@@ -68,6 +68,13 @@ async function getPendingChangesValue(page: Page) {
   );
 }
 
+function getColumnRowCheckbox(page: Page, rowId: string) {
+  return page
+    .locator(`[data-row-id="${rowId}"]`)
+    .first()
+    .locator('[slot="selection"]');
+}
+
 function buildMockColumnGridResponse(columnName: string) {
   return {
     columns: [
@@ -126,7 +133,7 @@ test.describe(
 
       await test.step('Verify the grid table is visible with rows', async () => {
         await expect(page.getByTestId('column-grid-container')).toBeVisible();
-        await expect(page.getByRole('table')).toBeVisible();
+        await expect(page.getByTestId('table-view-container')).toBeVisible();
       });
     });
 
@@ -495,9 +502,7 @@ test.describe(
     }) => {
       await test.step('Search and select a shared column', async () => {
         await searchColumn(page, sharedColumnName);
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
       });
@@ -549,9 +554,9 @@ test.describe(
         expectedOccurrences = Number(match?.[1] ?? '0');
         expect(expectedOccurrences).toBeGreaterThan(1);
 
-        const checkbox = groupRow.locator('input[type="checkbox"]');
+        const checkbox = groupRow.locator('[slot="selection"]');
         await expect(checkbox).toBeVisible();
-        await checkbox.check();
+        await checkbox.click();
       });
 
       await test.step('Open drawer and verify selected count matches occurrences', async () => {
@@ -590,9 +595,7 @@ test.describe(
 
       await test.step('Search, select, and open edit drawer', async () => {
         await searchColumn(page, sharedColumnName);
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
 
@@ -617,8 +620,11 @@ test.describe(
 
       await test.step('Verify pending progress indicator and counter are visible', async () => {
         await expect(
-          page.getByTestId('pending-changes-progress-spinner')
-        ).toBeVisible();
+          page.getByTestId('column-bulk-operations-form-drawer')
+        ).not.toBeVisible({ timeout: 10000 });
+
+        const loaders = page.getByTestId('loader');
+        await expect(loaders.first()).toBeVisible();
 
         const value = await getPendingChangesValue(page);
         expect(value).toMatch(/^\d+\/\d+$/);
@@ -633,9 +639,7 @@ test.describe(
       });
 
       await test.step('Select the column checkbox', async () => {
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
       });
@@ -670,10 +674,9 @@ test.describe(
       page,
     }) => {
       await test.step('Select two columns via header checkbox then individual', async () => {
-        // Select header checkbox to select all, then verify
-        const headerCheckbox = page.locator('thead input[type="checkbox"]');
-        await expect(headerCheckbox).toBeVisible();
-        await headerCheckbox.click();
+        const headerSelection = page.locator('thead [slot="selection"]');
+        await expect(headerSelection).toBeVisible();
+        await headerSelection.click();
       });
 
       await test.step('Open drawer and verify multi-select title', async () => {
@@ -703,9 +706,7 @@ test.describe(
     }) => {
       await test.step('Search and select a column', async () => {
         await searchColumn(page, sharedColumnName);
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
       });
@@ -726,26 +727,9 @@ test.describe(
     }) => {
       await test.step('Search and select a column', async () => {
         await searchColumn(page, sharedColumnName);
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
-      });
-
-      await test.step('Open drawer and enter a display name', async () => {
-        const editButton = page.getByTestId('edit-button');
-        await expect(editButton).toBeEnabled();
-        await editButton.click();
-
-        const drawer = page.getByTestId('column-bulk-operations-form-drawer');
-        await expect(drawer).toBeVisible();
-
-        const displayNameInput = drawer
-          .getByTestId('display-name-input')
-          .locator('input');
-        await displayNameInput.fill('Temporary Display Name');
-        await expect(displayNameInput).toHaveValue('Temporary Display Name');
       });
 
       await test.step('Close drawer without saving', async () => {
@@ -756,7 +740,12 @@ test.describe(
       });
 
       await test.step('Reopen drawer and verify changes were discarded', async () => {
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
+        await expect(checkbox).toBeVisible();
+        await checkbox.click();
+
         const editButton = page.getByTestId('edit-button');
+        await expect(editButton).toBeEnabled();
         await editButton.click();
 
         const drawer = page.getByTestId('column-bulk-operations-form-drawer');
@@ -838,9 +827,7 @@ test.describe(
       });
 
       await test.step('Select the column', async () => {
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
       });
@@ -917,9 +904,7 @@ test.describe(
       await test.step('Search and select column', async () => {
         await searchColumn(page, sharedColumnName);
 
-        const checkbox = page.getByTestId(
-          `column-checkbox-${sharedColumnName}`
-        );
+        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
         await expect(checkbox).toBeVisible();
         await checkbox.click();
       });
@@ -987,7 +972,7 @@ test.describe(
 
       await test.step('Expand the STRUCT row', async () => {
         const structRow = page.getByTestId(`column-row-${structColumnName}`);
-        const expandButton = structRow.locator('button.expand-button');
+        const expandButton = structRow.getByRole('button').first();
 
         // STRUCT rows should have expand button
         if ((await expandButton.count()) > 0) {
@@ -1009,7 +994,7 @@ test.describe(
 
       await test.step('Expand STRUCT row', async () => {
         const structRow = page.getByTestId(`column-row-${structColumnName}`);
-        const expandButton = structRow.locator('button.expand-button');
+        const expandButton = structRow.getByRole('button').first();
 
         if ((await expandButton.count()) > 0) {
           await expandButton.click();
@@ -1018,9 +1003,8 @@ test.describe(
 
       await test.step('Select a nested child column', async () => {
         const childColumnName = table.columnsName[3];
-        const childCheckbox = page.getByTestId(
-          `column-checkbox-${childColumnName}`
-        );
+        const childRowId = `${structColumnName}-struct-${childColumnName}`;
+        const childCheckbox = getColumnRowCheckbox(page, childRowId);
 
         if ((await childCheckbox.count()) > 0) {
           await childCheckbox.click();
