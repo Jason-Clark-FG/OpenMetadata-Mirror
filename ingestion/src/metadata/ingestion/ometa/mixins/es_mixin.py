@@ -15,6 +15,7 @@ To be used by OpenMetadata class
 """
 import functools
 import json
+import time
 import traceback
 from typing import (
     Generic,
@@ -47,6 +48,9 @@ from metadata.utils.logger import ometa_logger
 logger = ometa_logger()
 
 T = TypeVar("T", bound=BaseModel)
+
+_CIRCUIT_BREAKER_EXCEPTION_TYPE = "circuit_breaking_exception"
+_CIRCUIT_BREAKER_RETRY_WAITS = [5, 10, 20]
 
 
 class TotalModel(BaseModel):
@@ -300,10 +304,36 @@ class ESMixin(Generic[T]):
                 f"Cannot find the index in ES_INDEX_MAP for {entity_type.__name__}: {err}"
             )
         except Exception as exc:
-            logger.debug(traceback.format_exc())
-            logger.warning(
-                f"Elasticsearch search failed for query [{query_string}]: {exc}"
-            )
+            if _CIRCUIT_BREAKER_EXCEPTION_TYPE in str(exc):
+                for attempt, wait in enumerate(_CIRCUIT_BREAKER_RETRY_WAITS, start=1):
+                    logger.warning(
+                        f"Elasticsearch circuit breaker triggered for query [{query_string}]. "
+                        f"Retrying in {wait}s (attempt {attempt}/{len(_CIRCUIT_BREAKER_RETRY_WAITS)})..."
+                    )
+                    time.sleep(wait)
+                    try:
+                        return self._search_es_entity(
+                            entity_type=entity_type,
+                            query_string=query_string,
+                            fields=fields,
+                        )
+                    except Exception as retry_exc:
+                        if _CIRCUIT_BREAKER_EXCEPTION_TYPE not in str(retry_exc):
+                            logger.debug(traceback.format_exc())
+                            logger.warning(
+                                f"Elasticsearch search failed for query [{query_string}]: {retry_exc}"
+                            )
+                            return None
+                logger.warning(
+                    f"Elasticsearch circuit breaker still active after "
+                    f"{len(_CIRCUIT_BREAKER_RETRY_WAITS)} retries for query [{query_string}]. "
+                    "Skipping."
+                )
+            else:
+                logger.debug(traceback.format_exc())
+                logger.warning(
+                    f"Elasticsearch search failed for query [{query_string}]: {exc}"
+                )
         return None
 
     @staticmethod
