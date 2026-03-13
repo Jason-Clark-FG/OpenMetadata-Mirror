@@ -11,17 +11,15 @@
  *  limitations under the License.
  */
 
-import {
-  Checkbox,
-  TableCell,
-  TableRow,
-  useTheme,
-} from '@mui/material';
+import { Table } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import React, { useMemo } from 'react';
 import Loader from '../../../../components/common/Loader/Loader';
 import { ColumnGridRowData } from '../ColumnGrid.interface';
 
 interface ColumnGridTableRowProps {
+  /** Width percent per column id for fixed column layout */
+  columnWidthPercent?: Record<string, string>;
   entity: ColumnGridRowData;
   isSelected: boolean;
   isIndeterminate?: boolean;
@@ -31,6 +29,8 @@ interface ColumnGridTableRowProps {
   isRecentlyUpdated?: boolean;
   /** When true, parent/child row colors are shown (only when group/struct is expanded) */
   showParentChildColors?: boolean;
+  /** Column definitions for Table.Row (id only), used for core Table layout */
+  tableColumns: { id: string }[];
   onSelect: (id: string, checked: boolean) => void;
   onGroupSelect?: (groupId: string, checked: boolean) => void;
   renderColumnNameCell: (entity: ColumnGridRowData) => React.ReactNode;
@@ -42,125 +42,148 @@ interface ColumnGridTableRowProps {
 
 const ROW_BG_TRANSITION = 'background-color 0.4s ease-in-out';
 
+const cellBaseClass =
+  'tw:relative tw:py-3 tw:px-6 tw:text-sm tw:text-tertiary tw:align-middle tw:border-b tw:border-border-secondary tw:transition-[background-color] tw:duration-150';
+
+const CELL_ELLIPSIS_CLASS = 'tw:min-w-0 tw:w-full tw:overflow-hidden';
+
 export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
+  columnWidthPercent = {},
   entity,
   isSelected,
-  isIndeterminate,
+  isIndeterminate: _isIndeterminate,
   isPendingRefetch = false,
   isRecentlyUpdated,
   showParentChildColors = false,
-  onSelect,
-  onGroupSelect,
+  tableColumns,
+  onSelect: _onSelect,
+  onGroupSelect: _onGroupSelect,
   renderColumnNameCell,
   renderPathCell,
   renderDescriptionCell,
   renderTagsCell,
   renderGlossaryTermsCell,
 }) => {
-  const theme = useTheme();
-
-  const { rowSx, cellSx, rowType } = useMemo(() => {
+  const { rowClassName, cellClassName, rowType } = useMemo(() => {
     const isChildRow = Boolean(entity.parentId || entity.isStructChild);
     const type = isChildRow ? 'child' : 'parent';
-
-    const yellowHighlightBg =
-      theme.palette.allShades?.warning?.[50] ??
-      theme.palette.warning?.light ??
-      theme.palette.warning?.main;
 
     if (isRecentlyUpdated) {
       return {
         rowType: type,
-        rowSx: {
-          backgroundColor: yellowHighlightBg,
-          transition: ROW_BG_TRANSITION,
-          '&.Mui-selected': { backgroundColor: yellowHighlightBg },
-          '&.Mui-selected:hover': { backgroundColor: yellowHighlightBg },
-        },
-        cellSx: {
-          backgroundColor: yellowHighlightBg,
-          transition: ROW_BG_TRANSITION,
-        },
+        rowClassName: classNames(
+          'tw:transition-colors',
+          'tw:bg-utility-warning-50',
+          isSelected && 'tw:bg-utility-warning-50'
+        ),
+        cellClassName: classNames(
+          cellBaseClass,
+          'tw:bg-utility-warning-50',
+          ROW_BG_TRANSITION
+        ),
       };
     }
 
     if (!showParentChildColors) {
-      return { rowType: type, rowSx: undefined, cellSx: undefined };
+      return {
+        rowType: type,
+        rowClassName: classNames(
+          'tw:transition-colors tw:hover:bg-secondary',
+          isSelected && 'tw:bg-secondary'
+        ),
+        cellClassName: cellBaseClass,
+      };
     }
 
-    const parentBg =
-      theme.palette.allShades?.gray?.[100] ?? theme.palette.grey?.[100];
-    const childBg =
-      theme.palette.allShades?.gray?.[50] ?? theme.palette.grey?.[50];
-    const bg = isChildRow ? childBg : parentBg;
+    const bgClass = isChildRow ? 'tw:bg-primary' : 'tw:bg-secondary';
 
     return {
       rowType: type,
-      rowSx: {
-        backgroundColor: bg,
-        transition: ROW_BG_TRANSITION,
-        '&.Mui-selected': { backgroundColor: bg },
-        '&.Mui-selected:hover': { backgroundColor: bg },
-      },
-      cellSx: { backgroundColor: bg, transition: ROW_BG_TRANSITION },
+      rowClassName: classNames(
+        'tw:transition-colors',
+        bgClass,
+        isSelected && bgClass,
+        'tw:hover:opacity-95'
+      ),
+      cellClassName: classNames(cellBaseClass, bgClass, ROW_BG_TRANSITION),
     };
   }, [
     isRecentlyUpdated,
     showParentChildColors,
     entity.parentId,
     entity.isStructChild,
-    theme,
+    isSelected,
   ]);
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const checked = e.target.checked;
+  const renderCellContent = (columnId: string) => {
+    const content = (() => {
+      switch (columnId) {
+        case 'columnName':
+          return renderColumnNameCell(entity);
+        case 'path':
+          return renderPathCell(entity);
+        case 'description':
+          return renderDescriptionCell(entity);
+        case 'dataType':
+          return entity.dataType || '-';
+        case 'tags':
+          return renderTagsCell(entity);
+        case 'glossaryTerms':
+          return renderGlossaryTermsCell(entity);
+        default:
+          return null;
+      }
+    })();
 
-    if (entity.isGroup && entity.occurrenceCount > 1 && onGroupSelect) {
-      onGroupSelect(entity.id, checked);
-    } else {
-      onSelect(entity.id, checked);
+    if (content == null) {
+      return null;
     }
+
+    const wrapped = <div className={CELL_ELLIPSIS_CLASS}>{content}</div>;
+
+    if (columnId === 'columnName' && isPendingRefetch) {
+      return (
+        <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0">
+          <Loader className="tw:shrink-0" size="x-small" />
+          {wrapped}
+        </div>
+      );
+    }
+
+    return wrapped;
+  };
+
+  const getCellStyle = (columnId: string): React.CSSProperties | undefined => {
+    const width = columnWidthPercent[columnId];
+
+    return width ? { width, minWidth: 0, maxWidth: width } : undefined;
+  };
+
+  const cellTestIdMap: Record<string, string | undefined> = {
+    columnName: 'column-name-cell',
+    path: 'column-path-cell',
+    description: 'column-description-cell',
+    dataType: 'column-datatype-cell',
+    tags: 'column-tags-cell',
+    glossaryTerms: 'column-glossary-cell',
   };
 
   return (
-    <TableRow
-      hover
+    <Table.Row
+      className={rowClassName}
+      columns={tableColumns}
       data-row-id={entity.id}
       data-row-type={rowType}
       data-testid={`column-row-${entity.columnName}`}
-      key={entity.id}
-      selected={isSelected}
-      sx={rowSx}>
-      <TableCell padding="checkbox" sx={cellSx}>
-        {isPendingRefetch ? (
-          <Loader size="small" />
-        ) : (
-          <Checkbox
-            checked={isSelected}
-            data-testid={`column-checkbox-${entity.columnName}`}
-            indeterminate={isIndeterminate}
-            onChange={handleCheckboxChange}
-          />
-        )}
-      </TableCell>
-      <TableCell data-testid="column-name-cell" sx={cellSx}>
-        {renderColumnNameCell(entity)}
-      </TableCell>
-      <TableCell data-testid="column-path-cell" sx={cellSx}>
-        {renderPathCell(entity)}
-      </TableCell>
-      <TableCell data-testid="column-description-cell" sx={cellSx}>
-        {renderDescriptionCell(entity)}
-      </TableCell>
-      <TableCell data-testid="column-datatype-cell" sx={cellSx}>
-        {entity.dataType || '-'}
-      </TableCell>
-      <TableCell data-testid="column-tags-cell" sx={cellSx}>
-        {renderTagsCell(entity)}
-      </TableCell>
-      <TableCell data-testid="column-glossary-cell" sx={cellSx}>
-        {renderGlossaryTermsCell(entity)}
-      </TableCell>
-    </TableRow>
+      id={entity.id}>
+      {(column) => (
+        <Table.Cell
+          className={classNames(cellClassName, 'tw:overflow-hidden')}
+          data-testid={cellTestIdMap[column.id]}
+          style={getCellStyle(column.id)}>
+          {renderCellContent(column.id)}
+        </Table.Cell>
+      )}
+    </Table.Row>
   );
 };
