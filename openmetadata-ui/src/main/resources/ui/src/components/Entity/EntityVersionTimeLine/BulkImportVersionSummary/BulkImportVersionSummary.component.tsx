@@ -30,6 +30,32 @@ interface BulkImportVersionSummaryProps {
   csvImportResult: CSVImportResult;
 }
 
+const buildColumn = (column: string) => ({
+  key: column,
+  name: capitalize(column),
+  sortable: false,
+  resizable: true,
+  minWidth: column === 'status' ? 70 : 180,
+  renderCell: (data: { row: Record<string, string> }) =>
+    renderColumnDataEditor(column, {
+      value: data.row[column],
+      data: { details: '', glossaryStatus: '' },
+    }),
+});
+
+const buildRow = (
+  cols: string[],
+  row: string[],
+  idx: number
+): Record<string, string> => {
+  const acc: Record<string, string> = { id: idx + '' };
+  row.forEach((value, index) => {
+    acc[cols[index]] = value;
+  });
+
+  return acc;
+};
+
 export const BulkImportVersionSummary = ({
   csvImportResult,
 }: BulkImportVersionSummaryProps) => {
@@ -48,31 +74,8 @@ export const BulkImportVersionSummary = ({
         skipEmptyLines: true,
         complete: (results) => {
           const [cols, ...rows] = results.data as string[][];
-          const columns = cols?.map((column) => ({
-            key: column,
-            name: capitalize(column),
-            sortable: false,
-            resizable: true,
-            minWidth: column === 'status' ? 70 : 180,
-            renderCell: (data: { row: Record<string, string> }) =>
-              renderColumnDataEditor(column, {
-                value: data.row[column],
-                data: { details: '', glossaryStatus: '' },
-              }),
-          }));
-
-          const dataSource = rows.map((row, idx) => {
-            return row.reduce(
-              (acc: Record<string, string>, value: string, index: number) => {
-                acc[cols[index]] = value;
-                acc['id'] = idx + '';
-
-                return acc;
-              },
-              {} as Record<string, string>
-            );
-          });
-
+          const columns = cols?.map(buildColumn);
+          const dataSource = rows.map((row, idx) => buildRow(cols, row, idx));
           setTableData({ columns, dataSource });
         },
       });
