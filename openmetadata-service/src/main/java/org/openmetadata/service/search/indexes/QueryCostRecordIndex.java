@@ -6,7 +6,6 @@ import org.openmetadata.schema.entity.data.QueryCostRecord;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.exception.EntityNotFoundException;
 
 public class QueryCostRecordIndex implements SearchIndex {
   final QueryCostRecord queryCostRecord;
@@ -17,16 +16,9 @@ public class QueryCostRecordIndex implements SearchIndex {
 
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
     EntityReference queryReference = queryCostRecord.getQueryReference();
-    try {
-      Query query = Entity.getEntity(queryReference, "*", Include.NON_DELETED);
-      doc.put("query", query);
-      doc.put("service", query.getService());
-    } catch (EntityNotFoundException ex) {
-      LOG.warn(
-          "Query entity [{}] not found during search indexing: {}",
-          queryReference != null ? queryReference.getId() : "null",
-          ex.getMessage());
-    }
+    Query query = Entity.getEntity(queryReference, "*", Include.NON_DELETED);
+    doc.put("query", query);
+    doc.put("service", query.getService());
     doc.put("cost", queryCostRecord.getCost());
     doc.put("count", queryCostRecord.getCount());
     doc.put("timestamp", queryCostRecord.getTimestamp());
