@@ -379,45 +379,80 @@ public class OpenSearchEntityManager implements EntityManagementClient {
       return;
     }
 
-    try {
-      Map<String, JsonData> params = convertToJsonDataMap(doc);
+    Map<String, JsonData> params = convertToJsonDataMap(doc);
+    int attempt = 0;
+    while (true) {
+      try {
+        client.update(
+            u ->
+                u.index(indexName)
+                    .id(docId)
+                    .refresh(Refresh.True)
+                    .scriptedUpsert(true)
+                    .upsert(params)
+                    .script(
+                        s ->
+                            s.inline(
+                                inline ->
+                                    inline
+                                        .lang(
+                                            l ->
+                                                l.builtin(
+                                                    os.org.opensearch.client.opensearch._types
+                                                        .BuiltinScriptLanguage.Painless))
+                                        .source(scriptTxt)
+                                        .params(params))),
+            Map.class);
 
-      client.update(
-          u ->
-              u.index(indexName)
-                  .id(docId)
-                  .refresh(Refresh.True)
-                  .scriptedUpsert(true)
-                  .upsert(params)
-                  .script(
-                      s ->
-                          s.inline(
-                              inline ->
-                                  inline
-                                      .lang(
-                                          l ->
-                                              l.builtin(
-                                                  os.org.opensearch.client.opensearch._types
-                                                      .BuiltinScriptLanguage.Painless))
-                                      .source(scriptTxt)
-                                      .params(params))),
-          Map.class);
-
-      LOG.info(
-          "Successfully updated entity in OpenSearch for index: {}, docId: {}", indexName, docId);
-    } catch (OpenSearchException e) {
-      if (e.status() == 404) {
-        LOG.warn(
-            "Document not found during update for index: {}, docId: {}. The document may not have been indexed yet.",
-            indexName,
-            docId);
-      } else {
-        LOG.error(
-            "Failed to update entity in OpenSearch for index: {}, docId: {}", indexName, docId, e);
+        LOG.info(
+            "Successfully updated entity in OpenSearch for index: {}, docId: {}", indexName, docId);
+        return;
+      } catch (OpenSearchException e) {
+        if (e.status() == 404) {
+          LOG.warn(
+              "Document not found during update for index: {}, docId: {}. The document may not have been indexed yet.",
+              indexName,
+              docId);
+          return;
+        } else {
+          LOG.error(
+              "Failed to update entity in OpenSearch for index: {}, docId: {}",
+              indexName,
+              docId,
+              e);
+          return;
+        }
+      } catch (IOException e) {
+        if (attempt < MAX_RETRIES && isTooManyRequestsError(e)) {
+          attempt++;
+          long backoff = INITIAL_BACKOFF_MS * (1L << (attempt - 1));
+          LOG.warn(
+              "OpenSearch returned 429 for update (index: {}, docId: {}). Retrying attempt {}/{} after {}ms",
+              indexName,
+              docId,
+              attempt,
+              MAX_RETRIES,
+              backoff);
+          try {
+            Thread.sleep(backoff);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            LOG.error(
+                "Failed to update entity in OpenSearch for index: {}, docId: {}",
+                indexName,
+                docId,
+                e);
+            return;
+          }
+        } else {
+          LOG.error(
+              "Failed to update entity in OpenSearch for index: {}, docId: {}",
+              indexName,
+              docId,
+              e);
+          return;
+        }
       }
-    } catch (IOException e) {
-      LOG.error(
-          "Failed to update entity in OpenSearch for index: {}, docId: {}", indexName, docId, e);
     }
   }
 
@@ -1393,21 +1428,57 @@ public class OpenSearchEntityManager implements EntityManagementClient {
     }
   }
 
+  private static final int MAX_RETRIES = 3;
+  private static final long INITIAL_BACKOFF_MS = 100;
+
   private void upsertDocument(String indexName, String docId, String doc, String operation)
       throws IOException {
     if (!isClientAvailable) {
       LOG.error("OpenSearch client is not available. Cannot {}.", operation);
       return;
     }
-    client.update(
-        u ->
-            u.index(indexName)
-                .id(docId)
-                .refresh(Refresh.True)
-                .docAsUpsert(true)
-                .doc(toJsonData(doc)),
-        Map.class);
-    LOG.info("Successfully {} in OpenSearch for index: {}, docId: {}", operation, indexName, docId);
+    int attempt = 0;
+    while (true) {
+      try {
+        client.update(
+            u ->
+                u.index(indexName)
+                    .id(docId)
+                    .refresh(Refresh.True)
+                    .docAsUpsert(true)
+                    .doc(toJsonData(doc)),
+            Map.class);
+        LOG.info(
+            "Successfully {} in OpenSearch for index: {}, docId: {}", operation, indexName, docId);
+        return;
+      } catch (IOException e) {
+        if (attempt < MAX_RETRIES && isTooManyRequestsError(e)) {
+          attempt++;
+          long backoff = INITIAL_BACKOFF_MS * (1L << (attempt - 1));
+          LOG.warn(
+              "OpenSearch returned 429 for {} (index: {}, docId: {}). Retrying attempt {}/{} after {}ms",
+              operation,
+              indexName,
+              docId,
+              attempt,
+              MAX_RETRIES,
+              backoff);
+          try {
+            Thread.sleep(backoff);
+          } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw e;
+          }
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
+  private static boolean isTooManyRequestsError(IOException e) {
+    String message = e.getMessage();
+    return message != null && message.contains("429");
   }
 
   @Override
