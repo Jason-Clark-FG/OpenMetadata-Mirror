@@ -82,7 +82,11 @@ jobs:
       id: python-e2e-test
       run: |
         source env/bin/activate
-        make coverage
+        cd ingestion
+        nox --no-venv -s unit-tests
+        nox --no-venv -s integration-tests -- --durations=5
+      env:
+        TESTCONTAINERS_RYUK_DISABLED: true
 
     - name: Run CLI E2E Python Tests & record coverage
       if: matrix.e2e-test != 'python'
@@ -168,7 +172,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.e2e-test }}
-        path: .coverage
+        path: ingestion/.coverage
+        include-hidden-files: true
 
     - name: Upload coverage artifact for CLI E2E tests
       if: matrix.e2e-test != 'python' && steps.e2e-test.outcome == 'success' && env.DEBUG == 'false'
