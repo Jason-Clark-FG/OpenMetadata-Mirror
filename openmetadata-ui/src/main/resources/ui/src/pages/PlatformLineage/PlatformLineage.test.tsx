@@ -234,16 +234,6 @@ jest.mock('antd', () => {
   };
 });
 
-jest.mock('@mui/material', () => {
-  const actual = jest.requireActual('@mui/material');
-
-  return {
-    ...actual,
-    Grid: jest.fn(({ children }) => <div>{children}</div>),
-    Tooltip: jest.fn(({ children }) => <div>{children}</div>),
-  };
-});
-
 jest.mock('../../components/LineageTable/LineageTable.styled', () => ({
   StyledIconButton: jest.fn(({ children }) => <button>{children}</button>),
 }));
