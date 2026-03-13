@@ -57,6 +57,7 @@ import org.openmetadata.schema.api.configuration.OpenMetadataBaseUrlConfiguratio
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.auth.JWTTokenExpiry;
 import org.openmetadata.schema.configuration.SecurityConfiguration;
 import org.openmetadata.schema.email.SmtpSettings;
 import org.openmetadata.schema.entity.Bot;
@@ -2463,10 +2464,16 @@ public class OpenMetadataOperations implements Callable<Integer> {
     }
   }
 
+  /**
+   * Unlike most ops commands (e.g. deploy-pipelines) that delegate to the server API, this command
+   * operates directly on the database. This is intentional: when JWT signing keys have been rotated,
+   * all existing bot tokens — including the ingestion-bot token we'd use to authenticate against the
+   * server — are invalid. We must bypass the server to regenerate tokens in this scenario.
+   */
   @Command(
       name = "regenerate-bot-tokens",
       description =
-          "Regenerates JWT tokens for all bot users via the server API. "
+          "Regenerates JWT tokens for all bot users. "
               + "Use this after rotating JWT signing keys or changing the cluster name.")
   public Integer regenerateBotTokens(
       @Option(
@@ -2475,60 +2482,74 @@ public class OpenMetadataOperations implements Callable<Integer> {
                   "Token expiry for regenerated tokens (OneHour, One, Seven, Thirty, Sixty, Ninety, Unlimited). "
                       + "Defaults to Unlimited.",
               defaultValue = "Unlimited")
-          String expiry) {
+          JWTTokenExpiry expiry) {
     try {
       parseConfig();
+      initializeCollectionRegistry();
+      SettingsCache.initialize(config);
+      initializeSecurityConfig();
 
-      String jwtToken = getIngestionBotToken();
-      if (jwtToken == null) {
-        throw new RuntimeException("Failed to retrieve ingestion-bot JWT token");
-      }
+      JWTTokenGenerator.getInstance()
+          .init(
+              SecurityConfigurationManager.getInstance()
+                  .getCurrentAuthConfig()
+                  .getTokenValidationAlgorithm(),
+              config.getJwtTokenConfiguration());
 
-      String serverUrl = getServerApiUrl();
-      if (serverUrl == null) {
-        throw new RuntimeException("SERVER_HOST_API_URL not configured");
-      }
+      BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
+      UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
 
-      String normalizedServerUrl =
-          serverUrl.endsWith("/") ? serverUrl.substring(0, serverUrl.length() - 1) : serverUrl;
+      List<List<String>> rows = new ArrayList<>();
+      ListFilter filter = new ListFilter(Include.NON_DELETED);
+      String after = null;
+      int pageSize = 50;
 
-      HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+      do {
+        ResultList<Bot> botPage =
+            botRepository.listAfter(
+                null, botRepository.getFields("botUser"), filter, pageSize, after);
 
-      HttpRequest request =
-          HttpRequest.newBuilder()
-              .uri(
-                  URI.create(
-                      normalizedServerUrl + "/v1/users/regenerateBotTokens?expiry=" + expiry))
-              .header("Authorization", "Bearer " + jwtToken)
-              .header("Content-Type", "application/json")
-              .PUT(HttpRequest.BodyPublishers.noBody())
-              .timeout(Duration.ofMinutes(5))
-              .build();
+        for (Bot bot : botPage.getData()) {
+          String botName = bot.getName();
+          try {
+            if (bot.getBotUser() == null) {
+              rows.add(Arrays.asList(botName, "SKIPPED", "No bot user associated"));
+              continue;
+            }
 
-      LOG.info("Regenerating bot tokens via server API: {}", normalizedServerUrl);
-      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            User botUser =
+                userRepository.getByName(
+                    null,
+                    bot.getBotUser().getFullyQualifiedName(),
+                    new EntityUtil.Fields(Set.of("authenticationMechanism", "roles")));
 
-      if (response.statusCode() == 200) {
-        Map<String, List<String>> result =
-            JsonUtils.readValue(response.body(), new TypeReference<Map<String, List<String>>>() {});
+            if (botUser.getAuthenticationMechanism() == null
+                || botUser.getAuthenticationMechanism().getAuthType()
+                    != AuthenticationMechanism.AuthType.JWT) {
+              rows.add(Arrays.asList(botName, "SKIPPED", "Not using JWT authentication"));
+              continue;
+            }
 
-        List<List<String>> rows = new ArrayList<>();
-        for (String bot : result.getOrDefault("regeneratedBots", List.of())) {
-          rows.add(Arrays.asList(bot, "SUCCESS", "Token regenerated"));
+            JWTAuthMechanism newJwtAuth =
+                JWTTokenGenerator.getInstance().generateJWTToken(botUser, expiry);
+            botUser.setAuthenticationMechanism(
+                new AuthenticationMechanism()
+                    .withAuthType(AuthenticationMechanism.AuthType.JWT)
+                    .withConfig(newJwtAuth));
+            UserUtil.addOrUpdateUser(botUser);
+
+            rows.add(Arrays.asList(botName, "SUCCESS", "Token regenerated"));
+          } catch (Exception e) {
+            LOG.error("Failed to regenerate token for bot: {}", botName, e);
+            rows.add(Arrays.asList(botName, "FAILED", e.getMessage()));
+          }
         }
-        for (String bot : result.getOrDefault("skippedBots", List.of())) {
-          rows.add(Arrays.asList(bot, "SKIPPED", "No JWT auth or no bot user"));
-        }
-        for (String bot : result.getOrDefault("failedBots", List.of())) {
-          rows.add(Arrays.asList(bot, "FAILED", "Server-side error"));
-        }
 
-        printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
-        return result.getOrDefault("failedBots", List.of()).isEmpty() ? 0 : 1;
-      } else {
-        LOG.error("Server returned status {}: {}", response.statusCode(), response.body());
-        return 1;
-      }
+        after = botPage.getPaging() != null ? botPage.getPaging().getAfter() : null;
+      } while (after != null);
+
+      printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
+      return 0;
     } catch (Exception e) {
       LOG.error("Failed to regenerate bot tokens due to ", e);
       return 1;
