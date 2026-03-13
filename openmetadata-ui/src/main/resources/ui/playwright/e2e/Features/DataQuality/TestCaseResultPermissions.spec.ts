@@ -124,6 +124,7 @@ test.describe(
       await table.visitEntityPage(page);
       await page.getByTestId('profiler').click();
       await page.getByRole('tab', { name: 'Data Quality' }).click();
+      await waitForAllLoadersToDisappear(page);
     };
 
     const visitTestCaseDetailsPage = async (page: Page) => {

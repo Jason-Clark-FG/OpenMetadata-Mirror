@@ -149,22 +149,32 @@ test.describe(
         failedTimestamp - 60000
       }&endTs=${failedTimestamp + 60000}`;
 
-      const incidentListRes = await apiContext.get(incidentUrl);
-      const incidentList = await incidentListRes.json();
+      // Poll for incident creation — may not be immediate after adding failed result
+      await expect
+        .poll(
+          async () => {
+            const incidentListRes = await apiContext.get(incidentUrl);
+            const incidentList = await incidentListRes.json();
 
-      if (incidentList.data?.length > 0) {
-        const incident = incidentList.data.find(
-          (i: { testCaseReference?: { fullyQualifiedName?: string } }) =>
-            i.testCaseReference?.fullyQualifiedName === testCaseFqn
-        );
-        if (incident) {
-          incidentId = incident.id;
-          incidentStateId = incident.stateId;
-        }
-      }
+            if (incidentList.data?.length > 0) {
+              const incident = incidentList.data.find(
+                (i: {
+                  testCaseReference?: { fullyQualifiedName?: string };
+                }) => i.testCaseReference?.fullyQualifiedName === testCaseFqn
+              );
+              if (incident) {
+                incidentId = incident.id;
+                incidentStateId = incident.stateId;
 
-      expect(incidentId).toBeDefined();
-      expect(incidentStateId).toBeDefined();
+                return true;
+              }
+            }
+
+            return false;
+          },
+          { timeout: 30_000, intervals: [1_000, 2_000, 5_000] }
+        )
+        .toBe(true);
 
       // Setup all users
       await setupUserWithPolicy(

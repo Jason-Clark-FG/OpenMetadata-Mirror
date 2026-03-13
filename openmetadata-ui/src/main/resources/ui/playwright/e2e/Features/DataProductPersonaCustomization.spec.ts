@@ -160,7 +160,7 @@ test.describe('Data Product Persona customization', () => {
     });
 
     await test.step('apply customization', async () => {
-      expect(adminPage.locator('#KnowledgePanel\\.Description')).toBeVisible();
+      await expect(adminPage.locator('#KnowledgePanel\\.Description')).toBeVisible();
 
       await adminPage
         .locator('#KnowledgePanel\\.Description')
@@ -211,7 +211,7 @@ test.describe('Data Product Persona customization', () => {
         state: 'detached',
       });
 
-      expect(userPage.getByRole('tab', { name: 'Custom Tab' })).toBeVisible();
+      await expect(userPage.getByRole('tab', { name: 'Custom Tab' })).toBeVisible();
 
       await userPage.getByRole('tab', { name: 'Custom Tab' }).click();
 

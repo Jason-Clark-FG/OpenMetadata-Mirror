@@ -393,9 +393,6 @@ test.describe('Glossary Permissions', () => {
       },
     });
 
-    // Wait for permission cache invalidation to propagate
-    await page.waitForTimeout(3000);
-
     // Set up permissions with team as the principal
     await initializePermissions(page, 'allow', [
       'EditDescription',
@@ -403,16 +400,17 @@ test.describe('Glossary Permissions', () => {
     ]);
 
     // Login as test user and verify permissions inherited from team
-    await glossary.visitEntityPage(testUserPage);
-    await waitForAllLoadersToDisappear(testUserPage);
+    await expect(async () => {
+      await glossary.visitEntityPage(testUserPage);
+      await waitForAllLoadersToDisappear(testUserPage);
 
-    // Verify user can access the glossary page (team membership works)
-    const glossaryHeader = testUserPage.getByTestId(
-      'entity-header-display-name'
-    );
+      const glossaryHeader = testUserPage.getByTestId(
+        'entity-header-display-name'
+      );
 
-    await expect(glossaryHeader).toBeVisible({ timeout: 15000 });
-    await expect(glossaryHeader).toContainText(glossary.data.displayName);
+      await expect(glossaryHeader).toBeVisible({ timeout: 5_000 });
+      await expect(glossaryHeader).toContainText(glossary.data.displayName);
+    }).toPass({ timeout: 30_000, intervals: [2_000, 5_000] });
 
     // Clean up
     await cleanupPermissions(apiContext);

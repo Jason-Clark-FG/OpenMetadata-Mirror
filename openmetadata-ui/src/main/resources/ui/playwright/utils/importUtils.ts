@@ -561,7 +561,7 @@ export const uploadCSVAndWaitForGrid = async (
     state: 'hidden',
   });
 
-  await page.waitForTimeout(500);
+  await expect(page.locator('.rdg-header-row')).toBeVisible();
   const rowCount = await page.locator('.rdg-row').count();
   return { rowCount, tempFilePath };
 };
