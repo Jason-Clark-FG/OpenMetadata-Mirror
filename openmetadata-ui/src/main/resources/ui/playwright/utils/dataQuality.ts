@@ -153,14 +153,22 @@ export const addTestSuitePipeline = async (page: Page) => {
   const pipelineTab = page.getByRole('tab', { name: 'Pipeline' });
   await expect(pipelineTab).toBeVisible();
   await pipelineTab.click();
-
+  const testSuiteByNameResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/dataQuality/testSuites/name/') &&
+      res.url().includes('fields=owners') &&
+      res.status() === 200
+  );
   const addPlaceholderButton = page.getByTestId('add-placeholder-button');
   const addPipelineButton = page.getByTestId('add-pipeline-button');
   const addButton = addPlaceholderButton.or(addPipelineButton);
   await expect(addButton).toBeVisible();
   await addButton.click();
+  await testSuiteByNameResponse;
 
-  const selectAllTestCases = page.getByTestId('select-all-test-cases');
+  const selectAllTestCases = page
+    .getByTestId('select-all-test-cases')
+    .and(page.getByRole('switch'));
   await expect(selectAllTestCases).toBeVisible();
   await selectAllTestCases.click();
 

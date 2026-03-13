@@ -430,14 +430,12 @@ test.describe(
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
-      await page.waitForSelector('[data-testid="select-all-test-cases"]', {
-        state: 'visible',
-      });
+      const selectAllSwitch = page
+        .getByRole('switch')
+        .and(page.getByTestId('select-all-test-cases'));
+      await selectAllSwitch.waitFor({ state: 'visible' });
 
-      await expect(page.getByTestId('select-all-test-cases')).toHaveAttribute(
-        'aria-checked',
-        'true'
-      );
+      await expect(selectAllSwitch).toHaveAttribute('aria-checked', 'true');
     });
 
     /**

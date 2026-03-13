@@ -196,13 +196,7 @@ test(
       const addTestCaseCard = page.locator(
         '[data-testid="test-case-selection-card"]'
       );
-      const columnAggregateResponse = page.waitForResponse(
-        (url) =>
-          url.url().includes('/api/v1/search/aggregate') &&
-          url.url().includes('columns.name.keyword')
-      );
       await addTestCaseCard.getByTestId('search-dropdown-Column').click();
-      await columnAggregateResponse;
 
       const firstColumnOption = page
         .getByTestId('drop-down-menu')
