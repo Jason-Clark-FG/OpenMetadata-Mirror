@@ -265,6 +265,19 @@ public class OpenSearchBulkSink implements BulkSink {
                             DOC_BUILD_EXECUTOR))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+        // Index columns separately when processing table entities
+        if (Entity.TABLE.equals(entityType)) {
+          List<CompletableFuture<Void>> columnFutures =
+              entityInterfaces.stream()
+                  .map(
+                      entity ->
+                          CompletableFuture.runAsync(
+                              () -> indexTableColumns(entity, recreateIndex, reindexContext),
+                              DOC_BUILD_EXECUTOR))
+                  .toList();
+          CompletableFuture.allOf(columnFutures.toArray(CompletableFuture[]::new)).join();
+        }
       }
     } catch (Exception e) {
       LOG.error("Failed to write {} entities of type {}", entities.size(), entityType, e);
