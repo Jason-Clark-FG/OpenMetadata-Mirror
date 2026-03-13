@@ -72,3 +72,29 @@
     }
   }
 }
+
+// React Aria column resizer — positioned at right edge of th (th has position: relative)
+.react-aria-ColumnResizer {
+  cursor: col-resize;
+  height: 50%;
+  position: absolute;
+  right: 0;
+  top: 25%;
+  touch-action: none;
+  width: 8px;
+
+  &::after {
+    background-color: @border-color;
+    content: '';
+    height: 100%;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 1px;
+  }
+
+  &[data-resizing]::after {
+    background-color: @primary-color;
+    width: 2px;
+  }
+}

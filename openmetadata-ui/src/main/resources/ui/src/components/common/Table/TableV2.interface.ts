@@ -10,14 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import type { ResizeCallbackData } from 'react-resizable';
-import React from 'react';
-
-export interface InlineResizeHandleProps {
-  currentWidth: number;
-  onResize: (_: React.SyntheticEvent, data: ResizeCallbackData) => void;
-}
-
 export interface FlatRow<T> {
   record: T;
   depth: number;

@@ -79,7 +79,7 @@ export const BlockMenu = (props: BlockMenuProps) => {
         handleClickBlockHandle(event);
       }
 
-      if (!target.matches('[data-drag-handle]')) {
+      if (!target.matches('[data-drag]')) {
         popup.current?.hide();
 
         return;

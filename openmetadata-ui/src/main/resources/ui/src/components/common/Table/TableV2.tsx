@@ -53,14 +53,18 @@ import type {
   TablePaginationConfig,
 } from 'antd/lib/table/interface';
 import type { ColumnsType } from 'antd/es/table/interface';
-import 'react-resizable/css/styles.css';
+import {
+  ColumnResizer,
+  Dialog,
+  DialogTrigger,
+  Popover,
+  ResizableTableContainer,
+} from 'react-aria-components';
 import type {
   AriaSortDescriptor,
   AriaSelection,
   FlatRow,
 } from './TableV2.interface';
-
-import InlineResizeHandle from './InlineResizeHandle.component';
 import {
   flattenTreeRows,
   getColumnStickyStyle,
@@ -97,7 +101,6 @@ import {
   TableComponentProps,
 } from './Table.interface';
 import './table.less';
-import { ResizeCallbackData } from 'react-resizable';
 
 type TableV2Props<T extends object> = TableComponentProps<T>;
 
@@ -108,6 +111,7 @@ const TableV2 = <T extends object>(
     customPaginationProps,
     entityType,
     defaultVisibleColumns,
+    dragAndDropHooks,
     'data-testid': dataTestId,
     ...rest
   }: TableV2Props<T>,
@@ -353,25 +357,20 @@ const TableV2 = <T extends object>(
     [rest.rowSelection, filteredDataSource, getRowKey, selectionMode]
   );
 
-  // ─── Column resize ────────────────────────────────────────────────────────
+  // ─── Column resize (via React Aria ColumnResizer) ──────────────────────────
 
-  const resizeHandlers = useMemo(
-    () =>
-      Object.fromEntries(
-        propsColumns.map((col, idx) => {
-          const key = String(
-            col.key ?? (col as ColumnType<T>).dataIndex ?? idx
-          );
+  const handleColumnResize = useCallback(
+    (widths: Map<string | number | symbol, number | string>) => {
+      setColumnWidths((prev) => {
+        const next = { ...prev };
+        widths.forEach((w, k) => {
+          next[String(k)] = Number(w);
+        });
 
-          return [
-            key,
-            (_: React.SyntheticEvent, { size }: ResizeCallbackData) => {
-              setColumnWidths((prev) => ({ ...prev, [key]: size.width }));
-            },
-          ];
-        })
-      ),
-    [propsColumns]
+        return next;
+      });
+    },
+    []
   );
 
   // ─── Sorting ──────────────────────────────────────────────────────────────
@@ -614,214 +613,270 @@ const TableV2 = <T extends object>(
           </div>
         )}
 
-        <UntitledTable
-          aria-label="data-table"
-          selectedKeys={
-            rest.rowSelection?.selectedRowKeys
-              ? new Set(rest.rowSelection.selectedRowKeys.map(String))
-              : undefined
-          }
-          selectionBehavior={rest.rowSelection ? 'toggle' : undefined}
-          selectionMode={selectionMode}
-          size={rest.size === 'small' ? 'sm' : 'md'}
-          onSelectionChange={handleSelectionChange}
-          onSortChange={handleSortChange}>
-          <UntitledTable.Header className="tw:px-2">
-            {propsColumns.map((col, colIdx) => {
-              const colType = col as ColumnType<T>;
-              const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
-              const colWidth =
-                columnWidths[colKey] ?? (colType.width as number) ?? 150;
+        {(() => {
+          const tableContent = (
+            <UntitledTable
+              allowsDragging={Boolean(dragAndDropHooks)}
+              aria-label="data-table"
+              dragAndDropHooks={dragAndDropHooks}
+              selectedKeys={
+                rest.rowSelection?.selectedRowKeys
+                  ? new Set(rest.rowSelection.selectedRowKeys.map(String))
+                  : undefined
+              }
+              selectionBehavior={rest.rowSelection ? 'toggle' : undefined}
+              selectionMode={selectionMode}
+              size={rest.size === 'small' ? 'sm' : 'md'}
+              onSelectionChange={handleSelectionChange}
+              onSortChange={handleSortChange}>
+              <UntitledTable.Header className="tw:px-2">
+                {propsColumns.map((col, colIdx) => {
+                  const colType = col as ColumnType<T>;
+                  const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
+                  const colWidth =
+                    columnWidths[colKey] ?? (colType.width as number) ?? 150;
 
-              const isSorted = sortState.columnKey === colKey;
-              const stickyStyle = getColumnStickyStyle(colType.fixed, 2);
+                  const isSorted = sortState.columnKey === colKey;
+                  const stickyStyle = getColumnStickyStyle(colType.fixed, 2);
 
-              return (
-                <UntitledTable.Head
-                  allowsSorting={!!colType.sorter}
-                  className="tw:py-2 tw:pl-4 tw:pr-2 tw:text-sm tw:text-tertiary"
-                  id={colKey}
-                  key={colKey}
-                  style={{
-                    width: colWidth,
-                    minWidth: colWidth,
-                    ...(rest.resizableColumns ? { position: 'relative' } : {}),
-                    ...stickyStyle,
-                  }}>
-                  <div className="tw:flex tw:items-center tw:gap-1">
-                    {resolveColumnTitle(colType, propsColumns)}
-                    {!!colType.sorter &&
-                      (isSorted && sortState.direction ? (
-                        <ArrowDown
-                          className={classNames(
-                            'tw:size-3 tw:text-fg-quaternary',
-                            sortState.direction === 'ascending' &&
-                              'tw:rotate-180'
-                          )}
-                          strokeWidth={3}
-                        />
-                      ) : (
-                        <ChevronSelectorVertical
-                          className="tw:size-3 tw:text-fg-quaternary"
-                          strokeWidth={3}
-                        />
-                      ))}
-                    {(colType.filterIcon || colType.filterDropdown) && (
-                      <Dropdown.Root>
-                        <button
-                          aria-label="filter"
-                          className="tw:ml-1 tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex tw:items-center">
-                          {typeof colType.filterIcon === 'function'
-                            ? colType.filterIcon(
-                                Boolean(filterState[colKey]?.length)
-                              )
-                            : colType.filterIcon ?? null}
-                        </button>
-                        <Dropdown.Popover>
-                          <div className="tw:min-w-48">
-                            {typeof colType.filterDropdown === 'function'
-                              ? colType.filterDropdown({
-                                  prefixCls: 'ant-table-filter-dropdown',
-                                  setSelectedKeys: (keys) =>
-                                    setFilterState((prev) => ({
-                                      ...prev,
-                                      [colKey]: keys,
-                                    })),
-                                  selectedKeys: filterState[colKey] ?? [],
-                                  confirm: () => undefined,
-                                  clearFilters: () =>
-                                    setFilterState((prev) => {
-                                      const next = { ...prev };
-                                      delete next[colKey];
+                  return (
+                    <UntitledTable.Head
+                      allowsSorting={!!colType.sorter}
+                      className="tw:py-2 tw:pl-4 tw:pr-2 tw:text-sm tw:text-tertiary"
+                      id={colKey}
+                      key={colKey}
+                      style={{
+                        ...(rest.size === 'small' ? { padding: '8px' } : {}),
+                        width: colWidth,
+                        minWidth: colWidth,
+                        ...(rest.resizableColumns
+                          ? { position: 'relative' }
+                          : {}),
+                        ...stickyStyle,
+                      }}>
+                      <div className="tw:flex tw:items-center tw:gap-1">
+                        {resolveColumnTitle(colType, propsColumns)}
+                        {!!colType.sorter &&
+                          (isSorted && sortState.direction ? (
+                            <ArrowDown
+                              className={classNames(
+                                'tw:size-3 tw:text-fg-quaternary',
+                                sortState.direction === 'ascending' &&
+                                  'tw:rotate-180'
+                              )}
+                              strokeWidth={3}
+                            />
+                          ) : (
+                            <ChevronSelectorVertical
+                              className="tw:size-3 tw:text-fg-quaternary"
+                              strokeWidth={3}
+                            />
+                          ))}
+                        {Boolean(colType.filters || colType.filterDropdown) && (
+                          <DialogTrigger>
+                            <Button
+                              aria-label="filter"
+                              className="tw:ml-1 tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex tw:items-center"
+                              color="tertiary">
+                              {typeof colType.filterIcon === 'function'
+                                ? colType.filterIcon(
+                                    Boolean(filterState[colKey]?.length)
+                                  )
+                                : colType.filterIcon ?? null}
+                            </Button>
+                            <Popover placement="bottom right">
+                              <Dialog className="tw:outline-none">
+                                <div className="tw:min-w-48 tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:rounded-lg tw:overflow-hidden">
+                                  {typeof colType.filterDropdown === 'function'
+                                    ? colType.filterDropdown({
+                                        prefixCls: 'ant-table-filter-dropdown',
+                                        setSelectedKeys: (keys) =>
+                                          setFilterState((prev) => ({
+                                            ...prev,
+                                            [colKey]: keys,
+                                          })),
+                                        selectedKeys: filterState[colKey] ?? [],
+                                        confirm: () => undefined,
+                                        clearFilters: () =>
+                                          setFilterState((prev) => {
+                                            const next = { ...prev };
+                                            delete next[colKey];
 
-                                      return next;
-                                    }),
-                                  filters: colType.filters,
-                                  visible: true,
-                                  close: () => undefined,
-                                })
-                              : colType.filterDropdown}
-                          </div>
-                        </Dropdown.Popover>
-                      </Dropdown.Root>
-                    )}
-                  </div>
-                  {rest.resizableColumns && (
-                    <InlineResizeHandle
-                      currentWidth={colWidth}
-                      onResize={resizeHandlers[colKey]}
-                    />
-                  )}
-                </UntitledTable.Head>
-              );
-            })}
-          </UntitledTable.Header>
-
-          <UntitledTable.Body
-            renderEmptyState={() =>
-              isLoading ? null : (
-                <div className="tw:py-8 tw:text-center tw:text-sm tw:text-fg-tertiary">
-                  {(rest.locale?.emptyText as ReactNode) ?? t('label.no-data')}
-                </div>
-              )
-            }>
-            {flatRows.map((flatRow) => {
-              const { record, actualIndex, depth, hasChildren, rowKey } =
-                flatRow;
-              const rowHandlers = rest.onRow?.(record, actualIndex) ?? {};
-              const isExpanded = expandedKeys.has(rowKey);
-
-              return (
-                <UntitledTable.Row
-                  className={classNames(
-                    'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
-                    typeof rest.rowClassName === 'function'
-                      ? rest.rowClassName(record, actualIndex, 0)
-                      : rest.rowClassName
-                  )}
-                  data-row-key={rowKey}
-                  id={rowKey}
-                  key={rowKey}
-                  onClick={rowHandlers.onClick}
-                  onDoubleClick={rowHandlers.onDoubleClick}>
-                  {propsColumns.map((col, colIdx) => {
-                    const colType = col as ColumnType<T>;
-                    const cellKey = String(
-                      col.key ?? colType.dataIndex ?? colIdx
-                    );
-                    const stickyStyle = getColumnStickyStyle(colType.fixed, 1);
-
-                    const isFirstColumn = colIdx === 0;
-                    const showExpandInCell = rest.expandable && isFirstColumn;
-                    const ExpandIcon = rest.expandable?.expandIcon;
-                    const cellHandlerProps =
-                      (colType.onCell?.(
-                        record,
-                        actualIndex
-                      ) as React.TdHTMLAttributes<HTMLTableCellElement>) ?? {};
-
-                    return (
-                      <UntitledTable.Cell
-                        {...cellHandlerProps}
-                        className={
-                          rest.cellClassName ??
-                          'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
-                        }
-                        key={cellKey}
-                        style={{
-                          width:
-                            columnWidths[cellKey] ??
-                            (colType.width as number) ??
-                            150,
-                          minWidth: (colType.width as number) ?? undefined,
-                          ...stickyStyle,
-                          ...(showExpandInCell
-                            ? { paddingLeft: `${16 + depth * 20}px` }
-                            : {}),
-                          ...cellHandlerProps.style,
-                        }}>
-                        {showExpandInCell && (
-                          <>
-                            {hasChildren ? (
-                              ExpandIcon ? (
-                                <ExpandIcon
-                                  expandable={hasChildren}
-                                  expanded={isExpanded}
-                                  prefixCls=""
-                                  record={record}
-                                  onExpand={(rec, e) => {
-                                    e.stopPropagation();
-                                    handleExpandToggle(rec as T, rowKey);
-                                  }}
-                                />
-                              ) : (
-                                <button
-                                  className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleExpandToggle(record, rowKey);
-                                  }}>
-                                  {isExpanded ? (
-                                    <ChevronDown className="tw:size-4" />
-                                  ) : (
-                                    <ChevronRight className="tw:size-4" />
-                                  )}
-                                </button>
-                              )
-                            ) : (
-                              <span className="tw:inline-block tw:w-4 tw:mr-1" />
-                            )}
-                          </>
+                                            return next;
+                                          }),
+                                        filters: colType.filters,
+                                        visible: true,
+                                        close: () => undefined,
+                                      })
+                                    : colType.filterDropdown}
+                                </div>
+                              </Dialog>
+                            </Popover>
+                          </DialogTrigger>
                         )}
-                        {resolveCellValue(colType, record, actualIndex)}
-                      </UntitledTable.Cell>
-                    );
-                  })}
-                </UntitledTable.Row>
-              );
-            })}
-          </UntitledTable.Body>
-        </UntitledTable>
+                      </div>
+                      {rest.resizableColumns && <ColumnResizer />}
+                    </UntitledTable.Head>
+                  );
+                })}
+              </UntitledTable.Header>
+
+              <UntitledTable.Body
+                renderEmptyState={() =>
+                  isLoading ? null : (
+                    <div className="tw:py-8 tw:text-center tw:text-sm tw:text-fg-tertiary">
+                      {(rest.locale?.emptyText as ReactNode) ??
+                        t('label.no-data')}
+                    </div>
+                  )
+                }>
+                {flatRows.map((flatRow) => {
+                  const { record, actualIndex, depth, hasChildren, rowKey } =
+                    flatRow;
+                  const rowHandlers = rest.onRow?.(record, actualIndex) ?? {};
+                  const isExpanded = expandedKeys.has(rowKey);
+
+                  return (
+                    <UntitledTable.Row
+                      allowsDragging={Boolean(dragAndDropHooks)}
+                      className={classNames(
+                        'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
+                        typeof rest.rowClassName === 'function'
+                          ? rest.rowClassName(record, actualIndex, 0)
+                          : rest.rowClassName
+                      )}
+                      data-row-key={rowKey}
+                      draggable={
+                        dragAndDropHooks
+                          ? undefined
+                          : (rowHandlers.draggable as boolean | undefined)
+                      }
+                      id={rowKey}
+                      key={rowKey}
+                      onClick={rowHandlers.onClick}
+                      onDoubleClick={rowHandlers.onDoubleClick}
+                      onDragEnd={
+                        dragAndDropHooks ? undefined : rowHandlers.onDragEnd
+                      }
+                      onDragEnter={
+                        dragAndDropHooks ? undefined : rowHandlers.onDragEnter
+                      }
+                      onDragLeave={
+                        dragAndDropHooks ? undefined : rowHandlers.onDragLeave
+                      }
+                      onDragOver={
+                        dragAndDropHooks ? undefined : rowHandlers.onDragOver
+                      }
+                      onDragStart={
+                        dragAndDropHooks ? undefined : rowHandlers.onDragStart
+                      }
+                      onDrop={
+                        dragAndDropHooks ? undefined : rowHandlers.onDrop
+                      }>
+                      {propsColumns.map((col, colIdx) => {
+                        const colType = col as ColumnType<T>;
+                        const cellKey = String(
+                          col.key ?? colType.dataIndex ?? colIdx
+                        );
+                        const stickyStyle = getColumnStickyStyle(
+                          colType.fixed,
+                          1
+                        );
+
+                        const isFirstColumn = colIdx === 0;
+                        const showExpandInCell =
+                          rest.expandable && isFirstColumn;
+                        const ExpandIcon = rest.expandable?.expandIcon;
+                        const cellHandlerProps =
+                          (colType.onCell?.(
+                            record,
+                            actualIndex
+                          ) as React.TdHTMLAttributes<HTMLTableCellElement>) ??
+                          {};
+
+                        return (
+                          <UntitledTable.Cell
+                            {...cellHandlerProps}
+                            className={
+                              rest.cellClassName ??
+                              'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
+                            }
+                            key={cellKey}
+                            style={{
+                              ...(rest.size === 'small' && !rest.cellClassName
+                                ? { padding: '8px' }
+                                : {}),
+                              width:
+                                columnWidths[cellKey] ??
+                                (colType.width as number) ??
+                                150,
+                              minWidth: (colType.width as number) ?? undefined,
+                              ...stickyStyle,
+                              ...(showExpandInCell
+                                ? { paddingLeft: `${16 + depth * 20}px` }
+                                : {}),
+                              ...cellHandlerProps.style,
+                            }}>
+                            {showExpandInCell && (
+                              <>
+                                {hasChildren ? (
+                                  ExpandIcon ? (
+                                    <ExpandIcon
+                                      expandable={hasChildren}
+                                      expanded={isExpanded}
+                                      prefixCls=""
+                                      record={record}
+                                      onExpand={(rec, e) => {
+                                        e.stopPropagation();
+                                        handleExpandToggle(rec as T, rowKey);
+                                      }}
+                                    />
+                                  ) : (
+                                    <button
+                                      className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleExpandToggle(record, rowKey);
+                                      }}>
+                                      {isExpanded ? (
+                                        <ChevronDown className="tw:size-4" />
+                                      ) : (
+                                        <ChevronRight className="tw:size-4" />
+                                      )}
+                                    </button>
+                                  )
+                                ) : ExpandIcon ? (
+                                  <ExpandIcon
+                                    expandable={false}
+                                    expanded={false}
+                                    prefixCls=""
+                                    record={record}
+                                    onExpand={(_rec, _e) => {}}
+                                  />
+                                ) : (
+                                  <span className="tw:inline-block tw:w-4 tw:mr-1" />
+                                )}
+                              </>
+                            )}
+                            {resolveCellValue(colType, record, actualIndex)}
+                          </UntitledTable.Cell>
+                        );
+                      })}
+                    </UntitledTable.Row>
+                  );
+                })}
+              </UntitledTable.Body>
+            </UntitledTable>
+          );
+
+          return rest.resizableColumns ? (
+            <ResizableTableContainer onResize={handleColumnResize}>
+              {tableContent}
+            </ResizableTableContainer>
+          ) : (
+            tableContent
+          );
+        })()}
       </div>
 
       {customPaginationProps && customPaginationProps.showPagination ? (
