@@ -58,6 +58,7 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
   );
   const [loading, setLoading] = useState(!isEditView);
   const [isFormLoading, setIsFormLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchDataProducts = useCallback(async () => {
     if (isEditView) {
@@ -78,8 +79,10 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
         (hit) => hit._source
       ) as DataProduct[];
       setDataProducts(products ?? []);
+      setTotalCount(res?.data?.hits?.total?.value ?? 0);
     } catch {
       setDataProducts([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -205,12 +208,14 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
                 + {t('label.add-entity', { entity: t('label.data-product') })}
               </Button>
             )}
-            <Link
-              className="view-all-link"
-              data-testid="view-all-data-products"
-              to={ROUTES.DATA_PRODUCT}>
-              {t('label.view-all')} &rarr;
-            </Link>
+            {totalCount > DISPLAY_COUNT && (
+              <Link
+                className="view-all-link"
+                data-testid="view-all-data-products"
+                to={ROUTES.DATA_PRODUCT}>
+                {t('label.view-all')} &rarr;
+              </Link>
+            )}
           </div>
         )}
       </div>

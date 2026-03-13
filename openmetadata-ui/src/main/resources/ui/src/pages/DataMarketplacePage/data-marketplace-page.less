@@ -1,5 +1,8 @@
+@import (reference) '../../styles/variables.less';
+
 .data-marketplace-main-container {
   background: #f8f9fa;
+  height: 100vh !important;
 }
 
 .marketplace-header-bg {
@@ -7,9 +10,11 @@
   background-position: center top;
   background-repeat: no-repeat;
   padding-bottom: 24px;
+  padding-top: @om-navbar-height;
   mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
 }
+
 
 .marketplace-grid-wrapper {
   max-width: 900px;

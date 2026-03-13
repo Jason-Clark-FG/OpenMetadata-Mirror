@@ -57,6 +57,7 @@ const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
   );
   const [loading, setLoading] = useState(!isEditView);
   const [isFormLoading, setIsFormLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchDomains = useCallback(async () => {
     if (isEditView) {
@@ -74,8 +75,10 @@ const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
       });
       const domainList = res.hits.hits.map((hit) => hit._source) as Domain[];
       setDomains(domainList ?? []);
+      setTotalCount(res.hits.total.value ?? 0);
     } catch {
       setDomains([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -205,12 +208,14 @@ const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
                 + {t('label.add-entity', { entity: t('label.domain') })}
               </Button>
             )}
-            <Link
-              className="view-all-link"
-              data-testid="view-all-domains"
-              to={ROUTES.DOMAIN}>
-              {t('label.view-all')} &rarr;
-            </Link>
+            {totalCount > DISPLAY_COUNT && (
+              <Link
+                className="view-all-link"
+                data-testid="view-all-domains"
+                to={ROUTES.DOMAIN}>
+                {t('label.view-all')} &rarr;
+              </Link>
+            )}
           </div>
         )}
       </div>
