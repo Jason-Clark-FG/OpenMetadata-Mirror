@@ -801,9 +801,15 @@ public class SearchRepository {
           "Issue updating inherited fields for columns of table [{}]: {}. Falling back to full reindex.",
           table.getFullyQualifiedName(),
           e.getMessage());
-      // Fall back to full reindex on error
-      deleteTableColumns(table);
-      indexTableColumns(table);
+      try {
+        deleteTableColumns(table);
+        indexTableColumns(table);
+      } catch (Exception fallbackEx) {
+        LOG.error(
+            "Fallback column reindex also failed for [{}]",
+            table.getFullyQualifiedName(),
+            fallbackEx);
+      }
     }
   }
 
@@ -1048,7 +1054,14 @@ public class SearchRepository {
       searchClient.updateEntity(indexMapping.getIndexName(clusterAlias), entityId, doc, scriptTxt);
 
       if (Entity.TABLE.equals(entityType)) {
-        syncTableColumns((Table) entity, changeDescription);
+        try {
+          syncTableColumns((Table) entity, changeDescription);
+        } catch (Exception e) {
+          LOG.error(
+              "Column sync failed for [{}], continuing with propagation",
+              entity.getFullyQualifiedName(),
+              e);
+        }
       }
 
       long updateTime = System.currentTimeMillis() - startTime;

@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Metrics;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -97,6 +98,15 @@ public final class SearchIndexRetryQueue {
       return "";
     }
     return value.trim();
+  }
+
+  public static boolean isUuid(String value) {
+    try {
+      UUID.fromString(value);
+      return true;
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   public static void updateSuspension(Set<String> entityTypes, boolean suspendAll) {

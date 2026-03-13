@@ -132,7 +132,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                         .keySet()
                         .forEach(
                             docId -> {
-                              if (isUuid(docId)) {
+                              if (SearchIndexRetryQueue.isUuid(docId)) {
                                 SearchIndexRetryQueue.enqueue(docId, null, reason);
                               }
                             }));
@@ -151,7 +151,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                 .filter(item -> item.error() != null)
                 .forEach(
                     item -> {
-                      if (isUuid(item.id())) {
+                      if (SearchIndexRetryQueue.isUuid(item.id())) {
                         SearchIndexRetryQueue.enqueue(
                             item.id(),
                             null,
@@ -1562,15 +1562,6 @@ public class OpenSearchEntityManager implements EntityManagementClient {
       throw new IllegalArgumentException("Invalid JSON input", e);
     }
     return JsonData.of(docMap);
-  }
-
-  private boolean isUuid(String value) {
-    try {
-      UUID.fromString(value);
-      return true;
-    } catch (Exception e) {
-      return false;
-    }
   }
 
   private static String buildERQueryFilter(String schemaFqn, String queryFilter) {

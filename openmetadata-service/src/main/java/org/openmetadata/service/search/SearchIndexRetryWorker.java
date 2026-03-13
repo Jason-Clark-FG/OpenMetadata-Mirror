@@ -621,7 +621,7 @@ public class SearchIndexRetryWorker implements Managed {
   }
 
   private String nextRetryStatus(int retryCount) {
-    return retryCount < 3 ? STATUS_PENDING : STATUS_FAILED;
+    return retryCount < 2 ? STATUS_PENDING : STATUS_FAILED;
   }
 
   private void recoverStaleInProgressIfNeeded() {

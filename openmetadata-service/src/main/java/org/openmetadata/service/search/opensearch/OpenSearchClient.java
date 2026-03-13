@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.net.ssl.SSLContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -83,7 +84,7 @@ public class OpenSearchClient implements SearchClient {
 
   private volatile boolean isClientAvailable;
   private static final long HEALTH_CHECK_CACHE_MS = 5000;
-  private volatile long lastHealthCheckAt;
+  private final AtomicLong lastHealthCheckAt = new AtomicLong();
   private final RBACConditionEvaluator rbacConditionEvaluator;
 
   // New OpenSearch Java API client
@@ -164,7 +165,11 @@ public class OpenSearchClient implements SearchClient {
       return false;
     }
     long now = System.currentTimeMillis();
-    if (now - lastHealthCheckAt < HEALTH_CHECK_CACHE_MS) {
+    long last = lastHealthCheckAt.get();
+    if (now - last < HEALTH_CHECK_CACHE_MS) {
+      return isClientAvailable;
+    }
+    if (!lastHealthCheckAt.compareAndSet(last, now)) {
       return isClientAvailable;
     }
     try {
@@ -175,7 +180,6 @@ public class OpenSearchClient implements SearchClient {
       isClientAvailable = false;
       isNewClientAvailable = false;
     }
-    lastHealthCheckAt = now;
     return isClientAvailable;
   }
 

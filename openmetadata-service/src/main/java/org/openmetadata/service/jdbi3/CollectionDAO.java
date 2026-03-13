@@ -10448,7 +10448,7 @@ public interface CollectionDAO {
         @Bind("status") String status);
 
     default List<SearchIndexRetryRecord> claimPending(int batchSize) {
-      int fetchSize = Math.max(batchSize * 3, batchSize);
+      int fetchSize = Math.max(batchSize * 5, batchSize);
       List<SearchIndexRetryRecord> candidates =
           findByStatuses(List.of("PENDING", "PENDING_RETRY_1", "PENDING_RETRY_2"), fetchSize);
       List<SearchIndexRetryRecord> claimed = new ArrayList<>();
