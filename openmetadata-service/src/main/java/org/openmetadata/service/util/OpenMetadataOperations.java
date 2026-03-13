@@ -2467,7 +2467,14 @@ public class OpenMetadataOperations implements Callable<Integer> {
       description =
           "Regenerates JWT tokens for all bot users. "
               + "Use this after rotating JWT signing keys or changing the cluster name.")
-  public Integer regenerateBotTokens() {
+  public Integer regenerateBotTokens(
+      @Option(
+              names = {"--expiry"},
+              description =
+                  "Token expiry for regenerated tokens (OneHour, One, Seven, Thirty, Sixty, Ninety, Unlimited). "
+                      + "Defaults to Unlimited.",
+              defaultValue = "Unlimited")
+          JWTTokenExpiry expiry) {
     try {
       parseConfig();
       initializeCollectionRegistry();
@@ -2516,7 +2523,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
             }
 
             JWTAuthMechanism newJwtAuth =
-                JWTTokenGenerator.getInstance().generateJWTToken(botUser, JWTTokenExpiry.Unlimited);
+                JWTTokenGenerator.getInstance().generateJWTToken(botUser, expiry);
             botUser.setAuthenticationMechanism(
                 new AuthenticationMechanism()
                     .withAuthType(AuthenticationMechanism.AuthType.JWT)
@@ -2530,7 +2537,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
           }
         }
 
-        after = botPage.getPaging().getAfter();
+        after = botPage.getPaging() != null ? botPage.getPaging().getAfter() : null;
       } while (after != null);
 
       printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
