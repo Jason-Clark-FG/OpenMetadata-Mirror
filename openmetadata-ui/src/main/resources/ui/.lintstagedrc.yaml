@@ -16,6 +16,8 @@
   - yarn license-header-fix
   # Sync localization file
   - yarn i18n
+  # Generate App Docs
+  - yarn generate:app-docs
 
 'src/**/*.{ts,tsx,js,jsx}':
   # Organize Imports

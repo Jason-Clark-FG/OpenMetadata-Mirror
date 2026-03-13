@@ -37,7 +37,8 @@
     "playwright:open": "playwright test --ui",
     "playwright:codegen": "playwright codegen",
     "generate:app-docs": "node generateApplicationDocs.js",
-    "generate:e2e-docs": "PLAYWRIGHT_IS_OSS=true node playwright/doc-generator/generate.js"
+    "generate:e2e-docs": "PLAYWRIGHT_IS_OSS=true node playwright/doc-generator/generate.js",
+    "organize-imports": "organize-imports-cli src"
   },
   "dependencies": {
     "@analytics/session-utils": "^0.1.17",
@@ -228,6 +229,7 @@
     "jest-sonar-reporter": "^2.0.0",
     "less": "4.1.3",
     "license-check-and-add": "^4.0.5",
+    "lint-staged": "^15.2.0",
     "organize-imports-cli": "^0.10.0",
     "pinst": "^3.0.0",
     "postcss": "8.4.31",
