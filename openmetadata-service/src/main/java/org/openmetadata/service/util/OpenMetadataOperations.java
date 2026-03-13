@@ -998,6 +998,8 @@ public class OpenMetadataOperations implements Callable<Integer> {
         return 1;
       }
 
+      initOrganization();
+
       UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
       Set<String> fieldList = new HashSet<>(userRepository.getPatchFields().getFieldList());
       fieldList.add(AUTH_MECHANISM_FIELD);
@@ -2496,6 +2498,8 @@ public class OpenMetadataOperations implements Callable<Integer> {
                   .getTokenValidationAlgorithm(),
               config.getJwtTokenConfiguration());
 
+      initOrganization();
+
       BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
       UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
 
@@ -2544,8 +2548,9 @@ public class OpenMetadataOperations implements Callable<Integer> {
         }
       }
 
+      boolean hasFailures = rows.stream().anyMatch(r -> "FAILED".equals(r.get(1)));
       printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
-      return 0;
+      return hasFailures ? 1 : 0;
     } catch (Exception e) {
       LOG.error("Failed to regenerate bot tokens due to ", e);
       return 1;
@@ -3019,7 +3024,6 @@ public class OpenMetadataOperations implements Callable<Integer> {
           }
           roleRepository.initializeEntity(role);
         }
-        teamRepository.initOrganization();
       } catch (Exception ex) {
         LOG.error("Failed to initialize organization due to ", ex);
         throw new RuntimeException(ex);
@@ -3027,6 +3031,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
         rootLogger.setLevel(originalLevel);
       }
     }
+    teamRepository.initOrganization();
   }
 
   public static void printToAsciiTable(
