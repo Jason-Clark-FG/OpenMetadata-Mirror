@@ -65,6 +65,7 @@ export interface InformixConnection {
      * Regex to only include/exclude stored procedures that matches the pattern.
      */
     storedProcedureFilterPattern?: FilterPattern;
+    supportsDatabase?:             boolean;
     supportsLineageExtraction?:    boolean;
     supportsMetadataExtraction?:   boolean;
     supportsProfiler?:             boolean;
