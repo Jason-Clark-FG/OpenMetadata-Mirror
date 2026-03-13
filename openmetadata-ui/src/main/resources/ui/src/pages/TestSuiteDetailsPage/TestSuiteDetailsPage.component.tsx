@@ -583,8 +583,7 @@ const TestSuiteDetailsPage = () => {
                   <Button
                     color="primary"
                     data-testid="add-test-case-btn"
-                    size="md"
-                    onPress={() => setIsTestCaseModalOpen(true)}>
+                    size="md">
                     {t('label.add-entity', {
                       entity: t('label.test-case-plural'),
                     })}
