@@ -15,6 +15,7 @@ import {
   Badge,
   Button,
   Card,
+  Divider,
   Input,
   Select,
   SelectItemType,
@@ -725,6 +726,7 @@ function GlossaryTermRelationSettingsPage() {
         <SlideoutMenu
           data-testid="relation-type-drawer"
           isOpen={isModalOpen}
+          width="500"
           onOpenChange={(open) => {
             if (!open) {
               handleModalCancel();
@@ -744,6 +746,7 @@ function GlossaryTermRelationSettingsPage() {
                       })}
                 </Typography>
               </SlideoutMenu.Header>
+              <Divider orientation="horizontal" />
 
               <SlideoutMenu.Content>
                 <div

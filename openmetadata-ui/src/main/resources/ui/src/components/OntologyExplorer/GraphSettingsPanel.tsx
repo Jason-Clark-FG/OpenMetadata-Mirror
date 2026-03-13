@@ -58,7 +58,7 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
   );
 
   const popoverContent = (
-    <div className="tw:w-72 tw:min-w-0 tw:rounded-lg">
+    <div className="tw:min-w-0 tw:rounded-lg">
       <div className="tw:flex tw:items-center tw:justify-between tw:shrink-0 tw:border-b tw:border-gray-200">
         <Typography
           as="span"
@@ -83,35 +83,33 @@ const GraphSettingsPanel: React.FC<GraphSettingsPanelProps> = ({
           >
             {t('label.layout')}
           </Typography>
-          <div className="tw:w-full">
-            <Dropdown.Root>
-              <Button
-                className="tw:w-full tw:justify-between"
-                color="secondary"
-                iconTrailing={ChevronDown}
-                size="sm"
+          <Dropdown.Root>
+            <Button
+              className="tw:w-full tw:justify-between"
+              color="secondary"
+              iconTrailing={ChevronDown}
+              size="sm"
+            >
+              {layoutItems.find((i) => i.id === settings.layout)?.label ??
+                t('label.layout')}
+            </Button>
+            <Dropdown.Popover className="tw:w-72 tw:min-w-0">
+              <Dropdown.Menu
+                className="tw:w-full"
+                items={layoutItems}
+                onAction={(key) => {
+                  const layout = layoutItems.find((i) => i.id === key)?.id;
+                  if (layout) {
+                    handleLayoutChange(layout);
+                  }
+                }}
               >
-                {layoutItems.find((i) => i.id === settings.layout)?.label ??
-                  t('label.layout')}
-              </Button>
-              <Dropdown.Popover className="tw:w-72 tw:min-w-0">
-                <Dropdown.Menu
-                  className="tw:w-full"
-                  items={layoutItems}
-                  onAction={(key) => {
-                    const layout = layoutItems.find((i) => i.id === key)?.id;
-                    if (layout) {
-                      handleLayoutChange(layout);
-                    }
-                  }}
-                >
-                  {(item) => (
-                    <Dropdown.Item id={item.id} label={item.label ?? ''} />
-                  )}
-                </Dropdown.Menu>
-              </Dropdown.Popover>
-            </Dropdown.Root>
-          </div>
+                {(item) => (
+                  <Dropdown.Item id={item.id} label={item.label ?? ''} />
+                )}
+              </Dropdown.Menu>
+            </Dropdown.Popover>
+          </Dropdown.Root>
         </div>
         <div className="tw:flex tw:flex-col tw:gap-3 tw:py-4">
           <Toggle
