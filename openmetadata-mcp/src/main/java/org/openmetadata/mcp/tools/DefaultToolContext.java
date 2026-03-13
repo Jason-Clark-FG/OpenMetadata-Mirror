@@ -68,7 +68,7 @@ public class DefaultToolContext {
           result = new TestDefinitionsTool().execute(authorizer, securityContext, params);
           break;
         case "create_test_case":
-          result = new CreateTestCaseTool().execute(authorizer, securityContext, params);
+          result = new CreateTestCaseTool().execute(authorizer, limits, securityContext, params);
           break;
         case "root_cause_analysis":
           result = new RootCauseAnalysisTool().execute(authorizer, securityContext, params);
