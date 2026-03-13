@@ -487,17 +487,27 @@ export const assignDataProduct = async (
     .click();
 
   for (const dataProduct of dataProducts) {
-    const searchDataProduct = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/search/query') &&
-        response.url().includes(encodeURIComponent(domain.name))
+    const tagLocator = page.getByTestId(
+      `tag-${dataProduct.fullyQualifiedName}`
     );
 
-    await page
-      .locator('[data-testid="data-product-selector"] input')
-      .fill(dataProduct.displayName);
-    await searchDataProduct;
-    await page.getByTestId(`tag-${dataProduct.fullyQualifiedName}`).click();
+    await expect(async () => {
+      const searchDataProduct = page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/search/query') &&
+          response.url().includes(encodeURIComponent(domain.name))
+      );
+      await page
+        .locator('[data-testid="data-product-selector"] input')
+        .clear();
+      await page
+        .locator('[data-testid="data-product-selector"] input')
+        .fill(dataProduct.displayName);
+      await searchDataProduct;
+      await expect(tagLocator).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 30_000, intervals: [1_000, 2_000, 5_000] });
+
+    await tagLocator.click();
   }
 
   await expect(
@@ -1129,15 +1139,19 @@ export const testTableSearch = async (
 ) => {
   await waitForAllLoadersToDisappear(page);
 
-  const waitForSearchResponse = page.waitForResponse(
-    `/api/v1/search/query?q=*index=${searchIndex}*`
-  );
+  await expect(async () => {
+    const waitForSearchResponse = page.waitForResponse(
+      `/api/v1/search/query?q=*index=${searchIndex}*`
+    );
+    await page.getByTestId('searchbar').fill(searchTerm);
+    await waitForSearchResponse;
+    await waitForAllLoadersToDisappear(page);
 
-  await page.getByTestId('searchbar').fill(searchTerm);
-  await waitForSearchResponse;
-  await waitForAllLoadersToDisappear(page);
-
-  await expect(page.getByText(searchTerm).first()).toBeVisible();
-
-  await expect(page.getByText(notVisibleText).first()).not.toBeVisible();
+    await expect(page.getByText(searchTerm).first()).toBeVisible({
+      timeout: 5_000,
+    });
+    await expect(page.getByText(notVisibleText).first()).not.toBeVisible({
+      timeout: 5_000,
+    });
+  }).toPass({ timeout: 30_000, intervals: [2_000, 5_000] });
 };

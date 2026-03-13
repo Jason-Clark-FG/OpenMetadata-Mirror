@@ -7624,8 +7624,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     private void invalidateCachesAfterStore() {
       CACHE_WITH_ID.invalidate(new ImmutablePair<>(entityType, updated.getId()));
-      CACHE_WITH_NAME.invalidate(
-          new ImmutablePair<>(entityType, updated.getFullyQualifiedName()));
+      CACHE_WITH_NAME.invalidate(new ImmutablePair<>(entityType, updated.getFullyQualifiedName()));
       EntityRepository.this.writeThroughCache(updated, true);
       RequestEntityCache.invalidate(entityType, updated.getId(), updated.getFullyQualifiedName());
     }
