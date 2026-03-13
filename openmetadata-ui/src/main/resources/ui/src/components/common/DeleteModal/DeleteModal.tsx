@@ -18,6 +18,7 @@ import {
   FeaturedIcon,
   Modal,
   ModalOverlay,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { Trash01 } from '@untitledui/icons';
 import { useTranslation } from 'react-i18next';
@@ -50,10 +51,12 @@ export const DeleteModal = ({
                 theme="light"
               />
               <div className="tw:z-10 tw:flex tw:flex-col tw:gap-0.5 tw:mt-4">
-                <span className="tw:text-md tw:font-semibold tw:text-primary">
+                <Typography as="span" className="tw:text-md tw:font-semibold">
                   {t('label.delete')} {entityTitle}
-                </span>
-                <p className="tw:text-sm tw:text-tertiary">{message}</p>
+                </Typography>
+                <Typography as="p" className="tw:text-sm tw:text-tertiary">
+                  {message}
+                </Typography>
               </div>
             </Dialog.Header>
             <div className="tw:z-10 tw:flex tw:flex-1 tw:flex-col-reverse tw:gap-3 tw:p-4 tw:pt-6 tw:*:grow tw:sm:grid tw:sm:grid-cols-2 tw:sm:px-6 tw:sm:pt-8 tw:sm:pb-6">
