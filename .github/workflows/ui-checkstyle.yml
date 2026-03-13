@@ -100,6 +100,9 @@ jobs:
           yarn pretty
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔍 Debug: Changes detected in Linting (ESlint + Prettier + Organise Imports)"
+            git status --porcelain
+            git diff
           fi
           git checkout -- .
           git clean -fd
@@ -112,6 +115,9 @@ jobs:
           yarn license-header-fix
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔍 Debug: Changes detected in Licence Headers"
+            git status --porcelain
+            git diff
           fi
           git checkout -- .
           git clean -fd
@@ -127,6 +133,9 @@ jobs:
           yarn i18n
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔍 Debug: Changes detected in I18n sync"
+            git status --porcelain
+            git diff
           fi
           git checkout -- .
           git clean -fd
@@ -142,6 +151,9 @@ jobs:
           yarn generate:app-docs
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔍 Debug: Changes detected in App Docs"
+            git status --porcelain
+            git diff
           fi
           git checkout -- .
           git clean -fd
