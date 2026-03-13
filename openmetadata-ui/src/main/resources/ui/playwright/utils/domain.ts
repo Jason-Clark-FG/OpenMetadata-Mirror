@@ -16,11 +16,11 @@ import test, {
   Locator,
   Page,
 } from '@playwright/test';
+import { Operation } from 'fast-json-patch';
 import { get, isEmpty, isUndefined } from 'lodash';
 import { LONG_DESCRIPTION_END_TEXT } from '../constant/domain';
 import { SidebarItem } from '../constant/sidebar';
 import { PolicyClass } from '../support/access-control/PoliciesClass';
-import { TagClass } from '../support/tag/TagClass';
 import { RolesClass } from '../support/access-control/RolesClass';
 import { DataProduct } from '../support/domain/DataProduct';
 import { Domain } from '../support/domain/Domain';
@@ -30,6 +30,7 @@ import { EntityTypeEndpoint } from '../support/entity/Entity.interface';
 import { EntityClass } from '../support/entity/EntityClass';
 import { TableClass } from '../support/entity/TableClass';
 import { TopicClass } from '../support/entity/TopicClass';
+import { TagClass } from '../support/tag/TagClass';
 import { TeamClass } from '../support/team/TeamClass';
 import { UserClass } from '../support/user/UserClass';
 import {
@@ -578,7 +579,7 @@ export const addAssetsToDomain = async (
     const name = get(asset, 'entityResponseData.name');
     const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
     const entityDisplayName = get(asset, 'entityResponseData.displayName');
-    const visibleName = entityDisplayName ?? name;
+    const visibleName = entityDisplayName ?? name ?? '';
 
     const searchRes = page.waitForResponse(
       `/api/v1/search/query?q=${encodeURIComponent(
@@ -640,7 +641,7 @@ export const addServicesToDomain = async (
   await assetRes;
 
   for (const asset of assets) {
-    const name = get(asset, 'name');
+    const name = get(asset, 'name') ?? '';
     const fqn = get(asset, 'fullyQualifiedName');
 
     const searchRes = page.waitForResponse(
@@ -681,7 +682,7 @@ export const addAssetsToDataProduct = async (
   await assetRes;
 
   for (const asset of assets) {
-    const name = get(asset, 'entityResponseData.name');
+    const name = get(asset, 'entityResponseData.name') ?? '';
     const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
 
     const searchRes = page.waitForResponse(
@@ -978,7 +979,9 @@ export const verifyActiveDomainIsDefault = async (page: Page) => {
  * Creates user, policy, role, domain, data product and assigns ownership
  * Returns all created objects and a cleanup function
  */
-export const setupDomainOwnershipTest = async (apiContext: any) => {
+export const setupDomainOwnershipTest = async (
+  apiContext: APIRequestContext
+) => {
   // Create all necessary resources
   const dataConsumerUser = new UserClass();
   const id = uuid();
@@ -1402,25 +1405,18 @@ export const verifyPortCounts = async (
   expectedInputCount: number,
   expectedOutputCount: number
 ) => {
-  const inputPortsSection = page
-    .locator('[data-testid="input-output-ports-tab"]')
-    .locator('text=Input Ports')
-    .first();
-  const outputPortsSection = page
-    .locator('[data-testid="input-output-ports-tab"]')
-    .locator('text=Output Ports')
-    .first();
+  const inputOutputPortSection = page.locator(
+    '[data-testid="input-output-ports-tab"]'
+  );
 
   await expect(
-    inputPortsSection
-      .locator('..')
-      .locator('span')
+    inputOutputPortSection
+      .getByTestId('input-port-count')
       .filter({ hasText: `(${expectedInputCount})` })
   ).toBeVisible();
   await expect(
-    outputPortsSection
-      .locator('..')
-      .locator('span')
+    inputOutputPortSection
+      .getByTestId('output-port-count')
       .filter({ hasText: `(${expectedOutputCount})` })
   ).toBeVisible();
 };
@@ -1434,7 +1430,8 @@ export const addInputPortToDataProduct = async (
 ) => {
   const name = get(asset, 'entityResponseData.name');
   const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
-  const displayName = get(asset, 'entityResponseData.displayName') ?? name;
+  const displayName =
+    get(asset, 'entityResponseData.displayName') ?? name ?? '';
 
   await expect(page.getByTestId('add-input-port-button')).toBeEnabled({
     timeout: 10000,
@@ -1477,7 +1474,8 @@ export const addOutputPortToDataProduct = async (
 ) => {
   const name = get(asset, 'entityResponseData.name');
   const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
-  const displayName = get(asset, 'entityResponseData.displayName') ?? name;
+  const displayName =
+    get(asset, 'entityResponseData.displayName') ?? name ?? '';
 
   await expect(page.getByTestId('add-output-port-button')).toBeEnabled({
     timeout: 10000,
@@ -1650,12 +1648,12 @@ export const searchAndExpectEntityNotVisible = async (
  */
 export const assignDomainToEntity = async (
   apiContext: APIRequestContext,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   entity: {
     patch: (options: {
       apiContext: APIRequestContext;
-      patchData: any[];
-    }) => Promise<any>;
+      patchData: Operation[];
+    }) => Promise<void>;
   },
   domain: { responseData: { id?: string } }
 ) => {

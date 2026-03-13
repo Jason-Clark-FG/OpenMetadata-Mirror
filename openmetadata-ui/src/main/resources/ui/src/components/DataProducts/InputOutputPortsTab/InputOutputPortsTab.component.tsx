@@ -304,7 +304,8 @@ export const InputOutputPortsTab = forwardRef<
                       </Typography>
                       <Typography
                         as="span"
-                        className="tw:text-xs tw:text-gray-500">
+                        className="tw:text-xs tw:text-gray-500"
+                        data-testid="input-port-count">
                         ({inputPortsCount})
                       </Typography>
                     </div>
@@ -392,7 +393,8 @@ export const InputOutputPortsTab = forwardRef<
                       </Typography>
                       <Typography
                         as="span"
-                        className="tw:text-xs tw:text-gray-500">
+                        className="tw:text-xs tw:text-gray-500"
+                        data-testid="output-port-count">
                         ({outputPortsCount})
                       </Typography>
                     </div>
