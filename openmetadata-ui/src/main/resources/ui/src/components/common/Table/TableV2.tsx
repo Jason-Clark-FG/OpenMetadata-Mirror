@@ -527,26 +527,34 @@ const TableV2 = <T extends object>(
   return (
     <div
       className={classNames('table-container', rest.containerClassName)}
-      data-testid={dataTestId}
       ref={ref}>
       <div
         className={classNames('p-x-md', {
           'p-y-md':
             searchProps || rest.extraTableFilters || isCustomizeColumnEnable,
         })}>
-        <div className="d-flex">
-          {searchProps ? (
-            <div style={{ flex: 1 }}>
-              <Searchbar
-                {...searchProps}
-                removeMargin
-                placeholder={searchProps?.placeholder ?? t('label.search')}
-                searchValue={searchProps?.searchValue}
-                typingInterval={searchProps?.typingInterval ?? 500}
-                onSearch={handleSearchAction}
-              />
-            </div>
-          ) : null}
+        <div className="tw:flex tw:items-start tw:justify-between tw:mb-4">
+          <div className="tw:flex tw:items-center tw:gap-2">
+            {rest.title && (
+              <h5 className="tw:text-base tw:font-medium tw:m-0">
+                {(typeof rest.title === 'function'
+                  ? (rest.title as any)(pagedDataSource)
+                  : rest.title) as React.ReactNode}
+              </h5>
+            )}
+            {searchProps && (
+              <div style={{ flex: 1 }}>
+                <Searchbar
+                  {...searchProps}
+                  removeMargin
+                  placeholder={searchProps?.placeholder ?? t('label.search')}
+                  searchValue={searchProps?.searchValue}
+                  typingInterval={searchProps?.typingInterval ?? 500}
+                  onSearch={handleSearchAction}
+                />
+              </div>
+            )}
+          </div>
           {(rest.extraTableFilters || isCustomizeColumnEnable) && (
             <div
               className={classNames(
@@ -604,14 +612,7 @@ const TableV2 = <T extends object>(
         </div>
       </div>
 
-      <div
-        className="tw:relative"
-        style={{
-          ...(rest.scroll?.x ? { overflowX: 'auto' } : {}),
-          ...(rest.scroll?.y
-            ? { overflowY: 'auto', maxHeight: rest.scroll.y }
-            : {}),
-        }}>
+      <div className="tw:flex tw:flex-col tw:w-full" data-testid={dataTestId}>
         {isLoading && (
           <div className="tw:absolute tw:inset-0 tw:z-10 tw:flex tw:items-center tw:justify-center tw:bg-white/60">
             <Loader />
@@ -745,6 +746,8 @@ const TableV2 = <T extends object>(
                     <UntitledTable.Row
                       allowsDragging={Boolean(dragAndDropHooks)}
                       className={classNames(
+                        'ant-table-row',
+                        `ant-table-row-level-${depth}`,
                         'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
                         typeof rest.rowClassName === 'function'
                           ? rest.rowClassName(record, actualIndex, 0)
@@ -869,13 +872,17 @@ const TableV2 = <T extends object>(
                                   )}
                                 </div>
                               )}
-                              <div
-                                className={classNames(
-                                  'tw:flex-1',
-                                  colType.ellipsis && 'tw:truncate'
-                                )}>
-                                {resolveCellValue(colType, record, actualIndex)}
-                              </div>
+                              {colType.ellipsis ? (
+                                <div className="tw:flex-1 tw:truncate">
+                                  {resolveCellValue(
+                                    colType,
+                                    record,
+                                    actualIndex
+                                  )}
+                                </div>
+                              ) : (
+                                resolveCellValue(colType, record, actualIndex)
+                              )}
                             </div>
                           </UntitledTable.Cell>
                         );

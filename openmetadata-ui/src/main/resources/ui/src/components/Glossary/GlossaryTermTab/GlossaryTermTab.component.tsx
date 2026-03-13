@@ -1254,7 +1254,7 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
         record.fullyQualifiedName || ''
       );
 
-      return classNames({
+      return classNames('ant-table-row', {
         'glossary-nested-row': isNested || isExpanded,
       });
     },
