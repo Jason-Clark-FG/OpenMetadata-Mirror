@@ -14,33 +14,15 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.openmetadata.schema.utils.JsonUtils;
-import org.openmetadata.service.apps.AbstractNativeApplication;
 import org.openmetadata.service.apps.ApplicationContext;
 import org.openmetadata.service.security.ImpersonationContext;
 import org.openmetadata.service.security.JwtFilter;
 
 public class McpAuthFilter implements Filter {
-  private static final String MCP_APP_NAME = "McpApplication";
-  private static final String DEFAULT_MCP_BOT_NAME = MCP_APP_NAME + "Bot";
-
   private final JwtFilter jwtFilter;
-  private volatile String mcpBotName;
 
   public McpAuthFilter(JwtFilter filter) {
     this.jwtFilter = filter;
-  }
-
-  private String getMcpBotName() {
-    if (mcpBotName == null) {
-      AbstractNativeApplication mcpApp =
-          ApplicationContext.getInstance().getAppIfExists(MCP_APP_NAME);
-      if (mcpApp != null && mcpApp.getApp().getBot() != null) {
-        mcpBotName = mcpApp.getApp().getBot().getName();
-      } else {
-        mcpBotName = DEFAULT_MCP_BOT_NAME;
-      }
-    }
-    return mcpBotName;
   }
 
   @Override
@@ -63,16 +45,14 @@ public class McpAuthFilter implements Filter {
       String token = JwtFilter.extractToken(tokenWithType);
       Map<String, Claim> claims = jwtFilter.validateJwtAndGetClaims(token);
 
-      // All MCP requests are impersonated by the MCP bot — this ensures the audit trail
-      // distinguishes MCP-driven changes from direct UI changes
-      ImpersonationContext.setImpersonatedBy(getMcpBotName());
-
       checkForUsernameAndImpersonationValidation(token, claims, jwtFilter);
 
       // Continue with the filter chain
       filterChain.doFilter(servletRequest, servletResponse);
     } finally {
-      // Always clear the impersonation context after request processing
+      // Clear any impersonation context set during JWT validation on this (Jetty) thread.
+      // MCP bot impersonation is set and cleared on the Reactor boundedElastic thread
+      // inside McpServer.getTool() — that cleanup is independent of this one.
       ImpersonationContext.clear();
     }
   }

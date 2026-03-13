@@ -91,7 +91,7 @@ public class DefaultToolContext {
           .isError(false)
           .build();
     } catch (AuthorizationException ex) {
-      LOG.error("Authorization error: {}", ex.getMessage());
+      LOG.warn("Authorization error: {}", ex.getMessage());
       return McpSchema.CallToolResult.builder()
           .content(
               List.of(

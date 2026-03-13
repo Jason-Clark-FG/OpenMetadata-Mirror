@@ -70,12 +70,12 @@ public class GlossaryTermTool implements McpTool {
     glossaryTermRepository.prepare(glossaryTerm, nullOrEmpty(glossary));
     glossaryTermRepository.setFullyQualifiedName(glossaryTerm);
 
-    // Get impersonatedBy from thread-local context set by McpAuthFilter
     String impersonatedBy = ImpersonationContext.getImpersonatedBy();
 
+    String userName = securityContext.getUserPrincipal().getName();
     RestUtil.PutResponse<GlossaryTerm> response =
-        glossaryTermRepository.createOrUpdate(
-            null, glossaryTerm, securityContext.getUserPrincipal().getName(), impersonatedBy);
+        glossaryTermRepository.createOrUpdate(null, glossaryTerm, userName, impersonatedBy);
+    McpChangeEventUtil.publishChangeEvent(response.getEntity(), response.getChangeType(), userName);
     return JsonUtils.getMap(response.getEntity());
   }
 }
