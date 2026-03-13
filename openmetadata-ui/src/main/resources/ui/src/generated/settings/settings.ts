@@ -1695,10 +1695,18 @@ export interface GlobalSettings {
     /**
      * Which fields to highlight by default.
      */
-    highlightFields?:   string[];
+    highlightFields?: string[];
+    /**
+     * Weight for BM25 keyword search in hybrid RRF pipeline (0.0-1.0)
+     */
+    keywordWeight?:     number;
     maxAggregateSize?:  number;
     maxAnalyzedOffset?: number;
     maxResultHits?:     number;
+    /**
+     * Weight for semantic vector search in hybrid RRF pipeline (0.0-1.0)
+     */
+    semanticWeight?: number;
     /**
      * List of field=value term-boost rules that apply only to this asset.
      */
@@ -2110,6 +2118,10 @@ export interface NaturalLanguageSearch {
      */
     enabled?: boolean;
     /**
+     * Weight for BM25 keyword search results in hybrid RRF pipeline (0.0-1.0)
+     */
+    keywordWeight?: number;
+    /**
      * OpenAI configuration for embedding generation. Supports both OpenAI and Azure OpenAI
      * endpoints.
      */
@@ -2122,6 +2134,10 @@ export interface NaturalLanguageSearch {
      * Enable or disable semantic search using vector embeddings
      */
     semanticSearchEnabled?: boolean;
+    /**
+     * Weight for semantic vector search results in hybrid RRF pipeline (0.0-1.0)
+     */
+    semanticWeight?: number;
 }
 
 /**

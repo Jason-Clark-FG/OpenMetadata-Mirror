@@ -377,6 +377,21 @@ public class SystemResource {
       SearchSettings mergedSettings =
           searchSettingsHandler.mergeSearchSettings(defaultSearchSettings, incomingSearchSettings);
       settingName.setConfigValue(mergedSettings);
+
+      if (mergedSettings.getGlobalSettings() != null
+          && mergedSettings.getGlobalSettings().getKeywordWeight() != null
+          && mergedSettings.getGlobalSettings().getSemanticWeight() != null) {
+        try {
+          Entity.getSearchRepository()
+              .updateHybridSearchPipeline(
+                  mergedSettings.getGlobalSettings().getKeywordWeight(),
+                  mergedSettings.getGlobalSettings().getSemanticWeight());
+        } catch (Exception e) {
+          LOG.error("Failed to update hybrid search pipeline", e);
+          throw new SystemSettingsException(
+              "Failed to update hybrid search pipeline: " + e.getMessage());
+        }
+      }
     }
 
     if (GLOSSARY_TERM_RELATION_SETTINGS
@@ -389,8 +404,8 @@ public class SystemResource {
       validateGlossaryTermRelationSettingsUpdate(settingName);
     }
     Response response = systemRepository.createOrUpdate(settingName);
-    // Explicitly invalidate the cache to ensure latest settings are fetched
     SettingsCache.invalidateSettings(settingName.getConfigType().value());
+
     return response;
   }
 

@@ -1,5 +1,7 @@
 package org.openmetadata.service.migration.postgres.v200;
 
+import static org.openmetadata.service.migration.utils.v200.MigrationUtil.addTableColumnSearchSettings;
+
 import lombok.SneakyThrows;
 import org.openmetadata.service.migration.api.MigrationProcessImpl;
 import org.openmetadata.service.migration.utils.MigrationFile;
@@ -13,6 +15,6 @@ public class Migration extends MigrationProcessImpl {
   @Override
   @SneakyThrows
   public void runDataMigration() {
-    // Data migration handled by postDataMigrationSQLScript.sql
+    addTableColumnSearchSettings();
   }
 }
