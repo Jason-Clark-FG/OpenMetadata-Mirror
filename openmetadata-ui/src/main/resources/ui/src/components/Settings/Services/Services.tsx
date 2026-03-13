@@ -110,7 +110,7 @@ const Services = ({ serviceName }: ServicesProps) => {
     const mustClauses: object[] = [];
 
     if (searchTerm) {
-      const escapedTerm = searchTerm.replace(/[*?\\]/g, '\\$&');
+      const escapedTerm = searchTerm.replaceAll(/[*?\\]/g, String.raw`\$&`);
       mustClauses.push({
         bool: {
           should: [
@@ -122,7 +122,7 @@ const Services = ({ serviceName }: ServicesProps) => {
       });
     }
 
-    if (serviceTypeFilter?.length) {
+    if (serviceTypeFilter && !isEmpty(serviceTypeFilter)) {
       mustClauses.push({
         bool: {
           should: serviceTypeFilter.map((type) => ({
@@ -163,7 +163,18 @@ const Services = ({ serviceName }: ServicesProps) => {
       setIsLoading(true);
       try {
         let services = [];
-        if (!isEmpty(queryFilter)) {
+        if (isEmpty(queryFilter)) {
+          const { data, paging } = await getServices({
+            serviceName,
+            limit: pageSize,
+            after,
+            before,
+            include: deleted ? Include.Deleted : Include.NonDeleted,
+          });
+
+          services = data;
+          handlePagingChange(paging);
+        } else {
           const {
             hits: { hits, total },
           } = await searchService({
@@ -178,17 +189,6 @@ const Services = ({ serviceName }: ServicesProps) => {
             ({ _source }) => _source as DatabaseServiceSearchSource
           );
           handlePagingChange({ total: total.value });
-        } else {
-          const { data, paging } = await getServices({
-            serviceName,
-            limit: pageSize,
-            after,
-            before,
-            include: deleted ? Include.Deleted : Include.NonDeleted,
-          });
-
-          services = data;
-          handlePagingChange(paging);
         }
 
         setServiceDetails(
