@@ -135,14 +135,13 @@ public class McpServer implements McpServerProvider {
             ApplicationContext.getInstance().getAppIfExists(MCP_APP_NAME);
         if (mcpApp != null && mcpApp.getApp().getBot() != null) {
           mcpBotName = mcpApp.getApp().getBot().getName();
-        } else {
-          mcpBotName = DEFAULT_MCP_BOT_NAME;
         }
+        // Don't cache the default — if the app isn't registered yet, retry on next call
       } catch (Exception e) {
-        mcpBotName = DEFAULT_MCP_BOT_NAME;
+        // Don't cache — retry next time
       }
     }
-    return mcpBotName;
+    return mcpBotName != null ? mcpBotName : DEFAULT_MCP_BOT_NAME;
   }
 
   protected McpStatelessServerFeatures.SyncToolSpecification getTool(McpSchema.Tool tool) {

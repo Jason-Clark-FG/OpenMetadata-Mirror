@@ -49,8 +49,7 @@ class McpChangeEventUtilTest {
     assertThatNoException()
         .isThrownBy(
             () ->
-                McpChangeEventUtil.publishChangeEvent(
-                    entity, EventType.ENTITY_NO_CHANGE, "admin"));
+                McpChangeEventUtil.publishChangeEvent(entity, EventType.ENTITY_NO_CHANGE, "admin"));
     verify(entity, never()).getId();
   }
 
@@ -80,11 +79,10 @@ class McpChangeEventUtilTest {
       formatterMock
           .when(
               () ->
-                  FormatterUtil.createChangeEventForEntity("admin", EventType.ENTITY_CREATED, entity))
+                  FormatterUtil.createChangeEventForEntity(
+                      "admin", EventType.ENTITY_CREATED, entity))
           .thenReturn(changeEvent);
-      handlerMock
-          .when(() -> ChangeEventHandler.copyChangeEvent(changeEvent))
-          .thenReturn(copy);
+      handlerMock.when(() -> ChangeEventHandler.copyChangeEvent(changeEvent)).thenReturn(copy);
       jsonMock.when(() -> JsonUtils.pojoToMaskedJson(entity)).thenReturn("{}");
       jsonMock.when(() -> JsonUtils.pojoToJson(copy)).thenReturn("{\"event\":\"copy\"}");
       entityMock.when(Entity::getCollectionDAO).thenReturn(collectionDAO);

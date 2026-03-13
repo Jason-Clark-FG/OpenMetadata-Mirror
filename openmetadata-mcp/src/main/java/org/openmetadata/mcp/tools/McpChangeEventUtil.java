@@ -7,13 +7,9 @@ import org.openmetadata.schema.type.EventType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.formatter.util.FormatterUtil;
-import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
 public final class McpChangeEventUtil {
-  private static final WebsocketNotificationHandler WEBSOCKET_HANDLER =
-      new WebsocketNotificationHandler();
-
   private McpChangeEventUtil() {}
 
   public static <T extends EntityInterface> void publishChangeEvent(

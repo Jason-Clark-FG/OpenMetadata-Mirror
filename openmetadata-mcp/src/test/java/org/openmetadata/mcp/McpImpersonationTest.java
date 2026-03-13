@@ -169,6 +169,56 @@ public class McpImpersonationTest {
         .isNull();
   }
 
+  /**
+   * Verifies that getMcpBotName() falls back to DEFAULT_MCP_BOT_NAME without caching it, so that
+   * subsequent calls retry the app registry once it becomes available.
+   */
+  @Test
+  void getMcpBotName_fallsBackToDefaultWithoutCaching() {
+    JwtFilter jwtFilter = mock(JwtFilter.class);
+    CatalogSecurityContext securityContext = mock(CatalogSecurityContext.class);
+    Principal principal = mock(Principal.class);
+    when(principal.getName()).thenReturn("admin");
+    when(securityContext.getUserPrincipal()).thenReturn(principal);
+    when(jwtFilter.getCatalogSecurityContext(anyString())).thenReturn(securityContext);
+
+    AtomicReference<String> firstCall = new AtomicReference<>();
+    AtomicReference<String> secondCall = new AtomicReference<>();
+
+    DefaultToolContext toolContext = mock(DefaultToolContext.class);
+    doAnswer(
+            invocation -> {
+              if (firstCall.get() == null) {
+                firstCall.set(ImpersonationContext.getImpersonatedBy());
+              } else {
+                secondCall.set(ImpersonationContext.getImpersonatedBy());
+              }
+              return McpSchema.CallToolResult.builder()
+                  .content(List.of(new McpSchema.TextContent("{}")))
+                  .isError(false)
+                  .build();
+            })
+        .when(toolContext)
+        .callTool(any(), any(), anyString(), any(), any());
+
+    TestMcpServer server =
+        new TestMcpServer(toolContext, jwtFilter, mock(Authorizer.class), mock(Limits.class));
+    McpSchema.Tool tool = McpSchema.Tool.builder().name("test_tool").description("desc").build();
+    McpStatelessServerFeatures.SyncToolSpecification spec = server.buildToolSpec(tool);
+
+    McpTransportContext context =
+        McpTransportContext.create(Map.of("Authorization", "Bearer token"));
+    spec.callHandler().apply(context, mock(McpSchema.CallToolRequest.class));
+    spec.callHandler().apply(context, mock(McpSchema.CallToolRequest.class));
+
+    assertThat(firstCall.get())
+        .as("First call with no app registered must still fall back to McpApplicationBot")
+        .isEqualTo("McpApplicationBot");
+    assertThat(secondCall.get())
+        .as("Second call must also use McpApplicationBot (retry path works)")
+        .isEqualTo("McpApplicationBot");
+  }
+
   /** Test-only subclass of McpServer that exposes the tool spec builder for unit testing. */
   static class TestMcpServer extends McpServer {
     TestMcpServer(
