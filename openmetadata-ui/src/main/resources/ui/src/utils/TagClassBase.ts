@@ -12,7 +12,6 @@
  */
 import { isEmpty } from 'lodash';
 import React from 'react';
-import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import { CommonWidgets } from '../components/DataAssets/CommonWidgets/CommonWidgets';
 import { DomainLabelV2 } from '../components/DataAssets/DomainLabelV2/DomainLabelV2';
 import { OwnerLabelV2 } from '../components/DataAssets/OwnerLabelV2/OwnerLabelV2';
@@ -250,6 +249,12 @@ class TagClassBase {
     return null;
   };
 
+  public getRecognizerTabContent = (
+    _tagData: Tag
+  ): React.ReactElement | null => {
+    return null;
+  };
+
   public getRecognizerFeedbackPopup(
     _tagLabel: TagLabel,
     _entityFqn: string,
@@ -269,13 +274,6 @@ class TagClassBase {
       TabSpecificField.TERM_COUNT,
       TabSpecificField.DOMAINS,
     ];
-  }
-
-  public getAdditionalTagDetailPageTabs(
-    _tag: Tag,
-    _activeTab: string
-  ): TabProps[] {
-    return [];
   }
 }
 
