@@ -41,7 +41,7 @@ public final class SearchRetryUtil {
   public static void executeWithRetry(IOOperation operation) throws IOException {
     try {
       Retry.decorateCheckedRunnable(RETRY, operation::execute).run();
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
       throw e;
     } catch (Throwable e) {
       throw new IOException(e);
