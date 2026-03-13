@@ -69,6 +69,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        ref: ${{ github.event.pull_request.head.sha }}
         with:
           fetch-depth: 0
 
