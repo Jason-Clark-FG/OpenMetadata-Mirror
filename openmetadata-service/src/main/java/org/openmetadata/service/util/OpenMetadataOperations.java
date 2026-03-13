@@ -2505,7 +2505,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
       int pageSize = 50;
 
       do {
-        ResultList<Bot> botPage =
+        org.openmetadata.schema.utils.ResultList<Bot> botPage =
             botRepository.listAfter(
                 null, botRepository.getFields("botUser"), filter, pageSize, after);
 
