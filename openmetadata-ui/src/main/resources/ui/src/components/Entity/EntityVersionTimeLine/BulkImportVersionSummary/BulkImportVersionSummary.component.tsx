@@ -12,7 +12,6 @@
  */
 import {
   Button,
-  ButtonUtility,
   Dialog,
   Modal,
   ModalOverlay,
@@ -24,7 +23,6 @@ import DataGrid from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { useTranslation } from 'react-i18next';
 import { usePapaParse } from 'react-papaparse';
-import { ReactComponent as CloseIcon } from '../../../../assets/svg/close.svg';
 import { CSVImportResult } from '../../../../generated/type/csvImportResult';
 import { renderColumnDataEditor } from '../../../../utils/CSV/CSV.utils';
 
@@ -146,34 +144,16 @@ export const BulkImportVersionSummary = ({
           onOpenChange={(open) => !open && handleClose()}>
           <Modal>
             <Dialog
-              aria-label={t('label.bulk-import-entity', {
+              showCloseButton
+              title={t('label.bulk-import-entity', {
                 entity: t('label.detail-plural'),
-              })}>
-              <div
-                className="tw:flex tw:flex-col"
-                data-testid="bulk-import-details-modal"
-                style={{
-                  width: 800,
-                  maxWidth: '100%',
-                  height: '60vh',
-                  maxHeight: 700,
-                  background: 'white',
-                  borderRadius: 12,
-                }}>
-                <div className="tw:flex tw:justify-between tw:items-center tw:p-4 tw:shrink-0">
-                  <Typography as="h4">
-                    {t('label.bulk-import-entity', {
-                      entity: t('label.detail-plural'),
-                    })}
-                  </Typography>
-                  <ButtonUtility
-                    color="tertiary"
-                    data-testid="close-modal-button"
-                    icon={<CloseIcon height={12} width={12} />}
-                    onClick={handleClose}
-                  />
-                </div>
-                <div className="tw:p-6 tw:overflow-hidden tw:flex tw:flex-col tw:flex-1">
+              })}
+              width={800}
+              onClose={handleClose}>
+              <Dialog.Content className="tw:overflow-scroll">
+                <div
+                  data-testid="bulk-import-details-modal"
+                  style={{ height: '60vh', maxHeight: 700 }}>
                   {tableData && (
                     <div className="om-rdg tw:flex-1 tw:min-h-0">
                       <DataGrid
@@ -185,7 +165,7 @@ export const BulkImportVersionSummary = ({
                     </div>
                   )}
                 </div>
-              </div>
+              </Dialog.Content>
             </Dialog>
           </Modal>
         </ModalOverlay>

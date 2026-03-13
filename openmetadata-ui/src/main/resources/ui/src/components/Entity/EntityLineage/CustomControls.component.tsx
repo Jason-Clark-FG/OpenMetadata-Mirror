@@ -15,6 +15,7 @@ import {
   Button,
   ButtonUtility,
   Dropdown,
+  Tabs,
   Tooltip,
   TooltipTrigger,
   Typography,
@@ -399,22 +400,24 @@ const CustomControls: FC<{
         </div>
         <div className="tw:flex tw:gap-4 tw:items-center">
           {isEditMode ? null : (
-            <>
-              <Button
-                color={activeTab === 'lineage' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={handleLineageClick}>
-                {t('label.lineage')}
-              </Button>
-              <Button
-                color={
-                  activeTab === 'impact_analysis' ? 'primary' : 'secondary'
+            <Tabs
+              selectedKey={activeTab}
+              onSelectionChange={(key) => {
+                if (key === 'impact_analysis') {
+                  handleImpactAnalysisClick();
+                } else {
+                  handleLineageClick();
                 }
-                size="sm"
-                onClick={handleImpactAnalysisClick}>
-                {t('label.impact-analysis')}
-              </Button>
-            </>
+              }}>
+              <Tabs.List size="sm" type="button-brand">
+                <Tabs.Item id="lineage" key="lineage">
+                  {t('label.lineage')}
+                </Tabs.Item>
+                <Tabs.Item id="impact_analysis" key="impact_analysis">
+                  {t('label.impact-analysis')}
+                </Tabs.Item>
+              </Tabs.List>
+            </Tabs>
           )}
 
           {lineageEditButton}

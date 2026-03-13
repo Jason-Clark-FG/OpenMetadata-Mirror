@@ -111,6 +111,31 @@ jest.mock('@openmetadata/ui-core-components', () => ({
         </button>
       )
     ),
+  Tabs: Object.assign(
+    jest
+      .fn()
+      .mockImplementation(({ children, onSelectionChange }) => (
+        <div
+          onClick={(e) =>
+            onSelectionChange?.((e.target as HTMLElement).dataset.tabId)
+          }>
+          {children}
+        </div>
+      )),
+    {
+      List: jest
+        .fn()
+        .mockImplementation(({ children }) => <div>{children}</div>),
+      Item: jest.fn().mockImplementation(({ children, id, onClick }) => (
+        <button data-tab-id={id} onClick={onClick}>
+          {children}
+        </button>
+      )),
+      Panel: jest
+        .fn()
+        .mockImplementation(({ children }) => <div>{children}</div>),
+    }
+  ),
 }));
 
 jest.mock('react-router-dom', () => ({
