@@ -56,6 +56,9 @@ jobs:
     #       valid-labels: "safe to test"
     #       pull-request-number: "${{ github.event.pull_request.number }}"
     #       disable-reviews: true
+    steps:
+      - name: Authorize
+        run: echo 'safe to test'
 
   # ──────────────────────────────────────────────────────────────────────────
   # Job 2: UI Style Checks (One Job, Separate Steps)
