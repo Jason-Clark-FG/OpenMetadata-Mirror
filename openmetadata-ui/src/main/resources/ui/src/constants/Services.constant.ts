@@ -461,6 +461,7 @@ export const BETA_SERVICES = [
   DatabaseServiceType.BurstIQ,
   DatabaseServiceType.StarRocks,
   DriveServiceType.SFTP,
+  DatabaseServiceType.Informix,
 ];
 
 export const TEST_CONNECTION_INITIAL_MESSAGE =

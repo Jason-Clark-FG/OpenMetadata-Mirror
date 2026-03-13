@@ -164,6 +164,8 @@ import { getSearchServiceConfig } from './SearchServiceUtils';
 import { getSecurityConfig } from './SecurityServiceUtils';
 import { getStorageConfig } from './StorageServiceUtils';
 import { customServiceComparator } from './StringsUtils';
+import { ServiceType } from '../generated/entity/services/serviceType';
+import { getSearchIndexFromService } from './ServiceUtils';
 
 class ServiceUtilClassBase {
   unSupportedServices: string[] = [
@@ -187,6 +189,7 @@ class ServiceUtilClassBase {
     PipelineServiceType.Snowplow,
     DriveServiceType.GoogleDrive,
     DriveServiceType.SharePoint,
+    DatabaseServiceType.Informix,
     DatabaseServiceType.ServiceNow,
     DatabaseServiceType.Dremio,
     MetadataServiceType.Collibra,
@@ -915,6 +918,10 @@ class ServiceUtilClassBase {
     };
 
     return widgets;
+  }
+
+  public getSearchIndexFromEntityType(entityType: EntityType | string) {
+    return getSearchIndexFromService(entityType);
   }
 
   /**

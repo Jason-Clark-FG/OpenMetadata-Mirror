@@ -162,6 +162,8 @@ export interface DatabaseConnection {
  * Microsoft Fabric Warehouse and Lakehouse Connection Config
  *
  * BurstIQ LifeGraph Database Connection Config
+ *
+ * IBM Informix Database Connection Config
  */
 export interface Connection {
     /**
@@ -253,6 +255,8 @@ export interface Connection {
      *
      * Host and port of the Microsoft Fabric SQL endpoint (e.g.,
      * your-workspace.datawarehouse.fabric.microsoft.com:1433).
+     *
+     * Host and port of the Informix service.
      */
     hostPort?: string;
     /**
@@ -387,6 +391,10 @@ export interface Connection {
      * Database of the data source. This is the name of your Fabric Warehouse or Lakehouse. This
      * is optional parameter, if you would like to restrict the metadata reading to a single
      * database. When left blank, OpenMetadata Ingestion attempts to scan all the databases.
+     *
+     * Database of the data source. This is an optional parameter, if you would like to restrict
+     * the metadata reading to a single database. If left blank, OpenMetadata ingestion attempts
+     * to scan all the databases.
      */
     database?: string;
     /**
@@ -475,6 +483,8 @@ export interface Connection {
      * Password to connect to ServiceNow.
      *
      * Password to connect to BurstIQ.
+     *
+     * Password to connect to Informix.
      */
     password?: string;
     /**
@@ -578,6 +588,9 @@ export interface Connection {
      *
      * Username to connect to BurstIQ. This user should have privileges to read all the metadata
      * in BurstIQ LifeGraph.
+     *
+     * Username to connect to Informix. This user should have privileges to read all the
+     * metadata in Informix.
      */
     username?: string;
     /**
@@ -663,8 +676,16 @@ export interface Connection {
      *
      * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
      * client certificate, and private key for mutual TLS authentication.
+     *
+     * SSL Configuration details. Provide the CA certificate to validate the Informix server
+     * certificate. Paste the PEM content directly or upload the certificate file.
      */
-    sslConfig?:                     Config;
+    sslConfig?: Config;
+    /**
+     * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+     * without certificate verification, or 'verify-ca' to validate the server certificate
+     * against the provided CA certificate.
+     */
     sslMode?:                       SSLMode;
     supportsViewLineageExtraction?: boolean;
     /**
@@ -1030,6 +1051,11 @@ export interface Connection {
      * BurstIQ Keycloak realm name (e.g., 'ems' from https://auth.burstiq.com/realms/ems).
      */
     realmName?: string;
+    /**
+     * Informix server name as defined in the sqlhosts file or INFORMIXSERVER environment
+     * variable.
+     */
+    serverName?: string;
     [property: string]: any;
 }
 
@@ -1940,6 +1966,9 @@ export enum HiveMetastoreConnectionDetailsScheme {
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
  *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
  * OpenMetadata Client configured to validate SSL certificates.
  */
 export interface Config {
@@ -1959,6 +1988,10 @@ export interface Config {
 
 /**
  * SSL Mode to connect to database.
+ *
+ * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+ * without certificate verification, or 'verify-ca' to validate the server certificate
+ * against the provided CA certificate.
  */
 export enum SSLMode {
     Allow = "allow",
@@ -2028,6 +2061,7 @@ export enum ConfigScheme {
     Ibmi = "ibmi",
     Impala = "impala",
     Impala4 = "impala4",
+    Informix = "informix",
     Mongodb = "mongodb",
     MongodbSrv = "mongodb+srv",
     MssqlPymssql = "mssql+pymssql",
@@ -2102,6 +2136,7 @@ export enum ConfigType {
     Greenplum = "Greenplum",
     Hive = "Hive",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
@@ -2228,6 +2263,7 @@ export enum DatabaseServiceType {
     Greenplum = "Greenplum",
     Hive = "Hive",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",

@@ -1374,6 +1374,7 @@ export enum DatabaseServiceType {
     Greenplum = "Greenplum",
     Hive = "Hive",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
