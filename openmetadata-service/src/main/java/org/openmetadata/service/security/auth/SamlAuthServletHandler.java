@@ -147,20 +147,27 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       Auth auth = new Auth(SamlSettingsHolder.getSaml2Settings(), wrappedRequest, wrappedResponse);
       auth.processResponse();
 
-      if (!auth.isAuthenticated()) {
-        throw new AuthenticationException("SAML authentication failed");
-      }
-
       List<String> errors = auth.getErrors();
       if (!errors.isEmpty()) {
         String errorReason = auth.getLastErrorReason();
-        LOG.error("SAML authentication errors: {}", errorReason);
-        sendError(resp, HttpServletResponse.SC_UNAUTHORIZED, errorReason);
+        LOG.error("SAML authentication errors: {} - {}", errors, errorReason);
+        sendRedirectError(resp, "SAML authentication failed: " + errorReason);
+        return;
+      }
+
+      if (!auth.isAuthenticated()) {
+        LOG.error("SAML response processed but user is not authenticated");
+        sendRedirectError(resp, "SAML authentication failed");
         return;
       }
 
       // Extract user information from SAML response
       String nameId = auth.getNameId();
+      if (nullOrEmpty(nameId)) {
+        LOG.error("SAML response missing NameID");
+        sendRedirectError(resp, "SAML response missing NameID");
+        return;
+      }
       String email = nameId;
       String username;
 
@@ -242,10 +249,12 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       }
       resp.sendRedirect(callbackUrl);
 
+    } catch (AuthenticationException e) {
+      LOG.error("SAML authentication error: {}", e.getMessage());
+      sendRedirectError(resp, e.getMessage());
     } catch (Exception e) {
       LOG.error("Error processing SAML callback", e);
-      sendError(
-          resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "SAML callback processing failed");
+      sendRedirectError(resp, "SAML callback processing failed: " + e.getMessage());
     }
   }
 
@@ -504,6 +513,16 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
   private Set<String> getAdminPrincipals() {
     AuthorizerConfiguration authorizerConfig = SecurityConfigurationManager.getCurrentAuthzConfig();
     return new HashSet<>(authorizerConfig.getAdminPrincipals());
+  }
+
+  private void sendRedirectError(HttpServletResponse resp, String message) {
+    try {
+      String encodedMessage = URLEncoder.encode(message, StandardCharsets.UTF_8);
+      resp.sendRedirect("/signin?error=" + encodedMessage);
+    } catch (IOException e) {
+      LOG.error("Error sending redirect error response", e);
+      sendError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message);
+    }
   }
 
   private void sendError(HttpServletResponse resp, int status, String message) {
