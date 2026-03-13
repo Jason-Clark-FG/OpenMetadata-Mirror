@@ -182,6 +182,8 @@ export default function EntitySummaryPanel({
       let idForPermission = id;
 
       if (isUndefined(type)) {
+        setIsPermissionLoading(false);
+
         return;
       }
 

@@ -32,7 +32,7 @@ import { useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import cryptoRandomString from 'crypto-random-string-with-promisify-polyfill';
-import { isEmpty, isEqual, isString, snakeCase } from 'lodash';
+import { isEmpty, isEqual, isString, isUndefined, snakeCase } from 'lodash';
 import {
   FC,
   FocusEvent,
@@ -1485,10 +1485,12 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           <ServiceDocPanel
             activeField={activeField}
             selectedEntity={
-              {
-                ...selectedTableData,
-                entityType: EntityTypeEnum.TABLE,
-              } as TableSearchSource
+              isUndefined(selectedTableData)
+                ? undefined
+                : ({
+                    ...selectedTableData,
+                    entityType: EntityTypeEnum.TABLE,
+                  } as TableSearchSource)
             }
             serviceName={TEST_CASE_FORM}
             serviceType={OPEN_METADATA as ServiceCategory}

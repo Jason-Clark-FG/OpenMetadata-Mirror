@@ -24,7 +24,7 @@ import {
 } from 'antd';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
-import { isArray, isEmpty, isEqual, pick } from 'lodash';
+import { isArray, isEmpty, isEqual, isUndefined, pick } from 'lodash';
 import {
   FC,
   FocusEvent,
@@ -645,10 +645,12 @@ const EditTestCaseModalV1: FC<EditTestCaseModalProps> = ({
           <ServiceDocPanel
             activeField={activeField}
             selectedEntity={
-              {
-                ...table,
-                entityType: EntityType.TABLE,
-              } as TableSearchSource
+              isUndefined(table)
+                ? undefined
+                : ({
+                    ...table,
+                    entityType: EntityType.TABLE,
+                  } as TableSearchSource)
             }
             serviceName={TEST_CASE_FORM}
             serviceType={OPEN_METADATA as ServiceCategory}
