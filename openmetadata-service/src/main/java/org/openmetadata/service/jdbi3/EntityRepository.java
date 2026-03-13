@@ -7612,16 +7612,20 @@ public abstract class EntityRepository<T extends EntityInterface> {
           updated.getId(),
           updated.getChangeDescription());
       EntityRepository.this.storeEntity(updated, true);
-      // Write-through cache after update
-      EntityRepository.this.writeThroughCache(updated, true);
-      RequestEntityCache.invalidate(entityType, updated.getId(), updated.getFullyQualifiedName());
+      invalidateCachesAfterStore();
     }
 
     private void storeNewVersionWithOptimisticLocking() {
       // Pass the original version to enable optimistic locking
       // This ensures no other process has modified the entity between read and write
       EntityRepository.this.storeEntityWithVersion(updated, true, original.getVersion());
-      // Write-through cache after update
+      invalidateCachesAfterStore();
+    }
+
+    private void invalidateCachesAfterStore() {
+      CACHE_WITH_ID.invalidate(new ImmutablePair<>(entityType, updated.getId()));
+      CACHE_WITH_NAME.invalidate(
+          new ImmutablePair<>(entityType, updated.getFullyQualifiedName()));
       EntityRepository.this.writeThroughCache(updated, true);
       RequestEntityCache.invalidate(entityType, updated.getId(), updated.getFullyQualifiedName());
     }
