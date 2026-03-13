@@ -11,13 +11,7 @@
  *  limitations under the License.
  */
 
-import {
-  Box,
-  Button,
-  IconButton,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Box, Button, IconButton, Typography, useTheme } from '@mui/material';
 import { RefreshCcw01, Trash01, UploadCloud01 } from '@untitledui/icons';
 import { useSnackbar } from 'notistack';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';

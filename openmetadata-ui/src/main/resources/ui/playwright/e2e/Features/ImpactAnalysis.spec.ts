@@ -21,9 +21,7 @@ import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
-import { waitForAllLoadersToDisappear 
-  
-} from '../../utils/entity';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   connectEdgeBetweenNodesViaAPI,
   updateLineageConfigFromModal,

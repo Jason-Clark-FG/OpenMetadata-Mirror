@@ -15,4 +15,3 @@ tabWidth: 2
 bracketSameLine: true
 htmlWhitespaceSensitivity: 'strict'
 singleQuote: true
-trailingComma: 'es5'

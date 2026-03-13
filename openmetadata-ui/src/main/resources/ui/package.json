@@ -38,7 +38,7 @@
     "playwright:codegen": "playwright codegen",
     "generate:app-docs": "node generateApplicationDocs.js",
     "generate:e2e-docs": "PLAYWRIGHT_IS_OSS=true node playwright/doc-generator/generate.js",
-    "organize-imports": "organize-imports-cli src"
+    "organize-imports": "yarn organize-imports-cli src/**/*.ts && yarn organize-imports-cli src/**/*.tsx"
   },
   "dependencies": {
     "@analytics/session-utils": "^0.1.17",
