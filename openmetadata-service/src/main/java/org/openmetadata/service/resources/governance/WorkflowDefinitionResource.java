@@ -1,7 +1,5 @@
 package org.openmetadata.service.resources.governance;
 
-import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -32,11 +30,9 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.openmetadata.schema.api.data.RestoreEntity;
 import org.openmetadata.schema.api.governance.CreateWorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
@@ -73,23 +69,6 @@ public class WorkflowDefinitionResource
   public static final String COLLECTION_PATH = "/v1/governance/workflowDefinitions/";
   static final String FIELDS = "owners";
   private final WorkflowDefinitionMapper mapper = new WorkflowDefinitionMapper();
-
-  private static final RetryConfig RETRY_CONFIG =
-      RetryConfig.custom()
-          .maxAttempts(3)
-          .waitDuration(Duration.ofMillis(200))
-          .retryOnException(WorkflowDefinitionResource::isTransientDatabaseError)
-          .build();
-  private static final Retry RETRY = Retry.of("workflow-resource", RETRY_CONFIG);
-
-  private static boolean isTransientDatabaseError(Throwable e) {
-    String msg = ExceptionUtils.getRootCauseMessage(e);
-    if (msg == null) return false;
-    String lower = msg.toLowerCase();
-    return lower.contains("deadlock")
-        || lower.contains("lock wait timeout")
-        || lower.contains("try restarting transaction");
-  }
 
   public WorkflowDefinitionResource(Authorizer authorizer, Limits limits) {
     super(Entity.WORKFLOW_DEFINITION, authorizer, limits);
