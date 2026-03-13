@@ -1721,6 +1721,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           {(column) => (
             <Table.Head
               id={column.id}
+              isRowHeader={column.id === 'columnName'}
               key={column.id}
               label={t((column as { labelKey: string }).labelKey)}
               style={{ width: COLUMN_WIDTH_PERCENT[column.id] }}
@@ -1868,9 +1869,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     }
 
     const currentDisplayName =
-      selectedCount === 1
-        ? firstRow?.editedDisplayName ?? firstRow?.displayName ?? ''
-        : '';
+      firstRow?.editedDisplayName ?? firstRow?.displayName ?? '';
     const currentDescription =
       selectedCount === 1
         ? firstRow?.editedDescription ?? firstRow?.description ?? ''
@@ -1951,9 +1950,13 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             size="sm"
             value={currentDisplayName}
             onChange={(value: string) => {
-              selectedRowsData.forEach((row) => {
-                updateRowField(row.id, 'displayName', value);
-              });
+              columnGridListing.setAllRows((prev: ColumnGridRowData[]) =>
+                prev.map((row: ColumnGridRowData) =>
+                  columnGridListing.isSelected(row.id)
+                    ? { ...row, editedDisplayName: value }
+                    : row
+                )
+              );
             }}
           />
         </div>
@@ -2098,6 +2101,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       </div>
     );
   }, [
+    columnGridListing,
     columnGridListing.allRows,
     selectedRowsData,
     selectedCount,

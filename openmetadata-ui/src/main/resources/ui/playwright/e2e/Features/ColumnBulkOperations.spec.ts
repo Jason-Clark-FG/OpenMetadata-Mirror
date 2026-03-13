@@ -732,18 +732,29 @@ test.describe(
         await checkbox.click();
       });
 
+      await test.step('Open drawer and enter a display name', async () => {
+        const editButton = page.getByTestId('edit-button');
+        await expect(editButton).toBeEnabled();
+        await editButton.click();
+
+        const drawer = page.getByTestId('column-bulk-operations-form-drawer');
+        await expect(drawer).toBeVisible();
+
+        const displayNameInput = drawer
+          .getByTestId('display-name-input')
+          .locator('input');
+        await displayNameInput.fill('Temporary Display Name');
+        await expect(displayNameInput).toHaveValue('Temporary Display Name');
+      });
+
       await test.step('Close drawer without saving', async () => {
-        await page.keyboard.press('Escape');
+        await page.getByTestId('cancel-btn').click();
         await expect(
           page.getByTestId('column-bulk-operations-form-drawer')
         ).not.toBeVisible();
       });
 
       await test.step('Reopen drawer and verify changes were discarded', async () => {
-        const checkbox = getColumnRowCheckbox(page, sharedColumnName);
-        await expect(checkbox).toBeVisible();
-        await checkbox.click();
-
         const editButton = page.getByTestId('edit-button');
         await expect(editButton).toBeEnabled();
         await editButton.click();
