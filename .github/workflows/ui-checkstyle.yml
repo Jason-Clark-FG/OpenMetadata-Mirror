@@ -90,23 +90,12 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       # Step 3: Linting Sub-Group
       # ──────────────────────────────────────────────────────────────────────────
-      - name: Linting - Organise Import CLI
-        id: organize_imports
+      - name: Linting (ESlint + Prettier + Organise Imports)
+        id: linting
         continue-on-error: true
         working-directory: openmetadata-ui/src/main/resources/ui
         run: |
           yarn organize-imports
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "changes=true" >> "$GITHUB_OUTPUT"
-          fi
-          git checkout -- .
-          git clean -fd
-
-      - name: Linting - ESlint + Prettier
-        id: lint_pretty
-        continue-on-error: true
-        working-directory: openmetadata-ui/src/main/resources/ui
-        run: |
           yarn lint:fix
           yarn pretty
           if [ -n "$(git status --porcelain)" ]; then
@@ -169,7 +158,7 @@ jobs:
           body-includes: '### 🔍 UI Style Check Summary'
 
       - name: Create or Update Summary Comment
-        if: steps.organize_imports.outputs.changes == 'true' || steps.lint_pretty.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
+        if: steps.linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
@@ -181,15 +170,14 @@ jobs:
 
             - **UI check style**
               - **Linting**
-                - ${{ steps.lint_pretty.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier** (`yarn lint:fix && yarn pretty`)
-                - ${{ steps.organize_imports.outputs.changes == 'true' && '❌' || '✅' }} **Organise Import CLI** (`yarn organize-imports`)
+                - ${{ steps.linting.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier + Organise Imports** (`yarn organize-imports && yarn lint:fix && yarn pretty`)
                 - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header** (`yarn license-header-fix`)
               - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync** (`yarn i18n`)
               - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs** (`yarn generate:app-docs`)
           edit-mode: replace
 
       - name: Delete Summary Comment if Passed
-        if: steps.organize_imports.outputs.changes != 'true' && steps.lint_pretty.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
+        if: steps.linting.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -200,7 +188,7 @@ jobs:
             })
 
       - name: Fail if any check detected changes or failed
-        if: steps.organize_imports.outputs.changes == 'true' || steps.lint_pretty.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.organize_imports.outcome != 'success' || steps.lint_pretty.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
+        if: steps.linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.linting.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
         run: |
           echo "One or more checkstyle steps introduced changes or did not complete successfully."
           exit 1
