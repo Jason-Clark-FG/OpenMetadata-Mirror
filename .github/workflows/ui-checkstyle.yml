@@ -69,8 +69,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        ref: ${{ github.event.pull_request.head.sha }}
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Set up Node.js
