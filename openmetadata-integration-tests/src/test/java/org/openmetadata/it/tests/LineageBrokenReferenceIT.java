@@ -28,6 +28,7 @@ import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.type.EntitiesEdge;
 import org.openmetadata.schema.type.EntityLineage;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.TableConstraint;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.fluent.builders.ColumnBuilder;
 import org.openmetadata.service.Entity;
@@ -209,6 +210,46 @@ public class LineageBrokenReferenceIT {
     }
   }
 
+  /**
+   * Table A has a FOREIGN_KEY constraint referencing Table B. Delete Table B directly from the
+   * entity table via DAO, leaving an orphaned FK reference. Reindex Table A — the
+   * populateUpstreamEntityRelationshipData() path in TableIndex should handle the missing
+   * referenced table gracefully via processUpstreamConstraints catch block.
+   */
+  @Test
+  void testReindexTableWithBrokenForeignKeyReference(TestNamespace ns) throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Create the referenced table first (upstream)
+    Table referencedTable = createTable(client, ns, "brk_fk_referenced");
+
+    // Create main table with a FOREIGN_KEY constraint pointing to referencedTable
+    Table mainTable = createTableWithForeignKey(client, ns, "brk_fk_main", referencedTable);
+
+    try {
+      // Delete referencedTable directly from the entity table via DAO.
+      // This leaves the tableConstraints on mainTable pointing to a non-existent entity,
+      // creating an orphaned FK reference for populateUpstreamEntityRelationshipData.
+      Entity.getCollectionDAO().tableDAO().delete(referencedTable.getId());
+
+      // Reindex main table — processUpstreamConstraints will try to resolve the
+      // referenced table via getEntityByName. Without the fix, this would throw
+      // EntityNotFoundException. With the fix, it logs a warning and skips.
+      EntityReference mainTableRef = mainTable.getEntityReference();
+      String reindexResponse =
+          assertDoesNotThrow(
+              () -> client.search().reindexEntities(List.of(mainTableRef)),
+              "Reindexing should succeed when FK-referenced table has been deleted from entity table");
+
+      assertNotNull(reindexResponse);
+      assertEntitySearchable(client, mainTable);
+
+    } finally {
+      hardDeleteQuietly(client, mainTable);
+      hardDeleteQuietly(client, referencedTable);
+    }
+  }
+
   private Table createTable(OpenMetadataClient client, TestNamespace ns, String tableName)
       throws Exception {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
@@ -221,6 +262,32 @@ public class LineageBrokenReferenceIT {
         List.of(
             ColumnBuilder.of("id", "BIGINT").primaryKey().notNull().build(),
             ColumnBuilder.of("name", "VARCHAR").dataLength(255).build()));
+
+    return client.tables().create(createTable);
+  }
+
+  private Table createTableWithForeignKey(
+      OpenMetadataClient client, TestNamespace ns, String tableName, Table referencedTable)
+      throws Exception {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+
+    String referencedColumnFQN = referencedTable.getFullyQualifiedName() + ".id";
+    TableConstraint foreignKeyConstraint =
+        new TableConstraint()
+            .withConstraintType(TableConstraint.ConstraintType.FOREIGN_KEY)
+            .withColumns(List.of("ref_id"))
+            .withReferredColumns(List.of(referencedColumnFQN));
+
+    CreateTable createTable = new CreateTable();
+    createTable.setName(ns.prefix(tableName));
+    createTable.setDatabaseSchema(schema.getFullyQualifiedName());
+    createTable.setColumns(
+        List.of(
+            ColumnBuilder.of("id", "BIGINT").primaryKey().notNull().build(),
+            ColumnBuilder.of("ref_id", "BIGINT").build(),
+            ColumnBuilder.of("name", "VARCHAR").dataLength(255).build()));
+    createTable.setTableConstraints(List.of(foreignKeyConstraint));
 
     return client.tables().create(createTable);
   }
