@@ -15,6 +15,7 @@
 // IMPORTS
 // =============================================
 import { EditOutlined } from '@ant-design/icons';
+import { Alert } from '@openmetadata/ui-core-components';
 import {
   Button,
   Card,
@@ -116,7 +117,6 @@ import {
 } from '../../../../utils/StringsUtils';
 import { generateEntityLink } from '../../../../utils/TableUtils';
 import { showSuccessToast } from '../../../../utils/ToastUtils';
-import AlertBar from '../../../AlertBar/AlertBar';
 import { AsyncSelect } from '../../../common/AsyncSelect/AsyncSelect';
 import SelectionCardGroup from '../../../common/SelectionCardGroup/SelectionCardGroup';
 import { SelectionOption } from '../../../common/SelectionCardGroup/SelectionCardGroup.interface';
@@ -1061,12 +1061,13 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
       {/* Floating Error Alert - always visible at top */}
       {errorMessage && (
         <div className="floating-error-alert">
-          <AlertBar
-            defaultExpand
-            className="test-case-form-alert custom-alert-description"
-            message={errorMessage}
-            type="error"
-          />
+          <Alert
+            closable
+            title={t('label.error')}
+            variant="error"
+            onClose={() => setErrorMessage('')}>
+            {errorMessage}
+          </Alert>
         </div>
       )}
 
@@ -1323,22 +1324,17 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
 
         {shouldShowScheduler && (
           <Row gutter={[20, 20]}>
-            <Col span={24}>
-              <AlertBar
-                defaultExpand
-                className="test-case-form-alert custom-alert-description"
-                message={
-                  <Transi18next
-                    i18nKey="message.entity-pipeline-information"
-                    renderElement={<strong />}
-                    values={{
-                      entity: t('label.test-case-lowercase'),
-                      type: t('label.table-lowercase'),
-                    }}
-                  />
-                }
-                type="grey-info"
-              />
+            <Col className="m-l-md m-r-md">
+              <Alert closable title="" variant="gray">
+                <Transi18next
+                  i18nKey="message.entity-pipeline-information"
+                  renderElement={<strong />}
+                  values={{
+                    entity: t('label.test-case-lowercase'),
+                    type: t('label.table-lowercase'),
+                  }}
+                />
+              </Alert>
             </Col>
 
             <Col span={24}>

@@ -306,11 +306,20 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock AlertBar component
-jest.mock('../../../AlertBar/AlertBar', () => ({
-  __esModule: true,
-  default: ({ message }: { message: string }) => (
-    <div role="alert">{message}</div>
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Alert: ({
+    title,
+    children,
+    ...props
+  }: {
+    title: string;
+    children?: React.ReactNode;
+    [key: string]: unknown;
+  }) => (
+    <div data-testid="core-alert" role="alert" {...props}>
+      <span>{title}</span>
+      {children}
+    </div>
   ),
 }));
 
