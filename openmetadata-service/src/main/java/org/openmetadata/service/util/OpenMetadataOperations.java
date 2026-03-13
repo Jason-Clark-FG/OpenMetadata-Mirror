@@ -2499,54 +2499,50 @@ public class OpenMetadataOperations implements Callable<Integer> {
       BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
       UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
 
+      List<Bot> bots =
+          botRepository.listAll(
+              botRepository.getFields("botUser"), new ListFilter(Include.NON_DELETED));
+
       List<List<String>> rows = new ArrayList<>();
-      ListFilter filter = new ListFilter(Include.NON_DELETED);
-      String after = null;
-      int pageSize = 50;
 
-      do {
-        org.openmetadata.schema.utils.ResultList<Bot> botPage =
-            botRepository.listAfter(
-                null, botRepository.getFields("botUser"), filter, pageSize, after);
+      for (Bot listedBot : bots) {
+        String botName = listedBot.getName();
+        try {
+          // Fetch individually so that setFields populates the botUser relationship
+          Bot bot = botRepository.getByName(null, botName, botRepository.getFields("botUser"));
 
-        for (Bot bot : botPage.getData()) {
-          String botName = bot.getName();
-          try {
-            if (bot.getBotUser() == null) {
-              rows.add(Arrays.asList(botName, "SKIPPED", "No bot user associated"));
-              continue;
-            }
-
-            User botUser =
-                userRepository.getByName(
-                    null,
-                    bot.getBotUser().getFullyQualifiedName(),
-                    new EntityUtil.Fields(Set.of("authenticationMechanism", "roles")));
-
-            if (botUser.getAuthenticationMechanism() == null
-                || botUser.getAuthenticationMechanism().getAuthType()
-                    != AuthenticationMechanism.AuthType.JWT) {
-              rows.add(Arrays.asList(botName, "SKIPPED", "Not using JWT authentication"));
-              continue;
-            }
-
-            JWTAuthMechanism newJwtAuth =
-                JWTTokenGenerator.getInstance().generateJWTToken(botUser, expiry);
-            botUser.setAuthenticationMechanism(
-                new AuthenticationMechanism()
-                    .withAuthType(AuthenticationMechanism.AuthType.JWT)
-                    .withConfig(newJwtAuth));
-            UserUtil.addOrUpdateUser(botUser);
-
-            rows.add(Arrays.asList(botName, "SUCCESS", "Token regenerated"));
-          } catch (Exception e) {
-            LOG.error("Failed to regenerate token for bot: {}", botName, e);
-            rows.add(Arrays.asList(botName, "FAILED", e.getMessage()));
+          if (bot.getBotUser() == null) {
+            rows.add(Arrays.asList(botName, "SKIPPED", "No bot user associated"));
+            continue;
           }
-        }
 
-        after = botPage.getPaging() != null ? botPage.getPaging().getAfter() : null;
-      } while (after != null);
+          User botUser =
+              userRepository.getByName(
+                  null,
+                  bot.getBotUser().getFullyQualifiedName(),
+                  new EntityUtil.Fields(Set.of("authenticationMechanism", "roles")));
+
+          if (botUser.getAuthenticationMechanism() == null
+              || botUser.getAuthenticationMechanism().getAuthType()
+                  != AuthenticationMechanism.AuthType.JWT) {
+            rows.add(Arrays.asList(botName, "SKIPPED", "Not using JWT authentication"));
+            continue;
+          }
+
+          JWTAuthMechanism newJwtAuth =
+              JWTTokenGenerator.getInstance().generateJWTToken(botUser, expiry);
+          botUser.setAuthenticationMechanism(
+              new AuthenticationMechanism()
+                  .withAuthType(AuthenticationMechanism.AuthType.JWT)
+                  .withConfig(newJwtAuth));
+          UserUtil.addOrUpdateUser(botUser);
+
+          rows.add(Arrays.asList(botName, "SUCCESS", "Token regenerated"));
+        } catch (Exception e) {
+          LOG.error("Failed to regenerate token for bot: {}", botName, e);
+          rows.add(Arrays.asList(botName, "FAILED", e.getMessage()));
+        }
+      }
 
       printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
       return 0;
