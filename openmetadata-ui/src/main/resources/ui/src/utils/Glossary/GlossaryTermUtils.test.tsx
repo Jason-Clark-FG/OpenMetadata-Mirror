@@ -232,7 +232,7 @@ describe('getGlossaryTermDetailPageTabs', () => {
       expect(childProps.hasEditAccess).toBe(true);
     });
 
-    it('hasEditAccess is false when isVersionView is true', () => {
+    it('hasEditAccess is false when EditAll and EditCustomFields are both false', () => {
       const tabs = getGlossaryTermDetailPageTabs({
         ...mockProps,
         isVersionView: false,
