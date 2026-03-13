@@ -57,6 +57,7 @@ import org.openmetadata.schema.api.configuration.OpenMetadataBaseUrlConfiguratio
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.auth.JWTTokenExpiry;
 import org.openmetadata.schema.configuration.SecurityConfiguration;
 import org.openmetadata.schema.email.SmtpSettings;
 import org.openmetadata.schema.entity.Bot;
@@ -80,6 +81,7 @@ import org.openmetadata.schema.system.EventPublisherJob;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.sdk.PipelineServiceClientInterface;
 import org.openmetadata.search.IndexMapping;
 import org.openmetadata.search.IndexMappingLoader;
@@ -174,7 +176,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
             + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
             + "'dbServiceCleanup', 'relationshipCleanup', 'tagUsageCleanup', 'drop-indexes', 'remove-security-config', 'create-indexes', "
             + "'setOpenMetadataUrl', 'configureEmailSettings', 'get-security-config', 'update-security-config', 'install-app', 'delete-app', 'create-user', 'reset-password', "
-            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history'");
+            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens'");
     LOG.info(
         "Use 'reindex --auto-tune' for automatic performance optimization based on cluster capabilities");
     LOG.info(
@@ -2456,6 +2458,85 @@ public class OpenMetadataOperations implements Callable<Integer> {
       return 0;
     } catch (Exception e) {
       LOG.error("Failed to analyze tables due to ", e);
+      return 1;
+    }
+  }
+
+  @Command(
+      name = "regenerate-bot-tokens",
+      description =
+          "Regenerates JWT tokens for all bot users. "
+              + "Use this after rotating JWT signing keys or changing the cluster name.")
+  public Integer regenerateBotTokens() {
+    try {
+      parseConfig();
+      initializeCollectionRegistry();
+      SettingsCache.initialize(config);
+      initializeSecurityConfig();
+
+      JWTTokenGenerator.getInstance()
+          .init(
+              SecurityConfigurationManager.getInstance()
+                  .getCurrentAuthConfig()
+                  .getTokenValidationAlgorithm(),
+              config.getJwtTokenConfiguration());
+
+      BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
+      UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
+
+      List<List<String>> rows = new ArrayList<>();
+      ListFilter filter = new ListFilter(Include.NON_DELETED);
+      String after = null;
+      int pageSize = 50;
+
+      do {
+        ResultList<Bot> botPage =
+            botRepository.listAfter(
+                null, botRepository.getFields("botUser"), filter, pageSize, after);
+
+        for (Bot bot : botPage.getData()) {
+          String botName = bot.getName();
+          try {
+            if (bot.getBotUser() == null) {
+              rows.add(Arrays.asList(botName, "SKIPPED", "No bot user associated"));
+              continue;
+            }
+
+            User botUser =
+                userRepository.getByName(
+                    null,
+                    bot.getBotUser().getFullyQualifiedName(),
+                    new EntityUtil.Fields(Set.of("authenticationMechanism", "roles")));
+
+            if (botUser.getAuthenticationMechanism() == null
+                || botUser.getAuthenticationMechanism().getAuthType()
+                    != AuthenticationMechanism.AuthType.JWT) {
+              rows.add(Arrays.asList(botName, "SKIPPED", "Not using JWT authentication"));
+              continue;
+            }
+
+            JWTAuthMechanism newJwtAuth =
+                JWTTokenGenerator.getInstance().generateJWTToken(botUser, JWTTokenExpiry.Unlimited);
+            botUser.setAuthenticationMechanism(
+                new AuthenticationMechanism()
+                    .withAuthType(AuthenticationMechanism.AuthType.JWT)
+                    .withConfig(newJwtAuth));
+            UserUtil.addOrUpdateUser(botUser);
+
+            rows.add(Arrays.asList(botName, "SUCCESS", "Token regenerated"));
+          } catch (Exception e) {
+            LOG.error("Failed to regenerate token for bot: {}", botName, e);
+            rows.add(Arrays.asList(botName, "FAILED", e.getMessage()));
+          }
+        }
+
+        after = botPage.getPaging().getAfter();
+      } while (after != null);
+
+      printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
+      return 0;
+    } catch (Exception e) {
+      LOG.error("Failed to regenerate bot tokens due to ", e);
       return 1;
     }
   }
