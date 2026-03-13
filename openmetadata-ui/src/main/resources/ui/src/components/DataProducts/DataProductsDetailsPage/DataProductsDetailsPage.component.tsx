@@ -12,6 +12,7 @@
  */
 import Icon from '@ant-design/icons';
 import { Box, useTheme } from '@mui/material';
+import { Avatar } from '@openmetadata/ui-core-components';
 import { Button, Dropdown, Tabs, Tooltip, Typography } from 'antd';
 import ButtonGroup from 'antd/lib/button/button-group';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
@@ -83,6 +84,7 @@ import {
   getEntityVoteStatus,
 } from '../../../utils/EntityUtils';
 import { getEntityVersionByField } from '../../../utils/EntityVersionUtils';
+import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { showNotistackError } from '../../../utils/NotistackUtils';
 import {
   DEFAULT_ENTITY_PERMISSION,
@@ -98,7 +100,6 @@ import { useRequiredParams } from '../../../utils/useRequiredParams';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
 import { useBreadcrumbs } from '../../common/atoms/navigation/useBreadcrumbs';
 import { CoverImage } from '../../common/CoverImage/CoverImage.component';
-import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 import AnnouncementCard from '../../common/EntityPageInfos/AnnouncementCard/AnnouncementCard';
 import AnnouncementDrawer from '../../common/EntityPageInfos/AnnouncementDrawer/AnnouncementDrawer';
 import { AlignRightIconButton } from '../../common/IconButtons/EditIconButton';
@@ -619,19 +620,9 @@ const DataProductsDetailsPage = ({
 
   const iconData = useMemo(() => {
     return (
-      <EntityAvatar
-        entity={{
-          ...dataProduct,
-          entityType: 'dataProduct',
-        }}
-        size={91}
-        sx={{
-          borderRadius: '5px',
-          border: '2px solid',
-          borderColor: theme.palette.allShades.white,
-          marginTop: '-25px',
-          marginRight: 2,
-        }}
+      <Avatar
+        size="2xl"
+        {...getEntityAvatarProps({ ...dataProduct, entityType: 'dataProduct' })}
       />
     );
   }, [dataProduct, theme]);
@@ -680,8 +671,7 @@ const DataProductsDetailsPage = ({
           icon={icon ? <Icon component={icon} /> : null}
           onClick={() => {
             handleTabChange(EntityTabs.CONTRACT);
-          }}
-        >
+          }}>
           {t(`label.entity-${toLower(dataContract.latestResult.status)}`, {
             entity: t('label.contract'),
           })}
@@ -719,8 +709,7 @@ const DataProductsDetailsPage = ({
           display: 'flex',
           flexDirection: 'column',
           gap: 1.5,
-        }}
-      >
+        }}>
         <CoverImage
           imageUrl={
             (dataProduct.style as Style & { coverImage?: { url?: string } })
@@ -767,14 +756,12 @@ const DataProductsDetailsPage = ({
                 justifyContent: 'flex-end',
                 alignItems: 'center',
                 pb: '4px',
-              }}
-            >
+              }}>
               {!isVersionsView && dataProductPermission.Create && (
                 <Button
                   data-testid="data-product-details-add-button"
                   type="primary"
-                  onClick={openAssetDrawer}
-                >
+                  onClick={openAssetDrawer}>
                   {t('label.add-entity', {
                     entity: t('label.asset-plural'),
                   })}
@@ -800,21 +787,18 @@ const DataProductsDetailsPage = ({
                           ? 'exit-version-history'
                           : 'version-plural-history'
                       }`
-                    )}
-                  >
+                    )}>
                     <Button
                       className={classNames('', {
                         'text-primary border-primary': version,
                       })}
                       data-testid="version-button"
                       icon={<Icon component={VersionIcon} />}
-                      onClick={handleVersionClick}
-                    >
+                      onClick={handleVersionClick}>
                       <Typography.Text
                         className={classNames('', {
                           'text-primary': version,
-                        })}
-                      >
+                        })}>
                         {toString(dataProduct.version)}
                       </Typography.Text>
                     </Button>
@@ -833,14 +817,12 @@ const DataProductsDetailsPage = ({
                     overlayStyle={{ width: '350px' }}
                     placement="bottomRight"
                     trigger={['click']}
-                    onOpenChange={setShowActions}
-                  >
+                    onOpenChange={setShowActions}>
                     <Tooltip
                       placement="topRight"
                       title={t('label.manage-entity', {
                         entity: t('label.data-product'),
-                      })}
-                    >
+                      })}>
                       <Button
                         className="domain-manage-dropdown-button tw-px-1.5"
                         data-testid="manage-button"
@@ -873,12 +855,10 @@ const DataProductsDetailsPage = ({
           isVersionView={isVersionsView}
           permissions={dataProductPermission}
           type={EntityType.DATA_PRODUCT}
-          onUpdate={onUpdate}
-        >
+          onUpdate={onUpdate}>
           <Box
             className="data-product-details-page-tabs"
-            sx={{ width: '100%' }}
-          >
+            sx={{ width: '100%' }}>
             <Box sx={{ padding: 5 }}>
               <Tabs
                 destroyInactiveTabPane

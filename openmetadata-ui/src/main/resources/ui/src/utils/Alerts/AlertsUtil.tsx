@@ -87,8 +87,8 @@ import {
   InputType,
   SubscriptionCategory,
   SubscriptionType,
+  Type,
   Webhook,
-  WebhookAuthType,
 } from '../../generated/events/eventSubscription';
 import { Status as DestinationStatus } from '../../generated/events/testDestinationStatus';
 import { TestCaseStatus } from '../../generated/tests/testCase';
@@ -457,15 +457,15 @@ export const getDestinationConfigField = (
                           options={[
                             {
                               label: t('label.no-authentication'),
-                              value: WebhookAuthType.None,
+                              value: Type.None,
                             },
                             {
                               label: t('label.bearer-hmac-signature'),
-                              value: WebhookAuthType.Bearer,
+                              value: Type.Bearer,
                             },
                             {
                               label: t('label.oauth2-client-credential-plural'),
-                              value: WebhookAuthType.OAuth2,
+                              value: Type.Oauth2,
                             },
                           ]}
                           placeholder={t('label.authentication-type')}
@@ -493,7 +493,7 @@ export const getDestinationConfigField = (
                           'type',
                         ]);
 
-                        if (selectedAuthType === WebhookAuthType.Bearer) {
+                        if (selectedAuthType === Type.Bearer) {
                           return (
                             <Col data-testid="secret-key" span={24}>
                               <Form.Item
@@ -529,7 +529,7 @@ export const getDestinationConfigField = (
                           );
                         }
 
-                        if (selectedAuthType === WebhookAuthType.OAuth2) {
+                        if (selectedAuthType === Type.Oauth2) {
                           return (
                             <>
                               <Col span={24}>
