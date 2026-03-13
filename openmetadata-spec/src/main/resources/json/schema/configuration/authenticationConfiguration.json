@@ -134,7 +134,7 @@
       "default": false
     }
   },
-  "required": ["provider", "providerName", "jwtPrincipalClaims"],
+  "required": ["provider", "providerName"],
   "allOf": [
     {
       "if": {

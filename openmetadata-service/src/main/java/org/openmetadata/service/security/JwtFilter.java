@@ -136,9 +136,14 @@ public class JwtFilter implements ContainerRequestFilter {
     }
     this.jwkProvider = new MultiUrlJwkProvider(publicKeyUrlsBuilder.build());
 
-    this.principalDomain = authorizerConfiguration.getPrincipalDomain();
+    this.principalDomain =
+        SecurityUtil.resolvePrincipalDomain(
+            authorizerConfiguration.getPrincipalDomain(),
+            authorizerConfiguration.getAllowedEmailDomains(),
+            authorizerConfiguration.getAllowedDomains());
     this.allowedDomains = authorizerConfiguration.getAllowedDomains();
-    this.enforcePrincipalDomain = authorizerConfiguration.getEnforcePrincipalDomain();
+    this.enforcePrincipalDomain =
+        Boolean.TRUE.equals(authorizerConfiguration.getEnforcePrincipalDomain());
     this.useRolesFromProvider = authorizerConfiguration.getUseRolesFromProvider();
     this.tokenValidationAlgorithm = authenticationConfiguration.getTokenValidationAlgorithm();
 

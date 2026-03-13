@@ -22,7 +22,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import IconAuth0 from '../../assets/img/icon-auth0.svg';
 import IconCognito from '../../assets/img/icon-aws-cognito.png';
 import IconAzure from '../../assets/img/icon-azure.png';
@@ -49,9 +49,10 @@ const SignInPage = () => {
   const hasTriggeredAutoRedirect = useRef(false);
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { authConfig, isAuthenticated } = useApplicationStore();
   const { onLoginHandler } = useAuthProvider();
-  const { alert, resetAlert } = useAlertStore();
+  const { alert, addAlert, resetAlert } = useAlertStore();
 
   const { t } = useTranslation();
 
@@ -161,6 +162,15 @@ const SignInPage = () => {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    const loginError = searchParams.get('loginError');
+    if (loginError) {
+      addAlert({ message: loginError, type: 'error' });
+      searchParams.delete('loginError');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams]);
+
   if (!authConfig) {
     return <Loader fullScreen />;
   }
@@ -201,8 +211,7 @@ const SignInPage = () => {
         <div
           className={classNames('login-box', {
             'sso-container': !isAuthProviderBasic,
-          })}
-        >
+          })}>
           <BrandImage isMonoGram height="auto" width={50} />
           <Typography.Title className="header-text display-sm" level={3}>
             {t('label.welcome-to')} {brandName}
@@ -224,8 +233,7 @@ const SignInPage = () => {
                 form={form}
                 layout="vertical"
                 validateMessages={VALIDATION_MESSAGES}
-                onFinish={handleSubmit}
-              >
+                onFinish={handleSubmit}>
                 <Form.Item
                   data-testid="email"
                   label={t('label.email')}
@@ -239,8 +247,7 @@ const SignInPage = () => {
                         fieldText: t('label.email'),
                       }),
                     },
-                  ]}
-                >
+                  ]}>
                   <Input
                     autoFocus
                     className="input-field"
@@ -257,15 +264,13 @@ const SignInPage = () => {
                       <Typography.Link
                         className="forgot-password-link"
                         data-testid="forgot-password"
-                        onClick={onClickForgotPassword}
-                      >
+                        onClick={onClickForgotPassword}>
                         {t('label.forgot-password')}
                       </Typography.Link>
                     </>
                   }
                   name="password"
-                  rules={[{ required: true }]}
-                >
+                  rules={[{ required: true }]}>
                   <Input.Password
                     autoComplete="off"
                     className="input-field"
@@ -281,8 +286,7 @@ const SignInPage = () => {
                   htmlType="submit"
                   loading={loading}
                   size="large"
-                  type="primary"
-                >
+                  type="primary">
                   {t('label.sign-in')}
                 </Button>
               </Form>
@@ -297,8 +301,7 @@ const SignInPage = () => {
                         className="link-btn"
                         data-testid="signup"
                         type="link"
-                        onClick={onClickSignUp}
-                      >
+                        onClick={onClickSignUp}>
                         {t('label.create-entity', {
                           entity: t('label.account'),
                         })}

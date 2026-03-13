@@ -96,6 +96,20 @@ public final class SecurityUtil {
     return CommonUtil.nullOrEmpty(principalDomain) ? DEFAULT_PRINCIPAL_DOMAIN : principalDomain;
   }
 
+  public static String resolvePrincipalDomain(
+      String principalDomain, Set<String> allowedEmailDomains, Set<String> allowedDomains) {
+    if (!nullOrEmpty(principalDomain)) {
+      return principalDomain;
+    }
+    if (allowedEmailDomains != null && !allowedEmailDomains.isEmpty()) {
+      return allowedEmailDomains.iterator().next();
+    }
+    if (allowedDomains != null && !allowedDomains.isEmpty()) {
+      return allowedDomains.iterator().next();
+    }
+    return null;
+  }
+
   public static Invocation.Builder addHeaders(WebTarget target, Map<String, String> headers) {
     if (headers != null) {
       return target
@@ -153,15 +167,27 @@ public final class SecurityUtil {
       }
     } else {
       String jwtClaim = getFirstMatchJwtClaim(jwtPrincipalClaimsOrder, claims);
-      email =
-          jwtClaim.contains("@")
-              ? jwtClaim
-              : String.format("%s@%s", jwtClaim, defaulPrincipalClaim);
+      if (jwtClaim.contains("@")) {
+        email = jwtClaim;
+      } else if (!nullOrEmpty(defaulPrincipalClaim)) {
+        email = String.format("%s@%s", jwtClaim, defaulPrincipalClaim);
+      } else {
+        throw new AuthenticationException(
+            String.format(
+                "JWT claim value '%s' is not an email address and no domain is configured. "
+                    + "Configure 'emailClaim' for direct email resolution, "
+                    + "or set 'allowedEmailDomains' / 'principalDomain' for domain construction.",
+                jwtClaim));
+      }
     }
     return email.toLowerCase();
   }
 
   public static String extractEmailFromClaim(Map<String, ?> claims, String emailClaim) {
+    if (nullOrEmpty(emailClaim)) {
+      throw new AuthenticationException("Authentication failed: emailClaim is not configured");
+    }
+
     Object claimValue = claims.get(emailClaim);
     String claimString = getClaimOrObject(claimValue);
 
@@ -182,13 +208,19 @@ public final class SecurityUtil {
 
   public static String extractDisplayNameFromClaim(
       Map<String, ?> claims, String displayNameClaim, String email) {
-    Object claimValue = claims.get(displayNameClaim);
-    if (claimValue != null) {
-      claimValue = getClaimOrObject(claimValue);
+    if (!nullOrEmpty(displayNameClaim)) {
+      Object claimValue = claims.get(displayNameClaim);
+      if (claimValue != null) {
+        String value = getClaimOrObject(claimValue);
+        if (!nullOrEmpty(value)) {
+          return value.trim();
+        }
+      }
     }
 
-    if (claimValue != null && !claimValue.toString().trim().isEmpty()) {
-      return claimValue.toString().trim();
+    String fromStandardClaims = extractDisplayNameFromClaims(claims);
+    if (fromStandardClaims != null) {
+      return fromStandardClaims;
     }
 
     return email.split("@")[0];
@@ -362,7 +394,7 @@ public final class SecurityUtil {
       Map<String, Claim> claims,
       String principalDomain,
       Set<String> allowedDomains,
-      boolean enforcePrincipalDomain) {
+      Boolean enforcePrincipalDomain) {
     String domain = StringUtils.EMPTY;
 
     if (!nullOrEmpty(jwtPrincipalClaimsMapping) && !isBotW(claims)) {
@@ -388,7 +420,7 @@ public final class SecurityUtil {
       // Bots don't need to be validated
       return;
     }
-    if (enforcePrincipalDomain) {
+    if (Boolean.TRUE.equals(enforcePrincipalDomain)) {
       if (allowedDomains == null || allowedDomains.isEmpty()) {
         // Validate against the principal domain if allowed domains are not supplied
         if (!domain.equals(principalDomain)) {
@@ -445,13 +477,13 @@ public final class SecurityUtil {
       List<String> allowedEmailDomains,
       String principalDomain,
       Set<String> allowedDomains,
-      boolean enforcePrincipalDomain) {
+      Boolean enforcePrincipalDomain) {
     if (allowedEmailDomains != null && !allowedEmailDomains.isEmpty()) {
       validateEmailDomain(email, allowedEmailDomains);
       return;
     }
 
-    if (!enforcePrincipalDomain) {
+    if (!Boolean.TRUE.equals(enforcePrincipalDomain)) {
       return;
     }
 

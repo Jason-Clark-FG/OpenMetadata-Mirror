@@ -215,7 +215,11 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
             .collect(Collectors.toMap(s -> s[0], s -> s[1]));
     validatePrincipalClaimsMapping(claimsMapping);
     this.teamClaimMapping = authenticationConfiguration.getJwtTeamClaimMapping();
-    this.principalDomain = authorizerConfiguration.getPrincipalDomain();
+    this.principalDomain =
+        SecurityUtil.resolvePrincipalDomain(
+            authorizerConfiguration.getPrincipalDomain(),
+            authorizerConfiguration.getAllowedEmailDomains(),
+            authorizerConfiguration.getAllowedDomains());
     this.tokenValidity = authenticationConfiguration.getOidcConfiguration().getTokenValidity();
     this.maxAge = authenticationConfiguration.getOidcConfiguration().getMaxAge();
     this.promptType = authenticationConfiguration.getOidcConfiguration().getPrompt();
@@ -734,13 +738,11 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
   @SneakyThrows
   public static void getErrorMessage(HttpServletResponse resp, Exception e) {
-    resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-    resp.setContentType("text/html; charset=UTF-8");
     LOG.error("[Auth Callback Servlet] Failed in Auth Login : {}", e.getMessage());
-    resp.getOutputStream()
-        .println(
-            String.format(
-                "<p> [Auth Callback Servlet] Failed in Auth Login : %s </p>", e.getMessage()));
+    String errorMessage =
+        e.getMessage() != null ? e.getMessage() : "Authentication failed. Please try again.";
+    String encodedError = java.net.URLEncoder.encode(errorMessage, "UTF-8");
+    resp.sendRedirect("/signin?loginError=" + encodedError);
   }
 
   private void sendRedirectWithToken(

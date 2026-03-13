@@ -479,6 +479,17 @@ export const TEST_CONNECTION_TESTING_MESSAGE =
 export const TEST_CONNECTION_WARNING_MESSAGE =
   'message.connection-test-warning';
 
+export const DEPRECATED_SSO_PROPERTIES = [
+  'adminPrincipals',
+  'principalDomain',
+  'enforcePrincipalDomain',
+  'allowedDomains',
+  'botPrincipals',
+  'jwtPrincipalClaims',
+  'jwtPrincipalClaimsMapping',
+  'authorityUrl',
+];
+
 export const ADVANCED_PROPERTIES = [
   'connectionArguments',
   'connectionOptions',

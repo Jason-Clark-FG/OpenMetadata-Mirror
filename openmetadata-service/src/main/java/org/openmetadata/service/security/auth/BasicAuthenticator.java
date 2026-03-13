@@ -37,6 +37,7 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.SELF_SI
 import static org.openmetadata.service.exception.CatalogExceptionMessage.TOKEN_EXPIRED;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.TOKEN_EXPIRY_ERROR;
 import static org.openmetadata.service.resources.teams.UserResource.USER_PROTECTED_FIELDS;
+import static org.openmetadata.service.util.UserUtil.generateUsernameFromEmail;
 import static org.openmetadata.service.util.UserUtil.getRoleListFromUser;
 import static org.openmetadata.service.util.UserUtil.getUser;
 import static org.openmetadata.service.util.email.EmailUtil.getSmtpSettings;
@@ -80,6 +81,7 @@ import org.openmetadata.schema.auth.ServiceTokenType;
 import org.openmetadata.schema.auth.TokenRefreshRequest;
 import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.utils.EntityInterfaceUtil;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
@@ -441,7 +443,8 @@ public class BasicAuthenticator implements AuthenticatorHandler {
   }
 
   private User getUserFromRegistrationRequest(RegistrationRequest create) {
-    String username = create.getEmail().split("@")[0];
+    String username =
+        generateUsernameFromEmail(create.getEmail(), userRepository::checkUserNameExists);
     String hashedPwd =
         BCrypt.withDefaults().hashToString(HASHING_COST, create.getPassword().toCharArray());
 
@@ -454,6 +457,7 @@ public class BasicAuthenticator implements AuthenticatorHandler {
                 .withDisplayName(String.format("%s%s", create.getFirstName(), create.getLastName()))
                 .withIsBot(false)
                 .withIsAdmin(false))
+        .withFullyQualifiedName(EntityInterfaceUtil.quoteName(username))
         .withAuthenticationMechanism(
             new AuthenticationMechanism()
                 .withAuthType(AuthenticationMechanism.AuthType.BASIC)

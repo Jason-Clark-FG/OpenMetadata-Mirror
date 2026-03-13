@@ -13,6 +13,7 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.LDAP_MI
 import static org.openmetadata.service.exception.CatalogExceptionMessage.MAX_FAILED_LOGIN_ATTEMPT;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.MULTIPLE_EMAIL_ENTRIES;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.PASSWORD_RESET_TOKEN_EXPIRED;
+import static org.openmetadata.service.util.UserUtil.generateUsernameFromEmail;
 import static org.openmetadata.service.util.UserUtil.getRoleListFromUser;
 import static org.openmetadata.service.util.UserUtil.isAdminEmail;
 
@@ -433,7 +434,8 @@ public class LdapAuthenticator implements AuthenticatorHandler {
   }
 
   private User getUserForLdap(String email) {
-    String userName = email.split("@")[0];
+    String userName =
+        generateUsernameFromEmail(email, Entity.getUserRepository()::checkUserNameExists);
     return UserUtil.getUser(
             userName, new CreateUser().withName(userName).withEmail(email).withIsBot(false))
         .withIsEmailVerified(false)

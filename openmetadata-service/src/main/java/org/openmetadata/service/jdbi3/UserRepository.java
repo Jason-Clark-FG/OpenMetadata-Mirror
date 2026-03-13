@@ -591,23 +591,24 @@ public class UserRepository extends EntityRepository<User> {
     } catch (EntityNotFoundException e) {
       boolean existByName = checkUserNameExists(username);
       boolean existByEmail = checkEmailAlreadyExists(email);
-      if (existByName && !existByEmail) {
+      if (existByEmail) {
+        User userByEmail = getByEmail(uriInfo, email, fields);
+        if (!userByEmail.getName().equals(username)) {
+          LOG.debug(
+              "Username mismatch for email '{}': JWT-derived='{}', DB-actual='{}'. "
+                  + "Resolving by email (authoritative identifier).",
+              email,
+              username,
+              userByEmail.getName());
+        }
+        return userByEmail;
+      } else if (existByName) {
         User userByName = getByName(uriInfo, username, Fields.EMPTY_FIELDS);
         LOG.error(
             "User with given name exists but is not associated with the provided email. "
                 + "Matching User Found By Name [username:email] : [{}:{}], Provided User: [{}:{}]",
             userByName.getName().toLowerCase(),
             userByName.getEmail().toLowerCase(),
-            username,
-            email);
-        throw BadRequestException.of("Account already exists. Please contact administrator.");
-      } else if (!existByName && existByEmail) {
-        User userByEmail = getByEmail(uriInfo, email, Fields.EMPTY_FIELDS);
-        LOG.error(
-            "User with given email exists but is not associated with provider username. "
-                + "Matching User Found By Email [username:email] : [{}:{}], Provided User: [{}:{}]",
-            userByEmail.getName().toLowerCase(),
-            userByEmail.getEmail().toLowerCase(),
             username,
             email);
         throw BadRequestException.of("Account already exists. Please contact administrator.");

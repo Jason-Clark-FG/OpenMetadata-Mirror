@@ -54,13 +54,14 @@
     },
     "botPrincipals": {
       "title": "Bot Principals",
-      "description": "**@Deprecated** List of unique bot principals",
+      "description": "[DEPRECATED] List of unique bot principals.",
       "type": "array",
       "items": {
         "type": "string"
       },
       "uniqueItems": true,
-      "default": null
+      "default": null,
+      "deprecated": true
     },
     "testPrincipals": {
       "title": "Test Principals",
@@ -88,17 +89,19 @@
     },
     "allowedDomains": {
       "title": "Allowed Domains",
-      "description": "Allowed Domains to access",
+      "description": "[DEPRECATED: Use 'allowedEmailDomains' instead] Allowed Domains to access.",
       "type": "array",
       "items": {
         "type": "string"
       },
-      "uniqueItems": true
+      "uniqueItems": true,
+      "deprecated": true
     },
     "enforcePrincipalDomain": {
       "title": "Enable Enforce Principal Domain",
-      "description": "Enable Enforce Principal Domain",
-      "type": "boolean"
+      "description": "[DEPRECATED: Use 'allowedEmailDomains' instead] Enable Enforce Principal Domain.",
+      "type": "boolean",
+      "deprecated": true
     },
     "enableSecureSocketConnection": {
       "title": "Enable Secure Socket Connection.",
@@ -112,6 +115,6 @@
       "default": false
     }
   },
-  "required": ["className", "containerRequestFilter", "adminPrincipals", "principalDomain", "enforcePrincipalDomain", "enableSecureSocketConnection"],
+  "required": ["className", "containerRequestFilter", "enableSecureSocketConnection"],
   "additionalProperties": false
 }

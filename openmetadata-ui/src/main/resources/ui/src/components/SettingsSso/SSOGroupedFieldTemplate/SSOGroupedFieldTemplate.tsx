@@ -204,6 +204,35 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
         });
       });
 
+      const isLdapOrSamlProvider =
+        formContext?.currentProvider === 'ldap' ||
+        formContext?.currentProvider === 'saml';
+
+      const identityFieldNames = [
+        // emailClaim and displayNameClaim are only relevant for OIDC/public SSO providers.
+        // LDAP uses mailAttributeName, SAML uses NameID — both have their own mechanisms.
+        ...(isLdapOrSamlProvider ? [] : ['emailClaim', 'displayNameClaim']),
+        'jwtPrincipalClaims',
+        'jwtPrincipalClaimsMapping',
+        'jwtTeamClaimMapping',
+      ];
+
+      const identityFields = visibleProperties.filter((prop) =>
+        identityFieldNames.includes(prop.name)
+      );
+      if (identityFields.length > 0) {
+        groups.push({
+          title: 'Identity Configuration',
+          properties: identityFields,
+          showDivider: false,
+        });
+      }
+
+      // Fields hidden for LDAP/SAML should never appear in any group
+      const hiddenFieldNames = isLdapOrSamlProvider
+        ? ['emailClaim', 'displayNameClaim']
+        : [];
+
       // Remaining fields
       const groupedFieldNames = [
         ...basicConfigFields,
@@ -212,9 +241,12 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
         ...securityFields,
         ...credentialsFields,
         ...configObjectFields,
+        ...identityFields,
       ].map((p) => p.name);
       const remainingFields = visibleProperties.filter(
-        (prop) => !groupedFieldNames.includes(prop.name)
+        (prop) =>
+          !groupedFieldNames.includes(prop.name) &&
+          !hiddenFieldNames.includes(prop.name)
       );
       if (remainingFields.length > 0) {
         groups.push({
@@ -224,19 +256,25 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
         });
       }
     } else if (isAuthorizerConfig) {
-      // Authorizer configuration grouping
-      const principalFields = visibleProperties.filter((prop) =>
-        [
-          'adminPrincipals',
-          'botPrincipals',
-          'principalDomain',
-          'enforcePrincipalDomain',
-        ].includes(prop.name)
+      // Authorizer configuration grouping — new fields first, deprecated in separate group
+      const adminFields = visibleProperties.filter((prop) =>
+        ['adminEmails'].includes(prop.name)
       );
-      if (principalFields.length > 0) {
+      if (adminFields.length > 0) {
         groups.push({
-          title: 'Principal Management',
-          properties: principalFields,
+          title: 'Admin Management',
+          properties: adminFields,
+          showDivider: false,
+        });
+      }
+
+      const domainFields = visibleProperties.filter((prop) =>
+        ['allowedEmailDomains', 'botDomain'].includes(prop.name)
+      );
+      if (domainFields.length > 0) {
+        groups.push({
+          title: 'Domain Configuration',
+          properties: domainFields,
           showDivider: false,
         });
       }
@@ -246,6 +284,7 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
           'enableSecureSocketConnection',
           'className',
           'containerRequestFilter',
+          'useRolesFromProvider',
         ].includes(prop.name)
       );
       if (connectionFields.length > 0) {
@@ -256,10 +295,30 @@ export const SSOGroupedFieldTemplate: FunctionComponent<
         });
       }
 
-      // Remaining authorizer fields
-      const groupedFieldNames = [...principalFields, ...connectionFields].map(
-        (p) => p.name
+      const deprecatedFields = visibleProperties.filter((prop) =>
+        [
+          'adminPrincipals',
+          'principalDomain',
+          'enforcePrincipalDomain',
+          'allowedDomains',
+          'botPrincipals',
+        ].includes(prop.name)
       );
+      if (deprecatedFields.length > 0) {
+        groups.push({
+          title: 'Legacy Configuration (Deprecated)',
+          properties: deprecatedFields,
+          showDivider: false,
+        });
+      }
+
+      // Remaining authorizer fields
+      const groupedFieldNames = [
+        ...adminFields,
+        ...domainFields,
+        ...connectionFields,
+        ...deprecatedFields,
+      ].map((p) => p.name);
       const remainingFields = visibleProperties.filter(
         (prop) => !groupedFieldNames.includes(prop.name)
       );

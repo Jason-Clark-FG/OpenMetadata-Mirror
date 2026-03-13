@@ -2,6 +2,7 @@ package org.openmetadata.service.security;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -376,5 +377,102 @@ class SecurityUtilTest {
                     true));
 
     assertTrue(ex.getMessage().contains("domain 'company.com' not in allowed list"));
+  }
+
+  // --- resolvePrincipalDomain tests ---
+
+  @Test
+  void testResolvePrincipalDomain_usesPrincipalDomainWhenSet() {
+    assertEquals(
+        "principal.com",
+        SecurityUtil.resolvePrincipalDomain(
+            "principal.com", Set.of("email.com"), Set.of("allowed.com")));
+  }
+
+  @Test
+  void testResolvePrincipalDomain_fallsBackToAllowedEmailDomains() {
+    assertEquals(
+        "email.com",
+        SecurityUtil.resolvePrincipalDomain(null, Set.of("email.com"), Set.of("allowed.com")));
+  }
+
+  @Test
+  void testResolvePrincipalDomain_fallsBackToAllowedDomains() {
+    assertEquals(
+        "allowed.com", SecurityUtil.resolvePrincipalDomain(null, null, Set.of("allowed.com")));
+  }
+
+  @Test
+  void testResolvePrincipalDomain_returnsNullWhenNothingConfigured() {
+    assertNull(SecurityUtil.resolvePrincipalDomain(null, null, null));
+    assertNull(SecurityUtil.resolvePrincipalDomain("", Set.of(), Set.of()));
+  }
+
+  @Test
+  void testResolvePrincipalDomain_skipsEmptyPrincipalDomain() {
+    assertEquals("email.com", SecurityUtil.resolvePrincipalDomain("", Set.of("email.com"), null));
+  }
+
+  // --- findEmailFromClaims tests ---
+
+  @Test
+  void testFindEmailFromClaims_claimWithAtSign_returnsDirectly() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("email", "john@company.com");
+
+    String email =
+        SecurityUtil.findEmailFromClaims(Map.of(), List.of("email"), claims, "other.com");
+
+    assertEquals("john@company.com", email);
+  }
+
+  @Test
+  void testFindEmailFromClaims_claimWithoutAtSign_appendsDomain() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("sub", "john123");
+
+    String email =
+        SecurityUtil.findEmailFromClaims(Map.of(), List.of("sub"), claims, "company.com");
+
+    assertEquals("john123@company.com", email);
+  }
+
+  @Test
+  void testFindEmailFromClaims_claimWithoutAtSign_noDomain_throwsError() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("sub", "john123");
+
+    AuthenticationException ex =
+        assertThrows(
+            AuthenticationException.class,
+            () -> SecurityUtil.findEmailFromClaims(Map.of(), List.of("sub"), claims, null));
+
+    assertTrue(ex.getMessage().contains("john123"));
+    assertTrue(ex.getMessage().contains("not an email address"));
+    assertTrue(ex.getMessage().contains("emailClaim"));
+  }
+
+  @Test
+  void testFindEmailFromClaims_claimWithoutAtSign_emptyDomain_throwsError() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("sub", "john123");
+
+    AuthenticationException ex =
+        assertThrows(
+            AuthenticationException.class,
+            () -> SecurityUtil.findEmailFromClaims(Map.of(), List.of("sub"), claims, ""));
+
+    assertTrue(ex.getMessage().contains("not an email address"));
+  }
+
+  @Test
+  void testFindEmailFromClaims_lowercasesResult() {
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("email", "John.Doe@Company.COM");
+
+    String email =
+        SecurityUtil.findEmailFromClaims(Map.of(), List.of("email"), claims, "other.com");
+
+    assertEquals("john.doe@company.com", email);
   }
 }
