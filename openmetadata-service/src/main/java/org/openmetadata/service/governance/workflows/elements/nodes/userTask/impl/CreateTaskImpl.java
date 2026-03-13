@@ -14,11 +14,13 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.userTask.impl;
 
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.RECOGNIZER_FEEDBACK;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +38,9 @@ import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.RecognizerFeedback;
+import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TagLabelRecognizerMetadata;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
@@ -44,6 +49,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
+import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.util.WebsocketNotificationHandler;
@@ -60,6 +66,7 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
  */
 @Slf4j
 public class CreateTaskImpl implements TaskListener {
+  private static final String DEFAULT_SYSTEM_USER = "admin";
   private Expression inputNamespaceMapExpr;
   private Expression approvalThresholdExpr;
   private Expression rejectionThresholdExpr;
@@ -91,6 +98,9 @@ public class CreateTaskImpl implements TaskListener {
       // Get workflow instance ID from the process
       UUID workflowInstanceId = getWorkflowInstanceId(delegateTask);
 
+      // Build workflow-specific payload for task types that need richer context.
+      Object payload = buildWorkflowPayload(taskType, inputNamespaceMap, varHandler);
+
       // Create the Task entity
       Task task =
           createTask(
@@ -100,7 +110,8 @@ public class CreateTaskImpl implements TaskListener {
               taskCategory,
               workflowInstanceId,
               approvalThreshold,
-              rejectionThreshold);
+              rejectionThreshold,
+              payload);
 
       // Register with WorkflowHandler for resolution
       WorkflowHandler.getInstance().setCustomTaskId(delegateTask.getId(), task.getId());
@@ -199,7 +210,8 @@ public class CreateTaskImpl implements TaskListener {
       TaskCategory taskCategory,
       UUID workflowInstanceId,
       Integer approvalThreshold,
-      Integer rejectionThreshold) {
+      Integer rejectionThreshold,
+      Object payload) {
 
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
 
@@ -212,8 +224,8 @@ public class CreateTaskImpl implements TaskListener {
             .withFullyQualifiedName(entity.getFullyQualifiedName());
 
     // Build createdBy reference
-    EntityReference createdByRef =
-        Entity.getEntityReferenceByName(Entity.USER, entity.getUpdatedBy(), Include.NON_DELETED);
+    EntityReference createdByRef = resolveCreatedByReference(entity, payload);
+    String updatedBy = resolveUpdatedBy(entity, createdByRef);
 
     // Create the task
     Task task =
@@ -228,9 +240,10 @@ public class CreateTaskImpl implements TaskListener {
             .withCreatedBy(createdByRef)
             .withWorkflowInstanceId(workflowInstanceId)
             .withDescription(buildTaskDescription(entity, taskType))
+            .withPayload(payload)
             .withCreatedAt(System.currentTimeMillis())
             .withUpdatedAt(System.currentTimeMillis())
-            .withUpdatedBy(entity.getUpdatedBy());
+            .withUpdatedBy(updatedBy);
 
     // Use the repository to create (handles taskId generation, FQN, relationships)
     task = taskRepository.create(null, task);
@@ -243,7 +256,7 @@ public class CreateTaskImpl implements TaskListener {
             .withEntityId(task.getId())
             .withEntityType(Entity.TASK)
             .withEntityFullyQualifiedName(task.getFullyQualifiedName())
-            .withUserName(entity.getUpdatedBy())
+            .withUserName(updatedBy)
             .withTimestamp(task.getUpdatedAt())
             .withEntity(task);
 
@@ -258,5 +271,119 @@ public class CreateTaskImpl implements TaskListener {
   private String buildTaskDescription(EntityInterface entity, TaskEntityType taskType) {
     return String.format(
         "Approval required for %s: %s", entity.getEntityReference().getType(), entity.getName());
+  }
+
+  private EntityReference resolveCreatedByReference(EntityInterface entity, Object payload) {
+    EntityReference payloadCreator = extractPayloadCreatedBy(payload);
+    if (payloadCreator != null) {
+      return payloadCreator;
+    }
+
+    String userName = entity != null ? entity.getUpdatedBy() : null;
+    if (userName == null || userName.isEmpty()) {
+      userName = DEFAULT_SYSTEM_USER;
+    }
+
+    try {
+      return Entity.getEntityReferenceByName(Entity.USER, userName, Include.NON_DELETED);
+    } catch (Exception e) {
+      return Entity.getEntityReferenceByName(Entity.USER, DEFAULT_SYSTEM_USER, Include.NON_DELETED);
+    }
+  }
+
+  private EntityReference extractPayloadCreatedBy(Object payload) {
+    if (!(payload instanceof Map<?, ?> payloadMap)) {
+      return null;
+    }
+
+    Object feedback = payloadMap.get("feedback");
+    if (feedback == null) {
+      return null;
+    }
+
+    try {
+      RecognizerFeedback recognizerFeedback =
+          JsonUtils.convertValue(feedback, RecognizerFeedback.class);
+      if (recognizerFeedback == null || recognizerFeedback.getCreatedBy() == null) {
+        return null;
+      }
+      return recognizerFeedback.getCreatedBy();
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private String resolveUpdatedBy(EntityInterface entity, EntityReference createdByRef) {
+    if (entity != null && entity.getUpdatedBy() != null && !entity.getUpdatedBy().isEmpty()) {
+      return entity.getUpdatedBy();
+    }
+    if (createdByRef != null
+        && createdByRef.getName() != null
+        && !createdByRef.getName().isEmpty()) {
+      return createdByRef.getName();
+    }
+    return DEFAULT_SYSTEM_USER;
+  }
+
+  private Object buildWorkflowPayload(
+      TaskEntityType taskType,
+      Map<String, String> inputNamespaceMap,
+      WorkflowVariableHandler varHandler) {
+    if (taskType != TaskEntityType.DataQualityReview || inputNamespaceMap == null) {
+      return null;
+    }
+
+    String recognizerNamespace = inputNamespaceMap.get(RECOGNIZER_FEEDBACK);
+    if (recognizerNamespace == null) {
+      return null;
+    }
+
+    try {
+      String feedbackJson =
+          (String) varHandler.getNamespacedVariable(recognizerNamespace, RECOGNIZER_FEEDBACK);
+      if (feedbackJson == null || feedbackJson.isEmpty()) {
+        return null;
+      }
+
+      RecognizerFeedback feedback = JsonUtils.readValue(feedbackJson, RecognizerFeedback.class);
+      Map<String, Object> payload = new LinkedHashMap<>();
+      payload.put("feedback", feedback);
+
+      TagLabelRecognizerMetadata recognizer = resolveRecognizerMetadata(feedback);
+      if (recognizer != null) {
+        payload.put("recognizer", recognizer);
+      }
+      return payload;
+    } catch (Exception e) {
+      LOG.warn("Failed to build recognizer feedback payload for task: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  private TagLabelRecognizerMetadata resolveRecognizerMetadata(RecognizerFeedback feedback) {
+    if (feedback == null || feedback.getEntityLink() == null || feedback.getTagFQN() == null) {
+      return null;
+    }
+
+    try {
+      MessageParser.EntityLink entityLink =
+          MessageParser.EntityLink.parse(feedback.getEntityLink());
+      String targetFQN = entityLink.getFullyQualifiedFieldValue();
+
+      CollectionDAO.TagUsageDAO tagUsageDAO = Entity.getCollectionDAO().tagUsageDAO();
+      List<TagLabel> tags = tagUsageDAO.getTags(targetFQN);
+      return tags.stream()
+          .filter(tagLabel -> feedback.getTagFQN().equals(tagLabel.getTagFQN()))
+          .findFirst()
+          .filter(tagLabel -> tagLabel.getMetadata() != null)
+          .map(tagLabel -> tagLabel.getMetadata().getRecognizer())
+          .orElse(null);
+    } catch (Exception e) {
+      LOG.debug(
+          "Failed to resolve recognizer metadata for feedback '{}': {}",
+          feedback.getId(),
+          e.getMessage());
+      return null;
+    }
   }
 }

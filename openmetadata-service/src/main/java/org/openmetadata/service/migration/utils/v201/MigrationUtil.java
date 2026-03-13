@@ -42,6 +42,8 @@ import org.openmetadata.service.util.EntityUtil;
 public class MigrationUtil {
   private static final String ADMIN_USER_NAME = "admin";
   private static final String USER_APPROVAL_TASK_SUBTYPE = "userApprovalTask";
+  private static final String RECOGNIZER_APPROVAL_TASK_SUBTYPE =
+      "createRecognizerFeedbackApprovalTask";
   private static final int BATCH_SIZE = 200;
 
   private final Handle handle;
@@ -79,7 +81,7 @@ public class MigrationUtil {
           workflowDefinitionRepository.listAll(EntityUtil.Fields.EMPTY_FIELDS, new ListFilter());
 
       for (WorkflowDefinition workflowDefinition : workflowDefinitions) {
-        if (!containsUserApprovalTask(workflowDefinition.getNodes())) {
+        if (!containsApprovalTaskNodeForCutover(workflowDefinition.getNodes())) {
           continue;
         }
 
@@ -91,9 +93,7 @@ public class MigrationUtil {
               workflowDefinition.getName());
         } catch (Exception e) {
           LOG.warn(
-              "Failed to redeploy workflow '{}': {}",
-              workflowDefinition.getName(),
-              e.getMessage());
+              "Failed to redeploy workflow '{}': {}", workflowDefinition.getName(), e.getMessage());
         }
       }
     } catch (Exception e) {
@@ -102,9 +102,10 @@ public class MigrationUtil {
     return redeployed;
   }
 
-  private boolean containsUserApprovalTask(List<WorkflowNodeDefinitionInterface> nodes) {
+  private boolean containsApprovalTaskNodeForCutover(List<WorkflowNodeDefinitionInterface> nodes) {
     for (WorkflowNodeDefinitionInterface node : listOrEmpty(nodes)) {
-      if (USER_APPROVAL_TASK_SUBTYPE.equals(node.getSubType())) {
+      if (USER_APPROVAL_TASK_SUBTYPE.equals(node.getSubType())
+          || RECOGNIZER_APPROVAL_TASK_SUBTYPE.equals(node.getSubType())) {
         return true;
       }
     }
@@ -116,7 +117,8 @@ public class MigrationUtil {
     int offset = 0;
 
     while (true) {
-      List<String> threadBatch = collectionDAO.feedDAO().listTaskThreadWithOffset(BATCH_SIZE, offset);
+      List<String> threadBatch =
+          collectionDAO.feedDAO().listTaskThreadWithOffset(BATCH_SIZE, offset);
       if (threadBatch.isEmpty()) {
         break;
       }
@@ -180,7 +182,10 @@ public class MigrationUtil {
     EntityReference createdByRef = resolveUserReference(legacyThread.getCreatedBy());
     EntityReference aboutRef = resolveAboutReference(legacyThread);
 
-    long createdAt = legacyThread.getThreadTs() != null ? legacyThread.getThreadTs() : System.currentTimeMillis();
+    long createdAt =
+        legacyThread.getThreadTs() != null
+            ? legacyThread.getThreadTs()
+            : System.currentTimeMillis();
     long updatedAt = legacyThread.getUpdatedAt() != null ? legacyThread.getUpdatedAt() : createdAt;
 
     TaskEntityStatus status = mapLegacyStatus(legacyTaskDetails.getStatus());
@@ -201,10 +206,12 @@ public class MigrationUtil {
             .withUpdatedBy(resolveUpdatedBy(legacyThread, createdByRef))
             .withPayload(buildLegacyPayload(legacyTaskDetails));
 
-    List<TaskComment> comments = convertPostsToComments(legacyThread.getPosts(), createdByRef, updatedAt);
+    List<TaskComment> comments =
+        convertPostsToComments(legacyThread.getPosts(), createdByRef, updatedAt);
     task.withComments(comments).withCommentCount(comments.size());
 
-    UUID runtimeWorkflowInstanceId = workflowHandler.getRuntimeWorkflowInstanceId(legacyThread.getId());
+    UUID runtimeWorkflowInstanceId =
+        workflowHandler.getRuntimeWorkflowInstanceId(legacyThread.getId());
     if (runtimeWorkflowInstanceId != null) {
       task.setWorkflowInstanceId(runtimeWorkflowInstanceId);
     }
@@ -222,14 +229,16 @@ public class MigrationUtil {
     }
 
     return switch (legacyTaskType) {
-      case RequestApproval -> new TypeAndCategory(TaskEntityType.GlossaryApproval, TaskCategory.Approval);
-      case RecognizerFeedbackApproval ->
-          new TypeAndCategory(TaskEntityType.DataQualityReview, TaskCategory.Review);
-      case RequestDescription, UpdateDescription ->
-          new TypeAndCategory(TaskEntityType.DescriptionUpdate, TaskCategory.MetadataUpdate);
-      case RequestTag, UpdateTag -> new TypeAndCategory(TaskEntityType.TagUpdate, TaskCategory.MetadataUpdate);
-      case RequestTestCaseFailureResolution ->
-          new TypeAndCategory(TaskEntityType.TestCaseResolution, TaskCategory.Incident);
+      case RequestApproval -> new TypeAndCategory(
+          TaskEntityType.GlossaryApproval, TaskCategory.Approval);
+      case RecognizerFeedbackApproval -> new TypeAndCategory(
+          TaskEntityType.DataQualityReview, TaskCategory.Review);
+      case RequestDescription, UpdateDescription -> new TypeAndCategory(
+          TaskEntityType.DescriptionUpdate, TaskCategory.MetadataUpdate);
+      case RequestTag, UpdateTag -> new TypeAndCategory(
+          TaskEntityType.TagUpdate, TaskCategory.MetadataUpdate);
+      case RequestTestCaseFailureResolution -> new TypeAndCategory(
+          TaskEntityType.TestCaseResolution, TaskCategory.Incident);
       case Generic -> new TypeAndCategory(TaskEntityType.CustomTask, TaskCategory.Custom);
     };
   }
@@ -241,7 +250,8 @@ public class MigrationUtil {
     return TaskEntityStatus.Completed;
   }
 
-  private TaskResolution buildLegacyResolution(Thread legacyThread, EntityReference fallbackUserRef) {
+  private TaskResolution buildLegacyResolution(
+      Thread legacyThread, EntityReference fallbackUserRef) {
     TaskDetails legacyTask = legacyThread.getTask();
     TaskResolutionType resolutionType = mapLegacyResolutionType(legacyTask);
 

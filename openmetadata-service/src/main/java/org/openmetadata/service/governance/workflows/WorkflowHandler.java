@@ -756,10 +756,7 @@ public class WorkflowHandler {
       Thread thread = feedRepository.get(customTaskId);
       return thread != null && thread.getTask() != null;
     } catch (Exception e) {
-      LOG.debug(
-          "Could not find legacy Thread task with ID '{}': {}",
-          customTaskId,
-          e.getMessage());
+      LOG.debug("Could not find legacy Thread task with ID '{}': {}", customTaskId, e.getMessage());
       return false;
     }
   }

@@ -68,7 +68,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getEntityLinkCondition());
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
-conditions.add(getTaskStatusCondition(tableName));
+    conditions.add(getTaskStatusCondition(tableName));
     conditions.add(getTaskTypeCondition(tableName));
     conditions.add(getTaskPriorityCondition(tableName));
     conditions.add(getEntityStatusCondition());

@@ -298,7 +298,7 @@ public class OpenMetadataClient {
     this.aiApplications = new AIApplicationService(httpClient);
     this.promptTemplates = new PromptTemplateService(httpClient);
 
-// Initialize task services
+    // Initialize task services
     this.tasks = new TaskService(httpClient);
 
     // Initialize feed service

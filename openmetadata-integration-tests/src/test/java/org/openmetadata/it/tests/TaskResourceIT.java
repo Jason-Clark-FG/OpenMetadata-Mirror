@@ -38,9 +38,9 @@ import org.openmetadata.schema.api.data.CreatePipeline;
 import org.openmetadata.schema.api.data.CreateTopic;
 import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.tasks.CreateTask;
-import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
+import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.data.Container;
 import org.openmetadata.schema.entity.data.Dashboard;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
@@ -633,8 +633,7 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Domain domainB = createDomain(ns, "task-domain-b");
 
     Table domainTable =
-        createTableWithDomainAndOwners(
-            ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
     Table otherDomainTable =
         createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER2_REF));
 
@@ -646,7 +645,8 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
             .tasks()
             .listWithFilters(
                 Map.of(
-                    "domain", domainA.getFullyQualifiedName(),
+                    "domain",
+                    domainA.getFullyQualifiedName(),
                     "limit",
                     "1000",
                     "fields",
@@ -701,8 +701,7 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Domain domainB = createDomain(ns, "domain-endpoint-b");
 
     Table domainTable =
-        createTableWithDomainAndOwners(
-            ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
     Table otherDomainTable =
         createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER1_REF));
 
@@ -713,9 +712,7 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     SdkClients.adminClient().tasks().close(closedDomainTask.getId().toString());
 
     ListResponse<Task> domainTasks =
-        SdkClients.adminClient()
-            .domains()
-            .listTasks(domainA.getFullyQualifiedName(), null, 1000);
+        SdkClients.adminClient().domains().listTasks(domainA.getFullyQualifiedName(), null, 1000);
 
     assertNotNull(domainTasks);
     assertTrue(
@@ -820,8 +817,7 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
             domainOnlyClient
                 .tasks()
                 .create(
-                    createTaskRequestAboutTable(
-                        ns, "domain-only-create-blocked", blockedTable)),
+                    createTaskRequestAboutTable(ns, "domain-only-create-blocked", blockedTable)),
         "Domain-only user should not create tasks in inaccessible domains");
   }
 
@@ -2422,7 +2418,8 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     return SdkClients.adminClient().domains().create(request);
   }
 
-  private OpenMetadataClient createDomainOnlyTaskUserClient(TestNamespace ns, Domain allowedDomain) {
+  private OpenMetadataClient createDomainOnlyTaskUserClient(
+      TestNamespace ns, Domain allowedDomain) {
     Role domainOnlyRole = SdkClients.adminClient().roles().getByName("DomainOnlyAccessRole");
     Role elevatedRole = getElevatedRoleForTaskTests();
     String userName = "domtask_" + UUID.randomUUID().toString().substring(0, 8);

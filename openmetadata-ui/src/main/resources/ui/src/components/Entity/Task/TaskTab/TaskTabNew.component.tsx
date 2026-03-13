@@ -101,6 +101,7 @@ import {
   GLOSSARY_TASK_ACTION_LIST,
   INCIDENT_TASK_ACTION_LIST,
   isDescriptionTaskType,
+  isRecognizerFeedbackTask,
   isTagsTaskType,
   TASK_ACTION_COMMON_ITEM,
   TASK_ACTION_LIST,
@@ -241,8 +242,9 @@ export const TaskTabNew = ({
 
   const isTaskGlossaryApproval = task.type === TaskEntityType.GlossaryApproval;
 
-  const isTaskRecognizerFeedbackApproval =
-    task?.type === ('RecognizerFeedbackApproval' as TaskEntityType);
+  const isTaskRecognizerFeedbackApproval = isRecognizerFeedbackTask(task);
+  const isApprovalWorkflowTask =
+    isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval;
 
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);
@@ -376,13 +378,16 @@ export const TaskTabNew = ({
     [isEntityDetailsAvailable, entityFQN, entityType, task, handleTaskLinkClick]
   );
 
-  const updateTaskData = async (data: { newValue?: string }) => {
+  const updateTaskData = async (
+    data: { newValue?: string },
+    resolutionType: TaskResolutionType = TaskResolutionType.Approved
+  ) => {
     if (!task?.id) {
       return;
     }
     try {
       await resolveTaskAPI(task.id, {
-        resolutionType: TaskResolutionType.Approved,
+        resolutionType,
         newValue: data.newValue,
       });
       showSuccessToast(t('server.task-resolved-successfully'));
@@ -396,20 +401,16 @@ export const TaskTabNew = ({
   };
 
   const onGlossaryTaskResolve = (status = 'approved') => {
-    const newValue =
-      isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
-        ? status
-        : computedSuggestedValue;
-    const data = { newValue: newValue };
-    updateTaskData(data);
+    const resolutionType =
+      status.toLowerCase() === 'approved'
+        ? TaskResolutionType.Approved
+        : TaskResolutionType.Rejected;
+    const newValue = isApprovalWorkflowTask ? status : computedSuggestedValue;
+    updateTaskData({ newValue }, resolutionType);
   };
 
   const onTaskResolve = () => {
-    if (
-      !isTaskGlossaryApproval &&
-      !isTaskRecognizerFeedbackApproval &&
-      isEmpty(computedSuggestedValue)
-    ) {
+    if (!isApprovalWorkflowTask && isEmpty(computedSuggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -428,10 +429,9 @@ export const TaskTabNew = ({
 
       updateTaskData(tagsData);
     } else {
-      const newValue =
-        isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
-          ? 'approved'
-          : computedSuggestedValue;
+      const newValue = isApprovalWorkflowTask
+        ? 'approved'
+        : computedSuggestedValue;
       const data = { newValue: newValue };
       updateTaskData(data);
     }
@@ -487,11 +487,7 @@ export const TaskTabNew = ({
   };
 
   const onTaskReject = async () => {
-    if (
-      !isTaskGlossaryApproval &&
-      !isTaskRecognizerFeedbackApproval &&
-      !hasAddedComment
-    ) {
+    if (!isApprovalWorkflowTask && !hasAddedComment) {
       showErrorToast(t('server.task-closed-without-comment'));
 
       return;
@@ -501,10 +497,13 @@ export const TaskTabNew = ({
       return;
     }
 
-    const updatedComment =
-      isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
-        ? 'Rejected'
-        : recentComment;
+    if (isApprovalWorkflowTask) {
+      updateTaskData({ newValue: 'rejected' }, TaskResolutionType.Rejected);
+
+      return;
+    }
+
+    const updatedComment = recentComment;
     try {
       await closeTaskAPI(task.id, updatedComment);
       showSuccessToast(t('server.task-closed-successfully'));

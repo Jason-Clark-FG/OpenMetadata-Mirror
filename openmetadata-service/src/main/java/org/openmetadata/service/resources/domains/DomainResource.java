@@ -165,9 +165,7 @@ public class DomainResource extends EntityResource<Domain, DomainRepository> {
   public ResultList<Task> listTasksByDomain(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
-      @Parameter(description = "Fully qualified name of the domain")
-          @PathParam("fqn")
-          String fqn,
+      @Parameter(description = "Fully qualified name of the domain") @PathParam("fqn") String fqn,
       @Parameter(description = "Fields to include in response", schema = @Schema(type = "string"))
           @QueryParam("fields")
           String fieldsParam,

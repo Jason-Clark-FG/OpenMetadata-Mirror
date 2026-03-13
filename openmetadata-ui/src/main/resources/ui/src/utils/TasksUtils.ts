@@ -804,6 +804,20 @@ export const isDescriptionTaskType = (taskType: TaskEntityType) =>
 export const isTagsTaskType = (taskType: TaskEntityType) =>
   [TaskEntityType.TagUpdate].includes(taskType);
 
+export const isRecognizerFeedbackTask = (task: TaskEntity) => {
+  const taskType = task.type as unknown as string;
+  const hasFeedbackPayload =
+    Boolean(task.payload) &&
+    typeof task.payload === 'object' &&
+    'feedback' in (task.payload as Record<string, unknown>);
+
+  return (
+    hasFeedbackPayload &&
+    (task.type === TaskEntityType.DataQualityReview ||
+      taskType === 'RecognizerFeedbackApproval')
+  );
+};
+
 export const getTaskDetailPathFromTask = (task: TaskEntity) => {
   const entityFqn = task.about?.fullyQualifiedName ?? '';
   const entityType = (task.about?.type as EntityType) ?? '';

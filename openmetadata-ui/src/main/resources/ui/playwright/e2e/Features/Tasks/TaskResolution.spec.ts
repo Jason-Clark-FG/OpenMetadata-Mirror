@@ -193,6 +193,102 @@ test.describe('Task Resolution - Approve/Reject', () => {
       }
     }
   });
+
+  test('recognizer-style data quality task should reject via /tasks/{id}/resolve', async ({
+    page,
+  }) => {
+    const { apiContext, afterAction } = await performAdminLogin(
+      page.context().browser()!
+    );
+
+    const tableFqn = table.entityResponseData?.fullyQualifiedName;
+    const firstColumn = table.entityResponseData?.columns?.[0]?.name ?? 'id';
+    const createdByName = assigneeUser.responseData?.name ?? 'admin';
+    const createdById = assigneeUser.responseData?.id ?? '';
+
+    let feedbackTaskId = '';
+
+    try {
+      const taskResponse = await apiContext.post('/api/v1/tasks', {
+        data: {
+          about: tableFqn,
+          aboutType: 'table',
+          type: 'DataQualityReview',
+          category: 'Review',
+          assignees: [createdByName],
+          payload: {
+            feedback: {
+              entityLink: `<#E::table::${tableFqn}::columns::${firstColumn}>`,
+              tagFQN: 'PII.Sensitive',
+              feedbackType: 'FALSE_POSITIVE',
+              userReason: 'NOT_SENSITIVE_DATA',
+              userComments: 'Playwright recognizer feedback task',
+              createdBy: {
+                id: createdById,
+                type: 'user',
+                name: createdByName,
+                displayName: createdByName,
+              },
+              createdAt: Date.now(),
+            },
+            recognizer: {
+              recognizerId: '11111111-1111-1111-1111-111111111111',
+              recognizerName: 'email_recognizer',
+              score: 0.97,
+            },
+          },
+        },
+      });
+
+      const task = await taskResponse.json();
+      feedbackTaskId = task.id;
+
+      await assigneeUser.login(page);
+      await table.visitEntityPage(page);
+
+      await page.getByTestId('activity_feed').click();
+      await page.waitForLoadState('networkidle');
+
+      const tasksTab = page.getByRole('button', { name: /tasks/i });
+      if (await tasksTab.isVisible()) {
+        await tasksTab.click();
+        await page.waitForLoadState('networkidle');
+      }
+
+      const taskCard = page
+        .locator('[data-testid="task-feed-card"]')
+        .filter({ hasText: task.taskId })
+        .first();
+
+      await expect(taskCard).toBeVisible();
+      await taskCard.click();
+      await expect(page.getByTestId('feedback-approval-task')).toBeVisible();
+
+      const rejectButton = taskCard.getByTestId('reject-button');
+      await expect(rejectButton).toBeVisible();
+
+      const rejectResponse = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes(`/api/v1/tasks/${feedbackTaskId}/resolve`)
+      );
+
+      await rejectButton.click();
+      const response = await rejectResponse;
+      expect(response.ok()).toBeTruthy();
+
+      const refreshedTaskResponse = await apiContext.get(
+        `/api/v1/tasks/${feedbackTaskId}`
+      );
+      const refreshedTask = await refreshedTaskResponse.json();
+      expect(refreshedTask.status).toBe('Rejected');
+    } finally {
+      if (feedbackTaskId) {
+        await apiContext.delete(`/api/v1/tasks/${feedbackTaskId}?hardDelete=true`);
+      }
+      await afterAction();
+    }
+  });
 });
 
 test.describe('Task Resolution - Team Assignee', () => {

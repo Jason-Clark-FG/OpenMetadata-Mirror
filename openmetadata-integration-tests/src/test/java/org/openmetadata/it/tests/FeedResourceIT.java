@@ -948,8 +948,7 @@ public class FeedResourceIT {
     closeTask(closedTask.getTask().getId(), new CloseTask().withComment("closing task"));
 
     try {
-      ThreadList openTasks =
-          listTasksByUserFilter(admin.getId(), "ASSIGNED_TO", TaskStatus.Open);
+      ThreadList openTasks = listTasksByUserFilter(admin.getId(), "ASSIGNED_TO", TaskStatus.Open);
       ThreadList closedTasks =
           listTasksByUserFilter(admin.getId(), "ASSIGNED_TO", TaskStatus.Closed);
 

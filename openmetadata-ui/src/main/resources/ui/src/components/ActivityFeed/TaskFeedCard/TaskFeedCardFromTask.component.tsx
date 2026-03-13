@@ -51,6 +51,7 @@ import { getErrorText } from '../../../utils/StringsUtils';
 import {
   getTaskDetailPathFromTask,
   isDescriptionTaskType,
+  isRecognizerFeedbackTask,
   isTagsTaskType,
 } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
@@ -187,14 +188,20 @@ const TaskFeedCardFromTask = ({
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
   const isTaskGlossaryApproval = task.type === TaskEntityType.GlossaryApproval;
+  const isTaskRecognizerFeedbackApproval = isRecognizerFeedbackTask(task);
+  const isApprovalWorkflowTask =
+    isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval;
 
-  const updateTaskData = async (newValue: string) => {
+  const updateTaskData = async (
+    newValue: string,
+    resolutionType: TaskResolutionType = TaskResolutionType.Approved
+  ) => {
     if (!task?.id) {
       return;
     }
     try {
       await resolveTaskAPI(task.id, {
-        resolutionType: TaskResolutionType.Approved,
+        resolutionType,
         newValue,
       });
       showSuccessToast(t('server.task-resolved-successfully'));
@@ -208,7 +215,7 @@ const TaskFeedCardFromTask = ({
   };
 
   const onTaskResolve = () => {
-    if (!isTaskGlossaryApproval && isEmpty(computedSuggestedValue)) {
+    if (!isApprovalWorkflowTask && isEmpty(computedSuggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -223,7 +230,7 @@ const TaskFeedCardFromTask = ({
     if (isTaskTags) {
       updateTaskData(computedSuggestedValue || '[]');
     } else {
-      const newValue = isTaskGlossaryApproval
+      const newValue = isApprovalWorkflowTask
         ? 'approved'
         : computedSuggestedValue ?? '';
       updateTaskData(newValue);
@@ -231,13 +238,13 @@ const TaskFeedCardFromTask = ({
   };
 
   const onTaskReject = async () => {
-    const updatedComment = 'Rejected';
-    if (isTaskGlossaryApproval) {
-      updateTaskData('Rejected');
+    if (isApprovalWorkflowTask) {
+      updateTaskData('rejected', TaskResolutionType.Rejected);
 
       return;
     }
 
+    const updatedComment = 'Rejected';
     if (!task?.id) {
       return;
     }

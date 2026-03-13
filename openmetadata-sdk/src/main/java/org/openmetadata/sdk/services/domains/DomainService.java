@@ -8,10 +8,10 @@ import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.sdk.exceptions.OpenMetadataException;
 import org.openmetadata.sdk.models.AllModels;
+import org.openmetadata.sdk.models.ListResponse;
 import org.openmetadata.sdk.network.HttpClient;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
-import org.openmetadata.sdk.models.ListResponse;
 import org.openmetadata.sdk.services.EntityServiceBase;
 
 public class DomainService
@@ -64,7 +64,8 @@ public class DomainService
       }
 
       if (rootNode.has("paging")) {
-        response.setPaging(objectMapper.treeToValue(rootNode.get("paging"), AllModels.Paging.class));
+        response.setPaging(
+            objectMapper.treeToValue(rootNode.get("paging"), AllModels.Paging.class));
       }
 
       return response;

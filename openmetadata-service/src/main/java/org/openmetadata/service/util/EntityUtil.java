@@ -1100,9 +1100,7 @@ public final class EntityUtil {
             .map(id -> "'" + id + "'")
             .collect(Collectors.joining(","));
 
-    return nullOrEmpty(effectiveIds)
-        ? "'00000000-0000-0000-0000-000000000000'"
-        : effectiveIds;
+    return nullOrEmpty(effectiveIds) ? "'00000000-0000-0000-0000-000000000000'" : effectiveIds;
   }
 
   private static Set<String> parseDomainIds(String domainIds) {
