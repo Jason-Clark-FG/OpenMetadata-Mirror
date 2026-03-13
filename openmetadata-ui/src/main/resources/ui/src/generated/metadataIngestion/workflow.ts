@@ -1444,6 +1444,11 @@ export interface ConfigObject {
      */
     preserveIdentifierCase?: boolean;
     /**
+     * Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA
+     * privileges.
+     */
+    useDBATable?: boolean;
+    /**
      * Custom OpenMetadata Classification name for Postgres policy tags.
      *
      * Custom OpenMetadata Classification name for TimescaleDB policy tags.
@@ -4991,7 +4996,7 @@ export interface Pipeline {
     /**
      * Number of threads to use during metric computations
      */
-    threadCount?: number;
+    threadCount?: number | null;
     /**
      * Profiler Timeout in Seconds
      */
