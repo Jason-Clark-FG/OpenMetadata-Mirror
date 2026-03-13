@@ -45,13 +45,13 @@ public class OpenMetadataOperationsIT {
     JWTAuthMechanism secondToken =
         SdkClients.adminClient()
             .users()
-            .generateToken(bot.getBotUser().getId(), JWTTokenExpiry.Unlimited);
+            .generateToken(bot.getBotUser().getId(), JWTTokenExpiry.Seven);
     assertNotNull(secondToken.getJWTToken());
 
     assertNotEquals(
         firstToken.getJWTToken(),
         secondToken.getJWTToken(),
-        "Regenerated token must differ from the original");
+        "Regenerated token with different expiry must differ from the original");
   }
 
   @Test
