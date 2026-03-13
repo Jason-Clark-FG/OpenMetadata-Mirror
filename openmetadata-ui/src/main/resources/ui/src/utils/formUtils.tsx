@@ -30,7 +30,7 @@ import { RuleObject } from 'antd/lib/form';
 import { TooltipPlacement } from 'antd/lib/tooltip';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
-import { compact, startCase, toString } from 'lodash';
+import { compact, isString, startCase, toString } from 'lodash';
 import React, { Fragment, ReactNode } from 'react';
 import AsyncSelectList from '../components/common/AsyncSelectList/AsyncSelectList';
 import { AsyncSelectListProps } from '../components/common/AsyncSelectList/AsyncSelectList.interface';
@@ -336,8 +336,7 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <DomainSelectableList
-            {...(rest as unknown as DomainSelectableListProps)}
-          >
+            {...(rest as unknown as DomainSelectableListProps)}>
             {children}
           </DomainSelectableList>
         );
@@ -366,8 +365,7 @@ export const getField = (field: FieldProp) => {
 
         fieldElement = (
           <UserTeamSelectableList
-            {...(rest as unknown as UserSelectDropdownProps)}
-          >
+            {...(rest as unknown as UserSelectDropdownProps)}>
             {children}
           </UserTeamSelectableList>
         );
@@ -472,7 +470,7 @@ export const getField = (field: FieldProp) => {
         <Form.Item {...formProps} valuePropName="isSelected">
           <Toggle
             isDisabled={isDisabled}
-            label={typeof label === 'string' ? label : undefined}
+            label={isString(label) ? label : undefined}
             size={size}
             onChange={onChange}
             {...switchRest}
@@ -525,8 +523,7 @@ export const getField = (field: FieldProp) => {
           'm-b-xss': helperTextType === HelperTextType.ALERT,
         })}
         {...formProps}
-        label={labelValue}
-      >
+        label={labelValue}>
         {fieldElement}
       </Form.Item>
 
