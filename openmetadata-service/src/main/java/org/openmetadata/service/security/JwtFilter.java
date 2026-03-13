@@ -31,6 +31,7 @@ import com.auth0.jwt.exceptions.JWTDecodeException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.Priorities;
@@ -92,6 +93,9 @@ public class JwtFilter implements ContainerRequestFilter {
   private String emailClaim;
   private String displayNameClaim;
   private List<String> allowedEmailDomains;
+
+  private final com.google.common.cache.Cache<String, String> emailToUsernameCache =
+      CacheBuilder.newBuilder().maximumSize(10_000).build();
 
   public static final List<String> EXCLUDED_ENDPOINTS =
       List.of(
@@ -368,10 +372,15 @@ public class JwtFilter implements ContainerRequestFilter {
   }
 
   private String resolveUserNameForEmail(String email) {
+    String cached = emailToUsernameCache.getIfPresent(email);
+    if (cached != null) {
+      return cached;
+    }
     try {
-      return Entity.getUserRepository()
-          .getByEmail(null, email, new Fields(Set.of("name")))
-          .getName();
+      String username =
+          Entity.getUserRepository().getByEmail(null, email, new Fields(Set.of("name"))).getName();
+      emailToUsernameCache.put(email, username);
+      return username;
     } catch (EntityNotFoundException e) {
       return email.split("@")[0];
     } catch (Exception e) {

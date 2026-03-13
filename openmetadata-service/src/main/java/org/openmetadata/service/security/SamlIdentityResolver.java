@@ -73,6 +73,12 @@ public class SamlIdentityResolver {
         return new ResolvedSamlIdentity(null, email, displayName, true);
       } catch (AuthenticationException
           | org.openmetadata.service.security.AuthenticationException ex) {
+        if (isDomainValidationFailure(ex)) {
+          throw ex;
+        }
+        if (!canFallbackToLegacyFlow()) {
+          throw ex;
+        }
         LOG.warn(
             "SAML email-first attribute resolution failed for attribute '{}': {}. Falling back to legacy NameID flow.",
             authenticationConfiguration.getEmailClaim(),
@@ -103,6 +109,11 @@ public class SamlIdentityResolver {
         false);
   }
 
+  private boolean canFallbackToLegacyFlow() {
+    String nameId = authenticationConfiguration.getEmailClaim();
+    return nameId != null;
+  }
+
   private boolean shouldUseLegacyFlow() {
     List<String> claimsMapping = authenticationConfiguration.getJwtPrincipalClaimsMapping();
     return claimsMapping != null && !claimsMapping.isEmpty();
@@ -110,6 +121,11 @@ public class SamlIdentityResolver {
 
   private boolean shouldUseEmailFirstFlow() {
     return !nullOrEmpty(authenticationConfiguration.getEmailClaim()) && !shouldUseLegacyFlow();
+  }
+
+  private static boolean isDomainValidationFailure(Exception ex) {
+    String msg = ex.getMessage();
+    return msg != null && msg.contains("not in allowed list");
   }
 
   private List<String> getAllowedEmailDomains() {

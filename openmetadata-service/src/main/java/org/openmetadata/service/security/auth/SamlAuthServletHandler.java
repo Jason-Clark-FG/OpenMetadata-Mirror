@@ -433,7 +433,7 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
         boolean needsUpdate = false;
         boolean shouldBeAdmin = isUserAdmin(email, userName);
 
-        LOG.info(
+        LOG.debug(
             "SAML legacy login - Username: {}, Email: {}, Should be admin: {}, Current admin status: {}",
             userName,
             email,
@@ -441,14 +441,14 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
             user.getIsAdmin());
 
         if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-          LOG.info(
+          LOG.debug(
               "Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
           user.setIsAdmin(true);
           needsUpdate = true;
         }
 
         if (!nullOrEmpty(displayName) && !displayName.equals(user.getDisplayName())) {
-          LOG.info(
+          LOG.debug(
               "Updating displayName for user {} from '{}' to '{}'",
               user.getName(),
               user.getDisplayName(),

@@ -824,7 +824,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
         boolean shouldBeAdmin = isUserAdmin(email, userName);
         boolean needsUpdate = false;
 
-        LOG.info(
+        LOG.debug(
             "OIDC legacy login - Username: {}, Email: {}, Should be admin: {}, Current admin status: {}",
             userName,
             email,
@@ -832,14 +832,14 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
             user.getIsAdmin());
 
         if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-          LOG.info(
+          LOG.debug(
               "Updating user {} to admin based on adminEmails/adminPrincipals", user.getName());
           user.setIsAdmin(true);
           needsUpdate = true;
         }
 
         if (!nullOrEmpty(displayName) && !displayName.equals(user.getDisplayName())) {
-          LOG.info(
+          LOG.debug(
               "Updating displayName for user {} from '{}' to '{}'",
               user.getName(),
               user.getDisplayName(),
@@ -852,7 +852,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
         needsUpdate = needsUpdate || teamsAssigned;
 
         if (needsUpdate) {
-          UserUtil.addOrUpdateUser(user);
+          return UserUtil.addOrUpdateUser(user);
         }
 
         return user;
@@ -952,9 +952,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
             // client.getConfiguration().findProviderMetadata().getUserInfoEndpointURI()
             // but currently we are just return the OM created token in the response
             String accessToken = JSONObjectUtils.getString(jsonObjectResponse, "access_token");
-            LOG.info(
-                "Found an access token in the response, trying to parse it, Value : {}",
-                accessToken);
+            LOG.debug("Found an access token in the response, trying to parse it");
             OIDCTokenResponse tokenSuccessResponse =
                 parseTokenResponseFromHttpResponse(httpResponse);
             // Populate credentials
