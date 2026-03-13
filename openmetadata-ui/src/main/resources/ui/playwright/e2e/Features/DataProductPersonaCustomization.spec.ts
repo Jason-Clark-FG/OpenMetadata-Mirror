@@ -184,11 +184,19 @@ test.describe('Data Product Persona customization', () => {
         .getByRole('button', { name: 'Add' })
         .click();
 
-      await waitForAllLoadersToDisappear(adminPage);
+      // Wait for "Add tab" dialog to fully close before interacting with grid
+      await adminPage.getByRole('dialog').waitFor({ state: 'hidden' });
+      await adminPage
+        .locator('.ant-modal-wrap')
+        .waitFor({ state: 'detached' });
 
-      await adminPage.getByTestId('add-widget-button').click();
+      const addWidgetButton = adminPage.getByTestId('add-widget-button');
+      await addWidgetButton.waitFor({ state: 'visible' });
+      await addWidgetButton.click();
 
-      await expect(adminPage.getByTestId('add-widget-modal')).toBeVisible();
+      await adminPage
+        .getByTestId('widget-info-tabs')
+        .waitFor({ state: 'visible' });
 
       await adminPage.getByTestId('Description-widget').click();
       await adminPage

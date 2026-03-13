@@ -28,6 +28,7 @@ import { TableClass } from '../support/entity/TableClass';
 import { TagClass } from '../support/tag/TagClass';
 import {
   clickOutside,
+  closeFirstPopupAlert,
   descriptionBox,
   readElementInListWithScroll,
   redirectToHomePage,
@@ -1983,6 +1984,9 @@ export const deletedEntityCommonChecks = async ({
 
 export const restoreEntity = async (page: Page) => {
   await expect(page.locator('[data-testid="deleted-badge"]')).toBeVisible();
+
+  // Dismiss any stale toast from previous operations (e.g., delete toast)
+  await closeFirstPopupAlert(page);
 
   await page.click('[data-testid="manage-button"]');
   await page.click('[data-testid="restore-button"]');
