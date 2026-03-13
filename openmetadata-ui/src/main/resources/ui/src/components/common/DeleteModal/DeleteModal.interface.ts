@@ -10,9 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { SxProps, Theme } from '@mui/material';
 
-export interface DeleteModalMUIProps {
+export interface DeleteModalProps {
   /** Whether the modal is open */
   open: boolean;
   /** Title of the entity being deleted */
@@ -25,6 +24,4 @@ export interface DeleteModalMUIProps {
   onCancel: () => void;
   /** Callback when delete is confirmed */
   onDelete: () => void;
-  /** Additional custom styles for the Dialog paper component */
-  additionalStyle?: SxProps<Theme>;
 }
