@@ -72,7 +72,7 @@ import {
   resolveColumnTitle,
 } from './TableV2Utils';
 import classNames from 'classnames';
-import { isEmpty } from 'lodash';
+import { isEmpty, isEqual } from 'lodash';
 import React, {
   forwardRef,
   ReactElement,
@@ -435,8 +435,12 @@ const TableV2 = <T extends object>(
 
   useEffect(() => {
     if (isCustomizeColumnEnable) {
-      setDropdownColumnList(
-        getCustomizeColumnDetails<T>(rest.columns, rest.staticVisibleColumns)
+      const newList = getCustomizeColumnDetails<T>(
+        rest.columns,
+        rest.staticVisibleColumns
+      );
+      setDropdownColumnList((prev) =>
+        isEqual(prev, newList) ? prev : newList
       );
     }
   }, [isCustomizeColumnEnable, rest.columns, rest.staticVisibleColumns]);
@@ -458,6 +462,7 @@ const TableV2 = <T extends object>(
     rest.columns,
     columnDropdownSelections,
     rest.staticVisibleColumns,
+    dropdownColumnList,
   ]);
 
   useEffect(() => {
@@ -797,10 +802,11 @@ const TableV2 = <T extends object>(
                         return (
                           <UntitledTable.Cell
                             {...cellHandlerProps}
-                            className={
+                            className={classNames(
+                              'tw:overflow-hidden',
                               rest.cellClassName ??
-                              'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
-                            }
+                                'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
+                            )}
                             key={cellKey}
                             style={{
                               ...(rest.size === 'small' && !rest.cellClassName
@@ -817,48 +823,60 @@ const TableV2 = <T extends object>(
                                 : {}),
                               ...cellHandlerProps.style,
                             }}>
-                            {showExpandInCell && (
-                              <>
-                                {hasChildren ? (
-                                  ExpandIcon ? (
+                            <div
+                              className={classNames(
+                                'tw:flex tw:items-start tw:gap-1 tw:max-w-full',
+                                colType.ellipsis && 'tw:truncate'
+                              )}>
+                              {showExpandInCell && (
+                                <div className="tw:flex-shrink-0">
+                                  {hasChildren ? (
+                                    ExpandIcon ? (
+                                      <ExpandIcon
+                                        expandable={hasChildren}
+                                        expanded={isExpanded}
+                                        prefixCls=""
+                                        record={record}
+                                        onExpand={(rec, e) => {
+                                          e.stopPropagation();
+                                          handleExpandToggle(rec as T, rowKey);
+                                        }}
+                                      />
+                                    ) : (
+                                      <button
+                                        className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleExpandToggle(record, rowKey);
+                                        }}>
+                                        {isExpanded ? (
+                                          <ChevronDown className="tw:size-4" />
+                                        ) : (
+                                          <ChevronRight className="tw:size-4" />
+                                        )}
+                                      </button>
+                                    )
+                                  ) : ExpandIcon ? (
                                     <ExpandIcon
-                                      expandable={hasChildren}
-                                      expanded={isExpanded}
+                                      expandable={false}
+                                      expanded={false}
                                       prefixCls=""
                                       record={record}
-                                      onExpand={(rec, e) => {
-                                        e.stopPropagation();
-                                        handleExpandToggle(rec as T, rowKey);
-                                      }}
+                                      onExpand={(_rec, _e) => {}}
                                     />
                                   ) : (
-                                    <button
-                                      className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleExpandToggle(record, rowKey);
-                                      }}>
-                                      {isExpanded ? (
-                                        <ChevronDown className="tw:size-4" />
-                                      ) : (
-                                        <ChevronRight className="tw:size-4" />
-                                      )}
-                                    </button>
-                                  )
-                                ) : ExpandIcon ? (
-                                  <ExpandIcon
-                                    expandable={false}
-                                    expanded={false}
-                                    prefixCls=""
-                                    record={record}
-                                    onExpand={(_rec, _e) => {}}
-                                  />
-                                ) : (
-                                  <span className="tw:inline-block tw:w-4 tw:mr-1" />
-                                )}
-                              </>
-                            )}
-                            {resolveCellValue(colType, record, actualIndex)}
+                                    <span className="tw:inline-block tw:w-4 tw:mr-1" />
+                                  )}
+                                </div>
+                              )}
+                              <div
+                                className={classNames(
+                                  'tw:flex-1',
+                                  colType.ellipsis && 'tw:truncate'
+                                )}>
+                                {resolveCellValue(colType, record, actualIndex)}
+                              </div>
+                            </div>
                           </UntitledTable.Cell>
                         );
                       })}

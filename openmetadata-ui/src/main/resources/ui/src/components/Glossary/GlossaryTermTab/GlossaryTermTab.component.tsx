@@ -1418,6 +1418,11 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
     return map;
   }, [glossaryTerms]);
 
+  const draggingRecord = useMemo(
+    () => (draggingFqn ? termsByFqn.get(draggingFqn) : null),
+    [draggingFqn, termsByFqn]
+  );
+
   const { dragAndDropHooks } = useDragAndDrop({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     getItems(keys: any) {
@@ -1594,9 +1599,7 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
                 <DropZone
                   className={classNames({ 'drop-over-table': isTableHovered })}
                   getDropOperation={() =>
-                    draggingFqn && Fqn.split(draggingFqn).length > 2
-                      ? 'move'
-                      : 'cancel'
+                    draggingRecord?.parent ? 'move' : 'cancel'
                   }
                   onDrop={async (e) => {
                     const item = e.items[0];
