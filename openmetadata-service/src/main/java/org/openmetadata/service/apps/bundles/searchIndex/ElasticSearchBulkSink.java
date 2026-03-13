@@ -227,17 +227,12 @@ public class ElasticSearchBulkSink implements BulkSink {
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
 
-        // Index columns separately when processing table entities
+        // Index columns asynchronously when processing table entities
         if (Entity.TABLE.equals(entityType)) {
-          List<CompletableFuture<Void>> columnFutures =
-              entityInterfaces.stream()
-                  .map(
-                      entity ->
-                          CompletableFuture.runAsync(
-                              () -> indexTableColumns(entity, recreateIndex, reindexContext),
-                              DOC_BUILD_EXECUTOR))
-                  .toList();
-          CompletableFuture.allOf(columnFutures.toArray(CompletableFuture[]::new)).join();
+          for (EntityInterface entity : entityInterfaces) {
+            CompletableFuture.runAsync(
+                () -> indexTableColumns(entity, recreateIndex, reindexContext), DOC_BUILD_EXECUTOR);
+          }
         }
       }
     } catch (Exception e) {
