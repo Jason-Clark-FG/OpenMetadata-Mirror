@@ -82,6 +82,9 @@ jobs:
           cache: "yarn"
           cache-dependency-path: "openmetadata-ui/src/main/resources/ui/yarn.lock"
 
+      - name: Install Antlr4 CLI
+        run: sudo make install_antlr_cli
+
       - name: Install Yarn Packages
         working-directory: openmetadata-ui/src/main/resources/ui
         run: yarn install --frozen-lockfile
