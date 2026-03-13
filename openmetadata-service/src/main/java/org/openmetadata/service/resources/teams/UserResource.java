@@ -112,6 +112,7 @@ import org.openmetadata.schema.auth.RevokeTokenRequest;
 import org.openmetadata.schema.auth.ServiceTokenType;
 import org.openmetadata.schema.auth.TokenRefreshRequest;
 import org.openmetadata.schema.auth.TokenType;
+import org.openmetadata.schema.entity.Bot;
 import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
@@ -129,6 +130,7 @@ import org.openmetadata.service.auth.JwtResponse;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.exception.CustomExceptionMessage;
 import org.openmetadata.service.exception.EntityNotFoundException;
+import org.openmetadata.service.jdbi3.BotRepository;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.RoleRepository;
@@ -943,6 +945,88 @@ public class UserResource extends EntityResource<User, UserRepository> {
     // Invalidate Bot Token in Cache
     BotTokenCache.invalidateToken(user.getName());
     return response.toResponse();
+  }
+
+  @PUT
+  @Path("/regenerateBotTokens")
+  @Operation(
+      operationId = "regenerateJWTTokensForAllBots",
+      summary = "Regenerate JWT Tokens for all Bot Users",
+      description =
+          "Regenerate JWT Tokens for all bot users. Admin only. "
+              + "Use this after rotating JWT signing keys or changing the cluster name.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Token regeneration results",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = ResultList.class))),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin only")
+      })
+  public Response regenerateBotTokens(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description =
+                  "Token expiry (OneHour, One, Seven, Thirty, Sixty, Ninety, Unlimited). Defaults to Unlimited.")
+          @QueryParam("expiry")
+          @DefaultValue("Unlimited")
+          JWTTokenExpiry expiry) {
+    authorizer.authorizeAdmin(securityContext);
+    String updatedBy = securityContext.getUserPrincipal().getName();
+
+    BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
+    List<Bot> bots =
+        botRepository.listAll(
+            botRepository.getFields("botUser"), new ListFilter(Include.NON_DELETED));
+
+    List<String> regenerated = new ArrayList<>();
+    List<String> skipped = new ArrayList<>();
+    List<String> failed = new ArrayList<>();
+
+    for (Bot bot : bots) {
+      String botName = bot.getName();
+      try {
+        if (bot.getBotUser() == null) {
+          skipped.add(botName);
+          continue;
+        }
+
+        User botUser =
+            repository.get(
+                uriInfo, bot.getBotUser().getId(), repository.getFieldsWithUserAuth("*"));
+
+        if (botUser.getAuthenticationMechanism() == null
+            || botUser.getAuthenticationMechanism().getAuthType()
+                != AuthenticationMechanism.AuthType.JWT) {
+          skipped.add(botName);
+          continue;
+        }
+
+        JWTAuthMechanism newJwtAuth = jwtTokenGenerator.generateJWTToken(botUser, expiry);
+        botUser.setAuthenticationMechanism(
+            new AuthenticationMechanism()
+                .withConfig(newJwtAuth)
+                .withAuthType(AuthenticationMechanism.AuthType.JWT));
+        repository.createOrUpdate(uriInfo, botUser, updatedBy);
+        BotTokenCache.invalidateToken(botUser.getName());
+
+        regenerated.add(botName);
+      } catch (Exception e) {
+        LOG.error("Failed to regenerate token for bot: {}", botName, e);
+        failed.add(botName);
+      }
+    }
+
+    return Response.ok()
+        .entity(
+            java.util.Map.of(
+                "regeneratedBots", regenerated,
+                "skippedBots", skipped,
+                "failedBots", failed))
+        .build();
   }
 
   @GET
