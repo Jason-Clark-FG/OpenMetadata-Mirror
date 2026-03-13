@@ -2024,6 +2024,10 @@ public class SearchRepository {
           "Issue soft deleting/restoring columns for table [{}]: {}",
           table.getFullyQualifiedName(),
           e.getMessage());
+      if (e instanceof RuntimeException re) {
+        throw re;
+      }
+      throw new RuntimeException(e);
     }
   }
 
@@ -2513,11 +2517,21 @@ public class SearchRepository {
 
   public void deleteRelationshipFromSearch(UUID fromTableId, UUID toTableId) {
     String relationDocId = fromTableId.toString() + "-" + toTableId.toString();
-    searchClient.updateChildren(
-        GLOBAL_SEARCH_ALIAS,
-        new ImmutablePair<>("upstreamEntityRelationship.docId.keyword", relationDocId),
-        new ImmutablePair<>(
-            REMOVE_ENTITY_RELATIONSHIP, Collections.singletonMap("docId", relationDocId)));
+    try {
+      searchClient.updateChildren(
+          GLOBAL_SEARCH_ALIAS,
+          new ImmutablePair<>("upstreamEntityRelationship.docId.keyword", relationDocId),
+          new ImmutablePair<>(
+              REMOVE_ENTITY_RELATIONSHIP, Collections.singletonMap("docId", relationDocId)));
+    } catch (Exception e) {
+      SearchIndexRetryQueue.enqueue(
+          fromTableId.toString(),
+          null,
+          Entity.TABLE,
+          SearchIndexRetryQueue.failureReason("deleteRelationshipFromSearch", e));
+      LOG.error(
+          "Failed to delete relationship from search for {}: {}", relationDocId, e.getMessage());
+    }
   }
 
   public QueryCostSearchResult getQueryCostRecords(String serviceName) throws IOException {
