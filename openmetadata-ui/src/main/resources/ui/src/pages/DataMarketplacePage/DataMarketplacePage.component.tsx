@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
 import MarketplaceSearchBar from '../../components/DataMarketplace/MarketplaceSearchBar/MarketplaceSearchBar.component';
 import Loader from '../../components/common/Loader/Loader';
+import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { TAB_GRID_MAX_COLUMNS } from '../../constants/CustomizeWidgets.constants';
 import { EntityTabs, EntityType } from '../../enums/entity.enum';
@@ -126,21 +127,27 @@ const DataMarketplacePage = () => {
     <PageLayoutV1
       mainContainerClassName="p-t-0 data-marketplace-main-container"
       pageTitle={t('label.data-marketplace')}>
-      <div className="marketplace-grid-wrapper" dir="ltr">
-        <div className="p-x-box">
-          <div className="d-flex justify-end m-b-sm">
-            {selectedPersona && (
-              <Button
-                color="secondary"
-                data-testid="customize-marketplace-btn"
-                onPress={handleCustomize}>
-                {t('label.customize')}
-              </Button>
-            )}
+      <div
+        className="marketplace-header-bg"
+        style={{ backgroundImage: `url(${marketplaceBg})` }}>
+        <div className="marketplace-grid-wrapper" dir="ltr">
+          <div className="p-x-box">
+            <div className="d-flex justify-end m-b-sm">
+              {selectedPersona && (
+                <Button
+                  color="secondary"
+                  data-testid="customize-marketplace-btn"
+                  onPress={handleCustomize}>
+                  {t('label.customize')}
+                </Button>
+              )}
+            </div>
+            <MarketplaceGreetingBanner />
+            <MarketplaceSearchBar />
           </div>
-          <MarketplaceGreetingBanner />
-          <MarketplaceSearchBar />
         </div>
+      </div>
+      <div className="marketplace-grid-wrapper" dir="ltr">
         <ReactGridLayout
           className="grid-container p-x-box"
           cols={TAB_GRID_MAX_COLUMNS}
