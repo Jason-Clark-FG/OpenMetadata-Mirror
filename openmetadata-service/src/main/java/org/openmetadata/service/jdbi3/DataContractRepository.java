@@ -1407,9 +1407,9 @@ public class DataContractRepository extends EntityRepository<DataContract> {
             recordChange("latestResult", original.getLatestResult(), updated.getLatestResult());
           });
       compareAndUpdate(
-          "status",
+          "entityStatus",
           () -> {
-            recordChange("status", original.getEntityStatus(), updated.getEntityStatus());
+            recordChange("entityStatus", original.getEntityStatus(), updated.getEntityStatus());
           });
       compareAndUpdate(
           "testSuite",
