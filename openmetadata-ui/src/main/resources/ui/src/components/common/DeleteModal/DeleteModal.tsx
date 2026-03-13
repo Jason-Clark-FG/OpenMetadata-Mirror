@@ -39,7 +39,6 @@ export const DeleteModal = ({
     <DialogTrigger
       isOpen={open}
       onOpenChange={(isOpen) => !isOpen && !isDeleting && onCancel()}>
-      <span />
       <ModalOverlay isDismissable={!isDeleting}>
         <Modal>
           <Dialog width={400} onClose={onCancel}>
