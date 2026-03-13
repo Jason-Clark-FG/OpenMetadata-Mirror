@@ -107,7 +107,14 @@ test.describe(
       await redirectToHomePage(page);
       await entityData.visitPage(page);
       await page.getByTestId('profiler').click();
+      const columnProfileResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes('/columns') &&
+          response.url().includes('fields=profile') &&
+          response.status() === 200
+      );
       await page.getByRole('tab', { name: 'Column Profile' }).click();
+      await columnProfileResponse;
       await waitForAllLoadersToDisappear(page);
       await verifyExpandCollapseNoDuplication(page, {
         ...entityData.keys,
