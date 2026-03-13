@@ -268,7 +268,7 @@ export interface PipelineServiceClientConfiguration {
      */
     adminPrincipals?: string[];
     /**
-     * Allowed Domains to access
+     * [DEPRECATED: Use 'allowedEmailDomains' instead] Allowed Domains to access.
      */
     allowedDomains?: string[];
     /**
@@ -284,7 +284,7 @@ export interface PipelineServiceClientConfiguration {
      */
     botDomain?: string;
     /**
-     * **@Deprecated** List of unique bot principals
+     * [DEPRECATED] List of unique bot principals.
      */
     botPrincipals?: string[];
     /**
@@ -296,7 +296,7 @@ export interface PipelineServiceClientConfiguration {
      */
     enableSecureSocketConnection?: boolean;
     /**
-     * Enable Enforce Principal Domain
+     * [DEPRECATED: Use 'allowedEmailDomains' instead] Enable Enforce Principal Domain.
      */
     enforcePrincipalDomain?: boolean;
     /**
@@ -1063,7 +1063,7 @@ export interface AuthenticationConfiguration {
      * principal/subject of the token. Defaults are sub, email, preferred_username, name, upn,
      * email_verified
      */
-    jwtPrincipalClaims: string[];
+    jwtPrincipalClaims?: string[];
     /**
      * [DEPRECATED: Use 'emailClaim' and 'displayNameClaim' instead] Use these claims from the
      * JWT to identify the principal/subject and extract email. Format:
@@ -1556,9 +1556,9 @@ export interface AuthorizerConfiguration {
     /**
      * [DEPRECATED: Use 'adminEmails' instead] List of unique admin principals.
      */
-    adminPrincipals: string[];
+    adminPrincipals?: string[];
     /**
-     * Allowed Domains to access
+     * [DEPRECATED: Use 'allowedEmailDomains' instead] Allowed Domains to access.
      */
     allowedDomains?: string[];
     /**
@@ -1574,7 +1574,7 @@ export interface AuthorizerConfiguration {
      */
     botDomain?: string;
     /**
-     * **@Deprecated** List of unique bot principals
+     * [DEPRECATED] List of unique bot principals.
      */
     botPrincipals?: string[];
     /**
@@ -1590,14 +1590,14 @@ export interface AuthorizerConfiguration {
      */
     enableSecureSocketConnection: boolean;
     /**
-     * Enable Enforce Principal Domain
+     * [DEPRECATED: Use 'allowedEmailDomains' instead] Enable Enforce Principal Domain.
      */
-    enforcePrincipalDomain: boolean;
+    enforcePrincipalDomain?: boolean;
     /**
      * [DEPRECATED: Use 'botDomain' for bots, 'allowedEmailDomains' for domain restrictions]
      * Domain to use for constructing email addresses.
      */
-    principalDomain: string;
+    principalDomain?: string;
     /**
      * List of unique principals used as test users. **NOTE THIS IS ONLY FOR TEST SETUP AND NOT
      * TO BE USED IN PRODUCTION SETUP**

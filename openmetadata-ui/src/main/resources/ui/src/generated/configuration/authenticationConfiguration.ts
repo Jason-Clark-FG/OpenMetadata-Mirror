@@ -58,7 +58,7 @@ export interface AuthenticationConfiguration {
      * principal/subject of the token. Defaults are sub, email, preferred_username, name, upn,
      * email_verified
      */
-    jwtPrincipalClaims: string[];
+    jwtPrincipalClaims?: string[];
     /**
      * [DEPRECATED: Use 'emailClaim' and 'displayNameClaim' instead] Use these claims from the
      * JWT to identify the principal/subject and extract email. Format:
