@@ -662,8 +662,7 @@ public class EntityCsvTest {
       commonUtil
           .when(
               () ->
-                  CommonUtil.getResourceAsStream(
-                      EntityRepository.class.getClassLoader(), resource))
+                  CommonUtil.getResourceAsStream(EntityRepository.class.getClassLoader(), resource))
           .thenThrow(new IOException("broken docs"));
 
       IllegalStateException exception =
@@ -684,8 +683,7 @@ public class EntityCsvTest {
       commonUtil
           .when(
               () ->
-                  CommonUtil.getResourceAsStream(
-                      EntityRepository.class.getClassLoader(), resource))
+                  CommonUtil.getResourceAsStream(EntityRepository.class.getClassLoader(), resource))
           .thenReturn("{not-json");
 
       IllegalStateException exception =

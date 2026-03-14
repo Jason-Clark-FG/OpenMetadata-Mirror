@@ -29,12 +29,12 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.MockedStatic;
 import org.mockito.MockedConstruction;
-import org.openmetadata.schema.entity.domains.Domain;
-import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
+import org.mockito.MockedStatic;
 import org.openmetadata.schema.api.configuration.OpenMetadataBaseUrlConfiguration;
 import org.openmetadata.schema.email.SmtpSettings;
+import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
 import org.openmetadata.schema.settings.Settings;
 import org.openmetadata.schema.settings.SettingsType;
 import org.openmetadata.schema.type.ChangeDescription;
@@ -298,7 +298,8 @@ class NotificationTemplateHelperAdvancedTest {
                                     new OpenMetadataBaseUrlConfiguration()
                                         .withOpenMetadataUrl("https://openmetadata.example/"))))) {
       settingsCache
-          .when(() -> SettingsCache.getSetting(SettingsType.EMAIL_CONFIGURATION, SmtpSettings.class))
+          .when(
+              () -> SettingsCache.getSetting(SettingsType.EMAIL_CONFIGURATION, SmtpSettings.class))
           .thenReturn(new SmtpSettings().withEnableSmtpServer(false));
 
       class ExposedBuildEntityUrlHelper extends BuildEntityUrlHelper {

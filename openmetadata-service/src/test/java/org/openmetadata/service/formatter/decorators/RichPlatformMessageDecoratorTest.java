@@ -126,7 +126,8 @@ class RichPlatformMessageDecoratorTest {
             .withTimestamp(FIXED_TIME);
     OutgoingMessage outgoingMessage = new OutgoingMessage();
     outgoingMessage.setMessages(List.of("Owner changed"));
-    outgoingMessage.setEntityUrl("<https://openmetadata.example/table/service.sales.orders|orders>");
+    outgoingMessage.setEntityUrl(
+        "<https://openmetadata.example/table/service.sales.orders|orders>");
 
     java.lang.reflect.Method method =
         SlackMessageDecorator.class.getDeclaredMethod(
@@ -137,7 +138,9 @@ class RichPlatformMessageDecoratorTest {
     String json = JsonUtils.pojoToJson(message);
 
     assertTrue(json.contains("Owner changed"));
-    assertTrue(json.contains("Access data: <https://openmetadata.example/table/service.sales.orders|View>"));
+    assertTrue(
+        json.contains(
+            "Access data: <https://openmetadata.example/table/service.sales.orders|View>"));
   }
 
   @Test
@@ -152,7 +155,8 @@ class RichPlatformMessageDecoratorTest {
             .withTimestamp(FIXED_TIME);
     OutgoingMessage outgoingMessage = new OutgoingMessage();
     outgoingMessage.setMessages(List.of("Owner changed"));
-    outgoingMessage.setEntityUrl("[orders](https://openmetadata.example/table/service.sales.orders)");
+    outgoingMessage.setEntityUrl(
+        "[orders](https://openmetadata.example/table/service.sales.orders)");
 
     java.lang.reflect.Method method =
         MSTeamsMessageDecorator.class.getDeclaredMethod(
@@ -162,11 +166,13 @@ class RichPlatformMessageDecoratorTest {
             OutgoingMessage.class);
     method.setAccessible(true);
 
-    TeamsMessage message = (TeamsMessage) method.invoke(decorator, "publisher", event, outgoingMessage);
+    TeamsMessage message =
+        (TeamsMessage) method.invoke(decorator, "publisher", event, outgoingMessage);
     String json = JsonUtils.pojoToJson(message);
 
     assertTrue(json.contains("Owner changed"));
-    assertTrue(json.contains("[View Data](https://openmetadata.example/table/service.sales.orders)"));
+    assertTrue(
+        json.contains("[View Data](https://openmetadata.example/table/service.sales.orders)"));
   }
 
   @Test

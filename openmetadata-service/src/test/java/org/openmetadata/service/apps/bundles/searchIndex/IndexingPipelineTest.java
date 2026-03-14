@@ -278,7 +278,9 @@ class IndexingPipelineTest {
     when(searchRepository.getDataInsightReports()).thenReturn(List.of());
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
-      entityMock.when(() -> Entity.getEntityTimeSeriesRepository(entityType)).thenReturn(timeSeriesRepository);
+      entityMock
+          .when(() -> Entity.getEntityTimeSeriesRepository(entityType))
+          .thenReturn(timeSeriesRepository);
       entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
 
       int total =
@@ -301,11 +303,14 @@ class IndexingPipelineTest {
     String entityType = ReportData.ReportDataType.WEB_ANALYTIC_USER_ACTIVITY_REPORT_DATA.value();
 
     when(timeSeriesRepository.getTimeSeriesDao()).thenReturn(timeSeriesDao);
-    when(timeSeriesDao.listCount(any(ListFilter.class))).thenThrow(new IllegalStateException("boom"));
+    when(timeSeriesDao.listCount(any(ListFilter.class)))
+        .thenThrow(new IllegalStateException("boom"));
     when(searchRepository.getDataInsightReports()).thenReturn(List.of());
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
-      entityMock.when(() -> Entity.getEntityTimeSeriesRepository(entityType)).thenReturn(timeSeriesRepository);
+      entityMock
+          .when(() -> Entity.getEntityTimeSeriesRepository(entityType))
+          .thenReturn(timeSeriesRepository);
       entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
 
       int total =

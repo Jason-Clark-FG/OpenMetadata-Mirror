@@ -201,7 +201,8 @@ class MigrationUtilTest {
         .thenReturn(workflow);
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
-        MockedStatic<JsonUtils> jsonUtils = Mockito.mockStatic(JsonUtils.class, Mockito.CALLS_REAL_METHODS)) {
+        MockedStatic<JsonUtils> jsonUtils =
+            Mockito.mockStatic(JsonUtils.class, Mockito.CALLS_REAL_METHODS)) {
       entityMock
           .when(() -> Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION))
           .thenReturn(repository);
@@ -222,8 +223,7 @@ class MigrationUtilTest {
   @Test
   void jsonStructurallyEqualsFallsBackToRawStringComparisonWhenParsingFails() throws Exception {
     assertTrue(
-        (Boolean)
-            invokePrivateStatic("jsonStructurallyEquals", "{broken-json", "{broken-json"));
+        (Boolean) invokePrivateStatic("jsonStructurallyEquals", "{broken-json", "{broken-json"));
     assertFalse(
         (Boolean)
             invokePrivateStatic("jsonStructurallyEquals", "{broken-json", "{other-broken-json"));
