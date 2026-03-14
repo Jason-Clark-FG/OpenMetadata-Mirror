@@ -35,3 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "Step is not required"'
+
+  openmetadata-service-new-code-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Step is not required"'

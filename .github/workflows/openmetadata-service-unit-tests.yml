@@ -110,31 +110,8 @@ jobs:
             -DskipTests \
             -Dsonar.skip=true
 
-      - name: Evaluate new-code coverage
-        id: diff-coverage
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          python3 scripts/jacoco_diff_coverage.py \
-            --report openmetadata-service/target/site/jacoco/jacoco.xml \
-            --source-root openmetadata-service/src/main/java \
-            --base-ref origin/${{ github.event.pull_request.base.ref }} \
-            --head-ref HEAD \
-            --minimum-coverage "${NEW_CODE_COVERAGE_THRESHOLD}" \
-            --markdown-output openmetadata-service/target/diff-coverage.md
-
-      - name: Add coverage summary to job summary
-        if: ${{ always() && github.event_name == 'pull_request' && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
-        run: cat openmetadata-service/target/diff-coverage.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Comment PR with coverage summary
-        if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: openmetadata-service-new-code-coverage
-          path: openmetadata-service/target/diff-coverage.md
-
       - name: Upload JaCoCo report
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.event_name == 'pull_request' && hashFiles('openmetadata-service/target/site/jacoco/jacoco.xml') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: openmetadata-service-jacoco-report
@@ -154,3 +131,48 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_test_failures: true
           report_paths: "openmetadata-service/target/surefire-reports/TEST-*.xml"
+
+  openmetadata-service-new-code-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: openmetadata-service-unit-tests
+    env:
+      NEW_CODE_COVERAGE_THRESHOLD: "90"
+    if: ${{ github.event_name == 'pull_request' && !github.event.pull_request.draft }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Fetch PR base branch
+        run: git fetch --no-tags origin ${{ github.event.pull_request.base.ref }}
+
+      - name: Download JaCoCo report
+        uses: actions/download-artifact@v4
+        with:
+          name: openmetadata-service-jacoco-report
+          path: openmetadata-service/target/site/jacoco
+
+      - name: Evaluate new-code coverage
+        id: diff-coverage
+        run: |
+          python3 scripts/jacoco_diff_coverage.py \
+            --report openmetadata-service/target/site/jacoco/jacoco.xml \
+            --source-root openmetadata-service/src/main/java \
+            --base-ref origin/${{ github.event.pull_request.base.ref }} \
+            --head-ref HEAD \
+            --minimum-coverage "${NEW_CODE_COVERAGE_THRESHOLD}" \
+            --markdown-output openmetadata-service/target/diff-coverage.md
+
+      - name: Add coverage summary to job summary
+        if: ${{ always() && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
+        run: cat openmetadata-service/target/diff-coverage.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment PR with coverage summary
+        if: ${{ always() && github.event.pull_request.head.repo.full_name == github.repository && (steps.diff-coverage.outcome == 'success' || steps.diff-coverage.outcome == 'failure') }}
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: openmetadata-service-new-code-coverage
+          path: openmetadata-service/target/diff-coverage.md
