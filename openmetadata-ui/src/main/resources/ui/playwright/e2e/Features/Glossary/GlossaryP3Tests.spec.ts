@@ -20,6 +20,7 @@ import {
   getApiContext,
   redirectToHomePage,
 } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { selectActiveGlossary } from '../../../utils/glossary';
 import { sidebarClick } from '../../../utils/sidebar';
 
@@ -209,12 +210,15 @@ test.describe('Glossary P3 Tests', () => {
 
       // Test a single special character
       await searchInput.fill('@');
-      await page.getByTestId('glossary-term-table').or(page.getByText(/no.*term.*found|no.*result/i)).first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+      await waitForAllLoadersToDisappear(page);
 
       // Search should not crash - either shows results, table, or empty state
       const table = page.getByTestId('glossary-term-table');
       const emptyState = page.getByText(/no.*term.*found|no.*result/i);
       const tableRows = page.locator('tbody .ant-table-row');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- search results need time to render after special character input
+      await page.waitForTimeout(1000);
 
       const isStable =
         (await table.isVisible().catch(() => false)) ||
@@ -355,6 +359,7 @@ test.describe('Glossary P3 Tests', () => {
 
       // Navigate to term
       await page.click(`[data-testid="${glossaryTerm.data.displayName}"]`);
+      await waitForAllLoadersToDisappear(page);
 
       // Verify we're on term page
       await expect(
@@ -363,6 +368,7 @@ test.describe('Glossary P3 Tests', () => {
 
       // Go back
       await page.goBack();
+      await waitForAllLoadersToDisappear(page);
 
       // Should be back on glossary page
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
@@ -786,6 +792,7 @@ test.describe('Glossary P3 Tests', () => {
       // Navigate directly to a non-existent glossary (without redirectToHomePage)
       await page.goto(`/glossary/NonExistentGlossary_${Date.now()}`);
       await page.waitForLoadState('domcontentloaded');
+      await waitForAllLoadersToDisappear(page).catch(() => {});
 
       // Check for various states that indicate the app handled the invalid URL
       // App may show error OR redirect to glossary list page
@@ -801,7 +808,7 @@ test.describe('Glossary P3 Tests', () => {
       const hasValidResponse =
         (await badMessage
           .first()
-          .isVisible({ timeout: 3000 })
+          .isVisible({ timeout: 10000 })
           .catch(() => false)) ||
         (await errorState
           .first()

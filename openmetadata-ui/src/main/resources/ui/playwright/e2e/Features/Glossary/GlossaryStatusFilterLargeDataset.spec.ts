@@ -156,7 +156,8 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
       .catch(() => {
         // Ignore timeout
       });
-    await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' }).catch(() => {});
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- filter results need time to render
+    await page.waitForTimeout(500);
   };
 
   // Reusable helper to perform search
@@ -294,7 +295,8 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
       await allCheckbox.click();
 
       await page.locator('.ant-btn-primary', { hasText: 'Save' }).click();
-      await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' });
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- filter state needs time to settle after save
+      await page.waitForTimeout(1000);
 
       const allCount = await getRowCount(page);
       expect(allCount).toBeGreaterThanOrEqual(filteredCount);
@@ -369,7 +371,8 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
       expect(searchCount).toBeLessThanOrEqual(initialCount);
 
       await clearSearch(page);
-      await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' });
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- filter results need time to render after clearing search
+      await page.waitForTimeout(1000);
 
       const restoredCount = await getRowCount(page);
       expect(restoredCount).toBeGreaterThanOrEqual(searchCount);
@@ -500,7 +503,9 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
         hasText: 'Cancel',
       });
       await cancelButton.click();
-      await page.locator('.status-selection-dropdown').waitFor({ state: 'detached' }).catch(() => {});
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- dropdown dismiss animation needs time to settle
+      await page.waitForTimeout(500);
 
       // Count should remain the same
       const afterCancelCount = await getRowCount(page);

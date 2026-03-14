@@ -330,12 +330,20 @@ export const addCuratedAssetPlaceholder = async ({
   await openAddCustomizeWidgetModal(page);
   await waitForAllLoadersToDisappear(page);
 
-  await page.locator('[data-testid="KnowledgePanel.CuratedAssets"]').click();
+  await page
+    .getByRole('dialog', { name: 'Customize Home' })
+    .getByTestId('KnowledgePanel.CuratedAssets')
+    .click();
 
   await page.locator('[data-testid="apply-btn"]').click();
 
   await expect(
+    page.getByTestId('page-layout-v1').getByTestId('KnowledgePanel.CuratedAssets')
+  ).toBeVisible();
+
+  await expect(
     page
+      .getByTestId('page-layout-v1')
       .getByTestId('KnowledgePanel.CuratedAssets')
       .getByTestId('widget-empty-state')
   ).toBeVisible();
