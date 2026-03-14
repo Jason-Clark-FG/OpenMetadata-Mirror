@@ -102,7 +102,7 @@ export async function handleCoverImageUpload<T>(
     );
 
     return { entity: updatedEntity, uploadFailed: false };
-  } catch (uploadError) {
+  } catch {
     // Return original entity (without cover image)
     // Note: Warning notification will be shown by caller
     return { entity: createdEntity, uploadFailed: true };
@@ -226,7 +226,7 @@ export async function createEntityWithCoverImage<TFormData, TEntity>(
             jsonPatch
           );
 
-          return patchResult as Awaited<TEntity>;
+          return patchResult;
         },
       });
 

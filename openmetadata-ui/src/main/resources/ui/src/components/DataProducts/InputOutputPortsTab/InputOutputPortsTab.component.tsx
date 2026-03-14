@@ -69,9 +69,9 @@ export const InputOutputPortsTab = forwardRef<
     const [isAddingInputPort, setIsAddingInputPort] = useState(false);
     const [isAddingOutputPort, setIsAddingOutputPort] = useState(false);
     const [isLineageFullScreen, setIsLineageFullScreen] = useState(false);
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(
-      new Set(['input-ports', 'output-ports'])
-    );
+    const [isLineageExpanded, setIsLineageExpanded] = useState(false);
+    const [isInputPortsExpanded, setIsInputPortsExpanded] = useState(true);
+    const [isOutputPortsExpanded, setIsOutputPortsExpanded] = useState(true);
     const inputPortsListRef = React.useRef<PortsListViewRef>(null);
     const outputPortsListRef = React.useRef<PortsListViewRef>(null);
 
@@ -196,7 +196,7 @@ export const InputOutputPortsTab = forwardRef<
       [onPortClick]
     );
 
-    const isLineageCollapsed = !expandedSections.has('lineage');
+    const isLineageCollapsed = !isLineageExpanded;
 
     // Fetch port counts on initial load
     useEffect(() => {
@@ -228,15 +228,17 @@ export const InputOutputPortsTab = forwardRef<
 
     return (
       <div
-        className="tw:h-full tw:overflow-hidden tw:flex tw:flex-col tw:gap-5 tw:items-start"
+        className="tw:h-full tw:flex tw:flex-col tw:gap-5 tw:items-start tw:pb-3"
         data-testid="input-output-ports-tab">
         <Grid className="tw:w-full tw:shrink-0 tw:p-1" gap="4">
           <Grid.Item span={24}>
             <Accordion
               allowsMultipleExpanded
-              expandedKeys={expandedSections}
+              expandedKeys={
+                isLineageExpanded ? new Set(['lineage']) : new Set()
+              }
               onExpandedChange={(keys) =>
-                setExpandedSections(new Set([...keys].map(String)))
+                setIsLineageExpanded(keys.has('lineage'))
               }>
               <AccordionItem id="lineage">
                 <AccordionHeader data-testid="toggle-lineage-collapse">
@@ -287,9 +289,11 @@ export const InputOutputPortsTab = forwardRef<
           <Grid.Item span={12}>
             <Accordion
               allowsMultipleExpanded
-              expandedKeys={expandedSections}
+              expandedKeys={
+                isInputPortsExpanded ? new Set(['input-ports']) : new Set()
+              }
               onExpandedChange={(keys) =>
-                setExpandedSections(new Set([...keys].map(String)))
+                setIsInputPortsExpanded(keys.has('input-ports'))
               }>
               <AccordionItem id="input-ports">
                 <AccordionHeader data-testid="toggle-input-ports-collapse">
@@ -310,7 +314,7 @@ export const InputOutputPortsTab = forwardRef<
                       </Typography>
                     </div>
                     {permissions.EditAll &&
-                      expandedSections.has('input-ports') &&
+                      isInputPortsExpanded &&
                       inputPortsCount > 0 && (
                         <Button
                           color="secondary"
@@ -376,9 +380,11 @@ export const InputOutputPortsTab = forwardRef<
           <Grid.Item span={12}>
             <Accordion
               allowsMultipleExpanded
-              expandedKeys={expandedSections}
+              expandedKeys={
+                isOutputPortsExpanded ? new Set(['output-ports']) : new Set()
+              }
               onExpandedChange={(keys) =>
-                setExpandedSections(new Set([...keys].map(String)))
+                setIsOutputPortsExpanded(keys.has('output-ports'))
               }>
               <AccordionItem id="output-ports">
                 <AccordionHeader data-testid="toggle-output-ports-collapse">
@@ -399,7 +405,7 @@ export const InputOutputPortsTab = forwardRef<
                       </Typography>
                     </div>
                     {permissions.EditAll &&
-                      expandedSections.has('output-ports') &&
+                      isOutputPortsExpanded &&
                       outputPortsCount > 0 && (
                         <Button
                           color="secondary"
