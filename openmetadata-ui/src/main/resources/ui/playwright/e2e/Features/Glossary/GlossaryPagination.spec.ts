@@ -82,7 +82,7 @@ test.describe('Glossary tests', () => {
     // Wait for search API call with new endpoint
     await page.waitForResponse('api/v1/glossaryTerms/search?*');
     const table = page.getByTestId('glossary-terms-table');
-    const filteredTerms = await table.locator('tbody .ant-table-row').count();
+    const filteredTerms = await table.locator('tbody tr[role="row"]').count();
 
     expect(filteredTerms).toBe(1);
     await expect(
@@ -140,7 +140,7 @@ test.describe('Glossary tests', () => {
     await page.waitForResponse('api/v1/glossaryTerms/search?*');
     const nestedTable = page.getByTestId('glossary-terms-table');
     const filteredTerms = await nestedTable
-      .locator('tbody .ant-table-row')
+      .locator('tbody tr[role="row"]')
       .count();
 
     expect(filteredTerms).toBe(5);

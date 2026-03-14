@@ -537,9 +537,11 @@ const TableV2 = <T extends object>(
           <div className="tw:flex tw:items-center tw:gap-2">
             {rest.title && (
               <h5 className="tw:text-base tw:font-medium tw:m-0">
-                {(typeof rest.title === 'function'
-                  ? (rest.title as any)(pagedDataSource)
-                  : rest.title) as React.ReactNode}
+                {
+                  (typeof rest.title === 'function'
+                    ? (rest.title as any)(pagedDataSource)
+                    : rest.title) as React.ReactNode
+                }
               </h5>
             )}
             {searchProps && (
@@ -692,7 +694,9 @@ const TableV2 = <T extends object>(
                             </Button>
                             <Popover placement="bottom right">
                               <Dialog className="tw:outline-none">
-                                <div className="tw:min-w-48 tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:rounded-lg tw:overflow-hidden">
+                                <div
+                                  className="tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:rounded-lg"
+                                  style={{ minWidth: '200px' }}>
                                   {typeof colType.filterDropdown === 'function'
                                     ? colType.filterDropdown({
                                         prefixCls: 'ant-table-filter-dropdown',
@@ -746,13 +750,12 @@ const TableV2 = <T extends object>(
                     <UntitledTable.Row
                       allowsDragging={Boolean(dragAndDropHooks)}
                       className={classNames(
-                        'ant-table-row',
-                        `ant-table-row-level-${depth}`,
                         'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
                         typeof rest.rowClassName === 'function'
                           ? rest.rowClassName(record, actualIndex, 0)
                           : rest.rowClassName
                       )}
+                      data-level={depth}
                       data-row-key={rowKey}
                       draggable={
                         dragAndDropHooks
@@ -822,7 +825,7 @@ const TableV2 = <T extends object>(
                               minWidth: (colType.width as number) ?? undefined,
                               ...stickyStyle,
                               ...(showExpandInCell
-                                ? { paddingLeft: `${16 + depth * 20}px` }
+                                ? { paddingLeft: `${16 + depth * 12}px` }
                                 : {}),
                               ...cellHandlerProps.style,
                             }}>
@@ -847,7 +850,9 @@ const TableV2 = <T extends object>(
                                       />
                                     ) : (
                                       <button
+                                        aria-expanded={isExpanded}
                                         className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
+                                        data-testid="expand-icon"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleExpandToggle(record, rowKey);

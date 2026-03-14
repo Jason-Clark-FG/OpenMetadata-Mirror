@@ -73,7 +73,7 @@ test.describe(
         state: 'detached',
       });
 
-      expect(await page.locator('.ant-table-row').count()).toBe(15);
+      expect(await page.locator('tbody tr[role="row"]').count()).toBe(15);
     });
 
     test('Table search with sorting should work', async ({
