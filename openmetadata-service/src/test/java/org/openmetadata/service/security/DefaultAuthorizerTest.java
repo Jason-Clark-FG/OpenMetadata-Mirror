@@ -226,7 +226,10 @@ class DefaultAuthorizerTest {
           .when(
               () ->
                   Entity.getEntityByName(
-                      Entity.USER, "missing-bot", "*", org.openmetadata.schema.type.Include.ALL))
+                      Entity.USER,
+                      "missing-bot",
+                      "id,name,isBot,allowImpersonation,roles",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenThrow(new IllegalArgumentException("missing"));
 
       AuthorizationException missingBot =
@@ -234,6 +237,28 @@ class DefaultAuthorizerTest {
               AuthorizationException.class,
               () -> authorizer.authorize(securityContext, operationContext, resourceContext));
       assertTrue(missingBot.getMessage().contains("Bot user not found"));
+    }
+
+    try (MockedStatic<DefaultAuthorizer> mockedAuthorizer = mockStatic(DefaultAuthorizer.class);
+        MockedStatic<Entity> mockedEntity = mockStatic(Entity.class)) {
+      mockedAuthorizer
+          .when(() -> DefaultAuthorizer.getSubjectContext(securityContext))
+          .thenReturn(impersonatedContext);
+      mockedEntity
+          .when(
+              () ->
+                  Entity.getEntityByName(
+                      Entity.USER,
+                      "missing-bot",
+                      "id,name,isBot,allowImpersonation,roles",
+                      org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(null);
+
+      AuthorizationException nullBot =
+          assertThrows(
+              AuthorizationException.class,
+              () -> authorizer.authorize(securityContext, operationContext, resourceContext));
+      assertTrue(nullBot.getMessage().contains("Bot user not found"));
     }
 
     SubjectContext flaggedContext =
@@ -250,7 +275,10 @@ class DefaultAuthorizerTest {
           .when(
               () ->
                   Entity.getEntityByName(
-                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+                      Entity.USER,
+                      "bot-user",
+                      "id,name,isBot,allowImpersonation,roles",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
 
       AuthorizationException disabledImpersonation =
@@ -291,18 +319,17 @@ class DefaultAuthorizerTest {
           .when(
               () ->
                   Entity.getEntityByName(
-                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+                      Entity.USER,
+                      "bot-user",
+                      "id,name,isBot,allowImpersonation,roles",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
       mockedEntity
-          .when(
-              () -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL))
-          .thenReturn(role);
+          .when(() -> Entity.getEntities(List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(List.of(role));
       mockedEntity
-          .when(
-              () ->
-                  Entity.getEntity(
-                      role.getPolicies().get(0), "rules", org.openmetadata.schema.type.Include.ALL))
-          .thenReturn(policy);
+          .when(() -> Entity.getEntities(List.of(role.getPolicies().get(0)), "rules", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(List.of(policy));
 
       AuthorizationException exception =
           assertThrows(
@@ -342,16 +369,17 @@ class DefaultAuthorizerTest {
           .when(
               () ->
                   Entity.getEntityByName(
-                      Entity.USER, "bot-user", "*", org.openmetadata.schema.type.Include.ALL))
+                      Entity.USER,
+                      "bot-user",
+                      "id,name,isBot,allowImpersonation,roles",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
       mockedEntity
-          .when(
-              () -> Entity.getEntity(roleRef, "policies", org.openmetadata.schema.type.Include.ALL))
-          .thenReturn(role);
+          .when(() -> Entity.getEntities(List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(List.of(role));
       mockedEntity
-          .when(
-              () -> Entity.getEntity(policyRef, "rules", org.openmetadata.schema.type.Include.ALL))
-          .thenReturn(policy);
+          .when(() -> Entity.getEntities(List.of(policyRef), "rules", org.openmetadata.schema.type.Include.ALL))
+          .thenReturn(List.of(policy));
 
       assertDoesNotThrow(
           () -> authorizer.authorize(securityContext, operationContext, resourceContext));
