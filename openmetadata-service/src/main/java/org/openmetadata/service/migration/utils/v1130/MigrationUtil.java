@@ -115,6 +115,7 @@ public class MigrationUtil {
                     new EntityReference()
                         .withId(dataContract.getId())
                         .withType(Entity.DATA_CONTRACT)
+                        .withName(dataContract.getName())
                         .withFullyQualifiedName(dataContract.getFullyQualifiedName()));
 
                 collectionDAO.testCaseDAO().update(testCase);

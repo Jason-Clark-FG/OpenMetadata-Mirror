@@ -1842,6 +1842,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
               new EntityReference()
                   .withId(dataContract.getId())
                   .withType(Entity.DATA_CONTRACT)
+                  .withName(dataContract.getName())
                   .withFullyQualifiedName(dataContract.getFullyQualifiedName());
 
           daoCollection
@@ -1876,8 +1877,10 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
     for (EntityReference testCaseRef : dataContract.getQualityExpectations()) {
       try {
-        // Use testCase DAO to remove the dataContract field
-        daoCollection.testCaseDAO().removeTestCaseDataContract(testCaseRef.getId().toString());
+        daoCollection
+            .testCaseDAO()
+            .removeTestCaseDataContractForSpecificContract(
+                testCaseRef.getId().toString(), dataContract.getId().toString());
 
         LOG.debug("Removed dataContract reference from test case {}", testCaseRef.getId());
       } catch (Exception e) {

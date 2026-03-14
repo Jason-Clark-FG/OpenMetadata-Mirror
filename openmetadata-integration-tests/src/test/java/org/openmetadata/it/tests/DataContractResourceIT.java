@@ -6915,4 +6915,140 @@ public class DataContractResourceIT extends BaseEntityIT<DataContract, CreateDat
     assertNotNull(fetchedTc1.getDataContract());
     assertEquals(contract.getId(), fetchedTc1.getDataContract().getId());
   }
+
+  // ===================================================================
+  // DATA CONTRACT REFERENCE INTEGRITY TESTS
+  // ===================================================================
+
+  @Test
+  void testDeleteContract_DoesNotWipeOtherContractRef(TestNamespace ns) {
+    Table table1 = createTestTable(ns);
+    Table table2 = createTestTable(ns);
+    TestCase tc = createTestCaseForTable(ns, table1, "shared");
+
+    // Create contractA with tc
+    CreateDataContract requestA =
+        new CreateDataContract()
+            .withName(ns.prefix("contractA"))
+            .withEntity(table1.getEntityReference())
+            .withDescription("Contract A")
+            .withQualityExpectations(
+                List.of(new EntityReference().withId(tc.getId()).withType("testCase")));
+
+    DataContract contractA = createEntity(requestA);
+
+    // Verify tc references contractA
+    TestCase fetched = SdkClients.adminClient().testCases().get(tc.getId().toString());
+    assertNotNull(fetched.getDataContract());
+    assertEquals(contractA.getId(), fetched.getDataContract().getId());
+
+    // Create contractB for a different table, and reassign tc to contractB
+    CreateDataContract requestB =
+        new CreateDataContract()
+            .withName(ns.prefix("contractB"))
+            .withEntity(table2.getEntityReference())
+            .withDescription("Contract B")
+            .withQualityExpectations(
+                List.of(new EntityReference().withId(tc.getId()).withType("testCase")));
+
+    DataContract contractB = createEntity(requestB);
+
+    // tc should now reference contractB (the latest contract that claimed it)
+    fetched = SdkClients.adminClient().testCases().get(tc.getId().toString());
+    assertNotNull(fetched.getDataContract());
+    assertEquals(contractB.getId(), fetched.getDataContract().getId());
+
+    // Delete contractA - this should NOT wipe tc's reference to contractB
+    hardDeleteEntity(contractA.getId().toString());
+
+    // tc should still reference contractB
+    fetched = SdkClients.adminClient().testCases().get(tc.getId().toString());
+    assertNotNull(
+        fetched.getDataContract(),
+        "Deleting contractA should not wipe tc's reference to contractB");
+    assertEquals(
+        contractB.getId(),
+        fetched.getDataContract().getId(),
+        "tc should still reference contractB after contractA deletion");
+  }
+
+  @Test
+  void testDataContractRef_IncludesName(TestNamespace ns) {
+    Table table = createTestTable(ns);
+    TestCase tc = createTestCaseForTable(ns, table, "name_check");
+
+    CreateDataContract request =
+        new CreateDataContract()
+            .withName(ns.prefix("ref_name"))
+            .withEntity(table.getEntityReference())
+            .withDescription("Contract ref name test")
+            .withQualityExpectations(
+                List.of(new EntityReference().withId(tc.getId()).withType("testCase")));
+
+    DataContract contract = createEntity(request);
+
+    TestCase fetched = SdkClients.adminClient().testCases().get(tc.getId().toString());
+    assertNotNull(fetched.getDataContract());
+    assertEquals(contract.getId(), fetched.getDataContract().getId());
+    assertNotNull(
+        fetched.getDataContract().getName(), "dataContract EntityReference should include name");
+    assertEquals(contract.getName(), fetched.getDataContract().getName());
+    assertNotNull(fetched.getDataContract().getFullyQualifiedName());
+  }
+
+  @Test
+  void testUpdateContract_RemoveTestCase_OnlyRemovesOwnRef(TestNamespace ns) {
+    Table table1 = createTestTable(ns);
+    Table table2 = createTestTable(ns);
+    TestCase tc1 = createTestCaseForTable(ns, table1, "own1");
+    TestCase tc2 = createTestCaseForTable(ns, table1, "own2");
+
+    // Create contractA with tc1 and tc2
+    CreateDataContract requestA =
+        new CreateDataContract()
+            .withName(ns.prefix("own_refA"))
+            .withEntity(table1.getEntityReference())
+            .withDescription("Contract A owns tc1 and tc2")
+            .withQualityExpectations(
+                List.of(
+                    new EntityReference().withId(tc1.getId()).withType("testCase"),
+                    new EntityReference().withId(tc2.getId()).withType("testCase")));
+
+    DataContract contractA = createEntity(requestA);
+
+    // Create contractB and reassign tc1 to it
+    CreateDataContract requestB =
+        new CreateDataContract()
+            .withName(ns.prefix("own_refB"))
+            .withEntity(table2.getEntityReference())
+            .withDescription("Contract B takes tc1")
+            .withQualityExpectations(
+                List.of(new EntityReference().withId(tc1.getId()).withType("testCase")));
+
+    DataContract contractB = createEntity(requestB);
+
+    // tc1 should now point to contractB
+    TestCase fetchedTc1 = SdkClients.adminClient().testCases().get(tc1.getId().toString());
+    assertEquals(contractB.getId(), fetchedTc1.getDataContract().getId());
+
+    // Update contractA: remove tc1 from its quality expectations
+    contractA.setQualityExpectations(
+        List.of(new EntityReference().withId(tc2.getId()).withType("testCase")));
+    patchEntity(contractA.getId().toString(), contractA);
+
+    // tc1 should still reference contractB (removeDataContractFromOldTestCases is contract-aware)
+    fetchedTc1 = SdkClients.adminClient().testCases().get(tc1.getId().toString());
+    assertNotNull(
+        fetchedTc1.getDataContract(),
+        "tc1 should still have dataContract ref after being removed from contractA");
+    assertEquals(
+        contractB.getId(),
+        fetchedTc1.getDataContract().getId(),
+        "tc1 should still reference contractB");
+
+    // tc2 should still reference contractA
+    TestCase fetchedTc2 = SdkClients.adminClient().testCases().get(tc2.getId().toString());
+    assertNotNull(fetchedTc2.getDataContract());
+    assertEquals(contractA.getId(), fetchedTc2.getDataContract().getId());
+  }
 }

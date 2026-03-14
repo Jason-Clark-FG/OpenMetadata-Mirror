@@ -12,7 +12,7 @@
  */
 import Icon from '@ant-design/icons';
 import { Col, Row, Space, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ES_MAX_PAGE_SIZE } from '../../../constants/constants';
@@ -42,12 +42,15 @@ const ContractQualityCard: React.FC<{
   const [isTestCaseLoading, setIsTestCaseLoading] = useState(false);
   const [testCase, setTestCase] = useState<TestCase[]>([]);
 
-  const fetchTestCases = async () => {
+  const fetchTestCases = useCallback(async () => {
+    if (!fqn) {
+      return;
+    }
     setIsTestCaseLoading(true);
     try {
       const { data } = await getListTestCaseBySearch({
         ...DEFAULT_SORT_ORDER,
-        entityLink: generateEntityLink(fqn ?? ''),
+        entityLink: generateEntityLink(fqn),
         includeAllTests: true,
         limit: ES_MAX_PAGE_SIZE,
         include: Include.NonDeleted,
@@ -63,7 +66,7 @@ const ContractQualityCard: React.FC<{
     } finally {
       setIsTestCaseLoading(false);
     }
-  };
+  }, [fqn]);
 
   const {
     showTestCaseSummaryChart,
@@ -131,7 +134,7 @@ const ContractQualityCard: React.FC<{
 
   useEffect(() => {
     fetchTestCases();
-  }, []);
+  }, [fetchTestCases]);
 
   if (isTestCaseLoading) {
     return <Loader />;
