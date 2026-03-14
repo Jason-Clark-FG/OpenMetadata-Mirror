@@ -110,7 +110,7 @@ services.forEach((ServiceClass) => {
 
         // Wait for the service details page to load
         await page.waitForURL('**/service/**');
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -122,7 +122,7 @@ services.forEach((ServiceClass) => {
         // connection for live updates is only established when the initial
         // status is RUNNING — which it wasn't at page load time.
         await page.reload();
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -133,18 +133,15 @@ services.forEach((ServiceClass) => {
 
         if (service.serviceType === 'Mysql') {
           await page.reload();
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
 
           await page.getByTestId('agent-status-widget-view-more').click();
 
-          await page.waitForSelector(
-            '[data-testid="agent-status-card-Metadata"]',
-            {
-              state: 'visible',
-            }
-          );
+          await page.getByTestId('agent-status-card-Metadata').waitFor({
+            state: 'visible',
+          });
 
           // Check the agents statuses
           await expect(

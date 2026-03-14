@@ -70,7 +70,7 @@ test.describe('Glossary Remove Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -174,7 +174,7 @@ test.describe('Glossary Remove Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -330,8 +330,7 @@ test.describe('Glossary Remove Operations', () => {
       await page.getByTestId(`tag-${tagFqn}`).click();
 
       // Wait for save button and click
-      await page.waitForSelector(
-        '.ant-select-dropdown [data-testid="saveAssociatedTag"]',
+      await page.locator('.ant-select-dropdown').getByTestId('saveAssociatedTag').waitFor(
         { state: 'visible' }
       );
 
@@ -366,8 +365,7 @@ test.describe('Glossary Remove Operations', () => {
         .click();
 
       // Save the changes
-      await page.waitForSelector(
-        '.ant-select-dropdown [data-testid="saveAssociatedTag"]',
+      await page.locator('.ant-select-dropdown').getByTestId('saveAssociatedTag').waitFor(
         { state: 'visible' }
       );
 

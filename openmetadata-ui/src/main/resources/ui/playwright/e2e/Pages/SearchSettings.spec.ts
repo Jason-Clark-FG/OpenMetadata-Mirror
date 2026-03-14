@@ -176,7 +176,7 @@ test.describe('Search Preview test', () => {
       new RegExp(mockEntitySearchSettings.url + '$')
     );
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -199,7 +199,7 @@ test.describe('Search Preview test', () => {
     await searchInput.fill(table1.entity.name);
     await previewResponse;
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 

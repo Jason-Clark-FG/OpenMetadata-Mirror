@@ -189,32 +189,32 @@ export const validateViewPermissions = async (
   }
 
   await page.click('[data-testid="sample_data"]');
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
     /Sample Data/,
     permission?.viewSampleData
   );
   await page.click('[data-testid="table_queries"]');
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Queries/, permission?.viewQueries);
 
   await page.click('[data-testid="profiler"]');
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await page.getByRole('tab', { name: 'Data Quality' }).click();
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
     /Data Observability/,
     permission?.viewTests
   );
   await page.click('[data-testid="lineage"]');
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('edit-lineage')).not.toBeVisible();
 
   await page.click('[data-testid="custom_properties"]');
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Custom Properties/);
 };
 

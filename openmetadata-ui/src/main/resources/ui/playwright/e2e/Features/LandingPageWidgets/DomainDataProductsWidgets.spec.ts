@@ -342,7 +342,8 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
     await page.getByTestId('assets').click();
 
     await page
-      .waitForSelector('[data-testid="loader"]', {
+      .getByTestId('loader')
+      .waitFor({
         state: 'detached',
         timeout: 10000,
       })
@@ -374,8 +375,6 @@ test.describe.serial('Domain and Data Product Asset Counts', () => {
       const removeRes = page.waitForResponse('**/assets/remove');
       await page.getByTestId('delete-all-button').click();
       await removeRes;
-
-      await page.waitForTimeout(500);
     }
 
     await page.reload();

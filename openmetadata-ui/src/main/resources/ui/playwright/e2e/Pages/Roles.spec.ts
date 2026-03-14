@@ -550,7 +550,7 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     await page.reload();
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
     await expect(page.locator('[data-testid="add-role"]')).toBeVisible();

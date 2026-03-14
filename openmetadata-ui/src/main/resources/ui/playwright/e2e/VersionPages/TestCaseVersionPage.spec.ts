@@ -73,9 +73,7 @@ test.describe('TestCase Version Page', () => {
     await page.goto(
       `/test-case/${encodeURIComponent(testCase.fullyQualifiedName)}`
     );
-    await page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     /**
      * Step: Display name change
@@ -92,7 +90,7 @@ test.describe('TestCase Version Page', () => {
       await page.getByTestId('manage-button').click();
       await page.getByTestId('rename-button').click();
 
-      await page.waitForSelector('#displayName');
+      await page.locator('#displayName').waitFor();
       await page.fill('#displayName', 'test-case-version-changed');
       const updateNameRes = page.waitForResponse(
         '/api/v1/dataQuality/testCases/*'
@@ -109,9 +107,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test-case-version-changed');
 
       await page.getByTestId('version-button').click();
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await page.getByTestId('loader').waitFor({ state: 'detached' });
     });
 
     /**
@@ -120,7 +116,7 @@ test.describe('TestCase Version Page', () => {
      */
     await test.step('Description change', async () => {
       await page.getByTestId('edit-description').click();
-      await page.waitForSelector('[data-testid="editor"]');
+      await page.getByTestId('editor').waitFor();
 
       await page.fill(descriptionBox, 'test case description changed');
       const updateDescriptionRes = page.waitForResponse(
@@ -141,9 +137,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test case description changed');
 
       await page.getByTestId('version-button').click();
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await page.getByTestId('loader').waitFor({ state: 'detached' });
     });
 
     /**
@@ -152,7 +146,7 @@ test.describe('TestCase Version Page', () => {
      */
     await test.step('Parameter change', async () => {
       await page.getByTestId('edit-parameter-icon').click();
-      await page.waitForSelector('#tableTestForm');
+      await page.locator('#tableTestForm').waitFor();
 
       await page.locator('#tableTestForm_params_minValue').clear();
       await page.locator('#tableTestForm_params_minValue').fill('20');

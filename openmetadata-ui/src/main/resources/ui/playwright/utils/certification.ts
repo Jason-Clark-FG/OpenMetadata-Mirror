@@ -28,15 +28,15 @@ export const openCertificationDropdown = async (page: Page) => {
   );
   await page.getByTestId('edit-certification').click();
   await certificationResponse;
-  await page.waitForSelector('.certification-card-popover', {
+  await page.locator('.certification-card-popover').waitFor({
     state: 'visible',
   });
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 };
 
 export const closeCertificationDropdown = async (page: Page) => {
   await page.getByTestId('close-certification').click();
-  await page.waitForSelector('.certification-card-popover', {
+  await page.locator('.certification-card-popover').waitFor({
     state: 'hidden',
   });
 };

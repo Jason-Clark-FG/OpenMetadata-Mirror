@@ -154,13 +154,13 @@ test.describe('Glossary Bulk Import Export', () => {
 
       await page.click('[data-testid="manage-button"]');
       await page.click('[data-testid="import-button-description"]');
-      await page.waitForSelector('[type="file"]', { state: 'attached' });
+      await page.locator('[type="file"]').waitFor({ state: 'attached' });
       await page.setInputFiles(
         '[type="file"]',
         'downloads/' + glossary1.data.displayName + '.csv'
       );
 
-      await page.waitForSelector('[data-testid="upload-file-widget"]', {
+      await page.getByTestId('upload-file-widget').waitFor({
         state: 'hidden',
       });
 
@@ -175,11 +175,9 @@ test.describe('Glossary Bulk Import Export', () => {
       await page.click('[data-testid="add-row-btn"]');
 
       // click on last row first cell
-      const rows = await page.$$('.rdg-row');
-      const lastRow = rows[rows.length - 1];
-
-      const firstCell = await lastRow.$('.rdg-cell');
-      await firstCell?.click();
+      const lastRow = page.locator('.rdg-row').last();
+      const firstCell = lastRow.locator('.rdg-cell').first();
+      await firstCell.click();
 
       // Click on first cell and edit
       await fillGlossaryRowDetails(
@@ -209,7 +207,7 @@ test.describe('Glossary Bulk Import Export', () => {
         failed: '0',
       });
 
-      await page.waitForSelector('.rdg-header-row', {
+      await page.locator('.rdg-header-row').waitFor({
         state: 'visible',
       });
 
@@ -236,29 +234,20 @@ test.describe('Glossary Bulk Import Export', () => {
       );
       await page.click('[data-testid="version-button"]');
       await versionResponse;
-      await page.waitForSelector('[role="dialog"]', { state: 'visible' });
+      await page.locator('[role="dialog"]').waitFor({ state: 'visible' });
 
-      await page.waitForSelector('[data-testid="processed-row"]');
-      const processedRow = await page.$eval(
-        '[data-testid="processed-row"]',
-        (el) => el.textContent
-      );
+      await page.getByTestId('processed-row').waitFor();
+      await expect(
+        page.locator('[data-testid="processed-row"]')
+      ).toHaveText('3');
 
-      expect(processedRow).toBe('3');
+      await expect(
+        page.locator('[data-testid="passed-row"]')
+      ).toHaveText('3');
 
-      const passedRow = await page.$eval(
-        '[data-testid="passed-row"]',
-        (el) => el.textContent
-      );
-
-      expect(passedRow).toBe('3');
-
-      const failedRow = await page.$eval(
-        '[data-testid="failed-row"]',
-        (el) => el.textContent
-      );
-
-      expect(failedRow).toBe('0');
+      await expect(
+        page.locator('[data-testid="failed-row"]')
+      ).toHaveText('0');
 
       await expect(page.getByTestId('view-more-button')).toBeVisible();
 
@@ -319,14 +308,14 @@ ${circularRefGlossary.data.name}.parent,child,child,<p>child</p>,,,,,,user:admin
           type: 'text/csv',
         });
 
-        await page.waitForSelector('[type="file"]', { state: 'attached' });
+        await page.locator('[type="file"]').waitFor({ state: 'attached' });
         await page.setInputFiles('[type="file"]', {
           name: initialCsvFile.name,
           mimeType: initialCsvFile.type,
           buffer: Buffer.from(await initialCsvFile.arrayBuffer()),
         });
 
-        await page.waitForSelector('[data-testid="upload-file-widget"]', {
+        await page.getByTestId('upload-file-widget').waitFor({
           state: 'hidden',
         });
 
@@ -380,14 +369,14 @@ ${circularRefGlossary.data.name}.parent,child,child,<p>child</p>,,,,,,user:admin
           }
         );
 
-        await page.waitForSelector('[type="file"]', { state: 'attached' });
+        await page.locator('[type="file"]').waitFor({ state: 'attached' });
         await page.setInputFiles('[type="file"]', {
           name: circularCsvFile.name,
           mimeType: circularCsvFile.type,
           buffer: Buffer.from(await circularCsvFile.arrayBuffer()),
         });
 
-        await page.waitForSelector('[data-testid="upload-file-widget"]', {
+        await page.getByTestId('upload-file-widget').waitFor({
           state: 'hidden',
         });
 
@@ -407,10 +396,10 @@ ${circularRefGlossary.data.name}.parent,child,child,<p>child</p>,,,,,,user:admin
           failed: '1',
         });
 
-        const rows = await page.$$('.rdg-row');
-        const firstRow = rows[0];
-        const detailsCell = await firstRow.$('.rdg-cell-details');
-        const errorText = await detailsCell?.textContent();
+        const firstRow = page.locator('.rdg-row').first();
+        const errorText = await firstRow
+          .locator('.rdg-cell-details')
+          .textContent();
 
         expect(errorText).toContain(
           "Invalid hierarchy: Term 'Test CSV.name1' cannot be its own parent"
@@ -448,14 +437,14 @@ ${circularRefGlossary.data.name}.parent,child,child,<p>child</p>,,,,,,user:admin
           type: 'text/csv',
         });
 
-        await page.waitForSelector('[type="file"]', { state: 'attached' });
+        await page.locator('[type="file"]').waitFor({ state: 'attached' });
         await page.setInputFiles('[type="file"]', {
           name: csvFile.name,
           mimeType: csvFile.type,
           buffer: Buffer.from(await csvFile.arrayBuffer()),
         });
 
-        await page.waitForSelector('[data-testid="upload-file-widget"]', {
+        await page.getByTestId('upload-file-widget').waitFor({
           state: 'hidden',
         });
 
@@ -507,14 +496,14 @@ ${parentRefGlossary.data.name}.NonExistentParent,childTerm,childTerm,<p>Child wi
           type: 'text/csv',
         });
 
-        await page.waitForSelector('[type="file"]', { state: 'attached' });
+        await page.locator('[type="file"]').waitFor({ state: 'attached' });
         await page.setInputFiles('[type="file"]', {
           name: csvFile.name,
           mimeType: csvFile.type,
           buffer: Buffer.from(await csvFile.arrayBuffer()),
         });
 
-        await page.waitForSelector('[data-testid="upload-file-widget"]', {
+        await page.getByTestId('upload-file-widget').waitFor({
           state: 'hidden',
         });
 
@@ -571,14 +560,14 @@ ${partialGlossary.data.name}.selfRef,selfRef,selfRef,<p>Self-referential term</p
           type: 'text/csv',
         });
 
-        await page.waitForSelector('[type="file"]', { state: 'attached' });
+        await page.locator('[type="file"]').waitFor({ state: 'attached' });
         await page.setInputFiles('[type="file"]', {
           name: csvFile.name,
           mimeType: csvFile.type,
           buffer: Buffer.from(await csvFile.arrayBuffer()),
         });
 
-        await page.waitForSelector('[data-testid="upload-file-widget"]', {
+        await page.getByTestId('upload-file-widget').waitFor({
           state: 'hidden',
         });
 
@@ -643,7 +632,7 @@ ${partialGlossary.data.name}.selfRef,selfRef,selfRef,<p>Self-referential term</p
         await page.click('[data-testid="export-button-description"]');
 
         // Wait for export modal
-        await page.waitForSelector('[role="dialog"]');
+        await page.locator('[role="dialog"]').waitFor();
 
         // Start export
         const downloadPromise = page.waitForEvent('download');
@@ -704,7 +693,7 @@ ${partialGlossary.data.name}.selfRef,selfRef,selfRef,<p>Self-referential term</p
         await page.click('[data-testid="export-button-description"]');
 
         // Wait for export modal
-        await page.waitForSelector('[role="dialog"]');
+        await page.locator('[role="dialog"]').waitFor();
 
         // Start export
         const downloadPromise = page.waitForEvent('download');

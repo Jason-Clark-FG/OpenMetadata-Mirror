@@ -41,7 +41,7 @@ import { sidebarClick } from './sidebar';
 
 export const visitObservabilityAlertPage = async (page: Page) => {
   await redirectToHomePage(page);
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -83,7 +83,7 @@ export const addExternalDestination = async ({
     `[data-testid="destination-category-select-${destinationNumber}"]`
   );
 
-  await page.waitForSelector(`.ant-select-dropdown:visible`, {
+  await page.locator('.ant-select-dropdown:visible').waitFor({
     state: 'visible',
   });
   // Select external tab
@@ -586,10 +586,7 @@ export const createCommonObservabilityAlert = async ({
     const searchOptions = page.waitForResponse('/api/v1/search/query?q=*');
     await page.fill(
       `[data-testid="${filter.inputSelector}"] [role="combobox"]`,
-      filter.inputValue,
-      {
-        force: true,
-      }
+      filter.inputValue
     );
 
     await searchOptions;
@@ -625,13 +622,13 @@ export const createCommonObservabilityAlert = async ({
     await page.click(`[data-testid="trigger-select-${actionNumber}"]`);
 
     // Adding the dropdown visibility check to avoid flakiness here
-    await page.waitForSelector(`.ant-select-dropdown:visible`, {
+    await page.locator('.ant-select-dropdown:visible').waitFor({
       state: 'visible',
     });
     await page.click(
       `.ant-select-dropdown:visible [data-testid="${action.name}-filter-option"]:visible`
     );
-    await page.waitForSelector(`.ant-select-dropdown:visible`, {
+    await page.locator('.ant-select-dropdown:visible').waitFor({
       state: 'hidden',
     });
 
@@ -642,10 +639,7 @@ export const createCommonObservabilityAlert = async ({
         );
         await page.fill(
           `[data-testid="${input.inputSelector}"] [role="combobox"]`,
-          input.inputValue,
-          {
-            force: true,
-          }
+          input.inputValue
         );
         if (input.waitForAPI) {
           await getSearchResult;

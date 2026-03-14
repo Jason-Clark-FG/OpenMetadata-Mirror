@@ -46,7 +46,7 @@ const crudColumnDisplayName = async (
   );
   await page.getByTestId('searchbar').fill(columnName);
   await searchResponse;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+  await page.getByTestId('loader').waitFor({ state: 'hidden' });
 
   // Add the display name to a new value
   await updateDisplayNameForEntityChildren(
@@ -117,7 +117,7 @@ test('schema table test', async ({ dataStewardPage, ownerPage, page }) => {
     await redirectToHomePage(page);
 
     await table.visitEntityPage(page);
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     await addOwner({
       page,
@@ -142,7 +142,7 @@ test('schema table test', async ({ dataStewardPage, ownerPage, page }) => {
       await redirectToHomePage(currentPage);
 
       await table.visitEntityPage(currentPage);
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
       await crudColumnDisplayName(
@@ -194,7 +194,7 @@ test('Copy column link button should copy the column URL to clipboard', async ({
   // Navigate directly to the table page instead of searching
   await redirectToHomePage(page);
   await table.visitEntityPage(page);
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await testCopyLinkButton({
     page,
@@ -211,7 +211,7 @@ test('Copy column link should have valid URL format', async ({ page }) => {
     `/api/v1/tables/name/${table.entityResponseData?.['fullyQualifiedName']}/columns?*`
   );
   await table.visitEntityPage(page);
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   const columnData = await columnResponse.then((res) => res.json());
 
   await expect(page.getByTestId('entity-table')).toBeVisible();
@@ -257,7 +257,7 @@ test('Copy nested column link should include full hierarchical path', async ({
 }) => {
   await redirectToHomePage(page);
   await table.visitEntityPage(page);
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-table')).toBeVisible();
 

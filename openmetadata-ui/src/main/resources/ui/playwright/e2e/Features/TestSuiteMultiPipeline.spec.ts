@@ -69,7 +69,7 @@ test(
       await createTestCaseResponse;
 
       await page.reload();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -92,7 +92,7 @@ test(
       await page.getByTestId('deploy-button').click();
       await deployResponse;
 
-      await page.waitForSelector('[data-testid="body-text"]', {
+      await page.getByTestId('body-text').waitFor({
         state: 'detached',
       });
 
@@ -158,7 +158,7 @@ test(
       await page.getByTestId('deploy-button').click();
       await updateDeployResponse;
 
-      await page.waitForSelector('[data-testid="body-text"]', {
+      await page.getByTestId('body-text').waitFor({
         state: 'detached',
       });
 
@@ -268,7 +268,7 @@ test(
         name: new RegExp(pipeline?.['name']),
       })
       .getByTestId('more-actions')
-      .click({ force: true });
+      .click();
 
     await page
       .locator(
@@ -292,7 +292,7 @@ test(
     await page.getByTestId('deploy-button').click();
     await editDeployResponse;
 
-    await page.waitForSelector('[data-testid="body-text"]', {
+    await page.getByTestId('body-text').waitFor({
       state: 'detached',
     });
 

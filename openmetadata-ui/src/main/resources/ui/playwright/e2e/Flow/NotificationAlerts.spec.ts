@@ -216,7 +216,7 @@ test('Single Filter Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
@@ -270,7 +270,7 @@ test('Multiple Filters Alert', async ({ page }) => {
     for (let i = 5; i >= 0; i--) {
       await page.click(`[data-testid="remove-filter-${i}"]`);
       // Wait for filter to be removed from DOM
-      await page.waitForSelector(`[data-testid="filter-${i}"]`, {
+      await page.getByTestId(`filter-${i}`).waitFor({
         state: 'detached',
       });
     }
@@ -279,7 +279,7 @@ test('Multiple Filters Alert', async ({ page }) => {
     for (let i = 5; i > 0; i--) {
       await page.click(`[data-testid="remove-destination-${i}"]`);
       // Wait for destination to be removed from DOM
-      await page.waitForSelector(`[data-testid="destination-${i}"]`, {
+      await page.getByTestId(`destination-${i}`).waitFor({
         state: 'detached',
       });
     }
@@ -299,7 +299,7 @@ test('Multiple Filters Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
@@ -410,7 +410,7 @@ test('Conversation source alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
 
     // Verify the edited alert changes

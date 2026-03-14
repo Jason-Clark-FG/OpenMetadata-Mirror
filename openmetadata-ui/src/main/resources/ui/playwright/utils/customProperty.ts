@@ -120,7 +120,7 @@ export const setValueForProperty = async (data: {
     `[data-testid="custom-property-${propertyName}-card"] [data-testid="edit-icon"]`
   );
   await editButton.scrollIntoViewIfNeeded();
-  await editButton.click({ force: true });
+  await editButton.click();
 
   const patchRequestPromise = page.waitForResponse(`/api/v1/${endpoint}/*`);
   switch (propertyType) {
@@ -148,7 +148,7 @@ export const setValueForProperty = async (data: {
 
     case 'enum':
       await page.click('#enumValues');
-      await page.fill('#enumValues', value, { force: true });
+      await page.fill('#enumValues', value);
       await page.press('#enumValues', 'Enter');
       await clickOutside(page);
       await container.locator('[data-testid="inline-save-btn"]').click();
@@ -242,7 +242,7 @@ export const setValueForProperty = async (data: {
       await page.locator('[data-testid="add-new-row"]').click();
 
       // Editor grid to be visible
-      await page.waitForSelector('.om-rdg', { state: 'visible' });
+      await page.locator('.om-rdg').waitFor({ state: 'visible' });
 
       await fillTableColumnInputDetails(page, values[0], 'pw-column1');
 
@@ -764,7 +764,7 @@ export const addCustomPropertiesForEntity = async ({
     page.locator(String.raw`#root\/entityReferenceConfig_list`)
   ).not.toBeVisible();
 
-  await page.waitForSelector(descriptionBox, { state: 'visible' });
+  await page.locator(descriptionBox).waitFor({ state: 'visible' });
   await page.locator(descriptionBox).click();
   await page.keyboard.type(customPropertyData.description, { delay: 50 });
 
@@ -783,12 +783,12 @@ export const addCustomPropertiesForEntity = async ({
   await createButton.click();
 
   const response = await createPropertyPromise;
-  await page.waitForSelector('[data-testid="custom-property-form"]', {
+  await page.getByTestId('custom-property-form').waitFor({
     state: 'detached',
   });
 
   // CRITICAL: Wait for UI to update after API response
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -920,7 +920,7 @@ export const verifyCustomPropertyInAdvancedSearch = async (
   await sidebarClick(page, SidebarItem.EXPLORE);
 
   // Wait for loader to disappear instead of networkidle
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -1028,7 +1028,7 @@ export const editColumnCustomProperty = async (
       .click();
   } else if (propertyType === 'table-cp') {
     await page.locator('[data-testid="add-new-row"]').click();
-    await page.waitForSelector('.om-rdg', { state: 'visible' });
+    await page.locator('.om-rdg').waitFor({ state: 'visible' });
 
     // Fill Row
     await page.locator('div.rdg-cell-pw-column1').last().dblclick();
@@ -1262,7 +1262,7 @@ export const updateCustomPropertyInRightPanel = async (data: {
 
   const editButton = container.getByTestId('edit-icon-right-panel');
   await editButton.scrollIntoViewIfNeeded();
-  await editButton.click({ force: true });
+  await editButton.click();
 
   const patchRequestPromise = page.waitForResponse(
     (response) =>
@@ -1390,15 +1390,13 @@ export const updateCustomPropertyInRightPanel = async (data: {
       await page.locator('[data-testid="add-new-row"]').click();
 
       // Editor grid to be visible
-      await page.waitForSelector('.om-rdg', { state: 'visible' });
+      await page.locator('.om-rdg').waitFor({ state: 'visible' });
 
       await fillTableColumnInputDetails(page, values[0], 'pw-column1');
 
       await fillTableColumnInputDetails(page, values[1], 'pw-column2');
 
-      await page.locator('[data-testid="update-table-type-property"]').click({
-        force: true,
-      });
+      await page.locator('[data-testid="update-table-type-property"]').click();
 
       break;
     }

@@ -441,7 +441,7 @@ export class OverviewPageObject extends RightPanelBase {
 
   async editOwners(ownerName: string): Promise<OverviewPageObject> {
     await this.editOwnersIcon.scrollIntoViewIfNeeded();
-    await this.editOwnersIcon.click({ force: true });
+    await this.editOwnersIcon.click();
     await this.userSearchBar.waitFor({ state: 'visible' });
     await this.userSearchBar.scrollIntoViewIfNeeded();
     await this.userSearchBar.fill(ownerName);
@@ -473,7 +473,7 @@ export class OverviewPageObject extends RightPanelBase {
     type: 'Users' | 'Teams' = 'Users'
   ): Promise<OverviewPageObject> {
     await this.editOwnersIcon.waitFor({ state: 'visible' });
-    await this.editOwnersIcon.click({ force: true });
+    await this.editOwnersIcon.click();
 
     await this.selectOwnerTabs.waitFor({ state: 'visible' });
     await this.page.getByRole('tab', { name: type }).click();
@@ -558,7 +558,7 @@ export class OverviewPageObject extends RightPanelBase {
   ): Promise<OverviewPageObject> {
     await this.editGlossaryTermsIcon.scrollIntoViewIfNeeded();
     await this.editGlossaryTermsIcon.waitFor({ state: 'visible' });
-    await this.editGlossaryTermsIcon.click({ force: true });
+    await this.editGlossaryTermsIcon.click();
 
     await this.selectableList.waitFor({ state: 'visible' });
     await this.selectableList
@@ -596,7 +596,7 @@ export class OverviewPageObject extends RightPanelBase {
   async removeTier(): Promise<OverviewPageObject> {
     await this.editTierIcon.scrollIntoViewIfNeeded();
     await this.editTierIcon.waitFor({ state: 'visible' });
-    await this.editTierIcon.click({ force: true });
+    await this.editTierIcon.click();
 
     await this.tierListContainer.waitFor({ state: 'visible' });
     await this.clearTierButton.waitFor({ state: 'visible' });
@@ -615,7 +615,7 @@ export class OverviewPageObject extends RightPanelBase {
    */
   async removeDomain(domainName: string): Promise<OverviewPageObject> {
     await this.addDomainIcon.waitFor({ state: 'visible' });
-    await this.addDomainIcon.click({ force: true });
+    await this.addDomainIcon.click();
 
     await this.domainTree.waitFor({ state: 'visible' });
 
@@ -654,7 +654,7 @@ export class OverviewPageObject extends RightPanelBase {
       Teams: 'team_search_index',
     };
 
-    await this.editOwnersIcon.click({ force: true });
+    await this.editOwnersIcon.click();
 
     await this.selectOwnerTabsRoleTab.waitFor({ state: 'visible' });
 

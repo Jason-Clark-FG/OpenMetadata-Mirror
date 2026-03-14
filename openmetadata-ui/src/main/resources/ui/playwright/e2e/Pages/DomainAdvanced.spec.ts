@@ -254,7 +254,7 @@ test.describe('Move Assets Between Domains', () => {
           table.entityResponseData.fullyQualifiedName
         )}`
       );
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -396,7 +396,7 @@ test.describe('Subdomain Permissions', () => {
     const subDomainFqn =
       testResources.subDomain.responseData.fullyQualifiedName;
     await userPage.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-    await userPage.waitForSelector('[data-testid="loader"]', {
+    await userPage.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -432,7 +432,7 @@ test.describe('Domain Version History', () => {
       await sidebarClick(page, SidebarItem.DOMAIN);
       await selectDomain(page, domain.data);
 
-      await page.waitForSelector('[data-testid="version-button"]', {
+      await page.getByTestId('version-button').waitFor({
         state: 'visible',
       });
 
@@ -475,7 +475,7 @@ test.describe('Domain Version History', () => {
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
       await selectDataProduct(page, dataProduct.responseData);
 
-      await page.waitForSelector('[data-testid="version-button"]', {
+      await page.getByTestId('version-button').waitFor({
         state: 'visible',
       });
 
@@ -751,7 +751,7 @@ test.describe('Cross-Domain Access Denial', () => {
     const tableFqn =
       testResources.accessibleTable.entityResponseData.fullyQualifiedName;
     await userPage.goto(`/table/${encodeURIComponent(tableFqn)}`);
-    await userPage.waitForSelector('[data-testid="loader"]', {
+    await userPage.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -774,7 +774,7 @@ test.describe('Cross-Domain Access Denial', () => {
     const tableFqn =
       testResources.accessibleTable.entityResponseData.fullyQualifiedName;
     await userPage.goto(`/table/${encodeURIComponent(tableFqn)}`);
-    await userPage.waitForSelector('[data-testid="loader"]', {
+    await userPage.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -872,7 +872,7 @@ test.describe('Data Product Asset Management', () => {
       await selectDataProduct(page, dataProduct1.responseData);
       await page.getByTestId('assets').click();
       await page.getByTestId('data-product-details-add-button').click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -937,7 +937,7 @@ test.describe('Domain Search and Filter', () => {
         '/api/v1/search/query?q=*&index=domain_search_index*'
       );
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

@@ -158,8 +158,9 @@ export const redirectToExplorePage = async (page: Page) => {
 
 export const removeLandingBanner = async (page: Page) => {
   try {
-    const welcomePageCloseButton = await page
-      .waitForSelector('[data-testid="welcome-screen-close-btn"]', {
+    const welcomePageCloseButton = page.getByTestId('welcome-screen-close-btn');
+    await welcomePageCloseButton
+      .waitFor({
         state: 'visible',
         timeout: 5000,
       })
@@ -169,7 +170,7 @@ export const removeLandingBanner = async (page: Page) => {
       });
 
     // Close the welcome banner if it exists
-    if (welcomePageCloseButton?.isVisible()) {
+    if (await welcomePageCloseButton.isVisible()) {
       await welcomePageCloseButton.click();
     }
   } catch {
@@ -234,7 +235,7 @@ export const toastNotification = async (
   message: string | RegExp,
   timeout?: number
 ) => {
-  await page.waitForSelector('[data-testid="alert-bar"]', {
+  await page.getByTestId('alert-bar').waitFor({
     state: 'visible',
   });
 
@@ -254,7 +255,7 @@ export const clickOutside = async (page: Page) => {
 
 export const visitOwnProfilePage = async (page: Page) => {
   await page.locator('[data-testid="dropdown-profile"] svg').click();
-  await page.waitForSelector('[role="menu"].profile-dropdown', {
+  await page.locator('[role="menu"].profile-dropdown').waitFor({
     state: 'visible',
   });
   const userResponse = page.waitForResponse(
@@ -271,7 +272,7 @@ export const assignDomain = async (
   checkSelectedDomain = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -300,7 +301,7 @@ export const assignDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   if (checkSelectedDomain) {
     await expect(page.getByTestId('domain-link')).toContainText(
@@ -314,7 +315,7 @@ export const assignSingleSelectDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -340,7 +341,7 @@ export const assignSingleSelectDomain = async (
   await tagSelector.click();
 
   await patchReq;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('domain-link')).toContainText(
     domain.displayName
@@ -352,7 +353,7 @@ export const updateDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -381,7 +382,7 @@ export const updateDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('header-domain-container')).toContainText('+1');
 
@@ -398,7 +399,7 @@ export const removeDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -424,7 +425,7 @@ export const removeDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -437,7 +438,7 @@ export const removeSingleSelectDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -462,7 +463,7 @@ export const removeSingleSelectDomain = async (
   await page.getByTestId(`tag-${domain.fullyQualifiedName}`).click();
 
   await patchReq;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -550,7 +551,7 @@ export const removeDataProduct = async (
     .getByTestId('edit-button')
     .click();
 
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await page
     .getByTestId(`selected-tag-${dataProduct.fullyQualifiedName}`)
@@ -574,10 +575,11 @@ export const removeDataProduct = async (
     .click();
   await patchReq;
 
-  await page.waitForSelector(
-    '[data-testid="data-product-dropdown-actions"] [data-testid="saveAssociatedTag"] [data-icon="loading"]',
-    { state: 'detached' }
-  );
+  await page
+    .getByTestId('data-product-dropdown-actions')
+    .getByTestId('saveAssociatedTag')
+    .locator('[data-icon="loading"]')
+    .waitFor({ state: 'detached' });
   await expect(
     page
       .getByTestId('data-product-dropdown-actions')
@@ -597,11 +599,11 @@ export const visitGlossaryPage = async (page: Page, glossaryName: string) => {
   const glossaryResponse = page.waitForResponse('/api/v1/glossaries?fields=*');
   await sidebarClick(page, SidebarItem.GLOSSARY);
   await glossaryResponse;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await page
     .getByRole('menuitem', { name: glossaryName })
     .click({ timeout: 30000 });
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 };
 
 export const getRandomFirstName = () => {
@@ -650,7 +652,7 @@ export const verifyDomainPropagation = async (
 ) => {
   await page.getByTestId('searchBox').fill(childFqnSearchTerm);
   await page.getByTestId('searchBox').press('Enter');
-  await page.waitForSelector(`[data-testid*="table-data-card"]`);
+  await page.locator('[data-testid*="table-data-card"]').first().waitFor();
 
   const entityCard = page.getByTestId(`table-data-card_${childFqnSearchTerm}`);
 
@@ -681,7 +683,7 @@ export const closeFirstPopupAlert = async (page: Page) => {
 export const reloadAndWaitForNetworkIdle = async (page: Page) => {
   await page.reload();
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 };
@@ -753,6 +755,7 @@ export const readElementInListWithScroll = async (
   await hierarchyElementLocator.hover();
   await page.mouse.wheel(0, -99999);
 
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized list rendering delay
   await page.waitForTimeout(1000);
 
   // Retry mechanism for pagination
@@ -763,6 +766,7 @@ export const readElementInListWithScroll = async (
   while (elementCount === 0 && retryCount < maxRetries) {
     await hierarchyElementLocator.hover();
     await page.mouse.wheel(0, 1000);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized list scroll rendering delay
     await page.waitForTimeout(500);
 
     // Create fresh locator and check if the article is now visible after this retry
@@ -807,9 +811,9 @@ export const testPaginationNavigation = async (
   expect(page1Response.status()).toBe(200);
 
   if (waitForLoadSelector) {
-    await page.waitForSelector(waitForLoadSelector, { state: 'visible' });
+    await page.locator(waitForLoadSelector).waitFor({ state: 'visible' });
   }
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -832,7 +836,7 @@ export const testPaginationNavigation = async (
   const page2Response = await page2ResponsePromise;
   expect(page2Response.status()).toBe(200);
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -867,7 +871,7 @@ export const testPaginationNavigation = async (
 
   const reloadResponse = await reloadResponsePromise;
   expect(reloadResponse.status()).toBe(200);
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -915,7 +919,7 @@ export const testPaginationNavigation = async (
     );
     await menuItem.click();
     await pageSizeChangePromise;
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     await expect(pageSizeDropdown).toHaveText('25 / Page');
 
@@ -955,9 +959,9 @@ export const testCompletePaginationWithSearch = async (
   } = config;
 
   await page.goto(`${baseUrl}`);
-  await page.waitForSelector(waitForLoadSelector, { state: 'visible' });
+  await page.locator(waitForLoadSelector).waitFor({ state: 'visible' });
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -973,7 +977,7 @@ export const testCompletePaginationWithSearch = async (
     await nextButton.click();
     const page2Response = await page2ResponsePromise;
     expect(page2Response.status()).toBe(200);
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -1042,10 +1046,7 @@ export const testCompletePaginationWithSearch = async (
     const refreshPage2Content = await paginationAfterRefresh.textContent();
     expect(refreshPage2Content).toMatch(/2\s*of\s*\d+/);
 
-    const searchValueAfterRefresh = await page
-      .getByTestId('searchbar')
-      .inputValue();
-    expect(searchValueAfterRefresh).toBe(searchTestTerm);
+    await expect(page.getByTestId('searchbar')).toHaveValue(searchTestTerm);
 
     const deleteToggle = page.getByTestId(`${deleteBtnTestId}`);
     const isDeleteTogglePresent = await deleteToggle.count();
@@ -1058,7 +1059,7 @@ export const testCompletePaginationWithSearch = async (
       await deleteToggle.click();
       const searchApiResponseWithToggle1 = await searchApiPromiseWithToggle1;
       expect(searchApiResponseWithToggle1.status()).toBe(200);
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -1069,7 +1070,7 @@ export const testCompletePaginationWithSearch = async (
       await deleteToggle.click();
       const searchApiResponseWithToggle2 = await searchApiPromiseWithToggle2;
       expect(searchApiResponseWithToggle2.status()).toBe(200);
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

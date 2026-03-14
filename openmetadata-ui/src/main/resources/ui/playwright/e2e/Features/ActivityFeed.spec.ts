@@ -133,7 +133,7 @@ test.describe('FeedWidget on landing page', () => {
 
     // Test dropdown options
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     await expect(
       page.getByRole('menuitem', { name: 'All Activity' })
@@ -161,8 +161,8 @@ test.describe('FeedWidget on landing page', () => {
     await titleLink.click();
 
     // Verify navigation to user activity feed
-    await expect(page.url()).toContain('/users/');
-    await expect(page.url()).toContain('/activity_feed/all');
+    expect(page.url()).toContain('/users/');
+    expect(page.url()).toContain('/activity_feed/all');
   });
 
   test('feed body renders content or empty state', async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('FeedWidget on landing page', () => {
 
     // Switch to My Data filter
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     const myDataOption = page.getByRole('menuitem', { name: 'My Data' });
 
@@ -210,7 +210,7 @@ test.describe('FeedWidget on landing page', () => {
 
     // Switch back to All Activity
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     const allActivityOption = page.getByRole('menuitem', {
       name: 'All Activity',
@@ -420,8 +420,6 @@ test.describe('Mention notifications in Notification Box', () => {
           .textContent();
         count = Number(countText ?? '0');
         if (isNaN(count) || count <= 0) {
-          // wait for 2s before querying again
-          await adminPage.waitForTimeout(2000);
           await adminPage.reload();
           await waitForAllLoadersToDisappear(adminPage);
         }
@@ -429,7 +427,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await adminPage.getByTestId('activity_feed').click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -463,7 +461,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await user1Page.getByTestId('activity_feed').click();
 
-      await user1Page.waitForSelector('[data-testid="loader"]', {
+      await user1Page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -512,7 +510,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
     await test.step('Admin user checks notification for correct user and timestamp', async () => {
       await adminPage.reload();
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
       const notificationBell = adminPage.getByTestId('task-notifications');
@@ -585,7 +583,7 @@ test.describe('Mention notifications in Notification Box', () => {
       await entity.visitEntityPage(user1Page);
 
       await user1Page.getByTestId('activity_feed').click();
-      await user1Page.waitForSelector('[data-testid="loader"]', {
+      await user1Page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

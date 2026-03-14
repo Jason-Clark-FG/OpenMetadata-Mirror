@@ -17,7 +17,7 @@ import { toastNotification } from './common';
 export const navigateToContractTab = async (page: Page, table: TableClass) => {
   await table.visitEntityPage(page);
   await page.click('[data-testid="contract"]');
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
     timeout: 30000,
   });
@@ -98,7 +98,7 @@ export const importODCSYaml = async (
   });
 
   // Click Import button
-  const importButton = await page.getByTestId('import-button');
+  const importButton = page.getByTestId('import-button');
   await importButton.click({ delay: 100 });
 
   await importResponse;

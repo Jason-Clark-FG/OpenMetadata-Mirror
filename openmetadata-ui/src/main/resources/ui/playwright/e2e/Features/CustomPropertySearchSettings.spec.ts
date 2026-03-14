@@ -87,7 +87,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       await page.getByTestId('custom_properties').click();
       await customPropertyResponse;
 
-      await page.waitForSelector('.ant-skeleton-active', {
+      await page.locator('.ant-skeleton-active').waitFor({
         state: 'detached',
       });
 
@@ -104,7 +104,7 @@ test.describe.serial('Custom Property Search Settings', () => {
 
       const customPropertiesTab = page.getByTestId('custom_properties');
       await customPropertiesTab.click();
-      await page.waitForSelector('.ant-skeleton-active', {
+      await page.locator('.ant-skeleton-active').waitFor({
         state: 'detached',
       });
 
@@ -112,8 +112,7 @@ test.describe.serial('Custom Property Search Settings', () => {
 
       await expect(propertyValue).toBeVisible();
 
-      // Wait for the custom property value to be indexed in Elasticsearch
-      // Dashboards may take longer to index than tables
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for custom property value to be indexed in Elasticsearch
       await page.waitForTimeout(10000);
     });
 
@@ -129,20 +128,18 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/dashboards$/
       );
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.getByTestId('add-field-btn').click();
-
-      // Wait for the dropdown menu to appear
-      await page.waitForTimeout(500);
 
       // Click on the custom property field in the dropdown menu
       const customPropertyOption = page.getByText(
         `extension.${dashboardPropertyName}`,
         { exact: true }
       );
+      await customPropertyOption.waitFor({ state: 'visible' });
       await customPropertyOption.click();
 
       const fieldPanel = page.getByTestId(
@@ -171,8 +168,7 @@ test.describe.serial('Custom Property Search Settings', () => {
 
       await toastNotification(page, /Search Settings updated successfully/);
 
-      // Wait for search settings to be reloaded by the application
-      // The search repository needs to refresh its configuration
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for search repository to refresh its configuration
       await page.waitForTimeout(15000);
 
       // Verify the field is still visible after save
@@ -194,9 +190,8 @@ test.describe.serial('Custom Property Search Settings', () => {
         await searchInput.fill(dashboard.entityResponseData.name);
         await searchInput.press('Enter');
 
-        await page.waitForTimeout(2000);
-
         const searchResults = page.getByTestId('search-results');
+        await searchResults.waitFor({ state: 'visible' });
         // Note: All entity search cards use 'table-data-card_' prefix regardless of entity type
         const dashboardCard = searchResults.getByTestId(
           `table-data-card_${dashboard.entityResponseData.fullyQualifiedName}`
@@ -213,9 +208,8 @@ test.describe.serial('Custom Property Search Settings', () => {
         await searchInput.fill(dashboardPropertyValue);
         await searchInput.press('Enter');
 
-        await page.waitForTimeout(2000);
-
         const searchResults = page.getByTestId('search-results');
+        await searchResults.waitFor({ state: 'visible' });
 
         // Note: All entity search cards use 'table-data-card_' prefix regardless of entity type
         const dashboardCard = searchResults.getByTestId(
@@ -252,7 +246,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       await page.getByTestId('custom_properties').click();
       await customPropertyResponse;
 
-      await page.waitForSelector('.ant-skeleton-active', {
+      await page.locator('.ant-skeleton-active').waitFor({
         state: 'detached',
       });
 
@@ -277,20 +271,18 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/pipelines$/
       );
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.getByTestId('add-field-btn').click();
-
-      // Wait for the dropdown menu to appear
-      await page.waitForTimeout(500);
 
       // Click on the custom property field in the dropdown menu
       const customPropertyOption = page.getByText(
         `extension.${pipelinePropertyName}`,
         { exact: true }
       );
+      await customPropertyOption.waitFor({ state: 'visible' });
       await customPropertyOption.click();
 
       const fieldPanel = page.getByTestId(
@@ -319,7 +311,7 @@ test.describe.serial('Custom Property Search Settings', () => {
 
       await toastNotification(page, /Search Settings updated successfully/);
 
-      // Wait for search index to update with new settings
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for search index to update with new settings
       await page.waitForTimeout(10000);
     });
 
@@ -332,9 +324,8 @@ test.describe.serial('Custom Property Search Settings', () => {
       await searchInput.fill(pipelinePropertyValue);
       await searchInput.press('Enter');
 
-      await page.waitForTimeout(2000);
-
       const searchResults = page.getByTestId('search-results');
+      await searchResults.waitFor({ state: 'visible' });
       // Note: All entity search cards use 'table-data-card_' prefix regardless of entity type
       const pipelineCard = searchResults.getByTestId(
         `table-data-card_${pipeline.entityResponseData.fullyQualifiedName}`
@@ -357,7 +348,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await dashboardCard.click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -376,7 +367,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await pipelineCard.click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

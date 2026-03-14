@@ -57,7 +57,7 @@ test('Should show loader then render classification content on initial page load
   await classificationsResponse;
   await tagsResponse;
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -102,7 +102,7 @@ test('Should render correct content when switching between classifications', asy
     .click();
   await tagsResponse;
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -126,7 +126,7 @@ test('Should render classification correctly after page reload', async ({
   await page.reload();
   await classificationsResponse;
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 

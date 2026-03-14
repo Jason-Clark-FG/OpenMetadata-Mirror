@@ -20,9 +20,7 @@ export const removePolicyFromRole = async (
   // Clicking on remove action for added policy
   await page.locator(`[data-testid="remove-action-${policyName}"]`).click();
 
-  const modalText = await page.locator('.ant-modal-body').textContent();
-
-  expect(modalText).toBe(
+  await expect(page.locator('.ant-modal-body')).toHaveText(
     `Are you sure you want to remove the ${policyName} from ${roleName}?`
   );
 
@@ -40,7 +38,7 @@ export const getElementWithPagination = async (
   if (await previousBtn.isVisible()) {
     while (await previousBtn.isEnabled()) {
       await previousBtn.click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
     }
@@ -60,6 +58,6 @@ export const getElementWithPagination = async (
     await nextBtn.waitFor({ state: 'visible' });
 
     await nextBtn.click();
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
   }
 };

@@ -829,8 +829,7 @@ test.describe(
           .locator('input');
         await expect(displayNameInput).toBeVisible();
 
-        const displayNameValue = await displayNameInput.inputValue();
-        expect(displayNameValue).not.toBe('Temporary Display Name');
+        await expect(displayNameInput).not.toHaveValue('Temporary Display Name');
       });
 
       await test.step('Close drawer', async () => {

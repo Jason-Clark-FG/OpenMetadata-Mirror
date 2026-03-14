@@ -57,17 +57,15 @@ test.describe('Schema search', { tag: '@ingestion' }, () => {
 
     await page.getByPlaceholder('Search Services').fill(serviceName);
     await searchServiceResponse;
-    await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+    await page.getByTestId('loader').waitFor({ state: 'hidden' });
 
     await page.click(`[data-testid="service-name-${serviceName}"]`);
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+    await page.getByTestId('loader').waitFor({ state: 'hidden' });
 
-    const headerText = await page.textContent(
-      `[data-testid="entity-header-name"]`
-    );
-
-    expect(headerText).toBe(serviceName);
+    await expect(
+      page.locator('[data-testid="entity-header-name"]')
+    ).toHaveText(serviceName);
 
     const schemaResponse = page.waitForResponse('/api/v1/databaseSchemas?**');
     await page.click('[data-testid="databases"]');

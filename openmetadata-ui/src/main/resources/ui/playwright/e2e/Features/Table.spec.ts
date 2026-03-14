@@ -59,7 +59,7 @@ test.describe(
       await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
       await page.click('[data-testid="test-cases"]');
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -67,7 +67,7 @@ test.describe(
 
       await page.getByTestId('next').click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -85,8 +85,7 @@ test.describe(
       await page.click('[data-testid="test-cases"]');
 
       await listTestCasesResponse;
-      await page.waitForSelector(
-        '[data-testid="test-case-container"] [data-testid="loader"]',
+      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
         { state: 'detached' }
       );
 
@@ -100,8 +99,7 @@ test.describe(
       await page.getByTestId('searchbar').fill('temp-test-case');
 
       await testSearchResponse;
-      await page.waitForSelector(
-        '[data-testid="test-case-container"] [data-testid="loader"]',
+      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
         { state: 'detached' }
       );
 
@@ -119,8 +117,7 @@ test.describe(
       await page.click('[data-testid="test-cases"]');
 
       await listTestCasesResponse;
-      await page.waitForSelector(
-        '[data-testid="test-case-container"] [data-testid="loader"]',
+      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
         { state: 'detached' }
       );
 
@@ -135,8 +132,7 @@ test.describe(
       await page.getByTitle('Queued').locator('div').click();
 
       await filteredResults;
-      await page.waitForSelector(
-        '[data-testid="test-case-container"] [data-testid="loader"]',
+      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
         { state: 'detached' }
       );
 
@@ -157,7 +153,7 @@ test.describe(
 
     test('should persist current page', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -165,7 +161,7 @@ test.describe(
 
       await page.getByTestId('next').click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -178,50 +174,46 @@ test.describe(
       await firstLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.goBack();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Verify page indicator is still the same after first navigation
-      const pageIndicatorAfterFirstBack = await page
-        .locator('[data-testid="page-indicator"]')
-        .textContent();
-
-      expect(pageIndicatorAfterFirstBack).toBe(initialPageIndicator);
+      await expect(
+        page.locator('[data-testid="page-indicator"]')
+      ).toHaveText(initialPageIndicator ?? '');
 
       // Second navigation - click on second table link
       const secondLinkInColumn = getFirstRowColumnLink(page);
       await secondLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.goBack();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Verify page indicator is still the same after second navigation
-      const pageIndicatorAfterSecondBack = await page
-        .locator('[data-testid="page-indicator"]')
-        .textContent();
-
-      expect(pageIndicatorAfterSecondBack).toBe(initialPageIndicator);
+      await expect(
+        page.locator('[data-testid="page-indicator"]')
+      ).toHaveText(initialPageIndicator ?? '');
     });
 
     test('should persist page size', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -231,14 +223,14 @@ test.describe(
         .getByTestId('page-size-selection-dropdown')
         .scrollIntoViewIfNeeded();
       await page.getByTestId('page-size-selection-dropdown').click();
-      await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+      await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
       await expect(
         page.getByRole('menuitem', { name: '15 / Page' })
       ).toBeVisible();
 
       await page.getByRole('menuitem', { name: '15 / Page' }).click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -249,12 +241,12 @@ test.describe(
       await linkInColumn.click();
 
       await entityApiResponse;
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.goBack();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
       await page
@@ -278,12 +270,12 @@ test.describe(
       test.slow();
       await page.goto('/table/sample_data.ecommerce_db.shopify.dim_customer');
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Should show expand icon for nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shipping_address"]'
@@ -292,7 +284,7 @@ test.describe(
       ).toBeVisible();
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.customer_id"]'
@@ -301,7 +293,7 @@ test.describe(
       ).not.toBeVisible();
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shop_id"]'
@@ -311,7 +303,7 @@ test.describe(
 
       // verify column profile table
       await page.getByRole('tab', { name: 'Data Observability' }).click();
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -327,12 +319,12 @@ test.describe(
 
       const data = await colsResponse;
       expect(data.status()).toBe(200);
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Should show expand icon for nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shipping_address"]'
@@ -341,7 +333,7 @@ test.describe(
       ).toBeVisible();
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.customer_id"]'
@@ -350,7 +342,7 @@ test.describe(
       ).not.toBeVisible();
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shop_id"]'
@@ -366,7 +358,7 @@ test.describe(
         '/table/sample_data.ecommerce_db.shopify.performance_test_table'
       );
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -379,7 +371,7 @@ test.describe(
       });
 
       // Should not show expand icon for non-nested columns
-      expect(
+      await expect(
         page
           .locator(
             '[data-row-key="sample_data.ecommerce_db.shopify.performance_test_table.test_col_0044"]'
@@ -457,9 +449,8 @@ test.describe(
         await glossaryTagsCell.getByTestId('edit-button').click();
       }
 
-      await page.waitForSelector('.ant-select-dropdown', { state: 'visible' });
-      await page.waitForSelector(
-        '.ant-select-dropdown [data-testid="loader"]',
+      await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
+      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
         {
           state: 'detached',
         }
@@ -481,7 +472,7 @@ test.describe(
         ),
         page.getByTestId('saveAssociatedTag').click(),
       ]);
-      await page.waitForSelector('.ant-select-dropdown', { state: 'hidden' });
+      await page.locator('.ant-select-dropdown').waitFor({ state: 'hidden' });
       await waitForAllLoadersToDisappear(page);
       await expect(glossaryTagsCell).toBeVisible({ timeout: 30000 });
 
@@ -493,8 +484,7 @@ test.describe(
         .getByTestId('search-bar-container')
         .getByTestId('searchbar')
         .fill('customer_id');
-      await page.waitForSelector(
-        '[data-testid="entity-table"] [data-testid="loader"]',
+      await page.getByTestId('entity-table').getByTestId('loader').waitFor(
         {
           state: 'detached',
         }
@@ -508,9 +498,8 @@ test.describe(
 
       await page.click(`${rowSelector} [data-testid="edit-button"]`);
 
-      await page.waitForSelector('.ant-select-dropdown', { state: 'visible' });
-      await page.waitForSelector(
-        '.ant-select-dropdown [data-testid="loader"]',
+      await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
+      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
         {
           state: 'detached',
         }
@@ -533,7 +522,7 @@ test.describe(
         ),
         page.getByTestId('saveAssociatedTag').click(),
       ]);
-      await page.waitForSelector('.ant-select-dropdown', { state: 'hidden' });
+      await page.locator('.ant-select-dropdown').waitFor({ state: 'hidden' });
       await waitForAllLoadersToDisappear(page);
 
       await expect(
@@ -558,15 +547,14 @@ test.describe(
       const rowSelector =
         '[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shop_id"] [data-testid*="classification-tags"]';
 
-      const addButton = await page.$(`${rowSelector} [data-testid="add-tag"]`);
-      if (addButton && (await addButton.isVisible())) {
+      const addButton = page.locator(`${rowSelector} [data-testid="add-tag"]`);
+      if (await addButton.isVisible()) {
         await addButton.click();
       } else {
         await page.click(`${rowSelector} [data-testid="edit-button"]`);
       }
 
-      await page.waitForSelector(
-        '.ant-select-dropdown:visible [data-testid="loader"]',
+      await page.locator('.ant-select-dropdown:visible').getByTestId('loader').waitFor(
         {
           state: 'detached',
         }
@@ -589,7 +577,7 @@ test.describe(
 
       page.reload();
       // Wait for page to be fully loaded
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
       const getRequest = page.waitForResponse(
@@ -612,9 +600,8 @@ test.describe(
         `[data-row-key="sample_data.ecommerce_db.shopify.dim_customer.shop_id"] [data-testid="classification-tags-0"] [data-testid="edit-button"]`
       );
 
-      await page.waitForSelector('.ant-select-dropdown', { state: 'visible' });
-      await page.waitForSelector(
-        '.ant-select-dropdown [data-testid="loader"]',
+      await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
+      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
         {
           state: 'detached',
         }

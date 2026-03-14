@@ -334,7 +334,6 @@ test.describe(
 
         await personaMenuItem.click();
         await clickOutside(userPage);
-        await userPage.waitForTimeout(500);
         await waitForAllLoadersToDisappear(userPage);
 
         // Validate changes in navigation tree
@@ -386,7 +385,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await adminPage.getByText('Data Assets').click();
         await adminPage.getByText(type, { exact: true }).click();
 
-        await adminPage.waitForSelector('[data-testid="loader"]', {
+        await adminPage.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -409,7 +408,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       });
 
       await test.step('apply customization', async () => {
-        expect(
+        await expect(
           adminPage.locator('#KnowledgePanel\\.Description')
         ).toBeVisible();
 
@@ -483,7 +482,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.waitForSelector('[data-testid="loader"]', {
+        await userPage.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -550,7 +549,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await adminPage.getByText('Governance').click();
         await adminPage.getByText(type, { exact: true }).click();
 
-        await adminPage.waitForSelector('[data-testid="loader"]', {
+        await adminPage.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -573,7 +572,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       });
 
       await test.step('apply customization', async () => {
-        expect(
+        await expect(
           adminPage.locator('#KnowledgePanel\\.Description')
         ).toBeVisible();
 
@@ -643,7 +642,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.waitForSelector('[data-testid="loader"]', {
+        await userPage.getByTestId('loader').waitFor({
           state: 'detached',
         });
         await waitForAllLoadersToDisappear(userPage);
@@ -704,7 +703,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Glossary Term', { exact: true }).click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -713,7 +712,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       await dragElement.dragTo(dropTarget);
 
-      expect(adminPage.getByTestId('save-button')).toBeEnabled();
+      await expect(adminPage.getByTestId('save-button')).toBeEnabled();
 
       await adminPage.getByTestId('save-button').click();
 
@@ -727,7 +726,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -785,7 +784,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Data Assets').click();
       await adminPage.getByText('Table', { exact: true }).click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -833,14 +832,14 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Change language to French
       await userPage.getByRole('button', { name: 'EN', exact: true }).click();
       await userPage.getByRole('menuitem', { name: 'Français - FR' }).click();
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -890,7 +889,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Domain', { exact: true }).click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -945,7 +944,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await entity?.visitEntityPage(userPage);
       await domainResponse;
 
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(userPage);

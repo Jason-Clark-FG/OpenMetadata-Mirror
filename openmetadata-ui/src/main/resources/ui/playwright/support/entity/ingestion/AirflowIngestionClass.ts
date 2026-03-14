@@ -55,7 +55,7 @@ class AirflowIngestionClass extends ServiceBaseClass {
     await page
       .getByTestId('select-widget-root/connection__oneof_select')
       .getByRole('combobox')
-      .click({ force: true });
+      .click();
     await page.click(
       '.ant-select-dropdown:visible [title="BackendConnection"]'
     );

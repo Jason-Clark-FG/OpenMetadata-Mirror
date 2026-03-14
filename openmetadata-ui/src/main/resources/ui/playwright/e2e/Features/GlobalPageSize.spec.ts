@@ -28,7 +28,7 @@ test.describe(
         '/table/sample_data.ecommerce_db.shopify.performance_test_table'
       );
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -36,14 +36,14 @@ test.describe(
       await page.getByTestId('page-size-selection-dropdown').click();
       await page.getByRole('menuitem', { name: '25 / Page' }).click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       // Go to Explore Page
       await sidebarClick(page, SidebarItem.EXPLORE);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -56,7 +56,7 @@ test.describe(
       // Go to Users Page
       await settingClick(page, GlobalSettingOptions.USERS);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

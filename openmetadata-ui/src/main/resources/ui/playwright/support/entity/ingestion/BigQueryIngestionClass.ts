@@ -68,7 +68,7 @@ class BigQueryIngestionClass extends ServiceBaseClass {
     await page
       .getByTestId('select-widget-root/credentials/gcpConfig__oneof_select')
       .getByRole('combobox')
-      .click({ force: true });
+      .click();
     await page.click(
       '.ant-select-dropdown:visible [title="GCP Credentials Values"]'
     );
@@ -78,7 +78,7 @@ class BigQueryIngestionClass extends ServiceBaseClass {
         'select-widget-root/credentials/gcpConfig/projectId__oneof_select'
       )
       .getByRole('combobox')
-      .click({ force: true });
+      .click();
     await page.click(
       '.ant-select-dropdown:visible [title="Multiple Project ID"]'
     );

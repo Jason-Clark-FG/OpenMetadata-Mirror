@@ -72,7 +72,7 @@ export const createTeam = async (
     ...overrides,
   };
 
-  await page.waitForSelector('[role="dialog"].ant-modal');
+  await page.locator('[role="dialog"].ant-modal').waitFor();
 
   await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
@@ -98,7 +98,7 @@ export const createTeam = async (
   const response = await createTeamResponse;
   const createdTeam = await response.json();
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -143,7 +143,7 @@ export const hardDeleteTeam = async (page: Page) => {
     .click();
   await page.getByTestId('delete-button').click();
 
-  await page.waitForSelector('[role="dialog"].ant-modal');
+  await page.locator('[role="dialog"].ant-modal').waitFor();
 
   await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
@@ -498,7 +498,7 @@ export const addEmailTeam = async (page: Page, email: string) => {
   await page.reload();
 
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 
@@ -587,7 +587,7 @@ export const executionOnOwnerTeam = async (
   const newTeamData = await createTeam(page);
 
 
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
 

@@ -55,7 +55,7 @@ test.describe('Hyperlink Custom Property Tests', () => {
         `[data-testid="custom-property-${propertyName}-card"] [data-testid="edit-icon"]`
       );
       await editButton.scrollIntoViewIfNeeded();
-      await editButton.click({ force: true });
+      await editButton.click();
 
       await page
         .locator('[data-testid="hyperlink-url-input"]')

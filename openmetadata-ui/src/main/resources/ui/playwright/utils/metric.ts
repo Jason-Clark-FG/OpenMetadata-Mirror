@@ -154,10 +154,9 @@ export const updateRelatedMetric = async (
     await page.getByTestId('edit-related-metrics').click();
   }
 
-  await page.waitForSelector(
-    '[data-testid="asset-select-list"] > .ant-select-selector input',
-    { state: 'visible' }
-  );
+  await page
+    .locator('[data-testid="asset-select-list"] > .ant-select-selector input')
+    .waitFor({ state: 'visible' });
 
   const apiPromise = page.waitForResponse(
     '/api/v1/search/query?q=*&index=metric_search_index&*'
@@ -180,7 +179,7 @@ export const updateRelatedMetric = async (
 
   await patchPromise;
 
-  await page.waitForSelector(`[data-testid="${dataAsset.entity.name}"]`, {
+  await page.getByTestId(dataAsset.entity.name).waitFor({
     state: 'visible',
   });
 
@@ -195,13 +194,13 @@ export const updateRelatedMetric = async (
 
   await metricsResponsePromise1;
 
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     dataAsset.entity.name
   );
 
-  // Adding manual wait for,right panel to be in place
+  // eslint-disable-next-line playwright/no-wait-for-timeout -- right panel rendering delay
   await page.waitForTimeout(1000);
 
   // Wait for the metrics API call to complete
@@ -211,7 +210,7 @@ export const updateRelatedMetric = async (
   await page.getByRole('button', { name: title, exact: true }).click();
   await metricsResponsePromise2;
 
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     title
@@ -246,7 +245,7 @@ export const addMetric = async (page: Page) => {
       .locator('.ant-select-dropdown:visible')
       .getByTitle(title, { exact: true });
     await expect(option).toBeVisible();
-    await option.click({ force: true });
+    await option.click();
     await expect(field).toContainText(title);
   };
 

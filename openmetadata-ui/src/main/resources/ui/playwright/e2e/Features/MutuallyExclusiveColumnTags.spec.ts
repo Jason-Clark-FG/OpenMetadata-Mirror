@@ -38,7 +38,7 @@ test(
     await redirectToHomePage(page);
     await table.visitEntityPage(page);
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     const firstColumnName = table.columnsName[0];
     const columnRowSelector = `[data-row-key$="${firstColumnName}"]`;
@@ -64,7 +64,7 @@ test(
     await page.click('[data-testid="saveAssociatedTag"]');
     await saveTagResponse;
 
-    await page.waitForSelector('.ant-select-dropdown', { state: 'detached' });
+    await page.locator('.ant-select-dropdown').waitFor({ state: 'detached' });
 
     // Verify the tag was added successfully
     await expect(

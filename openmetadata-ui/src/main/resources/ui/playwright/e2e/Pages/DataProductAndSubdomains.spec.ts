@@ -56,7 +56,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.getByRole('menuitem', { name: 'Data Products' }).click();
 
       // Wait for the Add Data Product form to appear
-      await page.waitForSelector('[data-testid="add-domain"]', {
+      await page.getByTestId('add-domain').waitFor({
         state: 'visible',
         timeout: 10000,
       });
@@ -151,7 +151,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.getByTestId('domain-expert-name').getByTestId('Add').click();
 
       // Wait for the popover to appear
-      await page.waitForSelector('[data-testid="selectable-list"]', {
+      await page.getByTestId('selectable-list').waitFor({
         state: 'visible',
       });
 
@@ -174,7 +174,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -184,6 +184,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         }
 
         if (retry < maxRetries - 1) {
+          // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for ES indexing before retry
           await page.waitForTimeout(2000);
         }
       }
@@ -224,7 +225,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.getByTestId('tags-container').getByTestId('add-tag').click();
 
       // Wait for tag selector
-      await page.waitForSelector('[data-testid="tag-selector"]', {
+      await page.getByTestId('tag-selector').waitFor({
         state: 'visible',
       });
 
@@ -288,13 +289,10 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.getByTestId('data-product-details-add-button').click();
 
       // Wait for modal
-      await page.waitForSelector('[data-testid="asset-selection-modal"]', {
+      await page.getByTestId('asset-selection-modal').waitFor({
         state: 'visible',
         timeout: 10000,
       });
-
-      // Wait for search results to load
-      await page.waitForTimeout(1000); // Allow search index to populate
 
       // Search for table
       const searchRes = page.waitForResponse('/api/v1/search/query*');
@@ -365,7 +363,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.goto(
         `/dataProduct/${encodeURIComponent(dpData.fullyQualifiedName)}`
       );
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -798,7 +796,7 @@ test.describe('Data Product Search and Filter', () => {
 
       // Select domain1 from global dropdown
       await page.getByTestId('domain-dropdown').click();
-      await page.waitForSelector('[data-testid="domain-selectable-tree"]', {
+      await page.getByTestId('domain-selectable-tree').waitFor({
         state: 'visible',
       });
 
@@ -862,7 +860,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
 
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -878,7 +876,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -917,7 +915,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

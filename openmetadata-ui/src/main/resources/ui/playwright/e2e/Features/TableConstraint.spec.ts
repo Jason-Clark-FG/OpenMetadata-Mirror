@@ -60,12 +60,12 @@ test.describe('Table Constraints', {}, () => {
 
     await test.step('Add Constraints', async () => {
       await table.visitEntityPage(page);
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
       await page.click('[data-testid="table-constraints-add-button"]');
-      await page.waitForSelector('[role="dialog"].ant-modal');
+      await page.locator('[role="dialog"].ant-modal').waitFor();
 
       // Add for Primary Key
 
@@ -85,7 +85,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('primary-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName1, { force: true });
+        .fill(columnName1);
 
       // select 1st value from dropdown
       const firstPrimaryKeyColumn = page.getByTitle(columnName1);
@@ -96,7 +96,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('primary-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName2, { force: true });
+        .fill(columnName2);
 
       const secondPrimaryKeyColumn = page.getByTitle(columnName2);
       await secondPrimaryKeyColumn.hover();
@@ -177,7 +177,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('unique-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName3, { force: true });
+        .fill(columnName3);
 
       // select 1st value from dropdown
       const firstUniqueKeyColumn = page.getByTitle(columnName3, {
@@ -190,7 +190,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('unique-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName4, { force: true });
+        .fill(columnName4);
 
       const secondUniqueKeyColumn = page.getByTitle(columnName4);
       await secondUniqueKeyColumn.hover();
@@ -215,7 +215,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('dist-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName1, { force: true });
+        .fill(columnName1);
 
       // select 1st value from dropdown
       const firstDistKeyColumn = page.getByTitle(columnName1);
@@ -226,7 +226,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('dist-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName2, { force: true });
+        .fill(columnName2);
 
       const secondDistKeyColumn = page.getByTitle(columnName2);
       await secondDistKeyColumn.hover();
@@ -251,7 +251,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('sort-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName3, { force: true });
+        .fill(columnName3);
 
       // select 1st value from dropdown
       const firstSortKeyColumn = page.getByTitle(columnName3, { exact: true });
@@ -262,7 +262,7 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('sort-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName4, { force: true });
+        .fill(columnName4);
 
       const secondSortKeyColumn = page.getByTitle(columnName4);
       await secondSortKeyColumn.hover();
@@ -279,7 +279,7 @@ test.describe('Table Constraints', {}, () => {
       await page.click('[data-testid="save-btn"]');
       await saveResponse;
 
-      await page.waitForSelector('[role="dialog"].ant-modal', {
+      await page.locator('[role="dialog"].ant-modal').waitFor({
         state: 'detached',
       });
     });
@@ -345,7 +345,7 @@ test.describe('Table Constraints', {}, () => {
       await page.click('[data-testid="save-btn"]');
       await saveResponseOne;
 
-      await page.waitForSelector('[role="dialog"].ant-modal', {
+      await page.locator('[role="dialog"].ant-modal').waitFor({
         state: 'detached',
       });
 
@@ -361,7 +361,7 @@ test.describe('Table Constraints', {}, () => {
       // Remove the pending constraints
 
       await page.getByTestId('edit-table-constraint-button').click();
-      await page.waitForSelector('[role="dialog"].ant-modal');
+      await page.locator('[role="dialog"].ant-modal').waitFor();
 
       // Clear Dist Key
       await clickOnDistKeySelector(page, true);
@@ -379,7 +379,7 @@ test.describe('Table Constraints', {}, () => {
       await page.click('[data-testid="save-btn"]');
       await saveResponse;
 
-      await page.waitForSelector('[role="dialog"].ant-modal', {
+      await page.locator('[role="dialog"].ant-modal').waitFor({
         state: 'detached',
       });
 

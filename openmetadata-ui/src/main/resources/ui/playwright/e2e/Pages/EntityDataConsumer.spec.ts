@@ -99,7 +99,7 @@ entities.forEach((EntityClass) => {
 
       test('No edit owner permission', async ({ page }) => {
         await page.reload();
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 

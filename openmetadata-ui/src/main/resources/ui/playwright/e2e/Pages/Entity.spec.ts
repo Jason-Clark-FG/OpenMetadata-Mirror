@@ -816,10 +816,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
             if (hasDataType) {
               // If data type chip exists, it should have content
-              const dataTypeText = await dataTypeChip.textContent();
-
-              expect(dataTypeText).toBeTruthy();
-              expect(dataTypeText?.trim().length).toBeGreaterThan(0);
+              await expect(dataTypeChip).not.toHaveText('');
             }
           }
           // Verify pagination shows correct count (including nested columns)
@@ -872,9 +869,9 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                 await prevButton.click();
 
                 // Verify we're back
-                const finalPagination = await paginationText.textContent();
-
-                expect(finalPagination).toBe(paginationContent);
+                await expect(paginationText).toHaveText(
+                  paginationContent ?? ''
+                );
               }
             }
           }
@@ -893,6 +890,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         // Only run for entities that have nested columns (like Table)
         if (entity.type !== 'Table') {
+          // eslint-disable-next-line playwright/no-skipped-test -- conditional skip: only Table entities have nested columns
           test.skip();
         }
 
@@ -944,7 +942,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           });
 
           // Wait for any loaders to disappear
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
         });
@@ -1049,7 +1047,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await clickResponse;
 
           // Wait for loader to disappear after navigation
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
 
@@ -1070,7 +1068,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await prevButton.isEnabled()) {
             await prevButton.click();
             // Wait for loader to disappear after navigation
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
           }
@@ -1102,7 +1100,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await intermediateClickResponse;
 
             // Wait for loader to disappear after navigation
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
 
@@ -1188,6 +1186,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         test.slow(true);
 
         if (entity.type !== 'Table') {
+          // eslint-disable-next-line playwright/no-skipped-test -- conditional skip: only Table entities have nested columns
           test.skip();
         }
 
@@ -1267,6 +1266,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         test.slow(true);
 
         if (entity.type !== 'Table') {
+          // eslint-disable-next-line playwright/no-skipped-test -- conditional skip: only Table entities have nested columns
           test.skip();
         }
 
@@ -1285,7 +1285,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await nestedColumnRow.getByTestId('expand-icon').isVisible()) {
             await nestedColumnRow.getByTestId('expand-icon').click();
             // Wait for expansion to complete
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
 
@@ -1390,7 +1390,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           );
 
           // Wait for loader to disappear after search
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
 
@@ -1414,7 +1414,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await updateResponse;
 
           // CRITICAL: Wait for UI to update after API response
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
 
@@ -1522,7 +1522,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                 .getByTestId('alert-message')
             ).toContainText('Description updated successfully');
 
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
 
@@ -1566,7 +1566,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await nextButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
 
@@ -1575,6 +1575,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
             const updatedText = await paginationText.textContent();
 
+            // eslint-disable-next-line playwright/prefer-web-first-assertions
             expect(updatedText).not.toBe(initialText);
             // Verify pagination still shows correct format after navigation
             expect(updatedText).toMatch(/\d+\s+of\s+\d+\s+columns?/i);
@@ -1590,16 +1591,14 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await prevButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.waitForSelector('[data-testid="loader"]', {
+            await page.getByTestId('loader').waitFor({
               state: 'detached',
             });
 
             await expect(page.getByTestId('entity-link')).toBeVisible();
 
             // Verify we're back to the original column
-            const finalText = await paginationText.textContent();
-
-            expect(finalText).toBe(initialText);
+            await expect(paginationText).toHaveText(initialText ?? '');
           }
 
           // Close panel
@@ -1660,6 +1659,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
               // Verify that the chip has content (metric value)
               const chipContent = await metricChip.textContent();
 
+              // eslint-disable-next-line playwright/prefer-web-first-assertions
               expect(chipContent).toBeTruthy();
               // Value should match one of these patterns: percentage (e.g., "75%"), number (e.g., "1,000"), or placeholder ("--")
               expect(chipContent).toMatch(/(\d+%|\d{1,3}(,\d{3})*|--)/);
@@ -2183,7 +2183,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         // Navigate to the table entity page
         await entity.visitEntityPage(page);
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -2203,7 +2203,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await profilerTab.click();
           await profilerResponse;
 
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
         });
@@ -2212,9 +2212,9 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         await test.step('Verify tabs UI component is rendered in Data Observability tab', async () => {
           // Verify that the profiler sub-tabs are visible
           // (Table Profile, Column Profile, Data Quality, or Incidents)
-          expect(page.getByTestId('table-profile')).toBeVisible();
-          expect(page.getByTestId('column-profile')).toBeVisible();
-          expect(page.getByTestId('data-quality')).toBeVisible();
+          await expect(page.getByTestId('table-profile')).toBeVisible();
+          await expect(page.getByTestId('column-profile')).toBeVisible();
+          await expect(page.getByTestId('data-quality')).toBeVisible();
         });
 
         // Step 3: Switch to Activity Feed tab (all tab is selected by default)
@@ -2233,7 +2233,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await activityFeedTab.click();
           await activityFeedResponse;
 
-          await page.waitForSelector('[data-testid="loader"]', {
+          await page.getByTestId('loader').waitFor({
             state: 'detached',
           });
         });

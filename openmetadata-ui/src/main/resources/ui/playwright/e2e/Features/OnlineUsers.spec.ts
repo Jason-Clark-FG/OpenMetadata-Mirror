@@ -46,7 +46,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -102,7 +102,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
     await onlineUsersRes;
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -141,7 +141,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test('Should filter users by time window', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -196,7 +196,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test('Should show correct last activity format', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
     // Check various time formats in the Last Activity column
@@ -242,7 +242,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // 2 step - go to online user page and check that user display name should present
       await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -253,7 +253,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await page.getByTestId('searchbar').fill(displayName);
       await searchResponse;
 
-      await page.waitForSelector('[data-testid="loader"]', {
+      await page.getByTestId('loader').waitFor({
         state: 'detached',
       });
 

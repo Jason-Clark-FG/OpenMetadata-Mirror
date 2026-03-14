@@ -135,7 +135,7 @@ test.describe('Data Product Persona customization', () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Data Product', { exact: true }).click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -215,7 +215,7 @@ test.describe('Data Product Persona customization', () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -263,7 +263,7 @@ test.describe('Data Product Persona customization', () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Data Product', { exact: true }).click();
 
-      await adminPage.waitForSelector('[data-testid="loader"]', {
+      await adminPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
 
@@ -312,7 +312,7 @@ test.describe('Data Product Persona customization', () => {
 
       await entity?.visitEntityPage(userPage);
 
-      await userPage.waitForSelector('[data-testid="loader"]', {
+      await userPage.getByTestId('loader').waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(userPage);

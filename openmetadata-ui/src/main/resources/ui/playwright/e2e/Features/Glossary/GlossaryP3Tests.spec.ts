@@ -48,7 +48,7 @@ test.describe('Glossary P3 Tests', () => {
       await sidebarClick(page, SidebarItem.GLOSSARY);
 
       await page.click('[data-testid="add-glossary"]');
-      await page.waitForSelector('[data-testid="form-heading"]');
+      await page.getByTestId('form-heading').waitFor();
 
       // Use name with unicode characters
       await page.fill('[data-testid="name"]', unicodeName);
@@ -200,9 +200,6 @@ test.describe('Glossary P3 Tests', () => {
       await sidebarClick(page, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page, glossary.data.displayName);
 
-      // Wait for page to load fully
-      await page.waitForTimeout(1000);
-
       // Find the glossary terms search input (not the global search)
       // It has placeholder "Search Terms" and is within the glossary content area
       const searchInput = page.getByPlaceholder(/search.*term/i);
@@ -212,7 +209,7 @@ test.describe('Glossary P3 Tests', () => {
 
       // Test a single special character
       await searchInput.fill('@');
-      await page.waitForTimeout(500);
+      await page.getByTestId('glossary-term-table').or(page.getByText(/no.*term.*found|no.*result/i)).first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
 
       // Search should not crash - either shows results, table, or empty state
       const table = page.getByTestId('glossary-term-table');
@@ -367,14 +364,12 @@ test.describe('Glossary P3 Tests', () => {
 
       // Go back
       await page.goBack();
-      await page.waitForTimeout(500);
 
       // Should be back on glossary page
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
 
       // Go forward
       await page.goForward();
-      await page.waitForTimeout(500);
 
       // Should be on term page again
       await expect(
@@ -434,11 +429,9 @@ test.describe('Glossary P3 Tests', () => {
       if (await panelToggle.isVisible({ timeout: 3000 }).catch(() => false)) {
         // Click to toggle
         await panelToggle.click();
-        await page.waitForTimeout(300);
 
         // Click again to restore
         await panelToggle.click();
-        await page.waitForTimeout(300);
 
         // Page should still be functional
         await expect(
@@ -695,7 +688,7 @@ test.describe('Glossary P3 Tests', () => {
             await expandIcon.isVisible({ timeout: 2000 }).catch(() => false)
           ) {
             await expandIcon.click();
-            await page.waitForTimeout(500);
+            await page.locator('.ant-table-row').first().waitFor({ state: 'visible' });
           } else {
             break;
           }
@@ -731,6 +724,7 @@ test.describe('Glossary P3 Tests', () => {
       // Rapid search operations
       for (let i = 0; i < 5; i++) {
         await searchInput.fill(`test${i}`);
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- intentional small delay to simulate rapid user typing
         await page.waitForTimeout(100);
       }
 
@@ -792,9 +786,7 @@ test.describe('Glossary P3 Tests', () => {
     try {
       // Navigate directly to a non-existent glossary (without redirectToHomePage)
       await page.goto(`/glossary/NonExistentGlossary_${Date.now()}`);
-
-      // Wait for page to settle
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('domcontentloaded');
 
       // Check for various states that indicate the app handled the invalid URL
       // App may show error OR redirect to glossary list page
@@ -851,9 +843,7 @@ test.describe('Glossary P3 Tests', () => {
           glossary.responseData.fullyQualifiedName
         }/NonExistentTerm_${Date.now()}`
       );
-
-      // Wait for page to settle
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('domcontentloaded');
 
       // Check for various error/response states
       const badMessage = page.getByText(/bad message|bad request/i);
@@ -898,7 +888,7 @@ test.describe('Glossary P3 Tests', () => {
       await selectActiveGlossary(page, glossary.data.displayName);
 
       await page.getByTestId('add-new-tag-button-header').click();
-      await page.waitForSelector('[data-testid="name"]');
+      await page.getByTestId('name').waitFor();
 
       await page.fill('[data-testid="name"]', 'TestTerm');
       await page.locator(descriptionBox).fill('Test description');
@@ -911,11 +901,9 @@ test.describe('Glossary P3 Tests', () => {
 
       await page.getByTestId('save-glossary-term').click();
 
-      const errorMessage = await page
-        .getByText('URL must start with http:// or https://')
-        .isVisible();
-
-      expect(errorMessage).toBe(true);
+      await expect(
+        page.getByText('URL must start with http:// or https://')
+      ).toBeVisible();
 
       await page.locator('#url-0').clear();
       await page.locator('#url-0').fill('https://www.bbc.co.uk');
@@ -965,11 +953,9 @@ test.describe('Glossary P3 Tests', () => {
 
       await page.getByTestId('save-btn').click();
 
-      const errorMessage = await page
-        .getByText('URL must start with http:// or https://')
-        .isVisible();
-
-      expect(errorMessage).toBe(true);
+      await expect(
+        page.getByText('URL must start with http:// or https://')
+      ).toBeVisible();
 
       await page.locator('#references_0_endpoint').clear();
       await page

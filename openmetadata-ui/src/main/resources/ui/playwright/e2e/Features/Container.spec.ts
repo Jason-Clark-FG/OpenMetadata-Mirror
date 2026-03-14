@@ -121,7 +121,7 @@ test.describe('Container entity specific tests ', () => {
     await page.getByText('25 / Page').click();
     await childrenResponseSizeChange;
 
-    await page.waitForSelector('.ant-spin', {
+    await page.locator('.ant-spin').waitFor({
       state: 'detached',
     });
 
@@ -139,7 +139,7 @@ test.describe('Container entity specific tests ', () => {
     await page.getByText('15 / Page').click();
     await childrenResponseSizeChange2;
 
-    await page.waitForSelector('.ant-spin', {
+    await page.locator('.ant-spin').waitFor({
       state: 'detached',
     });
 
@@ -187,7 +187,7 @@ test.describe('Container entity specific tests ', () => {
   }) => {
     await container.visitEntityPage(page);
 
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 
@@ -204,7 +204,7 @@ test.describe('Container entity specific tests ', () => {
     dataConsumerPage: page,
   }) => {
     await container.visitEntityPage(page);
-    await page.waitForSelector('[data-testid="loader"]', {
+    await page.getByTestId('loader').waitFor({
       state: 'detached',
     });
 

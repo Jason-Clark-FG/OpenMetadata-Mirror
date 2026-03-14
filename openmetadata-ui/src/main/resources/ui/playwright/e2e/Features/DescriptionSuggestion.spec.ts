@@ -111,7 +111,7 @@ test.describe.serial(
         await singleResolveResponse;
 
         await page.reload();
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 
@@ -152,7 +152,7 @@ test.describe.serial(
         await singleResolveResponse;
 
         await page.reload();
-        await page.waitForSelector('[data-testid="loader"]', {
+        await page.getByTestId('loader').waitFor({
           state: 'detached',
         });
 

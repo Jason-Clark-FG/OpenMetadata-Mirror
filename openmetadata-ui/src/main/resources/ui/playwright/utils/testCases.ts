@@ -231,7 +231,7 @@ export const findSystemTestDefinition = async (page: Page) => {
       await nextButton.click();
       response = await nextResponsePromise;
       data = await response.json();
-      await page.waitForSelector('[data-testid="test-definition-table"]', {
+      await page.getByTestId('test-definition-table').waitFor({
         state: 'visible',
       });
     } else {
@@ -255,7 +255,7 @@ export const clickManageButton = async (
       .getByTestId('manage-button')
       .click();
   } else {
-    await page.waitForSelector('[data-testid="manage-button"]', {
+    await page.getByTestId('manage-button').waitFor({
       state: 'visible',
     });
     await page.getByTestId('manage-button').click();
@@ -273,10 +273,10 @@ export const visitTestSuitePage = async (page: Page, testSuiteFqn: string) => {
   );
   await page.goto(`/test-suites/${testSuiteFqn}`);
   await testCaseListResponse;
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
-  await page.waitForSelector('[data-testid="manage-button"]', {
+  await page.getByTestId('manage-button').waitFor({
     state: 'visible',
   });
 };
@@ -287,7 +287,7 @@ export const visitTestSuitePage = async (page: Page, testSuiteFqn: string) => {
  */
 export const navigateToGlobalDataQuality = async (page: Page) => {
   await page.goto('/data-quality/test-cases');
-  await page.waitForSelector('[data-testid="manage-button"]');
+  await page.getByTestId('manage-button').waitFor();
 };
 
 /**
@@ -298,7 +298,7 @@ export const navigateToGlobalDataQuality = async (page: Page) => {
 export const performTestCaseExport = async (page: Page) => {
   await expect(page.getByTestId('export-button')).toBeVisible();
   await page.getByTestId('export-button').click();
-  await page.waitForSelector('#export-form', {
+  await page.locator('#export-form').waitFor({
     state: 'visible',
   });
   await expect(page.locator('#export-form')).toBeVisible();
@@ -331,9 +331,9 @@ export const navigateToImportPage = async (
  * @param filePath - Path to CSV file
  */
 export const uploadCSVFile = async (page: Page, filePath: string) => {
-  await page.waitForSelector('[type="file"]', { state: 'attached' });
+  await page.locator('[type="file"]').waitFor({ state: 'attached' });
   await page.setInputFiles('[type="file"]', filePath);
-  await page.waitForSelector('[data-testid="upload-file-widget"]', {
+  await page.getByTestId('upload-file-widget').waitFor({
     state: 'hidden',
   });
 };
@@ -382,7 +382,7 @@ export const verifyPageAccess = async (
   );
   await page.goto(url);
   await permissionResponse;
-  await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 
   if (shouldHaveAccess) {
     // Verify user has access - should stay on the page
@@ -449,7 +449,7 @@ export const verifyButtonVisibility = async (
  */
 export const navigateToBulkEditPage = async (page: Page) => {
   await page.getByTestId('bulk-edit-button').click();
-  await page.waitForSelector('[data-testid="loader"]', {
+  await page.getByTestId('loader').waitFor({
     state: 'detached',
   });
   await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -624,11 +624,10 @@ export const performE2EExportImportFlow = async (
     await clickManageButton(page, 'table');
     await navigateToImportPage(page);
 
-    const fileInput = await page.$('[type="file"]');
     const exportedFile = fs
       .readdirSync('downloads')
       .find((f: string) => f.includes(table.entity.name) && f.endsWith('.csv'));
-    await fileInput?.setInputFiles(['downloads/' + exportedFile]);
+    await page.locator('[type="file"]').setInputFiles(['downloads/' + exportedFile]);
 
     await expect(page.locator('.rdg-header-row')).toBeVisible();
     await expect(page.getByTestId('add-row-btn')).toBeVisible();
@@ -672,7 +671,7 @@ export const performE2EExportImportFlow = async (
         response.url().includes('recursive=true')
     );
 
-    await page.click('[type="button"] >> text="Update"', { force: true });
+    await page.click('[type="button"] >> text="Update"');
     await updateButtonResponse;
     await page
       .locator('.inovua-react-toolkit-load-mask__background-layer')
@@ -695,7 +694,7 @@ export const performE2EExportImportFlow = async (
     await page.click('[data-testid="bulk-edit-button"]');
 
     // Wait for bulk edit grid to load
-    await page.waitForSelector('.rdg-header-row', { state: 'visible' });
+    await page.locator('.rdg-header-row').waitFor({ state: 'visible' });
     await expect(page.locator('.rdg-header-row')).toBeVisible();
 
     // Update display name for first test case (existing test case)
@@ -748,7 +747,7 @@ export const performE2EExportImportFlow = async (
         response.url().includes('dryRun=false')
     );
 
-    await page.click('[type="button"] >> text="Update"', { force: true });
+    await page.click('[type="button"] >> text="Update"');
     await bulkEditUpdateResponse;
     await page
       .locator('.inovua-react-toolkit-load-mask__background-layer')

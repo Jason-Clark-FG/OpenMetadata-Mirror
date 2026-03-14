@@ -148,7 +148,7 @@ test.describe('Teams Page', () => {
     await test.step('Create a new team', async () => {
       await checkTeamTabCount(page);
 
-      await page.waitForSelector('[data-testid="add-team"]');
+      await page.getByTestId('add-team').waitFor();
 
       await page.getByTestId('add-team').click();
 
@@ -349,7 +349,7 @@ test.describe('Teams Page', () => {
   test('Create a new public team', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.TEAMS);
 
-    await page.waitForSelector('[data-testid="add-team"]');
+    await page.getByTestId('add-team').waitFor();
 
     await page.getByTestId('add-team').click();
     const { apiContext, afterAction } = await getApiContext(page);
@@ -822,7 +822,7 @@ test.describe('Teams Page', () => {
       ).toBe(false);
 
       // Toggle to show deleted teams
-      await deletedToggle.click({ force: true });
+      await deletedToggle.click();
       await expect(deletedToggle).toHaveAttribute('aria-checked', 'true');
       await expect
         .poll(() => recordedIncludes.has('deleted'), { timeout: 30000 })
@@ -1143,7 +1143,7 @@ test.describe('Teams Page action as Owner of Team', () => {
     await teamNoOwner.visitTeamPage(ownerUserPage);
     await teamListResponse;
 
-    await ownerUserPage.waitForSelector('[data-testid="loader"]', {
+    await ownerUserPage.getByTestId('loader').waitFor({
       state: 'detached',
     });
 

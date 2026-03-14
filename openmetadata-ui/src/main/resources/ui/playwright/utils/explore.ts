@@ -94,7 +94,7 @@ export const selectNullOption = async (
 
   const queryRes = page.waitForResponse(querySearchURL);
   await page.click('[data-testid="update-btn"]');
-  await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+  await page.getByTestId('loader').waitFor({ state: 'hidden' });
   await queryRes;
 
   const queryParams = page.url().split('?')[1];
@@ -115,9 +115,12 @@ export const checkCheckboxStatus = async (
   isChecked: boolean
 ) => {
   const checkbox = page.getByTestId(boxId);
-  const isCheckedOnPage = await checkbox.isChecked();
 
-  expect(isCheckedOnPage).toEqual(isChecked);
+  if (isChecked) {
+    await expect(checkbox).toBeChecked();
+  } else {
+    await expect(checkbox).not.toBeChecked();
+  }
 };
 
 export const selectDataAssetFilter = async (
@@ -302,9 +305,9 @@ export const validateBucketsForIndexAndSort = async (
 };
 
 export const selectSortOrder = async (page: Page, sortOrder: string) => {
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
   await page.getByTestId('sorting-dropdown-label').click();
-  await page.waitForSelector(`role=menuitem[name="${sortOrder}"]`, {
+  await page.getByRole('menuitem', { name: sortOrder }).waitFor({
     state: 'visible',
   });
   const nameFilter = page.waitForResponse(
@@ -322,19 +325,22 @@ export const selectSortOrder = async (page: Page, sortOrder: string) => {
   );
   await page.getByTestId('sort-order-button').click();
   await ascSortOrder;
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+  await page.getByTestId('loader').waitFor({ state: 'detached' });
 };
 
 export const verifyEntitiesAreSorted = async (page: Page) => {
   // Wait for search results to be stable after sort
-  await page.waitForSelector('[data-testid="search-results"]', {
+  await page.getByTestId('search-results').waitFor({
     state: 'visible',
   });
 
-  const entityNames = await page.$$eval(
-    '[data-testid="search-results"] .explore-search-card [data-testid="entity-link"]',
-    (elements) => elements.map((el) => el.textContent?.trim() ?? '')
-  );
+  const entityNames = (
+    await page
+      .locator(
+        '[data-testid="search-results"] .explore-search-card [data-testid="entity-link"]'
+      )
+      .allTextContents()
+  ).map((name) => name.trim());
 
   // Elasticsearch keyword field with case-insensitive sorting
   const sortedEntityNames = [...entityNames].sort((a, b) => {

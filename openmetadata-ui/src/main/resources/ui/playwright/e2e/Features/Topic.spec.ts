@@ -63,7 +63,7 @@ test.describe('Topic entity specific tests ', () => {
   }) => {
     await topic.visitEntityPage(page);
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     await testCopyLinkButton({
       page,
@@ -76,7 +76,7 @@ test.describe('Topic entity specific tests ', () => {
 
   test('Copy field link should have valid URL format', async ({ page }) => {
     await topic.visitEntityPage(page);
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     await expect(page.getByTestId('topic-schema-fields-table')).toBeVisible();
 
@@ -116,7 +116,7 @@ test.describe('Topic entity specific tests ', () => {
     page,
   }) => {
     await topic.visitEntityPage(page);
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await page.getByTestId('loader').waitFor({ state: 'detached' });
 
     await expect(page.getByTestId('topic-schema-fields-table')).toBeVisible();
 
