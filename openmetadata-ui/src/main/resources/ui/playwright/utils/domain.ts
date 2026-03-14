@@ -257,8 +257,6 @@ export const selectDomain = async (page: Page, domain: Domain['data']) => {
     page.waitForResponse('/api/v1/domains/name/*'),
   ]);
 
-  await page.waitForLoadState('networkidle');
-
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -280,7 +278,6 @@ export const selectSubDomain = async (
     );
     await menuItem.click();
     await subDomainRes;
-    await page.waitForLoadState('networkidle');
   }
 
   const subDomainRes = page.waitForResponse(
@@ -294,7 +291,6 @@ export const selectSubDomain = async (
   });
 
   await page.getByTestId(subDomain.name).click();
-  await page.waitForLoadState('networkidle');
 };
 
 export const selectDataProductFromTab = async (
@@ -331,6 +327,12 @@ export const selectDataProduct = async (
   page: Page,
   dataProduct: DataProduct['data']
 ) => {
+  if (!dataProduct?.name) {
+    throw new Error(
+      `selectDataProduct: dataProduct.name is undefined. Ensure create() succeeded. Got: ${JSON.stringify(dataProduct)}`
+    );
+  }
+
   const searchBox = page
     .getByTestId('page-layout-v1')
     .getByPlaceholder('Search');
@@ -374,7 +376,6 @@ export const goToAssetsTab = async (
     page.waitForResponse('/api/v1/search/query?q=&index=all*'),
   ]);
 
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 };
 
@@ -441,9 +442,19 @@ export const checkDomainDisplayName = async (
 };
 
 export const checkAssetsCount = async (page: Page, count: number) => {
-  await expect(page.getByTestId('assets').getByTestId('count')).toContainText(
-    count.toString()
-  );
+  await expect
+    .poll(
+      async () => {
+        const text = await page
+          .getByTestId('assets')
+          .getByTestId('count')
+          .textContent();
+
+        return text?.trim();
+      },
+      { timeout: 30_000, intervals: [500, 1_000, 2_000] }
+    )
+    .toBe(count.toString());
 };
 
 export const verifyDomainOnAssetPages = async (
@@ -471,9 +482,19 @@ export const verifyDomainOnAssetPages = async (
 };
 
 export const checkDataProductCount = async (page: Page, count: number) => {
-  await expect(
-    page.getByTestId('data_products').getByTestId('count')
-  ).toContainText(count.toString());
+  await expect
+    .poll(
+      async () => {
+        const text = await page
+          .getByTestId('data_products')
+          .getByTestId('count')
+          .textContent();
+
+        return text?.trim();
+      },
+      { timeout: 30_000, intervals: [500, 1_000, 2_000] }
+    )
+    .toBe(count.toString());
 };
 
 export const verifyDomain = async (
@@ -622,7 +643,6 @@ export const addAssetsToDomain = async (
 
   await page.reload();
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 
   await checkAssetsCount(page, assets.length);
 };
@@ -682,8 +702,16 @@ export const addAssetsToDataProduct = async (
   await assetRes;
 
   for (const asset of assets) {
-    const name = get(asset, 'entityResponseData.name') ?? '';
-    const fqn = get(asset, 'entityResponseData.fullyQualifiedName');
+    const name = get(asset, 'entityResponseData.name') as string | undefined;
+    const fqn = get(asset, 'entityResponseData.fullyQualifiedName') as
+      | string
+      | undefined;
+
+    if (!name || !fqn) {
+      throw new Error(
+        `addAssetsToDataProduct: asset missing entityResponseData.name or fullyQualifiedName. Ensure asset.create() succeeded. Got name=${name}, fqn=${fqn}`
+      );
+    }
 
     const searchRes = page.waitForResponse(
       `/api/v1/search/query?q=${name}&index=all&from=0&size=25&*`
@@ -711,7 +739,7 @@ export const addAssetsToDataProduct = async (
       )
       .click();
 
-    await page.waitForLoadState('networkidle');
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page
@@ -721,7 +749,7 @@ export const addAssetsToDataProduct = async (
     ).toBeVisible();
 
     await page.goBack();
-    await page.waitForLoadState('networkidle');
+    await waitForAllLoadersToDisappear(page);
   }
 };
 
@@ -1339,7 +1367,6 @@ export const verifyDataProductsCount = async (
 ) => {
   await page.getByTestId('data_products').click();
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 
   const dataProductCountElement = page
     .getByTestId('data_products')
@@ -1359,7 +1386,6 @@ export const navigateToSubDomain = async (
   subDomainData: { name: string }
 ) => {
   await page.getByTestId('subdomains').getByText('Sub Domains').click();
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -1374,12 +1400,15 @@ export const navigateToSubDomain = async (
  * Navigates to the Input/Output Ports tab on a data product page.
  */
 export const navigateToPortsTab = async (page: Page) => {
-  await page.waitForTimeout(2000);
+  await waitForAllLoadersToDisappear(page);
+
+  const portsTab = page.getByTestId('input_output_ports');
+  await portsTab.waitFor({ state: 'visible' });
 
   const portsViewResponse = page.waitForResponse((response) =>
     response.url().includes('/portsView')
   );
-  await page.getByTestId('input_output_ports').click();
+  await portsTab.click();
   await portsViewResponse;
   await waitForAllLoadersToDisappear(page);
 };
@@ -1405,20 +1434,36 @@ export const verifyPortCounts = async (
   expectedInputCount: number,
   expectedOutputCount: number
 ) => {
-  const inputOutputPortSection = page.locator(
-    '[data-testid="input-output-ports-tab"]'
-  );
+  const portsTab = page.getByTestId('input-output-ports-tab');
+  const inputPortCount = portsTab
+    .getByTestId('input-port-count')
+  const outputPortCount = portsTab
+     .getByTestId('output-port-count')
 
-  await expect(
-    inputOutputPortSection
-      .getByTestId('input-port-count')
-      .filter({ hasText: `(${expectedInputCount})` })
-  ).toBeVisible();
-  await expect(
-    inputOutputPortSection
-      .getByTestId('output-port-count')
-      .filter({ hasText: `(${expectedOutputCount})` })
-  ).toBeVisible();
+  await expect
+    .poll(
+      async () => {
+        await waitForAllLoadersToDisappear(page);
+        const [inputCountText, outputCountText] = await Promise.all([
+          inputPortCount.textContent(),
+          outputPortCount.textContent(),
+        ]);
+
+        return {
+          hasInputCount:
+            inputCountText?.includes(`(${expectedInputCount})`) ?? false,
+          hasOutputCount:
+            outputCountText?.includes(`(${expectedOutputCount})`) ?? false,
+        };
+      },
+      {
+        timeout: 30000,
+      }
+    )
+    .toEqual({
+      hasInputCount: true,
+      hasOutputCount: true,
+    });
 };
 
 /**
@@ -1579,7 +1624,6 @@ export const selectDomainFromNavbar = async (
   await tagSelector.waitFor({ state: 'visible' });
   await tagSelector.click();
   await waitForAllLoadersToDisappear(page);
-  await page.waitForLoadState('networkidle');
 };
 
 /**
@@ -1601,16 +1645,21 @@ export const searchAndExpectEntityVisible = async (
     'entityResponseData.displayName',
     entity.entityResponseData.name
   );
-  await page.getByTestId('searchBox').fill(name);
-  await page.getByTestId('searchBox').press('Enter');
-  await page.waitForLoadState('networkidle');
-  await waitForAllLoadersToDisappear(page);
+  const fqn = entity.entityResponseData.fullyQualifiedName;
+  const card = page.locator(`[data-testid="table-data-card_${fqn}"]`);
 
-  await expect(
-    page.locator(
-      `[data-testid="table-data-card_${entity.entityResponseData.fullyQualifiedName}"]`
+  await expect
+    .poll(
+      async () => {
+        await page.getByTestId('searchBox').fill(name);
+        await page.getByTestId('searchBox').press('Enter');
+        await waitForAllLoadersToDisappear(page);
+
+        return await card.isVisible().catch(() => false);
+      },
+      { timeout: timeout ?? 30_000, intervals: [1_000, 2_000, 5_000] }
     )
-  ).toBeVisible(timeout ? { timeout } : undefined);
+    .toBe(true);
 };
 
 /**
@@ -1631,16 +1680,21 @@ export const searchAndExpectEntityNotVisible = async (
     'entityResponseData.displayName',
     entity.entityResponseData.name
   );
-  await page.getByTestId('searchBox').fill(name);
-  await page.getByTestId('searchBox').press('Enter');
-  await page.waitForLoadState('networkidle');
-  await waitForAllLoadersToDisappear(page);
+  const fqn = entity.entityResponseData.fullyQualifiedName;
+  const card = page.locator(`[data-testid="table-data-card_${fqn}"]`);
 
-  await expect(
-    page.locator(
-      `[data-testid="table-data-card_${entity.entityResponseData.fullyQualifiedName}"]`
+  await expect
+    .poll(
+      async () => {
+        await page.getByTestId('searchBox').fill(name);
+        await page.getByTestId('searchBox').press('Enter');
+        await waitForAllLoadersToDisappear(page);
+
+        return await card.isVisible().catch(() => false);
+      },
+      { timeout: 30_000, intervals: [1_000, 2_000, 5_000] }
     )
-  ).not.toBeVisible();
+    .toBe(false);
 };
 
 /**
