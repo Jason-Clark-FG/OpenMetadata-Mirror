@@ -279,7 +279,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
           TestSuiteRepository testSuiteRepository =
               (TestSuiteRepository) Entity.getEntityRepository(Entity.TEST_SUITE);
           testSuiteRepository.createOrUpdate(null, testSuite, ADMIN_USER_NAME);
-          if (!pipeline.getDeployed()) {
+          if (!pipeline.getDeployed() && pipelineServiceClient != null) {
             prepareAndDeployIngestionPipeline(pipeline, testSuite);
           }
         }
@@ -1185,6 +1185,10 @@ public class DataContractRepository extends EntityRepository<DataContract> {
     IngestionPipeline pipeline =
         Entity.getEntity(testSuite.getPipelines().get(0), "*", Include.NON_DELETED);
 
+    if (pipelineServiceClient == null) {
+      throw DataContractValidationException.byMessage(
+          "Pipeline service client is not configured, cannot trigger DQ validation");
+    }
     // ensure pipeline is deployed before running
     // we deploy the pipeline during post create
     if (!pipeline.getDeployed()) {
