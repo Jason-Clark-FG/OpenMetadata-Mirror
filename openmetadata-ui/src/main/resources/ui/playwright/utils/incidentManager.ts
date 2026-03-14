@@ -100,6 +100,7 @@ export const addAssigneeFromPopoverWidget = async (data: {
   await page
     .getByTestId('assignee')
     .getByTestId('owner-link')
+    .first()
     .waitFor();
 
   await expect(page.locator(`[data-testid=${user.displayName}]`)).toBeVisible();
