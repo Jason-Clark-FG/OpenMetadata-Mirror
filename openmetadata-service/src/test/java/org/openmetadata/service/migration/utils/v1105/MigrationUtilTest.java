@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -169,6 +170,65 @@ class MigrationUtilTest {
     assertEquals("updatedBy", updatedNode.get("output").get(0).asText());
   }
 
+  @Test
+  void updateGlossaryTermApprovalWorkflowReplacesApprovalNodeWhenThresholdsAreAdded()
+      throws Exception {
+    WorkflowDefinitionRepository repository = mock(WorkflowDefinitionRepository.class);
+    WorkflowDefinition workflow = readWorkflowDefinition(legacyWorkflowJson());
+    WorkflowNodeDefinitionInterface approvalNode = nodeByName(workflow, "ApproveGlossaryTerm");
+    String approvalNodeJson =
+        """
+            {
+              "type": "userTask",
+              "subType": "userApprovalTask",
+              "name": "ApproveGlossaryTerm",
+              "displayName": "Create User Approval Task",
+              "config": {
+                "assignees": {
+                  "addReviewers": true,
+                  "addOwners": false,
+                  "candidates": []
+                }
+              },
+              "inputNamespaceMap": {
+                "relatedEntity": "global"
+              }
+            }
+            """;
+
+    when(repository.getByName(
+            isNull(), eq("GlossaryTermApprovalWorkflow"), eq(EntityUtil.Fields.EMPTY_FIELDS)))
+        .thenReturn(workflow);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<JsonUtils> jsonUtils = Mockito.mockStatic(JsonUtils.class, Mockito.CALLS_REAL_METHODS)) {
+      entityMock
+          .when(() -> Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION))
+          .thenReturn(repository);
+      jsonUtils.when(() -> JsonUtils.pojoToJson(approvalNode)).thenReturn(approvalNodeJson);
+
+      MigrationUtil.updateGlossaryTermApprovalWorkflow();
+
+      verify(repository).createOrUpdate(isNull(), eq(workflow), eq("admin"));
+    }
+
+    JsonNode migratedApprovalNodeJson =
+        MAPPER.readTree(JsonUtils.pojoToJson(nodeByName(workflow, "ApproveGlossaryTerm")));
+    assertEquals(1, migratedApprovalNodeJson.get("config").get("approvalThreshold").asInt());
+    assertEquals(1, migratedApprovalNodeJson.get("config").get("rejectionThreshold").asInt());
+    assertEquals("updatedBy", migratedApprovalNodeJson.get("output").get(0).asText());
+  }
+
+  @Test
+  void jsonStructurallyEqualsFallsBackToRawStringComparisonWhenParsingFails() throws Exception {
+    assertTrue(
+        (Boolean)
+            invokePrivateStatic("jsonStructurallyEquals", "{broken-json", "{broken-json"));
+    assertFalse(
+        (Boolean)
+            invokePrivateStatic("jsonStructurallyEquals", "{broken-json", "{other-broken-json"));
+  }
+
   private static WorkflowDefinition readWorkflowDefinition(String json) {
     return JsonUtils.readValue(json, WorkflowDefinition.class);
   }
@@ -182,7 +242,13 @@ class MigrationUtilTest {
   }
 
   private static Object invokePrivateStatic(String methodName, Object... args) throws Exception {
-    Method method = MigrationUtil.class.getDeclaredMethod(methodName, String.class);
+    Class<?>[] parameterTypes =
+        switch (methodName) {
+          case "updateApprovalNodeWithThresholdsAndOutput" -> new Class<?>[] {String.class};
+          case "jsonStructurallyEquals" -> new Class<?>[] {String.class, String.class};
+          default -> new Class<?>[] {String.class};
+        };
+    Method method = MigrationUtil.class.getDeclaredMethod(methodName, parameterTypes);
     method.setAccessible(true);
     return method.invoke(null, args);
   }

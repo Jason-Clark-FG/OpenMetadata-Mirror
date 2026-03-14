@@ -2,6 +2,7 @@ package org.openmetadata.service.search.vector;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -217,6 +218,17 @@ class OpenSearchVectorServiceTest {
         vectorService.search("test query", Map.of(), 10, 0, 100, 0.9);
 
     assertEquals(0, results.hits.size(), "With threshold 0.9, all results should be filtered out");
+  }
+
+  @Test
+  void testLegacyVectorSearchResponseConstructorLeavesPaginationFieldsUnset() {
+    DTOs.VectorSearchResponse response =
+        new DTOs.VectorSearchResponse(12L, List.of(Map.of("parentId", "parent1")));
+
+    assertEquals(12L, response.tookMillis);
+    assertEquals(1, response.hits.size());
+    assertNull(response.totalHits);
+    assertNull(response.hasMore);
   }
 
   @Test

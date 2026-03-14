@@ -79,6 +79,7 @@ import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.schema.entity.data.StoredProcedure;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.exception.JsonParsingException;
 import org.openmetadata.schema.type.ApiStatus;
 import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.ChangeEvent;
@@ -329,7 +330,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
           CommonUtil.getResourceAsStream(
               EntityRepository.class.getClassLoader(), jsonDataFiles.get(0));
       return JsonUtils.readValue(json, CsvDocumentation.class);
-    } catch (IOException e) {
+    } catch (IOException | JsonParsingException e) {
       String message =
           String.format(
               "Failed to load CSV documentation for entity %s from path %s",

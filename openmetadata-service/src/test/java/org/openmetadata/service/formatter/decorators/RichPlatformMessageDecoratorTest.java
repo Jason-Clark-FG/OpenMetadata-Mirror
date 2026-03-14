@@ -115,6 +115,61 @@ class RichPlatformMessageDecoratorTest {
   }
 
   @Test
+  void slackBuildEntityMessageAddsViewLinkWhenEntityUrlIsAvailable() throws Exception {
+    SlackMessageDecorator decorator = new SlackMessageDecorator();
+    ChangeEvent event =
+        new ChangeEvent()
+            .withEntityType(Entity.TABLE)
+            .withEntityFullyQualifiedName("service.sales.orders")
+            .withEventType(EventType.ENTITY_UPDATED)
+            .withUserName("alice")
+            .withTimestamp(FIXED_TIME);
+    OutgoingMessage outgoingMessage = new OutgoingMessage();
+    outgoingMessage.setMessages(List.of("Owner changed"));
+    outgoingMessage.setEntityUrl("<https://openmetadata.example/table/service.sales.orders|orders>");
+
+    java.lang.reflect.Method method =
+        SlackMessageDecorator.class.getDeclaredMethod(
+            "createGeneralChangeEventMessage", ChangeEvent.class, OutgoingMessage.class);
+    method.setAccessible(true);
+
+    SlackMessage message = (SlackMessage) method.invoke(decorator, event, outgoingMessage);
+    String json = JsonUtils.pojoToJson(message);
+
+    assertTrue(json.contains("Owner changed"));
+    assertTrue(json.contains("Access data: <https://openmetadata.example/table/service.sales.orders|View>"));
+  }
+
+  @Test
+  void teamsBuildEntityMessageAddsViewLinkWhenEntityUrlIsAvailable() throws Exception {
+    MSTeamsMessageDecorator decorator = new MSTeamsMessageDecorator();
+    ChangeEvent event =
+        new ChangeEvent()
+            .withEntityType(Entity.TABLE)
+            .withEntityFullyQualifiedName("service.sales.orders")
+            .withEventType(EventType.ENTITY_UPDATED)
+            .withUserName("alice")
+            .withTimestamp(FIXED_TIME);
+    OutgoingMessage outgoingMessage = new OutgoingMessage();
+    outgoingMessage.setMessages(List.of("Owner changed"));
+    outgoingMessage.setEntityUrl("[orders](https://openmetadata.example/table/service.sales.orders)");
+
+    java.lang.reflect.Method method =
+        MSTeamsMessageDecorator.class.getDeclaredMethod(
+            "createGeneralChangeEventMessage",
+            String.class,
+            ChangeEvent.class,
+            OutgoingMessage.class);
+    method.setAccessible(true);
+
+    TeamsMessage message = (TeamsMessage) method.invoke(decorator, "publisher", event, outgoingMessage);
+    String json = JsonUtils.pojoToJson(message);
+
+    assertTrue(json.contains("Owner changed"));
+    assertTrue(json.contains("[View Data](https://openmetadata.example/table/service.sales.orders)"));
+  }
+
+  @Test
   void slackCreatesDQTemplateAttachmentWithResultSections() throws Exception {
     SlackMessageDecorator decorator = new SlackMessageDecorator();
     ChangeEvent event = testCaseEvent();

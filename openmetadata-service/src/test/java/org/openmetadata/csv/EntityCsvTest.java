@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.openmetadata.common.utils.CommonUtil;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
@@ -45,6 +47,7 @@ import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.teams.AuthenticationMechanism;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.exception.JsonParsingException;
 import org.openmetadata.schema.type.ApiStatus;
 import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.ChangeEvent;
@@ -71,6 +74,7 @@ import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.rules.RuleEngine;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.util.AsyncService;
+import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.RestUtil.PutResponse;
 import org.openmetadata.service.util.ValidatorUtil;
 
@@ -650,6 +654,51 @@ public class EntityCsvTest {
   }
 
   @Test
+  void test_getCsvDocumentationWrapsIoFailures() throws IOException {
+    String path = ".*json/data/table/tableCsvDocumentation.json$";
+    String resource = EntityUtil.getJsonDataResources(path).getFirst();
+    try (MockedStatic<CommonUtil> commonUtil =
+        Mockito.mockStatic(CommonUtil.class, Mockito.CALLS_REAL_METHODS)) {
+      commonUtil
+          .when(
+              () ->
+                  CommonUtil.getResourceAsStream(
+                      EntityRepository.class.getClassLoader(), resource))
+          .thenThrow(new IOException("broken docs"));
+
+      IllegalStateException exception =
+          assertThrows(
+              IllegalStateException.class,
+              () -> EntityCsv.getCsvDocumentation(Entity.TABLE, false));
+
+      assertTrue(exception.getMessage().contains("table"));
+    }
+  }
+
+  @Test
+  void test_getCsvDocumentationWrapsMalformedJsonDocumentation() throws IOException {
+    String path = ".*json/data/table/tableCsvDocumentation.json$";
+    String resource = EntityUtil.getJsonDataResources(path).getFirst();
+    try (MockedStatic<CommonUtil> commonUtil =
+        Mockito.mockStatic(CommonUtil.class, Mockito.CALLS_REAL_METHODS)) {
+      commonUtil
+          .when(
+              () ->
+                  CommonUtil.getResourceAsStream(
+                      EntityRepository.class.getClassLoader(), resource))
+          .thenReturn("{not-json");
+
+      IllegalStateException exception =
+          assertThrows(
+              IllegalStateException.class,
+              () -> EntityCsv.getCsvDocumentation(Entity.TABLE, false));
+
+      assertTrue(exception.getMessage().contains("table"));
+      assertInstanceOf(JsonParsingException.class, exception.getCause());
+    }
+  }
+
+  @Test
   void test_extensionValidationParsesEntityReferenceCustomProperties() throws IOException {
     TestCsv testCsv = new TestCsv();
     testCsv.enableProcessing();
@@ -729,6 +778,50 @@ public class EntityCsvTest {
         "service.db.schema.orders.address.location.street", street.getFullyQualifiedName());
     assertEquals(64, street.getDataLength());
     assertEquals(0, street.getOrdinalPosition());
+  }
+
+  @Test
+  void test_createMissingParentHierarchyForDryRunInitializesTopLevelColumnList() throws Exception {
+    TestCsv testCsv = new TestCsv();
+    Table table = new Table().withFullyQualifiedName("service.db.schema.orders").withColumns(null);
+    Method method =
+        EntityCsv.class.getDeclaredMethod(
+            "createMissingParentHierarchyForDryRun", Table.class, String.class);
+    method.setAccessible(true);
+
+    Column created = (Column) method.invoke(testCsv, table, "address");
+
+    assertNotNull(table.getColumns());
+    assertEquals(1, table.getColumns().size());
+    assertSame(created, table.getColumns().get(0));
+    assertEquals("address", created.getName());
+  }
+
+  @Test
+  void test_createMissingParentHierarchyForDryRunReusesExistingParentsAndInitializesChildLists()
+      throws Exception {
+    TestCsv testCsv = new TestCsv();
+    Column address =
+        new Column()
+            .withName("address")
+            .withFullyQualifiedName("service.db.schema.orders.address")
+            .withChildren(null);
+    Table table =
+        new Table()
+            .withFullyQualifiedName("service.db.schema.orders")
+            .withColumns(new ArrayList<>(List.of(address)));
+    Method method =
+        EntityCsv.class.getDeclaredMethod(
+            "createMissingParentHierarchyForDryRun", Table.class, String.class);
+    method.setAccessible(true);
+
+    Column created = (Column) method.invoke(testCsv, table, "address.location");
+    Column reused = (Column) method.invoke(testCsv, table, "address.location");
+
+    assertEquals("address", address.getName());
+    assertNotNull(address.getChildren());
+    assertSame(created, reused);
+    assertSame(created, address.getChildren().get(0));
   }
 
   @Test

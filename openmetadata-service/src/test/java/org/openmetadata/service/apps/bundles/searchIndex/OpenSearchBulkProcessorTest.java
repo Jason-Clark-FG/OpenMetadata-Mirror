@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -220,6 +221,39 @@ class OpenSearchBulkProcessorTest {
       getActiveBulkRequests(harness.processor).set(1);
       assertFalse(harness.processor.awaitClose(150, TimeUnit.MILLISECONDS));
       getActiveBulkRequests(harness.processor).set(0);
+    }
+  }
+
+  @Test
+  void handleBulkFailureRecordsPermanentFailuresForOperationsWithoutDocumentIds() throws Exception {
+    try (ProcessorHarness harness = newHarness(1, 1)) {
+      BulkSink.FailureCallback failureCallback = mock(BulkSink.FailureCallback.class);
+      OpenSearchBulkSink.SinkStatsCallback statsCallback =
+          mock(OpenSearchBulkSink.SinkStatsCallback.class);
+      harness.processor.setFailureCallback(failureCallback);
+      harness.processor.setStatsCallback(statsCallback);
+
+      Method method =
+          OpenSearchBulkSink.CustomBulkProcessor.class.getDeclaredMethod(
+              "handleBulkFailure", List.class, long.class, int.class, int.class, Throwable.class);
+      method.setAccessible(true);
+
+      BulkOperation operation =
+          BulkOperation.of(op -> op.delete(delete -> delete.index("table_search_index")));
+      boolean retry =
+          (boolean)
+              method.invoke(
+                  harness.processor,
+                  List.of(operation),
+                  99L,
+                  1,
+                  Integer.MAX_VALUE,
+                  new IllegalStateException("boom"));
+
+      assertFalse(retry);
+      assertEquals(1, harness.totalFailed.get());
+      assertEquals(1, harness.statsUpdates.get());
+      verifyNoInteractions(failureCallback, statsCallback);
     }
   }
 

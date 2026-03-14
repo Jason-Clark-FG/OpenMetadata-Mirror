@@ -268,6 +268,59 @@ class IndexingPipelineTest {
   }
 
   @Test
+  void getEntityTotalUsesEntitySpecificTimeSeriesRepositoryWithoutTimeWindow() throws Exception {
+    EntityTimeSeriesRepository<?> timeSeriesRepository = mock(EntityTimeSeriesRepository.class);
+    EntityTimeSeriesDAO timeSeriesDao = mock(EntityTimeSeriesDAO.class);
+    String entityType = ReportData.ReportDataType.WEB_ANALYTIC_USER_ACTIVITY_REPORT_DATA.value();
+
+    when(timeSeriesRepository.getTimeSeriesDao()).thenReturn(timeSeriesDao);
+    when(timeSeriesDao.listCount(any(ListFilter.class))).thenReturn(5);
+    when(searchRepository.getDataInsightReports()).thenReturn(List.of());
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(() -> Entity.getEntityTimeSeriesRepository(entityType)).thenReturn(timeSeriesRepository);
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+
+      int total =
+          (int)
+              invokePrivate(
+                  "getEntityTotal",
+                  new Class<?>[] {String.class, ReindexingConfiguration.class},
+                  entityType,
+                  null);
+
+      assertEquals(5, total);
+      verify(timeSeriesDao).listCount(any(ListFilter.class));
+    }
+  }
+
+  @Test
+  void getEntityTotalReturnsZeroWhenTimeSeriesRepositoryCountFails() throws Exception {
+    EntityTimeSeriesRepository<?> timeSeriesRepository = mock(EntityTimeSeriesRepository.class);
+    EntityTimeSeriesDAO timeSeriesDao = mock(EntityTimeSeriesDAO.class);
+    String entityType = ReportData.ReportDataType.WEB_ANALYTIC_USER_ACTIVITY_REPORT_DATA.value();
+
+    when(timeSeriesRepository.getTimeSeriesDao()).thenReturn(timeSeriesDao);
+    when(timeSeriesDao.listCount(any(ListFilter.class))).thenThrow(new IllegalStateException("boom"));
+    when(searchRepository.getDataInsightReports()).thenReturn(List.of());
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock.when(() -> Entity.getEntityTimeSeriesRepository(entityType)).thenReturn(timeSeriesRepository);
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+
+      int total =
+          (int)
+              invokePrivate(
+                  "getEntityTotal",
+                  new Class<?>[] {String.class, ReindexingConfiguration.class},
+                  entityType,
+                  null);
+
+      assertEquals(0, total);
+    }
+  }
+
+  @Test
   void createContextDataAndFinalizeReindexUseRecreateMetadata() throws Exception {
     ReindexContext recreateContext = new ReindexContext();
     recreateContext.add(

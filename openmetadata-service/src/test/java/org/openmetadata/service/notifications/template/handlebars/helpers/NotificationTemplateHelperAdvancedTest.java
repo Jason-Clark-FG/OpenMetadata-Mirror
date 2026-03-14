@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 
 import com.github.jknack.handlebars.Handlebars;
@@ -29,14 +30,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
+import org.mockito.MockedConstruction;
 import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineType;
+import org.openmetadata.schema.api.configuration.OpenMetadataBaseUrlConfiguration;
+import org.openmetadata.schema.email.SmtpSettings;
+import org.openmetadata.schema.settings.Settings;
+import org.openmetadata.schema.settings.SettingsType;
 import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.SystemRepository;
 import org.openmetadata.service.notifications.template.handlebars.HandlebarsHelper;
 import org.openmetadata.service.notifications.template.handlebars.HandlebarsHelperMetadata;
+import org.openmetadata.service.resources.settings.SettingsCache;
+import org.openmetadata.service.util.email.DefaultTemplateProvider;
 
 class NotificationTemplateHelperAdvancedTest {
 
@@ -268,6 +277,39 @@ class NotificationTemplateHelperAdvancedTest {
     assertNotNull(metadata.getUsages());
     assertFalse(metadata.getUsages().isEmpty());
     assertTrue(metadata.getCursorOffset() > 0);
+  }
+
+  @Test
+  void buildEntityUrlHelperDefaultBaseUrlDelegatesToEmailUtil() {
+    try (MockedStatic<SettingsCache> settingsCache = mockStatic(SettingsCache.class);
+        MockedConstruction<DefaultTemplateProvider> ignoredTemplateProvider =
+            mockConstruction(DefaultTemplateProvider.class);
+        MockedConstruction<SystemRepository> ignored =
+            mockConstruction(
+                SystemRepository.class,
+                (repository, context) ->
+                    org.mockito.Mockito.when(
+                            repository.getConfigWithKey(
+                                SettingsType.OPEN_METADATA_BASE_URL_CONFIGURATION.value()))
+                        .thenReturn(
+                            new Settings()
+                                .withConfigType(SettingsType.OPEN_METADATA_BASE_URL_CONFIGURATION)
+                                .withConfigValue(
+                                    new OpenMetadataBaseUrlConfiguration()
+                                        .withOpenMetadataUrl("https://openmetadata.example/"))))) {
+      settingsCache
+          .when(() -> SettingsCache.getSetting(SettingsType.EMAIL_CONFIGURATION, SmtpSettings.class))
+          .thenReturn(new SmtpSettings().withEnableSmtpServer(false));
+
+      class ExposedBuildEntityUrlHelper extends BuildEntityUrlHelper {
+        private String exposedBaseUrl() {
+          return getBaseUrl();
+        }
+      }
+
+      assertEquals(
+          "https://openmetadata.example", new ExposedBuildEntityUrlHelper().exposedBaseUrl());
+    }
   }
 
   private static Stream<HandlebarsHelper> advancedHelpers() {
