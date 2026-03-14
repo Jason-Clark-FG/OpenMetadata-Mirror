@@ -1760,7 +1760,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       await page.getByTestId('subdomains').getByText('Sub Domains').click();
       await subdomainSearchResponse;
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3030,7 +3030,7 @@ test.describe('Domain Access with hasDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3098,7 +3098,7 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3115,7 +3115,7 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const noDomainTableFqn =
         testResources.noDomainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(noDomainTableFqn)}`);
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3275,7 +3275,7 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({ state: 'hidden' });
+      await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
       await selectDomain(page, testDomain.data);
 
       await page.getByTestId('glossary-container').waitFor({
@@ -3350,7 +3350,7 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({ state: 'hidden' });
+      await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
       await selectDomain(page, testDomain.data);
 
       await page.getByTestId('tags-container').waitFor({

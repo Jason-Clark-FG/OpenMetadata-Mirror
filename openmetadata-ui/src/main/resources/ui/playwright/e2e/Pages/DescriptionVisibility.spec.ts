@@ -392,7 +392,7 @@ test.describe('Long Description Visibility', () => {
 
     await adminPage.getByText('Data Assets').click();
     await adminPage.getByText('Table', { exact: true }).click();
-    await adminPage.getByTestId('loader').waitFor({
+    await adminPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -452,7 +452,7 @@ test.describe('Long Description Visibility', () => {
     await redirectToHomePage(userPage);
 
     await table.visitEntityPage(userPage);
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 

@@ -53,7 +53,7 @@ export const saveAndTriggerDataContractValidation = async (
 
   await page.reload();
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -309,7 +309,7 @@ export const saveSecurityAndSLADetails = async (
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -386,7 +386,7 @@ export const validateSecurityAndSLADetails = async (
 
 export const performInitialStepForRules = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -405,7 +405,7 @@ export const performInitialStepForRules = async (page: Page) => {
 
 export const navigateToContractTab = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -464,7 +464,7 @@ export const saveContractAndWait = async (page: Page): Promise<void> => {
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };

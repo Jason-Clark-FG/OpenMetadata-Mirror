@@ -389,7 +389,7 @@ export const testPipelineSpecificOperations = async (
 
   // Test Edit Lineage for Pipeline
   await testUserPage.getByRole('tab', { name: 'Lineage' }).click();
-  await testUserPage.getByTestId('loader').waitFor({
+  await testUserPage.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -446,7 +446,7 @@ export const testDatabaseSpecificOperations = async (
     testUserPage.getByTestId('database-databaseSchemas')
   ).toBeVisible();
 
-  await testUserPage.getByTestId('loader').waitFor({
+  await testUserPage.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -467,7 +467,7 @@ export const testDashboardDataModelSpecificOperations = async (
 
   // Test Edit Lineage for Dashboard Data Model
   await testUserPage.getByRole('tab', { name: 'Lineage' }).click();
-  await testUserPage.getByTestId('loader').waitFor({
+  await testUserPage.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 

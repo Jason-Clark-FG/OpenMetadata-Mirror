@@ -51,11 +51,11 @@ const waitForSearchDebounce = async (page: Page) => {
   // Wait for loader to appear and disappear after search
   // This ensures search debounce completed and results are stable
   try {
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'attached',
       timeout: 999,
     });
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
   } catch (e) {
@@ -74,7 +74,7 @@ export const assignCertificationForWidget = async (
   await page.locator('.certification-card-popover').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await readElementInListWithScroll(
     page,
@@ -98,7 +98,7 @@ export const assignCertificationForWidget = async (
   const patchResponse = await patchRequest;
   expect(patchResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   await clickOutside(page);
 
   await expect(page.getByTestId('certification-label')).toContainText(
@@ -108,7 +108,7 @@ export const assignCertificationForWidget = async (
 
 export const removeTierFromWidget = async (page: Page, endpoint: string) => {
   await page.getByTestId('edit-tier').click();
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   const patchRequest = page.waitForResponse(
     (response) =>
@@ -120,7 +120,7 @@ export const removeTierFromWidget = async (page: Page, endpoint: string) => {
   const response = await patchRequest;
   expect(response.status()).toBe(200);
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   await clickOutside(page);
 
   await expect(
@@ -136,7 +136,7 @@ export const removeCertificationFromWidget = async (
   await page.locator('.certification-card-popover').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   const patchRequest = page.waitForResponse(
     (response) =>
@@ -148,7 +148,7 @@ export const removeCertificationFromWidget = async (
   const response = await patchRequest;
   expect(response.status()).toBe(200);
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   await clickOutside(page);
 
   await expect(
@@ -158,7 +158,7 @@ export const removeCertificationFromWidget = async (
 
 export const assignDomain = async (page: Page, domain: Domain['data']) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   const searchDomain = page.waitForResponse(
     `/api/v1/search/query?q=*${encodeURIComponent(domain.name)}*`
   );
@@ -175,7 +175,7 @@ export const assignDomain = async (page: Page, domain: Domain['data']) => {
 
   await page.getByTestId('saveAssociatedTag').click();
   await patchReq;
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('domain-link')).toContainText(
     domain.displayName
@@ -184,7 +184,7 @@ export const assignDomain = async (page: Page, domain: Domain['data']) => {
 
 export const updateDomain = async (page: Page, domain: Domain['data']) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   await page.getByTestId('selectable-list').getByTestId('searchbar').clear();
   const searchDomain = page.waitForResponse(
     `/api/v1/search/query?q=*${encodeURIComponent(domain.name)}*`
@@ -203,7 +203,7 @@ export const updateDomain = async (page: Page, domain: Domain['data']) => {
 
 export const removeDomain = async (page: Page) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('remove-owner').locator('path')).toBeVisible();
 
@@ -240,7 +240,7 @@ export const selectDomain = async (page: Page, domain: Domain['data']) => {
     .getByTestId('page-layout-v1')
     .getByPlaceholder('Search');
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -256,7 +256,7 @@ export const selectDomain = async (page: Page, domain: Domain['data']) => {
     page.waitForResponse('/api/v1/domains/name/*'),
   ]);
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -285,7 +285,7 @@ export const selectSubDomain = async (
   await page.getByTestId('subdomains').getByText('Sub Domains').click();
   await subDomainRes;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -311,7 +311,7 @@ export const selectDataProductFromTab = async (
 
   await dpRes;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await Promise.all([
     page
@@ -336,7 +336,7 @@ export const selectDataProduct = async (
     .getByTestId('page-layout-v1')
     .getByPlaceholder('Search');
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -354,7 +354,7 @@ export const selectDataProduct = async (
     page.waitForResponse('/api/v1/dataProducts/name/*'),
   ]);
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -375,7 +375,7 @@ export const goToAssetsTab = async (
     page.waitForResponse('/api/v1/search/query?q=&index=all*'),
   ]);
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 export const verifyAssetsInDomain = async (
@@ -1383,7 +1383,7 @@ export const navigateToSubDomain = async (
   subDomainData: { name: string }
 ) => {
   await page.getByTestId('subdomains').getByText('Sub Domains').click();
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 

@@ -783,7 +783,7 @@ test.describe('Glossary tests', () => {
         );
         await page.getByTestId('assets').click();
         await queryRes;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
         await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
@@ -1501,7 +1501,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1646,7 +1646,7 @@ test.describe('Glossary tests', () => {
       const dragColumn = 'Status';
       const dropColumn = 'Owners';
       await dragAndDropColumn(page, dragColumn, dropColumn);
-      await page.locator('thead th').waitFor({ state: 'visible' });
+      await page.locator('thead th').first().waitFor({ state: 'visible' });
       const columnHeaders = page.locator('thead th');
       // eslint-disable-next-line playwright/prefer-web-first-assertions
       const columnText = await columnHeaders.allTextContents();
@@ -1729,7 +1729,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2038,7 +2038,7 @@ test.describe('Glossary tests', () => {
 
         await page1.getByTestId(`tag-"${domain.data.name}"`).click();
 
-        await page1.getByTestId('loader').waitFor({
+        await page1.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
       });
@@ -2447,7 +2447,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2516,7 +2516,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2610,7 +2610,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

@@ -70,7 +70,7 @@ test.describe('Glossary Remove Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -174,7 +174,7 @@ test.describe('Glossary Remove Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

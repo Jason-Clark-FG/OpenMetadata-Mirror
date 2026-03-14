@@ -57,11 +57,11 @@ test.describe('Schema search', { tag: '@ingestion' }, () => {
 
     await page.getByPlaceholder('Search Services').fill(serviceName);
     await searchServiceResponse;
-    await page.getByTestId('loader').waitFor({ state: 'hidden' });
+    await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
     await page.click(`[data-testid="service-name-${serviceName}"]`);
 
-    await page.getByTestId('loader').waitFor({ state: 'hidden' });
+    await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
     await expect(
       page.locator('[data-testid="entity-header-name"]')

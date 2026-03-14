@@ -87,7 +87,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       await page.getByTestId('custom_properties').click();
       await customPropertyResponse;
 
-      await page.locator('.ant-skeleton-active').waitFor({
+      await page.locator('.ant-skeleton-active').first().waitFor({
         state: 'detached',
       });
 
@@ -104,7 +104,7 @@ test.describe.serial('Custom Property Search Settings', () => {
 
       const customPropertiesTab = page.getByTestId('custom_properties');
       await customPropertiesTab.click();
-      await page.locator('.ant-skeleton-active').waitFor({
+      await page.locator('.ant-skeleton-active').first().waitFor({
         state: 'detached',
       });
 
@@ -128,7 +128,7 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/dashboards$/
       );
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -246,7 +246,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       await page.getByTestId('custom_properties').click();
       await customPropertyResponse;
 
-      await page.locator('.ant-skeleton-active').waitFor({
+      await page.locator('.ant-skeleton-active').first().waitFor({
         state: 'detached',
       });
 
@@ -271,7 +271,7 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/pipelines$/
       );
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -348,7 +348,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await dashboardCard.click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -367,7 +367,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await pipelineCard.click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

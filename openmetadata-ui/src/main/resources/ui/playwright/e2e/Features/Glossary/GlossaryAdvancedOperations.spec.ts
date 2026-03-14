@@ -197,7 +197,7 @@ test.describe('Glossary Advanced Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -213,7 +213,7 @@ test.describe('Glossary Advanced Operations', () => {
         user2.getUserDisplayName()
       );
       await searchOwner;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -283,7 +283,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit reviewer
       await page.click('[data-testid="edit-reviewer-button"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -299,7 +299,7 @@ test.describe('Glossary Advanced Operations', () => {
         user2.getUserDisplayName()
       );
       await searchUser;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -369,7 +369,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Add initial domain via UI first
       await page.getByTestId('add-domain').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -395,7 +395,7 @@ test.describe('Glossary Advanced Operations', () => {
       );
       await domain1Tag.click();
       await addPatchReq;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -406,7 +406,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click on domain to change it
       await page.getByTestId('add-domain').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -439,7 +439,7 @@ test.describe('Glossary Advanced Operations', () => {
       );
       await domain2Tag.click();
       await changePatchReq;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -921,7 +921,7 @@ test.describe('Glossary Advanced Operations', () => {
         .getByTestId('edit-button')
         .click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1001,7 +1001,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit owner button
       await page.getByTestId('edit-owner').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1069,7 +1069,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit reviewer button
       await page.getByTestId('edit-reviewer-button').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

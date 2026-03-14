@@ -2002,7 +2002,7 @@ version: "1.0.0"`;
         await page.getByTestId('save-contract-btn').click();
         await saveContractResponse;
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 

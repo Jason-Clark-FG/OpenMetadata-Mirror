@@ -17,7 +17,7 @@ import { toastNotification } from './common';
 export const navigateToContractTab = async (page: Page, table: TableClass) => {
   await table.visitEntityPage(page);
   await page.click('[data-testid="contract"]');
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
     timeout: 30000,
   });

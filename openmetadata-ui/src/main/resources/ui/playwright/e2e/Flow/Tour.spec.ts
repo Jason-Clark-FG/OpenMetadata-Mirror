@@ -34,7 +34,7 @@ const waitForTourBadgeWithRetry = async (
     } catch (e) {
       if (attempt < maxAttempts) {
         await page.reload();
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
         await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
@@ -185,7 +185,7 @@ test.describe(
 
       await page.locator('[data-testid="help-icon"]').click();
       await page.getByRole('link', { name: 'Tour', exact: true }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
@@ -202,7 +202,7 @@ test.describe(
         .locator('.whats-new-alert-close')
         .click();
       await page.getByText('Take a product tour to get started!').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
@@ -216,7 +216,7 @@ test.describe(
 
     test('Tour should work from URL directly', async ({ page }) => {
       await page.goto('/tour');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       const isWelcomeScreenVisible = await page
@@ -226,7 +226,7 @@ test.describe(
       if (isWelcomeScreenVisible) {
         await page.getByTestId('welcome-screen-close-btn').click();
       }
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');

@@ -238,7 +238,7 @@ test.describe(
           page,
           ...tableTestCaseDetails,
         });
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -355,7 +355,7 @@ test.describe(
         })
         .click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -417,7 +417,7 @@ test.describe(
         .getByTestId('edit-button')
         .click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await page.getByTestId('select-all-test-cases').waitFor({

@@ -367,12 +367,12 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       await page.getByTestId('documentation').click();
       // Use add-owner since there's no owner initially
       await page.getByTestId('add-owner').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

@@ -99,7 +99,7 @@ export const fillOwnerDetails = async (page: Page, owners: string[]) => {
   ).toBeVisible();
 
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   const userListResponse = page.waitForResponse(
     '/api/v1/search/query?q=&index=user_search_index&*'
@@ -107,7 +107,7 @@ export const fillOwnerDetails = async (page: Page, owners: string[]) => {
   await page.getByRole('tab', { name: 'Users' }).click();
   await userListResponse;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page.getByTestId('owner-select-users-search-bar').waitFor({ state: 'visible' });
 
@@ -120,7 +120,7 @@ export const fillOwnerDetails = async (page: Page, owners: string[]) => {
     await page.locator('[data-testid="owner-select-users-search-bar"]').clear();
     await page.fill('[data-testid="owner-select-users-search-bar"]', owner);
     await searchOwner;
-    await page.getByTestId('select-owner-tabs').getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('select-owner-tabs').getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await page.getByRole('listitem', { name: owner }).click();
   }
@@ -143,14 +143,14 @@ export const fillTeamOwnerDetails = async (page: Page, owners: string[]) => {
   ).toBeVisible();
 
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page
     .locator("[data-testid='select-owner-tabs']")
     .getByRole('tab', { name: 'Teams' })
     .click();
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page.getByTestId('owner-select-teams-search-bar').waitFor({ state: 'visible' });
 
@@ -163,7 +163,7 @@ export const fillTeamOwnerDetails = async (page: Page, owners: string[]) => {
     await page.locator('[data-testid="owner-select-teams-search-bar"]').clear();
     await page.fill('[data-testid="owner-select-teams-search-bar"]', owner);
     await searchOwner;
-    await page.getByTestId('select-owner-tabs').getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('select-owner-tabs').getByTestId('loader').first().waitFor({ state: 'detached' });
     await page.getByRole('listitem', { name: owner }).click();
   }
 
@@ -206,7 +206,7 @@ export const fillGlossaryTermDetails = async (
 ) => {
   await page.keyboard.press('Enter', { delay: 100 });
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page.click('[data-testid="tag-selector"]');
   const searchResponse = page.waitForResponse(
@@ -214,7 +214,7 @@ export const fillGlossaryTermDetails = async (
   );
   await page.locator('[data-testid="tag-selector"] input').fill(glossary.name);
   await searchResponse;
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   await page.getByTestId(`tag-"${glossary.parent}"."${glossary.name}"`).click();
   await page.click('[data-testid="saveAssociatedTag"]');
 
@@ -253,7 +253,7 @@ export const fillStoredProcedureCode = async (page: Page) => {
   await page.keyboard.press('Enter', { delay: 100 });
 
   // Wait for the loader to disappear
-  await page.locator('.ant-skeleton-content').waitFor({ state: 'hidden' });
+  await page.locator('.ant-skeleton-content').first().waitFor({ state: 'hidden' });
 
   await page
     .getByTestId('code-mirror-container')
@@ -349,7 +349,7 @@ export const fillCustomPropertyDetails = async (
   await page.keyboard.press('Enter', { delay: 100 });
 
   // Wait for the loader to disappear
-  await page.locator('.ant-skeleton-content').waitFor({ state: 'hidden' });
+  await page.locator('.ant-skeleton-content').first().waitFor({ state: 'hidden' });
 
   for (const propertyName of Object.values(CUSTOM_PROPERTIES_TYPES)) {
     await editGlossaryCustomProperty(
@@ -379,10 +379,10 @@ export const fillExtensionDetails = async (
   await expect(page.getByTestId('save')).toBeVisible();
   await expect(page.getByTestId('cancel')).toBeVisible();
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   // Wait for skeleton loader to disappear
-  await page.locator('.ant-skeleton').waitFor({ state: 'detached' });
+  await page.locator('.ant-skeleton').first().waitFor({ state: 'detached' });
 
   for (const propertyName of Object.values(CUSTOM_PROPERTIES_TYPES)) {
     await editEntityCustomProperty(

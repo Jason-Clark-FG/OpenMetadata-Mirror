@@ -94,7 +94,7 @@ test('Glossary', async ({ page }) => {
     );
     await page.click('[data-testid="version-button"]');
     await versionPageResponse;
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await expect(
       page.locator(
@@ -107,7 +107,7 @@ test('Glossary', async ({ page }) => {
     );
     await page.click('[data-testid="version-button"]');
     await glossaryRes;
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await addMultiOwner({
       page,
@@ -208,7 +208,7 @@ test('GlossaryTerm', async ({ page }) => {
     await page.getByRole('dialog').getByRole('img').click();
     await glossaryTermsRes;
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await addMultiOwner({
       page,
@@ -220,7 +220,7 @@ test('GlossaryTerm', async ({ page }) => {
     });
 
     await page.reload();
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
     // Verify the reviewer was actually added before checking version diff
     await expect(
       page
@@ -327,7 +327,7 @@ test('Return to current version from history', async ({ page }) => {
 
     // Wait for dialog to close
     await page.locator('[role="dialog"]').waitFor({ state: 'hidden' });
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     // Verify we're back on the main glossary page
     await expect(page.getByTestId('entity-header-display-name')).toContainText(

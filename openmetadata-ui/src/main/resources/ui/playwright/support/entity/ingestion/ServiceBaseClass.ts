@@ -117,7 +117,7 @@ class ServiceBaseClass {
 
     if (await runnerSelector.isVisible()) {
       await runnerSelector.click();
-      await page.locator('.ant-select-dropdown:visible').waitFor({
+      await page.locator('.ant-select-dropdown:visible').first().waitFor({
         state: 'visible',
       });
 

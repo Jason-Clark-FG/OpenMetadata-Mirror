@@ -49,7 +49,7 @@ export const visitServiceDetailsPage = async (
   // Click on created service
   await page.click(`[data-testid="service-name-${service.name}"]`);
 
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   if (visitChildrenTab) {
     // Click on children tab Ex. DatabaseService -> Databases

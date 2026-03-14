@@ -127,7 +127,7 @@ test.describe(
     }) => {
       await dashboard.visitEntityPage(page);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -153,7 +153,7 @@ test.describe(
       );
 
       await page.reload();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       // Retry mechanism for checking deleted badge
@@ -170,7 +170,7 @@ test.describe(
         attempts++;
         if (attempts < maxAttempts) {
           await page.reload();
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
           deletedBadge = page.locator('[data-testid="deleted-badge"]');
@@ -190,7 +190,7 @@ test.describe(
 
       await restoreEntity(page);
       await page.reload();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -215,7 +215,7 @@ test.describe('Data Model', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       '/dashboardDataModel/sample_superset.model.big_analytics_data_model_with_nested_columns'
     );
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -331,7 +331,7 @@ test.describe(
         )}/data-model`
       );
 
-      await page.getByTestId('loader').waitFor({ state: 'hidden' });
+      await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
       await page.locator('.ant-spin').waitFor({
         state: 'detached',

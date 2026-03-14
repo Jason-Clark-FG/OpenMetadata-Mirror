@@ -112,7 +112,7 @@ export const selectOption = async (
   await page.mouse.move(1280, 0);
 
   await dropdownLocator.click();
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 

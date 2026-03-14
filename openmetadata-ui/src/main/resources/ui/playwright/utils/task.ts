@@ -154,7 +154,7 @@ export const checkTaskCountInActivityFeed = async (
   openTask = 0,
   closedTask = 0
 ) => {
-  await page.locator('.ant-skeleton-element').waitFor({
+  await page.locator('.ant-skeleton-element').first().waitFor({
     state: 'detached',
   });
   await page.getByTestId('user-profile-page-task-filter-icon').click();

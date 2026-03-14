@@ -59,7 +59,7 @@ test.describe(
       await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
       await page.click('[data-testid="test-cases"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -67,7 +67,7 @@ test.describe(
 
       await page.getByTestId('next').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -85,7 +85,7 @@ test.describe(
       await page.click('[data-testid="test-cases"]');
 
       await listTestCasesResponse;
-      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
+      await page.getByTestId('test-case-container').getByTestId('loader').first().waitFor(
         { state: 'detached' }
       );
 
@@ -99,7 +99,7 @@ test.describe(
       await page.getByTestId('searchbar').fill('temp-test-case');
 
       await testSearchResponse;
-      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
+      await page.getByTestId('test-case-container').getByTestId('loader').first().waitFor(
         { state: 'detached' }
       );
 
@@ -117,7 +117,7 @@ test.describe(
       await page.click('[data-testid="test-cases"]');
 
       await listTestCasesResponse;
-      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
+      await page.getByTestId('test-case-container').getByTestId('loader').first().waitFor(
         { state: 'detached' }
       );
 
@@ -132,7 +132,7 @@ test.describe(
       await page.getByTitle('Queued').locator('div').click();
 
       await filteredResults;
-      await page.getByTestId('test-case-container').getByTestId('loader').waitFor(
+      await page.getByTestId('test-case-container').getByTestId('loader').first().waitFor(
         { state: 'detached' }
       );
 
@@ -153,7 +153,7 @@ test.describe(
 
     test('should persist current page', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -161,7 +161,7 @@ test.describe(
 
       await page.getByTestId('next').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -174,13 +174,13 @@ test.describe(
       await firstLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await page.goBack();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -194,13 +194,13 @@ test.describe(
       await secondLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await page.goBack();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -213,7 +213,7 @@ test.describe(
     test('should persist page size', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -230,7 +230,7 @@ test.describe(
       ).toBeVisible();
 
       await page.getByRole('menuitem', { name: '15 / Page' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -241,12 +241,12 @@ test.describe(
       await linkInColumn.click();
 
       await entityApiResponse;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await page.goBack();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await page
@@ -270,7 +270,7 @@ test.describe(
       test.slow();
       await page.goto('/table/sample_data.ecommerce_db.shopify.dim_customer');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -303,7 +303,7 @@ test.describe(
 
       // verify column profile table
       await page.getByRole('tab', { name: 'Data Observability' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -319,7 +319,7 @@ test.describe(
 
       const data = await colsResponse;
       expect(data.status()).toBe(200);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -358,7 +358,7 @@ test.describe(
         '/table/sample_data.ecommerce_db.shopify.performance_test_table'
       );
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -450,7 +450,7 @@ test.describe(
       }
 
       await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
-      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
+      await page.locator('.ant-select-dropdown').getByTestId('loader').first().waitFor(
         {
           state: 'detached',
         }
@@ -484,7 +484,7 @@ test.describe(
         .getByTestId('search-bar-container')
         .getByTestId('searchbar')
         .fill('customer_id');
-      await page.getByTestId('entity-table').getByTestId('loader').waitFor(
+      await page.getByTestId('entity-table').getByTestId('loader').first().waitFor(
         {
           state: 'detached',
         }
@@ -499,7 +499,7 @@ test.describe(
       await page.click(`${rowSelector} [data-testid="edit-button"]`);
 
       await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
-      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
+      await page.locator('.ant-select-dropdown').getByTestId('loader').first().waitFor(
         {
           state: 'detached',
         }
@@ -554,7 +554,7 @@ test.describe(
         await page.click(`${rowSelector} [data-testid="edit-button"]`);
       }
 
-      await page.locator('.ant-select-dropdown:visible').getByTestId('loader').waitFor(
+      await page.locator('.ant-select-dropdown:visible').getByTestId('loader').first().waitFor(
         {
           state: 'detached',
         }
@@ -577,7 +577,7 @@ test.describe(
 
       page.reload();
       // Wait for page to be fully loaded
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       const getRequest = page.waitForResponse(
@@ -601,7 +601,7 @@ test.describe(
       );
 
       await page.locator('.ant-select-dropdown').waitFor({ state: 'visible' });
-      await page.locator('.ant-select-dropdown').getByTestId('loader').waitFor(
+      await page.locator('.ant-select-dropdown').getByTestId('loader').first().waitFor(
         {
           state: 'detached',
         }

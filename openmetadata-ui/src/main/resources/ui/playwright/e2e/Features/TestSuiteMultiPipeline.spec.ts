@@ -69,7 +69,7 @@ test(
       await createTestCaseResponse;
 
       await page.reload();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

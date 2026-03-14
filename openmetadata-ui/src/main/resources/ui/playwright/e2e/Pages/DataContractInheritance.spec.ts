@@ -169,12 +169,12 @@ const saveContract = async (page: Page) => {
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 const openContractTab = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 const startAddingContract = async (page: Page) => {
@@ -712,7 +712,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -764,7 +764,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify PATCH succeeded (200 OK)
       expect(response.status()).toBe(200);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     });
@@ -897,7 +897,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     });
@@ -1264,7 +1264,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1309,7 +1309,7 @@ test.describe('Data Contract Inheritance', () => {
 
     await test.step('Verify asset now shows inherited contract from Data Product', async () => {
       // Wait for contract to reload after deletion
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

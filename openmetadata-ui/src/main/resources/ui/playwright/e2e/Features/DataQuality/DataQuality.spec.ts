@@ -190,7 +190,7 @@ test.describe(
           NEW_TABLE_TEST_CASE.name
         );
         await page.click('[id="root\\/testType"]');
-        await page.locator(`text=${NEW_TABLE_TEST_CASE.label}`).waitFor();
+        await page.locator(`text=${NEW_TABLE_TEST_CASE.label}`).first().waitFor();
         await page.click(`[data-testid="${NEW_TABLE_TEST_CASE.type}"]`);
         await page.fill(
           '#testCaseFormV1_params_columnName',
@@ -851,7 +851,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
         await page.click('[data-testid="test-cases"]');
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -1123,7 +1123,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
         await page.click('[data-testid="test-cases"]');
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
         await verifyFilterTestCase(page);
@@ -1183,7 +1183,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
         await page.click('[data-testid="test-cases"]');
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 

@@ -64,7 +64,7 @@ test.describe('SubDomain Pagination', () => {
   test.beforeEach('Navigate to domain page', async ({ page }) => {
     await redirectToHomePage(page);
     await sidebarClick(page, SidebarItem.DOMAIN);
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   });
 
   test('Verify subdomain count and pagination functionality', async ({
@@ -72,7 +72,7 @@ test.describe('SubDomain Pagination', () => {
   }) => {
     await selectDomain(page, domain.data);
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await test.step('Verify subdomain count in tab label', async () => {
       const subDomainsTab = page.getByTestId('subdomains');
@@ -88,7 +88,7 @@ test.describe('SubDomain Pagination', () => {
       );
       await page.getByTestId('subdomains').click();
       await subDomainRes;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

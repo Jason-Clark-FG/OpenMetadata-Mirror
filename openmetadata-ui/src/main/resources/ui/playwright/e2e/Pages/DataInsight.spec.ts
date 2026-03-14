@@ -274,7 +274,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
 
     await kpiResponse;
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
 
     await expect(page.locator('[data-testid="kpi-widget"]')).toBeVisible();

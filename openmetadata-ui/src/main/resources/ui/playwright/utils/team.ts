@@ -98,7 +98,7 @@ export const createTeam = async (
   const response = await createTeamResponse;
   const createdTeam = await response.json();
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -498,7 +498,7 @@ export const addEmailTeam = async (page: Page, email: string) => {
   await page.reload();
 
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -587,7 +587,7 @@ export const executionOnOwnerTeam = async (
   const newTeamData = await createTeam(page);
 
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 

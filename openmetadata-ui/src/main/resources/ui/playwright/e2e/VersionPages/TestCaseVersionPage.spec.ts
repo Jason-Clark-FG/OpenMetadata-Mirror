@@ -73,7 +73,7 @@ test.describe('TestCase Version Page', () => {
     await page.goto(
       `/test-case/${encodeURIComponent(testCase.fullyQualifiedName)}`
     );
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     /**
      * Step: Display name change
@@ -107,7 +107,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test-case-version-changed');
 
       await page.getByTestId('version-button').click();
-      await page.getByTestId('loader').waitFor({ state: 'detached' });
+      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
     });
 
     /**
@@ -137,7 +137,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test case description changed');
 
       await page.getByTestId('version-button').click();
-      await page.getByTestId('loader').waitFor({ state: 'detached' });
+      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
     });
 
     /**

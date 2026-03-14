@@ -367,7 +367,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
         await page.reload();
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -468,7 +468,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
           await expect(page.getByRole('dialog')).not.toBeVisible();
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -540,7 +540,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           await page.getByRole('tab', { name: 'Quality' }).click();
 
           await qualityResponse;
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -623,7 +623,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
             .getByText('Schema')
             .click();
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -679,7 +679,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await toastNotification(page, '"Contract" deleted successfully!');
 
         await contractRefreshResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -709,7 +709,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await toastNotification(page, '"Contract" deleted successfully!');
 
         await contractRefreshResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -747,7 +747,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
         const response = await contractRefreshResponse;
         expect(response.status()).toBe(404);
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -768,7 +768,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await redirectToHomePage(page);
         await page.goto(`/table/${entityFQN}`);
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
       });
@@ -795,7 +795,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           .click();
 
         await columnResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -816,7 +816,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await page.getByTestId('next').click();
 
         await columnResponse2;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -837,7 +837,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await page.getByTestId('next').click();
 
         await columnResponse3;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -898,7 +898,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           .click();
 
         await columnResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -941,7 +941,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
           .click();
 
         await columnResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -976,7 +976,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         await redirectToHomePage(page);
         await page.goto(`/table/${entityFQN}`);
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -1165,7 +1165,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
     await page.reload();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -1342,7 +1342,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
     await page.reload();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -1378,7 +1378,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
     await page.getByRole('tab', { name: 'Schema' }).click();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -1505,7 +1505,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
     await page.reload();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -1661,7 +1661,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
 
     await expect(page.getByTestId('add-contract-card')).toBeVisible();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -2066,7 +2066,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       await page.getByTestId('save-contract-btn').click();
       await saveContractResponse;
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2246,7 +2246,7 @@ description:
 
         await toastNotification(page, 'ODCS Contract imported successfully');
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -2424,7 +2424,7 @@ entitiesWithDataContracts.forEach((EntityClass) => {
               await settingClick(page, GlobalSettingOptions.PERSONA);
               await personaGetResponse;
 
-              await page.locator('.ant-skeleton-content').waitFor({
+              await page.locator('.ant-skeleton-content').first().waitFor({
                 state: 'detached',
               });
 
@@ -2438,7 +2438,7 @@ entitiesWithDataContracts.forEach((EntityClass) => {
 
               // Add user to persona
               await page.getByTestId('add-persona-button').click();
-              await page.getByTestId('loader').waitFor({
+              await page.getByTestId('loader').first().waitFor({
                 state: 'detached',
               });
 
@@ -2502,7 +2502,7 @@ entitiesWithDataContracts.forEach((EntityClass) => {
               };
               await settingClick(page, GlobalSettingOptions.PERSONA);
 
-              await page.getByTestId('loader').waitFor({
+              await page.getByTestId('loader').first().waitFor({
                 state: 'detached',
               });
 
@@ -2525,7 +2525,7 @@ entitiesWithDataContracts.forEach((EntityClass) => {
                 })
                 .click();
 
-              await page.getByTestId('loader').waitFor({
+              await page.getByTestId('loader').first().waitFor({
                 state: 'detached',
               });
 

@@ -126,7 +126,7 @@ export const navigateToEntityPanelTab = async (page: Page, tabName: string) => {
   });
 
   await tab.click();
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -162,7 +162,7 @@ export const editTags = async (page: Page, tagName: string) => {
   const searchTagResponse = await searchTagResponsePromise;
   expect(searchTagResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -212,7 +212,7 @@ export const editGlossaryTerms = async (page: Page, termName?: string) => {
     );
 
     await searchBar.fill(termName);
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
     const termOption = page
@@ -273,7 +273,7 @@ export const editDomain = async (page: Page, domainName: string) => {
   const patchResponse = await patchReqPromise;
   expect(patchResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -302,7 +302,7 @@ export const verifyDeletedEntityNotVisible = async (
 
   const searchResponse = await searchResponsePromise;
   expect(searchResponse.status()).toBe(200);
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -319,7 +319,7 @@ export const clickDataQualityStatCard = async (
     `[data-testid="data-quality-stat-card-${statType}"]`
   );
   await statCard.click();
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -334,7 +334,7 @@ export const navigateToIncidentsTab = async (page: Page) => {
 
   if (await incidentsTabButton.isVisible()) {
     await incidentsTabButton.click();
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
   }
@@ -350,7 +350,7 @@ export const removeTagsFromPanel = async (
     .locator('[data-testid="selectable-list"]')
     .waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -382,7 +382,7 @@ export const removeGlossaryTermFromPanel = async (
     .locator('[data-testid="selectable-list"]')
     .waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
   for (const termName of termDisplayNames) {
@@ -494,7 +494,7 @@ export const assignTierToPanel = async (page: Page, tierName: string) => {
   const tierPopover = page.getByTestId('cards');
   await tierPopover.waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   const tierRadioButton = page.getByTestId(`radio-btn-${tierName}`);
   await tierRadioButton.waitFor({ state: 'visible' });
@@ -509,7 +509,7 @@ export const assignTierToPanel = async (page: Page, tierName: string) => {
 
   await patchPromise;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 export const removeTierFromPanel = async (page: Page) => {

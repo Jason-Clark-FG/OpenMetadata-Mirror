@@ -170,7 +170,7 @@ test('Classification Page', async ({ page }) => {
     await expect(page.getByTestId('add-owner')).not.toBeVisible();
 
     await page.getByTestId(tag.responseData.name).click();
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -235,7 +235,7 @@ test('Classification Page', async ({ page }) => {
     await expect(page.getByTestId('add-owner')).toBeVisible();
 
     await page.getByTestId(tag.responseData.name).click();
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -425,7 +425,7 @@ test('Classification Page', async ({ page }) => {
     await databaseSchemasPage;
 
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -484,11 +484,11 @@ test('Classification Page', async ({ page }) => {
     // Verify term count is now 0 after deleting the tag
     await page.reload();
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
-    await page.getByTestId('side-panel-classification').waitFor({
+    await page.getByTestId('side-panel-classification').first().waitFor({
       state: 'visible',
     });
 
@@ -593,7 +593,7 @@ test('Verify system classification term counts', async ({ page }) => {
 
   await classificationsResponse;
 
-  await page.getByTestId('side-panel-classification').waitFor({
+  await page.getByTestId('side-panel-classification').first().waitFor({
     state: 'visible',
   });
 
@@ -692,7 +692,7 @@ test('Disabled tag should not allow adding assets from Assets tab', async ({
     // Visit the disabled tag page
     await tag1.visitPage(page);
 
-    await page.getByTestId('tags-container').getByTestId('loader').waitFor(
+    await page.getByTestId('tags-container').getByTestId('loader').first().waitFor(
       { state: 'detached' }
     );
 

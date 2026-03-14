@@ -152,7 +152,7 @@ test('Permissions', async ({ userPage, adminPage }) => {
 
   await test.step('ViewBasic permission', async () => {
     await table.visitEntityPage(userPage);
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
     await validateViewPermissions(userPage);
@@ -172,7 +172,7 @@ test('Permissions', async ({ userPage, adminPage }) => {
       );
       await table.visitEntityPage(userPage);
       await permissionResponse;
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await validateViewPermissions(userPage, viewPermission.data.permission);
@@ -204,7 +204,7 @@ test('Permissions', async ({ userPage, adminPage }) => {
     );
     await table.visitEntityPage(userPage);
     await permissionResponse;
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
     const queryListResponse = userPage.waitForResponse(
@@ -247,12 +247,12 @@ test('Permissions', async ({ userPage, adminPage }) => {
     );
     await table.visitEntityPage(userPage);
     await permissionResponse;
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
     await userPage.getByTestId('profiler').click();
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 

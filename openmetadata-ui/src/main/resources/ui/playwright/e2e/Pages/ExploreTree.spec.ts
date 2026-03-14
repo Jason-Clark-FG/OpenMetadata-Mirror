@@ -63,7 +63,7 @@ test.describe('Explore Tree scenarios', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
   test('Explore Tree', async ({ page }) => {
     await test.step('Check the explore tree', async () => {
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -370,7 +370,7 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
   });
 
   test('Verify charts are visible in explore tree', async ({ page }) => {
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -449,7 +449,7 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
   }) => {
     await searchIndex.visitEntityPage(page);
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await testCopyLinkButton({
       page,
@@ -465,7 +465,7 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
   }) => {
     await apiEndpoint.visitEntityPage(page);
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await testCopyLinkButton({
       page,
@@ -480,7 +480,7 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     page,
   }) => {
     await searchIndex.visitEntityPage(page);
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await expect(page.getByTestId('search-index-fields-table')).toBeVisible();
 
@@ -522,7 +522,7 @@ test.describe('Explore page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
     page,
   }) => {
     await apiEndpoint.visitEntityPage(page);
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     await expect(page.getByTestId('schema-fields-table')).toBeVisible();
 

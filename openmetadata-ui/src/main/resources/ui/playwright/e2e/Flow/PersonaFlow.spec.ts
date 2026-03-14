@@ -71,7 +71,7 @@ test.describe.serial('Persona operations', () => {
     const personaListResponse = page.waitForResponse(`/api/v1/personas?*`);
     await settingClick(page, GlobalSettingOptions.PERSONA);
     await personaListResponse;
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   });
 
   test('Persona creation should work properly with breadcrumb navigation', async ({
@@ -97,9 +97,9 @@ test.describe.serial('Persona operations', () => {
     await page.getByTestId('add-users').click();
     await userListResponse;
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     const searchUser = page.waitForResponse(
       `/api/v1/search/query?q=*${encodeURIComponent(
@@ -342,7 +342,7 @@ test.describe.serial('Default persona setting and removal flow', () => {
       await adminPage.getByTestId('add-users').click();
       await userListResponse;
 
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

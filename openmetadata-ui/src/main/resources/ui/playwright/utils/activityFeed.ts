@@ -126,7 +126,7 @@ export const addMentionCommentInFeed = async (
     await fetchFeedResponse;
   }
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page.getByTestId('comments-input-field').click();
 

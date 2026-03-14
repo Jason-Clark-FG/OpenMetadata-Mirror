@@ -80,7 +80,7 @@ export const selectActiveGlossary = async (
     }
   }
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };
@@ -91,7 +91,7 @@ export const selectActiveGlossaryTerm = async (
 ) => {
   await page.getByTestId(glossaryTermName).click();
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -946,7 +946,7 @@ export const verifyAssetModalFilters = async (
   }
 
   const filterWrapper = page.locator('.asset-filters-wrapper');
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await testFilterWithSpecificOption(
     page,
@@ -1572,14 +1572,14 @@ export const addMultiOwnerInDialog = async (data: {
 
   await expect(page.locator("[data-testid='select-owner-tabs']")).toBeVisible();
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await page
     .locator("[data-testid='select-owner-tabs']")
     .getByRole('tab', { name: 'Users' })
     .click();
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   if (clearAll && isMultipleOwners) {
     await page.click('[data-testid="clear-all-button"]');
@@ -1592,7 +1592,7 @@ export const addMultiOwnerInDialog = async (data: {
     await page.locator('[data-testid="owner-select-users-search-bar"]').clear();
     await page.fill('[data-testid="owner-select-users-search-bar"]', ownerName);
     await searchOwner;
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     const ownerItem = page.getByRole('listitem', {
       name: ownerName,
@@ -1857,7 +1857,7 @@ export const performExpandAll = async (page: Page) => {
   await page.getByTestId('expand-collapse-all-button').click();
   await termRes;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 };

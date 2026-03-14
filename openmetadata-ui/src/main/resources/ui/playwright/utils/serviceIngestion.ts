@@ -85,7 +85,7 @@ export const deleteService = async (
       serviceName
     )}?currentPage=1`
   );
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-header-name')).toHaveText(serviceName);
 
@@ -122,7 +122,7 @@ export const deleteService = async (
   ); // Wait for up to 5 minutes for the toast notification to appear
 
   await page.reload();
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   const serviceSearchResponse = page.waitForResponse((response) => {
     const url = response.url();

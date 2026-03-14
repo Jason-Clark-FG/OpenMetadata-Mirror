@@ -150,7 +150,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -256,7 +256,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -363,7 +363,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -468,7 +468,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -554,7 +554,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -638,7 +638,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -710,14 +710,14 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await updateDescription(page, 'New Contract Rules Setting');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -735,7 +735,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -806,14 +806,14 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await updateDescription(page, 'New Contract Rules Setting');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await page.getByTestId('manage-contract-actions').click();
@@ -830,7 +830,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -895,14 +895,14 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await updateDescription(page, '');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await page.getByTestId('manage-contract-actions').click();
@@ -919,7 +919,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -986,14 +986,14 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await updateDescription(page, '');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1011,7 +1011,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1110,7 +1110,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1197,7 +1197,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1285,7 +1285,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1371,7 +1371,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1450,7 +1450,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1528,7 +1528,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1649,7 +1649,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1774,7 +1774,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1858,7 +1858,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -1943,7 +1943,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2029,7 +2029,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2116,7 +2116,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2211,7 +2211,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2221,7 +2221,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2239,7 +2239,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2315,7 +2315,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2325,7 +2325,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2343,7 +2343,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2419,7 +2419,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2429,7 +2429,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2447,7 +2447,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2521,7 +2521,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2531,7 +2531,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2549,7 +2549,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2618,14 +2618,14 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       await removeDataProduct(page, createdDataProducts[1].responseData);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2643,7 +2643,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2710,7 +2710,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
         // Move to Schema Tab
         await page.getByTestId('schema').click();
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -2721,7 +2721,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
         ]);
 
         await page.click('[data-testid="contract"]');
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -2739,7 +2739,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
         await page.reload();
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -2818,7 +2818,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2836,7 +2836,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2913,7 +2913,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -2931,7 +2931,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3005,7 +3005,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3023,7 +3023,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3099,7 +3099,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3117,7 +3117,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3186,7 +3186,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3204,7 +3204,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3275,7 +3275,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -3293,7 +3293,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

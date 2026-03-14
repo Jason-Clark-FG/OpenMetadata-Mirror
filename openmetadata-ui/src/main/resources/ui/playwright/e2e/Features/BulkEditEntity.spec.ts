@@ -129,7 +129,7 @@ test.describe('Bulk Edit Entity', () => {
       );
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -264,7 +264,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -627,7 +627,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -684,7 +684,7 @@ test.describe('Bulk Edit Entity', () => {
         .locator('.inovua-react-toolkit-load-mask__background-layer')
         .waitFor({ state: 'detached' });
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -721,7 +721,7 @@ test.describe('Bulk Edit Entity', () => {
 
       // Verify Custom Properties
       await page.click('[data-testid="custom_properties"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -772,7 +772,7 @@ test.describe('Bulk Edit Entity', () => {
       // Click on bulk edit button for the glossary term
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -835,7 +835,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await updateButtonResponse;
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -844,7 +844,7 @@ test.describe('Bulk Edit Entity', () => {
       // Visit the glossary terms tab
       await page.click('[data-testid="terms"]');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -853,13 +853,13 @@ test.describe('Bulk Edit Entity', () => {
         `[data-testid="${additionalNestedGlossaryTerm.displayName}"]`
       );
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       // Verify Custom Properties
       await page.click('[data-testid="custom_properties"]');
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

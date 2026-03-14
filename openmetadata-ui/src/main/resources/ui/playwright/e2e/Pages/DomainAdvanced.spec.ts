@@ -254,7 +254,7 @@ test.describe('Move Assets Between Domains', () => {
           table.entityResponseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -396,7 +396,7 @@ test.describe('Subdomain Permissions', () => {
     const subDomainFqn =
       testResources.subDomain.responseData.fullyQualifiedName;
     await userPage.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -751,7 +751,7 @@ test.describe('Cross-Domain Access Denial', () => {
     const tableFqn =
       testResources.accessibleTable.entityResponseData.fullyQualifiedName;
     await userPage.goto(`/table/${encodeURIComponent(tableFqn)}`);
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -774,7 +774,7 @@ test.describe('Cross-Domain Access Denial', () => {
     const tableFqn =
       testResources.accessibleTable.entityResponseData.fullyQualifiedName;
     await userPage.goto(`/table/${encodeURIComponent(tableFqn)}`);
-    await userPage.getByTestId('loader').waitFor({
+    await userPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -872,7 +872,7 @@ test.describe('Data Product Asset Management', () => {
       await selectDataProduct(page, dataProduct1.responseData);
       await page.getByTestId('assets').click();
       await page.getByTestId('data-product-details-add-button').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -937,7 +937,7 @@ test.describe('Domain Search and Filter', () => {
         '/api/v1/search/query?q=*&index=domain_search_index*'
       );
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

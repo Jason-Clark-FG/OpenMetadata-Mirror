@@ -239,7 +239,7 @@ test.describe('Tag Page with Admin Roles', () => {
           classification.responseData.name
       )}`
     );
-    await adminPage.getByTestId('tags-container').getByTestId('loader').waitFor(
+    await adminPage.getByTestId('tags-container').getByTestId('loader').first().waitFor(
       {
         state: 'detached',
       }
@@ -270,7 +270,7 @@ test.describe('Tag Page with Admin Roles', () => {
     await adminPage.goto(
       `/tag/${encodeURIComponent(createdTagData.fullyQualifiedName ?? NEW_TAG.name)}`
     );
-    await adminPage.getByTestId('tags-container').getByTestId('loader').waitFor(
+    await adminPage.getByTestId('tags-container').getByTestId('loader').first().waitFor(
       {
         state: 'detached',
       }

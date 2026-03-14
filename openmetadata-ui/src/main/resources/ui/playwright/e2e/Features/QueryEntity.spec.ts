@@ -124,7 +124,7 @@ test('Query Entity', async ({ page }) => {
       .click();
     await ownerListResponse;
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -273,7 +273,7 @@ test('Query Entity', async ({ page }) => {
     expect(upVoteResponse.status()).toBe(200);
 
     await page.reload();
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -287,7 +287,7 @@ test('Query Entity', async ({ page }) => {
       .click();
 
     await page.reload();
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -352,7 +352,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click(`[data-testid="table_queries"]`);
   await queryResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -364,7 +364,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click('[data-testid="next"]');
   await nextResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -376,7 +376,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click('[data-testid="previous"]');
   await previousResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -392,7 +392,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.getByTitle('25 / Page').click();
   await pageSizeResponse;
 
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 

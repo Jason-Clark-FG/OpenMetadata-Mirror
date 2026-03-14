@@ -273,7 +273,7 @@ test.describe('Glossary Bulk Import Export', () => {
         await settingClick(page, GlobalSettingOptions.GLOSSARY_TERM, true);
 
 
-        await page.getByTestId('loader').waitFor({ state: 'detached' });
+        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
         await deleteCreatedProperty(page, propertyName);
       }

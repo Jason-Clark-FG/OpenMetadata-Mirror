@@ -1143,7 +1143,7 @@ test.describe('Teams Page action as Owner of Team', () => {
     await teamNoOwner.visitTeamPage(ownerUserPage);
     await teamListResponse;
 
-    await ownerUserPage.getByTestId('loader').waitFor({
+    await ownerUserPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 

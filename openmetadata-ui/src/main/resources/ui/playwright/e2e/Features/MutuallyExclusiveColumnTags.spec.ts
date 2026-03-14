@@ -38,7 +38,7 @@ test(
     await redirectToHomePage(page);
     await table.visitEntityPage(page);
 
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
     const firstColumnName = table.columnsName[0];
     const columnRowSelector = `[data-row-key$="${firstColumnName}"]`;

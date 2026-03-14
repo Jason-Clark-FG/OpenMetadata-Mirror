@@ -650,7 +650,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -673,7 +673,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -695,7 +695,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -720,7 +720,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

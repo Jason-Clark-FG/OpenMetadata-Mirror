@@ -110,7 +110,7 @@ services.forEach((ServiceClass) => {
 
         // Wait for the service details page to load
         await page.waitForURL('**/service/**');
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -122,7 +122,7 @@ services.forEach((ServiceClass) => {
         // connection for live updates is only established when the initial
         // status is RUNNING — which it wasn't at page load time.
         await page.reload();
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -133,7 +133,7 @@ services.forEach((ServiceClass) => {
 
         if (service.serviceType === 'Mysql') {
           await page.reload();
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 

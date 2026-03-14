@@ -212,7 +212,7 @@ export const selectOption = async (
 
   await expect(dropdownLocator).toHaveClass(/(^|\s)ant-select-focused(\s|$)/);
 
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 

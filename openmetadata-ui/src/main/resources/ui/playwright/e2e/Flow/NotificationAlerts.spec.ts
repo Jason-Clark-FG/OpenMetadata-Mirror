@@ -216,7 +216,7 @@ test('Single Filter Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
@@ -299,7 +299,7 @@ test('Multiple Filters Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
@@ -410,7 +410,7 @@ test('Conversation source alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
 
     // Verify the edited alert changes

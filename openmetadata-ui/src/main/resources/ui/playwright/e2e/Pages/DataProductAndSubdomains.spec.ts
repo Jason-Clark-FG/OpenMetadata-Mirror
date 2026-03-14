@@ -174,7 +174,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -363,7 +363,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.goto(
         `/dataProduct/${encodeURIComponent(dpData.fullyQualifiedName)}`
       );
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -860,7 +860,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
 
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -876,7 +876,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -915,7 +915,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

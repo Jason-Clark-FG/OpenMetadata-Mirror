@@ -942,7 +942,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           });
 
           // Wait for any loaders to disappear
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
         });
@@ -1047,7 +1047,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await clickResponse;
 
           // Wait for loader to disappear after navigation
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -1068,7 +1068,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await prevButton.isEnabled()) {
             await prevButton.click();
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
           }
@@ -1100,7 +1100,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await intermediateClickResponse;
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
 
@@ -1285,7 +1285,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await nestedColumnRow.getByTestId('expand-icon').isVisible()) {
             await nestedColumnRow.getByTestId('expand-icon').click();
             // Wait for expansion to complete
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
 
@@ -1390,7 +1390,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           );
 
           // Wait for loader to disappear after search
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -1414,7 +1414,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await updateResponse;
 
           // CRITICAL: Wait for UI to update after API response
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -1522,7 +1522,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                 .getByTestId('alert-message')
             ).toContainText('Description updated successfully');
 
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
 
@@ -1566,7 +1566,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await nextButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
 
@@ -1591,7 +1591,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await prevButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').waitFor({
+            await page.getByTestId('loader').first().waitFor({
               state: 'detached',
             });
 
@@ -2183,7 +2183,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         // Navigate to the table entity page
         await entity.visitEntityPage(page);
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -2203,7 +2203,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await profilerTab.click();
           await profilerResponse;
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
         });
@@ -2233,7 +2233,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await activityFeedTab.click();
           await activityFeedResponse;
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
         });

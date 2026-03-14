@@ -158,7 +158,7 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await redirectToHomePage(adminPage);
 
       await table1.visitEntityPage(adminPage);
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -217,11 +217,11 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       );
       await page.click('[data-testid="incident"]');
       await incidentDetails;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
-      await page.locator('.ant-skeleton-content').waitFor({
+      await page.locator('.ant-skeleton-content').first().waitFor({
         state: 'detached',
       });
 

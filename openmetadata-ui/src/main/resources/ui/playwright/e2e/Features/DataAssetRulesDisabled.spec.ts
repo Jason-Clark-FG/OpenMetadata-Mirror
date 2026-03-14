@@ -338,7 +338,7 @@ test.describe(
         );
         await page.click('[data-testid="bulk-edit-table"]');
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -469,7 +469,7 @@ test.describe(
 
         await page.click('[data-testid="bulk-edit-table"]');
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -755,7 +755,7 @@ test.describe(
 
         // Open domain selector to verify multi-select mode (checkboxes visible)
         await page.getByTestId('add-domain').click();
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 

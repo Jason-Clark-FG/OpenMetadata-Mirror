@@ -813,7 +813,7 @@ export const verifyColumnLineageInCSV = async (
 export const verifyLineageConfig = async (page: Page) => {
   await page.getByTestId('lineage-config').click();
 
-  await page.locator('.ant-modal-content').waitFor({
+  await page.locator('.ant-modal-content').first().waitFor({
     state: 'visible',
   });
 
@@ -885,7 +885,7 @@ export const updateLineageConfigFromModal = async (
 ) => {
   await page.getByTestId('lineage-config').click();
 
-  await page.locator('.ant-modal-content').waitFor({
+  await page.locator('.ant-modal-content').first().waitFor({
     state: 'visible',
   });
 

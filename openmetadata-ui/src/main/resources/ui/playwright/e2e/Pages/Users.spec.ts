@@ -400,7 +400,7 @@ test.describe('User with Data Consumer Roles', () => {
     // Check CRUD for Glossary
     await sidebarClick(dataConsumerPage, SidebarItem.GLOSSARY);
 
-    await dataConsumerPage.getByTestId('loader').waitFor({
+    await dataConsumerPage.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -618,7 +618,7 @@ test.describe('User Profile Feed Interactions', () => {
     await visitOwnProfilePage(page);
     await feedResponse;
 
-    await page.getByTestId('message-container').waitFor();
+    await page.getByTestId('message-container').first().waitFor();
 
     const avatar = page
       .locator('#feedData [data-testid="message-container"]')
@@ -1430,7 +1430,7 @@ base.describe(
 
         for (const entity of entities) {
           await entity.visitEntityPage(page);
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -1445,7 +1445,7 @@ base.describe(
           await page.getByTestId('activity_feed').click();
           await feedResponse;
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 
@@ -1464,7 +1464,7 @@ base.describe(
           await page.getByTestId('lineage').click();
           await lineageResponse;
 
-          await page.getByTestId('loader').waitFor({
+          await page.getByTestId('loader').first().waitFor({
             state: 'detached',
           });
 

@@ -20,7 +20,7 @@ const navigateToAuditLogsPage = async (page: Page) => {
   const logRequest = page.waitForResponse('/api/v1/audit/logs?*');
   await settingClick(page, GlobalSettingOptions.AUDIT_LOGS);
   await logRequest;
-  await page.locator('.ant-skeleton').waitFor({ state: 'detached' });
+  await page.locator('.ant-skeleton').first().waitFor({ state: 'detached' });
   await page.getByTestId('audit-log-list').waitFor({ state: 'visible' });
 };
 
@@ -113,7 +113,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       // Verify Time filter is active
       const timeFilterTag = page.getByTestId('filter-chip-time');
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
       await expect(timeFilterTag).toBeVisible();
@@ -357,7 +357,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await removeUserButton.click();
       const response = await auditLogResponse;
       expect(response.status()).toBe(200);
-      await page.locator('.ant-skeleton').waitFor({ state: 'detached' });
+      await page.locator('.ant-skeleton').first().waitFor({ state: 'detached' });
 
       await expect(userFilterTag).not.toBeVisible();
 
@@ -380,7 +380,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await searchInput.press('Enter');
       const response = await auditLogResponse;
       expect(response.status()).toBe(200);
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
     });
@@ -397,7 +397,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const clearButton = page.getByTestId('clear-filters');
       await clearButton.click();
       await auditLogResponse;
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
 
@@ -420,7 +420,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await searchInput.press('Enter');
       const response = await auditLogResponse;
       expect(response.status()).toBe(200);
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
 
@@ -435,7 +435,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       }
 
       // Search with uppercase term - should return similar results
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
       await searchInput.fill('ADMIN');
@@ -449,7 +449,7 @@ test.describe('Audit Logs Page', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await searchInput.press('Enter');
       const response2 = await auditLogResponse2;
       expect(response2.status()).toBe(200);
-      await page.locator('.ant-skeleton').waitFor({
+      await page.locator('.ant-skeleton').first().waitFor({
         state: 'detached',
       });
     });
@@ -675,7 +675,7 @@ test.describe(
         await searchInput.press('Enter');
         const response = await auditLogResponse;
         expect(response.status()).toBe(200);
-        await page.locator('.ant-skeleton').waitFor({
+        await page.locator('.ant-skeleton').first().waitFor({
           state: 'detached',
         });
         const responseData = await response.json();
@@ -787,7 +787,7 @@ test.describe(
         );
         await searchInput.press('Enter');
         await auditResponse;
-        await page.locator('.ant-skeleton').waitFor({
+        await page.locator('.ant-skeleton').first().waitFor({
           state: 'detached',
         });
       });
@@ -1584,7 +1584,7 @@ test.describe(
           await searchInput.press('Enter');
           const response = await searchResponse;
           expect(response.status()).toBe(200);
-          await page.locator('.ant-skeleton').waitFor({
+          await page.locator('.ant-skeleton').first().waitFor({
             state: 'detached',
           });
           const responseData = await response.json();

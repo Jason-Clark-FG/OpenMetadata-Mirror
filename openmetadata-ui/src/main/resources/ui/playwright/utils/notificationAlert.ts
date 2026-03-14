@@ -54,7 +54,7 @@ export const visitNotificationAlertPage = async (page: Page) => {
   ]);
 
   // Ensure UI is ready after API responses
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 export const addFilterWithUsersListInput = async ({

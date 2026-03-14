@@ -194,7 +194,7 @@ export const updateRelatedMetric = async (
 
   await metricsResponsePromise1;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     dataAsset.entity.name
@@ -210,7 +210,7 @@ export const updateRelatedMetric = async (
   await page.getByRole('button', { name: title, exact: true }).click();
   await metricsResponsePromise2;
 
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     title

@@ -214,7 +214,7 @@ test.describe(
         await page.getByRole('link', { name: teamName }).click();
         await getTeamResponse;
 
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 

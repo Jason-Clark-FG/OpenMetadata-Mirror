@@ -31,7 +31,7 @@ export const openCertificationDropdown = async (page: Page) => {
   await page.locator('.certification-card-popover').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('loader').waitFor({ state: 'detached' });
+  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
 };
 
 export const closeCertificationDropdown = async (page: Page) => {

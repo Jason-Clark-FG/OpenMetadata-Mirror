@@ -385,7 +385,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await adminPage.getByText('Data Assets').click();
         await adminPage.getByText(type, { exact: true }).click();
 
-        await adminPage.getByTestId('loader').waitFor({
+        await adminPage.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -482,7 +482,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.getByTestId('loader').waitFor({
+        await userPage.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -549,7 +549,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await adminPage.getByText('Governance').click();
         await adminPage.getByText(type, { exact: true }).click();
 
-        await adminPage.getByTestId('loader').waitFor({
+        await adminPage.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -642,7 +642,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await redirectToHomePage(userPage);
 
         await entity?.visitEntityPage(userPage);
-        await userPage.getByTestId('loader').waitFor({
+        await userPage.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
         await waitForAllLoadersToDisappear(userPage);
@@ -703,7 +703,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Glossary Term', { exact: true }).click();
 
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -726,7 +726,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -784,7 +784,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Data Assets').click();
       await adminPage.getByText('Table', { exact: true }).click();
 
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -832,14 +832,14 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await redirectToHomePage(userPage);
 
       await entity?.visitEntityPage(userPage);
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
       // Change language to French
       await userPage.getByRole('button', { name: 'EN', exact: true }).click();
       await userPage.getByRole('menuitem', { name: 'Français - FR' }).click();
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -889,7 +889,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await adminPage.getByText('Governance').click();
       await adminPage.getByText('Domain', { exact: true }).click();
 
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -944,7 +944,7 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await entity?.visitEntityPage(userPage);
       await domainResponse;
 
-      await userPage.getByTestId('loader').waitFor({
+      await userPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await waitForAllLoadersToDisappear(userPage);

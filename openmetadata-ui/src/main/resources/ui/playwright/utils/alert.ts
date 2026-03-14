@@ -176,7 +176,7 @@ export const findPageWithAlert = async (
   alertDetails: AlertDetails
 ) => {
   const { id } = alertDetails;
-  await page.getByTestId('loader').waitFor({
+  await page.getByTestId('loader').first().waitFor({
     state: 'detached',
   });
   const alertRow = page.locator(`[data-row-key="${id}"]`);
@@ -297,7 +297,7 @@ export const addOwnerFilter = async ({
   await page.click(`[data-testid="filter-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -327,7 +327,7 @@ export const addOwnerFilter = async ({
   await ownerInput.click();
 
   // Wait for search dropdown to open
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -378,7 +378,7 @@ export const addEntityFQNFilter = async ({
   await page.click(`[data-testid="filter-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -408,7 +408,7 @@ export const addEntityFQNFilter = async ({
   await getSearchResult;
 
   // Wait for search dropdown to open
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -452,7 +452,7 @@ export const addEventTypeFilter = async ({
   await page.click(`[data-testid="filter-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -483,7 +483,7 @@ export const addEventTypeFilter = async ({
     await eventTypeInput.click();
 
     // Wait for dropdown to open
-    await page.locator('.ant-select-dropdown:visible').waitFor({
+    await page.locator('.ant-select-dropdown:visible').first().waitFor({
       state: 'visible',
     });
 
@@ -536,7 +536,7 @@ export const addDomainFilter = async ({
   await page.click(`[data-testid="filter-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -566,7 +566,7 @@ export const addDomainFilter = async ({
   await domainInput.click();
 
   // Wait for search dropdown to open
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -622,7 +622,7 @@ export const addGMEFilter = async ({
   await page.click(`[data-testid="filter-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -767,7 +767,7 @@ export const addGetSchemaChangesAction = async ({
   await page.click(`[data-testid="trigger-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -811,7 +811,7 @@ export const addPipelineStatusUpdatesAction = async ({
   await page.click(`[data-testid="trigger-select-${filterNumber}"]`);
 
   // Wait for dropdown to be fully visible and stable
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 
@@ -841,7 +841,7 @@ export const addPipelineStatusUpdatesAction = async ({
   await pipelineStatusInput.click();
 
   // Wait for search dropdown to open
-  await page.locator('.ant-select-dropdown:visible').waitFor({
+  await page.locator('.ant-select-dropdown:visible').first().waitFor({
     state: 'visible',
   });
 

@@ -25,7 +25,7 @@ test.describe('Table Version Page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       '/table/sample_data.ecommerce_db.shopify.performance_test_table',
       { waitUntil: 'domcontentloaded' }
     );
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
     await expect(page.getByTestId('version-button')).toHaveText(/0\.1/, {
       timeout: 30000,
     });

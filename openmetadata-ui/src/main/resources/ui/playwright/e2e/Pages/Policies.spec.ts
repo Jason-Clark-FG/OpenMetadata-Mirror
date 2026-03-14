@@ -100,7 +100,7 @@ test.describe(
 
       await redirectToHomePage(page);
       await settingClick(page, GlobalSettingOptions.POLICIES);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     });
@@ -308,7 +308,7 @@ test.describe(
 
       await test.step('Delete created policy', async () => {
         await settingClick(page, GlobalSettingOptions.POLICIES);
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
         const policyElement = page.locator('[data-testid="policy-name"]', {
@@ -409,7 +409,7 @@ test.describe(
 
       await page.reload();
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

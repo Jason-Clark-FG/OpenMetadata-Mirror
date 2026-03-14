@@ -85,7 +85,7 @@ test(
       );
       await getTestCase;
 
-      await page.getByTestId('test-case-selection-card').getByTestId('loader').waitFor(
+      await page.getByTestId('test-case-selection-card').getByTestId('loader').first().waitFor(
         { state: 'detached' }
       );
 
@@ -99,7 +99,7 @@ test(
       await createTestSuiteResponse;
       await toastNotification(page, 'Test Suite created successfully.');
 
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     });
@@ -134,7 +134,7 @@ test(
 
     await test.step('Add test case to logical test suite by owner', async () => {
       await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
-      await ownerPage.getByTestId('loader').waitFor({
+      await ownerPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       const testCaseResponse = ownerPage.waitForResponse(
@@ -185,7 +185,7 @@ test(
       );
 
       await page.getByTestId('view-service-button').click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     });
@@ -219,7 +219,7 @@ test(
       await page.getByTestId('select-owner-tabs').waitFor({
         state: 'visible',
       });
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       const getOwnerList = page.waitForResponse(
@@ -227,7 +227,7 @@ test(
       );
       await page.click('.ant-tabs [id*=tab-users]');
       await getOwnerList;
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

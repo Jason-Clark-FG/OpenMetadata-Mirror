@@ -63,7 +63,7 @@ test.describe('Domain Owner Management', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -86,7 +86,7 @@ test.describe('Domain Owner Management', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -174,7 +174,7 @@ test.describe('Domain Owner Management', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -239,7 +239,7 @@ test.describe('Domain Expert Management', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -409,7 +409,7 @@ test.describe('Data Product UI Operations', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -432,7 +432,7 @@ test.describe('Data Product UI Operations', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').waitFor({
+        await page.getByTestId('loader').first().waitFor({
           state: 'detached',
         });
 
@@ -500,7 +500,7 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -549,7 +549,7 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

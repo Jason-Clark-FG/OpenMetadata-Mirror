@@ -38,7 +38,7 @@ export const getElementWithPagination = async (
   if (await previousBtn.isVisible()) {
     while (await previousBtn.isEnabled()) {
       await previousBtn.click();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
     }
@@ -58,6 +58,6 @@ export const getElementWithPagination = async (
     await nextBtn.waitFor({ state: 'visible' });
 
     await nextBtn.click();
-    await page.getByTestId('loader').waitFor({ state: 'detached' });
+    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
   }
 };

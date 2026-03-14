@@ -343,7 +343,7 @@ export const softDeleteUser = async (
   displayName: string
 ) => {
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   const searchResponse = page.waitForResponse(
     '/api/v1/search/query?q=*&index=*&from=0&size=*'
@@ -368,7 +368,7 @@ export const softDeleteUser = async (
   await toastNotification(page, `"${displayName}" deleted successfully!`);
 
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   // Search soft deleted user in non-deleted mode
   const searchSoftDeletedUserResponse = page.waitForResponse(
@@ -398,7 +398,7 @@ export const restoreUser = async (
   await fetchDeletedUsers;
 
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   const searchUsers = page.waitForResponse('/api/v1/search/query*');
   await page.fill('[data-testid="searchbar"]', username);
@@ -438,7 +438,7 @@ export const permanentDeleteUser = async (
   }
 
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   // Search the user
   const searchUserResponse = page.waitForResponse('/api/v1/search/query*');
@@ -446,7 +446,7 @@ export const permanentDeleteUser = async (
   await searchUserResponse;
 
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   // Click on delete user button
   await page.click(`[data-testid="delete-user-btn-${username}"]`);
@@ -468,7 +468,7 @@ export const permanentDeleteUser = async (
   await reFetchUsers;
 
   // Wait for the loader to disappear
-  await page.getByTestId('loader').waitFor({ state: 'hidden' });
+  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
   // Search the user again
   const searchUserAfterDeleteResponse = page.waitForResponse(
@@ -616,7 +616,7 @@ export const checkStewardServicesPermissions = async (page: Page) => {
   // Perform search actions
   await page.click('[data-testid="search-dropdown-Data Assets"]');
 
-  await page.getByTestId('drop-down-menu').getByTestId('loader').waitFor({
+  await page.getByTestId('drop-down-menu').getByTestId('loader').first().waitFor({
     state: 'detached',
   });
 
@@ -738,7 +738,7 @@ export const addUser = async (
       .getByTestId('personas-dropdown')
       .getByRole('combobox')
       .fill(personas[0]);
-    await page.locator('.ant-select-dropdown:visible').waitFor({
+    await page.locator('.ant-select-dropdown:visible').first().waitFor({
       state: 'visible',
     });
     const personaOption = page

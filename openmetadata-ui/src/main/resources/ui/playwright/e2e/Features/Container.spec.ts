@@ -187,7 +187,7 @@ test.describe('Container entity specific tests ', () => {
   }) => {
     await container.visitEntityPage(page);
 
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 
@@ -204,7 +204,7 @@ test.describe('Container entity specific tests ', () => {
     dataConsumerPage: page,
   }) => {
     await container.visitEntityPage(page);
-    await page.getByTestId('loader').waitFor({
+    await page.getByTestId('loader').first().waitFor({
       state: 'detached',
     });
 

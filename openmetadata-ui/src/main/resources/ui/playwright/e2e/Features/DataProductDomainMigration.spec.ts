@@ -289,7 +289,7 @@ test.describe('Data Product Domain Migration', () => {
 
       // Refresh page to see updated domain
       await page.reload();
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

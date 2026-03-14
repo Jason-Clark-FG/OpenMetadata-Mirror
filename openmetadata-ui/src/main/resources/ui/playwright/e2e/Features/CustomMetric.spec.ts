@@ -38,7 +38,7 @@ test('Table custom metric', async ({ page }) => {
     );
     await table.visitEntityPage(page);
 
-    await page.getByTestId('loader').waitFor({ state: 'hidden' });
+    await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
 
     await page.click('[data-testid="profiler"]');
     await profilerResponse;

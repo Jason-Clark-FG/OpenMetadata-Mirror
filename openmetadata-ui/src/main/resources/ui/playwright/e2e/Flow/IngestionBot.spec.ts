@@ -95,7 +95,7 @@ test.describe('Ingestion Bot ', () => {
     await test.step('Assign assets to domains', async () => {
       // Add assets to domain 1
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await selectDomain(page, domain1.data);
@@ -103,7 +103,7 @@ test.describe('Ingestion Bot ', () => {
 
       // Add assets to domain 2
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await selectDomain(page, domain2.data);
@@ -143,7 +143,7 @@ test.describe('Ingestion Bot ', () => {
       // Add assets to domain 1
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await addServicesToDomain(page, domain1.data, [
@@ -152,7 +152,7 @@ test.describe('Ingestion Bot ', () => {
 
       // Add assets to domain 2
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       await addServicesToDomain(page, domain2.data, [

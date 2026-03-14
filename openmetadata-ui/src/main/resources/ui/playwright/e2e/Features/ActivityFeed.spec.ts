@@ -427,7 +427,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await adminPage.getByTestId('activity_feed').click();
 
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -461,7 +461,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await user1Page.getByTestId('activity_feed').click();
 
-      await user1Page.getByTestId('loader').waitFor({
+      await user1Page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 
@@ -510,7 +510,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
     await test.step('Admin user checks notification for correct user and timestamp', async () => {
       await adminPage.reload();
-      await adminPage.getByTestId('loader').waitFor({
+      await adminPage.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
       const notificationBell = adminPage.getByTestId('task-notifications');
@@ -583,7 +583,7 @@ test.describe('Mention notifications in Notification Box', () => {
       await entity.visitEntityPage(user1Page);
 
       await user1Page.getByTestId('activity_feed').click();
-      await user1Page.getByTestId('loader').waitFor({
+      await user1Page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

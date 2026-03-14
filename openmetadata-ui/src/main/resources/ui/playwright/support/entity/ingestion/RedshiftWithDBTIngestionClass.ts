@@ -166,7 +166,7 @@ class RedshiftWithDBTIngestionClass extends ServiceBaseClass {
 
       // Header available once page loads
       await page.getByTestId('data-assets-header').waitFor();
-      await page.getByTestId('loader').waitFor({ state: 'detached' });
+      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
       await page.getByTestId('agents').click();
       const metadataTab2 = page.locator('[data-testid="metadata-sub-tab"]');
       if (await metadataTab2.isVisible()) {
@@ -210,7 +210,7 @@ class RedshiftWithDBTIngestionClass extends ServiceBaseClass {
       );
 
       // Verify DBT tag category is added
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

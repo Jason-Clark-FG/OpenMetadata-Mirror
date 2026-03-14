@@ -60,7 +60,7 @@ test.describe('Table Constraints', {}, () => {
 
     await test.step('Add Constraints', async () => {
       await table.visitEntityPage(page);
-      await page.getByTestId('loader').waitFor({
+      await page.getByTestId('loader').first().waitFor({
         state: 'detached',
       });
 

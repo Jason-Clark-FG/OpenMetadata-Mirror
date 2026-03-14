@@ -332,7 +332,7 @@ export const addTagToTableColumn = async (
   await page.click('[data-testid="saveAssociatedTag"]');
   await saveAssociatedTag;
 
-  await page.locator('.ant-select-dropdown').waitFor({
+  await page.locator('.ant-select-dropdown').first().waitFor({
     state: 'detached',
   });
 
@@ -645,10 +645,10 @@ export const selectTagInTagSuggestion = async (
   await tagInput.fill(searchTerm);
   await tagSearchResponse;
 
-  await page.locator('[role="listbox"]').waitFor({ state: 'visible' });
+  await page.locator('[role="listbox"]').first().waitFor({ state: 'visible' });
   const tagOption = page.getByTestId(`tag-option-${tagFqn}`);
   await tagOption.waitFor({ state: 'visible' });
   await tagOption.click();
   await page.keyboard.press('Escape');
-  await page.locator('[role="listbox"]').waitFor({ state: 'hidden' });
+  await page.locator('[role="listbox"]').first().waitFor({ state: 'hidden' });
 };
