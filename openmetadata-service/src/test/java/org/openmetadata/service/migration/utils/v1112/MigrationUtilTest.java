@@ -1,7 +1,6 @@
 package org.openmetadata.service.migration.utils.v1112;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -92,12 +91,8 @@ class MigrationUtilTest {
                 .withId(serviceId)
                 .withName("svc.with.dot")
                 .withFullyQualifiedName("\"svc.with.dot\""));
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DATABASE_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of(relationship(failedDatabaseId), relationship(brokenDatabaseId)));
     when(databaseDAO.findEntityById(failedDatabaseId))
         .thenThrow(new IllegalStateException("database lookup failed"));
@@ -131,8 +126,7 @@ class MigrationUtilTest {
 
     MigrationUtil.fixDatabaseFqnHash(handle, collectionDAO);
 
-    verify(relationshipDAO, never())
-        .findTo(any(), any(), any(Integer.class), any());
+    verify(relationshipDAO, never()).findTo(any(), any(), any(Integer.class), any());
     verify(databaseDAO, never()).update(any(Database.class));
   }
 
@@ -143,19 +137,11 @@ class MigrationUtilTest {
     UUID schemaId = UUID.randomUUID();
     stubServiceRows("dbservice_entity", serviceId);
 
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DATABASE_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of(relationship(databaseId)));
-    when(
-            relationshipDAO.findTo(
-                databaseId,
-                Entity.DATABASE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE_SCHEMA))
+    when(relationshipDAO.findTo(
+            databaseId, Entity.DATABASE, Relationship.CONTAINS.ordinal(), Entity.DATABASE_SCHEMA))
         .thenReturn(List.of(relationship(schemaId)));
 
     Database database =
@@ -186,12 +172,8 @@ class MigrationUtilTest {
   void fixDatabaseSchemaFqnHashReturnsWhenNoDatabasesExistUnderQuotedServices() {
     UUID serviceId = UUID.randomUUID();
     stubServiceRows("dbservice_entity", serviceId);
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DATABASE_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of());
 
     MigrationUtil.fixDatabaseSchemaFqnHash(handle, collectionDAO);
@@ -207,26 +189,14 @@ class MigrationUtilTest {
     UUID tableId = UUID.randomUUID();
     stubServiceRows("dbservice_entity", serviceId);
 
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DATABASE_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of(relationship(databaseId)));
-    when(
-            relationshipDAO.findTo(
-                databaseId,
-                Entity.DATABASE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE_SCHEMA))
+    when(relationshipDAO.findTo(
+            databaseId, Entity.DATABASE, Relationship.CONTAINS.ordinal(), Entity.DATABASE_SCHEMA))
         .thenReturn(List.of(relationship(schemaId)));
-    when(
-            relationshipDAO.findTo(
-                schemaId,
-                Entity.DATABASE_SCHEMA,
-                Relationship.CONTAINS.ordinal(),
-                Entity.TABLE))
+    when(relationshipDAO.findTo(
+            schemaId, Entity.DATABASE_SCHEMA, Relationship.CONTAINS.ordinal(), Entity.TABLE))
         .thenReturn(List.of(relationship(tableId)));
 
     DatabaseSchema schema =
@@ -279,26 +249,17 @@ class MigrationUtilTest {
     UUID storedProcedureId = UUID.randomUUID();
     stubServiceRows("dbservice_entity", serviceId);
 
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DATABASE_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.DATABASE_SERVICE, Relationship.CONTAINS.ordinal(), Entity.DATABASE))
         .thenReturn(List.of(relationship(databaseId)));
-    when(
-            relationshipDAO.findTo(
-                databaseId,
-                Entity.DATABASE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DATABASE_SCHEMA))
+    when(relationshipDAO.findTo(
+            databaseId, Entity.DATABASE, Relationship.CONTAINS.ordinal(), Entity.DATABASE_SCHEMA))
         .thenReturn(List.of(relationship(schemaId)));
-    when(
-            relationshipDAO.findTo(
-                schemaId,
-                Entity.DATABASE_SCHEMA,
-                Relationship.CONTAINS.ordinal(),
-                Entity.STORED_PROCEDURE))
+    when(relationshipDAO.findTo(
+            schemaId,
+            Entity.DATABASE_SCHEMA,
+            Relationship.CONTAINS.ordinal(),
+            Entity.STORED_PROCEDURE))
         .thenReturn(List.of(relationship(storedProcedureId)));
 
     DatabaseSchema schema =
@@ -338,12 +299,11 @@ class MigrationUtilTest {
                 .withId(serviceId)
                 .withName("dash.with.dot")
                 .withFullyQualifiedName("\"dash.with.dot\""));
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.DASHBOARD_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.DASHBOARD_DATA_MODEL))
+    when(relationshipDAO.findTo(
+            serviceId,
+            Entity.DASHBOARD_SERVICE,
+            Relationship.CONTAINS.ordinal(),
+            Entity.DASHBOARD_DATA_MODEL))
         .thenReturn(List.of(relationship(modelId)));
 
     DashboardDataModel dataModel =
@@ -358,12 +318,12 @@ class MigrationUtilTest {
 
     MigrationUtil.fixDashboardDataModelFqnHash(handle, collectionDAO);
 
-    ArgumentCaptor<DashboardDataModel> captor =
-        ArgumentCaptor.forClass(DashboardDataModel.class);
+    ArgumentCaptor<DashboardDataModel> captor = ArgumentCaptor.forClass(DashboardDataModel.class);
     verify(dashboardDataModelDAO).update(captor.capture());
     String expectedFqn = FullyQualifiedName.add("\"dash.with.dot\".model", dataModel.getName());
     assertEquals(expectedFqn, captor.getValue().getFullyQualifiedName());
-    assertEquals(expectedFqn + ".metric", captor.getValue().getColumns().getFirst().getFullyQualifiedName());
+    assertEquals(
+        expectedFqn + ".metric", captor.getValue().getColumns().getFirst().getFullyQualifiedName());
   }
 
   @Test
@@ -378,12 +338,8 @@ class MigrationUtilTest {
                 .withId(serviceId)
                 .withName("api.with.dot")
                 .withFullyQualifiedName("\"api.with.dot\""));
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.API_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_COLLECTION))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.API_SERVICE, Relationship.CONTAINS.ordinal(), Entity.API_COLLECTION))
         .thenReturn(List.of(relationship(collectionId)));
 
     APICollection apiCollection =
@@ -421,19 +377,14 @@ class MigrationUtilTest {
     UUID endpointId = UUID.randomUUID();
     stubServiceRows("api_service_entity", serviceId);
 
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.API_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_COLLECTION))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.API_SERVICE, Relationship.CONTAINS.ordinal(), Entity.API_COLLECTION))
         .thenReturn(List.of(relationship(collectionId)));
-    when(
-            relationshipDAO.findTo(
-                collectionId,
-                Entity.API_COLLECTION,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_ENDPOINT))
+    when(relationshipDAO.findTo(
+            collectionId,
+            Entity.API_COLLECTION,
+            Relationship.CONTAINS.ordinal(),
+            Entity.API_ENDPOINT))
         .thenReturn(List.of(relationship(endpointId)));
 
     APICollection apiCollection =
@@ -465,19 +416,14 @@ class MigrationUtilTest {
     UUID serviceId = UUID.randomUUID();
     UUID collectionId = UUID.randomUUID();
     stubServiceRows("api_service_entity", serviceId);
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.API_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_COLLECTION))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.API_SERVICE, Relationship.CONTAINS.ordinal(), Entity.API_COLLECTION))
         .thenReturn(List.of(relationship(collectionId)));
-    when(
-            relationshipDAO.findTo(
-                collectionId,
-                Entity.API_COLLECTION,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_ENDPOINT))
+    when(relationshipDAO.findTo(
+            collectionId,
+            Entity.API_COLLECTION,
+            Relationship.CONTAINS.ordinal(),
+            Entity.API_ENDPOINT))
         .thenReturn(List.of(UUID.randomUUID()).stream().map(this::relationship).toList());
     when(apiEndpointDAO.findEntityById(any(UUID.class)))
         .thenReturn(
@@ -497,12 +443,8 @@ class MigrationUtilTest {
   void fixApiEndpointFqnHashReturnsWhenCollectionsDoNotExist() {
     UUID serviceId = UUID.randomUUID();
     stubServiceRows("api_service_entity", serviceId);
-    when(
-            relationshipDAO.findTo(
-                serviceId,
-                Entity.API_SERVICE,
-                Relationship.CONTAINS.ordinal(),
-                Entity.API_COLLECTION))
+    when(relationshipDAO.findTo(
+            serviceId, Entity.API_SERVICE, Relationship.CONTAINS.ordinal(), Entity.API_COLLECTION))
         .thenReturn(List.of());
 
     MigrationUtil.fixApiEndpointFqnHash(handle, collectionDAO);

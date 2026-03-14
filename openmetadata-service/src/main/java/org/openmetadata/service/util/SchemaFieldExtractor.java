@@ -46,7 +46,8 @@ public class SchemaFieldExtractor {
    * Entity types intentionally excluded from schema field extraction cache initialization. These
    * entities are not currently supported by the custom-property schema extractor flow.
    */
-  private static final Set<String> EXCLUDED_ENTITY_TYPES = Set.of("promptTemplate", "agentExecution");
+  private static final Set<String> EXCLUDED_ENTITY_TYPES =
+      Set.of("promptTemplate", "agentExecution");
 
   public SchemaFieldExtractor() {
     initializeEntityFieldsCache();

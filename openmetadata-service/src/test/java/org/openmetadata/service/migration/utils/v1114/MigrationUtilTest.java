@@ -3,8 +3,8 @@ package org.openmetadata.service.migration.utils.v1114;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -107,10 +107,15 @@ class MigrationUtilTest {
 
     try (MockedStatic<SearchSettingsMergeUtil> mergeUtil =
         mockStatic(SearchSettingsMergeUtil.class, CALLS_REAL_METHODS)) {
-      mergeUtil.when(SearchSettingsMergeUtil::getSearchSettingsFromDatabase).thenReturn(storedSettings);
-      mergeUtil.when(() -> SearchSettingsMergeUtil.loadSearchSettings(storedSettings))
+      mergeUtil
+          .when(SearchSettingsMergeUtil::getSearchSettingsFromDatabase)
+          .thenReturn(storedSettings);
+      mergeUtil
+          .when(() -> SearchSettingsMergeUtil.loadSearchSettings(storedSettings))
           .thenReturn(currentSettings);
-      mergeUtil.when(SearchSettingsMergeUtil::loadSearchSettingsFromFile).thenReturn(defaultSettings);
+      mergeUtil
+          .when(SearchSettingsMergeUtil::loadSearchSettingsFromFile)
+          .thenReturn(defaultSettings);
       mergeUtil
           .when(() -> SearchSettingsMergeUtil.saveSearchSettings(storedSettings, currentSettings))
           .thenAnswer(invocation -> null);
@@ -137,19 +142,20 @@ class MigrationUtilTest {
     Settings storedSettings = new Settings();
     try (MockedStatic<SearchSettingsMergeUtil> mergeUtil =
         mockStatic(SearchSettingsMergeUtil.class, CALLS_REAL_METHODS)) {
-      mergeUtil.when(SearchSettingsMergeUtil::getSearchSettingsFromDatabase).thenReturn(storedSettings);
-      mergeUtil.when(() -> SearchSettingsMergeUtil.loadSearchSettings(storedSettings))
+      mergeUtil
+          .when(SearchSettingsMergeUtil::getSearchSettingsFromDatabase)
+          .thenReturn(storedSettings);
+      mergeUtil
+          .when(() -> SearchSettingsMergeUtil.loadSearchSettings(storedSettings))
           .thenReturn(currentSettings);
-      mergeUtil.when(SearchSettingsMergeUtil::loadSearchSettingsFromFile).thenReturn(defaultSettings);
+      mergeUtil
+          .when(SearchSettingsMergeUtil::loadSearchSettingsFromFile)
+          .thenReturn(defaultSettings);
       mergeUtil
           .when(() -> SearchSettingsMergeUtil.saveSearchSettings(storedSettings, currentSettings))
           .thenAnswer(invocation -> null);
 
-      currentSettings
-          .getGlobalSettings()
-          .getFieldValueBoosts()
-          .getFirst()
-          .setFactor(0.25);
+      currentSettings.getGlobalSettings().getFieldValueBoosts().getFirst().setFactor(0.25);
 
       MigrationUtil.updateSearchSettingsBoostConfiguration();
 
@@ -161,13 +167,15 @@ class MigrationUtilTest {
 
   @Test
   void updateSearchSettingsBoostConfigurationPropagatesUnexpectedFailures() {
-    try (MockedStatic<SearchSettingsMergeUtil> mergeUtil = mockStatic(SearchSettingsMergeUtil.class)) {
+    try (MockedStatic<SearchSettingsMergeUtil> mergeUtil =
+        mockStatic(SearchSettingsMergeUtil.class)) {
       mergeUtil
           .when(SearchSettingsMergeUtil::getSearchSettingsFromDatabase)
           .thenThrow(new IllegalStateException("settings repository unavailable"));
 
       RuntimeException exception =
-          assertThrows(RuntimeException.class, MigrationUtil::updateSearchSettingsBoostConfiguration);
+          assertThrows(
+              RuntimeException.class, MigrationUtil::updateSearchSettingsBoostConfiguration);
       assertEquals(
           "Failed to update search settings percentileRank factors", exception.getMessage());
     }
@@ -181,30 +189,49 @@ class MigrationUtilTest {
             List.of(
                 Map.of("id", "app-1", "name", "Profiler"),
                 Map.of("id", "app-2", "name", "Missing")));
-    when(handle.createQuery(FIND_BOT_BY_NAME_POSTGRES).bind("botName", "ProfilerBot").mapToMap().list())
+    when(handle
+            .createQuery(FIND_BOT_BY_NAME_POSTGRES)
+            .bind("botName", "ProfilerBot")
+            .mapToMap()
+            .list())
         .thenReturn(List.of(Map.of("id", "bot-1")));
-    when(handle.createQuery(FIND_BOT_BY_NAME_POSTGRES).bind("botName", "MissingBot").mapToMap().list())
+    when(handle
+            .createQuery(FIND_BOT_BY_NAME_POSTGRES)
+            .bind("botName", "MissingBot")
+            .mapToMap()
+            .list())
         .thenReturn(List.of());
 
     MigrationUtil.restoreBotRelationshipsIfMissing(handle, ConnectionType.POSTGRES);
 
-    verify(handle.createUpdate(INSERT_APP_BOT_RELATIONSHIP_POSTGRES).bind("appId", "app-1")
-            .bind("botId", "bot-1")
-            .bind("relation", 0))
+    verify(
+            handle
+                .createUpdate(INSERT_APP_BOT_RELATIONSHIP_POSTGRES)
+                .bind("appId", "app-1")
+                .bind("botId", "bot-1")
+                .bind("relation", 0))
         .execute();
-    verify(handle.createUpdate(INSERT_APP_BOT_RELATIONSHIP_POSTGRES).bind("appId", "app-2")
-            .bind("botId", "bot-1")
-            .bind("relation", 0), never())
+    verify(
+            handle
+                .createUpdate(INSERT_APP_BOT_RELATIONSHIP_POSTGRES)
+                .bind("appId", "app-2")
+                .bind("botId", "bot-1")
+                .bind("relation", 0),
+            never())
         .execute();
   }
 
   @Test
   void checkAndLogDataLossSymptomsHandlesCountsAndQueryFailuresGracefully() {
     Handle handle = mock(Handle.class, RETURNS_DEEP_STUBS);
-    when(handle.createQuery("SELECT COUNT(*) FROM role_entity").mapTo(Integer.class).one()).thenReturn(0);
-    when(handle.createQuery("SELECT COUNT(*) FROM policy_entity").mapTo(Integer.class).one()).thenReturn(0);
-    when(handle.createQuery("SELECT COUNT(*) FROM installed_apps").mapTo(Integer.class).one()).thenReturn(2);
-    when(handle.createQuery("SELECT COUNT(*) FROM bot_entity").mapTo(Integer.class).one()).thenReturn(0);
+    when(handle.createQuery("SELECT COUNT(*) FROM role_entity").mapTo(Integer.class).one())
+        .thenReturn(0);
+    when(handle.createQuery("SELECT COUNT(*) FROM policy_entity").mapTo(Integer.class).one())
+        .thenReturn(0);
+    when(handle.createQuery("SELECT COUNT(*) FROM installed_apps").mapTo(Integer.class).one())
+        .thenReturn(2);
+    when(handle.createQuery("SELECT COUNT(*) FROM bot_entity").mapTo(Integer.class).one())
+        .thenReturn(0);
 
     assertDoesNotThrow(() -> MigrationUtil.checkAndLogDataLossSymptoms(handle));
 
@@ -252,9 +279,17 @@ class MigrationUtilTest {
     Handle handle = mock(Handle.class, RETURNS_DEEP_STUBS);
     stubSystemCounts(handle, SYSTEM_POLICIES, CHECK_POLICY_EXISTS_POSTGRES, 1);
     stubSystemCounts(handle, SYSTEM_ROLES, CHECK_ROLE_EXISTS_POSTGRES, 1);
-    when(handle.createQuery(CHECK_POLICY_EXISTS_POSTGRES).bind("name", SYSTEM_POLICIES.getFirst()).mapTo(Integer.class).one())
+    when(handle
+            .createQuery(CHECK_POLICY_EXISTS_POSTGRES)
+            .bind("name", SYSTEM_POLICIES.getFirst())
+            .mapTo(Integer.class)
+            .one())
         .thenReturn(0);
-    when(handle.createQuery(CHECK_ROLE_EXISTS_POSTGRES).bind("name", SYSTEM_ROLES.getFirst()).mapTo(Integer.class).one())
+    when(handle
+            .createQuery(CHECK_ROLE_EXISTS_POSTGRES)
+            .bind("name", SYSTEM_ROLES.getFirst())
+            .mapTo(Integer.class)
+            .one())
         .thenReturn(0);
 
     @SuppressWarnings("unchecked")
@@ -279,13 +314,14 @@ class MigrationUtilTest {
         new FieldValueBoost()
             .withField("usageSummary.weeklyStats.percentileRank")
             .withFactor(factor);
-    return new SearchSettings().withGlobalSettings(new GlobalSettings().withFieldValueBoosts(List.of(boost)));
+    return new SearchSettings()
+        .withGlobalSettings(new GlobalSettings().withFieldValueBoosts(List.of(boost)));
   }
 
-  private void stubSystemCounts(
-      Handle handle, List<String> names, String query, int count) {
+  private void stubSystemCounts(Handle handle, List<String> names, String query, int count) {
     for (String name : names) {
-      when(handle.createQuery(query).bind("name", name).mapTo(Integer.class).one()).thenReturn(count);
+      when(handle.createQuery(query).bind("name", name).mapTo(Integer.class).one())
+          .thenReturn(count);
     }
   }
 }

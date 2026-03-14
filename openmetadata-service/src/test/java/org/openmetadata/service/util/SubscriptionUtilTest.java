@@ -324,9 +324,7 @@ class SubscriptionUtilTest {
             .withEndpoint(URI.create("https://hooks.example.com"))
             .withQueryParams(Map.of("env", "test"))
             .withAuthType(
-                Map.of(
-                    "type", WebhookBearerAuth.Type.BEARER.value(),
-                    "secretKey", "plain-secret"))
+                Map.of("type", WebhookBearerAuth.Type.BEARER.value(), "secretKey", "plain-secret"))
             .withHeaders(Map.of("X-Custom", "true"));
     Map<String, String> authHeaders = Map.of("X-Auth-Params-Email", "admin@open-metadata.org");
 
@@ -534,9 +532,7 @@ class SubscriptionUtilTest {
             .withQueryParams(Map.of("env", "test"))
             .withHeaders(Map.of("X-Custom", "true"))
             .withAuthType(
-                Map.of(
-                    "type", WebhookBearerAuth.Type.BEARER.value(),
-                    "secretKey", "plain-secret"));
+                Map.of("type", WebhookBearerAuth.Type.BEARER.value(), "secretKey", "plain-secret"));
     Map<String, String> authHeaders = Map.of("X-Auth-Params-Email", "admin@open-metadata.org");
 
     when(client.target(webhook.getEndpoint())).thenReturn(target);
