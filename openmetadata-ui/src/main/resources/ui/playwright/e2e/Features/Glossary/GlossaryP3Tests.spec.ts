@@ -218,8 +218,7 @@ test.describe('Glossary P3 Tests', () => {
 
       const isStable =
         (await table.isVisible().catch(() => false)) ||
-        (await emptyState.isVisible().catch(() => false)) ||
-        (await tableRows.count()) >= 0;
+        (await emptyState.isVisible().catch(() => false));
 
       expect(isStable).toBeTruthy();
 
