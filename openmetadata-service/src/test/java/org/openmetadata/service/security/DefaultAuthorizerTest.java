@@ -325,10 +325,18 @@ class DefaultAuthorizerTest {
                       org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
       mockedEntity
-          .when(() -> Entity.getEntities(List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntities(
+                      List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(List.of(role));
       mockedEntity
-          .when(() -> Entity.getEntities(List.of(role.getPolicies().get(0)), "rules", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntities(
+                      List.of(role.getPolicies().get(0)),
+                      "rules",
+                      org.openmetadata.schema.type.Include.ALL))
           .thenReturn(List.of(policy));
 
       AuthorizationException exception =
@@ -375,10 +383,16 @@ class DefaultAuthorizerTest {
                       org.openmetadata.schema.type.Include.ALL))
           .thenReturn(bot);
       mockedEntity
-          .when(() -> Entity.getEntities(List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntities(
+                      List.of(roleRef), "policies", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(List.of(role));
       mockedEntity
-          .when(() -> Entity.getEntities(List.of(policyRef), "rules", org.openmetadata.schema.type.Include.ALL))
+          .when(
+              () ->
+                  Entity.getEntities(
+                      List.of(policyRef), "rules", org.openmetadata.schema.type.Include.ALL))
           .thenReturn(List.of(policy));
 
       assertDoesNotThrow(
