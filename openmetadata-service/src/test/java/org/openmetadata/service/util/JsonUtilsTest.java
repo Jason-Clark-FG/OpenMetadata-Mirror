@@ -159,4 +159,69 @@ class JsonUtilsTest {
     assertTrue(actualJson.has("deleted"));
     assertFalse(actualJson.get("deleted").asBoolean());
   }
+
+  @Test
+  void testApplyPatchReplaceMissingLeafTreatsAsAdd() {
+    JsonPatchBuilder patchBuilder = Json.createPatchBuilder();
+    patchBuilder
+        .add(
+            "/messageSchema",
+            Json.createObjectBuilder()
+                .add(
+                    "schemaFields",
+                    Json.createArrayBuilder()
+                        .add(Json.createObjectBuilder().add("name", "id").build()))
+                .build())
+        .replace("/messageSchema/schemaFields/0/description", "<p>updated</p>");
+
+    JsonNode original = JsonUtils.readTree("{}");
+    JsonNode updated = JsonUtils.applyPatch(original, patchBuilder.build(), JsonNode.class);
+
+    assertEquals(
+        "<p>updated</p>", updated.at("/messageSchema/schemaFields/0/description").asText());
+  }
+
+  @Test
+  void testApplyPatchReplaceStillFailsWhenParentMissing() {
+    JsonPatchBuilder patchBuilder = Json.createPatchBuilder();
+    patchBuilder.replace("/messageSchema/schemaFields/0/description", "<p>updated</p>");
+
+    assertThrows(
+        RuntimeException.class,
+        () ->
+            JsonUtils.applyPatch(
+                JsonUtils.readTree("{\"messageSchema\":[]}"),
+                patchBuilder.build(),
+                JsonNode.class));
+  }
+
+  @Test
+  void testApplyPatchReplaceUnchangedWhenPathExists() {
+    JsonPatchBuilder patchBuilder = Json.createPatchBuilder();
+    patchBuilder.replace("/messageSchema/schemaFields/0/description", "<p>updated</p>");
+    JsonNode original =
+        JsonUtils.readTree(
+            "{\"messageSchema\":{\"schemaFields\":[{\"name\":\"id\",\"description\":\"old\"}]}}");
+
+    JsonNode updated = JsonUtils.applyPatch(original, patchBuilder.build(), JsonNode.class);
+    assertEquals(
+        "<p>updated</p>", updated.at("/messageSchema/schemaFields/0/description").asText());
+  }
+
+  @Test
+  void testApplyPatchAddToArrayStillFailsForOutOfRangeIndex() {
+    JsonPatchBuilder patchBuilder = Json.createPatchBuilder();
+    patchBuilder.replace("/messageSchema/schemaFields/2/description", "<p>updated</p>");
+
+    RuntimeException exception =
+        assertThrows(
+            RuntimeException.class,
+            () ->
+                JsonUtils.applyPatch(
+                    JsonUtils.readTree(
+                        "{\"messageSchema\":{\"schemaFields\":[{\"name\":\"id\"}]}}"),
+                    patchBuilder.build(),
+                    JsonNode.class));
+    assertTrue(exception.getMessage() != null && !exception.getMessage().isBlank());
+  }
 }

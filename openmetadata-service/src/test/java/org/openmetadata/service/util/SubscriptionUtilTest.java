@@ -40,6 +40,7 @@ import org.openmetadata.schema.SubscriptionAction;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.entity.events.SubscriptionStatus;
 import org.openmetadata.schema.entity.events.TestDestinationStatus;
+import org.openmetadata.schema.entity.events.authentication.WebhookBearerAuth;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
@@ -322,7 +323,10 @@ class SubscriptionUtilTest {
         new Webhook()
             .withEndpoint(URI.create("https://hooks.example.com"))
             .withQueryParams(Map.of("env", "test"))
-            .withSecretKey("plain-secret")
+            .withAuthType(
+                Map.of(
+                    "type", WebhookBearerAuth.Type.BEARER.value(),
+                    "secretKey", "plain-secret"))
             .withHeaders(Map.of("X-Custom", "true"));
     Map<String, String> authHeaders = Map.of("X-Auth-Params-Email", "admin@open-metadata.org");
 
@@ -529,7 +533,10 @@ class SubscriptionUtilTest {
             .withEndpoint(URI.create("https://hooks.example.com"))
             .withQueryParams(Map.of("env", "test"))
             .withHeaders(Map.of("X-Custom", "true"))
-            .withSecretKey("plain-secret");
+            .withAuthType(
+                Map.of(
+                    "type", WebhookBearerAuth.Type.BEARER.value(),
+                    "secretKey", "plain-secret"));
     Map<String, String> authHeaders = Map.of("X-Auth-Params-Email", "admin@open-metadata.org");
 
     when(client.target(webhook.getEndpoint())).thenReturn(target);

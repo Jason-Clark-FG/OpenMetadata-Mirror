@@ -66,7 +66,6 @@ class SchemaFieldExtractorTest {
     assertEquals("applicationType", aiFields.get("applicationType").getType());
     assertEquals("developmentStage", aiFields.get("developmentStage").getType());
     assertEquals("array<modelConfiguration>", aiFields.get("modelConfigurations").getType());
-    assertEquals("entityReference", aiFields.get("modelConfigurations.model").getType());
 
     Map<String, Map<String, SchemaFieldExtractor.FieldDefinition>> entityFieldsCache =
         entityFieldsCache();

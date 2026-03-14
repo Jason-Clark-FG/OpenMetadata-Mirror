@@ -383,15 +383,17 @@ public class RBACConditionEvaluator {
 
   private OMQueryBuilder getIndexFilter(List<String> resources) {
     var searchRepository = Entity.getSearchRepository();
-    List<String> indices =
-        resources.stream()
-            .map(
-                resource ->
-                    searchRepository != null
-                        ? searchRepository.getIndexOrAliasName(resource)
-                        : resource.toLowerCase())
-            .toList();
-
+    List<String> indices = new ArrayList<>();
+    for (String resource : resources) {
+      if (searchRepository == null) {
+        indices.add(resource.toLowerCase());
+        continue;
+      }
+      indices.add(searchRepository.getIndexOrAliasName(resource));
+      for (String childAlias : searchRepository.getChildIndexAliases(resource)) {
+        indices.add(searchRepository.getIndexOrAliasName(childAlias));
+      }
+    }
     return queryBuilderFactory.termsQuery("_index", indices);
   }
 }
