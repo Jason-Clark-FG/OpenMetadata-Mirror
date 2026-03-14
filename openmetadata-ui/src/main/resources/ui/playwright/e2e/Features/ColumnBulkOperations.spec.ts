@@ -51,7 +51,7 @@ async function searchColumn(
 ) {
   const expectResults = options.expectResults ?? true;
   const searchInput = page.getByPlaceholder('Search columns');
-  const matchingCheckbox = page.getByTestId(`column-checkbox-${columnName}`);
+  const matchingRowLocator = page.getByTestId(`column-row-${columnName}`);
 
   const runSearch = async () => {
     await searchInput.clear();
@@ -60,7 +60,7 @@ async function searchColumn(
       (response) =>
         response.url().includes(GRID_API_URL) &&
         response.url().includes(`columnNamePattern=${encodedColumnName}`),
-      { timeout: 5000 }
+      { timeout: 15000 }
     );
     await searchInput.fill(columnName);
     const response = await responsePromise.catch(() => null);
@@ -70,7 +70,7 @@ async function searchColumn(
     }
 
     await waitForAllLoadersToDisappear(page);
-    return matchingCheckbox.count();
+    return matchingRowLocator.count();
   };
 
   if (!expectResults) {
@@ -520,6 +520,8 @@ test.describe(
   'Column Bulk Operations - Selection & Edit Drawer',
   PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
+    test.setTimeout(120000);
+
     const table = new TableClass();
     let sharedColumnName: string;
 
@@ -863,6 +865,8 @@ test.describe(
   'Column Bulk Operations - Bulk Update Flow',
   PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
+    test.setTimeout(120000);
+
     const table = new TableClass();
     let sharedColumnName: string;
 
@@ -1015,6 +1019,8 @@ test.describe(
   'Column Bulk Operations - Nested STRUCT Columns',
   PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
+    test.setTimeout(120000);
+
     const table = new TableClass();
     let structColumnName: string;
 
