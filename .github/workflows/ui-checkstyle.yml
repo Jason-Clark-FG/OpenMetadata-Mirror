@@ -52,6 +52,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-yarn-
 
+      - name: Install Antlr4 CLI
+        run: sudo make install_antlr_cli
+
       - name: Install Yarn Packages
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         run: yarn install --frozen-lockfile
