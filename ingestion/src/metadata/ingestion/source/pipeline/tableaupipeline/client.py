@@ -17,7 +17,13 @@ import traceback
 from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Union
 
-from tableauserverclient import Pager, PersonalAccessTokenAuth, Server, TableauAuth
+from tableauserverclient import (
+    Pager,
+    PersonalAccessTokenAuth,
+    RequestOptions,
+    Server,
+    TableauAuth,
+)
 
 from metadata.ingestion.source.pipeline.tableaupipeline.models import (
     TableauFlowItem,
@@ -30,6 +36,8 @@ from metadata.utils.logger import ingestion_logger
 from metadata.utils.ssl_manager import SSLManager
 
 logger = ingestion_logger()
+
+MAX_FLOW_RUNS = 10000
 
 
 class TableauPipelineClient:
@@ -70,8 +78,9 @@ class TableauPipelineClient:
             logger.warning("Unable to fetch Tableau Prep flows")
 
     def _get_all_flow_runs(self) -> Dict[str, List[TableauFlowRunItem]]:
-        """Fetch all flow runs and group by flow_id"""
+        """Fetch flow runs and group by flow_id, bounded to MAX_FLOW_RUNS"""
         runs_by_flow: Dict[str, List[TableauFlowRunItem]] = defaultdict(list)
+        count = 0
         try:
             for run in Pager(self.tableau_server.flow_runs):
                 if run.flow_id:
@@ -85,6 +94,13 @@ class TableauPipelineClient:
                             progress=run.progress,
                         )
                     )
+                count += 1
+                if count >= MAX_FLOW_RUNS:
+                    logger.warning(
+                        f"Reached flow run limit ({MAX_FLOW_RUNS}). "
+                        "Some older runs may be excluded."
+                    )
+                    break
         except Exception:
             logger.debug(traceback.format_exc())
             logger.warning("Unable to fetch Tableau flow runs")
@@ -118,13 +134,10 @@ class TableauPipelineClient:
                 runs=runs,
             )
 
-    def test_get_flows(self):
-        """Test that we can retrieve flows"""
-        for flow in Pager(self.tableau_server.flows):
-            if flow.id is not None:
-                return flow
-            break
-        return None
+    def test_get_flows(self) -> None:
+        """Validate that we can list flows. Raises on failure."""
+        req_options = RequestOptions(pagesize=1)
+        self.tableau_server.flows.get(req_options)
 
     def sign_out(self) -> None:
         self.tableau_server.auth.sign_out()

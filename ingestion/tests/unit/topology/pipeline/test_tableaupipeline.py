@@ -4,7 +4,7 @@ Test Tableau Pipeline using the topology
 
 from datetime import datetime, timezone
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from metadata.generated.schema.api.data.createPipeline import CreatePipelineRequest
 from metadata.generated.schema.entity.data.pipeline import (
@@ -348,3 +348,107 @@ class TableauPipelineUnitTest(TestCase):
         result = TableaupipelineSource._to_timestamp(dt)
         expected = convert_timestamp_to_milliseconds(int(dt.timestamp()))
         assert result.root == expected
+
+    def test_yield_pipeline_error_yields_stacktrace(self):
+        bad_details = TableauPipelineDetails(
+            id="flow-bad",
+            name="flow-bad",
+            display_name=None,
+            pipeline_type=TableauTaskType.FLOW_RUN,
+        )
+        original_get_source_url = self.tableaupipeline.get_source_url
+        self.tableaupipeline.get_source_url = MagicMock(
+            side_effect=RuntimeError("boom")
+        )
+        results = list(self.tableaupipeline.yield_pipeline(bad_details))
+        assert len(results) == 1
+        assert results[0].left is not None
+        assert "boom" in results[0].left.error
+        self.tableaupipeline.get_source_url = original_get_source_url
+
+    def test_get_pipelines_list(self):
+        mock_pipeline = TableauPipelineDetails(
+            id="flow-mock",
+            name="flow-mock",
+            display_name="Mock Flow",
+            pipeline_type=TableauTaskType.FLOW_RUN,
+        )
+        self.tableaupipeline.connection = MagicMock()
+        self.tableaupipeline.connection.get_pipelines.return_value = iter(
+            [mock_pipeline]
+        )
+        pipelines = list(self.tableaupipeline.get_pipelines_list())
+        assert len(pipelines) == 1
+        assert pipelines[0].id == "flow-mock"
+
+
+mock_tableaupipeline_token_config = {
+    "source": {
+        "type": "tableaupipeline",
+        "serviceName": "test_tableau_pipeline_token",
+        "serviceConnection": {
+            "config": {
+                "type": "TableauPipeline",
+                "hostPort": "https://tableau.example.com",
+                "authType": {
+                    "personalAccessTokenName": "my-token",
+                    "personalAccessTokenSecret": "secret-value",
+                },
+            }
+        },
+        "sourceConfig": {"config": {"pipelineFilterPattern": {}}},
+    },
+    "sink": {"type": "metadata-rest", "config": {}},
+    "workflowConfig": {
+        "openMetadataServerConfig": {
+            "hostPort": "http://localhost:8585/api",
+            "authProvider": "openmetadata",
+            "securityConfig": {
+                "jwtToken": "eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJ0eXAiOiJKV1QiLCJhbGc"
+                "iOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlzQm90IjpmYWxzZSwiaXNzIjoib3Blbi1tZXRhZGF0YS5vcmciLCJpYXQiOjE"
+                "2NjM5Mzg0NjIsImVtYWlsIjoiYWRtaW5Ab3Blbm1ldGFkYXRhLm9yZyJ9.tS8um_5DKu7HgzGBzS1VTA5uUjKWOCU0B_j08WXB"
+                "iEC0mr0zNREkqVfwFDD-d24HlNEbrqioLsBuFRiwIWKc1m_ZlVQbG7P36RUxhuv2vbSp80FKyNM-Tj93FDzq91jsyNmsQhyNv_fN"
+                "r3TXfzzSPjHt8Go0FMMP66weoKMgW2PbXlhVKwEuXUHyakLLzewm9UMeQaEiRzhiTMU3UkLXcKbYEJJvfNFcLwSl9W8JCO_l0Yj3u"
+                "d-qt_nQYEZwqW6u5nfdQllN133iikV4fM5QZsMCnm8Rq1mvLR0y9bmJiD7fwM1tmJ791TUWqmKaTnP49U493VanKpUAfzIiOiIbhg"
+            },
+        }
+    },
+}
+
+
+class TableauPipelineAccessTokenUnitTest(TestCase):
+    """
+    Verify that AccessTokenAuth config is accepted by the source
+    """
+
+    @patch(
+        "metadata.ingestion.source.pipeline.pipeline_service.PipelineServiceSource.test_connection"
+    )
+    @patch(
+        "metadata.ingestion.source.pipeline.tableaupipeline.connection.get_connection"
+    )
+    def __init__(self, methodName, get_connection_mock, test_connection) -> None:
+        super().__init__(methodName)
+        test_connection.return_value = False
+        get_connection_mock.return_value = False
+        self.config = OpenMetadataWorkflowConfig.model_validate(
+            mock_tableaupipeline_token_config
+        )
+        self.tableaupipeline = TableaupipelineSource.create(
+            mock_tableaupipeline_token_config["source"],
+            self.config.workflowConfig.openMetadataServerConfig,
+        )
+        self.tableaupipeline.context.get().__dict__[
+            "pipeline"
+        ] = MOCK_PIPELINE.name.root
+        self.tableaupipeline.context.get().__dict__[
+            "pipeline_service"
+        ] = MOCK_PIPELINE_SERVICE.name.root
+
+    def test_source_created_with_token_auth(self):
+        assert self.tableaupipeline is not None
+
+    def test_yield_pipeline_with_token_auth(self):
+        results = list(self.tableaupipeline.yield_pipeline(MOCK_PIPELINE_DETAILS))
+        assert len(results) == 1
+        assert results[0].right is not None

@@ -14,6 +14,7 @@ Tableau Pipeline source to extract Prep Flows as pipeline metadata
 """
 
 import traceback
+from datetime import datetime
 from typing import Iterable, List, Optional
 
 from metadata.generated.schema.api.data.createPipeline import CreatePipelineRequest
@@ -190,7 +191,7 @@ class TableaupipelineSource(PipelineServiceSource):
         return StatusType.Pending
 
     @staticmethod
-    def _to_timestamp(dt) -> Optional[Timestamp]:
+    def _to_timestamp(dt: Optional[datetime]) -> Optional[Timestamp]:
         if dt is None:
             return None
         try:
