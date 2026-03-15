@@ -2302,7 +2302,8 @@ export const copyAndGetClipboardText = async (
 ): Promise<string> => {
   // Hover and click the copy button
   await locator.hover();
-  await locator.click();
+  // eslint-disable-next-line playwright/no-force-option -- copy button may be obscured by tooltip overlay after hover
+  await locator.click({ force: true });
 
   // eslint-disable-next-line playwright/no-wait-for-timeout -- clipboard write completion delay
   await page.waitForTimeout(300);

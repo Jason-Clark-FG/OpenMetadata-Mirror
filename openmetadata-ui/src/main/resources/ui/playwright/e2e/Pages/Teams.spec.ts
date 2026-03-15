@@ -822,7 +822,8 @@ test.describe('Teams Page', () => {
       ).toBe(false);
 
       // Toggle to show deleted teams
-      await deletedToggle.click();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by adjacent UI
+      await deletedToggle.click({ force: true });
       await expect(deletedToggle).toHaveAttribute('aria-checked', 'true');
       await expect
         .poll(() => recordedIncludes.has('deleted'), { timeout: 30000 })

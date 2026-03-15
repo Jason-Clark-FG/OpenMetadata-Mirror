@@ -835,7 +835,8 @@ test.describe('Bulk Import Export', () => {
         `/api/v1/tables/name/*/importAsync?*dryRun=false&recursive=true*`
       );
 
-      await page.click('[type="button"] >> text="Update"');
+      // eslint-disable-next-line playwright/no-force-option -- button obscured by data grid overlay
+      await page.click('[type="button"] >> text="Update"', { force: true });
       await updateButtonResponse;
       await page
         .locator('.inovua-react-toolkit-load-mask__background-layer')

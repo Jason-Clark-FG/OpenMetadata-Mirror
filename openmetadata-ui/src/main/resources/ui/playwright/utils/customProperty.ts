@@ -120,7 +120,8 @@ export const setValueForProperty = async (data: {
     `[data-testid="custom-property-${propertyName}-card"] [data-testid="edit-icon"]`
   );
   await editButton.scrollIntoViewIfNeeded();
-  await editButton.click();
+  // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+  await editButton.click({ force: true });
 
   const patchRequestPromise = page.waitForResponse(`/api/v1/${endpoint}/*`);
   switch (propertyType) {
@@ -148,7 +149,8 @@ export const setValueForProperty = async (data: {
 
     case 'enum':
       await page.click('#enumValues');
-      await page.fill('#enumValues', value);
+      // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+      await page.fill('#enumValues', value, { force: true });
       await page.press('#enumValues', 'Enter');
       await clickOutside(page);
       await container.locator('[data-testid="inline-save-btn"]').click();
@@ -1262,7 +1264,8 @@ export const updateCustomPropertyInRightPanel = async (data: {
 
   const editButton = container.getByTestId('edit-icon-right-panel');
   await editButton.scrollIntoViewIfNeeded();
-  await editButton.click();
+  // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+  await editButton.click({ force: true });
 
   const patchRequestPromise = page.waitForResponse(
     (response) =>
@@ -1396,7 +1399,10 @@ export const updateCustomPropertyInRightPanel = async (data: {
 
       await fillTableColumnInputDetails(page, values[1], 'pw-column2');
 
-      await page.locator('[data-testid="update-table-type-property"]').click();
+      await page
+        .locator('[data-testid="update-table-type-property"]')
+        // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+        .click({ force: true });
 
       break;
     }

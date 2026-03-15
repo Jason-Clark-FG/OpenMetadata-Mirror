@@ -268,7 +268,8 @@ test(
         name: new RegExp(pipeline?.['name']),
       })
       .getByTestId('more-actions')
-      .click();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+      .click({ force: true });
 
     await page
       .locator(

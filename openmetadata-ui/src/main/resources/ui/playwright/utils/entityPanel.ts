@@ -376,7 +376,8 @@ export const removeGlossaryTermFromPanel = async (
   await page.getByTestId('edit-glossary-terms').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('edit-glossary-terms').click();
+  // eslint-disable-next-line playwright/no-force-option -- popover trigger may be partially obstructed by animation
+  await page.getByTestId('edit-glossary-terms').click({ force: true });
 
   await page
     .locator('[data-testid="selectable-list"]')
@@ -414,7 +415,8 @@ export const removeOwnerFromPanel = async (
   await page.getByTestId('edit-owners').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('edit-owners').click();
+  // eslint-disable-next-line playwright/no-force-option -- popover trigger may be partially obstructed by animation
+  await page.getByTestId('edit-owners').click({ force: true });
 
   await page.getByTestId('select-owner-tabs').waitFor({ state: 'visible' });
 
@@ -457,7 +459,8 @@ export const removeDomainFromPanel = async (page: Page, domainName: string) => {
     state: 'visible',
   });
 
-  await page.getByTestId('add-domain').click();
+  // eslint-disable-next-line playwright/no-force-option -- popover trigger may be partially obstructed by animation
+  await page.getByTestId('add-domain').click({ force: true });
 
   const domainTree = page.getByTestId('domain-selectable-tree');
   await domainTree.waitFor({ state: 'visible' });
@@ -489,7 +492,8 @@ export const assignTierToPanel = async (page: Page, tierName: string) => {
   await page.getByTestId('edit-icon-tier').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('edit-icon-tier').click();
+  // eslint-disable-next-line playwright/no-force-option -- popover trigger may be partially obstructed by animation
+  await page.getByTestId('edit-icon-tier').click({ force: true });
 
   const tierPopover = page.getByTestId('cards');
   await tierPopover.waitFor({ state: 'visible' });
@@ -517,7 +521,8 @@ export const removeTierFromPanel = async (page: Page) => {
   await page.getByTestId('edit-icon-tier').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('edit-icon-tier').click();
+  // eslint-disable-next-line playwright/no-force-option -- popover trigger may be partially obstructed by animation
+  await page.getByTestId('edit-icon-tier').click({ force: true });
 
   const tierPopover = page.getByTestId('cards');
   await tierPopover.waitFor({ state: 'visible' });

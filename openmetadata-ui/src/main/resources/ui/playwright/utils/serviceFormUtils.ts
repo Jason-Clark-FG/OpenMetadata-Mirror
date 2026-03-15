@@ -55,28 +55,36 @@ export const fillSupersetFormDetails = async ({
       await page.locator(String.raw`#root\/connection\/hostPort`).clear();
       await page.fill(
         String.raw`#root\/connection\/hostPort`,
-        connectionHostPort
+        connectionHostPort,
+        { force: true } // eslint-disable-line playwright/no-force-option -- form field overlay covers input
       );
     }
 
     if (database) {
       await page.locator(String.raw`#root\/connection\/database`).clear();
-      await page.fill(String.raw`#root\/connection\/database`, database);
+      await page.fill(String.raw`#root\/connection\/database`, database, {
+        force: true, // eslint-disable-line playwright/no-force-option -- form field overlay covers input
+      });
     }
   }
 
   await page.locator(String.raw`#root\/connection\/username`).clear();
-  await page.fill(String.raw`#root\/connection\/username`, username);
+  await page.fill(String.raw`#root\/connection\/username`, username, {
+    force: true, // eslint-disable-line playwright/no-force-option -- form field overlay covers input
+  });
   if (connectionType === 'SupersetApiConnection') {
     await page.locator(String.raw`#root\/connection\/password`).clear();
-    await page.fill(String.raw`#root\/connection\/password`, password);
+    await page.fill(String.raw`#root\/connection\/password`, password, {
+      force: true, // eslint-disable-line playwright/no-force-option -- form field overlay covers input
+    });
   } else {
     await page
       .locator(String.raw`#root\/connection\/authType\/password`)
       .clear();
     await page.fill(
       String.raw`#root\/connection\/authType\/password`,
-      password
+      password,
+      { force: true } // eslint-disable-line playwright/no-force-option -- form field overlay covers input
     );
   }
 

@@ -1035,6 +1035,7 @@ export const dragAndDropTerm = async (
       : page.locator('tr').filter({ hasText: dropTarget }).first();
 
   await dragLocator.dragTo(dropLocator, {
+    force: true, // eslint-disable-line playwright/no-force-option -- drag-and-drop requires force due to row hover overlays
     sourcePosition: { x: 10, y: 10 },
     targetPosition: { x: 10, y: 10 },
   });

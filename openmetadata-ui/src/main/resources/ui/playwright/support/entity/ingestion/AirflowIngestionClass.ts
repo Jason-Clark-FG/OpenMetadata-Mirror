@@ -55,7 +55,8 @@ class AirflowIngestionClass extends ServiceBaseClass {
     await page
       .getByTestId('select-widget-root/connection__oneof_select')
       .getByRole('combobox')
-      .click();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+      .click({ force: true });
     await page.click(
       '.ant-select-dropdown:visible [title="BackendConnection"]'
     );

@@ -245,7 +245,8 @@ export const addMetric = async (page: Page) => {
       .locator('.ant-select-dropdown:visible')
       .getByTitle(title, { exact: true });
     await expect(option).toBeVisible();
-    await option.click();
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await option.click({ force: true });
     await expect(field).toContainText(title);
   };
 

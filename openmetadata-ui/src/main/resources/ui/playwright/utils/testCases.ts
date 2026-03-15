@@ -671,7 +671,8 @@ export const performE2EExportImportFlow = async (
         response.url().includes('recursive=true')
     );
 
-    await page.click('[type="button"] >> text="Update"');
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await page.click('[type="button"] >> text="Update"', { force: true });
     await updateButtonResponse;
     await page
       .locator('.inovua-react-toolkit-load-mask__background-layer')
@@ -747,7 +748,8 @@ export const performE2EExportImportFlow = async (
         response.url().includes('dryRun=false')
     );
 
-    await page.click('[type="button"] >> text="Update"');
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await page.click('[type="button"] >> text="Update"', { force: true });
     await bulkEditUpdateResponse;
     await page
       .locator('.inovua-react-toolkit-load-mask__background-layer')

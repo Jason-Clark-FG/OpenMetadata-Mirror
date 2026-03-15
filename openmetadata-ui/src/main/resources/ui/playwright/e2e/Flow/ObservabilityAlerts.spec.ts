@@ -297,7 +297,10 @@ test('Alert operations for a user with and without permissions', async ({
     );
     await userWithPermissionsPage.fill(
       `[data-testid="fqn-list-select"] [role="combobox"]`,
-      table1.entity.name
+      table1.entity.name,
+      {
+        force: true, // eslint-disable-line playwright/no-force-option -- Ant Select overlay covers combobox input
+      }
     );
 
     await searchOptions;

@@ -145,7 +145,8 @@ test('Query Entity', async ({ page }) => {
         response.url().includes('/api/v1/queries/') &&
         response.request().method() === 'PATCH'
     );
-    await page.getByRole('button', { name: 'Update' }).click();
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await page.getByRole('button', { name: 'Update' }).click({ force: true });
     await updateOwnerResponse;
 
     await expect(page.getByTestId('admin')).toBeVisible();

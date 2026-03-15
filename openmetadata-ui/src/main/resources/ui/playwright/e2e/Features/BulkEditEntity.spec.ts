@@ -556,7 +556,8 @@ test.describe('Bulk Edit Entity', () => {
         .locator(RDG_ACTIVE_CELL_SELECTOR)
         .press('ArrowDown', { delay: 100 });
 
-      await page.click('[type="button"] >> text="Next"');
+      // eslint-disable-next-line playwright/no-force-option -- button obscured by data grid overlay
+      await page.click('[type="button"] >> text="Next"', { force: true });
       // total column count +1 for header row
       const count = `${tableEntity.entityLinkColumnsName.length + 1}`;
       await validateImportStatus(page, {
@@ -568,7 +569,8 @@ test.describe('Bulk Edit Entity', () => {
       const updateButtonResponse = page.waitForResponse(
         `/api/v1/tables/name/*/importAsync?*dryRun=false&recursive=false*`
       );
-      await page.click('[type="button"] >> text="Update"');
+      // eslint-disable-next-line playwright/no-force-option -- button obscured by data grid overlay
+      await page.click('[type="button"] >> text="Update"', { force: true });
       await page
         .locator('.inovua-react-toolkit-load-mask__background-layer')
         .waitFor({ state: 'detached' });

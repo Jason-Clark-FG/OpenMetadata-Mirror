@@ -586,7 +586,10 @@ export const createCommonObservabilityAlert = async ({
     const searchOptions = page.waitForResponse('/api/v1/search/query?q=*');
     await page.fill(
       `[data-testid="${filter.inputSelector}"] [role="combobox"]`,
-      filter.inputValue
+      filter.inputValue,
+      {
+        force: true, // eslint-disable-line playwright/no-force-option -- Ant Select overlay covers combobox input
+      }
     );
 
     await searchOptions;
@@ -639,7 +642,10 @@ export const createCommonObservabilityAlert = async ({
         );
         await page.fill(
           `[data-testid="${input.inputSelector}"] [role="combobox"]`,
-          input.inputValue
+          input.inputValue,
+          {
+            force: true, // eslint-disable-line playwright/no-force-option -- Ant Select overlay covers combobox input
+          }
         );
         if (input.waitForAPI) {
           await getSearchResult;

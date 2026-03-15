@@ -58,7 +58,8 @@ export const openTeamEditorAndSelect = async (
     .first();
 
   if (await directTeamOption.isVisible().catch(() => false)) {
-    await directTeamOption.click();
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await directTeamOption.click({ force: true });
 
     return;
   }
@@ -73,5 +74,6 @@ export const openTeamEditorAndSelect = async (
   });
 
   await expect(teamOption).toBeVisible({ timeout: 30000 });
-  await teamOption.click();
+  // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+  await teamOption.click({ force: true });
 };

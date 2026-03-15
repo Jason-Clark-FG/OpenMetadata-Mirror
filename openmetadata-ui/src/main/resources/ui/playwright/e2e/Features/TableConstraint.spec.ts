@@ -85,7 +85,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('primary-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName1);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName1, { force: true });
 
       // select 1st value from dropdown
       const firstPrimaryKeyColumn = page.getByTitle(columnName1);
@@ -96,7 +97,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('primary-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName2);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName2, { force: true });
 
       const secondPrimaryKeyColumn = page.getByTitle(columnName2);
       await secondPrimaryKeyColumn.hover();
@@ -177,7 +179,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('unique-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName3);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName3, { force: true });
 
       // select 1st value from dropdown
       const firstUniqueKeyColumn = page.getByTitle(columnName3, {
@@ -190,7 +193,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('unique-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName4);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName4, { force: true });
 
       const secondUniqueKeyColumn = page.getByTitle(columnName4);
       await secondUniqueKeyColumn.hover();
@@ -215,7 +219,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('dist-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName1);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName1, { force: true });
 
       // select 1st value from dropdown
       const firstDistKeyColumn = page.getByTitle(columnName1);
@@ -226,7 +231,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('dist-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName2);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName2, { force: true });
 
       const secondDistKeyColumn = page.getByTitle(columnName2);
       await secondDistKeyColumn.hover();
@@ -251,7 +257,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('sort-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName3);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName3, { force: true });
 
       // select 1st value from dropdown
       const firstSortKeyColumn = page.getByTitle(columnName3, { exact: true });
@@ -262,7 +269,8 @@ test.describe('Table Constraints', {}, () => {
       await page
         .getByTestId('sort-constraint-type-select')
         .getByRole('combobox')
-        .fill(columnName4);
+        // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
+        .fill(columnName4, { force: true });
 
       const secondSortKeyColumn = page.getByTitle(columnName4);
       await secondSortKeyColumn.hover();

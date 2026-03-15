@@ -238,7 +238,8 @@ test.describe('User with different Roles', () => {
       response.url().includes('/api/v1/users/')
     );
 
-    await adminPage.getByTestId('teams-edit-save-btn').click();
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+    await adminPage.getByTestId('teams-edit-save-btn').click({ force: true });
 
     await userProfileResponse;
 
@@ -338,7 +339,8 @@ test.describe('User with different Roles', () => {
 
     await adminPage
       .getByTestId('user-profile-domain-edit-cancel')
-      .click();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+      .click({ force: true });
 
     await assignDomainResponse;
 
@@ -408,7 +410,8 @@ test.describe('User with different Roles', () => {
 
     await adminPage
       .getByTestId('user-profile-domain-edit-cancel')
-      .click();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
+      .click({ force: true });
 
     await removeDomainResponse;
 
