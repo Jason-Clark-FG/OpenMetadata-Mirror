@@ -14,11 +14,9 @@ import { EntityReference } from '../../../generated/tests/testCase';
 
 export interface OwnerRevealProps {
   isCompactView: boolean;
-  isDropdownOpen: boolean;
   owners: EntityReference[];
   remainingCount: number;
   showAllOwners: boolean;
-  setIsDropdownOpen: (isOpen: boolean) => void;
   setShowAllOwners: React.Dispatch<React.SetStateAction<boolean>>;
   avatarSize?: number;
 }

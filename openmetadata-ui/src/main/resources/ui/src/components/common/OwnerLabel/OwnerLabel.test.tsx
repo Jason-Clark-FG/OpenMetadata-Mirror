@@ -12,7 +12,6 @@
  */
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import '../../../test/unit/mocks/mui.mock';
 import { OwnerLabel } from './OwnerLabel.component';
 
 const mockOwner = [
@@ -29,6 +28,12 @@ const mockTeamOwner = [
     name: 'Team Name',
   },
 ];
+
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Typography: jest
+    .fn()
+    .mockImplementation(({ children }) => <span>{children}</span>),
+}));
 
 jest.mock('../ProfilePicture/ProfilePicture', () => {
   return jest.fn().mockReturnValue(<div>ProfilePicture.component</div>);

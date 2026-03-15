@@ -11,7 +11,13 @@
  *  limitations under the License.
  */
 
-import { Box, Button, useTheme } from '@mui/material';
+import {
+  Button,
+  ButtonUtility,
+  defaultColors,
+  FeaturedIcon,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { ArrowRight } from '@untitledui/icons';
 import { Popover } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -27,7 +33,6 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const theme = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [resourceCount, setResourceCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,39 +73,18 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
   }
 
   const popoverContent = (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: theme.spacing(1),
-      }}>
-      <Box
-        component="span"
-        sx={{
-          fontSize: theme.typography.pxToRem(13),
-          whiteSpace: 'nowrap',
-        }}>
+    <div className="tw:flex tw:items-center tw:gap-2">
+      <Typography as="span" className="tw:whitespace-nowrap">
         {t('label.learn-how-this-feature-works')}
-      </Box>
+      </Typography>
       <Button
-        endIcon={<ArrowRight size={14} />}
-        size="small"
-        sx={{
-          borderRadius: theme.spacing(1.25),
-          border: `0.5px solid ${theme.palette.grey[300]}`,
-          background: theme.palette.background.paper,
-          boxShadow: theme.shadows[1],
-          color: theme.palette.text.secondary,
-          fontSize: theme.typography.body2.fontSize,
-          fontWeight: theme.typography.fontWeightMedium,
-          padding: theme.spacing(0.5, 1.25),
-          minWidth: 0,
-        }}
-        variant="text"
+        color="secondary"
+        iconTrailing={ArrowRight}
+        size="sm"
         onClick={handleClick}>
         {resourceCount} {t('label.tutorial-plural').toLowerCase()}
       </Button>
-    </Box>
+    </div>
   );
 
   return (
@@ -108,48 +92,28 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
       <Popover
         content={popoverContent}
         overlayInnerStyle={{
-          borderRadius: theme.shape.borderRadius,
-          background: `linear-gradient(180deg, ${theme.palette.grey[50]} 0%, ${theme.palette.grey[100]} 100%)`,
-          boxShadow: theme.shadows[2],
-          padding: theme.spacing(0.5, 1.25),
+          borderRadius: '8px',
+          background: `linear-gradient(180deg, ${defaultColors.gray[50]} 0%, ${defaultColors.gray[50]} 100%)`,
+          padding: '2px 6px',
         }}
         placement="bottomLeft"
         showArrow={false}
         trigger="hover">
-        <Box
+        <ButtonUtility
           className={className}
+          color="tertiary"
           data-testid="learning-icon"
-          sx={{
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            verticalAlign: 'middle',
-            position: 'relative',
-            borderRadius: theme.spacing(2),
-            backgroundColor: theme.palette.primary.light + '1A',
-            padding: theme.spacing(0.5),
-            height: 'fit-content',
-            color: theme.palette.primary.main,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              backgroundColor: theme.palette.primary.light + '33',
-            },
-          }}
-          onClick={handleClick}>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                transform: 'scale(1.1)',
-              },
-            }}>
-            <LearningIconSvg height={18} width={18} />
-          </Box>
-        </Box>
+          icon={
+            <FeaturedIcon
+              className="tw:hover:text-brand-700"
+              color="brand"
+              icon={
+                <LearningIconSvg className="tw:w-4.5 tw:h-4.5 tw:hover:h-5 tw:hover:w-5" />
+              }
+            />
+          }
+          onClick={handleClick}
+        />
       </Popover>
 
       <LearningDrawer

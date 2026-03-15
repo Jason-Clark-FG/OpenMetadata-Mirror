@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Box, useTheme } from '@mui/material';
+import { defaultColors } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { reverse } from 'lodash';
 import { ReactNode, useMemo, useState } from 'react';
@@ -38,9 +38,7 @@ const OwnerUserList = ({
   ownerLabelClassName,
   maxVisibleOwners,
 }: OwnerUserListProps) => {
-  const theme = useTheme();
   const [showAllOwners, setShowAllOwners] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const { showMoreButton, renderVisibleOwners, remainingOwnersCount } =
     useMemo(() => {
@@ -50,7 +48,7 @@ const OwnerUserList = ({
       const remainingOwnersCount = owners.length - maxVisibleOwners;
 
       return {
-        showMoreButton: remainingOwnersCount > 0 && !showAllOwners,
+        showMoreButton: remainingOwnersCount > 0,
         renderVisibleOwners: isCompactView
           ? visibleOwners
           : reverse(visibleOwners),
@@ -59,30 +57,23 @@ const OwnerUserList = ({
     }, [owners, showAllOwners, maxVisibleOwners]);
 
   return (
-    <Box
-      sx={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-      }}>
+    <div className="tw:w-full tw:flex tw:items-center">
       {!isCompactView && (
         <IconUser
           data-testid="user-owner-icon"
           style={{
             width: avatarSize,
             height: avatarSize,
-            color: theme.palette.allShades.gray[700],
+            color: defaultColors.gray[700],
             flex: 'none',
             marginRight: '2px',
           }}
         />
       )}
 
-      <Box
+      <div
         className={classNames('avatar-group', className)}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
+        style={{
           position: 'relative',
           marginLeft: '4px',
           width: '100%',
@@ -92,7 +83,7 @@ const OwnerUserList = ({
           flexWrap: isCompactView ? 'wrap' : 'initial',
         }}>
         {renderVisibleOwners.map((owner: EntityReference) => (
-          <Box
+          <div
             className={classNames(
               {
                 'w-max-full': isCompactView,
@@ -107,23 +98,21 @@ const OwnerUserList = ({
               owner={owner}
               ownerDisplayName={ownerDisplayName?.get(owner.name ?? '')}
             />
-          </Box>
+          </div>
         ))}
-      </Box>
+      </div>
 
       {showMoreButton && (
         <OwnerReveal
           avatarSize={isCompactView ? 24 : avatarSize}
           isCompactView={isCompactView}
-          isDropdownOpen={isDropdownOpen}
           owners={owners.slice(maxVisibleOwners)}
           remainingCount={remainingOwnersCount}
-          setIsDropdownOpen={setIsDropdownOpen}
           setShowAllOwners={setShowAllOwners}
           showAllOwners={showAllOwners}
         />
       )}
-    </Box>
+    </div>
   );
 };
 

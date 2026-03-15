@@ -11,14 +11,13 @@
  *  limitations under the License.
  */
 
-import { Box, Button, MenuItem, Typography, useTheme } from '@mui/material';
-import React, { ReactNode, useMemo, useState } from 'react';
+import { Button, Dropdown } from '@openmetadata/ui-core-components';
+import React, { ReactNode, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ReactComponent as IconTeamsGrey } from '../../../assets/svg/teams-grey.svg';
 import { EntityReference } from '../../../generated/entity/type';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
-import { StyledMenu } from '../../LineageTable/LineageTable.styled';
 
 export interface OwnerTeamListProps {
   owners: EntityReference[];
@@ -33,18 +32,6 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
   ownerDisplayName,
   placement,
 }) => {
-  const theme = useTheme();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
   const { visibleTeam, remainingTeam } = useMemo(() => {
     return {
       visibleTeam: owners[0],
@@ -53,8 +40,8 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
   }, [owners]);
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
@@ -63,25 +50,24 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
         className="no-underline"
         data-testid="owner-link"
         to={getOwnerPath(visibleTeam)}>
-        <Box
-          sx={{
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             maxWidth: '100%',
           }}>
           <IconTeamsGrey
+            className="tw:text-gray-700"
             data-testid={getEntityName(visibleTeam)}
             style={{
               width: avatarSize,
               height: avatarSize,
-              color: theme.palette.allShades.gray[700],
             }}
           />
-          <Typography
-            noWrap
-            sx={{
-              color: theme.palette.allShades.gray[900],
+          <span
+            className="tw:text-gray-900"
+            style={{
               maxWidth:
                 placement === 'vertical' || owners.length < 2
                   ? '120px'
@@ -89,74 +75,46 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
               fontSize: '12px',
               fontWeight: 500,
               lineHeight: 'initial',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}>
             {ownerDisplayName?.get(visibleTeam.name ?? '') ??
               getEntityName(visibleTeam)}
-          </Typography>
-        </Box>
+          </span>
+        </div>
       </Link>
 
       {owners.length > 1 && (
-        <>
+        <Dropdown.Root>
           <Button
-            size="small"
-            sx={{
-              marginLeft: '8px',
-              fontWeight: 400,
-              fontSize: '12px',
-              padding: 0,
-              minWidth: 'fit-content',
-              color: theme.palette.allShades.brand[700],
-            }}
-            variant="text"
-            onClick={handleClick}>
+            className="tw:ml-2 tw:text-xs tw:min-w-0 tw:p-0"
+            color="link-color"
+            size="sm">
             {`+${owners.length - 1}`}
           </Button>
+          <Dropdown.Popover>
+            <Dropdown.Menu aria-label="remaining team owners">
+              {remainingTeam.map((owner) => {
+                const name =
+                  ownerDisplayName?.get(owner.name ?? '') ??
+                  getEntityName(owner);
 
-          <StyledMenu
-            anchorEl={anchorEl}
-            id="owner-user-options-menu"
-            open={open}
-            slotProps={{
-              paper: {
-                sx: {
-                  marginTop: '0',
-                },
-              },
-            }}
-            sx={{
-              zIndex: 9999,
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            onClose={handleClose}>
-            {remainingTeam.map((owner) => (
-              <MenuItem
-                key={owner.id}
-                sx={{
-                  padding: '8px 16px',
-                  textDecoration: 'none',
-                }}
-                onClick={handleClose}>
-                <Link data-testid="owner-link" to={getOwnerPath(owner)}>
-                  <Typography
-                    noWrap
-                    sx={{
-                      width: '12rem',
-                      color: theme.palette.allShades.gray[900],
-                    }}
-                    variant="body2">
-                    {ownerDisplayName?.get(owner.name ?? '') ??
-                      getEntityName(owner)}
-                  </Typography>
-                </Link>
-              </MenuItem>
-            ))}
-          </StyledMenu>
-        </>
+                return (
+                  <Dropdown.Item key={owner.id}>
+                    <Link
+                      className="tw:block tw:no-underline tw:truncate tw:w-full tw:text-gray-900"
+                      data-testid="owner-link"
+                      to={getOwnerPath(owner)}>
+                      {name}
+                    </Link>
+                  </Dropdown.Item>
+                );
+              })}
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
       )}
-    </Box>
+    </div>
   );
 };

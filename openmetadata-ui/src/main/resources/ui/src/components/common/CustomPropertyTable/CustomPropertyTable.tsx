@@ -217,7 +217,7 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
           className="border-none"
           contentMaxWidth="24rem"
           icon={<CustomPropertyEmpty />}
-          type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}>
+          type={ERROR_PLACEHOLDER_TYPE.CORE_CREATE}>
           <Transi18next
             i18nKey="message.no-custom-properties-entity"
             renderElement={

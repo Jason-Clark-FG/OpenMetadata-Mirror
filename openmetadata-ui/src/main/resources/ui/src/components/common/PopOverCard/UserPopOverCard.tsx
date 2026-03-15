@@ -238,6 +238,7 @@ export interface Props extends HTMLAttributes<HTMLDivElement> {
   showUserProfile?: boolean;
   profileWidth?: number;
   className?: string;
+  popoverZIndex?: number;
 }
 
 const UserPopOverCard: FC<Props> = ({
@@ -249,6 +250,7 @@ const UserPopOverCard: FC<Props> = ({
   children,
   className,
   profileWidth = 24,
+  popoverZIndex = 9999,
 }) => {
   const profilePicture = (
     <ProfilePicture
@@ -272,7 +274,7 @@ const UserPopOverCard: FC<Props> = ({
         />
       }
       trigger="hover"
-      zIndex={9999}>
+      zIndex={popoverZIndex}>
       {(children as ReactNode) ?? (
         <Link
           className={classNames(
