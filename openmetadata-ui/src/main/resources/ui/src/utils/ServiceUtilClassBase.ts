@@ -644,6 +644,9 @@ class ServiceUtilClassBase {
       case this.PipelineServiceTypeSmallCase.Flink:
         return FLINK;
 
+      case this.PipelineServiceTypeSmallCase.TableauPipeline:
+        return TABLEAU;
+
       case this.MlModelServiceTypeSmallCase.CustomMlModel:
         return ML_MODEL_DEFAULT;
 

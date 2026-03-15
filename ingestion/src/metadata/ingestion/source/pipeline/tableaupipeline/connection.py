@@ -1,0 +1,141 @@
+#  Copyright 2025 Collate
+#  Licensed under the Collate Community License, Version 1.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  https://github.com/open-metadata/OpenMetadata/blob/main/ingestion/LICENSE
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+"""
+Source connection handler for Tableau Pipeline
+"""
+
+import traceback
+from typing import Optional, Union
+
+import tableauserverclient as TSC
+
+from metadata.generated.schema.entity.automations.workflow import (
+    Workflow as AutomationWorkflow,
+)
+from metadata.generated.schema.entity.services.connections.pipeline.tableauPipelineConnection import (
+    TableauPipelineConnection,
+)
+from metadata.generated.schema.entity.services.connections.testConnectionResult import (
+    TestConnectionResult,
+)
+from metadata.generated.schema.security.credentials.accessTokenAuth import (
+    AccessTokenAuth,
+)
+from metadata.generated.schema.security.credentials.basicAuth import BasicAuth
+from metadata.ingestion.connections.test_connections import (
+    SourceConnectionException,
+    test_connection_steps,
+)
+from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.pipeline.tableaupipeline.client import (
+    TableauPipelineClient,
+)
+from metadata.utils.constants import THREE_MIN
+from metadata.utils.logger import ingestion_logger
+from metadata.utils.ssl_manager import SSLManager
+
+logger = ingestion_logger()
+
+
+def _build_server_config(
+    connection: TableauPipelineConnection,
+) -> Union[TSC.TableauAuth, TSC.PersonalAccessTokenAuth]:
+    if isinstance(connection.authType, BasicAuth):
+        return TSC.TableauAuth(
+            username=connection.authType.username,
+            password=connection.authType.password.get_secret_value(),
+            site_id=connection.siteName if connection.siteName else "",
+        )
+    if isinstance(connection.authType, AccessTokenAuth):
+        return TSC.PersonalAccessTokenAuth(
+            token_name=connection.authType.personalAccessTokenName,
+            personal_access_token=connection.authType.personalAccessTokenSecret.get_secret_value(),
+            site_id=connection.siteName if connection.siteName else "",
+        )
+    raise ValueError("Unsupported authentication type")
+
+
+def _set_verify_ssl(
+    connection: TableauPipelineConnection,
+) -> tuple[Union[bool, str, None], Optional[SSLManager]]:
+    if connection.verifySSL.value == "no-ssl":
+        return None, None
+
+    if connection.verifySSL.value == "ignore":
+        return False, None
+
+    if connection.verifySSL.value == "validate":
+        if not connection.sslConfig:
+            raise ValueError(
+                "SSL Config is required when verifySSL is set to 'validate'. "
+                "Please provide CA certificate, SSL certificate, or SSL key."
+            )
+        ssl_manager = SSLManager(
+            ca=connection.sslConfig.root.caCertificate,
+            cert=connection.sslConfig.root.sslCertificate,
+            key=connection.sslConfig.root.sslKey,
+        )
+        if ssl_manager.ca_file_path:
+            return ssl_manager.ca_file_path, ssl_manager
+        return True, ssl_manager
+
+    raise ValueError(
+        f"Unsupported verifySSL value: {connection.verifySSL.value}. "
+        "Expected one of ['no-ssl', 'ignore', 'validate']."
+    )
+
+
+def get_connection(connection: TableauPipelineConnection) -> TableauPipelineClient:
+    """
+    Create connection to Tableau for pipeline extraction
+    """
+    tableau_server_auth = _build_server_config(connection)
+    verify_ssl, ssl_manager = _set_verify_ssl(connection)
+    try:
+        return TableauPipelineClient(
+            tableau_server_auth=tableau_server_auth,
+            config=connection,
+            verify_ssl=verify_ssl,
+            ssl_manager=ssl_manager,
+        )
+    except Exception as exc:
+        logger.debug(traceback.format_exc())
+        raise SourceConnectionException(
+            f"Unknown error connecting with {connection}: {exc}."
+        )
+
+
+def test_connection(
+    metadata: OpenMetadata,
+    client: TableauPipelineClient,
+    service_connection: TableauPipelineConnection,
+    automation_workflow: Optional[AutomationWorkflow] = None,
+    timeout_seconds: Optional[int] = THREE_MIN,
+) -> TestConnectionResult:
+    """
+    Test connection. This can be executed either as part
+    of a metadata workflow or during an Automation Workflow
+    """
+
+    def custom_executor():
+        result = list(client.get_pipelines())
+        return result
+
+    test_fn = {"GetPipelines": custom_executor}
+
+    return test_connection_steps(
+        metadata=metadata,
+        test_fn=test_fn,
+        service_type=service_connection.type.value,
+        automation_workflow=automation_workflow,
+        timeout_seconds=timeout_seconds,
+    )
