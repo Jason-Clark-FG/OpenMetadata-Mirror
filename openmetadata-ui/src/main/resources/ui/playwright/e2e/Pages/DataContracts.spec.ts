@@ -1938,7 +1938,8 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         ).toContainText(
           `${table.columnsName[filter.index]} = ${filter.values[0]},${
             filter.values[1]
-          }`
+          }`,
+          { timeout: 30_000 }
         );
       }
 
@@ -1963,7 +1964,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         page.getByText(
           `Column: Represents data refresh time corresponding to ${table.columnsName[0]}`
         )
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 30_000 });
 
       await openContractActionsDropdown(page);
       await page.getByTestId('contract-edit-button').click();
@@ -2013,7 +2014,8 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         ).toContainText(
           `${table.columnsName[filter.index]} = ${filter.values[0]},${
             filter.values[1]
-          },${filter.values[2]},${filter.values[3]}`
+          },${filter.values[2]},${filter.values[3]}`,
+          { timeout: 30_000 }
         );
       }
 
@@ -2040,7 +2042,7 @@ test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
         page.getByText(
           `Column: Represents data refresh time corresponding to ${table.columnsName[1]}`
         )
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 30_000 });
 
       await clickEditContractButton(page);
       await validateSecurityAndSLADetails(

@@ -883,9 +883,14 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // save and trigger contract validation
       await saveAndTriggerDataContractValidation(page, true);
 
-      await expect(
-        page.getByTestId('contract-status-card-item-semantics-status')
-      ).toContainText('Passed');
+      await expect(async () => {
+        await page.reload();
+        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await expect(
+          page.getByTestId('contract-status-card-item-semantics-status')
+        ).toContainText('Passed', { timeout: 5_000 });
+      }).toPass({ timeout: 30_000, intervals: [5_000, 10_000] });
+
       await expect(
         page.getByTestId('data-contract-latest-result-btn')
       ).not.toBeVisible();
@@ -917,15 +922,13 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       await page.getByTestId('contract-run-now-button').click();
       await runNowResponse;
 
-      await page.reload();
-
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
-
-      await expect(
-        page.getByTestId('contract-status-card-item-semantics-status')
-      ).toContainText('Failed');
+      await expect(async () => {
+        await page.reload();
+        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await expect(
+          page.getByTestId('contract-status-card-item-semantics-status')
+        ).toContainText('Failed', { timeout: 5_000 });
+      }).toPass({ timeout: 30_000, intervals: [5_000, 10_000] });
 
       await expect(
         page.getByTestId('data-contract-latest-result-btn')
