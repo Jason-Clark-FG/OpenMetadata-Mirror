@@ -232,6 +232,8 @@ export interface PipelineConnection {
  * MuleSoft Anypoint Platform Connection Config
  *
  * Microsoft Fabric Data Factory Pipeline Connection Config
+ *
+ * Tableau Pipeline Connection Config
  */
 export interface ConfigObject {
     /**
@@ -257,6 +259,8 @@ export interface ConfigObject {
      *
      * MuleSoft Anypoint Platform URL. Use https://anypoint.mulesoft.com for US cloud,
      * https://eu1.anypoint.mulesoft.com for EU cloud, or your on-premises URL.
+     *
+     * Tableau Server URL.
      */
     hostPort?: string;
     /**
@@ -269,6 +273,8 @@ export interface ConfigObject {
      * Regex to filter MuleSoft applications by name.
      *
      * Regex to only include/exclude pipelines that matches the pattern.
+     *
+     * Regex exclude or include pipelines that match the pattern.
      */
     pipelineFilterPattern?:      FilterPattern;
     supportsMetadataExtraction?: boolean;
@@ -297,6 +303,8 @@ export interface ConfigObject {
     messagingServiceName?: string;
     /**
      * Airbyte API version.
+     *
+     * Tableau API version. If not provided, the version will be used from the tableau server.
      */
     apiVersion?: string;
     /**
@@ -499,6 +507,14 @@ export interface ConfigObject {
      * The Microsoft Fabric workspace ID where the pipelines are located.
      */
     workspaceId?: string;
+    /**
+     * Types of methods used to authenticate to the tableau instance
+     */
+    authType?: AuthenticationTypeForTableau;
+    /**
+     * Tableau Site Name.
+     */
+    siteName?: string;
     [property: string]: any;
 }
 
@@ -543,6 +559,32 @@ export interface PurpleAuthentication {
      * Client Secret for the application registered in Airbyte.
      */
     clientSecret?: string;
+}
+
+/**
+ * Types of methods used to authenticate to the tableau instance
+ *
+ * Basic Auth Credentials
+ *
+ * Access Token Auth Credentials
+ */
+export interface AuthenticationTypeForTableau {
+    /**
+     * Password to access the service.
+     */
+    password?: string;
+    /**
+     * Username to access the service.
+     */
+    username?: string;
+    /**
+     * Personal Access Token Name.
+     */
+    personalAccessTokenName?: string;
+    /**
+     * Personal Access Token Secret.
+     */
+    personalAccessTokenSecret?: string;
 }
 
 /**
@@ -981,6 +1023,8 @@ export interface AuthConfigurationType {
  * Regex to filter MuleSoft applications by name.
  *
  * Regex to only include/exclude pipelines that matches the pattern.
+ *
+ * Regex exclude or include pipelines that match the pattern.
  */
 export interface FilterPattern {
     /**
@@ -1331,6 +1375,7 @@ export enum PipelineServiceType {
     Spline = "Spline",
     Ssis = "SSIS",
     Stitch = "Stitch",
+    TableauPipeline = "TableauPipeline",
     Wherescape = "Wherescape",
 }
 
