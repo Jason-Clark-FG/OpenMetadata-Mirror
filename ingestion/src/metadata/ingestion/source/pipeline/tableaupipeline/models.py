@@ -15,7 +15,7 @@ Tableau Pipeline Source Model module
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -54,19 +54,6 @@ class TableauTaskType(str, Enum):
     FLOW_RUN = "flowRun"
 
 
-class TableauJobItem(BaseModel):
-    """Represents a flow run mapped as a pipeline execution record"""
-
-    model_config = ConfigDict(extra="allow")
-
-    id: str
-    job_type: Optional[str] = None
-    status: Optional[str] = None
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    progress: Optional[str] = None
-
-
 class TableauPipelineDetails(BaseModel):
     """Wrapper for a pipeline entity in Tableau (Prep flow)"""
 
@@ -79,4 +66,3 @@ class TableauPipelineDetails(BaseModel):
     pipeline_type: TableauTaskType
     project_name: Optional[str] = None
     webpage_url: Optional[str] = None
-    runs: Optional[List[TableauJobItem]] = None

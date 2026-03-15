@@ -48,7 +48,7 @@ from metadata.ingestion.models.pipeline_status import OMetaPipelineStatus
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.pipeline.pipeline_service import PipelineServiceSource
 from metadata.ingestion.source.pipeline.tableaupipeline.models import (
-    TableauJobItem,
+    TableauFlowRunItem,
     TableauPipelineDetails,
 )
 from metadata.utils import fqn
@@ -144,7 +144,8 @@ class TableaupipelineSource(PipelineServiceSource):
         self, pipeline_details: TableauPipelineDetails
     ) -> Iterable[Either[OMetaPipelineStatus]]:
         try:
-            for run in pipeline_details.runs or []:
+            runs = self.connection.get_flow_runs(pipeline_details.id)
+            for run in runs:
                 execution_status = self._get_status(run)
                 start_time = self._to_timestamp(run.started_at)
                 end_time = self._to_timestamp(run.completed_at)
@@ -185,7 +186,7 @@ class TableaupipelineSource(PipelineServiceSource):
             )
 
     @staticmethod
-    def _get_status(run: TableauJobItem) -> StatusType:
+    def _get_status(run: TableauFlowRunItem) -> StatusType:
         if run.status:
             return FLOW_RUN_STATUS_MAP.get(run.status.lower(), StatusType.Pending)
         return StatusType.Pending

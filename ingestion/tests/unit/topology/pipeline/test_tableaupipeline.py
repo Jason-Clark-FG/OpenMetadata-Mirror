@@ -27,7 +27,7 @@ from metadata.ingestion.source.pipeline.tableaupipeline.metadata import (
     TableaupipelineSource,
 )
 from metadata.ingestion.source.pipeline.tableaupipeline.models import (
-    TableauJobItem,
+    TableauFlowRunItem,
     TableauPipelineDetails,
     TableauTaskType,
 )
@@ -102,23 +102,24 @@ MOCK_PIPELINE_DETAILS = TableauPipelineDetails(
     pipeline_type=TableauTaskType.FLOW_RUN,
     project_name="Sales Project",
     webpage_url="https://tableau.example.com/#/flows/flow-abc-123",
-    runs=[
-        TableauJobItem(
-            id="run-001",
-            job_type="FlowRun",
-            status="Success",
-            started_at=MOCK_FLOW_RUN_STARTED,
-            completed_at=MOCK_FLOW_RUN_COMPLETED,
-        ),
-        TableauJobItem(
-            id="run-002",
-            job_type="FlowRun",
-            status="Failed",
-            started_at=MOCK_FLOW_RUN_2_STARTED,
-            completed_at=MOCK_FLOW_RUN_2_COMPLETED,
-        ),
-    ],
 )
+
+MOCK_FLOW_RUNS = [
+    TableauFlowRunItem(
+        id="run-001",
+        flow_id="flow-abc-123",
+        status="Success",
+        started_at=MOCK_FLOW_RUN_STARTED,
+        completed_at=MOCK_FLOW_RUN_COMPLETED,
+    ),
+    TableauFlowRunItem(
+        id="run-002",
+        flow_id="flow-abc-123",
+        status="Failed",
+        started_at=MOCK_FLOW_RUN_2_STARTED,
+        completed_at=MOCK_FLOW_RUN_2_COMPLETED,
+    ),
+]
 
 MOCK_PIPELINE_DETAILS_NO_RUNS = TableauPipelineDetails(
     id="flow-def-456",
@@ -128,7 +129,6 @@ MOCK_PIPELINE_DETAILS_NO_RUNS = TableauPipelineDetails(
     pipeline_type=TableauTaskType.FLOW_RUN,
     project_name="Inventory Project",
     webpage_url=None,
-    runs=[],
 )
 
 EXPECTED_PIPELINE = CreatePipelineRequest(
@@ -275,6 +275,8 @@ class TableauPipelineUnitTest(TestCase):
         assert pipeline_request.description is None
 
     def test_yield_pipeline_status(self):
+        self.tableaupipeline.connection = MagicMock()
+        self.tableaupipeline.connection.get_flow_runs.return_value = MOCK_FLOW_RUNS
         results = list(
             self.tableaupipeline.yield_pipeline_status(MOCK_PIPELINE_DETAILS)
         )
@@ -289,8 +291,13 @@ class TableauPipelineUnitTest(TestCase):
         assert status_list[1].pipeline_status.executionStatus == "Failed"
         assert status_list[1].pipeline_status.taskStatus[0].startTime == _started_2_ms
         assert status_list[1].pipeline_status.taskStatus[0].endTime == _completed_2_ms
+        self.tableaupipeline.connection.get_flow_runs.assert_called_once_with(
+            "flow-abc-123"
+        )
 
     def test_yield_pipeline_status_empty_runs(self):
+        self.tableaupipeline.connection = MagicMock()
+        self.tableaupipeline.connection.get_flow_runs.return_value = []
         results = list(
             self.tableaupipeline.yield_pipeline_status(MOCK_PIPELINE_DETAILS_NO_RUNS)
         )
@@ -307,35 +314,35 @@ class TableauPipelineUnitTest(TestCase):
     def test_get_status_mapping(self):
         assert (
             TableaupipelineSource._get_status(
-                TableauJobItem(id="1", status="Success")
+                TableauFlowRunItem(id="1", status="Success")
             ).value
             == "Successful"
         )
         assert (
             TableaupipelineSource._get_status(
-                TableauJobItem(id="2", status="Failed")
+                TableauFlowRunItem(id="2", status="Failed")
             ).value
             == "Failed"
         )
         assert (
             TableaupipelineSource._get_status(
-                TableauJobItem(id="3", status="Cancelled")
+                TableauFlowRunItem(id="3", status="Cancelled")
             ).value
             == "Failed"
         )
         assert (
             TableaupipelineSource._get_status(
-                TableauJobItem(id="4", status="InProgress")
+                TableauFlowRunItem(id="4", status="InProgress")
             ).value
             == "Pending"
         )
         assert (
-            TableaupipelineSource._get_status(TableauJobItem(id="5", status=None)).value
+            TableaupipelineSource._get_status(TableauFlowRunItem(id="5", status=None)).value
             == "Pending"
         )
         assert (
             TableaupipelineSource._get_status(
-                TableauJobItem(id="6", status="UnknownStatus")
+                TableauFlowRunItem(id="6", status="UnknownStatus")
             ).value
             == "Pending"
         )

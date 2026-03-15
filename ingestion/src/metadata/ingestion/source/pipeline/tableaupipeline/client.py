@@ -28,7 +28,6 @@ from tableauserverclient import (
 from metadata.ingestion.source.pipeline.tableaupipeline.models import (
     TableauFlowItem,
     TableauFlowRunItem,
-    TableauJobItem,
     TableauPipelineDetails,
     TableauTaskType,
 )
@@ -57,6 +56,7 @@ class TableauPipelineClient:
         self.tableau_server.auth.sign_in(tableau_server_auth)
         self.config = config
         self.ssl_manager = ssl_manager
+        self._flow_runs_cache: Optional[Dict[str, List[TableauFlowRunItem]]] = None
 
     def get_flows(self) -> Iterable[TableauFlowItem]:
         """Fetch all Tableau Prep flows"""
@@ -77,8 +77,11 @@ class TableauPipelineClient:
             logger.debug(traceback.format_exc())
             logger.warning("Unable to fetch Tableau Prep flows")
 
-    def _get_all_flow_runs(self) -> Dict[str, List[TableauFlowRunItem]]:
-        """Fetch flow runs and group by flow_id, bounded to MAX_FLOW_RUNS"""
+    def _load_flow_runs_cache(self) -> Dict[str, List[TableauFlowRunItem]]:
+        """Fetch flow runs once and group by flow_id, bounded to MAX_FLOW_RUNS"""
+        if self._flow_runs_cache is not None:
+            return self._flow_runs_cache
+
         runs_by_flow: Dict[str, List[TableauFlowRunItem]] = defaultdict(list)
         count = 0
         try:
@@ -104,25 +107,22 @@ class TableauPipelineClient:
         except Exception:
             logger.debug(traceback.format_exc())
             logger.warning("Unable to fetch Tableau flow runs")
-        return runs_by_flow
+
+        self._flow_runs_cache = dict(runs_by_flow)
+        return self._flow_runs_cache
+
+    def get_flow_runs(self, flow_id: str) -> List[TableauFlowRunItem]:
+        """Get runs for a specific flow. Loads cache lazily on first call."""
+        cache = self._load_flow_runs_cache()
+        return cache.pop(flow_id, [])
+
+    def clear_flow_runs_cache(self) -> None:
+        """Release flow runs cache memory after all pipelines are processed."""
+        self._flow_runs_cache = None
 
     def get_pipelines(self) -> Iterable[TableauPipelineDetails]:
-        """Get all pipelines (Prep Flows) with their run history"""
-        flow_runs_by_id = self._get_all_flow_runs()
-
+        """Get all pipelines (Prep Flows) without run history"""
         for flow in self.get_flows():
-            flow_runs = flow_runs_by_id.get(flow.id, [])
-            runs = [
-                TableauJobItem(
-                    id=run.id,
-                    job_type="FlowRun",
-                    status=run.status,
-                    started_at=run.started_at,
-                    completed_at=run.completed_at,
-                    progress=run.progress,
-                )
-                for run in flow_runs
-            ]
             yield TableauPipelineDetails(
                 id=flow.id,
                 name=flow.id,
@@ -131,7 +131,6 @@ class TableauPipelineClient:
                 pipeline_type=TableauTaskType.FLOW_RUN,
                 project_name=flow.project_name,
                 webpage_url=flow.webpage_url,
-                runs=runs,
             )
 
     def test_get_flows(self) -> None:
@@ -144,5 +143,6 @@ class TableauPipelineClient:
         self.cleanup()
 
     def cleanup(self) -> None:
+        self.clear_flow_runs_cache()
         if self.ssl_manager:
             self.ssl_manager.cleanup_temp_files()
