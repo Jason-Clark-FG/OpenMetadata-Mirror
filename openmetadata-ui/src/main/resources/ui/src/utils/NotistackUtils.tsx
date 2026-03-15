@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { IconButton } from '@mui/material';
+import { ButtonUtility } from '@openmetadata/ui-core-components';
 import { X } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { isString } from 'lodash';
@@ -21,13 +21,13 @@ import i18n from './i18next/LocalUtil';
 import { getErrorText } from './StringsUtils';
 
 const CloseButton = ({ closeSnackbar }: { closeSnackbar?: () => void }) => (
-  <IconButton
+  <ButtonUtility
+    color="tertiary"
     data-testid="alert-icon-close"
-    size="small"
-    sx={{ color: 'currentColor' }}
-    onClick={closeSnackbar}>
-    <X size={16} />
-  </IconButton>
+    icon={<X size={16} />}
+    size="sm"
+    onClick={closeSnackbar}
+  />
 );
 
 /**
