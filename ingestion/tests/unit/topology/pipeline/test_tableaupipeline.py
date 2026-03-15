@@ -337,7 +337,9 @@ class TableauPipelineUnitTest(TestCase):
             == "Pending"
         )
         assert (
-            TableaupipelineSource._get_status(TableauFlowRunItem(id="5", status=None)).value
+            TableaupipelineSource._get_status(
+                TableauFlowRunItem(id="5", status=None)
+            ).value
             == "Pending"
         )
         assert (
