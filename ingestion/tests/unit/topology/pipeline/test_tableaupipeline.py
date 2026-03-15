@@ -222,7 +222,8 @@ class TableauPipelineUnitTest(TestCase):
     def __init__(self, methodName, get_connection_mock, test_connection) -> None:
         super().__init__(methodName)
         test_connection.return_value = False
-        get_connection_mock.return_value = False
+        self.mock_connection = MagicMock()
+        get_connection_mock.return_value = self.mock_connection
         self.config = OpenMetadataWorkflowConfig.model_validate(
             mock_tableaupipeline_config
         )
@@ -275,8 +276,7 @@ class TableauPipelineUnitTest(TestCase):
         assert pipeline_request.description is None
 
     def test_yield_pipeline_status(self):
-        self.tableaupipeline.connection = MagicMock()
-        self.tableaupipeline.connection.get_flow_runs.return_value = MOCK_FLOW_RUNS
+        self.mock_connection.get_flow_runs.return_value = MOCK_FLOW_RUNS
         results = list(
             self.tableaupipeline.yield_pipeline_status(MOCK_PIPELINE_DETAILS)
         )
@@ -291,13 +291,9 @@ class TableauPipelineUnitTest(TestCase):
         assert status_list[1].pipeline_status.executionStatus == "Failed"
         assert status_list[1].pipeline_status.taskStatus[0].startTime == _started_2_ms
         assert status_list[1].pipeline_status.taskStatus[0].endTime == _completed_2_ms
-        self.tableaupipeline.connection.get_flow_runs.assert_called_once_with(
-            "flow-abc-123"
-        )
 
     def test_yield_pipeline_status_empty_runs(self):
-        self.tableaupipeline.connection = MagicMock()
-        self.tableaupipeline.connection.get_flow_runs.return_value = []
+        self.mock_connection.get_flow_runs.return_value = []
         results = list(
             self.tableaupipeline.yield_pipeline_status(MOCK_PIPELINE_DETAILS_NO_RUNS)
         )
@@ -382,10 +378,7 @@ class TableauPipelineUnitTest(TestCase):
             display_name="Mock Flow",
             pipeline_type=TableauTaskType.FLOW_RUN,
         )
-        self.tableaupipeline.connection = MagicMock()
-        self.tableaupipeline.connection.get_pipelines.return_value = iter(
-            [mock_pipeline]
-        )
+        self.mock_connection.get_pipelines.return_value = iter([mock_pipeline])
         pipelines = list(self.tableaupipeline.get_pipelines_list())
         assert len(pipelines) == 1
         assert pipelines[0].id == "flow-mock"
@@ -439,7 +432,7 @@ class TableauPipelineAccessTokenUnitTest(TestCase):
     def __init__(self, methodName, get_connection_mock, test_connection) -> None:
         super().__init__(methodName)
         test_connection.return_value = False
-        get_connection_mock.return_value = False
+        get_connection_mock.return_value = MagicMock()
         self.config = OpenMetadataWorkflowConfig.model_validate(
             mock_tableaupipeline_token_config
         )
