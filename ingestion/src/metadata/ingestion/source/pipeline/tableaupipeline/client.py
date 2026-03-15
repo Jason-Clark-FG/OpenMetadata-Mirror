@@ -13,7 +13,6 @@
 Tableau Pipeline Client - wraps tableauserverclient for pipeline operations
 """
 
-import traceback
 from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Union
 
@@ -60,22 +59,18 @@ class TableauPipelineClient:
 
     def get_flows(self) -> Iterable[TableauFlowItem]:
         """Fetch all Tableau Prep flows"""
-        try:
-            for flow in Pager(self.tableau_server.flows):
-                yield TableauFlowItem(
-                    id=str(flow.id),
-                    name=flow.name,
-                    description=flow.description,
-                    project_id=str(flow.project_id) if flow.project_id else None,
-                    project_name=flow.project_name,
-                    owner_id=str(flow.owner_id) if flow.owner_id else None,
-                    webpage_url=flow.webpage_url,
-                    created_at=flow.created_at,
-                    updated_at=flow.updated_at,
-                )
-        except Exception:
-            logger.debug(traceback.format_exc())
-            logger.warning("Unable to fetch Tableau Prep flows")
+        for flow in Pager(self.tableau_server.flows):
+            yield TableauFlowItem(
+                id=str(flow.id),
+                name=flow.name,
+                description=flow.description,
+                project_id=str(flow.project_id) if flow.project_id else None,
+                project_name=flow.project_name,
+                owner_id=str(flow.owner_id) if flow.owner_id else None,
+                webpage_url=flow.webpage_url,
+                created_at=flow.created_at,
+                updated_at=flow.updated_at,
+            )
 
     def _load_flow_runs_cache(self) -> Dict[str, List[TableauFlowRunItem]]:
         """Fetch flow runs once and group by flow_id, bounded to MAX_FLOW_RUNS"""
@@ -84,29 +79,25 @@ class TableauPipelineClient:
 
         runs_by_flow: Dict[str, List[TableauFlowRunItem]] = defaultdict(list)
         count = 0
-        try:
-            for run in Pager(self.tableau_server.flow_runs):
-                if run.flow_id:
-                    runs_by_flow[run.flow_id].append(
-                        TableauFlowRunItem(
-                            id=str(run.id),
-                            flow_id=run.flow_id,
-                            status=run.status,
-                            started_at=run.started_at,
-                            completed_at=run.completed_at,
-                            progress=run.progress,
-                        )
+        for run in Pager(self.tableau_server.flow_runs):
+            if run.flow_id:
+                runs_by_flow[run.flow_id].append(
+                    TableauFlowRunItem(
+                        id=str(run.id),
+                        flow_id=run.flow_id,
+                        status=run.status,
+                        started_at=run.started_at,
+                        completed_at=run.completed_at,
+                        progress=run.progress,
                     )
-                count += 1
-                if count >= MAX_FLOW_RUNS:
-                    logger.warning(
-                        f"Reached flow run limit ({MAX_FLOW_RUNS}). "
-                        "Some older runs may be excluded."
-                    )
-                    break
-        except Exception:
-            logger.debug(traceback.format_exc())
-            logger.warning("Unable to fetch Tableau flow runs")
+                )
+            count += 1
+            if count >= MAX_FLOW_RUNS:
+                logger.warning(
+                    f"Reached flow run limit ({MAX_FLOW_RUNS}). "
+                    "Some older runs may be excluded."
+                )
+                break
 
         self._flow_runs_cache = dict(runs_by_flow)
         return self._flow_runs_cache

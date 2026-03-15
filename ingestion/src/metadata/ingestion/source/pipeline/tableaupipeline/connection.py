@@ -14,9 +14,7 @@ Source connection handler for Tableau Pipeline
 """
 
 import traceback
-from typing import Optional, Union
-
-import tableauserverclient as TSC
+from typing import Optional
 
 from metadata.generated.schema.entity.automations.workflow import (
     Workflow as AutomationWorkflow,
@@ -27,79 +25,32 @@ from metadata.generated.schema.entity.services.connections.pipeline.tableauPipel
 from metadata.generated.schema.entity.services.connections.testConnectionResult import (
     TestConnectionResult,
 )
-from metadata.generated.schema.security.credentials.accessTokenAuth import (
-    AccessTokenAuth,
-)
-from metadata.generated.schema.security.credentials.basicAuth import BasicAuth
 from metadata.ingestion.connections.test_connections import (
     SourceConnectionException,
     test_connection_steps,
 )
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.dashboard.tableau.connection import (
+    build_server_config,
+    set_verify_ssl,
+)
 from metadata.ingestion.source.pipeline.tableaupipeline.client import (
     TableauPipelineClient,
 )
 from metadata.utils.constants import THREE_MIN
 from metadata.utils.logger import ingestion_logger
-from metadata.utils.ssl_manager import SSLManager
 
 logger = ingestion_logger()
 
 
-def _build_server_config(
-    connection: TableauPipelineConnection,
-) -> Union[TSC.TableauAuth, TSC.PersonalAccessTokenAuth]:
-    if isinstance(connection.authType, BasicAuth):
-        return TSC.TableauAuth(
-            username=connection.authType.username,
-            password=connection.authType.password.get_secret_value(),
-            site_id=connection.siteName if connection.siteName else "",
-        )
-    if isinstance(connection.authType, AccessTokenAuth):
-        return TSC.PersonalAccessTokenAuth(
-            token_name=connection.authType.personalAccessTokenName,
-            personal_access_token=connection.authType.personalAccessTokenSecret.get_secret_value(),
-            site_id=connection.siteName if connection.siteName else "",
-        )
-    raise ValueError("Unsupported authentication type")
-
-
-def _set_verify_ssl(
-    connection: TableauPipelineConnection,
-) -> tuple[Union[bool, str, None], Optional[SSLManager]]:
-    if connection.verifySSL.value == "no-ssl":
-        return None, None
-
-    if connection.verifySSL.value == "ignore":
-        return False, None
-
-    if connection.verifySSL.value == "validate":
-        if not connection.sslConfig:
-            raise ValueError(
-                "SSL Config is required when verifySSL is set to 'validate'. "
-                "Please provide CA certificate, SSL certificate, or SSL key."
-            )
-        ssl_manager = SSLManager(
-            ca=connection.sslConfig.root.caCertificate,
-            cert=connection.sslConfig.root.sslCertificate,
-            key=connection.sslConfig.root.sslKey,
-        )
-        if ssl_manager.ca_file_path:
-            return ssl_manager.ca_file_path, ssl_manager
-        return True, ssl_manager
-
-    raise ValueError(
-        f"Unsupported verifySSL value: {connection.verifySSL.value}. "
-        "Expected one of ['no-ssl', 'ignore', 'validate']."
-    )
-
-
 def get_connection(connection: TableauPipelineConnection) -> TableauPipelineClient:
     """
-    Create connection to Tableau for pipeline extraction
+    Create connection to Tableau for pipeline extraction.
+    Reuses build_server_config and set_verify_ssl from the dashboard
+    Tableau connector since both share the same auth and SSL fields.
     """
-    tableau_server_auth = _build_server_config(connection)
-    verify_ssl, ssl_manager = _set_verify_ssl(connection)
+    tableau_server_auth = build_server_config(connection)
+    verify_ssl, ssl_manager = set_verify_ssl(connection)
     try:
         return TableauPipelineClient(
             tableau_server_auth=tableau_server_auth,

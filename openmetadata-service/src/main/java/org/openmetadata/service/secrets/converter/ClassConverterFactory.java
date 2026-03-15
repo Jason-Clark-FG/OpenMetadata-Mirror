@@ -127,8 +127,7 @@ public final class ClassConverterFactory {
             Map.entry(WherescapeConnection.class, new WherescapeConnectionClassConverter()),
             Map.entry(TimescaleConnection.class, new TimescaleConnectionClassConverter()),
             Map.entry(
-                TableauPipelineConnection.class,
-                new TableauPipelineConnectionClassConverter()));
+                TableauPipelineConnection.class, new TableauPipelineConnectionClassConverter()));
   }
 
   public static ClassConverter getConverter(Class<?> clazz) {
