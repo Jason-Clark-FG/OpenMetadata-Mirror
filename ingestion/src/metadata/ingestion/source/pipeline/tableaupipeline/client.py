@@ -105,7 +105,7 @@ class TableauPipelineClient:
     def get_flow_runs(self, flow_id: str) -> List[TableauFlowRunItem]:
         """Get runs for a specific flow. Loads cache lazily on first call."""
         cache = self._load_flow_runs_cache()
-        return cache.pop(flow_id, [])
+        return cache.get(flow_id, [])
 
     def clear_flow_runs_cache(self) -> None:
         """Release flow runs cache memory after all pipelines are processed."""
