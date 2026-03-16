@@ -36,6 +36,9 @@ import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.AbstractNativeApplication;
 import org.openmetadata.service.apps.bundles.insights.search.DataInsightsSearchInterface;
+import org.openmetadata.service.apps.bundles.insights.search.ManifestEntry;
+import org.openmetadata.service.apps.bundles.insights.workflows.dataAssets.EntityProjectionSource;
+import org.openmetadata.service.jdbi3.EntityDAO;
 import org.openmetadata.service.apps.bundles.insights.search.elasticsearch.ElasticSearchDataInsightsClient;
 import org.openmetadata.service.apps.bundles.insights.search.opensearch.OpenSearchDataInsightsClient;
 import org.openmetadata.service.apps.bundles.insights.utils.TimestampUtils;
@@ -226,6 +229,50 @@ public class DataInsightsApp extends AbstractNativeApplication {
     }
   }
 
+  public void rebuildManifest() {
+    DataInsightsSearchInterface searchInterface = getSearchInterface();
+    String manifestName = searchInterface.getStringWithClusterAlias(MANIFEST_INDEX_NAME);
+    LOG.info("[Data Insights] Rebuilding manifest index: {}", manifestName);
+    try {
+      if (searchInterface.manifestIndexExists(manifestName)) {
+        searchInterface.deleteManifestIndex(manifestName);
+      }
+      String mapping = searchInterface.readManifestMapping();
+      searchInterface.createManifestIndex(manifestName, mapping);
+
+      for (String entityType : dataAssetTypes) {
+        EntityProjectionSource source = new EntityProjectionSource(entityType, 1000);
+        List<ManifestEntry> entries = new java.util.ArrayList<>();
+        String cursor = "";
+        while (true) {
+          List<EntityDAO.EntityProjection> batch = source.readNextBatch(cursor);
+          if (batch.isEmpty()) {
+            break;
+          }
+          java.time.LocalDate today = java.time.LocalDate.now();
+          for (EntityDAO.EntityProjection projection : batch) {
+            entries.add(
+                new ManifestEntry(projection.id(), entityType, projection.updatedAt(), today));
+          }
+          if (entries.size() >= 1000) {
+            searchInterface.bulkUpsertManifest(manifestName, entries);
+            entries.clear();
+          }
+          cursor = EntityProjectionSource.getNextCursor(batch);
+          if (cursor == null) {
+            break;
+          }
+        }
+        if (!entries.isEmpty()) {
+          searchInterface.bulkUpsertManifest(manifestName, entries);
+        }
+      }
+      LOG.info("[Data Insights] Manifest rebuild complete");
+    } catch (Exception ex) {
+      LOG.error("[Data Insights] Failed to rebuild manifest index", ex);
+    }
+  }
+
   public void createRollupInfrastructure() {
     DataInsightsSearchInterface searchInterface = getSearchInterface();
     String rollupName = searchInterface.getStringWithClusterAlias(ROLLUP_INDEX_NAME);
@@ -347,6 +394,10 @@ public class DataInsightsApp extends AbstractNativeApplication {
 
       WorkflowStats dataAssetsStats = processDataAssets();
       updateJobStatsWithWorkflowStats(dataAssetsStats);
+
+      if (backfill.isPresent() || (recreateDataAssetsIndex.isPresent() && recreateDataAssetsIndex.get())) {
+        rebuildManifest();
+      }
 
       WorkflowStats dataQualityStats = processDataQuality();
       updateJobStatsWithWorkflowStats(dataQualityStats);
