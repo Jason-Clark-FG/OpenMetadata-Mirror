@@ -3,12 +3,17 @@ package org.openmetadata.service.apps.bundles.insights.search;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.exception.UnhandledServerException;
 
 public interface DataInsightsSearchInterface {
   String DATA_INSIGHTS_SEARCH_CONFIG_PATH = "/dataInsights/config.json";
+  String MANIFEST_INDEX_MAPPING_FILE = "manifestIndexMapping.json";
+  String TRANSFORM_DEFINITION_FILE = "transformDefinition.json";
+  String ROLLUP_INDEX_MAPPING_FILE = "rollupIndexMapping.json";
 
   void createComponentTemplate(String name, String template) throws IOException;
 
@@ -91,11 +96,55 @@ public interface DataInsightsSearchInterface {
 
   Boolean dataAssetDataStreamExists(String name) throws IOException;
 
+  void createManifestIndex(String name, String mappingJson) throws IOException;
+
+  boolean manifestIndexExists(String name) throws IOException;
+
+  void deleteManifestIndex(String name) throws IOException;
+
+  void createTransform(String transformId, String transformDefinition) throws IOException;
+
+  void startTransform(String transformId) throws IOException;
+
+  void stopTransform(String transformId) throws IOException;
+
+  boolean transformExists(String transformId) throws IOException;
+
+  String getTransformStatus(String transformId) throws IOException;
+
+  void createIndex(String name, String mappingJson) throws IOException;
+
+  boolean indexExists(String name) throws IOException;
+
+  Map<String, ManifestEntry> getManifestEntries(String manifestIndex, List<String> entityIds)
+      throws IOException;
+
+  void bulkUpsertManifest(String manifestIndex, List<ManifestEntry> entries) throws IOException;
+
+  void scrollManifestByEntityType(
+      String manifestIndex, String entityType, Consumer<ManifestEntry> consumer) throws IOException;
+
+  void deleteManifestEntries(String manifestIndex, List<String> entityIds) throws IOException;
+
   String getClusterAlias();
 
   default String getStringWithClusterAlias(String s) {
     return getStringWithClusterAlias(getClusterAlias(), s);
   }
+
+  default String readManifestMapping() {
+    return readResource(getResourcePath() + "/" + MANIFEST_INDEX_MAPPING_FILE);
+  }
+
+  default String readTransformDefinition() {
+    return readResource(getResourcePath() + "/" + TRANSFORM_DEFINITION_FILE);
+  }
+
+  default String readRollupIndexMapping() {
+    return readResource(getResourcePath() + "/" + ROLLUP_INDEX_MAPPING_FILE);
+  }
+
+  String getResourcePath();
 
   static String getStringWithClusterAlias(String clusterAlias, String s) {
     if (!(clusterAlias == null || clusterAlias.isEmpty())) {

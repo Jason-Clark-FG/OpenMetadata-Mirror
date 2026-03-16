@@ -696,4 +696,25 @@ public interface EntityDAO<T extends EntityInterface> {
       return new EntityIdJsonPair(UUID.fromString(r.getString(1)), r.getString(2));
     }
   }
+
+  record EntityProjection(String id, long updatedAt) {}
+
+  class EntityProjectionMapper implements RowMapper<EntityProjection> {
+    @Override
+    public EntityProjection map(ResultSet r, StatementContext ctx) throws SQLException {
+      return new EntityProjection(r.getString(1), r.getLong(2));
+    }
+  }
+
+  @SqlQuery(
+      "SELECT id, updatedAt FROM <table> WHERE id > :afterId ORDER BY id LIMIT :limit")
+  @RegisterRowMapper(EntityProjectionMapper.class)
+  List<EntityProjection> listProjections(
+      @Define("table") String table,
+      @Bind("afterId") String afterId,
+      @Bind("limit") int limit);
+
+  default List<EntityProjection> listProjections(String afterId, int limit) {
+    return listProjections(getTableName(), afterId, limit);
+  }
 }
