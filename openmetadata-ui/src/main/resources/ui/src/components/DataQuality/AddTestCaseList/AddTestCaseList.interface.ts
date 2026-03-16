@@ -26,5 +26,4 @@ export interface AddTestCaseModalProps {
   selectedTest?: string[];
   showButton?: boolean;
   hideTableFilter?: boolean;
-  getPopupContainer?: (triggerNode: HTMLElement) => HTMLElement;
 }

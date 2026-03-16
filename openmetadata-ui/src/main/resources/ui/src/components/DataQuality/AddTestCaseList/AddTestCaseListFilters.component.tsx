@@ -27,7 +27,6 @@ const AddTestCaseListFilters = ({
   filterOptions,
   filterSelectedKeys,
   filterLoading,
-  getPopupContainer,
   hideTableFilter = false,
   onChange,
   onSearch,
@@ -63,7 +62,6 @@ const AddTestCaseListFilters = ({
         <SearchDropdown
           hideCounts
           dropdownClassName="add-test-case-filter-dropdown"
-          getPopupContainer={getPopupContainer}
           hideSearchBar={!filter.enableSearch}
           isSuggestionsLoading={filterLoading?.[filter.searchKey]}
           key={filter.searchKey}

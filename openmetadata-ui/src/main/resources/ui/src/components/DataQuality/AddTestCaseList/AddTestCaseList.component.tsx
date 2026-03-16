@@ -72,7 +72,6 @@ export const AddTestCaseList = ({
   showButton = true,
   testCaseParams,
   hideTableFilter = false,
-  getPopupContainer,
 }: AddTestCaseModalProps) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>();
@@ -595,7 +594,6 @@ export const AddTestCaseList = ({
             filterLoading={filterLoading}
             filterOptions={filterOptions}
             filterSelectedKeys={filterSelectedKeys}
-            getPopupContainer={getPopupContainer}
             hideTableFilter={hideTableFilter}
             onChange={handleFilterChange}
             onSearch={handleFilterSearch}
