@@ -1,0 +1,81 @@
+{
+  "$id": "https://open-metadata.org/schema/governance/workflows/elements/nodes/manualTask/manualTask.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ManualTaskDefinition",
+  "description": "Defines a manual task node that creates an OM Task, waits for status transitions via messages, and routes based on the resulting status. The template name is resolved at runtime to determine statuses, task category, and other configuration.",
+  "javaInterfaces": [
+    "org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface"
+  ],
+  "javaType": "org.openmetadata.schema.governance.workflows.elements.nodes.manualTask.ManualTaskDefinition",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "default": "manualTask"
+    },
+    "subType": {
+      "type": "string",
+      "default": "manualTask"
+    },
+    "name": {
+      "title": "Name",
+      "description": "Name that identifies this Node.",
+      "$ref": "../../../../../type/basic.json#/definitions/entityName"
+    },
+    "displayName": {
+      "title": "Display Name",
+      "description": "Display Name that identifies this Node.",
+      "type": "string"
+    },
+    "description": {
+      "title": "Description",
+      "description": "Description of the Node.",
+      "$ref": "../../../../../type/basic.json#/definitions/markdown"
+    },
+    "config": {
+      "title": "Node Configuration",
+      "type": "object",
+      "properties": {
+        "template": {
+          "title": "Task Template",
+          "description": "Name of the task template. Resolved at runtime to full configuration (statuses, terminalStatuses, taskCategory, taskType, assignees). Will become an entity reference when Task Templates are implemented.",
+          "type": "string"
+        }
+      },
+      "required": ["template"],
+      "additionalProperties": false
+    },
+    "input": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["relatedEntity"],
+      "additionalItems": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "inputNamespaceMap": {
+      "type": "object",
+      "properties": {
+        "relatedEntity": {
+          "type": "string",
+          "default": "global"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["relatedEntity"]
+    },
+    "output": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["result"],
+      "additionalItems": false,
+      "minItems": 1,
+      "maxItems": 1
+    },
+    "branches": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    }
+  }
+}
