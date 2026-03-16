@@ -37,9 +37,25 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       List<FormulaHolder> formulas,
       Map metricHolder,
       boolean live,
+      String filter,
+      String targetIndex)
+      throws IOException {
+    return prepareSearchRequestInternal(
+        diChart, start, end, formulas, metricHolder, live, filter, targetIndex);
+  }
+
+  @Override
+  public SearchRequest prepareSearchRequest(
+      @NotNull DataInsightCustomChart diChart,
+      long start,
+      long end,
+      List<FormulaHolder> formulas,
+      Map metricHolder,
+      boolean live,
       String filter)
       throws IOException {
-    return prepareSearchRequestInternal(diChart, start, end, formulas, metricHolder, live, filter);
+    return prepareSearchRequestInternal(
+        diChart, start, end, formulas, metricHolder, live, filter, null);
   }
 
   @Override
@@ -51,7 +67,8 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       Map metricHolder,
       boolean live)
       throws IOException {
-    return prepareSearchRequestInternal(diChart, start, end, formulas, metricHolder, live, null);
+    return prepareSearchRequestInternal(
+        diChart, start, end, formulas, metricHolder, live, null, null);
   }
 
   private SearchRequest prepareSearchRequestInternal(
@@ -61,7 +78,8 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       List<FormulaHolder> formulas,
       Map metricHolder,
       boolean live,
-      String filter)
+      String filter,
+      String targetIndex)
       throws IOException {
 
     SummaryCard summaryCard = JsonUtils.convertValue(diChart.getChartDetails(), SummaryCard.class);
@@ -102,7 +120,11 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
 
       Query finalQuery = buildQueryWithFilter(rangeQuery, filter);
       searchRequestBuilder.query(finalQuery);
-      searchRequestBuilder.index(DataInsightSystemChartRepository.getDataInsightsSearchIndex());
+      String index =
+          targetIndex != null
+              ? targetIndex
+              : DataInsightSystemChartRepository.getDataInsightsSearchIndex();
+      searchRequestBuilder.index(index);
     } else {
       searchRequestBuilder.index(DataInsightSystemChartRepository.getLiveSearchIndex(null));
     }

@@ -98,7 +98,7 @@ public class OpenSearchDataInsightAggregatorManager implements DataInsightAggreg
           new HashMap<>();
       SearchRequest searchRequest =
           aggregator.prepareSearchRequest(
-              diChart, start, end, formulas, metricFormulaHolder, live, filter);
+              diChart, start, end, formulas, metricFormulaHolder, live, filter, targetIndex);
       Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
       SearchResponse<JsonData> searchResponse;
       try {

@@ -50,10 +50,25 @@ public class ElasticSearchLineChartAggregator
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
       boolean live,
+      String filter,
+      String targetIndex)
+      throws IOException {
+    return prepareSearchRequestInternal(
+        diChart, start, end, formulas, metricFormulaHolder, live, filter, targetIndex);
+  }
+
+  @Override
+  public SearchRequest prepareSearchRequest(
+      @NotNull DataInsightCustomChart diChart,
+      long start,
+      long end,
+      List<FormulaHolder> formulas,
+      Map metricFormulaHolder,
+      boolean live,
       String filter)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricFormulaHolder, live, filter);
+        diChart, start, end, formulas, metricFormulaHolder, live, filter, null);
   }
 
   @Override
@@ -66,7 +81,7 @@ public class ElasticSearchLineChartAggregator
       boolean live)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricFormulaHolder, live, null);
+        diChart, start, end, formulas, metricFormulaHolder, live, null, null);
   }
 
   @SuppressWarnings("unchecked")
@@ -77,7 +92,8 @@ public class ElasticSearchLineChartAggregator
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
       boolean live,
-      String filter)
+      String filter,
+      String targetIndex)
       throws IOException {
     LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
     Map<String, Aggregation> aggregationsMap = new HashMap<>();
@@ -114,7 +130,7 @@ public class ElasticSearchLineChartAggregator
       }
     }
 
-    return buildSearchRequest(aggregationsMap, startTime, end, live, filter, lineChart);
+    return buildSearchRequest(aggregationsMap, startTime, end, live, filter, lineChart, targetIndex);
   }
 
   private boolean hasCustomXAxis(LineChart lineChart) {
@@ -210,7 +226,8 @@ public class ElasticSearchLineChartAggregator
       long end,
       boolean live,
       String filter,
-      LineChart lineChart) {
+      LineChart lineChart,
+      String targetIndex) {
     SearchRequest.Builder builder = new SearchRequest.Builder().size(0);
 
     if (!live) {
@@ -225,7 +242,11 @@ public class ElasticSearchLineChartAggregator
                                       .gte(JsonData.of(String.valueOf(startTime)))
                                       .lte(JsonData.of(String.valueOf(end))))));
       builder.query(buildQueryWithFilter(rangeQuery, filter));
-      builder.index(DataInsightSystemChartRepository.getDataInsightsSearchIndex());
+      String index =
+          targetIndex != null
+              ? targetIndex
+              : DataInsightSystemChartRepository.getDataInsightsSearchIndex();
+      builder.index(index);
     } else {
       builder.index(
           DataInsightSystemChartRepository.getLiveSearchIndex(lineChart.getSearchIndex()));

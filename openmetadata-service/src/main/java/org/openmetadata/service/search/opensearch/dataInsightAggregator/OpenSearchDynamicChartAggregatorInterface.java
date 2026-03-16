@@ -177,6 +177,19 @@ public interface OpenSearchDynamicChartAggregatorInterface {
     return prepareSearchRequest(diChart, start, end, formulas, metricFormulaHolder, live);
   }
 
+  default SearchRequest prepareSearchRequest(
+      @NotNull DataInsightCustomChart diChart,
+      long start,
+      long end,
+      List<FormulaHolder> formulas,
+      Map metricFormulaHolder,
+      boolean live,
+      String filter,
+      String targetIndex)
+      throws IOException {
+    return prepareSearchRequest(diChart, start, end, formulas, metricFormulaHolder, live, filter);
+  }
+
   DataInsightCustomChartResultList processSearchResponse(
       @NotNull DataInsightCustomChart diChart,
       SearchResponse<JsonData> searchResponse,
