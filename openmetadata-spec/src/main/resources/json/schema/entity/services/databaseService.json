@@ -69,7 +69,8 @@
         "ServiceNow",
         "Dremio",
         "MicrosoftFabric",
-        "BurstIQ"
+        "BurstIQ",
+        "Informix"
       ],
       "javaEnums": [
         {
@@ -236,6 +237,9 @@
         },
         {
           "name": "BurstIQ"
+        },
+        {
+          "name": "Informix"
         }
       ]
     },
@@ -407,6 +411,9 @@
             },
             {
               "$ref": "./connections/database/burstIQConnection.json"
+            },
+            {
+              "$ref": "./connections/database/informixConnection.json"
             }
           ]
         }
