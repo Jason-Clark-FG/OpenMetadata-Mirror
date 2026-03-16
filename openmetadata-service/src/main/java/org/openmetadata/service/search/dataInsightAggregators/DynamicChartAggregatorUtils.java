@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChart;
@@ -158,85 +157,6 @@ public final class DynamicChartAggregatorUtils {
     return name;
   }
 
-  /**
-   * Processes the search response for a line chart. This method encapsulates the shared logic
-   * between ES and OS line chart aggregators. The platform-specific parts (bucket key extraction,
-   * aggregation map access) are handled via functional parameters.
-   *
-   * @param diChart the chart definition
-   * @param aggregationMap the aggregation results from the search response
-   * @param metricFormulaHolder map of metric name to formula holder
-   * @param processBuckets callback that iterates sterms buckets and calls the resultConsumer
-   *     for each (bucketKey, subAggregations) pair
-   * @param processAggregationsFn function to process aggregations (delegates to the
-   *     interface's processAggregations method)
-   */
-  public static <AggType> DataInsightCustomChartResultList processLineChartResponse(
-      DataInsightCustomChart diChart,
-      Map<String, AggType> aggregationMap,
-      Map<String, MetricFormulaHolder> metricFormulaHolder,
-      BiConsumer<Map<String, AggType>, LineChartBucketProcessor<AggType>> processBuckets,
-      AggregationProcessor<AggType> processAggregationsFn) {
-    DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
-    LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
-
-    if (lineChart.getGroupBy() != null) {
-      List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
-      processBuckets.accept(
-          aggregationMap,
-          (bucketKey, subAggName, subAggregations) -> {
-            String group;
-            if (lineChart.getMetrics().size() > 1) {
-              group = bucketKey + " - " + getMetricName(lineChart, subAggName);
-            } else {
-              group = bucketKey;
-            }
-            MetricFormulaHolder holder = metricFormulaHolder.get(subAggName);
-            if (holder != null) {
-              diChartResults.addAll(
-                  processAggregationsFn.process(
-                      subAggregations,
-                      holder.formula,
-                      group,
-                      holder.holders,
-                      getMetricName(lineChart, subAggName)));
-            }
-          });
-      resultList.setResults(diChartResults);
-      return resultList;
-    }
-
-    List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
-    for (Map.Entry<String, AggType> entry : aggregationMap.entrySet()) {
-      String aggName = entry.getKey();
-      MetricFormulaHolder formulaHolder =
-          metricFormulaHolder.get(aggName) == null
-              ? new MetricFormulaHolder()
-              : metricFormulaHolder.get(aggName);
-      String group = null;
-      if (lineChart.getMetrics().size() > 1) {
-        group = getMetricName(lineChart, aggName);
-      }
-
-      Map<String, AggType> singleAggMap = new HashMap<>();
-      singleAggMap.put(aggName, entry.getValue());
-
-      diChartResults.addAll(
-          processAggregationsFn.process(
-              singleAggMap,
-              formulaHolder.formula,
-              group,
-              formulaHolder.holders,
-              getMetricName(lineChart, aggName)));
-    }
-
-    resultList.setResults(diChartResults);
-    if (lineChart.getKpiDetails() != null) {
-      resultList.setKpiDetails(lineChart.getKpiDetails());
-    }
-    return resultList;
-  }
-
   public static <AggType> DataInsightCustomChartResultList processSummaryCardResponse(
       DataInsightCustomChart diChart,
       Map<String, AggType> aggregationMap,
@@ -287,11 +207,6 @@ public final class DynamicChartAggregatorUtils {
     return org.openmetadata.schema.dataInsight.custom.SummaryCard.Type.SUMMARY_CARD
         .value()
         .equals(getChartType(diChart));
-  }
-
-  @FunctionalInterface
-  public interface LineChartBucketProcessor<AggType> {
-    void process(String bucketKey, String subAggName, Map<String, AggType> subAggregations);
   }
 
   @FunctionalInterface
