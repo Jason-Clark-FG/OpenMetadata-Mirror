@@ -833,6 +833,7 @@ public class DistributedSearchIndexExecutor {
         boolean refreshed = coordinator.refreshReindexLock(jobId);
         if (refreshed) {
           LOG.debug("Refreshed reindex lock for job {}", jobId);
+          collectionDAO.searchIndexJobDAO().touchJob(jobId.toString(), System.currentTimeMillis());
         } else {
           LOG.warn("Failed to refresh reindex lock for job {} - lock may have been stolen", jobId);
           // Mark the job as failed since we lost the lock
