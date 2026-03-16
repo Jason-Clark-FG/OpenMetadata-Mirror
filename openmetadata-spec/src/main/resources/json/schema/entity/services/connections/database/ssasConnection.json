@@ -11,8 +11,73 @@
         "type": "string",
         "enum": ["SSAS"],
         "default": "SSAS"
+      },
+      "basicAuth": {
+        "title": "Basic Authentication",
+        "description": "Authenticate using username and password.",
+        "type": "object",
+        "properties": {
+          "authType": {
+            "title": "Auth Type",
+            "description": "Authentication type.",
+            "type": "string",
+            "enum": ["basic"],
+            "default": "basic"
+          },
+          "username": {
+            "title": "Username",
+            "description": "Username for SSAS authentication.",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "description": "Password for SSAS authentication.",
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": ["username", "password"],
+        "additionalProperties": false
+      },
+      "azureServicePrincipalAuth": {
+        "title": "Azure Service Principal Authentication",
+        "description": "Authenticate to Azure Analysis Services using a Service Principal.",
+        "type": "object",
+        "properties": {
+          "authType": {
+            "title": "Auth Type",
+            "description": "Authentication type.",
+            "type": "string",
+            "enum": ["azureServicePrincipal"],
+            "default": "azureServicePrincipal"
+          },
+          "clientId": {
+            "title": "Client ID",
+            "description": "Azure Active Directory App client ID (Service Principal).",
+            "type": "string"
+          },
+          "clientSecret": {
+            "title": "Client Secret",
+            "description": "Azure Active Directory App client secret (Service Principal).",
+            "type": "string",
+            "format": "password"
+          },
+          "tenantId": {
+            "title": "Tenant ID",
+            "description": "Azure Active Directory Tenant ID.",
+            "type": "string"
+          },
+          "authorityURI": {
+            "title": "Authority URI",
+            "description": "Authority URI for Azure AD authentication.",
+            "type": "string",
+            "default": "https://login.microsoftonline.com/"
+          }
+        },
+        "required": ["clientId", "clientSecret", "tenantId"],
+        "additionalProperties": false
       }
-    },       
+    },
     "properties": {
       "type": {
         "title": "Service Type",
@@ -21,20 +86,21 @@
         "default": "SSAS"
       },
       "httpConnection": {
-        "title": "HTTP Link for SSAS ACCESS",
-        "description": "HTTP Link for SSAS ACCESS",
+        "title": "HTTP Link for SSAS/AAS Access",
+        "description": "XMLA endpoint URL for on-premises SSAS (e.g. http://server/olap/msmdpump.dll) or Azure Analysis Services server URL (e.g. asazure://eastus.asazure.windows.net/myserver).",
         "type": "string"
       },
-      "username": {
-        "title": "Username",
-        "description": "Username",
-        "type": "string"
-      },
-      "password": {
-        "title": "Password",
-        "description": "Password",
-        "type": "string",
-        "format": "password"
+      "authConfig": {
+        "title": "Authentication Configuration",
+        "description": "Authentication configuration for SSAS or Azure Analysis Services.",
+        "oneOf": [
+          {
+            "$ref": "#/definitions/basicAuth"
+          },
+          {
+            "$ref": "#/definitions/azureServicePrincipalAuth"
+          }
+        ]
       },
       "supportsMetadataExtraction": {
         "title": "Supports Metadata Extraction",
@@ -46,6 +112,5 @@
       }
     },
     "additionalProperties": false,
-    "required": ["httpConnection", "username", "password"]
+    "required": ["httpConnection", "authConfig"]
   }
-  
