@@ -23,8 +23,9 @@ export const navigateToMarketplace = async (page: Page) => {
 };
 
 export const searchMarketplace = async (page: Page, term: string) => {
-  const searchInput = page.getByTestId('marketplace-search-input');
-  await expect(searchInput).toBeVisible();
+  const searchWrapper = page.getByTestId('marketplace-search-input');
+  await expect(searchWrapper).toBeVisible();
+  const searchInput = searchWrapper.locator('input');
   await searchInput.clear();
   await searchInput.fill(term);
 
