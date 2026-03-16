@@ -126,6 +126,7 @@ test.describe(
       page,
     }) => {
       await dashboard.visitEntityPage(page);
+      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
@@ -145,6 +146,7 @@ test.describe(
       await page.click('[data-testid="confirm-button"]');
 
       await deleteResponse;
+      await page.waitForLoadState('networkidle');
 
       await toastNotification(
         page,
@@ -153,6 +155,7 @@ test.describe(
       );
 
       await page.reload();
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -170,6 +173,7 @@ test.describe(
         attempts++;
         if (attempts < maxAttempts) {
           await page.reload();
+          await page.waitForLoadState('networkidle');
           await page.waitForSelector('[data-testid="loader"]', {
             state: 'detached',
           });
@@ -190,6 +194,7 @@ test.describe(
 
       await restoreEntity(page);
       await page.reload();
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -215,6 +220,7 @@ test.describe('Data Model', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       '/dashboardDataModel/sample_superset.model.big_analytics_data_model_with_nested_columns'
     );
 
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -331,6 +337,7 @@ test.describe(
         )}/data-model`
       );
 
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
 
       await page.waitForSelector('.ant-spin', {
@@ -345,6 +352,7 @@ test.describe(
       await expect(dataModelLink).toHaveText(dataModelResponseData.name);
 
       await dataModelLink.click();
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('entity-header-name')).toContainText(
         dataModelName

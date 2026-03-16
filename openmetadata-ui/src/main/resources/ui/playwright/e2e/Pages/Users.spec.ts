@@ -190,7 +190,7 @@ test.describe('User with Admin Roles', () => {
 
     await addUser(adminPage, {
       ...updatedUserDetails,
-      role: 'Data Consumer',
+      role: role.responseData.displayName,
     });
 
     await visitUserProfilePage(adminPage, updatedUserDetails.name);
@@ -246,6 +246,7 @@ test.describe('User with Admin Roles', () => {
   }) => {
     await redirectToHomePage(adminPage);
     await settingClick(adminPage, GlobalSettingOptions.USERS);
+    await adminPage.waitForLoadState('networkidle');
     await adminPage.waitForSelector('.user-list-table [data-testid="loader"]', {
       state: 'detached',
     });
@@ -325,6 +326,7 @@ test.describe('User with Admin Roles', () => {
     // 2. UI Verification
     await redirectToHomePage(adminPage);
     await tableEntity.visitEntityPage(adminPage);
+    await adminPage.waitForLoadState('networkidle');
 
     // Check if the user details are visible in the right panel
     const userElement = adminPage.getByTestId(userName);
@@ -400,6 +402,7 @@ test.describe('User with Data Consumer Roles', () => {
     // Check CRUD for Glossary
     await sidebarClick(dataConsumerPage, SidebarItem.GLOSSARY);
 
+    await dataConsumerPage.waitForLoadState('networkidle');
     await dataConsumerPage.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -461,11 +464,9 @@ test.describe('User with Data Consumer Roles', () => {
     adminPage,
     dataConsumerPage,
   }) => {
-    test.slow(true);
     await redirectToHomePage(adminPage);
 
     await tableEntity.visitEntityPage(adminPage);
-    await waitForAllLoadersToDisappear(adminPage);
 
     await addOwner({
       page: adminPage,
@@ -476,7 +477,6 @@ test.describe('User with Data Consumer Roles', () => {
     });
 
     await tableEntity.visitEntityPage(dataConsumerPage);
-    await waitForAllLoadersToDisappear(dataConsumerPage);
 
     await checkDataConsumerPermissions(dataConsumerPage);
   });
@@ -645,6 +645,7 @@ test.describe('User Profile Feed Interactions', () => {
     await userDetailsResponse;
 
     // redirecting on new page
+    await page.waitForLoadState('networkidle');
 
     // Verify we navigated to the correct user's profile
     await expect(page.locator('[data-testid="user-display-name"]')).toHaveText(
@@ -667,6 +668,7 @@ test.describe('User Profile Feed Interactions', () => {
     );
     await adminPage.getByTestId('user-name').click();
     await userResponse;
+    await adminPage.waitForLoadState('networkidle');
 
     await expect(
       adminPage.locator('.user-profile-dropdown-overlay')
@@ -915,6 +917,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
 
       // Refresh the page
       await adminPage.reload();
+      await adminPage.waitForLoadState('networkidle');
 
       // Open dropdown again after refresh
       await adminPage.locator('[data-testid="dropdown-profile"]').click();
@@ -1166,6 +1169,7 @@ test.describe('User Profile Persona Interactions', () => {
 
       // Click the persona link to navigate
       await personaLink.click();
+      await adminPage.waitForLoadState('networkidle');
 
       // Verify we're on the persona page
       await expect(adminPage.url()).toContain('/persona/');
@@ -1236,6 +1240,7 @@ test.describe('User Profile Persona Interactions', () => {
       await adminPage.waitForSelector('.ant-select-dropdown', {
         state: 'visible',
       });
+      await adminPage.waitForLoadState('networkidle');
 
       // Select specific persona for default - try test ID first, fallback to role selector
       const defaultPersonaOptionTestId = adminPage.getByTitle(
@@ -1278,6 +1283,7 @@ test.describe('User Profile Persona Interactions', () => {
 
       // Click the persona link to navigate
       await personaLink.click();
+      await adminPage.waitForLoadState('networkidle');
 
       // Verify we're on the persona page
       await expect(adminPage.url()).toContain('/persona/');
@@ -1327,23 +1333,6 @@ test.describe('User Profile Persona Interactions', () => {
       await expect(adminPage.getByText('No default persona')).toBeVisible();
     });
   });
-});
-
-test.afterAll('Cleanup', async ({ browser }) => {
-  const { apiContext, afterAction } = await performAdminLogin(browser);
-  await persona2.delete(apiContext);
-  await persona1.delete(apiContext);
-  await role.delete(apiContext);
-  await policy.delete(apiContext);
-  await tableEntity2.delete(apiContext);
-  await tableEntity.delete(apiContext);
-  await user3.delete(apiContext);
-  await user2.delete(apiContext);
-  await user.delete(apiContext);
-  await dataStewardUser.delete(apiContext);
-  await dataConsumerUser.delete(apiContext);
-  await adminUser.delete(apiContext);
-  await afterAction();
 });
 
 base.describe(
@@ -1441,6 +1430,7 @@ base.describe(
 
         for (const entity of entities) {
           await entity.visitEntityPage(page);
+          await page.waitForLoadState('networkidle');
           await page.waitForSelector('[data-testid="loader"]', {
             state: 'detached',
           });

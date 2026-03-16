@@ -75,11 +75,9 @@ import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.rules.RuleEngine;
 import org.openmetadata.service.rules.RuleValidationException;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
-import org.openmetadata.service.search.EntityBuilderConstant;
 import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
-import org.openmetadata.service.search.QueryFilterBuilder;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -193,17 +191,12 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
 
   @Override
   public void setInheritedFields(DataProduct dataProduct, Fields fields) {
-    boolean inheritOwners = fields.contains(FIELD_OWNERS) && nullOrEmpty(dataProduct.getOwners());
-    boolean inheritExperts =
-        fields.contains(FIELD_EXPERTS) && nullOrEmpty(dataProduct.getExperts());
-    if (!inheritOwners && !inheritExperts) {
-      return;
-    }
-
-    // Domains may not be part of requested response fields, but they are required to derive
-    // inherited owners/experts.
-    List<EntityReference> domains = getDomains(dataProduct);
-    if (!nullOrEmpty(domains)) {
+    // If dataProduct does not have owners and experts, inherit them from the domains
+    List<EntityReference> domains =
+        !nullOrEmpty(dataProduct.getDomains()) ? getDomains(dataProduct) : Collections.emptyList();
+    if (!nullOrEmpty(domains)
+        && (fields.contains(FIELD_EXPERTS) || fields.contains(FIELD_OWNERS))
+        && (nullOrEmpty(dataProduct.getOwners()) || nullOrEmpty(dataProduct.getExperts()))) {
       List<EntityReference> owners = new ArrayList<>();
       List<EntityReference> experts = new ArrayList<>();
 
@@ -213,10 +206,10 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
         experts = mergedInheritedEntityRefs(experts, domain.getExperts());
       }
       // inherit only if applicable and empty
-      if (inheritOwners) {
+      if (fields.contains(FIELD_OWNERS) && nullOrEmpty(dataProduct.getOwners())) {
         dataProduct.setOwners(owners);
       }
-      if (inheritExperts) {
+      if (fields.contains(FIELD_EXPERTS) && nullOrEmpty(dataProduct.getExperts())) {
         dataProduct.setExperts(experts);
       }
     }
@@ -439,20 +432,20 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     Map<String, Integer> dataProductAssetCounts = new LinkedHashMap<>();
 
     for (DataProduct dataProduct : allDataProducts) {
-      dataProductAssetCounts.put(dataProduct.getFullyQualifiedName(), 0);
-    }
+      InheritedFieldQuery query =
+          InheritedFieldQuery.forDataProduct(dataProduct.getFullyQualifiedName(), 0, 0);
 
-    String queryFilter =
-        QueryFilterBuilder.buildGenericAssetsCountFilter("dataProducts.fullyQualifiedName", false);
-    Map<String, Integer> exactCounts =
-        inheritedFieldEntitySearch.getAggregatedCountsByField(
-            "dataProducts.fullyQualifiedName",
-            queryFilter,
-            EntityBuilderConstant.MAX_AGGREGATE_SIZE);
+      Integer count =
+          inheritedFieldEntitySearch.getCountForField(
+              query,
+              () -> {
+                LOG.warn(
+                    "Search fallback for data product {} asset count. Returning 0.",
+                    dataProduct.getFullyQualifiedName());
+                return 0;
+              });
 
-    for (Map.Entry<String, Integer> entry : exactCounts.entrySet()) {
-      dataProductAssetCounts.computeIfPresent(
-          entry.getKey(), (ignored, current) -> entry.getValue());
+      dataProductAssetCounts.put(dataProduct.getFullyQualifiedName(), count);
     }
 
     return dataProductAssetCounts;
@@ -739,8 +732,7 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     // will be a Task created.
     // This if handles this case scenario, by guaranteeing that we are any Approval Task if the
     // Data Product goes back to DRAFT.
-    if (original.getEntityStatus() != EntityStatus.DRAFT
-        && updated.getEntityStatus() == EntityStatus.DRAFT) {
+    if (updated.getEntityStatus() == EntityStatus.DRAFT) {
       try {
         closeApprovalTask(updated, "Closed due to data product going back to DRAFT.");
       } catch (EntityNotFoundException ignored) {
@@ -779,16 +771,6 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
       super(original, updated, operation);
     }
 
-    @Override
-    public void updateReviewers() {
-      super.updateReviewers();
-      if (original.getReviewers() != null
-          && updated.getReviewers() != null
-          && !original.getReviewers().equals(updated.getReviewers())) {
-        updateTaskWithNewReviewers(updated);
-      }
-    }
-
     public List<EntityReference> getCapturedOriginalDomains() {
       return capturedOriginalDomains;
     }
@@ -800,17 +782,13 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "name",
-          () -> {
-            updateName(updated);
-          });
+      updateName(updated);
       // Ports are managed via dedicated bulk add/remove APIs, not via entity PATCH
       // Handle domain change with asset migration
       // Skip during consolidation to avoid incorrect intermediate migrations.
       // Asset migration should only happen on the final update, not during
       // intermediate consolidation steps which may temporarily revert state.
-      if (!consolidatingChanges && shouldCompare("domains")) {
+      if (!consolidatingChanges) {
         updateDataProductDomains();
       }
     }
@@ -999,13 +977,6 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
   public TaskWorkflow getTaskWorkflow(ThreadContext threadContext) {
     validateTaskThread(threadContext);
     return super.getTaskWorkflow(threadContext);
-  }
-
-  @Override
-  protected void preDelete(DataProduct entity, String deletedBy) {
-    if (EntityStatus.IN_REVIEW.equals(entity.getEntityStatus())) {
-      checkUpdatedByReviewer(entity, deletedBy);
-    }
   }
 
   public static void checkUpdatedByReviewer(DataProduct dataProduct, String updatedBy) {

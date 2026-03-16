@@ -43,9 +43,9 @@ export const saveAndTriggerDataContractValidation = async (
   );
   await page.getByTestId('manage-contract-actions').click();
 
-  await page
-    .getByTestId('contract-run-now-button')
-    .waitFor({ state: 'visible' });
+  await page.waitForSelector('.contract-action-dropdown', {
+    state: 'visible',
+  });
 
   await page.getByTestId('contract-run-now-button').click();
   // Use validate response to get the resultId of the newly triggered execution.
@@ -53,6 +53,7 @@ export const saveAndTriggerDataContractValidation = async (
 
   await page.reload();
 
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -72,6 +73,7 @@ export const validateDataContractInsideBundleTestSuites = async (
   await page.getByTestId('test-suites').click();
   await testSuiteResponse;
 
+  await page.waitForLoadState('networkidle');
 
   const bundleSuitesResponse = page.waitForResponse(
     (response) =>
@@ -98,43 +100,18 @@ export const waitForDataContractExecution = async (
 ) => {
   const { apiContext } = await getApiContext(page);
   let consecutiveErrors = 0;
-  const terminalStatusPattern =
-    /(Aborted|Success|Failed|PartialSuccess|Queued)/;
 
   await expect
     .poll(
       async () => {
         try {
-          const [latestResultResponse, specificResultResponse] =
-            await Promise.all([
-              apiContext
-                .get(`/api/v1/dataContracts/${contractId}/results/latest`)
-                .then((res) => (res.ok() ? res.json() : null))
-                .catch(() => null),
-              apiContext
-                .get(`/api/v1/dataContracts/${contractId}/results/${resultId}`)
-                .then((res) => (res.ok() ? res.json() : null))
-                .catch(() => null),
-            ]);
+          const response = await apiContext
+            .get(`/api/v1/dataContracts/${contractId}/results/${resultId}`)
+            .then((res) => res.json());
 
           consecutiveErrors = 0; // Reset error counter on success
 
-          const latestStatus = latestResultResponse?.contractExecutionStatus;
-          const specificStatus = specificResultResponse?.contractExecutionStatus;
-
-          if (
-            latestStatus &&
-            terminalStatusPattern.test(latestStatus) &&
-            latestResultResponse?.id === resultId
-          ) {
-            return latestStatus;
-          }
-
-          if (specificStatus && terminalStatusPattern.test(specificStatus)) {
-            return specificStatus;
-          }
-
-          return latestStatus ?? specificStatus ?? 'Running';
+          return response.contractExecutionStatus;
         } catch (error) {
           consecutiveErrors++;
           if (consecutiveErrors >= maxConsecutiveErrors) {
@@ -148,11 +125,13 @@ export const waitForDataContractExecution = async (
       },
       {
         message: 'Wait for data contract execution to complete',
-        timeout: 600_000,
+        timeout: 300_000,
         intervals: [30_000, 20_000, 10_000],
       }
     )
-    .toEqual(expect.stringMatching(terminalStatusPattern));
+    .toEqual(
+      expect.stringMatching(/(Aborted|Success|Failed|PartialSuccess|Queued)/)
+    );
 };
 
 export const saveSecurityAndSLADetails = async (
@@ -309,6 +288,7 @@ export const saveSecurityAndSLADetails = async (
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });
@@ -464,6 +444,7 @@ export const saveContractAndWait = async (page: Page): Promise<void> => {
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector('[data-testid="loader"]', {
     state: 'detached',
   });

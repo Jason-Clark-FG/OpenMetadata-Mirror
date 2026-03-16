@@ -58,9 +58,7 @@ class CliBase(ABC):
             "-c",
             file_path,
         ]
-        env = os.environ.copy()
-        env["PYTHONWARNINGS"] = "ignore::FutureWarning"
-        process_status = subprocess.Popen(args, stderr=subprocess.PIPE, env=env)
+        process_status = subprocess.Popen(args, stderr=subprocess.PIPE)
         _, stderr = process_status.communicate()
         if process_status.returncode != 0:
             print(stderr.decode("utf-8"))

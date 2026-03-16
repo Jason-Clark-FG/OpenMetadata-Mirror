@@ -13,7 +13,7 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 
-export type Theme = 'light' | 'dark';
+type Theme = 'light' | 'dark' | 'system';
 
 interface BrandColors {
   primaryColor?: string;
@@ -46,17 +46,17 @@ interface ThemeProviderProps {
   children: ReactNode;
   brandColors?: BrandColors;
   /**
-   * The class to add to the root element when the theme is dark.
+   * The class to add to the root element when the theme is dark
    * @default "dark-mode"
    */
   darkModeClass?: string;
   /**
-   * The default theme to use if no theme is stored in localStorage.
-   * @default "light"
+   * The default theme to use if no theme is stored in localStorage
+   * @default "system"
    */
   defaultTheme?: Theme;
   /**
-   * The key to use to store the theme in localStorage.
+   * The key to use to store the theme in localStorage
    * @default "ui-theme"
    */
   storageKey?: string;
@@ -238,7 +238,7 @@ const clearBrandCssVars = (root: HTMLElement) => {
 export const ThemeProvider = ({
   children,
   brandColors,
-  defaultTheme = 'light',
+  defaultTheme = 'system',
   storageKey = 'ui-theme',
   darkModeClass = 'dark-mode',
 }: ThemeProviderProps) => {
@@ -246,27 +246,44 @@ export const ThemeProvider = ({
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem(storageKey) as Theme | null;
 
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        return savedTheme;
-      }
-
-      localStorage.removeItem(storageKey);
+      return savedTheme || defaultTheme;
     }
 
     return defaultTheme;
   });
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    const applyTheme = () => {
+      const root = window.document.documentElement;
 
-    root.classList.toggle(darkModeClass, theme === 'dark');
+      if (theme === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches
+          ? 'dark'
+          : 'light';
 
-    if (theme === 'dark') {
-      localStorage.setItem(storageKey, theme);
-    } else {
-      localStorage.removeItem(storageKey);
-    }
-  }, [theme, darkModeClass, storageKey]);
+        root.classList.toggle(darkModeClass, systemTheme === 'dark');
+        localStorage.removeItem(storageKey);
+      } else {
+        root.classList.toggle(darkModeClass, theme === 'dark');
+        localStorage.setItem(storageKey, theme);
+      }
+    };
+
+    applyTheme();
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleChange = () => {
+      if (theme === 'system') {
+        applyTheme();
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
 
   useEffect(() => {
     const root = window.document.documentElement;

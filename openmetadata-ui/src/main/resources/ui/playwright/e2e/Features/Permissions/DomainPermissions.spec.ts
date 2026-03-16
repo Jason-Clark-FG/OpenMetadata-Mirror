@@ -120,6 +120,7 @@ test('Domain allow operations', async ({ testUserPage, browser }) => {
 
   const manageButtonElements = ['delete-button', 'rename-button'];
 
+  await testUserPage.waitForLoadState('networkidle');
 
   // Test direct elements first
   for (const testId of directElements) {
@@ -192,6 +193,7 @@ test('Domain deny operations', async ({ testUserPage, browser }) => {
 
   const manageButtonElements = ['delete-button', 'rename-button'];
 
+  await testUserPage.waitForLoadState('networkidle');
 
   for (const testId of directElements) {
     let element;

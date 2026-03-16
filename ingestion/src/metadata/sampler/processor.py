@@ -47,11 +47,8 @@ from metadata.utils.dependency_injector.dependency_injector import (
     Inject,
     inject,
 )
-from metadata.utils.logger import profiler_logger
 from metadata.utils.profiler_utils import get_context_entities
 from metadata.utils.service_spec.service_spec import import_sampler_class
-
-logger = profiler_logger()
 
 
 class SamplerProcessor(Processor):
@@ -94,12 +91,6 @@ class SamplerProcessor(Processor):
 
     def _run(self, record: ProfilerSourceAndEntity) -> Either[SamplerResponse]:
         """Fetch the sample data and pass it down the pipeline"""
-        if not record.entity.columns:
-            logger.warning(
-                "Skipping sampler for table '%s': no columns found",
-                record.entity.fullyQualifiedName.root,
-            )
-            return Either()
 
         try:
             entity = cast(Table, record.entity)

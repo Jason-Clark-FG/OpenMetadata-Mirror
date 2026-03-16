@@ -197,14 +197,10 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
 
   @Override
   public void storeEntities(List<EventSubscription> entities) {
-    List<String> fqns = new ArrayList<>(entities.size());
-    List<String> jsons = new ArrayList<>(entities.size());
     for (EventSubscription entity : entities) {
       ensureDestinationIds(entity);
-      fqns.add(entity.getFullyQualifiedName());
-      jsons.add(serializeForStorage(entity));
     }
-    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
+    storeMany(entities);
   }
 
   @Override
@@ -244,58 +240,23 @@ public class EventSubscriptionRepository extends EntityRepository<EventSubscript
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "notificationTemplate",
-          () -> {
-            updateTemplateRelationship();
-          });
+      updateTemplateRelationship();
 
-      compareAndUpdate(
-          "input",
-          () -> {
-            recordChange("input", original.getInput(), updated.getInput(), true);
-          });
-      compareAndUpdate(
-          "batchSize",
-          () -> {
-            recordChange("batchSize", original.getBatchSize(), updated.getBatchSize());
-          });
+      recordChange("input", original.getInput(), updated.getInput(), true);
+      recordChange("batchSize", original.getBatchSize(), updated.getBatchSize());
       if (!original.getAlertType().equals(CreateEventSubscription.AlertType.ACTIVITY_FEED)) {
-        compareAndUpdate(
-            "filteringRules",
-            () -> {
-              recordChange(
-                  "filteringRules",
-                  original.getFilteringRules(),
-                  updated.getFilteringRules(),
-                  true);
-            });
-        compareAndUpdate(
-            "enabled",
-            () -> {
-              recordChange("enabled", original.getEnabled(), updated.getEnabled());
-            });
-        compareAndUpdate(
+        recordChange(
+            "filteringRules", original.getFilteringRules(), updated.getFilteringRules(), true);
+        recordChange("enabled", original.getEnabled(), updated.getEnabled());
+        recordChange(
             "destinations",
-            () -> {
-              recordChange(
-                  "destinations",
-                  original.getDestinations(),
-                  encryptWebhookSecretKey(updated.getDestinations()),
-                  true,
-                  objectMatch,
-                  false);
-            });
-        compareAndUpdate(
-            "trigger",
-            () -> {
-              recordChange("trigger", original.getTrigger(), updated.getTrigger(), true);
-            });
-        compareAndUpdate(
-            "config",
-            () -> {
-              recordChange("config", original.getConfig(), updated.getConfig(), true);
-            });
+            original.getDestinations(),
+            encryptWebhookSecretKey(updated.getDestinations()),
+            true,
+            objectMatch,
+            false);
+        recordChange("trigger", original.getTrigger(), updated.getTrigger(), true);
+        recordChange("config", original.getConfig(), updated.getConfig(), true);
       }
     }
 

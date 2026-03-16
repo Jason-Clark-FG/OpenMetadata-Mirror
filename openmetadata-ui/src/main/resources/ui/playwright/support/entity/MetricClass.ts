@@ -78,14 +78,12 @@ export class MetricClass extends EntityClass {
   }
 
   async visitEntityPage(page: Page) {
-    const metricName = this.entityResponseData.name ?? this.entity.name;
-    const searchTerm =
-      this.entityResponseData?.['fullyQualifiedName'] ?? metricName;
-
     await visitEntityPage({
       page,
-      searchTerm,
-      dataTestId: `${metricName}-${metricName}`,
+      searchTerm: this.entityResponseData?.['fullyQualifiedName'],
+      dataTestId: `${this.entityResponseData.name ?? this.entity.name}-${
+        this.entityResponseData.name ?? this.entity.name
+      }`,
     });
   }
 

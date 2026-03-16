@@ -70,16 +70,6 @@ test.describe('Data Product Rename', () => {
     }
   );
 
-  test.afterAll('Cleanup', async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
-    await table.delete(apiContext);
-    await dataProduct.delete(apiContext);
-    await domain.delete(apiContext);
-    await EntityDataClass.postRequisitesForTests(apiContext);
-    await adminUser.delete(apiContext);
-    await afterAction();
-  });
-
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
   });
@@ -155,9 +145,11 @@ test.describe('Data Product Rename', () => {
       )
       .click();
 
+    await page.waitForLoadState('networkidle');
 
     // Navigate back to data product and verify assets tab still shows the asset
     await page.goBack();
+    await page.waitForLoadState('networkidle');
 
     await page.getByTestId('assets').click();
     await checkAssetsCount(page, 1);
@@ -331,9 +323,11 @@ test.describe('Data Product Rename', () => {
         )
         .click();
 
+      await page.waitForLoadState('networkidle');
 
       // Navigate back and verify assets still there
       await page.goBack();
+      await page.waitForLoadState('networkidle');
       await page.getByTestId('assets').click();
       await checkAssetsCount(page, 1);
     } finally {

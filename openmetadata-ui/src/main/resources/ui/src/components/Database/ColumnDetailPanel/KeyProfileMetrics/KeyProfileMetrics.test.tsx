@@ -10,6 +10,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import {
+  createTheme,
+  Palette,
+  ThemeProvider,
+  TypographyVariantsOptions,
+} from '@mui/material/styles';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { ColumnProfile } from '../../../../generated/entity/data/table';
@@ -43,18 +49,39 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+const mockTheme = createTheme({
+  palette: {
+    allShades: {
+      gray: {
+        50: '#FAFAFA',
+        100: '#EAECF5',
+        600: '#717680',
+        900: '#181D27',
+      },
+    },
+  } as Palette,
+  spacing: (value: number) => `${value * 8}px`,
+  typography: {
+    pxToRem: (px: number) => `${px / 16}rem`,
+  } as TypographyVariantsOptions,
+});
+
+const renderWithTheme = (component: React.ReactElement) => {
+  return render(<ThemeProvider theme={mockTheme}>{component}</ThemeProvider>);
+};
+
 describe('KeyProfileMetrics', () => {
   const mockProfile: ColumnProfile = {
     name: 'test_column',
     timestamp: Date.now(),
-    uniqueProportion: 1,
-    nullProportion: 0,
-    distinctProportion: 1,
+    uniqueProportion: 1.0,
+    nullProportion: 0.0,
+    distinctProportion: 1.0,
     valuesCount: 1000,
   };
 
   it('should render all four metrics with profile data', () => {
-    render(<KeyProfileMetrics profile={mockProfile} />);
+    renderWithTheme(<KeyProfileMetrics profile={mockProfile} />);
 
     expect(
       screen.getByText('label.key-profile-metric-plural')
@@ -72,7 +99,7 @@ describe('KeyProfileMetrics', () => {
   });
 
   it('should render -- when no profile is provided', () => {
-    render(<KeyProfileMetrics />);
+    renderWithTheme(<KeyProfileMetrics />);
 
     const placeholders = screen.getAllByText('--');
 
@@ -86,7 +113,7 @@ describe('KeyProfileMetrics', () => {
       uniqueProportion: 0.5,
     };
 
-    render(<KeyProfileMetrics profile={partialProfile} />);
+    renderWithTheme(<KeyProfileMetrics profile={partialProfile} />);
 
     expect(screen.getByText('50%')).toBeInTheDocument();
 
@@ -105,7 +132,7 @@ describe('KeyProfileMetrics', () => {
       valuesCount: 5000,
     };
 
-    render(<KeyProfileMetrics profile={profileWithPercentages} />);
+    renderWithTheme(<KeyProfileMetrics profile={profileWithPercentages} />);
 
     expect(screen.getByText('75%')).toBeInTheDocument();
     expect(screen.getByText('25%')).toBeInTheDocument();
@@ -120,7 +147,7 @@ describe('KeyProfileMetrics', () => {
       valuesCount: 1234567,
     };
 
-    render(<KeyProfileMetrics profile={profileWithLargeCount} />);
+    renderWithTheme(<KeyProfileMetrics profile={profileWithLargeCount} />);
 
     expect(screen.getByText('1,234,567')).toBeInTheDocument();
   });
@@ -135,7 +162,7 @@ describe('KeyProfileMetrics', () => {
       valuesCount: 0,
     };
 
-    render(<KeyProfileMetrics profile={profileWithZeros} />);
+    renderWithTheme(<KeyProfileMetrics profile={profileWithZeros} />);
 
     const zeroPercentages = screen.getAllByText('0%');
 
@@ -144,7 +171,7 @@ describe('KeyProfileMetrics', () => {
   });
 
   it('should render data-testid for each metric', () => {
-    render(<KeyProfileMetrics profile={mockProfile} />);
+    renderWithTheme(<KeyProfileMetrics profile={mockProfile} />);
 
     expect(
       screen.getByTestId('key-profile-metric-label.uniqueness')

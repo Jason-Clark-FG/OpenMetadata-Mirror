@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import {
-  ButtonUtility,
   Grid,
   Tooltip,
   TooltipTrigger,
@@ -35,6 +34,7 @@ import { LineageConfig } from '../../components/Entity/EntityLineage/EntityLinea
 import EntitySuggestionOption from '../../components/Entity/EntityLineage/EntitySuggestionOption/EntitySuggestionOption.component';
 import LineageConfigModal from '../../components/Entity/EntityLineage/LineageConfigModal';
 import Lineage from '../../components/Lineage/Lineage.component';
+import { StyledIconButton } from '../../components/LineageTable/LineageTable.styled';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { SourceType } from '../../components/SearchedData/SearchedData.interface';
@@ -256,18 +256,20 @@ const PlatformLineage = () => {
               type: t('label.png-uppercase'),
             })}>
             <TooltipTrigger>
-              <ButtonUtility
+              <StyledIconButton
                 data-testid="export-button"
-                icon={DownloadIcon}
-                onClick={handleExport}
-              />
+                size="large"
+                onClick={handleExport}>
+                <DownloadIcon />
+              </StyledIconButton>
             </TooltipTrigger>
           </Tooltip>
-          <ButtonUtility
+          <StyledIconButton
             data-testid="lineage-config"
-            icon={SettingsOutlined}
-            onClick={handleSettingsClick}
-          />
+            size="large"
+            onClick={handleSettingsClick}>
+            <SettingsOutlined />
+          </StyledIconButton>
           <Tooltip
             placement="top"
             title={
@@ -276,8 +278,8 @@ const PlatformLineage = () => {
                 : t('label.full-screen-view')
             }>
             <TooltipTrigger>
-              <ButtonUtility
-                icon={isFullScreen ? Minimize02 : Expand05}
+              <StyledIconButton
+                size="large"
                 onClick={() =>
                   navigate({
                     search: QueryString.stringify({
@@ -285,8 +287,9 @@ const PlatformLineage = () => {
                       [FULLSCREEN_QUERY_PARAM_KEY]: !isFullScreen,
                     }),
                   })
-                }
-              />
+                }>
+                {isFullScreen ? <Minimize02 /> : <Expand05 />}
+              </StyledIconButton>
             </TooltipTrigger>
           </Tooltip>
         </div>

@@ -91,7 +91,9 @@ class AthenaProfilerInterface(SQAProfilerInterface):
                     table_service_type=DatabaseServiceType.Athena,
                     _quote=False,
                 )
-                self.table.__table__.append_column(sqa_col, replace_existing=True)
+                sqa_col._set_parent(  # pylint: disable=protected-access
+                    self.table.__table__
+                )
                 columns_list.append(sqa_col)
             else:
                 cols = self._get_struct_columns(
@@ -110,6 +112,8 @@ class AthenaProfilerInterface(SQAProfilerInterface):
                 )
             else:
                 col = build_orm_col(idx, column_obj, DatabaseServiceType.Athena)
-                self.table.__table__.append_column(col, replace_existing=True)
+                col._set_parent(  # pylint: disable=protected-access
+                    self.table.__table__
+                )
                 columns.append(col)
         return columns

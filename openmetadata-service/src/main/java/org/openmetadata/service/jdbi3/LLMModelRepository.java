@@ -15,6 +15,8 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 
+import com.google.gson.Gson;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,18 +133,25 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
   }
 
   @Override
-  protected List<String> getFieldsStrippedFromStorageJson() {
-    return List.of("service");
-  }
-
-  @Override
   public void storeEntity(LLMModel llmModel, boolean update) {
+    EntityReference service = llmModel.getService();
+    llmModel.withService(null);
     store(llmModel, update);
+    llmModel.withService(service);
   }
 
   @Override
   public void storeEntities(List<LLMModel> entities) {
-    storeMany(entities);
+    List<LLMModel> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+    for (LLMModel entity : entities) {
+      EntityReference service = entity.getService();
+      entity.withService(null);
+      String jsonCopy = gson.toJson(entity);
+      entitiesToStore.add(gson.fromJson(jsonCopy, LLMModel.class));
+      entity.withService(service);
+    }
+    storeMany(entitiesToStore);
   }
 
   @Override
@@ -159,11 +168,6 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
   }
 
   @Override
-  protected EntityReference getParentReference(LLMModel entity) {
-    return entity.getService();
-  }
-
-  @Override
   public EntityInterface getParentEntity(LLMModel entity, String fields) {
     if (entity.getService() == null) {
       return null;
@@ -172,8 +176,7 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
   }
 
   private void populateService(LLMModel llmModel) {
-    var service =
-        (LLMService) getCachedParentOrLoad(llmModel.getService(), "", Include.NON_DELETED);
+    LLMService service = Entity.getEntity(llmModel.getService(), "", Include.NON_DELETED);
     llmModel.setService(service.getEntityReference());
   }
 
@@ -184,65 +187,23 @@ public class LLMModelRepository extends EntityRepository<LLMModel> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "baseModel",
-          () -> {
-            recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
-          });
-      compareAndUpdate(
-          "modelVersion",
-          () -> {
-            recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
-          });
-      compareAndUpdate(
-          "modelProvider",
-          () -> {
-            recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
-          });
-      compareAndUpdate(
+      recordChange("baseModel", original.getBaseModel(), updated.getBaseModel());
+      recordChange("modelVersion", original.getModelVersion(), updated.getModelVersion());
+      recordChange("modelProvider", original.getModelProvider(), updated.getModelProvider());
+      recordChange(
           "modelSpecifications",
-          () -> {
-            recordChange(
-                "modelSpecifications",
-                original.getModelSpecifications(),
-                updated.getModelSpecifications(),
-                true);
-          });
-      compareAndUpdate(
-          "trainingMetadata",
-          () -> {
-            recordChange(
-                "trainingMetadata",
-                original.getTrainingMetadata(),
-                updated.getTrainingMetadata(),
-                true);
-          });
-      compareAndUpdate(
-          "modelEvaluation",
-          () -> {
-            recordChange(
-                "modelEvaluation",
-                original.getModelEvaluation(),
-                updated.getModelEvaluation(),
-                true);
-          });
-      compareAndUpdate(
-          "costMetrics",
-          () -> {
-            recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
-          });
-      compareAndUpdate(
-          "deploymentInfo",
-          () -> {
-            recordChange(
-                "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
-          });
-      compareAndUpdate(
-          "governanceStatus",
-          () -> {
-            recordChange(
-                "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
-          });
+          original.getModelSpecifications(),
+          updated.getModelSpecifications(),
+          true);
+      recordChange(
+          "trainingMetadata", original.getTrainingMetadata(), updated.getTrainingMetadata(), true);
+      recordChange(
+          "modelEvaluation", original.getModelEvaluation(), updated.getModelEvaluation(), true);
+      recordChange("costMetrics", original.getCostMetrics(), updated.getCostMetrics(), true);
+      recordChange(
+          "deploymentInfo", original.getDeploymentInfo(), updated.getDeploymentInfo(), true);
+      recordChange(
+          "governanceStatus", original.getGovernanceStatus(), updated.getGovernanceStatus());
     }
   }
 }

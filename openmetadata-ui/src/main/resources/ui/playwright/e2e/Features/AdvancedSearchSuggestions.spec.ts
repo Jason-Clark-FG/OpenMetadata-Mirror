@@ -51,6 +51,7 @@ test.describe('Advanced Search Suggestions', () => {
     test(`Verify suggestions for ${field.label} field`, async ({ page }) => {
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.EXPLORE);
+      await page.waitForLoadState('networkidle');
       await waitForAllLoadersToDisappear(page);
       await showAdvancedSearchDialog(page);
 

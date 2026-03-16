@@ -12,8 +12,9 @@
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
+import { SidebarItem } from '../../constant/sidebar';
 import { getRandomLastName } from '../../utils/common';
-import { visitClassificationPage } from '../../utils/tag';
+import { sidebarClick } from '../../utils/sidebar';
 type ClassificationData = {
   name: string;
   displayName: string;
@@ -41,14 +42,20 @@ export class ClassificationClass {
   }
 
   async visitPage(page: Page) {
-    await visitClassificationPage(
-      page,
-      this.responseData.name ?? this.data.name,
-      this.responseData.displayName ?? this.data.displayName
-    );
+    const getClassification = page.waitForResponse('/api/v1/classifications**');
+    const getTags = page.waitForResponse('/api/v1/tags**');
+    await sidebarClick(page, SidebarItem.TAGS);
+    await getClassification;
+    await getTags;
+    await page.waitForSelector('[data-testid="side-panel-classification"]');
+
+    await page
+      .locator(`[data-testid="side-panel-classification"]`)
+      .filter({ hasText: this.data.displayName })
+      .click();
 
     await expect(page.locator('.activeCategory')).toContainText(
-      this.responseData.displayName ?? this.data.displayName
+      this.data.displayName
     );
   }
 

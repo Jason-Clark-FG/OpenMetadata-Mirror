@@ -141,6 +141,7 @@ export class DatabaseSchemaClass extends EntityClass {
       false
     );
 
+    await page.waitForLoadState('networkidle');
 
     // Wait for the database to be visible before clicking
     await page.getByTestId(this.database.name).waitFor({ state: 'visible' });
@@ -152,6 +153,7 @@ export class DatabaseSchemaClass extends EntityClass {
     await databaseResponse;
 
     // Wait for page to fully load after navigation
+    await page.waitForLoadState('networkidle');
 
     // Target schema specifically within the table container to avoid clicking breadcrumbs or other elements
     const schemaLocator = page.getByTestId(this.entity.name);

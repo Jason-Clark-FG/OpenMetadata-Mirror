@@ -13,6 +13,7 @@
 
 package org.openmetadata.service.jdbi3;
 
+import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -63,13 +64,13 @@ public class PromptTemplateRepository extends EntityRepository<PromptTemplate> {
 
   @Override
   public void storeEntities(List<PromptTemplate> entities) {
-    List<String> fqns = new ArrayList<>(entities.size());
-    List<String> jsons = new ArrayList<>(entities.size());
+    List<PromptTemplate> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
     for (PromptTemplate entity : entities) {
-      fqns.add(entity.getFullyQualifiedName());
-      jsons.add(serializeForStorage(entity));
+      String jsonCopy = gson.toJson(entity);
+      entitiesToStore.add(gson.fromJson(jsonCopy, PromptTemplate.class));
     }
-    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
+    storeMany(entitiesToStore);
   }
 
   @Override
@@ -94,38 +95,12 @@ public class PromptTemplateRepository extends EntityRepository<PromptTemplate> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "templateContent",
-          () -> {
-            recordChange(
-                "templateContent", original.getTemplateContent(), updated.getTemplateContent());
-          });
-      compareAndUpdate(
-          "systemPrompt",
-          () -> {
-            recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
-          });
-      compareAndUpdate(
-          "variables",
-          () -> {
-            recordChange("variables", original.getVariables(), updated.getVariables(), true);
-          });
-      compareAndUpdate(
-          "examples",
-          () -> {
-            recordChange("examples", original.getExamples(), updated.getExamples(), true);
-          });
-      compareAndUpdate(
-          "templateType",
-          () -> {
-            recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
-          });
-      compareAndUpdate(
-          "templateVersion",
-          () -> {
-            recordChange(
-                "templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
-          });
+      recordChange("templateContent", original.getTemplateContent(), updated.getTemplateContent());
+      recordChange("systemPrompt", original.getSystemPrompt(), updated.getSystemPrompt());
+      recordChange("variables", original.getVariables(), updated.getVariables(), true);
+      recordChange("examples", original.getExamples(), updated.getExamples(), true);
+      recordChange("templateType", original.getTemplateType(), updated.getTemplateType());
+      recordChange("templateVersion", original.getTemplateVersion(), updated.getTemplateVersion());
     }
   }
 }

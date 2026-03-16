@@ -96,6 +96,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
 
     await page.waitForURL(`**/dataProduct/${newName}/**`);
     // Wait for the page to fully load after rename navigation
+    await page.waitForLoadState('networkidle');
     // Ensure the data product header is visible with the new name
     await expect(page.getByTestId('entity-header-name')).toBeVisible();
   }
@@ -122,6 +123,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
     await page.getByTestId('save').click();
     await patchResponse;
 
+    await page.waitForLoadState('networkidle');
   }
 
   test('Rename then update description - assets should be preserved', async ({
@@ -172,10 +174,12 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
 
       // Verify assets after rename
       await page.getByTestId('assets').click();
+      await page.waitForLoadState('networkidle');
       await checkAssetsCount(page, 1);
 
       // Step 2: Update description (this triggers consolidation logic)
       await page.getByTestId('documentation').click();
+      await page.waitForLoadState('networkidle');
       await updateDescription(
         page,
         `Updated description after rename ${uuid()}`
@@ -196,6 +200,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
           `[data-testid="table-data-card_${tableFqn}"] a[data-testid="entity-link"]`
         )
         .click();
+      await page.waitForLoadState('networkidle');
 
       await expect(
         page.getByTestId('KnowledgePanel.DataProducts')
@@ -264,10 +269,12 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       currentName = newName;
 
       await page.getByTestId('assets').click();
+      await page.waitForLoadState('networkidle');
       await checkAssetsCount(page, 1);
 
       // Step 2: Add a tag (this triggers consolidation logic)
       await page.getByTestId('documentation').click();
+      await page.waitForLoadState('networkidle');
       await page.getByTestId('tags-container').getByTestId('add-tag').click();
 
       await page
@@ -286,6 +293,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       await page.getByTestId('saveAssociatedTag').click();
       await patchResponse;
 
+      await page.waitForLoadState('networkidle');
 
       // Step 3: Verify assets
       await page.getByTestId('assets').click();
@@ -361,10 +369,12 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       currentName = newName;
 
       await page.getByTestId('assets').click();
+      await page.waitForLoadState('networkidle');
       await checkAssetsCount(page, 1);
 
       // Step 2: Change owner (this triggers consolidation logic)
       await page.getByTestId('documentation').click();
+      await page.waitForLoadState('networkidle');
       // Use add-owner since there's no owner initially
       await page.getByTestId('add-owner').click();
       await page.waitForSelector('[data-testid="loader"]', {
@@ -387,9 +397,12 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
         .getByTestId('owner-select-users-search-bar')
         .fill(ownerDisplayName);
       await searchResponse;
+      await page.waitForLoadState('networkidle');
 
       // Click on the user in the list
-      await page.getByRole('listitem', { name: ownerDisplayName }).click();
+      await page
+        .getByRole('listitem', { name: ownerDisplayName, exact: true })
+        .click();
 
       const patchResponse = page.waitForResponse(
         (response) =>
@@ -399,6 +412,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
       await page.getByTestId('selectable-list-update-btn').click();
       await patchResponse;
 
+      await page.waitForLoadState('networkidle');
 
       // Step 3: Verify assets
       await page.getByTestId('assets').click();
@@ -476,14 +490,17 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
 
         // Verify assets after rename
         await page.getByTestId('assets').click();
+        await page.waitForLoadState('networkidle');
         await checkAssetsCount(page, 1);
 
         // Update description
         await page.getByTestId('documentation').click();
+        await page.waitForLoadState('networkidle');
         await updateDescription(page, `Description after rename cycle ${i}`);
 
         // Verify assets after description update
         await page.getByTestId('assets').click();
+        await page.waitForLoadState('networkidle');
         await checkAssetsCount(page, 1);
 
         const tableFqn = get(
@@ -502,6 +519,7 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
           `[data-testid="table-data-card_${tableFqn}"] a[data-testid="entity-link"]`
         )
         .click();
+      await page.waitForLoadState('networkidle');
 
       await expect(
         page.getByTestId('KnowledgePanel.DataProducts')

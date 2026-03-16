@@ -155,6 +155,7 @@ test.describe('Entity Version pages', () => {
       const { apiContext } = await getApiContext(page);
       await entity.visitEntityPage(page);
 
+      await page.waitForLoadState('networkidle');
       // Read actual version from API response to avoid hardcoding version numbers.
       const setupPatchVersion = entity.entityResponseData.version;
       const setupVersionText = `v${Number.parseFloat(
@@ -167,10 +168,6 @@ test.describe('Entity Version pages', () => {
       );
       await page.locator('[data-testid="version-button"]').click();
       await versionDetailResponse;
-      // Wait for version selector to render before clicking
-      await page
-        .locator(`[data-testid="version-selector-${setupVersionText}"]`)
-        .waitFor({ state: 'visible' });
       // Explicitly select the incremental version in the history panel.
       await page
         .locator(`[data-testid="version-selector-${setupVersionText}"]`)

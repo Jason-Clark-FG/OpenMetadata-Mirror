@@ -130,7 +130,6 @@ export interface EntityReference {
 
 export interface ServiceEntity {
   name: string;
-  displayName?: string;
   serviceType: string;
   connection: {
     config: Record<string, unknown>;

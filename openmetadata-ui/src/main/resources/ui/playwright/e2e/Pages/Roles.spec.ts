@@ -188,26 +188,27 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       );
       await getElementWithPagination(page, roleLocator, false);
 
-      const roleRow = roleLocator.locator(
-        'xpath=ancestor::*[@data-row-key][1]'
+      // Wait for plus-more-count button to be visible before clicking
+      const plusMoreButton = page.locator(
+        `[data-row-key="${roleName}"] [data-testid="plus-more-count"]`
       );
-      await expect(roleRow).toBeVisible();
-      await expect(roleRow).toContainText(roleName);
+      await expect(plusMoreButton).toBeVisible();
+      await plusMoreButton.click();
 
-      const plusMoreButton = roleRow.getByTestId('plus-more-count');
-      if (await plusMoreButton.isVisible()) {
-        await plusMoreButton.click();
-        const combinedPoliciesText = [
-          await roleRow.textContent(),
-          await page.locator('.ant-popover-content').textContent(),
-        ]
-          .filter(Boolean)
-          .join(' ');
-        expect(combinedPoliciesText).toContain(policies.dataConsumerPolicy);
-        expect(combinedPoliciesText).toContain(policies.dataStewardPolicy);
-      } else {
-        await expect(roleRow).toContainText(policies.dataConsumerPolicy);
-      }
+      // Wait for popover to be visible
+      await expect(page.locator('.ant-popover-content')).toBeVisible();
+
+      // Both policies should be visible - one in the table row and one in the popover
+      // The order is non-deterministic, so check both are visible within the row + popover scope
+      const rowAndPopover = page.locator(
+        `[data-row-key="${roleName}"], .ant-popover-content`
+      );
+      await expect(
+        rowAndPopover.getByRole('link', { name: policies.dataConsumerPolicy })
+      ).toBeVisible();
+      await expect(
+        rowAndPopover.getByRole('link', { name: policies.dataStewardPolicy })
+      ).toBeVisible();
     });
 
     await test.step('Add new role without selecting data', async () => {
@@ -541,10 +542,11 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     const role = new RolesClass();
     const policies = ['ApplicationBotPolicy'];
-    const roleLocator = page
-      .getByTestId('role-name')
-      .filter({ hasText: role.data.displayName })
-      .first();
+    const roleLocator = page.locator(
+      `[data-testid="role-name"][href="/settings/access/roles/${encodeURIComponent(
+        role.data.name
+      )}"]`
+    );
 
     await role.create(apiContext, policies);
 
@@ -557,15 +559,12 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     await getElementWithPagination(page, roleLocator);
 
-    const manageButton = page
-      .getByTestId('role-details-container')
-      .getByTestId('manage-button');
+    // Wait for manage button to be visible
+    const manageButton = page.getByTestId('manage-button');
     await expect(manageButton).toBeVisible();
     await manageButton.click();
 
-    const deleteButton = page
-      .locator('[data-testid="delete-button"], [data-testid="delete-button-title"]')
-      .first();
+    const deleteButton = page.getByTestId('delete-button');
     await expect(deleteButton).toBeVisible();
     await deleteButton.click();
 

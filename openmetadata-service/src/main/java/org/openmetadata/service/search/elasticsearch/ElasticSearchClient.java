@@ -475,8 +475,7 @@ public class ElasticSearchClient implements SearchClient {
   }
 
   @Override
-  public void createEntities(String indexName, List<Map<String, String>> docsAndIds)
-      throws IOException {
+  public void createEntities(String indexName, List<Map<String, String>> docsAndIds) {
     entityManager.createEntities(indexName, docsAndIds);
   }
 
@@ -776,12 +775,6 @@ public class ElasticSearchClient implements SearchClient {
   @Override
   public void deleteILMPolicy(String policyName) throws IOException {
     genericManager.deleteILMPolicy(policyName);
-  }
-
-  @Override
-  public void createOrUpdateIndexTemplate(
-      String templateName, String indexPattern, String mappingContent) throws IOException {
-    genericManager.createOrUpdateIndexTemplate(templateName, indexPattern, mappingContent);
   }
 
   @Override

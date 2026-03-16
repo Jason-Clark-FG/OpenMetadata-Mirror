@@ -21,6 +21,7 @@ import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.getEntityReferenceById;
 import static org.openmetadata.service.exception.CatalogExceptionMessage.entityNameAlreadyExists;
 
+import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -50,11 +51,9 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.domains.DomainResource;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
-import org.openmetadata.service.search.EntityBuilderConstant;
 import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
-import org.openmetadata.service.search.QueryFilterBuilder;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -103,11 +102,8 @@ public class DomainRepository extends EntityRepository<Domain> {
   @Override
   public void setFieldsInBulk(Fields fields, List<Domain> entities) {
     fetchAndSetFields(entities, fields);
-    entities.forEach(
-        entity -> {
-          setInheritedFields(entity, fields);
-          clearFieldsInternal(entity, fields);
-        });
+    setInheritedFields(entities, fields);
+    entities.forEach(entity -> clearFieldsInternal(entity, fields));
   }
 
   private void fetchAndSetParents(List<Domain> domains, Fields fields) {
@@ -147,18 +143,30 @@ public class DomainRepository extends EntityRepository<Domain> {
   }
 
   @Override
-  protected List<String> getFieldsStrippedFromStorageJson() {
-    return List.of("parent");
-  }
-
-  @Override
   public void storeEntity(Domain entity, boolean update) {
+    EntityReference parent = entity.getParent();
+    entity.withParent(null);
     store(entity, update);
+    entity.withParent(parent);
   }
 
   @Override
   public void storeEntities(List<Domain> entities) {
-    storeMany(entities);
+    List<Domain> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+
+    for (Domain entity : entities) {
+      EntityReference parent = entity.getParent();
+
+      entity.withParent(null);
+
+      String jsonCopy = gson.toJson(entity);
+      entitiesToStore.add(gson.fromJson(jsonCopy, Domain.class));
+
+      entity.withParent(parent);
+    }
+
+    storeMany(entitiesToStore);
   }
 
   @Override
@@ -241,29 +249,22 @@ public class DomainRepository extends EntityRepository<Domain> {
 
     List<Domain> allDomains = listAll(getFields("fullyQualifiedName"), new ListFilter(null));
     Map<String, Integer> domainAssetCounts = new LinkedHashMap<>();
+
     for (Domain domain : allDomains) {
-      String fullyQualifiedName = domain.getFullyQualifiedName();
-      domainAssetCounts.put(fullyQualifiedName, 0);
-    }
+      InheritedFieldQuery query =
+          InheritedFieldQuery.forDomain(domain.getFullyQualifiedName(), 0, 0);
 
-    String queryFilter =
-        QueryFilterBuilder.buildDomainAssetsCountFilter("domains.fullyQualifiedName");
-    Map<String, Integer> exactCounts =
-        inheritedFieldEntitySearch.getAggregatedCountsByField(
-            "domains.fullyQualifiedName", queryFilter, EntityBuilderConstant.MAX_AGGREGATE_SIZE);
+      Integer count =
+          inheritedFieldEntitySearch.getCountForField(
+              query,
+              () -> {
+                LOG.warn(
+                    "Search fallback for domain {} asset count. Returning 0.",
+                    domain.getFullyQualifiedName());
+                return 0;
+              });
 
-    for (Map.Entry<String, Integer> entry : exactCounts.entrySet()) {
-      String currentDomainFqn = entry.getKey();
-      int count = entry.getValue();
-      while (currentDomainFqn != null) {
-        if (domainAssetCounts.containsKey(currentDomainFqn)) {
-          domainAssetCounts.computeIfPresent(
-              currentDomainFqn, (ignored, current) -> current + count);
-        }
-        int separatorIndex = currentDomainFqn.lastIndexOf('.');
-        currentDomainFqn =
-            separatorIndex > 0 ? currentDomainFqn.substring(0, separatorIndex) : null;
-      }
+      domainAssetCounts.put(domain.getFullyQualifiedName(), count);
     }
 
     return domainAssetCounts;
@@ -400,11 +401,6 @@ public class DomainRepository extends EntityRepository<Domain> {
   }
 
   @Override
-  protected EntityReference getParentReference(Domain entity) {
-    return entity.getParent();
-  }
-
-  @Override
   public EntityInterface getParentEntity(Domain entity, String fields) {
     return entity.getParent() != null
         ? Entity.getEntity(entity.getParent(), fields, Include.NON_DELETED)
@@ -442,16 +438,8 @@ public class DomainRepository extends EntityRepository<Domain> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "name",
-          () -> {
-            updateName(updated);
-          });
-      compareAndUpdate(
-          "domainType",
-          () -> {
-            recordChange("domainType", original.getDomainType(), updated.getDomainType());
-          });
+      updateName(updated);
+      recordChange("domainType", original.getDomainType(), updated.getDomainType());
     }
 
     private void updateName(Domain updated) {

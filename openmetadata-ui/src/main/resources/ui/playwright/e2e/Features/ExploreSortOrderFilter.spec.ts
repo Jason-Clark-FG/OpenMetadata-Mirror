@@ -32,6 +32,7 @@ test.describe(
         await redirectToHomePage(page);
         await sidebarClick(page, SidebarItem.EXPLORE);
 
+        await page.waitForLoadState('networkidle');
 
         await page.getByTestId('search-dropdown-Data Assets').click();
         await page.waitForSelector(

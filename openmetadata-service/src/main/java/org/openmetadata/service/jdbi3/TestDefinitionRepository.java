@@ -135,62 +135,26 @@ public class TestDefinitionRepository extends EntityRepository<TestDefinition> {
       // For system test definitions, only allow enabled field changes
       if (original.getProvider() == ProviderType.SYSTEM) {
         // Only record enabled field changes for system test definitions
-        compareAndUpdate(
-            "enabled",
-            () -> {
-              recordChange("enabled", original.getEnabled(), updated.getEnabled());
-            });
+        recordChange("enabled", original.getEnabled(), updated.getEnabled());
       } else {
         // For user/automation test definitions, allow all changes
-        compareAndUpdate(
-            "testPlatforms",
-            () -> {
-              recordChange(
-                  "testPlatforms", original.getTestPlatforms(), updated.getTestPlatforms());
-            });
-        compareAndUpdate(
+        recordChange("testPlatforms", original.getTestPlatforms(), updated.getTestPlatforms());
+        recordChange(
             "supportedDataTypes",
-            () -> {
-              recordChange(
-                  "supportedDataTypes",
-                  original.getSupportedDataTypes(),
-                  updated.getSupportedDataTypes());
-            });
-        compareAndUpdate(
+            original.getSupportedDataTypes(),
+            updated.getSupportedDataTypes());
+        recordChange(
             "parameterDefinition",
-            () -> {
-              recordChange(
-                  "parameterDefinition",
-                  original.getParameterDefinition(),
-                  updated.getParameterDefinition());
-            });
-        compareAndUpdate(
-            "enabled",
-            () -> {
-              recordChange("enabled", original.getEnabled(), updated.getEnabled());
-            });
-        compareAndUpdate(
+            original.getParameterDefinition(),
+            updated.getParameterDefinition());
+        recordChange("enabled", original.getEnabled(), updated.getEnabled());
+        recordChange(
             "dataQualityDimension",
-            () -> {
-              recordChange(
-                  "dataQualityDimension",
-                  original.getDataQualityDimension(),
-                  updated.getDataQualityDimension());
-            });
-        compareAndUpdate(
-            "supportedServices",
-            () -> {
-              recordChange(
-                  "supportedServices",
-                  original.getSupportedServices(),
-                  updated.getSupportedServices());
-            });
-        compareAndUpdate(
-            "sqlExpression",
-            () -> {
-              recordChange(
-                  "sqlExpression", original.getSqlExpression(), updated.getSqlExpression());
-            });
+            original.getDataQualityDimension(),
+            updated.getDataQualityDimension());
+        recordChange(
+            "supportedServices", original.getSupportedServices(), updated.getSupportedServices());
+        recordChange("sqlExpression", original.getSqlExpression(), updated.getSqlExpression());
       }
     }
   }

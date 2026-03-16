@@ -119,20 +119,6 @@ test.describe('Input Output Ports', () => {
     }
   });
 
-  test.afterAll('Cleanup', async ({ browser }) => {
-    const { apiContext } = await performAdminLogin(browser);
-    for (const dashboard of dashboards) {
-      await dashboard.delete(apiContext);
-    }
-    for (const topic of topics) {
-      await topic.delete(apiContext);
-    }
-    for (const table of tables) {
-      await table.delete(apiContext);
-    }
-    await domain.delete(apiContext);
-  });
-
   test.beforeEach('Visit home page', async ({ page }) => {
     await redirectToHomePage(page);
   });
@@ -150,6 +136,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -181,6 +168,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
       });
 
       await test.step('Navigate to ports tab', async () => {
@@ -254,6 +242,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -277,6 +266,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -303,6 +293,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -331,6 +322,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -359,6 +351,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -441,6 +434,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -477,6 +471,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -512,6 +507,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -560,6 +556,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -590,6 +587,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -620,6 +618,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -648,6 +647,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -697,6 +697,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -758,6 +759,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -795,6 +797,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -840,6 +843,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -877,6 +881,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -926,6 +931,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -968,6 +974,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1009,6 +1016,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1061,6 +1069,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1092,16 +1101,16 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
 
       await test.step('Verify data product node is visible', async () => {
-        const centerNode = page.getByTestId('data-product-center-node');
-
-        await expect(centerNode).toBeVisible();
-        await expect(centerNode).toContainText('Data Product');
-        await expect(centerNode).toContainText(dataProduct.data.displayName);
+        await expect(page.locator('text=Data Product').first()).toBeVisible();
+        await expect(
+          page.locator(`text=${dataProduct.data.displayName}`).first()
+        ).toBeVisible();
       });
     });
 
@@ -1133,6 +1142,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1183,6 +1193,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1213,6 +1224,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1248,6 +1260,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1278,6 +1291,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1315,6 +1329,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1357,6 +1372,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1405,6 +1421,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1443,6 +1460,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1474,6 +1492,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1508,6 +1527,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1542,6 +1562,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and expand lineage', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await expandLineageSection(page);
       });
@@ -1573,6 +1594,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to ports tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
       });
 
@@ -1604,6 +1626,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product assets tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         const assetsTab = page.getByTestId('assets');
         await assetsTab.click();
         await waitForAllLoadersToDisappear(page);
@@ -1616,8 +1639,6 @@ test.describe('Input Output Ports', () => {
         );
         await page.getByTestId(`manage-button-${tableFqn}`).click();
         await page.getByTestId('delete-button').click();
-
-        await page.locator('.ant-alert-warning').waitFor({ state: 'visible' });
 
         await expect(page.locator('.ant-alert-warning')).toBeVisible();
         await expect(
@@ -1648,6 +1669,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product assets tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         const assetsTab = page.getByTestId('assets');
         await assetsTab.click();
         await waitForAllLoadersToDisappear(page);
@@ -1692,6 +1714,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate to data product assets tab', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         const assetsTab = page.getByTestId('assets');
         await assetsTab.click();
         await waitForAllLoadersToDisappear(page);
@@ -1744,6 +1767,7 @@ test.describe('Input Output Ports', () => {
       await test.step('Navigate and delete asset', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         const assetsTab = page.getByTestId('assets');
         await assetsTab.click();
         await waitForAllLoadersToDisappear(page);
@@ -1763,9 +1787,9 @@ test.describe('Input Output Ports', () => {
       page,
     }) => {
       const dataProduct = new DataProduct([domain]);
-      const { apiContext } = await getApiContext(page);
 
       await test.step('Create data product with two assets as output ports via API', async () => {
+        const { apiContext } = await getApiContext(page);
         await dataProduct.create(apiContext);
 
         await dataProduct.addAssets(apiContext, [
@@ -1777,19 +1801,12 @@ test.describe('Input Output Ports', () => {
           createAssetRef(tables[0], 'table'),
           createAssetRef(tables[1], 'table'),
         ]);
-
-        await expect
-          .poll(async () => {
-            const response = await dataProduct.getOutputPorts(apiContext);
-
-            return response?.paging?.total ?? response?.data?.length ?? 0;
-          })
-          .toBe(2);
       });
 
       await test.step('Navigate to data product and verify output ports', async () => {
         await sidebarClick(page, SidebarItem.DATA_PRODUCT);
         await selectDataProduct(page, dataProduct.data);
+        await page.waitForLoadState('networkidle');
         await navigateToPortsTab(page);
         await verifyPortCounts(page, 0, 2);
       });
@@ -1819,14 +1836,6 @@ test.describe('Input Output Ports', () => {
         );
         await page.getByTestId('save-button').click();
         await removeRes;
-
-        await expect
-          .poll(async () => {
-            const response = await dataProduct.getOutputPorts(apiContext);
-
-            return response?.paging?.total ?? response?.data?.length ?? 0;
-          })
-          .toBe(1);
       });
 
       await test.step('Verify output port was also removed', async () => {

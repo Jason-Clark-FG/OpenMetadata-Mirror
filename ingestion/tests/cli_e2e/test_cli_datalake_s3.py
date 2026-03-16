@@ -59,7 +59,7 @@ class DatalakeCliTest(CliCommonDB.TestSuite):
 
     @staticmethod
     def expected_profiled_tables() -> int:
-        return 5
+        return 6
 
     def expected_sample_size(self) -> int:
         return 50

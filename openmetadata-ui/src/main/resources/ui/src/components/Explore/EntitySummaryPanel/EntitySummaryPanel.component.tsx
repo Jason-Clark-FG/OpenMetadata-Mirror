@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { XClose } from '@untitledui/icons';
 import { Button, Card } from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -87,6 +86,7 @@ import {
   patchContainerDetails,
 } from '../../../rest/storageAPI';
 
+import { X } from '@untitledui/icons';
 import {
   getStoredProceduresByFqn,
   patchStoredProceduresDetails,
@@ -1021,7 +1021,7 @@ export default function EntitySummaryPanel({
             aria-label={t('label.close')}
             className="drawer-close-icon flex-center mr-2"
             data-testid="drawer-close-icon"
-            icon={<XClose />}
+            icon={<X size={16} />}
             size="small"
             onClick={handleClosePanel}
           />

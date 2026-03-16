@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { Box, Typography } from '@mui/material';
 import { SimpleTreeView, SimpleTreeViewProps } from '@mui/x-tree-view';
-import { ChevronDown, ChevronRight } from '@untitledui/icons';
 import React, { FC, memo, MutableRefObject, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import Loader from '../../../Loader/Loader';
@@ -91,8 +92,8 @@ const TreeContent: FC<TreeContentProps> = ({
       focusedItem={focusedItem}
       selectedItems={selectedItems}
       slots={{
-        collapseIcon: ChevronDown,
-        expandIcon: ChevronRight,
+        collapseIcon: ExpandMoreIcon,
+        expandIcon: ChevronRightIcon,
       }}
       sx={{
         px: 1,

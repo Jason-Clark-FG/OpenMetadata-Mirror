@@ -80,15 +80,6 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
   await afterAction();
 });
 
-test.afterAll('Cleanup', async ({ browser }) => {
-  const { apiContext, afterAction } = await performAdminLogin(browser);
-  await dataProduct.delete(apiContext);
-  await domain.delete(apiContext);
-  await testUser.delete(apiContext);
-  await adminUser.delete(apiContext);
-  await afterAction();
-});
-
 test.describe('Data Product Permissions', () => {
   test('Data Product allow operations', async ({ testUserPage, page }) => {
     test.slow(true);
@@ -111,6 +102,7 @@ test.describe('Data Product Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
+    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;
@@ -166,6 +158,7 @@ test.describe('Data Product Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
+    await testUserPage.waitForLoadState('networkidle');
 
     for (const testId of directElements) {
       let element;

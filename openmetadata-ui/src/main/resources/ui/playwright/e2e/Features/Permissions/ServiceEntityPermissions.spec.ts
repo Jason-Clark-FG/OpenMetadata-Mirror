@@ -49,12 +49,6 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
   await afterAction();
 });
 
-test.afterAll('Cleanup user', async ({ browser }) => {
-  const { apiContext, afterAction } = await performAdminLogin(browser);
-  await testUser.delete(apiContext);
-  await afterAction();
-});
-
 Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
   test.describe(`${entityType} Permissions`, () => {
     const entity = new EntityClass();
@@ -64,12 +58,6 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
     test.beforeAll('Setup entity', async ({ browser }) => {
       const { apiContext, afterAction } = await performAdminLogin(browser);
       await entity.create(apiContext);
-      await afterAction();
-    });
-
-    test.afterAll('Cleanup entity', async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-      await entity.delete(apiContext);
       await afterAction();
     });
 

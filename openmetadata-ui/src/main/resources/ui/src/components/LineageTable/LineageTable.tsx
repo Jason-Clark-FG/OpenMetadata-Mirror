@@ -465,18 +465,10 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         nodeDepthOptions={nodeDepthOptions}
         queryFilterNodeIds={filterNodeIds}
         searchValue={searchValue}
-        onSearchValueChange={
-          impactLevel === EImpactLevel.TableLevel ? setSearchValue : undefined
-        }
+        onSearchValueChange={setSearchValue}
       />
     );
-  }, [
-    searchValue,
-    lineagePagingInfo,
-    nodeDepthOptions,
-    filterNodeIds,
-    impactLevel,
-  ]);
+  }, [searchValue, lineagePagingInfo, nodeDepthOptions, filterNodeIds]);
 
   const renderName = useCallback(
     (_: string, record: SearchSourceAlias) => (
@@ -791,7 +783,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         defaultVisibleColumns={IMPACT_ANALYSIS_DEFAULT_VISIBLE_COLUMNS}
         entityType="impact_analysis"
         extraTableFilters={extraTableFilters}
-        key={`lineage-table-${impactLevel}-${lineageDirection}-${nodeDepth}`}
+        key={`lineage-table-${impactLevel}-${lineageDirection}`}
         loading={loading}
         locale={{
           emptyText: <NoDataPlaceholder size={SIZE.LARGE} />,

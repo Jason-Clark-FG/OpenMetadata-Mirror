@@ -27,7 +27,7 @@ import { CreateUser } from '../../generated/api/teams/createUser';
 import { Role } from '../../generated/entity/teams/role';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { createBot } from '../../rest/botsAPI';
-import { getAllRoles } from '../../rest/rolesAPIV1';
+import { getRoles } from '../../rest/rolesAPIV1';
 import {
   createUser,
   createUserWithPut,
@@ -156,12 +156,14 @@ const CreateUserPage = () => {
 
   const fetchRoles = async () => {
     try {
-      const roles = await getAllRoles(
+      const response = await getRoles(
         '',
+        undefined,
+        undefined,
         false,
-        PAGE_SIZE_EXTRA_LARGE // until we implement server-side search, fetch all pages
+        PAGE_SIZE_EXTRA_LARGE // until we implement search for roles, putting high limit
       );
-      setRoles(roles);
+      setRoles(response.data);
     } catch (err) {
       setRoles([]);
       showErrorToast(

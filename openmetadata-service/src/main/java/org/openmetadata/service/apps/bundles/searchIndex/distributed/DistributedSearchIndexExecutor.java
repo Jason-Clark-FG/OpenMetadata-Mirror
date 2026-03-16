@@ -753,7 +753,7 @@ public class DistributedSearchIndexExecutor {
           coordinatorReaderWarnings.addAndGet(result.readerWarnings());
           coordinatorPartitionsCompleted.incrementAndGet();
 
-          LOG.debug(
+          LOG.info(
               "Worker {} completed partition {} (success: {}, failed: {}, readerFailed: {}, readerWarnings: {})",
               workerId,
               partition.getId(),

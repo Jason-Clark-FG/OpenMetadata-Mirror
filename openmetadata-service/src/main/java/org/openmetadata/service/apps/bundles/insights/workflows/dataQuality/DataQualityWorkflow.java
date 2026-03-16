@@ -34,7 +34,6 @@ import org.openmetadata.service.search.opensearch.OpenSearchIndexSink;
 import org.openmetadata.service.workflows.interfaces.Processor;
 import org.openmetadata.service.workflows.interfaces.Sink;
 import org.openmetadata.service.workflows.interfaces.Source;
-import org.openmetadata.service.workflows.interfaces.TaggedOperation;
 import org.openmetadata.service.workflows.searchIndex.PaginatedEntityTimeSeriesSource;
 
 @Slf4j
@@ -182,23 +181,13 @@ public class DataQualityWorkflow {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void processEntity(
       ResultList<? extends EntityTimeSeriesInterface> resultList,
       Map<String, Object> contextData,
       Source<?> paginatedSource)
       throws SearchIndexException {
     if (!resultList.getData().isEmpty()) {
-      LOG.debug(
-          "[DataQualityWorkflow] Processing a Batch of Size: {}, EntityType: {}",
-          resultList.getData().size(),
-          contextData.get(ENTITY_TYPE_KEY));
-      List<TaggedOperation<?>> taggedOps = new ArrayList<>();
-      for (EntityTimeSeriesInterface entity : resultList.getData()) {
-        Object op = entityProcessor.process(entity, contextData);
-        taggedOps.add(new TaggedOperation<>(op, entity.getEntityReference()));
-      }
-      searchIndexSink.write(taggedOps);
+      searchIndexSink.write(entityProcessor.process(resultList, contextData), contextData);
       paginatedSource.updateStats(resultList.getData().size(), 0);
     }
   }

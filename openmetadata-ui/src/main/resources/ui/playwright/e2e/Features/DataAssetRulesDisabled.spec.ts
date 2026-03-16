@@ -396,6 +396,7 @@ test.describe(
 
         await page.click('[data-testid="databases"]');
 
+        await page.waitForLoadState('networkidle');
 
         // Verify Details updated
         await expect(page.getByTestId('column-name')).toHaveText(
@@ -555,6 +556,7 @@ test.describe(
 
         await page.getByTestId('column-display-name').click();
 
+        await page.waitForLoadState('networkidle');
         await page.waitForSelector('loader', { state: 'hidden' });
 
         // Verify Tags
@@ -672,6 +674,7 @@ test.describe(
           .getByTestId('column-display-name')
           .getByTestId(table.entity.name)
           .click();
+        await page.waitForLoadState('networkidle');
         await page.waitForSelector('loader', { state: 'hidden' });
 
         // Verify Domain

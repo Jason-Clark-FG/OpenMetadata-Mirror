@@ -63,6 +63,7 @@ test(
     const testCaseName1 = table.testCasesResponseData?.[0]?.['name'];
     const testCaseName2 = table.testCasesResponseData?.[1]?.['name'];
     await page.goto('/data-quality/test-suites/bundle-suites');
+    await page.waitForLoadState('networkidle');
 
     const loggedInUserRequest = ownerPage.waitForResponse(
       `/api/v1/users/loggedInUser*`
@@ -100,6 +101,7 @@ test(
       await createTestSuiteResponse;
       await toastNotification(page, 'Test Suite created successfully.');
 
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -135,6 +137,7 @@ test(
 
     await test.step('Add test case to logical test suite by owner', async () => {
       await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
+      await ownerPage.waitForLoadState('networkidle');
       await ownerPage.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -186,6 +189,7 @@ test(
       );
 
       await page.getByTestId('view-service-button').click();
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });

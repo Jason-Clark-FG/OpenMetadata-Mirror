@@ -1164,14 +1164,8 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     bulkAddAssets(dataProduct.getFullyQualifiedName(), addTable);
 
     // Verify asset is linked
-    Awaitility.await("Wait for asset to be linked")
-        .pollInterval(Duration.ofSeconds(1))
-        .atMost(Duration.ofSeconds(15))
-        .untilAsserted(
-            () -> {
-              ResultList<EntityReference> a = getAssets(dataProduct.getId(), 10, 0);
-              assertEquals(1, a.getPaging().getTotal());
-            });
+    ResultList<EntityReference> assets = getAssets(dataProduct.getId(), 10, 0);
+    assertEquals(1, assets.getPaging().getTotal());
 
     // Verify table is in domain1
     Table tableBeforeChange =
@@ -1188,7 +1182,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     assertEquals(domain2.getId(), updated.getDomains().get(0).getId());
 
     // Verify asset is still linked
-    ResultList<EntityReference> assets = getAssets(updated.getId(), 10, 0);
+    assets = getAssets(updated.getId(), 10, 0);
     assertEquals(
         1, assets.getPaging().getTotal(), "Asset should still be linked after domain change");
 
@@ -1275,14 +1269,8 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     bulkAddAssets(dataProduct.getFullyQualifiedName(), addTables);
 
     // Verify all assets are linked
-    Awaitility.await("Wait for all assets to be linked")
-        .pollInterval(Duration.ofSeconds(1))
-        .atMost(Duration.ofSeconds(15))
-        .untilAsserted(
-            () -> {
-              ResultList<EntityReference> a = getAssets(dataProduct.getId(), 10, 0);
-              assertEquals(3, a.getPaging().getTotal());
-            });
+    ResultList<EntityReference> assets = getAssets(dataProduct.getId(), 10, 0);
+    assertEquals(3, assets.getPaging().getTotal());
 
     // Change data product domain to domain2
     dataProduct.setDomains(List.of(domain2.getEntityReference()));
@@ -1292,7 +1280,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     assertEquals(domain2.getId(), updated.getDomains().get(0).getId());
 
     // Verify all assets are still linked
-    ResultList<EntityReference> assets = getAssets(updated.getId(), 10, 0);
+    assets = getAssets(updated.getId(), 10, 0);
     assertEquals(3, assets.getPaging().getTotal(), "All assets should still be linked");
 
     // Verify all tables' domains were migrated to domain2
@@ -1534,7 +1522,7 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
               assertEquals(
                   searchDomainIds.size(),
                   uniqueSearchDomainIds,
-                  "No duplicate domains in search index after domain change and consolidation");
+                  "No duplicate domains in search index after consolidation");
 
               assertEquals(
                   domain2.getId(),

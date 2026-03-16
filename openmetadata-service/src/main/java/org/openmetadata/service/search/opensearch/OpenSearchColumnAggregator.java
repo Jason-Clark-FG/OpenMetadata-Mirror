@@ -62,6 +62,16 @@ public class OpenSearchColumnAggregator implements ColumnAggregator {
   private static final List<String> DATA_ASSET_INDEXES =
       Arrays.asList("table", "dashboardDataModel", "topic", "searchIndex", "container");
 
+  private static final List<String> COLUMN_SOURCE_FIELDS =
+      Arrays.asList(
+          "fullyQualifiedName",
+          "entityType",
+          "displayName",
+          "service.name",
+          "database.name",
+          "databaseSchema.name",
+          "columns");
+
   public OpenSearchColumnAggregator(OpenSearchClient client) {
     this.client = client;
   }
@@ -527,9 +537,9 @@ public class OpenSearchColumnAggregator implements ColumnAggregator {
     Aggregation topHitsAgg =
         Aggregation.of(
             a ->
-                // Use full _source to avoid OpenSearch top_hits source-filter edge cases where
-                // mixing root + nested include paths can return empty buckets unexpectedly.
-                a.topHits(th -> th.size(100)));
+                a.topHits(
+                    th ->
+                        th.size(100).source(s -> s.filter(f -> f.includes(COLUMN_SOURCE_FIELDS)))));
 
     Map<String, Aggregation> subAggs = new HashMap<>();
     subAggs.put("sample_docs", topHitsAgg);

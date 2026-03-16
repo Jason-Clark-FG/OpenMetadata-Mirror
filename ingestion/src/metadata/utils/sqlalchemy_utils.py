@@ -167,10 +167,6 @@ def get_all_table_ddls(
                 connection.rollback()
             except Exception:
                 pass
-        try:
-            connection.rollback()
-        except Exception:
-            pass
 
 
 def get_table_ddl_wrapper(

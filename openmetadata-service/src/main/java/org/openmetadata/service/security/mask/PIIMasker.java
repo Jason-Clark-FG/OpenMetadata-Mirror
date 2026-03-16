@@ -135,14 +135,7 @@ public class PIIMasker {
   public static List<Column> getTableProfile(
       String fqn, List<Column> columns, Authorizer authorizer, SecurityContext securityContext) {
     Table table = Entity.getEntityByName(Entity.TABLE, fqn, "owners", Include.ALL);
-    return getTableProfile(table.getOwners(), columns, authorizer, securityContext);
-  }
-
-  public static List<Column> getTableProfile(
-      List<EntityReference> owners,
-      List<Column> columns,
-      Authorizer authorizer,
-      SecurityContext securityContext) {
+    List<EntityReference> owners = table.getOwners();
     boolean authorizePII = authorizer.authorizePII(securityContext, owners);
     if (authorizePII) return columns;
     for (Column c : listOrEmpty(columns)) {

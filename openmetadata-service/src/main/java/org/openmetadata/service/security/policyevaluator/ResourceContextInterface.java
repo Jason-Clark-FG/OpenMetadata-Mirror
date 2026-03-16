@@ -9,7 +9,6 @@ public interface ResourceContextInterface {
   enum Operation {
     PATCH,
     PUT,
-    DELETE,
     NONE
   }
 

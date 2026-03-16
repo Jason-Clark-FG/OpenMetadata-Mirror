@@ -10,20 +10,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { useTheme } from '@mui/material';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import IconButton from '@mui/material/IconButton';
 import Link from '@mui/material/Link';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { ChevronRight, DotsHorizontal } from '@untitledui/icons';
 import React, { useState } from 'react';
 import { CondensedBreadcrumbProps } from './CondensedBreadcrumb.interface';
 import './condensedBreadcrumb.less';
 
 export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
   items,
-  separator = <ChevronRight size={20} />,
+  separator = <ChevronRightIcon fontSize="small" />,
   itemsBeforeCollapse = 1,
   itemsAfterCollapse = 1,
   className,
@@ -109,7 +110,7 @@ export const CondensedBreadcrumb: React.FC<CondensedBreadcrumbProps> = ({
             className="breadcrumb-menu-button"
             size="small"
             onClick={handleClick}>
-            <DotsHorizontal size={20} />
+            <MoreHorizIcon fontSize="small" />
           </IconButton>
         )}
         {items.slice(-itemsAfterCollapse).map((item) => (

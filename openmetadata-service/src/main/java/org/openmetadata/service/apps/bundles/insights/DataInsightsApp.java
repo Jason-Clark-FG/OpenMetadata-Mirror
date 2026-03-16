@@ -52,6 +52,7 @@ import org.quartz.JobExecutionContext;
 
 @Slf4j
 public class DataInsightsApp extends AbstractNativeApplication {
+  public static final String REPORT_DATA_TYPE_KEY = "ReportDataType";
   public static final String DATA_ASSET_INDEX_PREFIX = "di-data-assets";
   @Getter private Long timestamp;
   @Getter private int batchSize;
@@ -86,8 +87,7 @@ public class DataInsightsApp extends AbstractNativeApplication {
           "mlmodel",
           "dataProduct",
           "glossaryTerm",
-          "tag",
-          "metric");
+          "tag");
 
   public final Set<String> dataQualityEntities =
       Set.of(Entity.TEST_CASE_RESULT, Entity.TEST_CASE_RESOLUTION_STATUS);

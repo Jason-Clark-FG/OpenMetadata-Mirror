@@ -189,6 +189,7 @@ export const validateViewPermissions = async (
   }
 
   await page.click('[data-testid="sample_data"]');
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
@@ -196,12 +197,15 @@ export const validateViewPermissions = async (
     permission?.viewSampleData
   );
   await page.click('[data-testid="table_queries"]');
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Queries/, permission?.viewQueries);
 
   await page.click('[data-testid="profiler"]');
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await page.getByRole('tab', { name: 'Data Quality' }).click();
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
@@ -209,11 +213,13 @@ export const validateViewPermissions = async (
     permission?.viewTests
   );
   await page.click('[data-testid="lineage"]');
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
 
   await expect(page.getByTestId('edit-lineage')).not.toBeVisible();
 
   await page.click('[data-testid="custom_properties"]');
+  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Custom Properties/);
 };

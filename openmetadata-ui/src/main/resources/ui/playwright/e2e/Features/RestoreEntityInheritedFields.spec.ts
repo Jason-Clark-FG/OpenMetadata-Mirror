@@ -30,10 +30,7 @@ import {
   assignSingleSelectDomain,
   redirectToHomePage,
 } from '../../utils/common';
-import {
-  softDeleteEntity,
-  waitForAllLoadersToDisappear,
-} from '../../utils/entity';
+import { softDeleteEntity } from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
 const domain = new Domain();
@@ -81,6 +78,7 @@ entities.forEach((EntityClass) => {
       test.slow();
 
       await entity.visitEntityPage(page);
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('breadcrumb-link')).toHaveCount(
         ['Table', 'ApiEndpoint', 'Store Procedure'].includes(entity.getType())
@@ -99,7 +97,6 @@ entities.forEach((EntityClass) => {
         .click();
       // assign domain
       await assignSingleSelectDomain(page, domain.responseData);
-      await waitForAllLoadersToDisappear(page);
 
       await redirectToHomePage(page);
 

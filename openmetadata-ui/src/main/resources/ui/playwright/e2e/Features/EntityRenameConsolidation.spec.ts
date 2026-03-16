@@ -70,6 +70,7 @@ async function performRename(
   await page.getByTestId('save-button').click();
   await patchResponse;
 
+  await page.waitForLoadState('networkidle');
   await expect(page.getByTestId('entity-header-name')).toBeVisible();
 }
 
@@ -96,6 +97,7 @@ async function updateDescription(
   await page.getByTestId('save').click();
   await patchResponse;
 
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe(
@@ -662,6 +664,7 @@ test.describe(
 
         // Navigate to domain
         await sidebarClick(page, SidebarItem.DOMAIN);
+        await page.waitForLoadState('networkidle');
         await selectDomain(page, domain.responseData);
         await expect(page.getByTestId('entity-header-name')).toBeVisible();
 
@@ -716,6 +719,7 @@ test.describe(
         await redirectToHomePage(page);
 
         await sidebarClick(page, SidebarItem.DOMAIN);
+        await page.waitForLoadState('networkidle');
         await selectDomain(page, domain.responseData);
         await expect(page.getByTestId('entity-header-name')).toBeVisible();
 

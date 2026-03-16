@@ -17,7 +17,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
-import org.junit.jupiter.api.parallel.ResourceLock;
 import org.openmetadata.it.bootstrap.SharedEntities;
 import org.openmetadata.it.util.EntityRulesUtil;
 import org.openmetadata.it.util.SdkClients;
@@ -693,7 +692,7 @@ public class DatabaseServiceResourceIT
   }
 
   private String addColumnTags(String csvLine, String tagFQN) {
-    String[] parts = splitCsvRow(csvLine);
+    String[] parts = csvLine.split(",");
     if (parts.length >= 5) {
       if (parts[4] == null || parts[4].trim().isEmpty() || parts[4].equals("\"\"")) {
         parts[4] = "\"" + tagFQN + "\"";
@@ -706,7 +705,7 @@ public class DatabaseServiceResourceIT
   }
 
   private String addColumnGlossaryTerms(String csvLine, String glossaryTermFQN) {
-    String[] parts = splitCsvRow(csvLine);
+    String[] parts = csvLine.split(",");
     if (parts.length >= 6) {
       if (parts[5] == null || parts[5].trim().isEmpty() || parts[5].equals("\"\"")) {
         parts[5] = "\"" + glossaryTermFQN + "\"";
@@ -719,7 +718,7 @@ public class DatabaseServiceResourceIT
   }
 
   private String removeColumnTags(String csvLine) {
-    String[] parts = splitCsvRow(csvLine);
+    String[] parts = csvLine.split(",");
     if (parts.length >= 5) {
       parts[4] = "";
     }
@@ -727,7 +726,7 @@ public class DatabaseServiceResourceIT
   }
 
   private String removeColumnGlossaryTerms(String csvLine) {
-    String[] parts = splitCsvRow(csvLine);
+    String[] parts = csvLine.split(",");
     if (parts.length >= 6) {
       parts[5] = "";
     }
@@ -799,7 +798,6 @@ public class DatabaseServiceResourceIT
   }
 
   @Test
-  @ResourceLock("MULTI_DOMAIN_RULE")
   void test_csvImportEntityRuleValidation(TestNamespace ns)
       throws IOException, InterruptedException {
 
@@ -863,7 +861,6 @@ public class DatabaseServiceResourceIT
       // Modify CSV to include multiple domains (violates the rule)
       String[] lines = originalCsv.split("\n");
       String header = lines[0];
-      int domainsIndex = getDomainColumnIndex(header);
       StringBuilder modifiedCsv = new StringBuilder();
       modifiedCsv.append(header).append("\n");
 
@@ -874,7 +871,7 @@ public class DatabaseServiceResourceIT
           // Using SharedEntities domain and the new domain to violate the rule
           SharedEntities shared = SharedEntities.get();
           String multipleDomains = shared.DOMAIN.getName() + ";" + domain2.getName();
-          line = addDomainsToTableRow(line, domainsIndex, multipleDomains);
+          line = addDomainsToTableRow(line, multipleDomains);
         }
         modifiedCsv.append(line).append("\n");
       }
@@ -962,7 +959,7 @@ public class DatabaseServiceResourceIT
   }
 
   private int getDomainColumnIndex(String header) {
-    String[] columns = splitCsvRow(header);
+    String[] columns = header.split(",");
     for (int i = 0; i < columns.length; i++) {
       String column = columns[i].replaceAll("\"", "").trim();
       if ("domains".equals(column)) {
@@ -973,16 +970,13 @@ public class DatabaseServiceResourceIT
     return 10;
   }
 
-  private String addDomainsToTableRow(String csvLine, int domainsIndex, String newDomains) {
-    String[] parts = splitCsvRow(csvLine);
+  private String addDomainsToTableRow(String csvLine, String newDomains) {
+    String[] parts = csvLine.split(",");
+    // Domains column is at index 10 based on CSV documentation
+    int domainsIndex = 10;
     if (parts.length > domainsIndex) {
       parts[domainsIndex] = "\"" + newDomains + "\"";
     }
     return String.join(",", parts);
-  }
-
-  private String[] splitCsvRow(String row) {
-    // Split on commas not enclosed in quotes.
-    return row.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
   }
 }

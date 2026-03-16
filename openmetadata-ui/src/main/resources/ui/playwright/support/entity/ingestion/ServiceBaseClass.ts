@@ -200,6 +200,7 @@ class ServiceBaseClass {
     if (await metadataTab.isVisible()) {
       await metadataTab.click();
     }
+    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="add-new-ingestion-button"]');
 
@@ -238,6 +239,7 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
+    await page.waitForLoadState('networkidle');
     await page
       .getByLabel('agents')
       .getByTestId('loader')
@@ -259,6 +261,7 @@ class ServiceBaseClass {
 
     await triggerPipeline;
 
+    await page.waitForLoadState('networkidle');
 
     // need manual wait to make sure we are awaiting on latest run results
     await page.waitForTimeout(2000);
@@ -417,6 +420,7 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector(`td:has-text("${ingestionType}")`);
 
     await expect(
@@ -476,6 +480,7 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
+    await page.waitForLoadState('networkidle');
 
     // click and edit pipeline schedule for Hours
 
@@ -639,6 +644,7 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
+    await page.waitForLoadState('networkidle');
 
     await ingestionResponse;
     await page

@@ -186,6 +186,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="databases"]');
 
+      await page.waitForLoadState('networkidle');
 
       // Verify Details updated
       await expect(page.getByTestId('column-name')).toHaveText(
@@ -345,6 +346,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.getByTestId('column-display-name').click();
 
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('loader', { state: 'hidden' });
 
       // Verify Tags
@@ -469,6 +471,7 @@ test.describe('Bulk Edit Entity', () => {
         .getByTestId('column-display-name')
         .getByTestId(table.entity.name)
         .click();
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('loader', { state: 'hidden' });
 
       // Verify Domain

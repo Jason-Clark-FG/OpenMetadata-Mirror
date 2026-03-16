@@ -262,9 +262,6 @@ export const fillRule = async (
     index: number;
   }
 ) => {
-  const escapeRegex = (value: string) =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
   const ruleLocator = page.locator('.rule').nth(index - 1);
 
   // Perform click on rule field
@@ -311,29 +308,9 @@ export const fillRule = async (
 
       await aggregateRes2;
 
-      const dropdown = page.locator('.ant-select-dropdown:visible');
-      const exactTitleMatch = dropdown
-        .locator('[title]')
-        .filter({
-          hasText: new RegExp(`^${escapeRegex(searchData)}$`, 'i'),
-        })
-        .first();
-      const partialTextMatch = dropdown
-        .locator('.ant-select-item-option-content')
-        .filter({
-          hasText: new RegExp(escapeRegex(searchData), 'i'),
-        })
-        .first();
-
-      if (await exactTitleMatch.count()) {
-        await exactTitleMatch.click();
-      } else if (await partialTextMatch.count()) {
-        await partialTextMatch.click();
-      } else {
-        // Some suggestion backends normalize or delay option text; Enter keeps
-        // the typed criteria and avoids waiting forever on an exact title match.
-        await dropdownInput.press('Enter');
-      }
+      await page
+        .locator(`.ant-select-dropdown:visible [title="${searchData}"]`)
+        .click();
     }
 
     await clickOutside(page);

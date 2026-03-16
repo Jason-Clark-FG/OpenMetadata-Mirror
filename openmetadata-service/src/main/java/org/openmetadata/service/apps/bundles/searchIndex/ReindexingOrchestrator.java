@@ -154,17 +154,7 @@ public class ReindexingOrchestrator {
   private void preflightFixes() {
     LOG.info("Running preflight fixes before reindexing");
     markStaleRunningJobsStopped();
-    syncIndexTemplates();
     cleanupOrphanedIndicesPreFlight();
-  }
-
-  private void syncIndexTemplates() {
-    try {
-      searchRepository.createOrUpdateIndexTemplates();
-      LOG.info("Preflight: synced index templates from indexMapping files");
-    } catch (Exception e) {
-      LOG.warn("Preflight: failed to sync index templates: {}", e.getMessage());
-    }
   }
 
   private static final String APP_NAME = "SearchIndexingApplication";
@@ -452,7 +442,16 @@ public class ReindexingOrchestrator {
   }
 
   private Set<String> getAll() {
-    return new HashSet<>(searchRepository.getEntityIndexMap().keySet());
+    Set<String> entities =
+        new HashSet<>(
+            Entity.getEntityList().stream()
+                .filter(t -> searchRepository.getEntityIndexMap().containsKey(t))
+                .toList());
+    entities.addAll(
+        SearchIndexApp.TIME_SERIES_ENTITIES.stream()
+            .filter(t -> searchRepository.getEntityIndexMap().containsKey(t))
+            .toList());
+    return entities;
   }
 
   private boolean hasSlackConfig() {

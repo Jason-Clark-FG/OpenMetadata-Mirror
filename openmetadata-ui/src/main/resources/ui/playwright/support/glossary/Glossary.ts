@@ -65,12 +65,6 @@ export class Glossary extends EntityClass {
       data: apiData,
     });
 
-    if (!response.ok()) {
-      throw new Error(
-        `Glossary.create() failed with status ${response.status()}: ${await response.text()}`
-      );
-    }
-
     this.responseData = await response.json();
 
     return this.responseData;

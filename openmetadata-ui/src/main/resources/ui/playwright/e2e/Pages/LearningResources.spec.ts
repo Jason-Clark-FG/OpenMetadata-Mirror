@@ -15,7 +15,6 @@ import { GlobalSettingOptions } from '../../constant/settings';
 import { SidebarItem } from '../../constant/sidebar';
 import { Glossary } from '../../support/glossary/Glossary';
 import { LearningResourceClass } from '../../support/learning/LearningResourceClass';
-import { AdminClass } from '../../support/user/AdminClass';
 import {
   createNewPage,
   getApiContext,
@@ -28,15 +27,7 @@ import { settingClick, sidebarClick } from '../../utils/sidebar';
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
 async function goToLearningResourcesAdmin(page: Page) {
-  const admin = new AdminClass();
-  await page.goto('/');
-  await page.waitForLoadState('domcontentloaded');
-
-  if (page.url().includes('/signin')) {
-    await admin.login(page);
-  }
-
-  await page.waitForURL('**/my-data');
+  await redirectToHomePage(page);
   await settingClick(page, GlobalSettingOptions.LEARNING_RESOURCES);
   await waitForAllLoadersToDisappear(page);
   await expect(page.getByTestId('learning-resources-page')).toBeVisible();

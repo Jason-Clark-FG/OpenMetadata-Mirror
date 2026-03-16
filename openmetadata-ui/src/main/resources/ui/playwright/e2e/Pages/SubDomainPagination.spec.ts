@@ -64,6 +64,7 @@ test.describe('SubDomain Pagination', () => {
   test.beforeEach('Navigate to domain page', async ({ page }) => {
     await redirectToHomePage(page);
     await sidebarClick(page, SidebarItem.DOMAIN);
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
   });
 
@@ -72,6 +73,7 @@ test.describe('SubDomain Pagination', () => {
   }) => {
     await selectDomain(page, domain.data);
 
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 
     await test.step('Verify subdomain count in tab label', async () => {
@@ -119,6 +121,7 @@ test.describe('SubDomain Pagination', () => {
       await redirectToHomePage(page);
 
       await sidebarClick(page, SidebarItem.DOMAIN);
+      await page.waitForLoadState('networkidle');
 
       await selectDomain(page, domain.data);
 

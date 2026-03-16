@@ -82,6 +82,7 @@ test.describe('Data Product Comprehensive Tests', () => {
 
       // Verify data product was created - navigate to Data Products tab
       await page.getByTestId('data_products').click();
+      await page.waitForLoadState('networkidle');
 
       // Data product cards use testid pattern: explore-card-{name}
       await expect(page.getByTestId(`explore-card-${dpName}`)).toBeVisible();
@@ -294,6 +295,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       });
 
       // Wait for search results to load
+      await page.waitForLoadState('networkidle');
       await page.waitForTimeout(1000); // Allow search index to populate
 
       // Search for table
@@ -303,6 +305,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         .getByTestId('searchbar')
         .fill(table.entityResponseData.name);
       await searchRes;
+      await page.waitForLoadState('networkidle');
 
       // Select the table by clicking the checkbox in the card
       const tableCheckbox = page
@@ -365,6 +368,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.goto(
         `/dataProduct/${encodeURIComponent(dpData.fullyQualifiedName)}`
       );
+      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -417,6 +421,7 @@ test.describe('Multiple Subdomains Tests', () => {
       await selectDomain(page, domain.data);
 
       await page.getByTestId('subdomains').click();
+      await page.waitForLoadState('networkidle');
 
       // Verify both subdomains are visible
       await expect(page.getByTestId(subDomain1.data.name)).toBeVisible();
@@ -448,15 +453,18 @@ test.describe('Multiple Subdomains Tests', () => {
       // Navigate to first subdomain
       const subDomainFqn = subDomain1.responseData.fullyQualifiedName;
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn!)}`);
+      await page.waitForLoadState('networkidle');
 
       // Check subdomains tab for nested subdomain
       await page.getByTestId('subdomains').click();
+      await page.waitForLoadState('networkidle');
 
       // Verify nested subdomain is visible
       await expect(page.getByTestId(nestedSubDomain.data.name)).toBeVisible();
 
       // Navigate to nested subdomain and verify breadcrumb
       await page.getByTestId(nestedSubDomain.data.name).click();
+      await page.waitForLoadState('networkidle');
 
       // Verify we're on the nested subdomain page
       await expect(
@@ -490,6 +498,7 @@ test.describe('Multiple Subdomains Tests', () => {
       // Navigate to first subdomain
       const subDomainFqn1 = subDomain1.responseData.fullyQualifiedName;
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn1!)}`);
+      await page.waitForLoadState('networkidle');
 
       // Verify we're on first subdomain
       await expect(
@@ -500,12 +509,15 @@ test.describe('Multiple Subdomains Tests', () => {
       await page
         .getByRole('link', { name: domain.responseData.fullyQualifiedName })
         .click();
+      await page.waitForLoadState('networkidle');
 
       // Navigate to subdomains tab
       await page.getByTestId('subdomains').click();
+      await page.waitForLoadState('networkidle');
 
       // Click on second subdomain
       await page.getByTestId(subDomain2.data.name).click();
+      await page.waitForLoadState('networkidle');
 
       // Verify we're on second subdomain
       await expect(
@@ -567,6 +579,7 @@ test.describe('Multiple Subdomains Tests', () => {
           table1.entityResponseData.fullyQualifiedName
         )}`
       );
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('domain-link')).toContainText(
         subDomain1.data.displayName
@@ -578,6 +591,7 @@ test.describe('Multiple Subdomains Tests', () => {
           table2.entityResponseData.fullyQualifiedName
         )}`
       );
+      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('domain-link')).toContainText(
         subDomain2.data.displayName
@@ -667,6 +681,7 @@ test.describe('Multiple Subdomains Tests', () => {
       // Check subdomain assets count
       const subDomainFqn = subDomain.responseData.fullyQualifiedName;
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn!)}`);
+      await page.waitForLoadState('networkidle');
       await checkAssetsCount(page, 1);
 
       // Check parent domain - assets in subdomains should also count toward parent
@@ -676,6 +691,7 @@ test.describe('Multiple Subdomains Tests', () => {
       // The parent domain may show inherited assets or just direct assets
       // This depends on the implementation
       await page.getByTestId('assets').click();
+      await page.waitForLoadState('networkidle');
 
       await subDomain.delete(apiContext);
     } finally {
@@ -704,6 +720,7 @@ test.describe('Multiple Subdomains Tests', () => {
       // Navigate to subdomain
       const subDomainFqn = subDomain.responseData.fullyQualifiedName;
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn!)}`);
+      await page.waitForLoadState('networkidle');
 
       // Delete the subdomain (recursive delete)
       await page.getByTestId('manage-button').click();
@@ -721,12 +738,14 @@ test.describe('Multiple Subdomains Tests', () => {
 
       // Verify data product no longer exists
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
+      await page.waitForLoadState('networkidle');
 
       // Search for the deleted data product - it should not exist
       const searchBox = page
         .getByTestId('page-layout-v1')
         .getByPlaceholder('Search');
       await searchBox.fill(dp.data.name);
+      await page.waitForLoadState('networkidle');
 
       // Expect no results or the data product not to be found
       await expect(page.getByTestId(dp.data.name))
@@ -767,6 +786,7 @@ test.describe('Data Product Search and Filter', () => {
       await searchBox.fill(uniqueName);
 
       await page.waitForResponse('/api/v1/search/query*');
+      await page.waitForLoadState('networkidle');
 
       // Verify the data product appears in results
       await expect(page.getByTestId(dataProduct.data.name)).toBeVisible();
@@ -819,6 +839,7 @@ test.describe('Data Product Search and Filter', () => {
       await tagSelector.waitFor({ state: 'visible' });
       await tagSelector.click();
       await waitForAllLoadersToDisappear(page);
+      await page.waitForLoadState('networkidle');
 
       // Verify only dp1 is visible (from domain1)
       await expect(page.getByTestId(dp1.data.name)).toBeVisible({
@@ -831,6 +852,7 @@ test.describe('Data Product Search and Filter', () => {
       // Clear domain filter
       await page.getByTestId('domain-dropdown').click();
       await page.getByTestId('all-domains-selector').click();
+      await page.waitForLoadState('networkidle');
 
       await dp1.delete(apiContext);
       await dp2.delete(apiContext);

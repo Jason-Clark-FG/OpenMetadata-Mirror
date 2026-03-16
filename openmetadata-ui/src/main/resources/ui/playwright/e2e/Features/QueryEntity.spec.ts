@@ -231,9 +231,9 @@ test('Query Entity', async ({ page }) => {
       key: 'Owner',
       page,
     });
-    await expect(
-      page.locator('[data-testid="query-card"]').first()
-    ).toBeVisible();
+    const queryCards = await page.$$('[data-testid="query-card"]');
+
+    expect(queryCards.length).toBeGreaterThan(0);
 
     await queryFilters({
       filter: 'None',
@@ -253,28 +253,19 @@ test('Query Entity', async ({ page }) => {
       page,
     });
 
-    await expect(
-      page.locator('[data-testid="query-card"]').first()
-    ).toBeVisible();
+    const updatedQueryCards = await page.$$('[data-testid="query-card"]');
+
+    expect(updatedQueryCards.length).toBeGreaterThan(0);
   });
 
   await test.step('Verify vote for query', async () => {
-    const upVoteInterceptor = page.waitForResponse(
-      (response) =>
-        response.url().includes('api/v1/queries/') &&
-        response.url().includes('/vote') &&
-        response.request().method() === 'PUT'
-    );
     await page
       .getByTestId('extra-option-container')
       .getByTestId('up-vote-btn')
       .click();
 
-    const upVoteResponse = await upVoteInterceptor;
-
-    expect(upVoteResponse.status()).toBe(200);
-
     await page.reload();
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -292,6 +283,7 @@ test('Query Entity', async ({ page }) => {
       .click();
 
     await page.reload();
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });

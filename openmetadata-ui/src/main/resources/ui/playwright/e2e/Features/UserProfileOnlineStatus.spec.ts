@@ -49,6 +49,7 @@ test.describe('User Profile Online Status', () => {
 
     await redirectToHomePage(page);
     await visitUserProfilePage(page, activeUser.responseData.name);
+    await page.waitForLoadState('networkidle');
 
     // Check for online status badge
     const onlineStatusBadge = page.locator(
@@ -83,6 +84,7 @@ test.describe('User Profile Online Status', () => {
     // Navigate to user profile
     await redirectToHomePage(page);
     await visitUserProfilePage(page, activeUser.responseData.name);
+    await page.waitForLoadState('networkidle');
 
     // Simulate that the user was active 30 minutes ago
     // (In real scenario, this would be set by backend based on actual activity)
@@ -102,6 +104,7 @@ test.describe('User Profile Online Status', () => {
     // Navigate to inactive user profile
     await redirectToHomePage(page);
     await visitUserProfilePage(page, inactiveUser.responseData.name);
+    await page.waitForLoadState('networkidle');
 
     // Check that online status badge is not visible
     const onlineStatusBadge = page.getByTestId('user-online-status');
@@ -122,6 +125,7 @@ test.describe('User Profile Online Status', () => {
     // Navigate to admin's profile (admin always has activity)
     await redirectToHomePage(page);
     await visitOwnProfilePage(page);
+    await page.waitForLoadState('networkidle');
 
     // Verify email element is visible
     const emailElement = page.getByTestId('user-email-value');
@@ -153,6 +157,7 @@ test.describe('User Profile Online Status', () => {
     // First navigate to admin profile
     await redirectToHomePage(page);
     await visitOwnProfilePage(page);
+    await page.waitForLoadState('networkidle');
 
     // Admin should always show online status since they're logged in
     const onlineStatusBadge = page.getByTestId('user-online-status');
@@ -162,8 +167,10 @@ test.describe('User Profile Online Status', () => {
 
     // Navigate away and back to verify status persists
     await sidebarClick(page, SidebarItem.EXPLORE);
+    await page.waitForLoadState('networkidle');
 
     await visitOwnProfilePage(page);
+    await page.waitForLoadState('networkidle');
 
     // Status should still be visible
     await expect(onlineStatusBadge).toBeVisible();

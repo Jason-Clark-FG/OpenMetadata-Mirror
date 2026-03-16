@@ -17,6 +17,7 @@ import static org.openmetadata.service.search.SearchUtils.getAggregationObject;
 import static org.openmetadata.service.util.FullyQualifiedName.quoteName;
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.escapeDoubleQuotes;
 
+import com.google.gson.Gson;
 import jakarta.json.Json;
 import jakarta.json.JsonArray;
 import jakarta.json.JsonArrayBuilder;
@@ -269,14 +270,9 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
   }
 
   @Override
-  protected EntityReference getParentReference(TestSuite entity) {
-    return entity.getBasic() ? entity.getBasicEntityReference() : null;
-  }
-
-  @Override
   public EntityInterface getParentEntity(TestSuite entity, String fields) {
     if (entity.getBasic() && entity.getBasicEntityReference() != null) {
-      var filteredFields = EntityUtil.getFilteredFields(TABLE, fields);
+      String filteredFields = EntityUtil.getFilteredFields(TABLE, fields);
       return Entity.getEntity(entity.getBasicEntityReference(), filteredFields, ALL);
     }
     return null;
@@ -637,18 +633,26 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
   }
 
   @Override
-  protected List<String> getFieldsStrippedFromStorageJson() {
-    return List.of("tests");
-  }
-
-  @Override
   public void storeEntity(TestSuite entity, boolean update) {
+    // we don't want to store the tests in the test suite entity
+    List<EntityReference> tests = entity.getTests();
+    entity.setTests(null);
     store(entity, update);
+    entity.setTests(tests);
   }
 
   @Override
   public void storeEntities(List<TestSuite> entities) {
-    storeMany(entities);
+    List<TestSuite> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+    for (TestSuite entity : entities) {
+      List<EntityReference> tests = entity.getTests();
+      entity.setTests(null);
+      String jsonCopy = gson.toJson(entity);
+      entitiesToStore.add(gson.fromJson(jsonCopy, TestSuite.class));
+      entity.setTests(tests);
+    }
+    storeMany(entitiesToStore);
   }
 
   @Override
@@ -954,28 +958,16 @@ public class TestSuiteRepository extends EntityRepository<TestSuite> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          UPDATE_FIELDS,
-          () -> {
-            List<EntityReference> origTests = listOrEmpty(original.getTests());
-            List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
-            recordChange(UPDATE_FIELDS, origTests, updatedTests);
-          });
-      compareAndUpdate(
-          "testCaseResultSummary",
-          () -> {
-            List<ResultSummary> origTestCaseResultSummary =
-                listOrEmpty(original.getTestCaseResultSummary());
-            List<ResultSummary> updatedTestCaseResultSummary =
-                listOrEmpty(updated.getTestCaseResultSummary());
-            recordChange(
-                "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
-          });
-      compareAndUpdate(
-          "dataContract",
-          () -> {
-            recordChange("dataContract", original.getDataContract(), updated.getDataContract());
-          });
+      List<EntityReference> origTests = listOrEmpty(original.getTests());
+      List<EntityReference> updatedTests = listOrEmpty(updated.getTests());
+      List<ResultSummary> origTestCaseResultSummary =
+          listOrEmpty(original.getTestCaseResultSummary());
+      List<ResultSummary> updatedTestCaseResultSummary =
+          listOrEmpty(updated.getTestCaseResultSummary());
+      recordChange(UPDATE_FIELDS, origTests, updatedTests);
+      recordChange(
+          "testCaseResultSummary", origTestCaseResultSummary, updatedTestCaseResultSummary);
+      recordChange("dataContract", original.getDataContract(), updated.getDataContract());
     }
   }
 }

@@ -101,6 +101,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     test('Edit buttons not visible on Domain', async ({ viewOnlyPage }) => {
       await redirectToHomePage(viewOnlyPage);
       await domain.visitEntityPage(viewOnlyPage);
+      await viewOnlyPage.waitForLoadState('networkidle');
 
       await expect(viewOnlyPage.getByTestId('edit-tier')).not.toBeVisible();
       await expect(
@@ -113,6 +114,7 @@ test.describe('Domain & DataProduct - Tier, Certification, and Voting', () => {
     }) => {
       await redirectToHomePage(viewOnlyPage);
       await dataProduct.visitEntityPage(viewOnlyPage);
+      await viewOnlyPage.waitForLoadState('networkidle');
 
       await expect(viewOnlyPage.getByTestId('edit-tier')).not.toBeVisible();
       await expect(

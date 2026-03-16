@@ -25,6 +25,7 @@ test.describe('API docs should work properly', () => {
     await page.locator('[data-testid="help-icon"]').click();
     await page.getByRole('link', { name: 'API', exact: true }).click();
 
+    await page.waitForLoadState('networkidle');
     await page
       .getByTestId('fluid-container')
       .getByTestId('loader')

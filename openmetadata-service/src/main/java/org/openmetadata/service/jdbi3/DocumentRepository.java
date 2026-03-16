@@ -148,12 +148,8 @@ public class DocumentRepository extends EntityRepository<Document> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "data",
-          () -> {
-            updateEmailTemplatePlaceholders(original, updated);
-            recordChange("data", original.getData(), updated.getData(), true);
-          });
+      updateEmailTemplatePlaceholders(original, updated);
+      recordChange("data", original.getData(), updated.getData(), true);
     }
   }
 

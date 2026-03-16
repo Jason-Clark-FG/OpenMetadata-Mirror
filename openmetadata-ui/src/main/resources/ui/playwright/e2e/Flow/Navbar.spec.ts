@@ -29,6 +29,7 @@ for (const searchItem of navbarSearchItems) {
     async ({ page }) => {
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.EXPLORE);
+      await page.waitForLoadState('networkidle');
 
       await selectOption(
         page,

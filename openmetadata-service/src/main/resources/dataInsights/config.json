@@ -117,13 +117,6 @@
       "parent",
       "children",
       "usageCount"
-    ],
-    "metric": [
-      "metricType",
-      "unitOfMeasurement",
-      "granularity",
-      "relatedMetrics",
-      "metricExpression"
     ]
   }
 }

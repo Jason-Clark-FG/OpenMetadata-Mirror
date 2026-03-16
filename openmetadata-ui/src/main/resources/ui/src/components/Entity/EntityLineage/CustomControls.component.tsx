@@ -11,15 +11,7 @@
  *  limitations under the License.
  */
 
-import {
-  Button,
-  ButtonUtility,
-  Dropdown,
-  Tabs,
-  Tooltip,
-  TooltipTrigger,
-  Typography,
-} from '@openmetadata/ui-core-components';
+import { Button, MenuItem, Tooltip, useTheme } from '@mui/material';
 import classNames from 'classnames';
 import QueryString from 'qs';
 import {
@@ -64,6 +56,10 @@ import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import { AssetsUnion } from '../../DataAssets/AssetsSelectionModal/AssetSelectionModal.interface';
 import { ExploreQuickFilterField } from '../../Explore/ExplorePage.interface';
 import ExploreQuickFilters from '../../Explore/ExploreQuickFilters';
+import {
+  StyledIconButton,
+  StyledMenu,
+} from '../../LineageTable/LineageTable.styled';
 import { LineageConfig } from './EntityLineage.interface';
 import LineageConfigModal from './LineageConfigModal';
 import LineageSearchSelect from './LineageSearchSelect/LineageSearchSelect';
@@ -99,8 +95,11 @@ const CustomControls: FC<{
   } = useLineageStore();
   const [filterSelectionActive, setFilterSelectionActive] = useState(false);
   const [dialogVisible, setDialogVisible] = useState(false);
+  const [nodeDepthAnchorEl, setNodeDepthAnchorEl] =
+    useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useCustomLocation();
+  const theme = useTheme();
   const { fqn } = useFqn();
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
 
@@ -220,13 +219,15 @@ const CustomControls: FC<{
       lineageConfig.upstreamDepth,
     ]);
 
-  const handleTabChange = useCallback(
-    (key: string) => {
-      queryParams['mode'] = key;
-      navigate({ search: QueryString.stringify(queryParams) });
-    },
-    [navigate, queryParams]
-  );
+  const handleImpactAnalysisClick = useCallback(() => {
+    queryParams['mode'] = 'impact_analysis';
+    navigate({ search: QueryString.stringify(queryParams) });
+  }, [navigate, queryParams]);
+
+  const handleLineageClick = useCallback(() => {
+    queryParams['mode'] = 'lineage';
+    navigate({ search: QueryString.stringify(queryParams) });
+  }, [navigate, queryParams]);
 
   const updateURLParams = useCallback(
     (
@@ -253,6 +254,7 @@ const CustomControls: FC<{
         },
         { replace: true }
       );
+      setNodeDepthAnchorEl(null);
     },
     [location.search]
   );
@@ -302,6 +304,21 @@ const CustomControls: FC<{
     setDialogVisible(false);
   };
 
+  const buttonActiveStyle = {
+    outlineColor: theme.palette.allShades.blue[700],
+    backgroundColor: theme.palette.allShades.blue[50],
+    color: theme.palette.allShades.blue[700],
+    outline: '1px solid',
+    boxShadow: 'none',
+
+    '&:hover': {
+      outlineColor: theme.palette.allShades.blue[100],
+      backgroundColor: theme.palette.allShades.blue[100],
+      color: theme.palette.allShades.blue[700],
+      boxShadow: 'none',
+    },
+  };
+
   const filterApplied = useMemo(() => {
     return selectedQuickFilters.some(
       (filter) => (filter.value ?? []).length > 0
@@ -309,19 +326,17 @@ const CustomControls: FC<{
   }, [selectedQuickFilters]);
 
   const searchBarComponent = useMemo(() => {
-    return activeTab === 'impact_analysis' ? (
-      onSearchValueChange && (
-        <Searchbar
-          removeMargin
-          inputClassName="w-80"
-          placeholder={t('label.search-for-type', {
-            type: t('label.asset-or-column'),
-          })}
-          searchValue={searchValue}
-          typingInterval={300}
-          onSearch={onSearchValueChange}
-        />
-      )
+    return activeTab === 'impact_analysis' && onSearchValueChange ? (
+      <Searchbar
+        removeMargin
+        inputClassName="w-80"
+        placeholder={t('label.search-for-type', {
+          type: t('label.asset-or-column'),
+        })}
+        searchValue={searchValue}
+        typingInterval={300}
+        onSearch={onSearchValueChange}
+      />
     ) : (
       <LineageSearchSelect />
     );
@@ -330,6 +345,7 @@ const CustomControls: FC<{
   const handleNodeDepthUpdate = useCallback(
     (depth: number) => {
       updateURLParams({ depth });
+      setNodeDepthAnchorEl(null);
     },
     [updateURLParams]
   );
@@ -343,16 +359,16 @@ const CustomControls: FC<{
 
     return showEditOption ? (
       <Tooltip
+        arrow
         placement="top"
         title={t('label.edit-entity', { entity: t('label.lineage') })}>
-        <TooltipTrigger>
-          <Button
-            color={isEditMode ? 'primary' : 'secondary'}
-            data-testid="edit-lineage"
-            iconLeading={EditIcon}
-            onClick={toggleEditMode}
-          />
-        </TooltipTrigger>
+        <StyledIconButton
+          color={isEditMode ? 'primary' : 'default'}
+          data-testid="edit-lineage"
+          size="large"
+          onClick={toggleEditMode}>
+          <EditIcon />
+        </StyledIconButton>
       </Tooltip>
     ) : null;
   }, [
@@ -371,127 +387,130 @@ const CustomControls: FC<{
     };
 
     return (
-      <ButtonUtility
+      <StyledIconButton
         data-testid="lineage-config"
-        icon={SettingsOutlined}
-        onClick={handleSettingsClick}
-      />
+        size="large"
+        onClick={handleSettingsClick}>
+        <SettingsOutlined />
+      </StyledIconButton>
     );
   }, []);
 
   return (
     <div>
-      <div className={classNames('tw:flex tw:w-full tw:justify-between')}>
-        <div className="tw:flex tw:items-center tw:gap-4">
-          <Tooltip placement="top" title={t('label.filter-plural')}>
-            <TooltipTrigger>
-              <Button
-                aria-label={t('label.filter-plural')}
-                color={filterSelectionActive ? 'primary' : 'secondary'}
-                data-testid="filters-button"
-                iconLeading={FilterLinesIcon}
-                onClick={toggleFilterSelection}
-              />
-            </TooltipTrigger>
+      <div className={classNames('d-flex w-full justify-between')}>
+        <div className="d-flex items-center gap-4">
+          <Tooltip arrow placement="top" title={t('label.filter-plural')}>
+            <StyledIconButton
+              color={filterSelectionActive ? 'primary' : 'default'}
+              size="large"
+              onClick={toggleFilterSelection}>
+              <FilterLinesIcon />
+            </StyledIconButton>
           </Tooltip>
           {searchBarComponent}
         </div>
-        <div className="tw:flex tw:gap-4 tw:items-center">
+        <div className="d-flex gap-4 items-center">
           {isEditMode ? null : (
-            <Tabs
-              selectedKey={activeTab}
-              onSelectionChange={(key) => handleTabChange(key as string)}>
-              <Tabs.List size="sm" type="button-brand">
-                <Tabs.Item id="lineage" key="lineage">
-                  {t('label.lineage')}
-                </Tabs.Item>
-                <Tabs.Item id="impact_analysis" key="impact_analysis">
-                  {t('label.impact-analysis')}
-                </Tabs.Item>
-              </Tabs.List>
-            </Tabs>
+            <>
+              <Button
+                className="font-semibold"
+                sx={activeTab === 'lineage' ? buttonActiveStyle : {}}
+                variant="outlined"
+                onClick={handleLineageClick}>
+                {t('label.lineage')}
+              </Button>
+              <Button
+                className="font-semibold"
+                sx={activeTab === 'impact_analysis' ? buttonActiveStyle : {}}
+                variant="outlined"
+                onClick={handleImpactAnalysisClick}>
+                {t('label.impact-analysis')}
+              </Button>{' '}
+            </>
           )}
 
           {lineageEditButton}
           <Tooltip
+            arrow
             placement="top"
             title={
               activeTab === 'impact_analysis'
                 ? t('label.export-as-type', { type: t('label.csv') })
                 : t('label.export')
             }>
-            <TooltipTrigger>
-              <ButtonUtility
-                aria-label={
-                  activeTab === 'impact_analysis'
-                    ? t('label.export-as-type', { type: t('label.csv') })
-                    : t('label.export')
-                }
-                data-testid="export-button"
-                disabled={isEditMode}
-                icon={DownloadIcon}
-                onClick={handleExportClick}
-              />
-            </TooltipTrigger>
+            <StyledIconButton
+              data-testid="export-button"
+              disabled={isEditMode}
+              size="large"
+              onClick={handleExportClick}>
+              <DownloadIcon />
+            </StyledIconButton>
           </Tooltip>
           {settingsButton}
           <Tooltip
+            arrow
             placement="top"
             title={
               isFullScreen
                 ? t('label.exit-full-screen')
                 : t('label.full-screen-view')
             }>
-            <TooltipTrigger>
-              <ButtonUtility
-                aria-label={
-                  isFullScreen
-                    ? t('label.exit-full-screen')
-                    : t('label.full-screen-view')
-                }
-                icon={isFullScreen ? ExitFullScreenIcon : FullscreenIcon}
-                onClick={() =>
-                  updateURLParams({
-                    [FULLSCREEN_QUERY_PARAM_KEY]: !isFullScreen,
-                  })
-                }
-              />
-            </TooltipTrigger>
+            <StyledIconButton
+              size="large"
+              onClick={() =>
+                updateURLParams({ [FULLSCREEN_QUERY_PARAM_KEY]: !isFullScreen })
+              }>
+              {isFullScreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
+            </StyledIconButton>
           </Tooltip>
         </div>
       </div>
       {filterSelectionActive ? (
-        <div className="tw:mt-2 tw:flex tw:items-center tw:justify-between">
-          <div className="tw:flex tw:items-baseline">
+        <div className="m-t-sm d-flex items-center justify-between">
+          <div>
             {activeTab === 'impact_analysis' && (
-              <Dropdown.Root>
-                <Button className="tw:px-3.5 tw:py-2.5" color="tertiary">
-                  <div className="tw:flex tw:items-center tw:gap-1">
-                    <Typography as="span" className="tw:font-normal">
-                      {`${t('label.node-depth')}:`}{' '}
-                    </Typography>
-                    <Typography
-                      as="span"
-                      className="tw:text-brand-600 tw:font-normal">
-                      {nodeDepth}
-                    </Typography>
-                    <DropdownIcon height={12} width={12} />
-                  </div>
+              <>
+                <Button
+                  endIcon={<DropdownIcon />}
+                  sx={{
+                    fontWeight: 500,
+                    '& .MuiButton-endIcon': {
+                      svg: {
+                        height: 12,
+                      },
+                    },
+                  }}
+                  variant="text"
+                  onClick={(e) => setNodeDepthAnchorEl(e.currentTarget)}>
+                  {`${t('label.node-depth')}:`}{' '}
+                  <span className="text-primary m-l-xss">{nodeDepth}</span>
                 </Button>
-                <Dropdown.Popover className="tw:max-w-32">
-                  <Dropdown.Menu
-                    aria-label={t('label.node-depth')}
-                    onAction={(key) => handleNodeDepthUpdate(Number(key))}>
-                    {(nodeDepthOptions ?? []).map((depth) => (
-                      <Dropdown.Item
-                        className={depth === nodeDepth ? 'tw:text-primary' : ''}
-                        key={depth}>
-                        {depth}
-                      </Dropdown.Item>
-                    ))}
-                  </Dropdown.Menu>
-                </Dropdown.Popover>
-              </Dropdown.Root>
+                <StyledMenu
+                  anchorEl={nodeDepthAnchorEl}
+                  open={Boolean(nodeDepthAnchorEl)}
+                  slotProps={{
+                    paper: {
+                      style: {
+                        maxHeight: 48 * 4.5,
+                        width: '10ch',
+                      },
+                    },
+                    list: {
+                      'aria-labelledby': 'long-button',
+                    },
+                  }}
+                  onClose={() => setNodeDepthAnchorEl(null)}>
+                  {(nodeDepthOptions ?? [])?.map((depth) => (
+                    <MenuItem
+                      key={depth}
+                      selected={depth === nodeDepth}
+                      onClick={() => handleNodeDepthUpdate(depth)}>
+                      {depth}
+                    </MenuItem>
+                  ))}
+                </StyledMenu>
+              </>
             )}
             <ExploreQuickFilters
               independent
@@ -505,9 +524,13 @@ const CustomControls: FC<{
             />
           </div>
           <Button
-            color="link-color"
-            isDisabled={!filterApplied}
-            size="sm"
+            disabled={!filterApplied}
+            size="small"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.primary.main,
+            }}
+            variant="text"
             onClick={handleClearAllFilters}>
             {t('label.clear-entity', { entity: t('label.all') })}
           </Button>

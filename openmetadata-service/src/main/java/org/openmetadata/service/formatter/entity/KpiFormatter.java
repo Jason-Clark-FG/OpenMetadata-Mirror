@@ -48,14 +48,18 @@ public class KpiFormatter implements EntityFormatter {
     String kpiName = entity.getName();
     KpiResult result = (KpiResult) fieldChange.getNewValue();
     if (result != null) {
+      String format =
+          String.format(
+              "Added Results for %s. Target Name : %s , Current Value: %s, Target Met: %s",
+              messageFormatter.getBold(),
+              messageFormatter.getBold(),
+              messageFormatter.getBold(),
+              messageFormatter.getBold());
       KpiTarget target = result.getTargetResult().get(0);
       return String.format(
-          "Added Results for %s. Target Name : %s , Current Value: %s, Target Met: %s",
-          messageFormatter.bold(kpiName),
-          messageFormatter.bold(target.getName()),
-          messageFormatter.bold(String.valueOf(target.getValue())),
-          messageFormatter.bold(String.valueOf(target.getTargetMet())));
+          format, kpiName, target.getName(), target.getValue(), target.getTargetMet());
     }
-    return String.format("KpiResult %s is updated.", messageFormatter.bold(kpiName));
+    String format = String.format("KpiResult %s is updated.", messageFormatter.getBold());
+    return String.format(format, kpiName);
   }
 }

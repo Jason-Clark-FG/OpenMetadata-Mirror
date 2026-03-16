@@ -83,136 +83,50 @@ public class AIApplicationRepository extends EntityRepository<AIApplication> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "applicationType",
-          () -> {
-            recordChange(
-                "applicationType", original.getApplicationType(), updated.getApplicationType());
-          });
-      compareAndUpdate(
-          "developmentStage",
-          () -> {
-            recordChange(
-                "developmentStage", original.getDevelopmentStage(), updated.getDevelopmentStage());
-          });
-      compareAndUpdate(
+      recordChange("applicationType", original.getApplicationType(), updated.getApplicationType());
+      recordChange(
+          "developmentStage", original.getDevelopmentStage(), updated.getDevelopmentStage());
+      recordChange(
           "modelConfigurations",
-          () -> {
-            recordChange(
-                "modelConfigurations",
-                original.getModelConfigurations(),
-                updated.getModelConfigurations(),
-                true);
-          });
-      compareAndUpdate(
-          "primaryModel",
-          () -> {
-            recordChange(
-                "primaryModel", original.getPrimaryModel(), updated.getPrimaryModel(), true);
-          });
-      compareAndUpdate(
-          "promptTemplates",
-          () -> {
-            recordChange(
-                "promptTemplates",
-                original.getPromptTemplates(),
-                updated.getPromptTemplates(),
-                true);
-          });
-      compareAndUpdate(
-          "tools",
-          () -> {
-            recordChange("tools", original.getTools(), updated.getTools(), true);
-          });
-      compareAndUpdate(
-          "dataSources",
-          () -> {
-            recordChange("dataSources", original.getDataSources(), updated.getDataSources(), true);
-          });
-      compareAndUpdate(
-          "knowledgeBases",
-          () -> {
-            recordChange(
-                "knowledgeBases", original.getKnowledgeBases(), updated.getKnowledgeBases(), true);
-          });
-      compareAndUpdate(
+          original.getModelConfigurations(),
+          updated.getModelConfigurations(),
+          true);
+      recordChange("primaryModel", original.getPrimaryModel(), updated.getPrimaryModel(), true);
+      recordChange(
+          "promptTemplates", original.getPromptTemplates(), updated.getPromptTemplates(), true);
+      recordChange("tools", original.getTools(), updated.getTools(), true);
+      recordChange("dataSources", original.getDataSources(), updated.getDataSources(), true);
+      recordChange(
+          "knowledgeBases", original.getKnowledgeBases(), updated.getKnowledgeBases(), true);
+      recordChange(
           "upstreamApplications",
-          () -> {
-            recordChange(
-                "upstreamApplications",
-                original.getUpstreamApplications(),
-                updated.getUpstreamApplications(),
-                true);
-          });
-      compareAndUpdate(
+          original.getUpstreamApplications(),
+          updated.getUpstreamApplications(),
+          true);
+      recordChange(
           "downstreamApplications",
-          () -> {
-            recordChange(
-                "downstreamApplications",
-                original.getDownstreamApplications(),
-                updated.getDownstreamApplications(),
-                true);
-          });
-      compareAndUpdate(
-          "framework",
-          () -> {
-            recordChange("framework", original.getFramework(), updated.getFramework(), true);
-          });
-      compareAndUpdate(
+          original.getDownstreamApplications(),
+          updated.getDownstreamApplications(),
+          true);
+      recordChange("framework", original.getFramework(), updated.getFramework(), true);
+      recordChange(
           "governanceMetadata",
-          () -> {
-            recordChange(
-                "governanceMetadata",
-                original.getGovernanceMetadata(),
-                updated.getGovernanceMetadata(),
-                true);
-          });
-      compareAndUpdate(
-          "biasMetrics",
-          () -> {
-            recordChange("biasMetrics", original.getBiasMetrics(), updated.getBiasMetrics(), true);
-          });
-      compareAndUpdate(
+          original.getGovernanceMetadata(),
+          updated.getGovernanceMetadata(),
+          true);
+      recordChange("biasMetrics", original.getBiasMetrics(), updated.getBiasMetrics(), true);
+      recordChange(
           "performanceMetrics",
-          () -> {
-            recordChange(
-                "performanceMetrics",
-                original.getPerformanceMetrics(),
-                updated.getPerformanceMetrics(),
-                true);
-          });
-      compareAndUpdate(
-          "qualityMetrics",
-          () -> {
-            recordChange(
-                "qualityMetrics", original.getQualityMetrics(), updated.getQualityMetrics(), true);
-          });
-      compareAndUpdate(
-          "safetyMetrics",
-          () -> {
-            recordChange(
-                "safetyMetrics", original.getSafetyMetrics(), updated.getSafetyMetrics(), true);
-          });
-      compareAndUpdate(
-          "testSuites",
-          () -> {
-            recordChange("testSuites", original.getTestSuites(), updated.getTestSuites(), true);
-          });
-      compareAndUpdate(
-          "sourceCode",
-          () -> {
-            recordChange("sourceCode", original.getSourceCode(), updated.getSourceCode());
-          });
-      compareAndUpdate(
-          "deploymentUrl",
-          () -> {
-            recordChange("deploymentUrl", original.getDeploymentUrl(), updated.getDeploymentUrl());
-          });
-      compareAndUpdate(
-          "documentation",
-          () -> {
-            recordChange("documentation", original.getDocumentation(), updated.getDocumentation());
-          });
+          original.getPerformanceMetrics(),
+          updated.getPerformanceMetrics(),
+          true);
+      recordChange(
+          "qualityMetrics", original.getQualityMetrics(), updated.getQualityMetrics(), true);
+      recordChange("safetyMetrics", original.getSafetyMetrics(), updated.getSafetyMetrics(), true);
+      recordChange("testSuites", original.getTestSuites(), updated.getTestSuites(), true);
+      recordChange("sourceCode", original.getSourceCode(), updated.getSourceCode());
+      recordChange("deploymentUrl", original.getDeploymentUrl(), updated.getDeploymentUrl());
+      recordChange("documentation", original.getDocumentation(), updated.getDocumentation());
     }
   }
 }

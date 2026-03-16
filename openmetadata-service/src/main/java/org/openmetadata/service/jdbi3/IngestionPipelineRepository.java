@@ -17,6 +17,7 @@ import static org.openmetadata.schema.type.EventType.ENTITY_FIELDS_CHANGED;
 import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.service.Entity.INGESTION_PIPELINE;
 
+import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
@@ -225,10 +226,15 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
 
     for (CollectionDAO.EntityRelationshipObject record : records) {
       UUID pipelineId = UUID.fromString(record.getToId());
-      EntityReference serviceRef =
-          Entity.getEntityReferenceById(
-              record.getFromEntity(), UUID.fromString(record.getFromId()), Include.NON_DELETED);
-      serviceMap.put(pipelineId, serviceRef);
+      String fromEntity = record.getFromEntity();
+      // Service entities can be of different types (database_service, dashboard_service, etc.)
+      // All service entity types end with "_service"
+      if (fromEntity.endsWith("_service")) {
+        EntityReference serviceRef =
+            Entity.getEntityReferenceById(
+                fromEntity, UUID.fromString(record.getFromId()), Include.NON_DELETED);
+        serviceMap.put(pipelineId, serviceRef);
+      }
     }
 
     return serviceMap;
@@ -241,8 +247,9 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
 
   @Override
   public void prepare(IngestionPipeline ingestionPipeline, boolean update) {
-    var service = getCachedParentOrLoad(ingestionPipeline.getService(), "", Include.NON_DELETED);
-    ingestionPipeline.setService(service.getEntityReference());
+    EntityReference entityReference =
+        Entity.getEntityReference(ingestionPipeline.getService(), Include.NON_DELETED);
+    ingestionPipeline.setService(entityReference);
   }
 
   protected boolean requiresRedeployment(IngestionPipeline original, IngestionPipeline updated) {
@@ -391,36 +398,68 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
   }
 
   @Override
-  protected List<String> getFieldsStrippedFromStorageJson() {
-    return List.of("service", "openMetadataServerConnection", "processingEngine");
-  }
-
-  @Override
   public void storeEntity(IngestionPipeline ingestionPipeline, boolean update) {
+    // Relationships and fields such as service are derived and not stored as part of json
+    EntityReference service = ingestionPipeline.getService();
+    OpenMetadataConnection openmetadataConnection =
+        ingestionPipeline.getOpenMetadataServerConnection();
+
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
 
     if (secretsManager != null) {
       secretsManager.encryptIngestionPipeline(ingestionPipeline);
+      // We store the OM sensitive values in SM separately
+      openmetadataConnection =
+          secretsManager.encryptOpenMetadataConnection(openmetadataConnection, true);
     }
+
+    EntityReference processingEngine = ingestionPipeline.getProcessingEngine();
+
+    ingestionPipeline
+        .withService(null)
+        .withOpenMetadataServerConnection(null)
+        .withProcessingEngine(null);
     store(ingestionPipeline, update);
+    ingestionPipeline
+        .withService(service)
+        .withOpenMetadataServerConnection(openmetadataConnection)
+        .withProcessingEngine(processingEngine);
   }
 
   @Override
   public void storeEntities(List<IngestionPipeline> entities) {
-    List<String> fqns = new ArrayList<>(entities.size());
-    List<String> jsons = new ArrayList<>(entities.size());
+    List<IngestionPipeline> entitiesToStore = new ArrayList<>();
+    Gson gson = new Gson();
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
 
     for (IngestionPipeline ingestionPipeline : entities) {
+      EntityReference service = ingestionPipeline.getService();
+      OpenMetadataConnection openmetadataConnection =
+          ingestionPipeline.getOpenMetadataServerConnection();
+
       if (secretsManager != null) {
         secretsManager.encryptIngestionPipeline(ingestionPipeline);
+        openmetadataConnection =
+            secretsManager.encryptOpenMetadataConnection(openmetadataConnection, true);
       }
 
-      fqns.add(ingestionPipeline.getFullyQualifiedName());
-      jsons.add(serializeForStorage(ingestionPipeline));
+      EntityReference processingEngine = ingestionPipeline.getProcessingEngine();
+
+      ingestionPipeline
+          .withService(null)
+          .withOpenMetadataServerConnection(null)
+          .withProcessingEngine(null);
+
+      String jsonCopy = gson.toJson(ingestionPipeline);
+      entitiesToStore.add(gson.fromJson(jsonCopy, IngestionPipeline.class));
+
+      ingestionPipeline
+          .withService(service)
+          .withOpenMetadataServerConnection(openmetadataConnection)
+          .withProcessingEngine(processingEngine);
     }
 
-    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
+    storeMany(entitiesToStore);
   }
 
   @Override
@@ -477,11 +516,6 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
     daoCollection
         .entityExtensionTimeSeriesDao()
         .delete(entity.getFullyQualifiedName(), PIPELINE_STATUS_EXTENSION);
-  }
-
-  @Override
-  protected EntityReference getParentReference(IngestionPipeline entity) {
-    return entity.getService();
   }
 
   @Override
@@ -732,47 +766,15 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "processingEngine",
-          () -> {
-            updateProcessingEngine(original, updated);
-          });
-      compareAndUpdate(
-          "sourceConfig",
-          () -> {
-            updateSourceConfig();
-          });
-      compareAndUpdate(
-          "airflowConfig",
-          () -> {
-            updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
-          });
-      compareAndUpdate(
-          "loggerLevel",
-          () -> {
-            updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
-          });
-      compareAndUpdate(
-          "enabled",
-          () -> {
-            updateEnabled(original.getEnabled(), updated.getEnabled());
-          });
-      compareAndUpdate(
-          "deployed",
-          () -> {
-            updateDeployed(original.getDeployed(), updated.getDeployed());
-          });
-      compareAndUpdate(
-          "raiseOnError",
-          () -> {
-            updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
-          });
-      compareAndUpdate(
-          "enableStreamableLogs",
-          () -> {
-            updateEnableStreamableLogs(
-                original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
-          });
+      updateProcessingEngine(original, updated);
+      updateSourceConfig();
+      updateAirflowConfig(original.getAirflowConfig(), updated.getAirflowConfig());
+      updateLogLevel(original.getLoggerLevel(), updated.getLoggerLevel());
+      updateEnabled(original.getEnabled(), updated.getEnabled());
+      updateDeployed(original.getDeployed(), updated.getDeployed());
+      updateRaiseOnError(original.getRaiseOnError(), updated.getRaiseOnError());
+      updateEnableStreamableLogs(
+          original.getEnableStreamableLogs(), updated.getEnableStreamableLogs());
 
       deployIfRequired(original, updated);
     }

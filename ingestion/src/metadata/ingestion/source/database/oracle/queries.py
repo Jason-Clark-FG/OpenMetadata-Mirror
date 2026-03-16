@@ -14,18 +14,19 @@ SQL Queries used during ingestion
 
 import textwrap
 
-ORACLE_TABLE_COMMENTS = textwrap.dedent(
+ORACLE_ALL_TABLE_COMMENTS = textwrap.dedent(
     """
 SELECT
     comments table_comment,
     LOWER(table_name) "table_name",
     LOWER(owner) "schema"
-FROM {prefix}_TAB_COMMENTS
+FROM DBA_TAB_COMMENTS
 where comments is not null and owner not in ('SYSTEM', 'SYS')
 """
 )
 
-ORACLE_VIEW_DEFINITIONS = textwrap.dedent(
+
+ORACLE_ALL_VIEW_DEFINITIONS = textwrap.dedent(
     """
 SELECT
     LOWER(v.view_name) AS "view_name",
@@ -35,8 +36,8 @@ SELECT
         WHEN text IS NOT NULL THEN NULL
         ELSE DBMS_METADATA.GET_DDL('VIEW', view_name, owner)
     END AS "view_ddl"
-FROM {prefix}_VIEWS v
-JOIN {prefix}_USERS u
+FROM DBA_VIEWS v
+JOIN DBA_USERS u
     ON v.owner = u.username
 WHERE u.oracle_maintained = 'N'
 UNION ALL
@@ -48,26 +49,26 @@ SELECT
         WHEN query IS NOT NULL THEN NULL
         ELSE DBMS_METADATA.GET_DDL('MATERIALIZED_VIEW', mview_name, owner)
     END AS "view_ddl"
-FROM {prefix}_MVIEWS m
-JOIN {prefix}_USERS u
+FROM DBA_MVIEWS m
+JOIN DBA_USERS u
     ON m.owner = u.username
 WHERE u.oracle_maintained = 'N'
 """
 )
 
-ORACLE_TABLE_COMMENTS_PRESERVE_CASE = textwrap.dedent(
+ORACLE_ALL_TABLE_COMMENTS_PRESERVE_CASE = textwrap.dedent(
     """
 SELECT
     comments "table_comment",
     table_name "table_name",
     owner "schema"
-FROM {prefix}_TAB_COMMENTS
+FROM DBA_TAB_COMMENTS
 where comments is not null and owner not in ('SYSTEM', 'SYS')
 """
 )
 
 
-ORACLE_VIEW_DEFINITIONS_PRESERVE_CASE = textwrap.dedent(
+ORACLE_ALL_VIEW_DEFINITIONS_PRESERVE_CASE = textwrap.dedent(
     """
 SELECT
     v.view_name AS "view_name",
@@ -77,8 +78,8 @@ SELECT
         WHEN text IS NOT NULL THEN NULL
         ELSE DBMS_METADATA.GET_DDL('VIEW', view_name, owner)
     END AS "view_ddl"
-FROM {prefix}_VIEWS v
-JOIN {prefix}_USERS u
+FROM DBA_VIEWS v
+JOIN DBA_USERS u
     ON v.owner = u.username
 WHERE u.oracle_maintained = 'N'
 UNION ALL
@@ -90,8 +91,8 @@ SELECT
         WHEN query IS NOT NULL THEN NULL
         ELSE DBMS_METADATA.GET_DDL('MATERIALIZED_VIEW', mview_name, owner)
     END AS "view_ddl"
-FROM {prefix}_MVIEWS m
-JOIN {prefix}_USERS u
+FROM DBA_MVIEWS m
+JOIN DBA_USERS u
     ON m.owner = u.username
 WHERE u.oracle_maintained = 'N'
 """
@@ -100,25 +101,25 @@ WHERE u.oracle_maintained = 'N'
 
 GET_VIEW_NAMES = textwrap.dedent(
     """
-SELECT view_name FROM {prefix}_VIEWS WHERE owner = :owner
+SELECT view_name FROM DBA_VIEWS WHERE owner = :owner
 """
 )
 
 GET_MATERIALIZED_VIEW_NAMES = textwrap.dedent(
     """
-SELECT mview_name FROM {prefix}_MVIEWS WHERE owner = :owner
+SELECT mview_name FROM DBA_MVIEWS WHERE owner = :owner
 """
 )
 
 ORACLE_GET_TABLE_NAMES = textwrap.dedent(
     """
-SELECT table_name FROM {prefix}_TABLES WHERE
+SELECT table_name FROM DBA_TABLES WHERE
 {tablespace}
 OWNER = :owner
 AND IOT_NAME IS NULL
 AND DURATION IS NULL
 AND TABLE_NAME NOT IN
-(SELECT mview_name FROM {prefix}_MVIEWS WHERE owner = :owner)
+(SELECT mview_name FROM DBA_MVIEWS WHERE owner = :owner)
 """
 )
 
@@ -127,7 +128,7 @@ ORACLE_IDENTITY_TYPE = textwrap.dedent(
 col.default_on_null,
 (
     SELECT id.generation_type || ',' || id.IDENTITY_OPTIONS
-    FROM {prefix}_TAB_IDENTITY_COLS{dblink} id
+    FROM DBA_TAB_IDENTITY_COLS{dblink} id
     WHERE col.table_name = id.table_name
     AND col.column_name = id.column_name
     AND col.owner = id.owner
@@ -144,7 +145,7 @@ SELECT
     TEXT,
     'StoredProcedure' as procedure_type
 FROM
-    {prefix}_SOURCE
+    DBA_SOURCE
 WHERE
     type = 'PROCEDURE' and owner = '{schema}'
 ORDER BY OWNER, NAME, LINE
@@ -161,7 +162,7 @@ SELECT
     'StoredPackage' as procedure_type
 
 FROM
-    {prefix}_SOURCE
+    DBA_SOURCE
 WHERE TYPE IN ('PACKAGE', 'PACKAGE BODY') AND owner = '{schema}'
 ORDER BY OWNER, NAME, CASE type
         WHEN 'PACKAGE' THEN 1
@@ -180,14 +181,14 @@ SELECT
     TEXT,
     'StoredPackage' as procedure_type
 FROM
-    {prefix}_SOURCE
+    DBA_SOURCE
 WHERE
     TYPE IN ('PACKAGE', 'PACKAGE BODY')
     AND owner = (
         SELECT
             USERNAME
         FROM
-            {prefix}_USERS
+            ALL_USERS
         WHERE
             ROWNUM = 1
     )
@@ -199,13 +200,13 @@ ORDER BY OWNER, NAME, CASE type
 """
 )
 
-CHECK_ACCESS_TO_ALL = "SELECT table_name FROM {prefix}_TABLES where ROWNUM < 2"
+CHECK_ACCESS_TO_ALL = "SELECT table_name FROM DBA_TABLES where ROWNUM < 2"
 
 
 TEST_MATERIALIZED_VIEWS = textwrap.dedent(
     """
 SELECT COUNT(*) as count
-FROM {prefix}_MVIEWS
+FROM DBA_MVIEWS
 WHERE ROWNUM = 1
 """
 )
@@ -290,8 +291,8 @@ ORACLE_GET_COLUMNS = textwrap.dedent(
             com.comments,
             col.virtual_column,
             {identity_cols}
-        FROM {prefix}_TAB_COLS{dblink} col
-        LEFT JOIN {prefix}_COL_COMMENTS{dblink} com
+        FROM DBA_TAB_COLS{dblink} col
+        LEFT JOIN DBA_COL_COMMENTS{dblink} com
         ON col.table_name = com.table_name
         AND col.column_name = com.column_name
         AND col.owner = com.owner
@@ -300,7 +301,7 @@ ORACLE_GET_COLUMNS = textwrap.dedent(
     """
 )
 
-ORACLE_CONSTRAINTS = textwrap.dedent(
+ORACLE_ALL_CONSTRAINTS = textwrap.dedent(
     """
         SELECT
             ac.constraint_name,
@@ -313,9 +314,9 @@ ORACLE_CONSTRAINTS = textwrap.dedent(
             rem.position as rem_pos,
             ac.search_condition,
             ac.delete_rule
-        FROM {prefix}_CONSTRAINTS{dblink} ac,
-            {prefix}_CONS_COLUMNS{dblink} loc,
-            {prefix}_CONS_COLUMNS{dblink} rem
+        FROM DBA_CONSTRAINTS{dblink} ac,
+            DBA_CONS_COLUMNS{dblink} loc,
+            DBA_CONS_COLUMNS{dblink} rem
         WHERE ac.table_name = CAST(:table_name AS VARCHAR2(128))
             AND ac.constraint_type IN ('R','P', 'U', 'C')
             AND ac.owner = CAST(:owner AS VARCHAR2(128))

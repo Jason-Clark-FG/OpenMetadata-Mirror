@@ -795,7 +795,8 @@ describe('ContractImportModal', () => {
         expect(screen.getByText('contract.yaml')).toBeInTheDocument();
       });
 
-      const removeButton = screen.getByTestId('remove-file-button');
+      const removeButton = screen.getByTestId('DeleteOutlineOutlinedIcon')
+        .parentElement as HTMLElement;
 
       await act(async () => {
         fireEvent.click(removeButton);

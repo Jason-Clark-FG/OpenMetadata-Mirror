@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { APIRequestContext, expect, Page, test } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { SidebarItem } from '../../constant/sidebar';
 import { TableClass } from '../../support/entity/TableClass';
@@ -44,78 +44,21 @@ async function visitColumnBulkOperationsPage(page: Page) {
   await waitForAllLoadersToDisappear(page);
 }
 
-async function searchColumn(
-  page: Page,
-  columnName: string,
-  options: { expectResults?: boolean } = {}
-) {
-  const expectResults = options.expectResults ?? true;
+async function searchColumn(page: Page, columnName: string) {
   const searchInput = page.getByPlaceholder('Search columns');
-  const matchingCheckbox = page.getByTestId(`column-checkbox-${columnName}`);
+  await searchInput.clear();
 
-  const runSearch = async () => {
-    await searchInput.clear();
-    const encodedColumnName = encodeURIComponent(columnName);
-    const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes(GRID_API_URL) &&
-        response.url().includes(`columnNamePattern=${encodedColumnName}`),
-      { timeout: 5000 }
-    );
-    await searchInput.fill(columnName);
-    const response = await responsePromise.catch(() => null);
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes(GRID_API_URL) &&
+      response.url().includes('columnNamePattern=') &&
+      response.status() === 200,
+    { timeout: 15000 }
+  );
 
-    if (response && response.status() !== 200) {
-      return 0;
-    }
-
-    await waitForAllLoadersToDisappear(page);
-    return matchingCheckbox.count();
-  };
-
-  if (!expectResults) {
-    await runSearch();
-    return;
-  }
-
-  await expect
-    .poll(
-      async () => {
-        return runSearch();
-      },
-      { timeout: 90000, intervals: [1000, 2000, 3000] }
-    )
-    .toBeGreaterThan(0);
-}
-
-async function waitForColumnInGridIndex(
-  apiContext: APIRequestContext,
-  columnName: string,
-  minOccurrences = 1
-) {
-  await expect
-    .poll(
-      async () => {
-        const response = await apiContext.get(
-          `/api/v1/columns/grid?size=1000&columnNamePattern=${encodeURIComponent(
-            columnName
-          )}`
-        );
-
-        if (!response.ok()) {
-          return 0;
-        }
-
-        const body = await response.json();
-        const match = body.columns?.find(
-          (column: { columnName?: string }) => column.columnName === columnName
-        );
-
-        return match?.totalOccurrences ?? 0;
-      },
-      { timeout: 90000, intervals: [1000, 2000, 3000] }
-    )
-    .toBeGreaterThanOrEqual(minOccurrences);
+  await searchInput.fill(columnName);
+  await responsePromise;
+  await waitForAllLoadersToDisappear(page);
 }
 
 async function getPendingChangesValue(page: Page) {
@@ -191,9 +134,7 @@ test.describe(
       page,
     }) => {
       await test.step('Search for a nonexistent column name', async () => {
-        await searchColumn(page, 'zzz_nonexistent_column_xyz_12345', {
-          expectResults: false,
-        });
+        await searchColumn(page, 'zzz_nonexistent_column_xyz_12345');
       });
 
       await test.step('Verify empty state or zero rows', async () => {
@@ -530,8 +471,6 @@ test.describe(
         },
         apiContext
       );
-
-      await waitForColumnInGridIndex(apiContext, sharedColumnName, 2);
       await afterAction();
     });
 
@@ -775,7 +714,6 @@ test.describe(
         const cancelButton = page.getByTestId('cancel-selection-button');
         await expect(cancelButton).toBeVisible();
         await cancelButton.click();
-        await waitForAllLoadersToDisappear(page);
       });
 
       await test.step('Verify edit button is disabled again', async () => {
@@ -880,8 +818,6 @@ test.describe(
           },
           apiContext
         );
-
-        await waitForColumnInGridIndex(apiContext, sharedColumnName, 2);
         await afterAction();
       }
     );
@@ -1026,8 +962,6 @@ test.describe(
       const { apiContext, afterAction } = await createNewPage(browser);
       await table.create(apiContext);
       structColumnName = table.columnsName[2];
-
-      await waitForColumnInGridIndex(apiContext, structColumnName);
       await afterAction();
     });
 
@@ -1060,11 +994,8 @@ test.describe(
           const initialRowCount = await page.locator('tbody tr').count();
           await expandButton.click();
 
-          await expect
-            .poll(() => page.locator('tbody tr').count(), {
-              timeout: 10000,
-            })
-            .toBeGreaterThan(initialRowCount);
+          const expandedRowCount = await page.locator('tbody tr').count();
+          expect(expandedRowCount).toBeGreaterThan(initialRowCount);
         }
       });
     });

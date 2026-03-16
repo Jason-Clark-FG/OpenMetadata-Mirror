@@ -77,7 +77,6 @@ public class ElasticSearchSummaryCardAggregator
                                       .lte(
                                           es.co.elastic.clients.json.JsonData.of(
                                               String.valueOf(end))))));
-
       searchRequestBuilder.query(rangeQuery);
       searchRequestBuilder.index(DataInsightSystemChartRepository.getDataInsightsSearchIndex());
     } else {

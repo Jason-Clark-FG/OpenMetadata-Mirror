@@ -47,6 +47,7 @@ test.describe.serial('Add role and assign it to the user', () => {
 
   test('Create role', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ROLES);
+    await page.waitForLoadState('networkidle');
 
     await page.click('[data-testid="add-role"]');
 
@@ -79,6 +80,7 @@ test.describe.serial('Add role and assign it to the user', () => {
   test('Create new user and assign new role to him', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.USERS);
 
+    await page.waitForLoadState('networkidle');
 
     await page.click('[data-testid="add-user"]');
 

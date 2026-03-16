@@ -11,10 +11,9 @@
  *  limitations under the License.
  */
 
+import AddIcon from '@mui/icons-material/Add';
 import { Box, Button, Chip, Typography, useTheme } from '@mui/material';
 import { SimpleTreeView, TreeItem, treeItemClasses } from '@mui/x-tree-view';
-import { Avatar } from '@openmetadata/ui-core-components';
-import { Plus } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { compare, Operation as JsonPathOperation } from 'fast-json-patch';
 import { isEmpty } from 'lodash';
@@ -42,13 +41,13 @@ import {
 } from '../../../rest/domainAPI';
 import { convertDomainsToTreeOptions } from '../../../utils/DomainUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import {
   escapeESReservedCharacters,
   getDecodedFqn,
   getEncodedFqn,
 } from '../../../utils/StringsUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../common/Loader/Loader';
 import ResizableLeftPanels from '../../common/ResizablePanels/ResizableLeftPanels';
@@ -779,7 +778,7 @@ const DomainTreeView = ({
                   alignItems: 'center',
                   gap: 2,
                 }}>
-                <Avatar size="xs" {...getEntityAvatarProps(node)} />
+                <EntityAvatar entity={node} size={24} variant="rounded" />
                 <Typography
                   sx={{
                     color: theme.palette.allShades?.gray?.[800],
@@ -825,7 +824,7 @@ const DomainTreeView = ({
                   mb: 1.5,
                 }}>
                 <Button
-                  startIcon={isLoadingMore ? null : <Plus />}
+                  startIcon={isLoadingMore ? null : <AddIcon />}
                   sx={{
                     p: 0,
                     cursor: 'pointer',

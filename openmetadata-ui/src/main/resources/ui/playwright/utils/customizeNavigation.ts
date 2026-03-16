@@ -124,4 +124,5 @@ export const selectPersona = async (page: Page, persona: PersonaClass) => {
     .getByTestId('persona-label')
     .getByText(persona.data.displayName)
     .click();
+  await page.waitForLoadState('networkidle');
 };

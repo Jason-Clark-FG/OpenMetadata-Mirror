@@ -64,7 +64,7 @@ export interface DatabaseServiceProfilerPipeline {
     /**
      * Number of threads to use during metric computations
      */
-    threadCount?: number | null;
+    threadCount?: number;
     /**
      * Profiler Timeout in Seconds
      */

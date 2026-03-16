@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
-import org.junit.jupiter.api.parallel.Isolated;
 import org.openmetadata.api.configuration.LogoConfiguration;
 import org.openmetadata.api.configuration.ThemeConfiguration;
 import org.openmetadata.api.configuration.UiThemePreference;
@@ -79,11 +78,10 @@ import org.openmetadata.sdk.network.RequestOptions;
  *
  * <p>Migrated from: org.openmetadata.service.resources.system.SystemResourceTest
  *
- * <p>Test isolation: Uses TestNamespace extension and runs isolated because tests mutate global
- * search/system settings that can interfere with concurrently executing classes.
+ * <p>Test isolation: Uses TestNamespace extension for test isolation Parallelization: Safe for
+ * concurrent execution via @Execution(ExecutionMode.CONCURRENT)
  */
-@Execution(ExecutionMode.SAME_THREAD)
-@Isolated
+@Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(TestNamespaceExtension.class)
 public class SystemResourceIT {
 
@@ -701,15 +699,6 @@ public class SystemResourceIT {
   @Test
   void test_getDefaultSearchSettings() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
-
-    // Ensure deterministic baseline even when other tests mutate search settings.
-    client
-        .getHttpClient()
-        .executeForString(
-            HttpMethod.PUT,
-            "/v1/system/settings/reset/" + SettingsType.SEARCH_SETTINGS.value(),
-            null,
-            RequestOptions.builder().build());
 
     String settingsJson =
         client

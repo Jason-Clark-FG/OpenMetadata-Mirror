@@ -18,7 +18,6 @@ import {
   descriptionBox,
   redirectToHomePage,
 } from '../../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   clickCreateTestCaseButton,
   clickEditTestCaseButton,
@@ -1190,7 +1189,6 @@ test.describe(
       };
 
       await visitCreateTestCasePanelFromEntityPage(page, table);
-      await waitForAllLoadersToDisappear(page);
       await page
         .getByTestId('select-table-card')
         .getByText('Column Level')

@@ -590,6 +590,7 @@ describe('getFieldByArgumentType tests', () => {
 
     fireEvent.click(secretKeyInput);
 
+    expect(await screen.findByTestId('secret-key')).toBeInTheDocument();
     expect(
       await screen.findByTestId('webhook-4-headers-list')
     ).toBeInTheDocument();

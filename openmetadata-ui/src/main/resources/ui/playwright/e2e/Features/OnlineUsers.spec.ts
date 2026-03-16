@@ -18,7 +18,6 @@ import { SidebarItem } from '../../constant/sidebar';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { settingClick, sidebarClick } from '../../utils/sidebar';
 import { test } from '../fixtures/pages';
 
@@ -31,12 +30,6 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await afterAction();
   });
 
-  test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
-    await testUser.delete(apiContext);
-    await afterAction();
-  });
-
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
   });
@@ -45,6 +38,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     page,
   }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
+    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
@@ -93,38 +87,32 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   }) => {
     // First, navigate around to generate activity
     await sidebarClick(page, SidebarItem.EXPLORE);
-    await waitForAllLoadersToDisappear(page);
+    await page.waitForLoadState('networkidle');
 
     await sidebarClick(page, SidebarItem.DATA_QUALITY);
-    await waitForAllLoadersToDisappear(page);
+    await page.waitForLoadState('networkidle');
 
-    const onlineUsersRes = page.waitForResponse('/api/v1/users/online?*');
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
-    await onlineUsersRes;
+    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
 
-    await expect(page.getByTestId('online-users-table')).toBeVisible();
-
-    // Admin user should appear in the online users list with recent activity
+    // Admin user should appear in the online users list
     const adminLink = page.locator('a').filter({ hasText: 'admin' }).first();
 
     await expect(adminLink).toBeVisible();
 
-    // Check that admin user shows recent activity since we just navigated
+    // Check that admin user shows as "Online now" since we just navigated
     const adminRow = page.locator('tr').filter({ has: adminLink });
-    const activityCell = adminRow.locator('td:nth-child(3)');
 
-    await expect(activityCell).toHaveText(
-      /(Online now|\d+\s+(seconds?|minutes?)\s+ago)/
-    );
+    await expect(adminRow.getByText('Online now')).toBeVisible();
   });
 
   test('Should not show bots in online users list', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
-    await waitForAllLoadersToDisappear(page);
+    await page.waitForLoadState('networkidle');
 
     // Verify bot users are not shown (ingestion-bot should not be visible)
     const tableRows = page.locator('tbody tr');
@@ -140,6 +128,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('Should filter users by time window', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
+    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
@@ -186,7 +175,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await sidebarClick(dataConsumerPage, SidebarItem.SETTINGS);
 
     await dataConsumerPage.getByTestId('members').click();
-    await waitForAllLoadersToDisappear(dataConsumerPage);
+    await dataConsumerPage.waitForLoadState('networkidle');
 
     await expect(
       dataConsumerPage.getByTestId('members.online-users')
@@ -195,6 +184,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
   test('Should show correct last activity format', async ({ page }) => {
     await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
+    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
@@ -231,7 +221,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       // 1 step - go to explore page using new user
       await sidebarClick(userPage, SidebarItem.EXPLORE);
-      await waitForAllLoadersToDisappear(userPage);
+      await userPage.waitForLoadState('networkidle');
 
       await userPage.close();
     });
@@ -241,6 +231,7 @@ test.describe('Online Users Feature', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       // 2 step - go to online user page and check that user display name should present
       await settingClick(page, GlobalSettingOptions.ONLINE_USERS);
+      await page.waitForLoadState('networkidle');
 
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',

@@ -74,7 +74,7 @@ class VectorEmbeddingIntegrationIT {
 
     try {
       embeddingClient = createTestEmbeddingClient();
-    } catch (Exception e) {
+    } catch (EmbeddingInitializationException e) {
       Assumptions.assumeTrue(false, "DJL model not available: " + e.getMessage());
       return;
     }

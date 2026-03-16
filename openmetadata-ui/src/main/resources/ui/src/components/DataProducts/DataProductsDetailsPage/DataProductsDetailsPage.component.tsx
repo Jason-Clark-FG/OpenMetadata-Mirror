@@ -12,7 +12,6 @@
  */
 import Icon from '@ant-design/icons';
 import { Box, useTheme } from '@mui/material';
-import { Avatar } from '@openmetadata/ui-core-components';
 import { Button, Dropdown, Tabs, Tooltip, Typography } from 'antd';
 import ButtonGroup from 'antd/lib/button/button-group';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
@@ -84,7 +83,6 @@ import {
   getEntityVoteStatus,
 } from '../../../utils/EntityUtils';
 import { getEntityVersionByField } from '../../../utils/EntityVersionUtils';
-import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { showNotistackError } from '../../../utils/NotistackUtils';
 import {
   DEFAULT_ENTITY_PERMISSION,
@@ -100,6 +98,7 @@ import { useRequiredParams } from '../../../utils/useRequiredParams';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
 import { useBreadcrumbs } from '../../common/atoms/navigation/useBreadcrumbs';
 import { CoverImage } from '../../common/CoverImage/CoverImage.component';
+import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 import AnnouncementCard from '../../common/EntityPageInfos/AnnouncementCard/AnnouncementCard';
 import AnnouncementDrawer from '../../common/EntityPageInfos/AnnouncementDrawer/AnnouncementDrawer';
 import { AlignRightIconButton } from '../../common/IconButtons/EditIconButton';
@@ -620,9 +619,19 @@ const DataProductsDetailsPage = ({
 
   const iconData = useMemo(() => {
     return (
-      <Avatar
-        size="2xl"
-        {...getEntityAvatarProps({ ...dataProduct, entityType: 'dataProduct' })}
+      <EntityAvatar
+        entity={{
+          ...dataProduct,
+          entityType: 'dataProduct',
+        }}
+        size={91}
+        sx={{
+          borderRadius: '5px',
+          border: '2px solid',
+          borderColor: theme.palette.allShades.white,
+          marginTop: '-25px',
+          marginRight: 2,
+        }}
       />
     );
   }, [dataProduct, theme]);

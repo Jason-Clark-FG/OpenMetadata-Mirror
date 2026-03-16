@@ -23,14 +23,13 @@ import jakarta.ws.rs.client.Client;
 import jakarta.ws.rs.client.Invocation;
 import java.net.UnknownHostException;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openmetadata.schema.entity.events.EventSubscription;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
-import org.openmetadata.schema.entity.events.authentication.WebhookOAuth2Config;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.Webhook;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -39,7 +38,6 @@ import org.openmetadata.service.events.errors.EventPublisherException;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.notifications.recipients.context.Recipient;
 import org.openmetadata.service.notifications.recipients.context.WebhookRecipient;
-import org.openmetadata.service.util.OAuth2TokenManager;
 
 @Slf4j
 public class GenericPublisher implements Destination<ChangeEvent> {
@@ -78,33 +76,21 @@ public class GenericPublisher implements Destination<ChangeEvent> {
     try {
       String eventJson = JsonUtils.pojoToJson(event);
 
-      List<WebhookRecipient> webhookRecipients =
+      // Convert type-agnostic Recipient objects to configured webhook requests
+      List<Invocation.Builder> targets =
           recipients.stream()
               .filter(WebhookRecipient.class::isInstance)
               .map(WebhookRecipient.class::cast)
+              .map(r -> r.getConfiguredRequest(client, eventJson))
+              .filter(Objects::nonNull)
               .toList();
 
-      for (WebhookRecipient recipient : webhookRecipients) {
-        Invocation.Builder target = recipient.getConfiguredRequest(client, eventJson);
-        if (target == null) {
-          continue;
-        }
-        try {
-          postWebhookMessage(this, target, eventJson);
-        } catch (EventPublisherException ex) {
-          if (isOAuth2Configured() && ex.getMessage().contains("HTTP 401")) {
-            LOG.debug("OAuth2 token rejected (401), invalidating and retrying");
-            invalidateOAuth2Token();
-            Invocation.Builder retryTarget = recipient.getConfiguredRequest(client, eventJson);
-            postWebhookMessage(this, retryTarget, eventJson);
-          } else {
-            throw ex;
-          }
-        }
+      // Send webhook message to each target
+      for (Invocation.Builder actionTarget : targets) {
+        postWebhookMessage(this, actionTarget, eventJson);
       }
-    } catch (EventPublisherException ex) {
-      throw ex;
     } catch (Exception ex) {
+      // Handle UnknownHostException with specific logging
       if (ex.getCause() instanceof UnknownHostException) {
         String message =
             String.format(
@@ -144,20 +130,6 @@ public class GenericPublisher implements Destination<ChangeEvent> {
   @Override
   public boolean getEnabled() {
     return subscriptionDestination.getEnabled();
-  }
-
-  private boolean isOAuth2Configured() {
-    return webhook != null
-        && webhook.getAuthType() instanceof Map<?, ?> authMap
-        && WebhookOAuth2Config.Type.OAUTH_2.value().equals(authMap.get("type"));
-  }
-
-  private void invalidateOAuth2Token() {
-    WebhookOAuth2Config oauth2Config =
-        JsonUtils.convertValue(webhook.getAuthType(), WebhookOAuth2Config.class);
-    if (oauth2Config != null) {
-      OAuth2TokenManager.getInstance().invalidateToken(oauth2Config);
-    }
   }
 
   public void close() {

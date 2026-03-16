@@ -16,7 +16,6 @@ import {
   SETTING_CUSTOM_PROPERTIES_PATH,
 } from '../constant/settings';
 import { SidebarItem, SIDEBAR_LIST_ITEMS } from '../constant/sidebar';
-import { waitForAllLoadersToDisappear } from './entity';
 
 export type SettingOptionsType =
   | keyof typeof SETTINGS_OPTIONS_PATH
@@ -70,5 +69,5 @@ export const settingClick = async (
     await page.click(`[data-testid="${path}"]`);
   }
 
-  await waitForAllLoadersToDisappear(page);
+  await page.waitForLoadState('networkidle');
 };

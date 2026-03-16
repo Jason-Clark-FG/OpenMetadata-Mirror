@@ -107,12 +107,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await database.delete(apiContext);
-      await afterAction();
-    });
-
     test('should test Database Schema Tables normal pagination', async ({
       page,
     }) => {
@@ -167,12 +161,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await database.delete(apiContext);
-      await afterAction();
-    });
-
     test('should test pagination on Table columns', async ({ page }) => {
       await page.goto(`/table/${tableFqn}?pageSize=15`);
       await testPaginationNavigation(page, '/columns', 'table', false);
@@ -213,12 +201,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         });
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await database.delete(apiContext);
       await afterAction();
     });
 
@@ -293,12 +275,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await tag.create(apiContext);
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await classification.delete(apiContext);
       await afterAction();
     });
 
@@ -436,12 +412,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await apiCollection.delete(apiContext);
-      await afterAction();
-    });
-
     test('should test API Collection normal pagination', async ({ page }) => {
       await page.goto(`/apiCollection/${apiCollectionFqn}?pageSize=15`);
       await testPaginationNavigation(page, '/api/v1/apiEndpoints', 'table');
@@ -486,12 +456,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         });
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await database.delete(apiContext);
       await afterAction();
     });
 
@@ -559,12 +523,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await database.delete(apiContext);
-      await afterAction();
-    });
-
     test('should test Database Schemas normal pagination', async ({ page }) => {
       await page.goto(`/database/${databaseFqn}?pageSize=15`);
       await testPaginationNavigation(page, '/api/v1/databaseSchemas', 'table');
@@ -620,12 +578,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await dashboardService.delete(apiContext);
-      await afterAction();
-    });
-
     test('should test Data Models normal pagination', async ({ page }) => {
       await page.goto(
         `/service/dashboardServices/${serviceFqn}/data-model?pageSize=15`
@@ -669,7 +621,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   });
 
   test.describe('Pagination tests for Drive Service Directories page', () => {
-    const driveService = new DriveServiceClass(`pw-drive-service-${uuid()}`);
+    const driveService = new DriveServiceClass();
     let serviceFqn: string;
 
     test.beforeAll(async ({ browser }) => {
@@ -688,12 +640,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         });
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await driveService.delete(apiContext);
       await afterAction();
     });
 
@@ -726,7 +672,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   });
 
   test.describe('Pagination tests for Drive Service Files page', () => {
-    const driveService = new DriveServiceClass(`pw-drive-service-${uuid()}`);
+    const driveService = new DriveServiceClass();
     let serviceFqn: string;
 
     test.beforeAll(async ({ browser }) => {
@@ -753,12 +699,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         },
       });
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await driveService.delete(apiContext);
       await afterAction();
     });
 
@@ -880,7 +820,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   });
 
   test.describe('Pagination tests for Drive Service Spreadsheets page', () => {
-    const driveService = new DriveServiceClass(`pw-drive-service-${uuid()}`);
+    const driveService = new DriveServiceClass();
     let serviceFqn: string;
 
     test.beforeAll(async ({ browser }) => {
@@ -899,12 +839,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         });
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await driveService.delete(apiContext);
       await afterAction();
     });
 
@@ -958,12 +892,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await role.create(apiContext, [policy.responseData.id!]);
       }
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await policy.delete(apiContext);
       await afterAction();
     });
 
@@ -1037,12 +965,6 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await dashboardService.create(apiContext, customChildDashboards);
       serviceFqn = dashboardService.entityResponseData.fullyQualifiedName!;
 
-      await afterAction();
-    });
-
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await dashboardService.delete(apiContext);
       await afterAction();
     });
 

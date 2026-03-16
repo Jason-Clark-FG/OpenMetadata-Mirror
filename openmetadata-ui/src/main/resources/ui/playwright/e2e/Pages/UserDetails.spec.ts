@@ -83,39 +83,32 @@ test.describe('User with different Roles', () => {
   });
 
   test(
-    'Admin user can edit teams from the user profile',
+    'Admin user can get all the teams hierarchy and edit teams',
     PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
     async ({ adminPage }) => {
-      test.slow();
       await redirectToUserPage(adminPage);
 
       // Check if the avatar is visible
       await expect(adminPage.getByTestId('user-profile-teams')).toBeVisible();
 
-      const teamsListResponse = adminPage.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/teams/hierarchy') &&
-          response.request().method() === 'GET'
-      );
-
       await adminPage.getByTestId('edit-teams-button').click();
-      await teamsListResponse;
+
+      await expect(adminPage.getByTestId('team-select')).toBeVisible();
 
       await adminPage.waitForSelector('.ant-tree-select-dropdown', {
         state: 'visible',
       });
 
-      const teamOption = adminPage
-        .locator('[title="' + team.responseData.displayName + '"]')
-        .first();
-
-      await expect(teamOption).toBeVisible();
-      await teamOption.click();
+      await adminPage
+        .locator('.ant-select-tree-title')
+        .filter({ hasText: 'Accounting' })
+        .first()
+        .click();
 
       await adminPage.getByTestId('teams-edit-save-btn').click();
 
       await expect(adminPage.getByTestId('user-profile-teams')).toContainText(
-        team.responseData.displayName ?? team.data.displayName
+        'Accounting'
       );
     }
   );
@@ -124,6 +117,7 @@ test.describe('User with different Roles', () => {
     adminPage,
   }) => {
     await visitUserProfilePage(adminPage, user3.getUserName());
+    await adminPage.waitForLoadState('networkidle');
 
     await expect(adminPage.getByTestId('user-profile-teams')).toBeVisible();
 
@@ -153,6 +147,7 @@ test.describe('User with different Roles', () => {
 
     await adminPage.getByText(team.responseData.displayName).first().click();
 
+    await adminPage.waitForLoadState('networkidle');
 
     const domainResponse = adminPage.waitForResponse((response) =>
       response.url().includes('/api/v1/domains/hierarchy')
@@ -195,6 +190,7 @@ test.describe('User with different Roles', () => {
 
     await visitUserProfilePage(adminPage, user3.getUserName());
 
+    await adminPage.waitForLoadState('networkidle');
 
     // Wait for the team to be visible in the teams section
     await adminPage
@@ -280,6 +276,7 @@ test.describe('User with different Roles', () => {
     test.slow();
 
     await redirectToUserPage(adminPage);
+    await adminPage.waitForLoadState('networkidle');
 
     // Step 1: Assign domain to user
     // Verify domain edit button is visible
@@ -430,6 +427,7 @@ test.describe('User with different Roles', () => {
     await subdomain.create(apiContext);
 
     await redirectToUserPage(adminPage);
+    await adminPage.waitForLoadState('networkidle');
 
     // Click on edit domains button
     await adminPage.getByTestId('edit-domains').click();
@@ -475,6 +473,7 @@ test.describe('User with different Roles', () => {
 
     // Wait for the child domains to load
     await waitForAllLoadersToDisappear(adminPage);
+    await adminPage.waitForLoadState('networkidle');
 
     // Verify that the subdomain is now visible in the tree
     await expect(

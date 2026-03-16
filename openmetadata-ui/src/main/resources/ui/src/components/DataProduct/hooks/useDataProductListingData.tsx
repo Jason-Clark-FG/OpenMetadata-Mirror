@@ -12,7 +12,6 @@
  */
 
 import { Box, Typography } from '@mui/material';
-import { Avatar } from '@openmetadata/ui-core-components';
 import { useCallback, useMemo } from 'react';
 import { TABLE_CARD_PAGE_SIZE } from '../../../constants/constants';
 import {
@@ -23,13 +22,13 @@ import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { TagSource } from '../../../generated/type/tagLabel';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { useListingData } from '../../common/atoms/compositions/useListingData';
 import {
   CellRenderer,
   ColumnConfig,
   ListingData,
 } from '../../common/atoms/shared/types';
+import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 
 export const useDataProductListingData = (): ListingData<DataProduct> => {
   const filterKeys = useMemo(() => DATAPRODUCT_DEFAULT_QUICK_FILTERS, []);
@@ -98,7 +97,7 @@ export const useDataProductListingData = (): ListingData<DataProduct> => {
 
         return (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar size="lg" {...getEntityAvatarProps(entity)} />
+            <EntityAvatar entity={entity} size={40} />
             <Box>
               <Typography
                 sx={{

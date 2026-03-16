@@ -1,5 +1,6 @@
 package org.openmetadata.service.apps.bundles.insights.workflows.costAnalysis;
 
+import static org.openmetadata.service.apps.bundles.insights.DataInsightsApp.REPORT_DATA_TYPE_KEY;
 import static org.openmetadata.service.apps.bundles.insights.utils.TimestampUtils.TIMESTAMP_KEY;
 
 import java.util.ArrayList;
@@ -220,11 +221,11 @@ public class CostAnalysisWorkflow {
       Map<String, Object> contextData) {
     Optional<String> error = Optional.empty();
 
+    contextData.put(REPORT_DATA_TYPE_KEY, ReportData.ReportDataType.RAW_COST_ANALYSIS_REPORT_DATA);
     CreateReportDataProcessor createReportdataProcessor =
         new CreateReportDataProcessor(
             rawCostAnalysisReportDataList.size(),
-            "[CostAnalysisWorkflow] Raw Cost Analysis Report Data Processor",
-            ReportData.ReportDataType.RAW_COST_ANALYSIS_REPORT_DATA);
+            "[CostAnalysisWorkflow] Raw Cost Analysis Report Data Processor");
 
     Optional<List<ReportData>> rawCostAnalysisReportData = Optional.empty();
 
@@ -247,10 +248,9 @@ public class CostAnalysisWorkflow {
       ReportDataSink reportDataSink =
           new ReportDataSink(
               rawCostAnalysisReportData.get().size(),
-              "[CostAnalysisWorkflow] Raw Cost Analysis Report Data Sink",
-              ReportData.ReportDataType.RAW_COST_ANALYSIS_REPORT_DATA);
+              "[CostAnalysisWorkflow] Raw Cost Analysis Report Data " + "Sink");
       try {
-        reportDataSink.write(rawCostAnalysisReportData.get());
+        reportDataSink.write(rawCostAnalysisReportData.get(), contextData);
       } catch (SearchIndexException ex) {
         error =
             Optional.of(
@@ -270,6 +270,8 @@ public class CostAnalysisWorkflow {
       Map<String, Object> contextData) {
     Optional<String> error = Optional.empty();
 
+    contextData.put(
+        REPORT_DATA_TYPE_KEY, ReportData.ReportDataType.AGGREGATED_COST_ANALYSIS_REPORT_DATA);
     AggregatedCostAnalysisReportDataAggregator aggregatedCostAnalysisReportDataAggregator =
         new AggregatedCostAnalysisReportDataAggregator(aggregatedCostAnalysisDataMap.size());
 
@@ -296,8 +298,7 @@ public class CostAnalysisWorkflow {
       CreateReportDataProcessor createReportdataProcessor =
           new CreateReportDataProcessor(
               aggregatedCostAnalysisReportDataList.get().size(),
-              "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Processor",
-              ReportData.ReportDataType.AGGREGATED_COST_ANALYSIS_REPORT_DATA);
+              "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Processor");
       Optional<List<ReportData>> aggregatedCostAnalysisReportData = Optional.empty();
 
       try {
@@ -320,10 +321,9 @@ public class CostAnalysisWorkflow {
         ReportDataSink reportDataSink =
             new ReportDataSink(
                 aggregatedCostAnalysisReportData.get().size(),
-                "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Sink",
-                ReportData.ReportDataType.AGGREGATED_COST_ANALYSIS_REPORT_DATA);
+                "[CostAnalysisWorkflow] Aggregated Cost Analysis Report Data Sink");
         try {
-          reportDataSink.write(aggregatedCostAnalysisReportData.get());
+          reportDataSink.write(aggregatedCostAnalysisReportData.get(), contextData);
         } catch (SearchIndexException ex) {
           error =
               Optional.of(

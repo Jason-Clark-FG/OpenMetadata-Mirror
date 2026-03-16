@@ -19,7 +19,6 @@ import {
   getApiContext,
   redirectToHomePage,
   toastNotification,
-  uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
@@ -176,6 +175,7 @@ test.describe('Search Preview test', () => {
       new RegExp(mockEntitySearchSettings.url + '$')
     );
 
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -199,6 +199,7 @@ test.describe('Search Preview test', () => {
     await searchInput.fill(table1.entity.name);
     await previewResponse;
 
+    await page.waitForLoadState('networkidle');
     await page.waitForSelector('[data-testid="loader"]', {
       state: 'detached',
     });
@@ -255,6 +256,7 @@ test.describe('Column Search Settings Tests', () => {
       /settings\/preferences\/search-settings\/column$/
     );
 
+    await page.waitForLoadState('networkidle');
 
     const fieldContainers = page.getByTestId('field-container-header');
     const firstFieldContainer = fieldContainers.first();
@@ -298,7 +300,9 @@ test.describe('Column Search Settings Tests', () => {
   test('Search preview displays column results correctly', async ({ page }) => {
     const { apiContext, afterAction } = await getApiContext(page);
     const columnTable = new TableClass();
-    const uniqueColumnName = `test_column_${uuid()}`;
+    const uniqueColumnName = `test_column_${Math.random()
+      .toString(36)
+      .substring(7)}`;
 
     columnTable.entity.columns[0].name = uniqueColumnName;
     columnTable.entity.columns[0].description = `Unique column for testing search preview`;
@@ -312,6 +316,7 @@ test.describe('Column Search Settings Tests', () => {
       const columnCard = page.getByTestId('preferences.search-settings.column');
       await columnCard.click();
 
+      await page.waitForLoadState('networkidle');
 
       const searchInput = page.getByTestId('searchbar');
       await searchInput.fill(uniqueColumnName);
@@ -319,6 +324,7 @@ test.describe('Column Search Settings Tests', () => {
       const previewResponse = page.waitForResponse('/api/v1/search/preview');
       await previewResponse;
 
+      await page.waitForLoadState('networkidle');
 
       const searchResultsContainer = page.locator('.search-results-container');
       const matchedCard = searchResultsContainer

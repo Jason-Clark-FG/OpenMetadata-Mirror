@@ -26,7 +26,6 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { setupUserWithPolicy } from '../../../utils/permission';
 import { waitForTestCaseDetailsResponse } from '../../../utils/testCases';
 import { getCurrentMillis } from '../../../utils/dateTime';
@@ -124,7 +123,6 @@ test.describe(
       await table.visitEntityPage(page);
       await page.getByTestId('profiler').click();
       await page.getByRole('tab', { name: 'Data Quality' }).click();
-      await waitForAllLoadersToDisappear(page);
     };
 
     const visitTestCaseDetailsPage = async (page: Page) => {
@@ -384,7 +382,6 @@ test.describe(
       }) => {
         await visitProfilerPage(partialDeleteTcPage);
         await visitTestCaseDetailsPage(partialDeleteTcPage);
-        await waitForAllLoadersToDisappear(partialDeleteTcPage);
         await expect(
           partialDeleteTcPage.getByTestId('test-case-result-tab-container')
         ).toBeVisible();

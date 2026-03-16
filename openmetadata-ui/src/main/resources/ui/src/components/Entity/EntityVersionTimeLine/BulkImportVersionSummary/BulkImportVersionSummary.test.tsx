@@ -10,61 +10,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import { createMuiTheme } from '@openmetadata/ui-core-components';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import {
   CSVImportResult,
   Status,
 } from '../../../../generated/type/csvImportResult';
 import { BulkImportVersionSummary } from './BulkImportVersionSummary.component';
 
-jest.mock('@openmetadata/ui-core-components', () => ({
-  Button: jest
-    .fn()
-    .mockImplementation(({ children, onClick, 'data-testid': testId }) => (
-      <button data-testid={testId} onClick={onClick}>
-        {children}
-      </button>
-    )),
-  Dialog: Object.assign(
-    jest
-      .fn()
-      .mockImplementation(({ children, title, showCloseButton, onClose }) => (
-        <div>
-          {title && <span>{title}</span>}
-          {showCloseButton && (
-            <button data-testid="close-modal-button" onClick={onClose} />
-          )}
-          {children}
-        </div>
-      )),
-    {
-      Content: jest
-        .fn()
-        .mockImplementation(({ children, 'data-testid': testId }) => (
-          <div data-testid={testId}>{children}</div>
-        )),
-      Header: jest
-        .fn()
-        .mockImplementation(({ children }) => <div>{children}</div>),
-      Footer: jest
-        .fn()
-        .mockImplementation(({ children }) => <div>{children}</div>),
-    }
-  ),
-  Typography: jest
-    .fn()
-    .mockImplementation(
-      ({ children, 'data-testid': testId, as: Tag = 'span' }) => (
-        <Tag data-testid={testId}>{children}</Tag>
-      )
-    ),
-  Modal: jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
-  ModalOverlay: jest
-    .fn()
-    .mockImplementation(({ children, isOpen }) =>
-      isOpen ? <div>{children}</div> : null
-    ),
-}));
+const theme = createMuiTheme();
 
 const mockCsvImportResult: CSVImportResult = {
   dryRun: false,
@@ -93,8 +54,12 @@ jest.mock('react-data-grid', () => {
 jest.mock('../../../../utils/CSV/CSV.utils', () => ({
   renderColumnDataEditor: jest
     .fn()
-    .mockImplementation((_column, data) => data.value),
+    .mockImplementation((column, data) => data.value),
 }));
+
+const renderWithTheme = (component: React.ReactElement) => {
+  return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
+};
 
 describe('BulkImportVersionSummary', () => {
   beforeEach(() => {
@@ -111,7 +76,9 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should render bulk import stats in column layout', () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     expect(screen.getByText('label.rows-processed:')).toBeInTheDocument();
     expect(screen.getByTestId('processed-row')).toHaveTextContent('2');
@@ -122,68 +89,70 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should render View More button', () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     expect(screen.getByTestId('view-more-button')).toBeInTheDocument();
     expect(screen.getByText('label.view-more')).toBeInTheDocument();
   });
 
   it('should open modal when View More button is clicked', async () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('bulk-import-details-modal')
-      ).toBeInTheDocument()
-    );
-    await waitFor(() =>
-      expect(screen.getByText('label.bulk-import-entity')).toBeInTheDocument()
-    );
+    expect(screen.getByTestId('bulk-import-details-modal')).toBeInTheDocument();
+    expect(screen.getByText('label.bulk-import-entity')).toBeInTheDocument();
   });
 
   it('should parse CSV and render DataGrid when modal opens', async () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() =>
-      expect(mockReadString).toHaveBeenCalledWith(
-        mockCsvImportResult.importResultsCsv,
-        expect.objectContaining({
-          worker: true,
-          skipEmptyLines: true,
-        })
-      )
+    expect(mockReadString).toHaveBeenCalledWith(
+      mockCsvImportResult.importResultsCsv,
+      expect.objectContaining({
+        worker: true,
+        skipEmptyLines: true,
+      })
     );
 
     expect(screen.getByTestId('data-grid')).toBeInTheDocument();
   });
 
   it('should close modal when close button is clicked', async () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('bulk-import-details-modal')
-      ).toBeInTheDocument()
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId('close-modal-button')).toBeInTheDocument()
-    );
+    expect(screen.getByTestId('bulk-import-details-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('close-modal-button')).toBeInTheDocument();
 
     const closeButton = screen.getByTestId('close-modal-button');
 
-    fireEvent.click(closeButton);
+    await act(async () => {
+      fireEvent.click(closeButton);
+    });
 
     await waitFor(() => {
       expect(
@@ -193,21 +162,29 @@ describe('BulkImportVersionSummary', () => {
   });
 
   it('should not parse CSV again if already parsed', async () => {
-    render(<BulkImportVersionSummary csvImportResult={mockCsvImportResult} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={mockCsvImportResult} />
+    );
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() => expect(mockReadString).toHaveBeenCalledTimes(1));
+    expect(mockReadString).toHaveBeenCalledTimes(1);
 
     const closeButton = screen.getByTestId('close-modal-button');
 
-    fireEvent.click(closeButton);
+    await act(async () => {
+      fireEvent.click(closeButton);
+    });
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() => expect(mockReadString).toHaveBeenCalledTimes(1));
+    expect(mockReadString).toHaveBeenCalledTimes(1);
   });
 
   it('should not parse CSV if importResultsCsv is not provided', async () => {
@@ -216,12 +193,16 @@ describe('BulkImportVersionSummary', () => {
       importResultsCsv: undefined,
     };
 
-    render(<BulkImportVersionSummary csvImportResult={resultWithoutCsv} />);
+    renderWithTheme(
+      <BulkImportVersionSummary csvImportResult={resultWithoutCsv} />
+    );
 
     const viewMoreButton = screen.getByTestId('view-more-button');
 
-    fireEvent.click(viewMoreButton);
+    await act(async () => {
+      fireEvent.click(viewMoreButton);
+    });
 
-    await waitFor(() => expect(mockReadString).not.toHaveBeenCalled());
+    expect(mockReadString).not.toHaveBeenCalled();
   });
 });

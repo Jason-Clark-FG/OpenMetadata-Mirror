@@ -25,6 +25,7 @@ import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.SPREADSHEET;
 import static org.openmetadata.service.Entity.WORKSHEET;
 
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,15 +118,16 @@ public class SpreadsheetRepository extends EntityRepository<Spreadsheet> {
 
   @Override
   public void storeEntities(List<Spreadsheet> spreadsheets) {
-    List<String> fqns = new ArrayList<>(spreadsheets.size());
-    List<String> jsons = new ArrayList<>(spreadsheets.size());
+    List<Spreadsheet> spreadsheetsToStore = new ArrayList<>();
+    Gson gson = new Gson();
 
     for (Spreadsheet spreadsheet : spreadsheets) {
-      fqns.add(spreadsheet.getFullyQualifiedName());
-      jsons.add(serializeForStorage(spreadsheet));
+      // Clone for storage
+      String jsonCopy = gson.toJson(spreadsheet);
+      spreadsheetsToStore.add(gson.fromJson(jsonCopy, Spreadsheet.class));
     }
 
-    dao.insertMany(dao.getTableName(), dao.getNameHashColumn(), fqns, jsons);
+    storeMany(spreadsheetsToStore);
   }
 
   @Override
@@ -448,41 +450,13 @@ public class SpreadsheetRepository extends EntityRepository<Spreadsheet> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "mimeType",
-          () -> {
-            recordChange("mimeType", original.getMimeType(), updated.getMimeType());
-          });
-      compareAndUpdate(
-          "createdTime",
-          () -> {
-            recordChange("createdTime", original.getCreatedTime(), updated.getCreatedTime());
-          });
-      compareAndUpdate(
-          "modifiedTime",
-          () -> {
-            recordChange("modifiedTime", original.getModifiedTime(), updated.getModifiedTime());
-          });
-      compareAndUpdate(
-          "path",
-          () -> {
-            recordChange("path", original.getPath(), updated.getPath());
-          });
-      compareAndUpdate(
-          "driveFileId",
-          () -> {
-            recordChange("driveFileId", original.getDriveFileId(), updated.getDriveFileId());
-          });
-      compareAndUpdate(
-          "size",
-          () -> {
-            recordChange("size", original.getSize(), updated.getSize());
-          });
-      compareAndUpdate(
-          "fileVersion",
-          () -> {
-            recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
-          });
+      recordChange("mimeType", original.getMimeType(), updated.getMimeType());
+      recordChange("createdTime", original.getCreatedTime(), updated.getCreatedTime());
+      recordChange("modifiedTime", original.getModifiedTime(), updated.getModifiedTime());
+      recordChange("path", original.getPath(), updated.getPath());
+      recordChange("driveFileId", original.getDriveFileId(), updated.getDriveFileId());
+      recordChange("size", original.getSize(), updated.getSize());
+      recordChange("fileVersion", original.getFileVersion(), updated.getFileVersion());
     }
   }
 }

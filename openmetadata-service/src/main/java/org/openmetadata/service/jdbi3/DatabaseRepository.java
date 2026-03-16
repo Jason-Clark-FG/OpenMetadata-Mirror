@@ -24,6 +24,7 @@ import static org.openmetadata.service.Entity.DATABASE_SCHEMA;
 import static org.openmetadata.service.Entity.STORED_PROCEDURE;
 import static org.openmetadata.service.Entity.TABLE;
 
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -105,18 +106,35 @@ public class DatabaseRepository extends EntityRepository<Database> {
   }
 
   @Override
-  protected List<String> getFieldsStrippedFromStorageJson() {
-    return List.of("service");
-  }
-
-  @Override
   public void storeEntity(Database database, boolean update) {
+    // Relationships and fields such as service are not stored as part of json
+    EntityReference service = database.getService();
+    database.withService(null);
     store(database, update);
+    database.withService(service);
   }
 
   @Override
   public void storeEntities(List<Database> databases) {
-    storeMany(databases);
+    List<Database> databasesToStore = new ArrayList<>();
+    Gson gson = new Gson();
+
+    for (Database database : databases) {
+      // Save entity-specific relationships
+      EntityReference service = database.getService();
+
+      // Nullify for storage (same as storeEntity)
+      database.withService(null);
+
+      // Clone for storage
+      String jsonCopy = gson.toJson(database);
+      databasesToStore.add(gson.fromJson(jsonCopy, Database.class));
+
+      // Restore in original
+      database.withService(service);
+    }
+
+    storeMany(databasesToStore);
   }
 
   @Override
@@ -131,34 +149,10 @@ public class DatabaseRepository extends EntityRepository<Database> {
     addServiceRelationship(database, database.getService());
   }
 
-  @Override
-  protected void storeEntitySpecificRelationshipsForMany(List<Database> entities) {
-    List<CollectionDAO.EntityRelationshipObject> relationships = new ArrayList<>();
-    for (Database database : entities) {
-      EntityReference service = database.getService();
-      if (service == null || service.getId() == null) {
-        continue;
-      }
-      relationships.add(
-          newRelationship(
-              service.getId(),
-              database.getId(),
-              service.getType(),
-              entityType,
-              Relationship.CONTAINS));
-    }
-    bulkInsertRelationships(relationships);
-  }
-
   private List<EntityReference> getSchemas(Database database) {
     return database == null
         ? null
         : findTo(database.getId(), Entity.DATABASE, Relationship.CONTAINS, Entity.DATABASE_SCHEMA);
-  }
-
-  @Override
-  protected EntityReference getParentReference(Database entity) {
-    return entity.getService();
   }
 
   @Override
@@ -335,8 +329,7 @@ public class DatabaseRepository extends EntityRepository<Database> {
   }
 
   private void populateService(Database database) {
-    var service =
-        (DatabaseService) getCachedParentOrLoad(database.getService(), "", Include.NON_DELETED);
+    DatabaseService service = Entity.getEntity(database.getService(), "", Include.NON_DELETED);
     database.setService(service.getEntityReference());
     database.setServiceType(service.getServiceType());
   }
@@ -460,22 +453,11 @@ public class DatabaseRepository extends EntityRepository<Database> {
       return;
     }
 
-    List<Database> databasesMissingDefaultService =
-        databases.stream().filter(this::needsDefaultService).toList();
-    if (databasesMissingDefaultService.isEmpty()) {
-      return;
-    }
-
     // Batch fetch service references for all databases
-    var serviceMap = batchFetchServices(databasesMissingDefaultService);
+    var serviceMap = batchFetchServices(databases);
 
     // Set service for all databases
-    databasesMissingDefaultService.forEach(
-        database -> database.setService(serviceMap.get(database.getId())));
-  }
-
-  private boolean needsDefaultService(Database database) {
-    return database.getService() == null;
+    databases.forEach(database -> database.setService(serviceMap.get(database.getId())));
   }
 
   private Map<UUID, EntityReference> batchFetchServices(List<Database> databases) {
@@ -530,28 +512,15 @@ public class DatabaseRepository extends EntityRepository<Database> {
     @Transaction
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      compareAndUpdate(
-          "retentionPeriod",
-          () -> {
-            recordChange(
-                "retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
-          });
-      compareAndUpdate(
-          "sourceUrl",
-          () -> {
-            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-          });
-      compareAndUpdate(
+      recordChange("retentionPeriod", original.getRetentionPeriod(), updated.getRetentionPeriod());
+      recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
+      recordChange(
           "sourceHash",
-          () -> {
-            recordChange(
-                "sourceHash",
-                original.getSourceHash(),
-                updated.getSourceHash(),
-                false,
-                EntityUtil.objectMatch,
-                false);
-          });
+          original.getSourceHash(),
+          updated.getSourceHash(),
+          false,
+          EntityUtil.objectMatch,
+          false);
     }
   }
 

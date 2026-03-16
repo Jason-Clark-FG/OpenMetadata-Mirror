@@ -20,11 +20,7 @@ import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
-import {
-  getApiContext,
-  redirectToHomePage,
-  removeLandingBanner,
-} from '../../utils/common';
+import { getApiContext, redirectToHomePage } from '../../utils/common';
 import {
   addAndVerifyWidget,
   removeAndVerifyWidget,
@@ -138,18 +134,6 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
     data: [
       {
         op: 'add',
-        path: '/personas/0',
-        value: {
-          id: persona.responseData.id,
-          type: 'persona',
-          name: persona.responseData.name,
-          fullyQualifiedName: persona.responseData.fullyQualifiedName,
-          description: persona.responseData.description,
-          displayName: persona.responseData.displayName,
-        },
-      },
-      {
-        op: 'add',
         path: '/defaultPersona',
         value: {
           id: persona.responseData.id,
@@ -171,9 +155,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
 
 test.beforeEach(async ({ page }) => {
   await redirectToHomePage(page);
-  await removeLandingBanner(page);
   await waitForAllLoadersToDisappear(page);
-  await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
 });
 
 test(
