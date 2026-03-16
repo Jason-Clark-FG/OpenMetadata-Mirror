@@ -93,6 +93,7 @@ import org.openmetadata.service.config.OMWebBundle;
 import org.openmetadata.service.config.OMWebConfiguration;
 import org.openmetadata.service.events.EventFilter;
 import org.openmetadata.service.events.EventPubSub;
+import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
 import org.openmetadata.service.events.scheduled.EventSubscriptionScheduler;
 import org.openmetadata.service.events.scheduled.ServicesStatusJobHandler;
 import org.openmetadata.service.exception.CatalogGenericExceptionMapper;
@@ -122,6 +123,7 @@ import org.openmetadata.service.monitoring.EventMonitorConfiguration;
 import org.openmetadata.service.monitoring.EventMonitorFactory;
 import org.openmetadata.service.monitoring.EventMonitorPublisher;
 import org.openmetadata.service.monitoring.JettyMetricsIntegration;
+import org.openmetadata.service.monitoring.JettyQoSIntegration;
 import org.openmetadata.service.monitoring.UserMetricsServlet;
 import org.openmetadata.service.rdf.RdfUpdater;
 import org.openmetadata.service.resources.CollectionRegistry;
@@ -1009,6 +1011,9 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
     // MCP OAuth is handled by servlets registered in McpServer.initializeMcpServer()
     // No JAX-RS resources needed for OAuth endpoints
 
+    // Register QoS handler for request concurrency limiting
+    JettyQoSIntegration.registerQoSHandler(environment, config.getQosConfiguration());
+
     // RDF resources are now automatically registered via @Collection annotation
     if (config.getRdfConfiguration() != null
         && config.getRdfConfiguration().getEnabled() != null
@@ -1120,6 +1125,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       EventPubSub.shutdown();
       EventSubscriptionScheduler.shutDown();
       AsyncService.getInstance().shutdown();
+      EntityLifecycleEventDispatcher.getInstance().shutdown();
       AppScheduler.shutDown();
       LOG.info("Stopping the application");
     }
