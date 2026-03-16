@@ -39,12 +39,7 @@ import {
   Dropdown,
   Table as UntitledTable,
 } from '@openmetadata/ui-core-components';
-import {
-  ArrowDown,
-  ChevronDown,
-  ChevronRight,
-  ChevronSelectorVertical,
-} from '@untitledui/icons';
+import { ChevronDown, ChevronRight } from '@untitledui/icons';
 import type {
   ColumnType,
   FilterValue,
@@ -113,6 +108,7 @@ const TableV2 = <T extends object>(
     defaultVisibleColumns,
     dragAndDropHooks,
     'data-testid': dataTestId,
+    scroll,
     ...rest
   }: TableV2Props<T>,
   ref: Ref<HTMLDivElement> | null | undefined
@@ -233,6 +229,19 @@ const TableV2 = <T extends object>(
       !isEmpty(rest.staticVisibleColumns) && !isEmpty(defaultVisibleColumns),
     [rest.staticVisibleColumns, defaultVisibleColumns]
   );
+
+  const scrollStyle = useMemo((): React.CSSProperties => {
+    if (!scroll) {
+      return {};
+    }
+
+    return {
+      ...(scroll.x ? { overflowX: 'auto' } : {}),
+      ...(scroll.y
+        ? { overflowY: 'auto', maxHeight: scroll.y as string | number }
+        : {}),
+    };
+  }, [scroll]);
 
   // ─── Column customization (identical to Table.tsx) ───────────────────────
 
@@ -533,37 +542,26 @@ const TableV2 = <T extends object>(
           'p-y-md':
             searchProps || rest.extraTableFilters || isCustomizeColumnEnable,
         })}>
-        <div className="tw:flex tw:items-start tw:justify-between tw:mb-4">
-          <div className="tw:flex tw:items-center tw:gap-2">
-            {rest.title && (
-              <h5 className="tw:text-base tw:font-medium tw:m-0">
-                {
-                  (typeof rest.title === 'function'
-                    ? (rest.title as any)(pagedDataSource)
-                    : rest.title) as React.ReactNode
-                }
-              </h5>
-            )}
-            {searchProps && (
-              <div style={{ flex: 1 }}>
-                <Searchbar
-                  {...searchProps}
-                  removeMargin
-                  placeholder={searchProps?.placeholder ?? t('label.search')}
-                  searchValue={searchProps?.searchValue}
-                  typingInterval={searchProps?.typingInterval ?? 500}
-                  onSearch={handleSearchAction}
-                />
-              </div>
-            )}
-          </div>
+        <div className="tw:flex tw:items-center">
+          {searchProps && (
+            <div style={{ flex: 1 }}>
+              <Searchbar
+                {...searchProps}
+                removeMargin
+                placeholder={searchProps?.placeholder ?? t('label.search')}
+                searchValue={searchProps?.searchValue}
+                typingInterval={searchProps?.typingInterval ?? 500}
+                onSearch={handleSearchAction}
+              />
+            </div>
+          )}
           {(rest.extraTableFilters || isCustomizeColumnEnable) && (
             <div
               className={classNames(
                 'd-flex justify-end items-center gap-5',
                 rest.extraTableFiltersClassName
               )}
-              style={searchProps ? { flex: 1 } : undefined}>
+              style={{ flex: 1 }}>
               {rest.extraTableFilters}
               {isCustomizeColumnEnable && (
                 <Dropdown.Root>
@@ -614,7 +612,10 @@ const TableV2 = <T extends object>(
         </div>
       </div>
 
-      <div className="tw:flex tw:flex-col tw:w-full" data-testid={dataTestId}>
+      <div
+        className="tw:flex tw:flex-col tw:w-full"
+        data-testid={dataTestId}
+        style={scrollStyle}>
         {isLoading && (
           <div className="tw:absolute tw:inset-0 tw:z-10 tw:flex tw:items-center tw:justify-center tw:bg-white/60">
             <Loader />
@@ -635,16 +636,29 @@ const TableV2 = <T extends object>(
               selectionBehavior={rest.rowSelection ? 'toggle' : undefined}
               selectionMode={selectionMode}
               size={rest.size === 'small' ? 'sm' : 'md'}
+              sortDescriptor={
+                sortState.columnKey && sortState.direction
+                  ? {
+                      column: sortState.columnKey,
+                      direction: sortState.direction,
+                    }
+                  : undefined
+              }
               onSelectionChange={handleSelectionChange}
               onSortChange={handleSortChange}>
-              <UntitledTable.Header className="tw:px-2">
+              <UntitledTable.Header
+                className={classNames('tw:px-2', {
+                  'tw:sticky tw:top-0 tw:z-10 tw:bg-primary': Boolean(
+                    scroll?.y
+                  ),
+                })}>
                 {propsColumns.map((col, colIdx) => {
                   const colType = col as ColumnType<T>;
                   const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
                   const colWidth =
-                    columnWidths[colKey] ?? (colType.width as number) ?? 150;
+                    columnWidths[colKey] ??
+                    (colType.width as number | undefined);
 
-                  const isSorted = sortState.columnKey === colKey;
                   const stickyStyle = getColumnStickyStyle(colType.fixed, 2);
 
                   return (
@@ -655,8 +669,9 @@ const TableV2 = <T extends object>(
                       key={colKey}
                       style={{
                         ...(rest.size === 'small' ? { padding: '8px' } : {}),
-                        width: colWidth,
-                        minWidth: colWidth,
+                        ...(colWidth !== undefined
+                          ? { width: colWidth, minWidth: colWidth }
+                          : {}),
                         ...(rest.resizableColumns
                           ? { position: 'relative' }
                           : {}),
@@ -664,22 +679,6 @@ const TableV2 = <T extends object>(
                       }}>
                       <div className="tw:flex tw:items-center tw:gap-1">
                         {resolveColumnTitle(colType, propsColumns)}
-                        {!!colType.sorter &&
-                          (isSorted && sortState.direction ? (
-                            <ArrowDown
-                              className={classNames(
-                                'tw:size-3 tw:text-fg-quaternary',
-                                sortState.direction === 'ascending' &&
-                                  'tw:rotate-180'
-                              )}
-                              strokeWidth={3}
-                            />
-                          ) : (
-                            <ChevronSelectorVertical
-                              className="tw:size-3 tw:text-fg-quaternary"
-                              strokeWidth={3}
-                            />
-                          ))}
                         {Boolean(colType.filters || colType.filterDropdown) && (
                           <DialogTrigger>
                             <Button
@@ -818,11 +817,16 @@ const TableV2 = <T extends object>(
                               ...(rest.size === 'small' && !rest.cellClassName
                                 ? { padding: '8px' }
                                 : {}),
-                              width:
-                                columnWidths[cellKey] ??
-                                (colType.width as number) ??
-                                150,
-                              minWidth: (colType.width as number) ?? undefined,
+                              ...(columnWidths[cellKey] !== undefined ||
+                              colType.width !== undefined
+                                ? {
+                                    width:
+                                      columnWidths[cellKey] ??
+                                      (colType.width as number),
+                                    minWidth:
+                                      (colType.width as number) ?? undefined,
+                                  }
+                                : {}),
                               ...stickyStyle,
                               ...(showExpandInCell
                                 ? { paddingLeft: `${16 + depth * 12}px` }
