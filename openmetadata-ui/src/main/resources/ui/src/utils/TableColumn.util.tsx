@@ -44,6 +44,7 @@ export const ownerTableObject = <
     dataIndex: TABLE_COLUMNS_KEYS.OWNERS,
     key: TABLE_COLUMNS_KEYS.OWNERS,
     width: 280,
+    filterIcon: columnFilterIcon,
     render: (owners: EntityReference[]) => (
       <OwnerLabel
         isCompactView={false}
