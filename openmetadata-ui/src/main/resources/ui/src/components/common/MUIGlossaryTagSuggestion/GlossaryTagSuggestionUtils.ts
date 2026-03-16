@@ -16,19 +16,19 @@ import { getEntityName } from '../../../utils/EntityUtils';
 import { ModifiedGlossaryTerm } from '../../Glossary/GlossaryTermTab/GlossaryTermTab.interface';
 import { TreeNode } from '../atoms/asyncTreeSelect/types';
 
-export const convertToTreeNodes = (
-  options: Array<{
-    id: string;
-    value: string;
-    title: string;
-    children?: any[];
-    disabled?: boolean;
-    selectable?: boolean;
-    lazyLoad?: boolean;
-    data?: any;
-    isParentMutuallyExclusive?: boolean;
-  }>
-): TreeNode[] => {
+export interface TreeOptionNode {
+  id: string;
+  value: string;
+  title: string;
+  children?: TreeOptionNode[];
+  disabled?: boolean;
+  selectable?: boolean;
+  lazyLoad?: boolean;
+  data?: ModifiedGlossaryTerm;
+  isParentMutuallyExclusive?: boolean;
+}
+
+export const convertToTreeNodes = (options: TreeOptionNode[]): TreeNode[] => {
   return options.map((option) => ({
     id: option.id,
     label: option.title,
@@ -53,16 +53,7 @@ export const convertGlossaryTermsToTreeOptionsWithNames = (
   options: ModifiedGlossaryTerm[] = [],
   level = 0,
   parentMutuallyExclusive = false
-): Array<{
-  id: string;
-  value: string;
-  title: string;
-  children: any[];
-  disabled: boolean;
-  selectable: boolean;
-  data: any;
-  isParentMutuallyExclusive?: boolean;
-}> => {
+): TreeOptionNode[] => {
   return options.map((option) => {
     const hasChildren =
       'children' in option && option.children && option.children.length > 0;

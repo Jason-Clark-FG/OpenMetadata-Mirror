@@ -147,6 +147,7 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
 
     try {
       const { data } = await getGlossariesList({
+        fields: 'mutuallyExclusive',
         limit: PAGE_SIZE_LARGE,
       });
       setGlossaries(filterTreeNodeOptions(data, filterOptions));
@@ -388,7 +389,7 @@ const TreeAsyncSelectList: FC<TreeAsyncSelectListProps> = ({
             };
 
         selectedTagsRef.current = [selectedValue as SelectOption];
-        onChange?.(selectedValue as any);
+        onChange?.(selectedValue as SelectOption);
       } else {
         // Nothing selected
         selectedTagsRef.current = [];

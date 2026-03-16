@@ -26,6 +26,7 @@ import {
 import { getEntityName } from '../../../utils/EntityUtils';
 import { escapeESReservedCharacters } from '../../../utils/StringsUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
+import { ModifiedGlossaryTerm } from '../../Glossary/GlossaryTermTab/GlossaryTermTab.interface';
 import { TreeDataResponse, TreeNode } from '../atoms/asyncTreeSelect/types';
 import MUIAsyncTreeSelect from '../MUIAsyncTreeSelect/MUIAsyncTreeSelect';
 import {
@@ -33,6 +34,10 @@ import {
   convertToTreeNodes,
 } from './GlossaryTagSuggestionUtils';
 import { useGlossaryMutualExclusivity } from './useGlossaryMutualExclusivity';
+
+interface HierarchicalGlossary extends Glossary {
+  children?: ModifiedGlossaryTerm[];
+}
 
 export interface MUIGlossaryTagSuggestionProps {
   value?: TagLabel[];
@@ -79,7 +84,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
 
           if (Array.isArray(response)) {
             // Process each glossary with its nested terms
-            response.forEach((glossary: any) => {
+            response.forEach((glossary: HierarchicalGlossary) => {
               // Include all glossaries returned by search
               // The API returns glossaries that match the search term
               // Either in their name or in their children's names
