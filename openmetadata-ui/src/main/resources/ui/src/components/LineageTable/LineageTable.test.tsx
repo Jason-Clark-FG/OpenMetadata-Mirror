@@ -826,6 +826,25 @@ describe('LineageTable', () => {
         expect(setColumnLineageNodes).toHaveBeenCalledWith([], []);
       });
     });
+
+    it('should not pass onSearchValueChange for column-level lineage', () => {
+      const mockState = {
+        ...defaultMockState,
+        searchValue: 'test search',
+        loading: true,
+        impactLevel: EImpactLevel.ColumnLevel,
+      };
+      mockUseLineageTableState.mockReturnValue(mockState);
+
+      render(<LineageTable entity={mockEntity} />, { wrapper: MemoryRouter });
+
+      expect(CustomControlsComponent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onSearchValueChange: undefined,
+        }),
+        {}
+      );
+    });
   });
 
   describe('fetchNodes - Table Level Impact', () => {
@@ -1044,6 +1063,25 @@ describe('LineageTable', () => {
           })
         );
       });
+    });
+
+    it('should not pass onSearchValueChange for table-level lineage', () => {
+      const mockState = {
+        ...defaultMockState,
+        searchValue: 'test search',
+        loading: true,
+        impactLevel: EImpactLevel.TableLevel,
+      };
+      mockUseLineageTableState.mockReturnValue(mockState);
+
+      render(<LineageTable entity={mockEntity} />, { wrapper: MemoryRouter });
+
+      expect(CustomControlsComponent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onSearchValueChange: expect.any(Function),
+        }),
+        {}
+      );
     });
   });
 });
