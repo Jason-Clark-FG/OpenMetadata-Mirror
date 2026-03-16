@@ -1150,8 +1150,7 @@ export const verifyTableColumnCustomPropertyPersistence = async ({
   const testValue = getPropertyValues(propertyType, users).value;
 
   // 1. Navigate and Open Column Detail Panel
-  await page.goto(`/table/${columnFqn}`);
-  await page.waitForLoadState('networkidle');
+  await page.goto(`/table/${columnFqn}`, { waitUntil: 'domcontentloaded' });
   await waitForAllLoadersToDisappear(page);
   const sidePanel = page.locator('.column-detail-panel-container');
   await expect(sidePanel).toBeVisible();
@@ -1175,7 +1174,8 @@ export const verifyTableColumnCustomPropertyPersistence = async ({
   const updateColumnResponse = page.waitForResponse(
     (response) =>
       response.url().includes('/api/v1/columns/name') &&
-      response.request().method() === 'PUT'
+      response.request().method() === 'PUT' &&
+      response.ok()
   );
 
   // Edit logic
@@ -1185,9 +1185,7 @@ export const verifyTableColumnCustomPropertyPersistence = async ({
   await updateColumnResponse;
 
   // CRITICAL: Wait for UI to update after API response
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Validation
   await validateColumnCustomProperty(
@@ -1197,25 +1195,16 @@ export const verifyTableColumnCustomPropertyPersistence = async ({
     propertyName
   );
 
-  // 5. Reload Page
-  const getColumnDetails = page.waitForResponse(
-    '/api/v1/tables/name/*/columns?*fields=*extension*'
-  );
-  const getTableColumnTypes = page.waitForResponse(
-    '/api/v1/metadata/types/name/tableColumn*'
-  );
-  await page.reload();
-  await getTableColumnTypes;
-  await getColumnDetails;
-
-  await page.waitForSelector(
-    '.column-detail-panel-container [data-testid="custom-properties-tab"]',
-    {
-      state: 'visible',
-    }
-  );
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await waitForAllLoadersToDisappear(page);
+  await expect(
+    page.locator(
+      '.column-detail-panel-container [data-testid="custom-properties-tab"]'
+    )
+  ).toBeVisible();
   await customPropertiesTab.click();
   await expect(searchbar).toBeVisible();
+  await searchbar.clear();
   await searchbar.fill(propertyName);
 
   // Validation Logic After Reload
@@ -1251,21 +1240,21 @@ export const updateCustomPropertyInRightPanel = async (data: {
     await waitForAllLoadersToDisappear(page);
   }
 
-  const searchContainer = page.getByTestId('search-bar-container');
-  if (await searchContainer.isVisible()) {
-    await searchContainer.getByTestId('searchbar').fill(propertyName);
-  }
+  // Scope everything to the panel container to avoid matching stray elements
+  // elsewhere on the Explore page when tests run in parallel.
+  const panelContainer = page.locator('.entity-summary-panel-container');
+  const searchContainer = panelContainer.getByTestId('search-bar-container');
+  await expect(searchContainer).toBeVisible();
+  await searchContainer.getByRole('textbox').fill(propertyName);
 
   // Since the search is client side, can't wait on APIs and names are unique,
   // waiting for only single custom property card to be visible
-  // to ensure stability of the next click operations
+  // to ensure stability of the next click operations.
   await expect(
-    page.getByTestId('custom-property-right-panel-card')
+    panelContainer.getByTestId('custom-property-right-panel-card')
   ).toHaveCount(1);
 
-  const container = page
-    .locator('.entity-summary-panel-container')
-    .getByTestId(propertyName);
+  const container = panelContainer.getByTestId(propertyName);
 
   await expect(container.getByTestId('property-name')).toContainText(
     propertyName

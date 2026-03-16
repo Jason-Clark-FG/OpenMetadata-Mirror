@@ -25,7 +25,6 @@ import {
   getApiContext,
   INVALID_NAMES,
   NAME_VALIDATION_ERROR,
-  toastNotification,
 } from '../../../utils/common';
 import { visitEntityPage } from '../../../utils/entity';
 import { visitServiceDetailsPage } from '../../../utils/service';
@@ -201,7 +200,6 @@ class ServiceBaseClass {
     if (await metadataTab.isVisible()) {
       await metadataTab.click();
     }
-    await page.waitForLoadState('networkidle');
 
     await page.waitForSelector('[data-testid="add-new-ingestion-button"]');
 
@@ -240,7 +238,6 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
-    await page.waitForLoadState('networkidle');
     await page
       .getByLabel('agents')
       .getByTestId('loader')
@@ -250,11 +247,18 @@ class ServiceBaseClass {
     await page.waitForTimeout(3000);
 
     await page.getByTestId('more-actions').first().click();
+
+    const triggerPipeline = page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .includes('/api/v1/services/ingestionPipelines/trigger/') &&
+        response.status() === 200
+    );
     await page.getByTestId('run-button').click();
 
-    await page.waitForLoadState('networkidle');
+    await triggerPipeline;
 
-    await toastNotification(page, `Pipeline triggered successfully!`);
 
     // need manual wait to make sure we are awaiting on latest run results
     await page.waitForTimeout(2000);
@@ -357,7 +361,6 @@ class ServiceBaseClass {
     workflowData: { fullyQualifiedName: string; name: string },
     ingestionType: string
   ) => {
-    const oneHourBefore = Date.now() - 86400000;
     let consecutiveErrors = 0;
 
     await expect
@@ -367,7 +370,7 @@ class ServiceBaseClass {
             const response = await makeRetryRequest({
               url: `/api/v1/services/ingestionPipelines/${encodeURIComponent(
                 workflowData.fullyQualifiedName
-              )}/pipelineStatus?startTs=${oneHourBefore}&endTs=${Date.now()}`,
+              )}/pipelineStatus?limit=1`,
               page,
             });
             consecutiveErrors = 0; // Reset error counter on success
@@ -414,7 +417,6 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
-    await page.waitForLoadState('networkidle');
     await page.waitForSelector(`td:has-text("${ingestionType}")`);
 
     await expect(
@@ -474,7 +476,6 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
-    await page.waitForLoadState('networkidle');
 
     // click and edit pipeline schedule for Hours
 
@@ -638,7 +639,6 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
-    await page.waitForLoadState('networkidle');
 
     await ingestionResponse;
     await page
@@ -649,9 +649,17 @@ class ServiceBaseClass {
     await page.waitForTimeout(3000);
 
     await page.getByTestId('more-actions').first().click();
-    await page.getByTestId('run-button').click();
 
-    await toastNotification(page, `Pipeline triggered successfully!`);
+    const triggerPipeline = page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .includes('/api/v1/services/ingestionPipelines/trigger/') &&
+        response.status() === 200
+    );
+
+    await page.getByTestId('run-button').click();
+    await triggerPipeline;
 
     // need manual wait to make sure we are awaiting on latest run results
     await page.waitForTimeout(2000);

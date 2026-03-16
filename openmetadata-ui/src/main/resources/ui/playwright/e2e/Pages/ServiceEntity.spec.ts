@@ -214,6 +214,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
       test(`Set & Update ${titleText} Custom Property `, async ({ page }) => {
         // increase timeout as it using single test for multiple steps
         test.slow(true);
+        test.setTimeout(6 * 60 * 1000);
 
         const { apiContext, afterAction } = await getApiContext(page);
         await entity.prepareCustomProperty(apiContext);
@@ -238,24 +239,21 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           }
         });
 
-        await test.step(
-          `Update ${titleText} Custom Property in Right Panel`,
-          async () => {
-            test.slow();
-            for (const [index, type] of properties.entries()) {
-              await updateCustomPropertyInRightPanel({
-                page,
-                entityName:
-                  entity.entityResponseData['displayName'] ??
-                  entity.entityResponseData['name'],
-                propertyDetails: entity.customPropertyValue[type].property,
-                value: entity.customPropertyValue[type].value,
-                endpoint: entity.endpoint,
-                skipNavigation: index > 0,
-              });
-            }
+        await test.step(`Update ${titleText} Custom Property in Right Panel`, async () => {
+          test.slow();
+          for (const [index, type] of properties.entries()) {
+            await updateCustomPropertyInRightPanel({
+              page,
+              entityName:
+                entity.entityResponseData['displayName'] ??
+                entity.entityResponseData['name'],
+              propertyDetails: entity.customPropertyValue[type].property,
+              value: entity.customPropertyValue[type].value,
+              endpoint: entity.endpoint,
+              skipNavigation: index > 0,
+            });
           }
-        );
+        });
 
         await entity.cleanupCustomProperty(apiContext);
         await afterAction();

@@ -52,6 +52,33 @@ export const initializePermissions = async (
   return { apiContext, policy, role };
 };
 
+export const setupUserWithPolicy = async (
+  apiContext: APIRequestContext,
+  user: UserClass,
+  policy: PolicyClass,
+  role: RolesClass,
+  policyRules: Array<{
+    name: string;
+    resources: string[];
+    operations: string[];
+    effect: string;
+  }>
+) => {
+  await user.create(apiContext, false);
+  const pol = await policy.create(apiContext, policyRules);
+  const rol = await role.create(apiContext, [pol.fullyQualifiedName]);
+  await user.patch({
+    apiContext,
+    patchData: [
+      {
+        op: 'add',
+        path: '/roles/0',
+        value: { id: rol.id, type: 'role', name: rol.name },
+      },
+    ],
+  });
+};
+
 export const assignRoleToUser = async (page: Page, testUser: UserClass) => {
   const { apiContext } = await getApiContext(page);
 
@@ -117,7 +144,6 @@ export const validateViewPermissions = async (
     ).toHaveCount(0);
   }
 
-
   // check edit owner permission
   await expect(page.locator('[data-testid="edit-owner"]')).not.toBeVisible();
   // check edit description permission
@@ -163,7 +189,6 @@ export const validateViewPermissions = async (
   }
 
   await page.click('[data-testid="sample_data"]');
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
@@ -171,15 +196,12 @@ export const validateViewPermissions = async (
     permission?.viewSampleData
   );
   await page.click('[data-testid="table_queries"]');
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Queries/, permission?.viewQueries);
 
   await page.click('[data-testid="profiler"]');
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await page.getByRole('tab', { name: 'Data Quality' }).click();
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(
     page,
@@ -187,13 +209,11 @@ export const validateViewPermissions = async (
     permission?.viewTests
   );
   await page.click('[data-testid="lineage"]');
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
 
   await expect(page.getByTestId('edit-lineage')).not.toBeVisible();
 
   await page.click('[data-testid="custom_properties"]');
-  await page.waitForLoadState('networkidle');
   await page.waitForSelector("[data-testid='loader']", { state: 'detached' });
   await checkNoPermissionPlaceholder(page, /Custom Properties/);
 };
