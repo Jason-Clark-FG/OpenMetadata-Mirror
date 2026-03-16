@@ -328,13 +328,13 @@ public class MigrationUtil {
 
     PreparedBatch batch = handle.prepareBatch(insertSql);
     for (Map<String, Object> row : rows) {
-      String tagFQN = (String) row.get("tagFQN");
+      String tagFQN = (String) row.get("tagfqn");
       if (tagFQN == null) continue;
       batch
           .bind("tagFQN", tagFQN)
           .bind("tagFQNHash", FullyQualifiedName.buildHash(tagFQN))
-          .bind("targetFQNHash", row.get("fqnHash").toString())
-          .bind("metadata", buildCertMetadata(row.get("expiryDate")))
+          .bind("targetFQNHash", row.get("fqnhash").toString())
+          .bind("metadata", buildCertMetadata(row.get("expirydate")))
           .add();
     }
     batch.execute();
