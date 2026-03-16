@@ -22,8 +22,11 @@ const MarketplaceGreetingBanner = () => {
   const displayName = currentUser?.displayName || currentUser?.name || '';
 
   return (
-    <div className="text-center p-y-lg" data-testid="marketplace-greeting">
-      <Typography.Title data-testid="greeting-text" level={4}>
+    <div className="text-center p-b-lg" data-testid="marketplace-greeting">
+      <Typography.Title
+        data-testid="greeting-text"
+        level={4}
+        style={{ marginBottom: 5 }}>
         {t('label.hey-comma-name', { name: displayName })}
         {'\uD83D\uDC4B'}
       </Typography.Title>

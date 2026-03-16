@@ -126,6 +126,7 @@ const DataMarketplacePage = () => {
   return (
     <PageLayoutV1
       mainContainerClassName="p-t-0 data-marketplace-main-container"
+      pageContainerStyle={{ paddingLeft: 0, paddingRight: 0 }}
       pageTitle={t('label.data-marketplace')}>
       <div
         className="marketplace-header-bg"
