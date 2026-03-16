@@ -84,6 +84,8 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
 
   public static final String DI_SEARCH_INDEX = "di-data-assets-*";
 
+  public static final String DI_ROLLUP_INDEX = "di-rollup-daily";
+
   private static final Set IGNORE_OTHER_SERVICE_CHARTS =
       Set.of(
           "healthy_data_assets",
@@ -137,6 +139,14 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
       return String.format("%s-%s", clusterAlias, DI_SEARCH_INDEX);
     }
     return DI_SEARCH_INDEX;
+  }
+
+  public static String getDataInsightsRollupIndex() {
+    String clusterAlias = Entity.getSearchRepository().getClusterAlias();
+    if (!(clusterAlias == null || clusterAlias.isEmpty())) {
+      return String.format("%s-%s", clusterAlias, DI_ROLLUP_INDEX);
+    }
+    return DI_ROLLUP_INDEX;
   }
 
   public static String getLiveSearchIndex(String index) {

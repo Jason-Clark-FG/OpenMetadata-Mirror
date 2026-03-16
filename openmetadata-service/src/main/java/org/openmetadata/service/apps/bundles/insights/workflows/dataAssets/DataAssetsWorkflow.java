@@ -6,6 +6,8 @@ import static org.openmetadata.service.apps.bundles.insights.utils.TimestampUtil
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.ENTITY_TYPE_KEY;
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.getInitialStatsForEntities;
 
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,6 +37,7 @@ import org.openmetadata.service.OpenMetadataApplicationConfigHolder;
 import org.openmetadata.service.apps.bundles.insights.DataInsightsApp;
 import org.openmetadata.service.apps.bundles.insights.search.DataInsightsSearchConfiguration;
 import org.openmetadata.service.apps.bundles.insights.search.DataInsightsSearchInterface;
+import org.openmetadata.service.apps.bundles.insights.search.ManifestEntry;
 import org.openmetadata.service.apps.bundles.insights.utils.TimestampUtils;
 import org.openmetadata.service.apps.bundles.insights.workflows.WorkflowStats;
 import org.openmetadata.service.apps.bundles.insights.workflows.dataAssets.processors.DataInsightsElasticSearchProcessor;
@@ -69,6 +72,8 @@ public class DataAssetsWorkflow {
   private final Set<String> entityTypes;
   private final DataInsightsSearchConfiguration dataInsightsSearchConfiguration;
   private final DataInsightsSearchInterface searchInterface;
+  private final boolean isBackfill;
+  private final String manifestIndex;
 
   private DataInsightsEntityEnricherProcessor entityEnricher;
   private Processor entityProcessor;
@@ -125,6 +130,9 @@ public class DataAssetsWorkflow {
     this.searchInterface = searchInterface;
     this.dataInsightsSearchConfiguration = searchInterface.readDataInsightsSearchConfiguration();
     this.dataAssetsConfig = dataAssetsConfig;
+    this.isBackfill = backfill.isPresent();
+    this.manifestIndex =
+        searchInterface.getStringWithClusterAlias(DataInsightsApp.MANIFEST_INDEX_NAME);
   }
 
   private void initialize() {
@@ -227,24 +235,30 @@ public class DataAssetsWorkflow {
     int budget = computeConcurrencyBudget();
     LOG.info("[Data Insights] Using concurrency budget of {} virtual threads.", budget);
 
+    boolean deltaEnabled = !isBackfill && isDeltaDetectionAvailable();
+
     for (PaginatedEntitiesSource source : sources) {
       if (stopped) {
         break;
       }
-      deleteBasedOnDataRetentionPolicy(
-          getDataStreamName(searchRepository.getClusterAlias(), source.getEntityType()));
-      deleteDataBeforeInserting(
-          getDataStreamName(searchInterface.getClusterAlias(), source.getEntityType()));
-      contextData.put(
-          DATA_STREAM_KEY,
-          getDataStreamName(searchInterface.getClusterAlias(), source.getEntityType()));
+
+      String dataStreamName =
+          getDataStreamName(searchInterface.getClusterAlias(), source.getEntityType());
+      contextData.put(DATA_STREAM_KEY, dataStreamName);
       contextData.put(ENTITY_TYPE_KEY, source.getEntityType());
       contextData.put(
           ENTITY_TYPE_FIELDS_KEY,
           searchInterface.getEntityAttributeFields(
               dataInsightsSearchConfiguration, source.getEntityType()));
 
-      processSource(source, Collections.unmodifiableMap(new HashMap<>(contextData)), budget);
+      if (deltaEnabled) {
+        processDelta(source, contextData, budget);
+      } else {
+        deleteBasedOnDataRetentionPolicy(
+            getDataStreamName(searchRepository.getClusterAlias(), source.getEntityType()));
+        deleteDataBeforeInserting(dataStreamName);
+        processSource(source, Collections.unmodifiableMap(new HashMap<>(contextData)), budget);
+      }
     }
   }
 
@@ -359,6 +373,208 @@ public class DataAssetsWorkflow {
     }
     if (!batch.isEmpty()) {
       searchIndexSink.write(batch);
+    }
+  }
+
+  private boolean isDeltaDetectionAvailable() {
+    try {
+      return searchInterface.manifestIndexExists(manifestIndex);
+    } catch (IOException e) {
+      LOG.warn("[DataAssetsWorkflow] Could not check manifest index, falling back to full scan", e);
+      return false;
+    }
+  }
+
+  private void processDelta(
+      PaginatedEntitiesSource source, Map<String, Object> contextData, int budget)
+      throws SearchIndexException {
+    String entityType = source.getEntityType();
+    LOG.info("[DataAssetsWorkflow] Running delta detection for entityType={}", entityType);
+
+    DeltaDetector detector = new DeltaDetector(searchInterface, manifestIndex);
+    EntityProjectionSource projectionSource = new EntityProjectionSource(entityType, batchSize);
+
+    DeltaDetector.DeltaResult delta;
+    try {
+      delta = detector.detectDelta(projectionSource);
+    } catch (IOException e) {
+      LOG.error("[DataAssetsWorkflow] Delta detection failed for {}, falling back to full scan",
+          entityType, e);
+      deleteBasedOnDataRetentionPolicy(
+          getDataStreamName(searchRepository.getClusterAlias(), entityType));
+      deleteDataBeforeInserting((String) contextData.get(DATA_STREAM_KEY));
+      processSource(source, Collections.unmodifiableMap(new HashMap<>(contextData)), budget);
+      return;
+    }
+
+    if (!delta.deletedIds().isEmpty()) {
+      produceTombstones(delta.deletedIds(), entityType, contextData);
+    }
+
+    Set<String> idsToProcess = new java.util.HashSet<>(delta.changedIds());
+    idsToProcess.addAll(delta.newIds());
+
+    if (idsToProcess.isEmpty()) {
+      LOG.info("[DataAssetsWorkflow] No changes detected for entityType={}, skipping", entityType);
+      return;
+    }
+
+    LOG.info(
+        "[DataAssetsWorkflow] Processing {} changed/new entities for entityType={} (skipped {})",
+        idsToProcess.size(),
+        entityType,
+        delta.totalScanned() - idsToProcess.size());
+
+    processSourceWithManifestUpdate(
+        source, contextData, budget, idsToProcess, entityType);
+  }
+
+  private void processSourceWithManifestUpdate(
+      PaginatedEntitiesSource source,
+      Map<String, Object> contextData,
+      int budget,
+      Set<String> idsToProcess,
+      String entityType)
+      throws SearchIndexException {
+    Semaphore concurrencyLimit = new Semaphore(budget);
+    ConcurrentLinkedQueue<TaggedOperation<?>> opsQueue = new ConcurrentLinkedQueue<>();
+    List<ManifestEntry> processedEntries = new ArrayList<>();
+    LocalDate snapshotDate = LocalDate.now();
+
+    try (ExecutorService sourceExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
+      this.executor = sourceExecutor;
+
+      String keysetCursor = null;
+      while (!stopped) {
+        try {
+          ResultList<? extends EntityInterface> batch = source.readNextKeyset(keysetCursor);
+          keysetCursor = batch.getPaging().getAfter();
+
+          List<? extends EntityInterface> filtered =
+              batch.getData().stream()
+                  .filter(e -> idsToProcess.contains(e.getId().toString()))
+                  .toList();
+
+          if (filtered.isEmpty()) {
+            if (keysetCursor == null) {
+              break;
+            }
+            continue;
+          }
+
+          record EntityFuture(EntityInterface entity, Future<Void> future) {}
+          List<EntityFuture> entityFutures = new ArrayList<>();
+          for (EntityInterface entity : filtered) {
+            entityFutures.add(
+                new EntityFuture(
+                    entity,
+                    sourceExecutor.submit(
+                        () -> {
+                          concurrencyLimit.acquire();
+                          try {
+                            List<Map<String, Object>> enriched =
+                                entityEnricher.enrichSingle(entity, contextData);
+                            List<?> bulkOps =
+                                (List<?>) entityProcessor.process(enriched, contextData);
+                            EntityReference ref = entity.getEntityReference();
+                            bulkOps.forEach(op -> opsQueue.add(new TaggedOperation<>(op, ref)));
+                          } finally {
+                            concurrencyLimit.release();
+                          }
+                          return null;
+                        })));
+          }
+
+          int batchSuccess = 0;
+          int batchFailed = 0;
+          for (EntityFuture ef : entityFutures) {
+            try {
+              ef.future().get();
+              batchSuccess++;
+              processedEntries.add(
+                  new ManifestEntry(
+                      ef.entity().getId().toString(),
+                      entityType,
+                      ef.entity().getUpdatedAt(),
+                      snapshotDate));
+            } catch (ExecutionException e) {
+              batchFailed++;
+              LOG.debug(
+                  "[DataAssetsWorkflow] Failed to process entity '{}' (type={}): {}",
+                  ef.entity().getFullyQualifiedName(),
+                  entityType,
+                  e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+            }
+          }
+
+          drainAndFlush(opsQueue);
+          flushManifestEntries(processedEntries);
+
+          source.updateStats(batchSuccess, batchFailed + batch.getErrors().size());
+
+          if (keysetCursor == null) {
+            break;
+          }
+        } catch (SearchIndexException ex) {
+          source.updateStats(
+              ex.getIndexingError().getSuccessCount(), ex.getIndexingError().getFailedCount());
+          workflowStats.addFailure(
+              String.format("Failed processing Data from %s: %s", source.getName(), ex));
+          break;
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    } finally {
+      this.executor = null;
+    }
+
+    try {
+      drainAndFlush(opsQueue);
+      flushManifestEntries(processedEntries);
+    } finally {
+      updateWorkflowStats(source.getName(), source.getStats());
+    }
+  }
+
+  private void flushManifestEntries(List<ManifestEntry> entries) {
+    if (entries.isEmpty()) {
+      return;
+    }
+    try {
+      searchInterface.bulkUpsertManifest(manifestIndex, entries);
+      entries.clear();
+    } catch (IOException e) {
+      LOG.error("[DataAssetsWorkflow] Failed to update manifest entries", e);
+    }
+  }
+
+  private void produceTombstones(
+      List<String> deletedIds, String entityType, Map<String, Object> contextData) {
+    LOG.info(
+        "[DataAssetsWorkflow] Producing {} tombstones for entityType={}",
+        deletedIds.size(),
+        entityType);
+    try {
+      List<Map<String, Object>> tombstones = new ArrayList<>();
+      for (String id : deletedIds) {
+        Map<String, Object> tombstone = new HashMap<>();
+        tombstone.put("id", id);
+        tombstone.put("entityType", entityType);
+        tombstone.put("@timestamp", endTimestamp);
+        tombstone.put("deleted", Boolean.TRUE);
+        tombstones.add(tombstone);
+      }
+      List<?> bulkOps = (List<?>) entityProcessor.process(tombstones, contextData);
+      ConcurrentLinkedQueue<TaggedOperation<?>> opsQueue = new ConcurrentLinkedQueue<>();
+      bulkOps.forEach(op -> opsQueue.add(new TaggedOperation<>(op, null)));
+      drainAndFlush(opsQueue);
+
+      searchInterface.deleteManifestEntries(manifestIndex, deletedIds);
+    } catch (Exception e) {
+      LOG.error(
+          "[DataAssetsWorkflow] Failed to produce tombstones for entityType={}", entityType, e);
     }
   }
 
