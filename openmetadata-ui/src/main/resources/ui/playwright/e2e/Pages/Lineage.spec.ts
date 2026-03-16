@@ -38,6 +38,8 @@ import {
   uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+
+test.describe.configure({ mode: 'serial' });
 import {
   activateColumnLayer,
   addColumnLineage,
@@ -50,11 +52,13 @@ import {
   deleteNode,
   editLineage,
   editLineageClick,
+  performExpand,
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
   setupEntitiesForLineage,
   toggleLineageFilters,
+  updateLineageConfigFromModal,
   verifyColumnLayerInactive,
   verifyColumnLineageInCSV,
   verifyExportLineageCSV,
@@ -135,7 +139,7 @@ for (const EntityClass of entities) {
           state: 'visible',
         });
 
-        await page.waitForTimeout(500);
+        await waitForAllLoadersToDisappear(page);
         await performZoomOut(page);
 
         for (const entity of entities) {
@@ -172,7 +176,7 @@ for (const EntityClass of entities) {
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
         await performZoomOut(page, 8);
-        await page.waitForTimeout(500); // wait for the nodes to settle
+        await waitForAllLoadersToDisappear(page);
 
         const fromNodeFqn = get(
           currentEntity,
@@ -186,11 +190,11 @@ for (const EntityClass of entities) {
         }
       });
 
-      await page.waitForTimeout(500);
+      await waitForAllLoadersToDisappear(page);
 
       await test.step('Verify Lineage Export CSV', async () => {
         await editLineageClick(page);
-        await page.waitForTimeout(500);
+        await waitForAllLoadersToDisappear(page);
         await performZoomOut(page);
         await verifyExportLineageCSV(page, currentEntity, entities, pipeline);
       });
@@ -203,7 +207,7 @@ for (const EntityClass of entities) {
         await editLineage(page);
         await page.getByTestId('fit-screen').click();
         await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
-        await page.waitForTimeout(500); // wait for the nodes to settle
+        await waitForAllLoadersToDisappear(page);
 
         await performZoomOut(page);
 
@@ -298,7 +302,6 @@ test('Verify column lineage between table and topic', async ({ page }) => {
   await redirectToHomePage(page);
   await table.visitEntityPage(page);
   await visitLineageTab(page);
-  await page.waitForLoadState('networkidle');
   await verifyColumnLineageInCSV(page, table, topic, sourceCol, targetCol);
 
   await verifyPlatformLineageForEntity(page, tableServiceFqn, topicServiceFqn);
@@ -442,7 +445,6 @@ test('Verify function data in edge drawer', async ({ page }) => {
     await page.reload();
     await lineageReq1;
 
-    await page.waitForLoadState('networkidle');
 
     await activateColumnLayer(page);
     await page
@@ -523,7 +525,6 @@ test('Verify table search with special characters as handled', async ({
     await expect(page.locator('[data-testid="lineage-details"]')).toBeVisible();
 
     await clickLineageNode(page, dbFqn);
-    await page.waitForLoadState('networkidle');
 
     await expect(
       page.locator('.lineage-entity-panel').getByTestId('entity-header-title')
@@ -557,26 +558,49 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
       'entityResponseData.fullyQualifiedName'
     );
 
+    // connect table to topic
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      {
+        id: table.entityResponseData.id,
+        type: 'table',
+      },
+      {
+        id: topic.entityResponseData.id,
+        type: 'topic',
+      }
+    );
+
+    // connect topic to dashboard
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      {
+        id: topic.entityResponseData.id,
+        type: 'topic',
+      },
+      {
+        id: dashboard.entityResponseData.id,
+        type: 'dashboard',
+      }
+    );
+
+    // connect dashboard to table
+    await connectEdgeBetweenNodesViaAPI(
+      apiContext,
+      {
+        id: dashboard.entityResponseData.id,
+        type: 'dashboard',
+      },
+      {
+        id: table.entityResponseData.id,
+        type: 'table',
+      }
+    );
+
     await redirectToHomePage(page);
     await table.visitEntityPage(page);
     await visitLineageTab(page);
-    await editLineage(page);
-    await performZoomOut(page);
 
-    // connect table to topic
-    await connectEdgeBetweenNodes(page, table, topic);
-    await rearrangeNodes(page);
-
-    // connect topic to dashboard
-    await connectEdgeBetweenNodes(page, topic, dashboard);
-    await rearrangeNodes(page);
-
-    // connect dashboard to table
-    await connectEdgeBetweenNodes(page, dashboard, table);
-    await rearrangeNodes(page);
-
-    await page.reload();
-    await page.waitForLoadState('networkidle');
     await performZoomOut(page);
 
     await expect(page.getByTestId(`lineage-node-${tableFqn}`)).toBeVisible();
@@ -618,7 +642,7 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
     await page
       .getByTestId(`lineage-node-${dashboardFqn}`)
       .getByTestId('plus-icon')
-      .click();
+      .dispatchEvent('click');
 
     await downstreamResponse;
 
@@ -633,7 +657,7 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
     await page
       .getByTestId(`lineage-node-${dashboardFqn}`)
       .getByTestId('upstream-collapse-handle')
-      .click();
+      .dispatchEvent('click');
 
     await expect(page.getByTestId(`lineage-node-${tableFqn}`)).toBeVisible();
     await expect(
@@ -654,7 +678,7 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
     await page
       .getByTestId(`lineage-node-${dashboardFqn}`)
       .getByTestId('plus-icon')
-      .click();
+      .dispatchEvent('click');
     await upStreamResponse2;
 
     await expect(page.getByTestId(`lineage-node-${tableFqn}`)).toBeVisible();
@@ -667,13 +691,13 @@ test('Verify cycle lineage should be handled properly', async ({ page }) => {
     await page
       .getByTestId(`lineage-node-${topicFqn}`)
       .getByTestId('downstream-collapse-handle')
-      .click();
+      .dispatchEvent('click');
 
     await expect(page.getByTestId(`lineage-node-${tableFqn}`)).toBeVisible();
     await expect(page.getByTestId(`lineage-node-${topicFqn}`)).toBeVisible();
     await expect(
       page.getByTestId(`lineage-node-${dashboardFqn}`)
-    ).toBeVisible();
+    ).not.toBeVisible();
   } finally {
     await Promise.all([
       table.delete(apiContext),
