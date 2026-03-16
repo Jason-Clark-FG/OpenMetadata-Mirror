@@ -245,3 +245,8 @@ yarn parse-schema              # Parse JSON schemas for frontend (connection and
 - Provide clean code blocks without unnecessary explanations
 - Assume readers are experienced developers
 - Focus on functionality over education
+
+
+This is the OpenMetadata repository. The main backend is Java (Spring/Dropwizard),
+ingestion framework is Python, and the UI is React/TypeScript.
+Always run tests relevant to your changes before creating a PR.

@@ -280,17 +280,13 @@ class TableauPipelineUnitTest(TestCase):
         results = list(
             self.tableaupipeline.yield_pipeline_status(MOCK_PIPELINE_DETAILS)
         )
-        status_list = [r.right for r in results if r.right is not None]
-        assert len(status_list) == 2
+        for r in results:
+            assert (
+                r.left is None
+            ), f"Unexpected error: {r.left.error}\n{r.left.stackTrace}"
 
-        assert status_list[0].pipeline_fqn == "test_tableau_pipeline.flow-abc-123"
-        assert status_list[0].pipeline_status.executionStatus == "Successful"
-        assert status_list[0].pipeline_status.taskStatus[0].startTime == _started_ms
-        assert status_list[0].pipeline_status.taskStatus[0].endTime == _completed_ms
-
-        assert status_list[1].pipeline_status.executionStatus == "Failed"
-        assert status_list[1].pipeline_status.taskStatus[0].startTime == _started_2_ms
-        assert status_list[1].pipeline_status.taskStatus[0].endTime == _completed_2_ms
+        status_list = [r.right for r in results]
+        assert status_list == EXPECTED_PIPELINE_STATUS
 
     def test_yield_pipeline_status_empty_runs(self):
         self.mock_connection.get_flow_runs.return_value = []

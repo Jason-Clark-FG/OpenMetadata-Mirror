@@ -12,6 +12,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 # Maven
 .venv
+.maestro
 __pycache__
 target/
 pom.xml.tag
