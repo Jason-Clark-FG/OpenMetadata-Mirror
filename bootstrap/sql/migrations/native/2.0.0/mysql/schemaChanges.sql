@@ -86,3 +86,7 @@ CREATE TABLE IF NOT EXISTS activity_stream_config (
     KEY idx_scope (scope),
     KEY idx_enabled (enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Add stageResult generated column to workflow_instance_state_time_series
+ALTER TABLE workflow_instance_state_time_series
+ADD COLUMN stageResult VARCHAR(256) GENERATED ALWAYS AS (json_unquote(json_extract(json, '$.stage.result'))) STORED NULL;

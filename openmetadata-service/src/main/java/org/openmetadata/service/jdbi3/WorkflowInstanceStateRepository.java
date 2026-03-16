@@ -3,6 +3,7 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FAILURE_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.ArrayList;
@@ -82,16 +83,15 @@ public class WorkflowInstanceStateRepository
     return getResultList(workflowInstanceStates, null, null, workflowInstanceStates.size());
   }
 
-  private UUID getStateId(UUID workflowInstanceId, String workflowInstanceStage) {
-    UUID id = null;
-    ResultList<WorkflowInstanceState> resultList =
-        listWorkflowInstanceStateForStage(workflowInstanceId, workflowInstanceStage);
-
-    if (!resultList.getData().isEmpty()) {
-      id = resultList.getData().get(0).getId();
+  private WorkflowInstanceState getLatestState(
+      UUID workflowInstanceId, String workflowInstanceStage) {
+    String json =
+        ((CollectionDAO.WorkflowInstanceStateTimeSeriesDAO) timeSeriesDao)
+            .getLatestStateForStage(workflowInstanceId.toString(), workflowInstanceStage);
+    if (json == null) {
+      return null;
     }
-
-    return id;
+    return JsonUtils.readValue(json, WorkflowInstanceState.class);
   }
 
   public UUID addNewStageToInstance(
@@ -124,10 +124,14 @@ public class WorkflowInstanceStateRepository
             .withStatus(WorkflowInstance.WorkflowStatus.RUNNING)
             .withWorkflowDefinitionId(workflowDefinition.getId());
 
-    UUID stateId = getStateId(workflowInstanceId, workflowInstanceStage);
+    WorkflowInstanceState existing = getLatestState(workflowInstanceId, workflowInstanceStage);
 
-    if (stateId != null) {
-      entityRecord.withId(stateId);
+    if (existing != null) {
+      boolean sameExecution =
+          workflowInstanceExecutionId.equals(existing.getWorkflowInstanceExecutionId());
+      if (existing.getStatus() == WorkflowInstance.WorkflowStatus.RUNNING || !sameExecution) {
+        entityRecord.withId(existing.getId());
+      }
     }
 
     entityRecord =
@@ -147,6 +151,12 @@ public class WorkflowInstanceStateRepository
     Stage stage = workflowInstanceState.getStage();
     stage.setEndedAt(endedAt);
     stage.setVariables(variables);
+
+    String resultKey = getNamespacedVariableName(stage.getName(), RESULT_VARIABLE);
+    Object result = variables.get(resultKey);
+    if (result != null) {
+      stage.setResult(String.valueOf(result));
+    }
 
     workflowInstanceState.setStage(stage);
     workflowInstanceState.setStatus(WorkflowInstance.WorkflowStatus.FINISHED);

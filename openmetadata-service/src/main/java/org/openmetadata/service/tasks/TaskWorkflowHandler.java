@@ -607,6 +607,31 @@ public class TaskWorkflowHandler {
     return task;
   }
 
+  public void transitionManualTaskStatus(Task task, String status) {
+    Map<String, Object> variables = new HashMap<>();
+    variables.put("status", status);
+    if (task.getUpdatedBy() != null) {
+      variables.put(UPDATED_BY_VARIABLE, task.getUpdatedBy());
+    }
+
+    boolean sent =
+        WorkflowHandler.getInstance().sendManualTaskMessage(task.getId().toString(), variables);
+
+    if (sent) {
+      LOG.info(
+          "[TaskWorkflowHandler] Transitioned manual task '{}' to status '{}' by '{}'",
+          task.getId(),
+          status,
+          task.getUpdatedBy());
+    } else {
+      LOG.warn(
+          "[TaskWorkflowHandler] Could not deliver status '{}' to workflow for task '{}'. "
+              + "The workflow may have completed or is between cycles.",
+          status,
+          task.getId());
+    }
+  }
+
   /**
    * Check if a task supports multi-approval.
    */

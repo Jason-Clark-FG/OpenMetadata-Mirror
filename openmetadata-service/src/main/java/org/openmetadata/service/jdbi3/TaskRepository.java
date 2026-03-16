@@ -792,6 +792,18 @@ public class TaskRepository extends EntityRepository<Task> {
   @Override
   protected void postUpdate(Task original, Task updated) {
     super.postUpdate(original, updated);
+
+    if (original.getStatus() != updated.getStatus() && updated.getWorkflowInstanceId() != null) {
+      try {
+        TaskWorkflowHandler.getInstance()
+            .transitionManualTaskStatus(updated, updated.getStatus().value());
+      } catch (Exception e) {
+        LOG.warn(
+            "Failed to notify workflow of status change for task '{}': {}",
+            updated.getId(),
+            e.getMessage());
+      }
+    }
   }
 
   /**
