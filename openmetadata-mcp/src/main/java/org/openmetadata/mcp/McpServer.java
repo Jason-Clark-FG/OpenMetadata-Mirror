@@ -138,7 +138,7 @@ public class McpServer implements McpServerProvider {
         }
         // Don't cache the default — if the app isn't registered yet, retry on next call
       } catch (Exception e) {
-        // Don't cache — retry next time
+        LOG.debug("Could not resolve MCP bot name from app registry, will retry on next call", e);
       }
     }
     return mcpBotName != null ? mcpBotName : DEFAULT_MCP_BOT_NAME;

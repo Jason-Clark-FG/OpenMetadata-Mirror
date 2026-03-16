@@ -68,3 +68,16 @@ DELETE FROM QRTZ_JOB_DETAILS;
 DELETE FROM QRTZ_FIRED_TRIGGERS;
 DELETE FROM QRTZ_LOCKS;
 DELETE FROM QRTZ_SCHEDULER_STATE;
+
+-- Enable allowImpersonation for McpApplicationBot so it can record impersonation in audit logs
+UPDATE user_entity
+SET json = JSON_SET(json, '$.allowImpersonation', true)
+WHERE name = 'mcpapplicationbot';
+
+-- Assign ApplicationBotImpersonationRole to the MCP bot user
+-- Relationship.HAS ordinal = 10
+INSERT IGNORE INTO entity_relationship (fromId, toId, fromEntity, toEntity, relation)
+SELECT ue.id, re.id, 'user', 'role', 10
+FROM user_entity ue, role_entity re
+WHERE ue.name = 'mcpapplicationbot'
+  AND re.name = 'ApplicationBotImpersonationRole';
