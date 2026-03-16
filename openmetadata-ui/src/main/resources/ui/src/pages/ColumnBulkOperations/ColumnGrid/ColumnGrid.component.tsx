@@ -14,6 +14,7 @@
 import {
   Badge,
   Button,
+  ButtonUtility,
   Card,
   Input,
   Table,
@@ -108,7 +109,7 @@ const COLUMN_WIDTH_PERCENT: Record<string, string> = {
   columnName: '22%',
   path: '16%',
   description: '14%',
-  dataType: '8%',
+  dataType: '14%',
   tags: '18%',
   glossaryTerms: '18%',
 };
@@ -722,11 +723,12 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       }
 
       return (
-        <Link
-          className="tw:text-primary tw:cursor-pointer tw:block tw:min-w-0 tw:truncate hover:tw:underline"
-          to={entityInfo.link}>
+        <Button
+          className="tw:block tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap"
+          color="link-color"
+          href={entityInfo.link}>
           {entityInfo.name}
-        </Link>
+        </Button>
       );
     },
     [getEntityLink]
@@ -757,16 +759,15 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       // Strip HTML tags for display - React's JSX escaping handles XSS prevention
       const displayValue = description.replace(/<[^>]*>/g, '').slice(0, 100);
 
-      return (
-        <div
-          className={classNames(
-            hasEdit && 'tw:bg-utility-warning-50 tw:px-1 tw:py-0.5 tw:rounded'
-          )}>
-          <Typography as="span" className="tw:block tw:truncate">
-            {displayValue || '-'}
-          </Typography>
-        </div>
-      );
+      if (hasEdit) {
+        return (
+          <Badge color="warning" size="sm" type="color">
+            <Typography as="span">{displayValue || '-'}</Typography>
+          </Badge>
+        );
+      }
+
+      return <Typography as="span">{displayValue || '-'}</Typography>;
     },
     []
   );
@@ -878,56 +879,46 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const renderColumnNameCellFinal = useCallback(
     (entity: ColumnGridRowData) => {
       if (entity.isGroup && entity.occurrenceCount > 1) {
-        const expandButton = (
-          <Button
-            className={classNames(
-              'tw:shrink-0 tw:p-0 tw:h-9 tw:w-9',
-              'tw:text-tertiary hover:tw:bg-secondary hover:tw:text-secondary'
-            )}
-            color="tertiary"
-            iconLeading={
-              <ChevronRight
-                className={classNames(
-                  'tw:size-4 tw:transition-transform',
-                  entity.isExpanded && 'tw:rotate-90'
-                )}
-              />
-            }
-            size="sm"
-            onPress={() => {
-              const isExpanded = columnGridListing.expandedRows.has(entity.id);
-              if (isExpanded) {
-                scrollToRowIdRef.current = entity.id;
-                columnGridListing.setExpandedRows((prev: Set<string>) => {
-                  const newSet = new Set(prev);
-                  newSet.delete(entity.id);
+        const expandHandler = () => {
+          const isExpanded = columnGridListing.expandedRows.has(entity.id);
+          if (isExpanded) {
+            scrollToRowIdRef.current = entity.id;
+            columnGridListing.setExpandedRows((prev: Set<string>) => {
+              const newSet = new Set(prev);
+              newSet.delete(entity.id);
 
-                  return newSet;
-                });
-              } else {
-                columnGridListing.setExpandedRows((prev: Set<string>) => {
-                  const newSet = new Set(prev);
-                  newSet.add(entity.id);
+              return newSet;
+            });
+          } else {
+            columnGridListing.setExpandedRows((prev: Set<string>) => {
+              const newSet = new Set(prev);
+              newSet.add(entity.id);
 
-                  return newSet;
-                });
-              }
-            }}
-          />
-        );
+              return newSet;
+            });
+          }
+        };
 
         const nameWithCount = `${entity.columnName} (${entity.occurrenceCount})`;
 
+        const isGroupExpanded = columnGridListing.expandedRows.has(entity.id);
+
         return (
-          <div
-            className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden"
-            style={{ minWidth: 0 }}>
-            {expandButton}
+          <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
+            <ButtonUtility
+              color="tertiary"
+              icon={
+                <ChevronRight
+                  className={classNames(
+                    'tw:size-4 tw:transition-transform',
+                    isGroupExpanded && 'tw:rotate-90'
+                  )}
+                />
+              }
+              size="sm"
+              onClick={expandHandler}
+            />
             <Button
-              className={classNames(
-                'tw:block tw:min-w-0 tw:flex-1 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap',
-                'tw:font-semibold tw:text-left '
-              )}
               color="tertiary"
               onPress={() => {
                 handleGroupSelectRef.current(entity.id, true);
@@ -939,138 +930,108 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         );
       }
 
-      // STRUCT child row
       if (entity.isStructChild) {
-        const nestingPadding = (entity.nestingLevel || 1) * 24;
         const hasChildren = entity.children && entity.children.length > 0;
 
+        const structExpandHandler = () => {
+          const isExpanded = columnGridListing.expandedStructRows.has(
+            entity.id
+          );
+          if (isExpanded) {
+            scrollToRowIdRef.current = entity.id;
+            columnGridListing.setExpandedStructRows((prev: Set<string>) => {
+              const newSet = new Set(prev);
+              newSet.delete(entity.id);
+
+              return newSet;
+            });
+          } else {
+            columnGridListing.setExpandedStructRows((prev: Set<string>) => {
+              const newSet = new Set(prev);
+              newSet.add(entity.id);
+
+              return newSet;
+            });
+          }
+        };
+
+        const isStructExpanded = columnGridListing.expandedStructRows.has(
+          entity.id
+        );
+
         return (
-          <div
-            className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden tw:text-tertiary"
-            style={{ paddingLeft: `${nestingPadding}px`, minWidth: 0 }}>
+          <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
             {hasChildren && (
-              <Button
-                className={classNames(
-                  'tw:shrink-0 tw:p-0 tw:h-9 tw:w-9',
-                  'tw:text-tertiary hover:tw:bg-secondary hover:tw:text-secondary'
-                )}
+              <ButtonUtility
                 color="tertiary"
-                iconLeading={
+                icon={
                   <ChevronRight
                     className={classNames(
                       'tw:size-4 tw:transition-transform',
-                      entity.isExpanded && 'tw:rotate-90'
+                      isStructExpanded && 'tw:rotate-90'
                     )}
                   />
                 }
                 size="sm"
-                onPress={() => {
-                  const isExpanded = columnGridListing.expandedStructRows.has(
-                    entity.id
-                  );
-                  if (isExpanded) {
-                    scrollToRowIdRef.current = entity.id;
-                    columnGridListing.setExpandedStructRows(
-                      (prev: Set<string>) => {
-                        const newSet = new Set(prev);
-                        newSet.delete(entity.id);
-
-                        return newSet;
-                      }
-                    );
-                  } else {
-                    columnGridListing.setExpandedStructRows(
-                      (prev: Set<string>) => {
-                        const newSet = new Set(prev);
-                        newSet.add(entity.id);
-
-                        return newSet;
-                      }
-                    );
-                  }
-                }}
+                onClick={structExpandHandler}
               />
             )}
-            <div
-              className="tw:min-w-0 tw:flex-1 tw:overflow-hidden"
-              style={{ minWidth: 0 }}>
-              <span className="tw:block tw:w-full tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap tw:text-tertiary">
-                {entity.columnName}
-              </span>
-            </div>
+            <Typography as="span">{entity.columnName}</Typography>
           </div>
         );
       }
 
-      // Child row or single occurrence
       const hasStructChildren = entity.children && entity.children.length > 0;
 
+      const occurrenceExpandHandler = () => {
+        const isExpanded = columnGridListing.expandedStructRows.has(entity.id);
+        if (isExpanded) {
+          scrollToRowIdRef.current = entity.id;
+          columnGridListing.setExpandedStructRows((prev: Set<string>) => {
+            const newSet = new Set(prev);
+            newSet.delete(entity.id);
+
+            return newSet;
+          });
+        } else {
+          columnGridListing.setExpandedStructRows((prev: Set<string>) => {
+            const newSet = new Set(prev);
+            newSet.add(entity.id);
+
+            return newSet;
+          });
+        }
+      };
+
+      const isOccurrenceExpanded = columnGridListing.expandedStructRows.has(
+        entity.id
+      );
+
       return (
-        <div
-          className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden"
-          style={{ minWidth: 0 }}>
-          <span
-            className={classNames(
-              entity.parentId && 'tw:pl-7',
-              'tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-1 tw:overflow-hidden'
-            )}
-            style={{ minWidth: 0 }}>
-            {hasStructChildren && (
-              <Button
-                className={classNames(
-                  'tw:shrink-0 tw:p-0 tw:h-9 tw:w-9',
-                  'tw:text-tertiary hover:tw:bg-secondary hover:tw:text-secondary'
-                )}
-                color="tertiary"
-                iconLeading={
-                  <ChevronRight
-                    className={classNames(
-                      'tw:size-4 tw:transition-transform',
-                      entity.isExpanded && 'tw:rotate-90'
-                    )}
-                  />
-                }
-                size="sm"
-                onPress={() => {
-                  const isExpanded = columnGridListing.expandedStructRows.has(
-                    entity.id
-                  );
-                  if (isExpanded) {
-                    scrollToRowIdRef.current = entity.id;
-                    columnGridListing.setExpandedStructRows(
-                      (prev: Set<string>) => {
-                        const newSet = new Set(prev);
-                        newSet.delete(entity.id);
-
-                        return newSet;
-                      }
-                    );
-                  } else {
-                    columnGridListing.setExpandedStructRows(
-                      (prev: Set<string>) => {
-                        const newSet = new Set(prev);
-                        newSet.add(entity.id);
-
-                        return newSet;
-                      }
-                    );
-                  }
-                }}
-              />
-            )}
-            <Button
-              className={classNames(
-                'tw:block tw:min-w-0 tw:flex-1 tw:w-full tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap',
-                'tw:text-left tw:cursor-pointer tw:bg-transparent tw:border-0 tw:py-0 tw:pl-6 tw:pr-0 tw:font-inherit tw:text-inherit hover:tw:underline'
-              )}
+        <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
+          {hasStructChildren && (
+            <ButtonUtility
               color="tertiary"
-              onPress={() => {
-                handleSelectRef.current(entity.id, true);
-                openDrawerRef.current();
-              }}>
-              {entity.columnName}
-            </Button>
-          </span>
+              icon={
+                <ChevronRight
+                  className={classNames(
+                    'tw:size-4 tw:transition-transform',
+                    isOccurrenceExpanded && 'tw:rotate-90'
+                  )}
+                />
+              }
+              size="sm"
+              onClick={occurrenceExpandHandler}
+            />
+          )}
+          <Button
+            color="tertiary"
+            onPress={() => {
+              handleSelectRef.current(entity.id, true);
+              openDrawerRef.current();
+            }}>
+            {entity.columnName}
+          </Button>
         </div>
       );
     },
@@ -1481,7 +1442,25 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     customStyles: { searchBoxWidth: 260 },
   });
 
-  // Helper function to compute child row IDs from gridItem data (before expansion)
+  const getAllDescendantIds = useCallback(
+    (parentId: string): string[] => {
+      const allRows = columnGridListing.allRows;
+      const result: string[] = [parentId];
+      const queue = [parentId];
+      while (queue.length > 0) {
+        const current = queue.shift() as string;
+        const children = allRows.filter((r) => r.structParentId === current);
+        for (const c of children) {
+          result.push(c.id);
+          queue.push(c.id);
+        }
+      }
+
+      return result;
+    },
+    [columnGridListing.allRows]
+  );
+
   const computeChildRowIdsFromGridItem = useCallback(
     (groupId: string): string[] => {
       const parentRow = columnGridListing.allRows.find(
@@ -1510,10 +1489,16 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     [columnGridListing.allRows]
   );
 
-  // Handle group checkbox selection - expands the group and selects all children
   const handleGroupSelect = useCallback(
     (groupId: string, checked: boolean) => {
       const computedChildIds = computeChildRowIdsFromGridItem(groupId);
+      const idsWithDescendants = new Set<string>([groupId]);
+      computedChildIds.forEach((id) => idsWithDescendants.add(id));
+      idsWithDescendants.forEach((id) => {
+        getAllDescendantIds(id).forEach((descId) =>
+          idsWithDescendants.add(descId)
+        );
+      });
 
       if (checked) {
         columnGridListing.setExpandedRows((prev: Set<string>) => {
@@ -1522,22 +1507,29 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
           return newSet;
         });
-        columnGridListing.handleSelect(groupId, true);
-        computedChildIds.forEach((childId) => {
-          columnGridListing.handleSelect(childId, true);
-        });
+        idsWithDescendants.forEach((id) =>
+          columnGridListing.handleSelect(id, true)
+        );
       } else {
-        columnGridListing.handleSelect(groupId, false);
-        computedChildIds.forEach((childId) => {
-          columnGridListing.handleSelect(childId, false);
-        });
+        idsWithDescendants.forEach((id) =>
+          columnGridListing.handleSelect(id, false)
+        );
       }
     },
-    [columnGridListing, computeChildRowIdsFromGridItem]
+    [columnGridListing, computeChildRowIdsFromGridItem, getAllDescendantIds]
+  );
+
+  const selectWithDescendants = useCallback(
+    (rowId: string, checked: boolean) => {
+      getAllDescendantIds(rowId).forEach((id) =>
+        columnGridListing.handleSelect(id, checked)
+      );
+    },
+    [columnGridListing.handleSelect, getAllDescendantIds]
   );
 
   handleGroupSelectRef.current = handleGroupSelect;
-  handleSelectRef.current = columnGridListing.handleSelect;
+  handleSelectRef.current = selectWithDescendants;
 
   // Set up data table with custom row component
   const CustomTableRow = useCallback(
@@ -1642,18 +1634,18 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       );
       const validSet = new Set(validKeys);
       const previousSelected = new Set(columnGridListing.selectedEntities);
-      const finalSelection = new Set(validKeys);
+      const finalSelection = new Set<string>();
+      validKeys.forEach((id) => {
+        getAllDescendantIds(id).forEach((descId) => finalSelection.add(descId));
+      });
 
       previousSelected.forEach((id) => {
-        const entity = columnGridListing.entities.find((e) => e.id === id);
-        const isGroupParent =
-          entity?.isGroup && (entity.occurrenceCount ?? 0) > 1;
-
-        if (isGroupParent && !validSet.has(id)) {
-          const childIds = computeChildRowIdsFromGridItem(id);
-          childIds.forEach((childId) => finalSelection.delete(childId));
-          finalSelection.delete(id);
+        if (validSet.has(id)) {
+          return;
         }
+        getAllDescendantIds(id).forEach((descId) =>
+          finalSelection.delete(descId)
+        );
       });
 
       validKeys.forEach((id) => {
@@ -1671,7 +1663,11 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
           const parentWasNewlySelected = !previousSelected.has(id);
           if (parentWasNewlySelected) {
             const childIds = computeChildRowIdsFromGridItem(id);
-            childIds.forEach((childId) => finalSelection.add(childId));
+            childIds.forEach((childId) => {
+              getAllDescendantIds(childId).forEach((descId) =>
+                finalSelection.add(descId)
+              );
+            });
           }
         }
       });
@@ -1686,6 +1682,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       columnGridListing.setExpandedRows,
       columnGridListing.setSelectedEntities,
       computeChildRowIdsFromGridItem,
+      getAllDescendantIds,
     ]
   );
 

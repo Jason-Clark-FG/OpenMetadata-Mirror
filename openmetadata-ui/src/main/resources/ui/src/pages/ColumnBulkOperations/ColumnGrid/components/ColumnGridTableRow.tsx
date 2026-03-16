@@ -37,9 +37,6 @@ interface ColumnGridTableRowProps {
   renderGlossaryTermsCell: (entity: ColumnGridRowData) => React.ReactNode;
 }
 
-const cellBaseClass =
-  'tw:relative tw:py-3 tw:px-6 tw:text-sm tw:text-tertiary tw:align-middle tw:border-b tw:border-border-secondary tw:transition-[background-color] tw:duration-150';
-
 const CELL_ELLIPSIS_CLASS = 'tw:min-w-0 tw:w-full tw:overflow-hidden';
 
 export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
@@ -68,7 +65,7 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
           'tw:bg-utility-warning-50',
           isSelected && 'tw:bg-utility-warning-50'
         ),
-        cellClassName: classNames(cellBaseClass, 'tw:bg-utility-warning-50'),
+        cellClassName: classNames('tw:bg-utility-warning-50'),
       };
     }
 
@@ -79,7 +76,6 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
           'tw:transition-colors tw:hover:bg-secondary',
           isSelected && 'tw:bg-secondary'
         ),
-        cellClassName: cellBaseClass,
       };
     }
 
@@ -93,7 +89,7 @@ export const ColumnGridTableRow: React.FC<ColumnGridTableRowProps> = ({
         isSelected && bgClass,
         'tw:hover:opacity-95'
       ),
-      cellClassName: classNames(cellBaseClass, bgClass),
+      cellClassName: classNames(bgClass),
     };
   }, [
     isRecentlyUpdated,
