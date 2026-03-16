@@ -92,4 +92,4 @@ CREATE INDEX IF NOT EXISTS idx_activity_config_enabled ON activity_stream_config
 
 -- Add stageResult generated column to workflow_instance_state_time_series
 ALTER TABLE workflow_instance_state_time_series
-ADD COLUMN IF NOT EXISTS stageResult VARCHAR(256) GENERATED ALWAYS AS (json -> 'stage' ->> 'result') STORED;
+ADD COLUMN stageResult VARCHAR(256) GENERATED ALWAYS AS (json -> 'stage' ->> 'result') STORED;

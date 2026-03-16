@@ -1171,8 +1171,12 @@ public class WorkflowHandler {
   }
 
   static final int MESSAGE_RETRY_ASYNC_ATTEMPTS = 5;
-  static long messageRetryInitialIntervalMillis = 500;
-  static long messageRetryMaxIntervalMillis = 5000;
+  static final long MESSAGE_RETRY_INITIAL_INTERVAL_MS = 500;
+  static final long MESSAGE_RETRY_MAX_INTERVAL_MS = 5000;
+
+  private static final IntervalFunction MESSAGE_RETRY_BACKOFF =
+      IntervalFunction.ofExponentialBackoff(
+          MESSAGE_RETRY_INITIAL_INTERVAL_MS, 2.0, MESSAGE_RETRY_MAX_INTERVAL_MS);
 
   private static final ScheduledExecutorService messageRetryScheduler =
       Executors.newSingleThreadScheduledExecutor(
@@ -1201,10 +1205,7 @@ public class WorkflowHandler {
       return;
     }
 
-    IntervalFunction backoff =
-        IntervalFunction.ofExponentialBackoff(
-            messageRetryInitialIntervalMillis, 2.0, messageRetryMaxIntervalMillis);
-    long delayMillis = backoff.apply(attempt);
+    long delayMillis = MESSAGE_RETRY_BACKOFF.apply(attempt);
 
     LOG.debug(
         "Scheduling message retry for '{}' in {}ms (attempt {}/{}).",
@@ -1246,6 +1247,13 @@ public class WorkflowHandler {
     } catch (FlowableObjectNotFoundException e) {
       LOG.warn(
           "Workflow execution not found when sending message '{}': {}",
+          messageName,
+          e.getMessage());
+      return false;
+    } catch (org.flowable.common.engine.api.FlowableOptimisticLockingException e) {
+      LOG.debug(
+          "Optimistic lock conflict delivering message '{}'. "
+              + "Concurrent modification detected, will retry: {}",
           messageName,
           e.getMessage());
       return false;

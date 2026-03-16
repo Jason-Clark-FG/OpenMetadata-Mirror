@@ -374,8 +374,7 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
       }
       validLoopSources.put(
           entry.getKey(),
-          nonTerminalReachable(
-              entry.getKey(), (ManualTaskDefinition) entry.getValue(), edges, outgoingEdges));
+          nonTerminalReachable(entry.getKey(), (ManualTaskDefinition) entry.getValue(), edges));
     }
 
     Map<String, List<String>> graph = new java.util.HashMap<>();
@@ -398,10 +397,7 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
    * and multi-hop loops are validated uniformly.
    */
   private Set<String> nonTerminalReachable(
-      String mtId,
-      ManualTaskDefinition manualTask,
-      List<EdgeDefinition> edges,
-      Map<String, List<String>> outgoingEdges) {
+      String mtId, ManualTaskDefinition manualTask, List<EdgeDefinition> edges) {
 
     Set<String> terminal =
         Set.copyOf(
@@ -422,9 +418,13 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
     }
 
     while (!queue.isEmpty()) {
-      for (String neighbor : outgoingEdges.getOrDefault(queue.poll(), List.of())) {
-        if (!neighbor.equals(mtId) && reachable.add(neighbor)) {
-          queue.add(neighbor);
+      String current = queue.poll();
+      for (EdgeDefinition edge : edges) {
+        if (edge.getFrom().equals(current)) {
+          String neighbor = edge.getTo();
+          if (!neighbor.equals(mtId) && reachable.add(neighbor)) {
+            queue.add(neighbor);
+          }
         }
       }
     }
