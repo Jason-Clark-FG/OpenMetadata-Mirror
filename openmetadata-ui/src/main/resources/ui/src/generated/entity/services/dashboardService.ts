@@ -1601,7 +1601,6 @@ export interface TagLabelMetadata {
      * Metadata about the recognizer that automatically applied this tag
      */
     recognizer?: TagLabelRecognizerMetadata;
-    [property: string]: any;
 }
 
 /**
