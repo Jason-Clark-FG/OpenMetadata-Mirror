@@ -675,6 +675,19 @@ public class ElasticSearchClient implements SearchClient {
   }
 
   @Override
+  public DataInsightCustomChartResultList buildDIChart(
+      @NotNull DataInsightCustomChart diChart,
+      long start,
+      long end,
+      boolean live,
+      String filter,
+      String targetIndex)
+      throws IOException {
+    return dataInsightAggregatorManager.buildDIChart(
+        diChart, start, end, live, filter, targetIndex);
+  }
+
+  @Override
   public QueryCostSearchResult getQueryCostRecords(String serviceName) throws IOException {
     return dataInsightAggregatorManager.getQueryCostRecords(serviceName);
   }
