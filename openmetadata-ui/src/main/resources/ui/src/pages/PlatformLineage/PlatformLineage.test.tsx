@@ -65,6 +65,13 @@ jest.mock('@openmetadata/ui-core-components', () => {
       .mockImplementation(({ children }: { children: React.ReactNode }) => (
         <span>{children}</span>
       )),
+    ButtonUtility: jest
+      .fn()
+      .mockImplementation(({ children, onClick, 'data-testid': testId }) => (
+        <button data-testid={testId} onClick={onClick}>
+          {children}
+        </button>
+      )),
   };
 });
 
