@@ -563,12 +563,12 @@ public class OpenSearchBulkSink implements BulkSink {
 
   private void drainPendingColumnFutures(int timeoutSeconds) {
     List<CompletableFuture<Void>> remaining = new ArrayList<>();
-    for (CompletableFuture<Void> f : pendingColumnFutures) {
+    CompletableFuture<Void> f;
+    while ((f = pendingColumnFutures.poll()) != null) {
       if (!f.isDone()) {
         remaining.add(f);
       }
     }
-    pendingColumnFutures.clear();
     if (!remaining.isEmpty()) {
       try {
         CompletableFuture.allOf(remaining.toArray(CompletableFuture[]::new))
