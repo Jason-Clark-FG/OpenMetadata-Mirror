@@ -23,6 +23,7 @@ import org.openmetadata.schema.dataInsight.custom.FormulaHolder;
 import org.openmetadata.schema.dataInsight.custom.SummaryCard;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
+import org.openmetadata.service.search.dataInsightAggregators.DynamicChartAggregatorUtils;
 import org.openmetadata.service.search.elasticsearch.EsUtils;
 
 public class ElasticSearchSummaryCardAggregator
@@ -150,30 +151,9 @@ public class ElasticSearchSummaryCardAggregator
       SearchResponse<JsonData> searchResponse,
       List<FormulaHolder> formulas,
       Map metricFormulaMap) {
-    DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
-    SummaryCard summaryCard = JsonUtils.convertValue(diChart.getChartDetails(), SummaryCard.class);
     Map<String, Aggregate> aggregationMap =
         searchResponse.aggregations() != null ? searchResponse.aggregations() : new HashMap<>();
-
-    String formula = summaryCard.getMetrics().getFirst().getFormula();
-    // If formulas list is empty and formula is not null, populate it
-    if ((formulas == null || formulas.isEmpty()) && formula != null) {
-      formulas = ElasticSearchDynamicChartAggregatorInterface.getFormulaList(formula);
-    }
-
-    List<DataInsightCustomChartResult> results =
-        processAggregations(aggregationMap, formula, null, formulas, null);
-
-    List<DataInsightCustomChartResult> finalResults = new ArrayList<>();
-    for (int i = results.size() - 1; i >= 0; i--) {
-      if (results.get(i).getCount() != null) {
-        finalResults.add(results.get(i));
-        resultList.setResults(finalResults);
-        return resultList;
-      }
-    }
-
-    resultList.setResults(results);
-    return resultList;
+    return DynamicChartAggregatorUtils.processSummaryCardResponse(
+        diChart, aggregationMap, formulas, this::processAggregations);
   }
 }

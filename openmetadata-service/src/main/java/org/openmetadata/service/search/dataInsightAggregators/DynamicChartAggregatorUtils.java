@@ -2,16 +2,25 @@ package org.openmetadata.service.search.dataInsightAggregators;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChart;
 import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChartResult;
+import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChartResultList;
 import org.openmetadata.schema.dataInsight.custom.FormulaHolder;
 import org.openmetadata.schema.dataInsight.custom.Function;
+import org.openmetadata.schema.dataInsight.custom.LineChart;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
 import org.openmetadata.service.security.policyevaluator.CompiledRule;
 import org.springframework.expression.Expression;
+
+// Suppress warnings for the raw Map type used in metricFormulaHolder parameter
+@SuppressWarnings("unchecked")
 
 /**
  * Shared utility methods for DI chart aggregation processing. These methods are
@@ -128,5 +137,150 @@ public final class DynamicChartAggregatorUtils {
       finalResult.addAll(diResultList);
     }
     return finalResult;
+  }
+
+  public static class MetricFormulaHolder {
+    public String formula;
+    public List<FormulaHolder> holders;
+
+    public MetricFormulaHolder() {}
+
+    public MetricFormulaHolder(String formula, List<FormulaHolder> holders) {
+      this.holders = holders;
+      this.formula = formula;
+    }
+  }
+
+  public static String getMetricName(LineChart lineChart, String name) {
+    if (lineChart.getMetrics().size() == 1) {
+      return null;
+    }
+    return name;
+  }
+
+  /**
+   * Processes the search response for a line chart. This method encapsulates the shared logic
+   * between ES and OS line chart aggregators. The platform-specific parts (bucket key extraction,
+   * aggregation map access) are handled via functional parameters.
+   *
+   * @param diChart the chart definition
+   * @param aggregationMap the aggregation results from the search response
+   * @param metricFormulaHolder map of metric name to formula holder
+   * @param processBuckets callback that iterates sterms buckets and calls the resultConsumer
+   *     for each (bucketKey, subAggregations) pair
+   * @param processAggregationsFn function to process aggregations (delegates to the
+   *     interface's processAggregations method)
+   */
+  public static <AggType> DataInsightCustomChartResultList processLineChartResponse(
+      DataInsightCustomChart diChart,
+      Map<String, AggType> aggregationMap,
+      Map<String, MetricFormulaHolder> metricFormulaHolder,
+      BiConsumer<Map<String, AggType>, LineChartBucketProcessor<AggType>> processBuckets,
+      AggregationProcessor<AggType> processAggregationsFn) {
+    DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
+    LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
+
+    if (lineChart.getGroupBy() != null) {
+      List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
+      processBuckets.accept(
+          aggregationMap,
+          (bucketKey, subAggName, subAggregations) -> {
+            String group;
+            if (lineChart.getMetrics().size() > 1) {
+              group = bucketKey + " - " + getMetricName(lineChart, subAggName);
+            } else {
+              group = bucketKey;
+            }
+            MetricFormulaHolder holder = metricFormulaHolder.get(subAggName);
+            if (holder != null) {
+              diChartResults.addAll(
+                  processAggregationsFn.process(
+                      subAggregations,
+                      holder.formula,
+                      group,
+                      holder.holders,
+                      getMetricName(lineChart, subAggName)));
+            }
+          });
+      resultList.setResults(diChartResults);
+      return resultList;
+    }
+
+    List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
+    for (Map.Entry<String, AggType> entry : aggregationMap.entrySet()) {
+      String aggName = entry.getKey();
+      MetricFormulaHolder formulaHolder =
+          metricFormulaHolder.get(aggName) == null
+              ? new MetricFormulaHolder()
+              : metricFormulaHolder.get(aggName);
+      String group = null;
+      if (lineChart.getMetrics().size() > 1) {
+        group = getMetricName(lineChart, aggName);
+      }
+
+      Map<String, AggType> singleAggMap = new HashMap<>();
+      singleAggMap.put(aggName, entry.getValue());
+
+      diChartResults.addAll(
+          processAggregationsFn.process(
+              singleAggMap,
+              formulaHolder.formula,
+              group,
+              formulaHolder.holders,
+              getMetricName(lineChart, aggName)));
+    }
+
+    resultList.setResults(diChartResults);
+    if (lineChart.getKpiDetails() != null) {
+      resultList.setKpiDetails(lineChart.getKpiDetails());
+    }
+    return resultList;
+  }
+
+  public static <AggType> DataInsightCustomChartResultList processSummaryCardResponse(
+      DataInsightCustomChart diChart,
+      Map<String, AggType> aggregationMap,
+      List<FormulaHolder> formulas,
+      AggregationProcessor<AggType> processAggregationsFn) {
+    DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
+    org.openmetadata.schema.dataInsight.custom.SummaryCard summaryCard =
+        JsonUtils.convertValue(
+            diChart.getChartDetails(),
+            org.openmetadata.schema.dataInsight.custom.SummaryCard.class);
+
+    String formula = summaryCard.getMetrics().getFirst().getFormula();
+    if ((formulas == null || formulas.isEmpty()) && formula != null) {
+      formulas = getFormulaList(formula);
+    }
+
+    List<DataInsightCustomChartResult> results =
+        processAggregationsFn.process(aggregationMap, formula, null, formulas, null);
+
+    List<DataInsightCustomChartResult> finalResults = new ArrayList<>();
+    for (int i = results.size() - 1; i >= 0; i--) {
+      if (results.get(i).getCount() != null) {
+        finalResults.add(results.get(i));
+        resultList.setResults(finalResults);
+        return resultList;
+      }
+    }
+
+    resultList.setResults(results);
+    return resultList;
+  }
+
+  @FunctionalInterface
+  public interface LineChartBucketProcessor<AggType> {
+    void process(String bucketKey, String subAggName, Map<String, AggType> subAggregations);
+  }
+
+  @FunctionalInterface
+  public interface AggregationProcessor<AggType> {
+    List<DataInsightCustomChartResult> process(
+        Map<String, AggType> aggregations,
+        String formula,
+        String group,
+        List<FormulaHolder> holders,
+        String metric);
   }
 }

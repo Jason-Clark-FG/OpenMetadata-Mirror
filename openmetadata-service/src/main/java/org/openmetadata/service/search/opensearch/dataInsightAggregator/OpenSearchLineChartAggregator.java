@@ -3,7 +3,6 @@ package org.openmetadata.service.search.opensearch.dataInsightAggregator;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,15 +30,13 @@ import os.org.opensearch.client.opensearch.core.SearchRequest;
 import os.org.opensearch.client.opensearch.core.SearchResponse;
 
 public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggregatorInterface {
-  public static class MetricFormulaHolder {
-    String formula;
-    List<FormulaHolder> holders;
-
-    MetricFormulaHolder() {}
+  public static class MetricFormulaHolder extends DynamicChartAggregatorUtils.MetricFormulaHolder {
+    public MetricFormulaHolder() {
+      super();
+    }
 
     public MetricFormulaHolder(String formula, List<FormulaHolder> holders) {
-      this.holders = holders;
-      this.formula = formula;
+      super(formula, holders);
     }
   }
 
@@ -273,89 +270,34 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
     }
   }
 
-  private String getMetricName(LineChart lineChart, String name) {
-    if (lineChart.getMetrics().size() == 1) {
-      return null;
-    }
-    return name;
-  }
-
+  @Override
+  @SuppressWarnings("unchecked")
   public DataInsightCustomChartResultList processSearchResponse(
       @NotNull DataInsightCustomChart diChart,
       SearchResponse<JsonData> searchResponse,
       List<FormulaHolder> formulas,
       Map metricFormulaHolder) {
-    DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
-    LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
     Map<String, Aggregate> aggregationMap =
         searchResponse.aggregations() != null ? searchResponse.aggregations() : new HashMap<>();
 
-    if (lineChart.getGroupBy() != null) {
-      List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
-      for (Map.Entry<String, Aggregate> entry : aggregationMap.entrySet()) {
-        Aggregate agg = entry.getValue();
-        if (agg.isSterms()) {
-          for (StringTermsBucket bucket : agg.sterms().buckets().array()) {
-            for (Map.Entry<String, Aggregate> subEntry : bucket.aggregations().entrySet()) {
-              String subAggName = subEntry.getKey();
-              String group;
-              if (lineChart.getMetrics().size() > 1) {
-                group = bucket.key() + " - " + getMetricName(lineChart, subAggName);
-              } else {
-                group = bucket.key();
+    return DynamicChartAggregatorUtils.processLineChartResponse(
+        diChart,
+        aggregationMap,
+        metricFormulaHolder,
+        (aggMap, processor) -> {
+          for (Map.Entry<String, Aggregate> entry : aggMap.entrySet()) {
+            Aggregate agg = entry.getValue();
+            if (agg.isSterms()) {
+              for (StringTermsBucket bucket : agg.sterms().buckets().array()) {
+                for (Map.Entry<String, Aggregate> subEntry : bucket.aggregations().entrySet()) {
+                  Map<String, Aggregate> subAggMap = new HashMap<>();
+                  subAggMap.put(subEntry.getKey(), subEntry.getValue());
+                  processor.process(bucket.key(), subEntry.getKey(), subAggMap);
+                }
               }
-
-              Map<String, Aggregate> singleAggMap = new HashMap<>();
-              singleAggMap.put(subAggName, subEntry.getValue());
-
-              diChartResults.addAll(
-                  processAggregations(
-                      singleAggMap,
-                      ((Map<String, MetricFormulaHolder>) metricFormulaHolder)
-                          .get(subAggName)
-                          .formula,
-                      group,
-                      ((Map<String, MetricFormulaHolder>) metricFormulaHolder)
-                          .get(subAggName)
-                          .holders,
-                      getMetricName(lineChart, subAggName)));
             }
           }
-        }
-      }
-      resultList.setResults(diChartResults);
-      return resultList;
-    }
-
-    List<DataInsightCustomChartResult> diChartResults = new ArrayList<>();
-    for (Map.Entry<String, Aggregate> entry : aggregationMap.entrySet()) {
-      String aggName = entry.getKey();
-      MetricFormulaHolder formulaHolder =
-          metricFormulaHolder.get(aggName) == null
-              ? new MetricFormulaHolder()
-              : ((Map<String, MetricFormulaHolder>) metricFormulaHolder).get(aggName);
-      String group = null;
-      if (lineChart.getMetrics().size() > 1) {
-        group = getMetricName(lineChart, aggName);
-      }
-
-      Map<String, Aggregate> singleAggMap = new HashMap<>();
-      singleAggMap.put(aggName, entry.getValue());
-
-      List<DataInsightCustomChartResult> results =
-          processAggregations(
-              singleAggMap,
-              formulaHolder.formula,
-              group,
-              formulaHolder.holders,
-              getMetricName(lineChart, aggName));
-      diChartResults.addAll(results);
-    }
-
-    resultList.setResults(diChartResults);
-    if (lineChart.getKpiDetails() != null) {
-      resultList.setKpiDetails(lineChart.getKpiDetails());
-    }
-    return resultList;
+        },
+        this::processAggregations);
   }
 }
