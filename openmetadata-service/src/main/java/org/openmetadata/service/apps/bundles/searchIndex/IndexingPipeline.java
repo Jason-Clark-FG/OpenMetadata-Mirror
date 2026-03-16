@@ -457,12 +457,14 @@ public class IndexingPipeline implements AutoCloseable {
     StepStats js = s.getJobStats();
     if (js != null) {
       int totalSuccess =
-          s.getEntityStats().getAdditionalProperties().values().stream()
-              .mapToInt(StepStats::getSuccessRecords)
+          s.getEntityStats().getAdditionalProperties().entrySet().stream()
+              .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+              .mapToInt(e -> e.getValue().getSuccessRecords())
               .sum();
       int totalFailed =
-          s.getEntityStats().getAdditionalProperties().values().stream()
-              .mapToInt(StepStats::getFailedRecords)
+          s.getEntityStats().getAdditionalProperties().entrySet().stream()
+              .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+              .mapToInt(e -> e.getValue().getFailedRecords())
               .sum();
       js.setSuccessRecords(totalSuccess);
       js.setFailedRecords(totalFailed);

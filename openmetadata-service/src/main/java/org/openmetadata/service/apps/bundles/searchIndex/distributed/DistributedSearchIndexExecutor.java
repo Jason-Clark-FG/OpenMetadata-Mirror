@@ -380,6 +380,7 @@ public class DistributedSearchIndexExecutor {
       statsAggregator.setProgressListener(listeners, jobContext);
     }
 
+    statsAggregator.setBulkSink(bulkSink);
     statsAggregator.start();
 
     // Store sink reference for stats persistence

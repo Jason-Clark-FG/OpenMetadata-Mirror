@@ -1538,13 +1538,15 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
 
     int totalSuccess =
-        statsObj.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(StepStats::getSuccessRecords)
+        statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
+            .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+            .mapToInt(e -> e.getValue().getSuccessRecords())
             .sum();
 
     int totalFailed =
-        statsObj.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(StepStats::getFailedRecords)
+        statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
+            .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+            .mapToInt(e -> e.getValue().getFailedRecords())
             .sum();
 
     jobStats.withSuccessRecords(totalSuccess).withFailedRecords(totalFailed);
