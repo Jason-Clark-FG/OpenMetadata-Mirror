@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -138,6 +139,8 @@ public class OpenSearchBulkSink implements BulkSink {
   private final AtomicLong columnSinkSuccess = new AtomicLong(0);
   private final AtomicLong columnSinkFailed = new AtomicLong(0);
   private final AtomicLong columnBuildFailed = new AtomicLong(0);
+  private final ConcurrentLinkedDeque<CompletableFuture<Void>> pendingColumnFutures =
+      new ConcurrentLinkedDeque<>();
 
   public OpenSearchBulkSink(
       SearchRepository searchRepository,
@@ -290,15 +293,18 @@ public class OpenSearchBulkSink implements BulkSink {
         // Index columns asynchronously when processing table entities
         if (Entity.TABLE.equals(entityType)) {
           for (EntityInterface entity : entityInterfaces) {
-            CompletableFuture.runAsync(
-                    () -> indexTableColumns(entity, recreateIndex, reindexContext),
-                    DOC_BUILD_EXECUTOR)
-                .exceptionally(
-                    ex -> {
-                      LOG.error("Failed to index columns for table {}", entity.getName(), ex);
-                      return null;
-                    });
+            CompletableFuture<Void> future =
+                CompletableFuture.runAsync(
+                        () -> indexTableColumns(entity, recreateIndex, reindexContext),
+                        DOC_BUILD_EXECUTOR)
+                    .exceptionally(
+                        ex -> {
+                          LOG.error("Failed to index columns for table {}", entity.getName(), ex);
+                          return null;
+                        });
+            pendingColumnFutures.add(future);
           }
+          pendingColumnFutures.removeIf(CompletableFuture::isDone);
         }
       }
     } catch (Exception e) {
@@ -555,6 +561,24 @@ public class OpenSearchBulkSink implements BulkSink {
         .withFailedRecords((int) failed);
   }
 
+  private void drainPendingColumnFutures(int timeoutSeconds) {
+    List<CompletableFuture<Void>> remaining = new ArrayList<>();
+    for (CompletableFuture<Void> f : pendingColumnFutures) {
+      if (!f.isDone()) {
+        remaining.add(f);
+      }
+    }
+    pendingColumnFutures.clear();
+    if (!remaining.isEmpty()) {
+      try {
+        CompletableFuture.allOf(remaining.toArray(CompletableFuture[]::new))
+            .get(timeoutSeconds, TimeUnit.SECONDS);
+      } catch (Exception e) {
+        LOG.warn("Timed out waiting for {} in-flight column doc-build tasks", remaining.size());
+      }
+    }
+  }
+
   private void updateStats() {
     stats.setTotalRecords((int) totalSubmitted.get());
     stats.setSuccessRecords((int) totalSuccess.get());
@@ -584,6 +608,9 @@ public class OpenSearchBulkSink implements BulkSink {
   public void close() {
     try {
       bulkProcessor.flush();
+
+      // Wait for in-flight column doc-build tasks before flushing the column processor
+      drainPendingColumnFutures(30);
       columnBulkProcessor.flush();
 
       boolean terminated = bulkProcessor.awaitClose(60, TimeUnit.SECONDS);
@@ -615,8 +642,17 @@ public class OpenSearchBulkSink implements BulkSink {
   @Override
   public boolean flushAndAwait(int timeoutSeconds) {
     try {
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
       boolean completed = bulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
-      boolean columnCompleted = columnBulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
+
+      long remainingNanos = deadline - System.nanoTime();
+      long remainingSecs = Math.max(1, TimeUnit.NANOSECONDS.toSeconds(remainingNanos));
+      drainPendingColumnFutures((int) remainingSecs);
+
+      remainingNanos = deadline - System.nanoTime();
+      remainingSecs = Math.max(1, TimeUnit.NANOSECONDS.toSeconds(remainingNanos));
+      boolean columnCompleted = columnBulkProcessor.flushAndWait(remainingSecs, TimeUnit.SECONDS);
+
       if (completed) {
         LOG.debug(
             "Flush complete - stats: submitted={}, success={}, failed={}",
