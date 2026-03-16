@@ -20,6 +20,7 @@ export enum NodeSubType {
     CreateRecognizerFeedbackApprovalTask = "createRecognizerFeedbackApprovalTask",
     DataCompletenessTask = "dataCompletenessTask",
     EndEvent = "endEvent",
+    ManualTask = "manualTask",
     ParallelGateway = "parallelGateway",
     RejectRecognizerFeedbackTask = "rejectRecognizerFeedbackTask",
     RollbackEntityTask = "rollbackEntityTask",

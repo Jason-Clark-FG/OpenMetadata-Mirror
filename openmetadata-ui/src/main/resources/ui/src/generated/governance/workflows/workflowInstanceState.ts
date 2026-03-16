@@ -51,6 +51,11 @@ export interface Stage {
     endedAt?: number;
     name?:    string;
     /**
+     * The result value produced by this stage, if any (e.g. the status chosen in a ManualTask
+     * or the boolean outcome of a CheckEntityAttributes).
+     */
+    result?: string;
+    /**
      * Timestamp on which the workflow instance stage started.
      */
     startedAt?: number;
