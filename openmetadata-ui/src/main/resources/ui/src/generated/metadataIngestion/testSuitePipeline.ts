@@ -2348,6 +2348,8 @@ export enum AuthProvider {
  *
  * SSL Certificates By Path
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configs.
  *
  * AWS credentials configuration.
@@ -2528,6 +2530,8 @@ export interface AuthenticationTypeForTableau {
 }
 
 /**
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configs.
  *
  * AWS credentials configuration.
@@ -2971,6 +2975,8 @@ export interface IcebergFileSystem {
 }
 
 /**
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configs.
  *
  * AWS credentials configuration.
@@ -3245,6 +3251,8 @@ export interface ConfigSourceConnection {
  * GCP Credentials
  *
  * GCP Credentials for Google Drive API
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configs.
  *
@@ -3674,6 +3682,8 @@ export interface DataStorageConfig {
 }
 
 /**
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configs.
  *
  * AWS credentials configuration.
@@ -4226,6 +4236,8 @@ export interface NifiCredentialsConfiguration {
  * Open API Schema URL Connection Config
  *
  * Open API Schema File Path Connection Config
+ *
+ * Open API Schema S3 Connection Config
  */
 export interface OpenAPISchemaConnection {
     /**
@@ -4236,6 +4248,15 @@ export interface OpenAPISchemaConnection {
      * Path to a local OpenAPI schema file.
      */
     openAPISchemaFilePath?: string;
+    /**
+     * AWS credentials required to access the S3 file.
+     */
+    awsCredentials?: AWSCredentials;
+    /**
+     * S3 URL of the OpenAPI schema file (JSON or YAML). Example:
+     * https://bucket-name.s3.amazonaws.com/path/to/openapi_schema.json
+     */
+    openAPISchemaS3URL?: string;
 }
 
 /**
