@@ -14,14 +14,16 @@ import org.openmetadata.service.governance.workflows.elements.nodes.manualTask.i
 import org.openmetadata.service.governance.workflows.flowable.BaseDelegate;
 
 /**
- * Creates an OM Task for the ManualTask node. Idempotent on re-entry: if the task was already
- * created (cycle re-entry), it skips creation and sets taskCreated = true.
+ * Creates an OM Task for the ManualTask node. Idempotent on re-entry: if the task already exists
+ * (cycle re-entry), it skips creation and sets taskAlreadyExists = true so the subprocess proceeds
+ * to the IntermediateCatchEvent. On first entry, taskAlreadyExists = false routes to skipEnd,
+ * allowing the graph-level self-loop to re-enter for the wait phase.
  */
 @Slf4j
 public class SetupDelegate extends BaseDelegate {
 
   static final String OM_TASK_ID_VARIABLE = "omTaskId";
-  private static final String TASK_CREATED_VARIABLE = "taskCreated";
+  private static final String TASK_ALREADY_EXISTS_VARIABLE = "taskAlreadyExists";
 
   private Expression inputNamespaceMapExpr;
   private Expression configMapExpr;
@@ -31,7 +33,7 @@ public class SetupDelegate extends BaseDelegate {
     Object existingTaskId = varHandler.getNodeVariable(OM_TASK_ID_VARIABLE);
     if (existingTaskId != null) {
       LOG.debug("[ManualTask.Setup] Task already exists ({}), skipping creation.", existingTaskId);
-      execution.setVariableLocal(TASK_CREATED_VARIABLE, true);
+      execution.setVariableLocal(TASK_ALREADY_EXISTS_VARIABLE, true);
       return;
     }
 
@@ -62,7 +64,7 @@ public class SetupDelegate extends BaseDelegate {
 
     varHandler.setNodeVariable(OM_TASK_ID_VARIABLE, taskId.toString());
     varHandler.setNodeVariable(RESULT_VARIABLE, TaskEntityStatus.Open.value());
-    execution.setVariableLocal(TASK_CREATED_VARIABLE, false);
+    execution.setVariableLocal(TASK_ALREADY_EXISTS_VARIABLE, false);
   }
 
   private UUID getWorkflowInstanceId(DelegateExecution execution) {

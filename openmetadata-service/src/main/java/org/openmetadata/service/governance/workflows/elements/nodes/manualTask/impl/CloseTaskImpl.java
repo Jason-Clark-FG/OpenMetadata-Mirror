@@ -1,6 +1,5 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.manualTask.impl;
 
-import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.tasks.Task;
@@ -17,11 +16,11 @@ public class CloseTaskImpl {
 
   private static final String FALLBACK_USER = "governance-bot";
 
-  public static void closeTask(UUID taskId, List<String> terminalStatuses, String closedByUser) {
+  public static void closeTask(UUID taskId, String closedByUser) {
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
     Task task = taskRepository.get(null, taskId, taskRepository.getFields("*"));
 
-    if (isAlreadyClosed(task, terminalStatuses)) {
+    if (isAlreadyClosed(task)) {
       LOG.debug("[ManualTask.CloseTaskImpl] Task '{}' already closed, skipping.", taskId);
       return;
     }
@@ -44,11 +43,7 @@ public class CloseTaskImpl {
         "[ManualTask.CloseTaskImpl] Closed Task: id='{}', closedBy='{}'", taskId, resolvedUser);
   }
 
-  private static boolean isAlreadyClosed(Task task, List<String> terminalStatuses) {
-    if (task.getResolution() != null) {
-      return true;
-    }
-    String currentStatus = task.getStatus().value();
-    return terminalStatuses.contains(currentStatus);
+  private static boolean isAlreadyClosed(Task task) {
+    return task.getResolution() != null;
   }
 }

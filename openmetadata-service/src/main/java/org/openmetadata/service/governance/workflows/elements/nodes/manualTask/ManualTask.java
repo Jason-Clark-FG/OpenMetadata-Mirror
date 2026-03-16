@@ -41,8 +41,8 @@ import org.openmetadata.service.governance.workflows.flowable.builders.SubProces
  *
  * <pre>
  * [Start] → [Setup] → [taskCreatedGateway]
- *   !taskCreated → [skipEnd]
- *   taskCreated  → [statusCatchEvent] → [setResult] → [checkTerminal] → [isTerminalGateway]
+ *   !taskAlreadyExists → [skipEnd]
+ *   taskAlreadyExists  → [statusCatchEvent] → [setResult] → [checkTerminal] → [isTerminalGateway]
  *     isTerminal  → [closeTask] → [end]
  *     !isTerminal → [end]
  * </pre>
@@ -92,7 +92,7 @@ public class ManualTask implements NodeInterface {
             .id(getFlowableElementId(subProcessId, "isTerminalGateway"))
             .build();
 
-    ServiceTask closeTask = getCloseTask(subProcessId, resolvedTemplate);
+    ServiceTask closeTask = getCloseTask(subProcessId);
 
     EndEvent endEvent =
         new EndEventBuilder().id(getFlowableElementId(subProcessId, "endEvent")).build();
@@ -115,12 +115,12 @@ public class ManualTask implements NodeInterface {
     // TaskCreated Gateway → StatusCatchEvent (task was created)
     SequenceFlow toCatchEvent =
         new SequenceFlow(taskCreatedGateway.getId(), statusCatchEvent.getId());
-    toCatchEvent.setConditionExpression("${taskCreated}");
+    toCatchEvent.setConditionExpression("${taskAlreadyExists}");
     subProcess.addFlowElement(toCatchEvent);
 
     // TaskCreated Gateway → SkipEnd (default)
     SequenceFlow toSkip = new SequenceFlow(taskCreatedGateway.getId(), skipEndEvent.getId());
-    toSkip.setConditionExpression("${!taskCreated}");
+    toSkip.setConditionExpression("${!taskAlreadyExists}");
     subProcess.addFlowElement(toSkip);
     taskCreatedGateway.setDefaultFlow(toSkip.getId());
 
@@ -206,17 +206,10 @@ public class ManualTask implements NodeInterface {
         .build();
   }
 
-  private ServiceTask getCloseTask(String subProcessId, ResolvedTemplate resolvedTemplate) {
-    FieldExtension terminalStatusesExpr =
-        new FieldExtensionBuilder()
-            .fieldName("terminalStatusesExpr")
-            .fieldValue(JsonUtils.pojoToJson(resolvedTemplate.terminalStatuses()))
-            .build();
-
+  private ServiceTask getCloseTask(String subProcessId) {
     return new ServiceTaskBuilder()
         .id(getFlowableElementId(subProcessId, "closeTask"))
         .implementation(CloseTaskDelegate.class.getName())
-        .addFieldExtension(terminalStatusesExpr)
         .build();
   }
 
