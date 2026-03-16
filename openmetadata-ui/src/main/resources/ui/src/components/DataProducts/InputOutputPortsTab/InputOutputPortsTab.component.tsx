@@ -243,15 +243,13 @@ export const InputOutputPortsTab = forwardRef<
               <AccordionItem id="lineage">
                 <AccordionHeader data-testid="toggle-lineage-collapse">
                   <div className="tw:flex tw:items-baseline tw:gap-1">
-                    <Typography
-                      as="span"
-                      className="tw:test-md tw:text-gray-400">
+                    <Typography as="span" className="tw:text-md">
                       {t('label.port-plural')} {t('label.lineage')}
                     </Typography>
                     {isLineageCollapsed && (
                       <Typography
-                        as="span"
-                        className="tw:text-xs tw:text-gray-500">
+                        as="p"
+                        className="tw:text-xs tw:text-gray-700 tw:font-light">
                         ({inputPortsCount} {t('label.input').toLowerCase()},{' '}
                         {outputPortsCount} {t('label.output').toLowerCase()})
                       </Typography>
@@ -299,16 +297,14 @@ export const InputOutputPortsTab = forwardRef<
                 <AccordionHeader data-testid="toggle-input-ports-collapse">
                   <div className="tw:flex tw:items-center tw:justify-between tw:w-full tw:gap-2">
                     <div className="tw:flex tw:items-baseline tw:gap-1">
-                      <Typography
-                        as="span"
-                        className="tw:text-md tw:text-gray-400">
+                      <Typography as="span" className="tw:text-md">
                         {t('label.entity-port-plural', {
                           entity: t('label.input'),
                         })}
                       </Typography>
                       <Typography
-                        as="span"
-                        className="tw:text-xs tw:text-gray-500"
+                        as="p"
+                        className="tw:text-xs tw:text-gray-700 tw:font-light"
                         data-testid="input-port-count">
                         ({inputPortsCount})
                       </Typography>
@@ -390,16 +386,14 @@ export const InputOutputPortsTab = forwardRef<
                 <AccordionHeader data-testid="toggle-output-ports-collapse">
                   <div className="tw:flex tw:items-center tw:justify-between tw:w-full tw:gap-2">
                     <div className="tw:flex tw:items-baseline tw:gap-1">
-                      <Typography
-                        as="span"
-                        className="tw:text-md tw:text-gray-400">
+                      <Typography as="span" className="tw:text-md">
                         {t('label.entity-port-plural', {
                           entity: t('label.output'),
                         })}
                       </Typography>
                       <Typography
-                        as="span"
-                        className="tw:text-xs tw:text-gray-500"
+                        as="p"
+                        className="tw:text-xs tw:text-gray-700 tw:font-light"
                         data-testid="output-port-count">
                         ({outputPortsCount})
                       </Typography>
