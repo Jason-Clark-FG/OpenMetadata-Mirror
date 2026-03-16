@@ -516,6 +516,9 @@ public class ElasticSearchBulkSink implements BulkSink {
       try {
         CompletableFuture.allOf(remaining.toArray(CompletableFuture[]::new))
             .get(timeoutSeconds, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted waiting for {} in-flight column doc-build tasks", remaining.size());
+        Thread.currentThread().interrupt();
       } catch (Exception e) {
         LOG.warn("Timed out waiting for {} in-flight column doc-build tasks", remaining.size());
       }
