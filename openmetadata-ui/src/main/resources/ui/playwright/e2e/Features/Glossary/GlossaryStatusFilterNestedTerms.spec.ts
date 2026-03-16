@@ -80,7 +80,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
   const applyStatusFilter = async (page: Page, statuses: string[]) => {
     const statusDropdown = page.getByTestId('glossary-status-dropdown');
     await statusDropdown.click();
-    await page.waitForSelector('.status-selection-dropdown');
+    await page.locator('.status-selection-dropdown').waitFor();
 
     // Click "All" twice to ensure we start from a clean state (nothing selected)
     // First click toggles the current state, second click ensures "All" is unchecked
@@ -119,7 +119,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
   const resetStatusFilter = async (page: Page) => {
     const statusDropdown = page.getByTestId('glossary-status-dropdown');
     await statusDropdown.click();
-    await page.waitForSelector('.status-selection-dropdown');
+    await page.locator('.status-selection-dropdown').waitFor();
 
     // Click "All" twice to clear, then once more to select all
     // This ensures "All" ends up checked regardless of initial state
@@ -152,7 +152,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
 
     const expandTrigger = termRow.locator('.vertical-baseline').first();
     await expandTrigger.click();
-    await page.waitForTimeout(500);
+    await page.locator('.ant-table-row').first().waitFor({ state: 'visible' });
   };
 
   // Helper to verify term is visible in table
@@ -176,7 +176,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
       .locator('.glossary-terms-scroll-container [data-testid="loader"]')
       .waitFor({ state: 'detached', timeout: 30000 })
       .catch(() => {});
-    await page.waitForTimeout(500);
+    await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' }).catch(() => {});
   };
 
   // Helper to clear search
@@ -188,7 +188,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
       .locator('.glossary-terms-scroll-container [data-testid="loader"]')
       .waitFor({ state: 'detached', timeout: 30000 })
       .catch(() => {});
-    await page.waitForTimeout(500);
+    await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' }).catch(() => {});
   };
 
   // Helper to get row count
@@ -282,7 +282,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
 
   test.beforeEach(async ({ page }) => {
     await glossary.visitEntityPage(page);
-    await page.waitForSelector('[data-testid="glossary-terms-table"]');
+    await page.getByTestId('glossary-terms-table').waitFor();
     await page
       .locator('.glossary-terms-scroll-container [data-testid="loader"]')
       .waitFor({ state: 'detached', timeout: 30000 });
@@ -307,6 +307,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
     });
 
     // Skip: Requires backend to return nested terms as flat results when filtered
+    // eslint-disable-next-line playwright/no-skipped-test -- requires backend flat result support
     test.skip('filter by child status shows child as flat result even if parent does not match', async ({
       page,
     }) => {
@@ -375,6 +376,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
     });
 
     // Skip: Requires backend to return nested terms as flat results when filtered
+    // eslint-disable-next-line playwright/no-skipped-test -- requires backend flat result support
     test.skip('filter by middle level status shows nested term as flat result', async ({
       page,
     }) => {
@@ -391,6 +393,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
     });
 
     // Skip: Requires backend to return nested terms as flat results when filtered
+    // eslint-disable-next-line playwright/no-skipped-test -- requires backend flat result support
     test.skip('filter by leaf level status shows nested term as flat result', async ({
       page,
     }) => {
@@ -486,6 +489,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
     });
 
     // Skip: Requires re-filtering expanded state which isn't fully implemented
+    // eslint-disable-next-line playwright/no-skipped-test -- requires re-filtering expanded state support
     test.skip('change filter while expanded updates visible root terms', async ({
       page,
     }) => {
@@ -523,6 +527,7 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
 
   test.describe('Edge Cases', () => {
     // Skip: Requires backend to return nested terms as flat results when filtered
+    // eslint-disable-next-line playwright/no-skipped-test -- requires backend flat result support
     test.skip('deeply nested term (5 levels) - filter shows matching terms as flat results', async ({
       page,
     }) => {
