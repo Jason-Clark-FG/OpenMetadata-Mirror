@@ -37,6 +37,7 @@ import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.datainsight.system.DataInsightSystemChartResource;
 import org.openmetadata.service.search.SearchClient;
+import org.openmetadata.service.search.dataInsightAggregators.RollupQueryRouter;
 import org.openmetadata.service.socket.WebSocketManager;
 import org.openmetadata.service.socket.messages.ChartDataStreamMessage;
 import org.openmetadata.service.util.EntityUtil;
@@ -745,7 +746,8 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
 
   public DataInsightCustomChartResultList getPreviewData(
       DataInsightCustomChart chart, long startTimestamp, long endTimestamp) throws IOException {
-    return searchClient.buildDIChart(chart, startTimestamp, endTimestamp);
+    String targetIndex = RollupQueryRouter.getTargetIndex(chart);
+    return searchClient.buildDIChart(chart, startTimestamp, endTimestamp, false, null, targetIndex);
   }
 
   public Map<String, DataInsightCustomChartResultList> listChartData(

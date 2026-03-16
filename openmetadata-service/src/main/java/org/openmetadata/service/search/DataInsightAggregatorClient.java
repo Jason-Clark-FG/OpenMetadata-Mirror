@@ -24,6 +24,17 @@ public interface DataInsightAggregatorClient {
   default DataInsightCustomChartResultList buildDIChart(
       DataInsightCustomChart diChart, long start, long end, boolean live, String filter)
       throws IOException {
+    return buildDIChart(diChart, start, end, live, filter, null);
+  }
+
+  default DataInsightCustomChartResultList buildDIChart(
+      DataInsightCustomChart diChart,
+      long start,
+      long end,
+      boolean live,
+      String filter,
+      String targetIndex)
+      throws IOException {
     return null;
   }
 

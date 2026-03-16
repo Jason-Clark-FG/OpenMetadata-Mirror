@@ -111,17 +111,26 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
   }
 
   private Query buildQueryWithFilter(Query rangeQuery, String filter) {
+    Query deletedFilter =
+        Query.of(q -> q.term(t -> t.field("deleted").value(v -> v.booleanValue(true))));
+
     if (nullOrEmpty(filter) || filter.equals("{}")) {
-      return rangeQuery;
+      return Query.of(
+          q -> q.bool(BoolQuery.of(b -> b.must(rangeQuery).mustNot(deletedFilter))));
     }
 
     try {
       String queryToProcess = OsUtils.parseJsonQuery(filter);
       Query filterQuery = Query.of(q -> q.wrapper(w -> w.query(queryToProcess)));
 
-      return Query.of(q -> q.bool(BoolQuery.of(b -> b.must(rangeQuery).filter(filterQuery))));
+      return Query.of(
+          q ->
+              q.bool(
+                  BoolQuery.of(
+                      b -> b.must(rangeQuery).filter(filterQuery).mustNot(deletedFilter))));
     } catch (Exception e) {
-      return rangeQuery;
+      return Query.of(
+          q -> q.bool(BoolQuery.of(b -> b.must(rangeQuery).mustNot(deletedFilter))));
     }
   }
 
