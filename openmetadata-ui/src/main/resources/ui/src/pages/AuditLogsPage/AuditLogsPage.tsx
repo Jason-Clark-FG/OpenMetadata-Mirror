@@ -332,10 +332,10 @@ const AuditLogsPage = () => {
       <div
         className="tw:flex tw:flex-col tw:h-full tw:min-h-0 tw:overflow-hidden"
         data-testid="audit-logs-page">
-        <div className="tw:shrink-0 tw:mb-3">{breadcrumbs}</div>
+        <div className="tw:shrink-0 tw:mb-2">{breadcrumbs}</div>
         {/* Header */}
         <Card
-          className="tw:flex tw:justify-between tw:items-center tw:mt-2 tw:mb-4 tw:px-6 tw:py-4"
+          className="tw:flex tw:justify-between tw:items-center tw:mt-1 tw:mb-2 tw:px-6 tw:py-4"
           data-testid="audit-logs-page-header">
           <PageHeader
             data={{
@@ -379,19 +379,24 @@ const AuditLogsPage = () => {
                       className="filter-selection-chip"
                       data-testid={`filter-chip-${filter.category}`}
                       key={filter.category}>
-                      <span className="filter-selection-chip-content">
-                        <span className="filter-selection-label">
+                      <div className="filter-selection-chip-content tw:overflow-hidden">
+                        <Typography
+                          as="span"
+                          className="tw:text-gray-600 tw:font-medium">
                           {filter.categoryLabel}:{' '}
-                        </span>
-                        <span
-                          className="filter-selection-value"
-                          title={filter.value.label}>
-                          {filter.category === 'time' &&
-                          filter.value.key === 'customRange'
-                            ? t('label.custom-range')
-                            : filter.value.label}
-                        </span>
-                      </span>
+                        </Typography>
+                        <div className="tw:max-w-87 tw:overflow-hidden">
+                          <Typography
+                            as="span"
+                            className="tw:text-brand-600 tw:truncate tw:block tw:font-medium"
+                            title={filter.value.label}>
+                            {filter.category === 'time' &&
+                            filter.value.key === 'customRange'
+                              ? t('label.custom-range')
+                              : filter.value.label}
+                          </Typography>
+                        </div>
+                      </div>
                       <ButtonUtility
                         aria-label="Remove filter"
                         className="filter-selection-remove-btn"

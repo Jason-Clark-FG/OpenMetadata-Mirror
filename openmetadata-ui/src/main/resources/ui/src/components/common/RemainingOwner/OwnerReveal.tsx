@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Dropdown } from '@openmetadata/ui-core-components';
+import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -89,9 +89,13 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                         type="circle"
                         width={avatarSize.toString()}
                       />
-                      <span className="tw:text-sm tw:text-gray-900 tw:min-w-0 tw:truncate">
-                        {name}
-                      </span>
+                      <div className="tw:min-w-0 tw:overflow-hidden">
+                        <Typography
+                          as="span"
+                          className="tw:text-sm tw:truncate tw:block">
+                          {name}
+                        </Typography>
+                      </div>
                     </Link>
                   </UserPopOverCard>
                 </Dropdown.Item>

@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button, Dropdown } from '@openmetadata/ui-core-components';
+import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
 import React, { ReactNode, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ReactComponent as IconTeamsGrey } from '../../../assets/svg/teams-grey.svg';
@@ -65,23 +65,19 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
               height: avatarSize,
             }}
           />
-          <span
-            className="tw:text-gray-900"
-            style={{
-              maxWidth:
-                placement === 'vertical' || owners.length < 2
-                  ? '120px'
-                  : '50px',
-              fontSize: '12px',
-              fontWeight: 500,
-              lineHeight: 'initial',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}>
-            {ownerDisplayName?.get(visibleTeam.name ?? '') ??
-              getEntityName(visibleTeam)}
-          </span>
+          <div
+            className={
+              placement === 'vertical' || owners.length < 2
+                ? 'tw:max-w-30 tw:overflow-hidden'
+                : 'tw:max-w-12.5 tw:overflow-hidden'
+            }>
+            <Typography
+              as="p"
+              className="tw:text-xs tw:font-medium tw:leading-none tw:truncate tw:m-0">
+              {ownerDisplayName?.get(visibleTeam.name ?? '') ??
+                getEntityName(visibleTeam)}
+            </Typography>
+          </div>
         </div>
       </Link>
 
