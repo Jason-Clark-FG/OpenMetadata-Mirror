@@ -13,10 +13,11 @@ Client to interact with airbyte apis
 """
 import json
 import time
-from typing import List, Optional, Tuple
+from typing import Iterable, Optional, Tuple, Type, Union
 from urllib.parse import quote
 
 import requests
+from pydantic import BaseModel
 
 from metadata.generated.schema.entity.services.connections.pipeline.airbyte.basicAuth import (
     BasicAuthentication,
@@ -29,6 +30,20 @@ from metadata.generated.schema.entity.services.connections.pipeline.airbyteConne
 )
 from metadata.ingestion.connections.source_api_client import TrackedREST
 from metadata.ingestion.ometa.client import APIError, ClientConfig
+from metadata.ingestion.source.pipeline.airbyte.models import (
+    AirbyteCloudJob,
+    AirbyteConnectionList,
+    AirbyteConnectionModel,
+    AirbyteDestinationResponse,
+    AirbytePublicCloudJobList,
+    AirbytePublicConnectionList,
+    AirbytePublicWorkspaceList,
+    AirbyteSelfHostedJob,
+    AirbyteSelfHostedJobList,
+    AirbyteSourceResponse,
+    AirbyteWorkspace,
+    AirbyteWorkspaceList,
+)
 from metadata.utils.constants import AUTHORIZATION_HEADER, NO_ACCESS_TOKEN
 from metadata.utils.credentials import generate_http_basic_token
 from metadata.utils.helpers import clean_uri
@@ -46,7 +61,6 @@ class AirbyteClient:
 
     def __init__(self, config: AirbyteConnection):
         self.config = config
-        # Detect if using the public API based on apiVersion containing "public"
         self._use_public_api = "public" in (self.config.apiVersion or "").lower()
 
         client_config: ClientConfig = ClientConfig(
@@ -68,101 +82,110 @@ class AirbyteClient:
 
         self.client = TrackedREST(client_config, source_name="airbyte")
 
-    def list_workspaces(self) -> List[dict]:
+    def _paginate_get(self, path: str, response_cls: Type[BaseModel]) -> Iterable:
         """
-        Method returns the list of workflows
-        an airbyte instance can contain multiple workflows
+        Handle offset-based pagination for the Airbyte public API.
+        All public API list endpoints default to 20 items per page (max 100).
+        Yields individual items from each page.
         """
-        if self._use_public_api:
-            # Public API uses GET /workspaces with data in response
-            response = self.client.get("/workspaces")
-            if response.get("exceptionStack"):
-                raise APIError(response)
-            return response.get("data", [])
-
-        # Internal API uses POST /workspaces/list
-        response = self.client.post("/workspaces/list")
-        if response.get("exceptionStack"):
-            raise APIError(response)
-        return response.get("workspaces", [])
-
-    def list_connections(self, workflow_id: str) -> List[dict]:
-        """
-        Method returns the list all of connections of workflow
-        """
-        if self._use_public_api:
-            # Public API uses GET /connections with workspaceIds query parameter
+        limit = 100
+        offset = 0
+        while True:
+            separator = "&" if "?" in path else "?"
             response = self.client.get(
-                f"/connections?workspaceIds={quote(workflow_id, safe='')}"
+                f"{path}{separator}limit={limit}&offset={offset}"
             )
             if response.get("exceptionStack"):
                 raise APIError(response)
-            return response.get("data", [])
+            parsed = response_cls.model_validate(response)
+            yield from parsed.data
+            if len(parsed.data) < limit or not parsed.next:
+                break
+            offset += limit
 
-        # Internal API uses POST /connections/list with JSON body
+    def list_workspaces(self) -> Iterable[AirbyteWorkspace]:
+        """
+        Method returns the list of workflows.
+        An airbyte instance can contain multiple workflows.
+        """
+        if self._use_public_api:
+            yield from self._paginate_get("/workspaces", AirbytePublicWorkspaceList)
+            return
+
+        response = self.client.post("/workspaces/list")
+        if response.get("exceptionStack"):
+            raise APIError(response)
+        yield from AirbyteWorkspaceList.model_validate(response).workspaces
+
+    def list_connections(self, workflow_id: str) -> Iterable[AirbyteConnectionModel]:
+        """
+        Method returns the list of all connections of a workflow.
+        """
+        if self._use_public_api:
+            yield from self._paginate_get(
+                f"/connections?workspaceIds={quote(workflow_id, safe='')}",
+                AirbytePublicConnectionList,
+            )
+            return
+
         data = {"workspaceId": workflow_id}
         response = self.client.post("/connections/list", data=json.dumps(data))
         if response.get("exceptionStack"):
             raise APIError(response)
-        return response.get("connections", [])
+        yield from AirbyteConnectionList.model_validate(response).connections
 
-    def list_jobs(self, connection_id: str) -> List[dict]:
+    def list_jobs(
+        self, connection_id: str
+    ) -> Iterable[Union[AirbyteSelfHostedJob, AirbyteCloudJob]]:
         """
-        Method returns the list all of jobs of a connection
+        Method returns the list of all jobs of a connection.
         """
         if self._use_public_api:
-            # Public API uses GET /jobs with connectionId query parameter
-            response = self.client.get(
-                f"/jobs?connectionId={quote(connection_id, safe='')}"
+            yield from self._paginate_get(
+                f"/jobs?connectionId={quote(connection_id, safe='')}",
+                AirbytePublicCloudJobList,
             )
-            if response.get("exceptionStack"):
-                raise APIError(response)
-            return response.get("data", [])
+            return
 
-        # Internal API uses POST /jobs/list with JSON body
         data = {"configId": connection_id, "configTypes": ["sync", "reset_connection"]}
         response = self.client.post("/jobs/list", data=json.dumps(data))
         if response.get("exceptionStack"):
             raise APIError(response)
-        return response.get("jobs", [])
+        yield from AirbyteSelfHostedJobList.model_validate(response).jobs
 
-    def get_source(self, source_id: str) -> dict:
+    def get_source(self, source_id: str) -> AirbyteSourceResponse:
         """
-        Method returns source details
+        Method returns source details.
         """
         if self._use_public_api:
-            # Public API uses GET /sources/{sourceId}
             response = self.client.get(f"/sources/{quote(source_id, safe='')}")
             if response.get("exceptionStack"):
                 raise APIError(response)
-            return response
+            return AirbyteSourceResponse.model_validate(response)
 
-        # Internal API uses POST /sources/get with JSON body
         data = {"sourceId": source_id}
         response = self.client.post("/sources/get", data=json.dumps(data))
         if response.get("exceptionStack"):
             raise APIError(response)
-        return response
+        return AirbyteSourceResponse.model_validate(response)
 
-    def get_destination(self, destination_id: str) -> dict:
+    def get_destination(self, destination_id: str) -> AirbyteDestinationResponse:
         """
-        Method returns destination details
+        Method returns destination details.
         """
         if self._use_public_api:
-            # Public API uses GET /destinations/{destinationId}
             response = self.client.get(
                 f"/destinations/{quote(destination_id, safe='')}"
             )
             if response.get("exceptionStack"):
                 raise APIError(response)
-            return response
+            return AirbyteDestinationResponse.model_validate(response)
 
-        # Internal API uses POST /destinations/get with JSON body
         data = {"destinationId": destination_id}
         response = self.client.post("/destinations/get", data=json.dumps(data))
         if response.get("exceptionStack"):
             raise APIError(response)
-        return response
+        return AirbyteDestinationResponse.model_validate(response)
 
 
 class AirbyteCloudClient(AirbyteClient):
