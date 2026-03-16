@@ -77,7 +77,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
 test.beforeEach(async ({ page }) => {
   await redirectToHomePage(page);
   await sidebarClick(page, SidebarItem.EXPLORE);
-  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
+  await waitForAllLoadersToDisappear(page);
 });
 
 test('search dropdown should work properly for quick filters', async ({

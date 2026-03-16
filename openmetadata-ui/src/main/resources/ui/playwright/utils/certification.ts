@@ -12,6 +12,7 @@
  */
 import { APIRequestContext, Page } from '@playwright/test';
 import { setClassificationDisabled, setTagDisabledByFqn } from './tag';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export { setTagDisabled, setTagDisabledByFqn } from './tag';
 
@@ -31,7 +32,7 @@ export const openCertificationDropdown = async (page: Page) => {
   await page.locator('.certification-card-popover').waitFor({
     state: 'visible',
   });
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const closeCertificationDropdown = async (page: Page) => {

@@ -26,6 +26,7 @@ import {
   getFirstRowColumnLink,
   removeTagsFromChildren,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
 import { test } from '../fixtures/pages';
@@ -59,17 +60,13 @@ test.describe(
       await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
       await page.click('[data-testid="test-cases"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByText('Name', { exact: true }).click();
 
       await page.getByTestId('next').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       expect(await page.locator('.ant-table-row').count()).toBe(15);
     });
@@ -153,17 +150,13 @@ test.describe(
 
     test('should persist current page', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(page.getByTestId('databaseSchema-tables')).toBeVisible();
 
       await page.getByTestId('next').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const initialPageIndicator = await page
         .locator('[data-testid="page-indicator"]')
@@ -174,15 +167,11 @@ test.describe(
       await firstLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.goBack();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify page indicator is still the same after first navigation
       await expect(
@@ -194,15 +183,11 @@ test.describe(
       await secondLinkInColumn.click();
 
       await page.waitForURL('**/table/**');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.goBack();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify page indicator is still the same after second navigation
       await expect(
@@ -213,9 +198,7 @@ test.describe(
     test('should persist page size', async ({ dataConsumerPage: page }) => {
       await page.goto('/databaseSchema/sample_data.ecommerce_db.shopify');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(page.getByTestId('databaseSchema-tables')).toBeVisible();
 
@@ -230,9 +213,7 @@ test.describe(
       ).toBeVisible();
 
       await page.getByRole('menuitem', { name: '15 / Page' }).click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const linkInColumn = getFirstRowColumnLink(page);
       const entityApiResponse = page.waitForResponse(
@@ -241,14 +222,10 @@ test.describe(
       await linkInColumn.click();
 
       await entityApiResponse;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.goBack();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       await page
         .getByTestId('page-size-selection-dropdown')
         .scrollIntoViewIfNeeded();
@@ -270,9 +247,7 @@ test.describe(
       test.slow();
       await page.goto('/table/sample_data.ecommerce_db.shopify.dim_customer');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Should show expand icon for nested columns
       await expect(
@@ -303,9 +278,7 @@ test.describe(
 
       // verify column profile table
       await page.getByRole('tab', { name: 'Data Observability' }).click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const colsResponse = page.waitForResponse(
         (response) =>
@@ -319,9 +292,7 @@ test.describe(
 
       const data = await colsResponse;
       expect(data.status()).toBe(200);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Should show expand icon for nested columns
       await expect(
@@ -358,9 +329,7 @@ test.describe(
         '/table/sample_data.ecommerce_db.shopify.performance_test_table'
       );
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await assignTagToChildren({
         page,
@@ -577,9 +546,7 @@ test.describe(
 
       page.reload();
       // Wait for page to be fully loaded
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       const getRequest = page.waitForResponse(
         'api/v1/tables/name/sample_data.ecommerce_db.shopify.dim_customer/columns/*'
       );

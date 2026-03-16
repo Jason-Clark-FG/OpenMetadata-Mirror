@@ -17,6 +17,7 @@ import { EXPECTED_BUCKETS } from '../constant/explore';
 import { TableClass } from '../support/entity/TableClass';
 import { getApiContext, redirectToExplorePage } from './common';
 import { openEntitySummaryPanel } from './entityPanel';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export interface Bucket {
   key: string;
@@ -94,7 +95,7 @@ export const selectNullOption = async (
 
   const queryRes = page.waitForResponse(querySearchURL);
   await page.click('[data-testid="update-btn"]');
-  await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
+  await waitForAllLoadersToDisappear(page);
   await queryRes;
 
   const queryParams = page.url().split('?')[1];
@@ -305,7 +306,7 @@ export const validateBucketsForIndexAndSort = async (
 };
 
 export const selectSortOrder = async (page: Page, sortOrder: string) => {
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await page.getByTestId('sorting-dropdown-label').click();
   await page.getByRole('menuitem', { name: sortOrder }).waitFor({
     state: 'visible',
@@ -325,7 +326,7 @@ export const selectSortOrder = async (page: Page, sortOrder: string) => {
   );
   await page.getByTestId('sort-order-button').click();
   await ascSortOrder;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const verifyEntitiesAreSorted = async (page: Page) => {

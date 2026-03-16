@@ -37,7 +37,7 @@ import {
   toastNotification,
   uuid,
 } from './common';
-import { getEntityDisplayName, getTextFromHtmlString } from './entity';
+import { getEntityDisplayName, getTextFromHtmlString, waitForAllLoadersToDisappear } from './entity';
 import { validateFormNameFieldInput } from './form';
 import {
   addFilterWithUsersListInput,
@@ -176,9 +176,7 @@ export const findPageWithAlert = async (
   alertDetails: AlertDetails
 ) => {
   const { id } = alertDetails;
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
   const alertRow = page.locator(`[data-row-key="${id}"]`);
   const nextButton = page.locator('[data-testid="next"]');
   if ((await alertRow.isHidden()) && (await nextButton.isEnabled())) {

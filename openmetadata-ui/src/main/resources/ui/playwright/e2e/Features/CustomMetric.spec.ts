@@ -17,6 +17,7 @@ import {
   createCustomMetric,
   deleteCustomMetric,
 } from '../../utils/customMetric';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -38,7 +39,7 @@ test('Table custom metric', async ({ page }) => {
     );
     await table.visitEntityPage(page);
 
-    await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
+    await waitForAllLoadersToDisappear(page);
 
     await page.click('[data-testid="profiler"]');
     await profilerResponse;

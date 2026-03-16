@@ -129,7 +129,7 @@ export async function navigateToDomainDataProductsAndOpenPanel(
     .getByText('Data Products')
     .click();
   await dpRes;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   // dispatchEvent fires the click on the card's outer div directly; the entity-link child
   // never becomes the event target, so React Router does not navigate away.

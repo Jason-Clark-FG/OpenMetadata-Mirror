@@ -272,7 +272,7 @@ export const assignDomain = async (
   checkSelectedDomain = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -301,7 +301,7 @@ export const assignDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   if (checkSelectedDomain) {
     await expect(page.getByTestId('domain-link')).toContainText(
@@ -315,7 +315,7 @@ export const assignSingleSelectDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -341,7 +341,7 @@ export const assignSingleSelectDomain = async (
   await tagSelector.click();
 
   await patchReq;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('domain-link')).toContainText(
     domain.displayName
@@ -353,7 +353,7 @@ export const updateDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -382,7 +382,7 @@ export const updateDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('header-domain-container')).toContainText('+1');
 
@@ -399,7 +399,7 @@ export const removeDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -425,7 +425,7 @@ export const removeDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -438,7 +438,7 @@ export const removeSingleSelectDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -463,7 +463,7 @@ export const removeSingleSelectDomain = async (
   await page.getByTestId(`tag-${domain.fullyQualifiedName}`).click();
 
   await patchReq;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -551,7 +551,7 @@ export const removeDataProduct = async (
     .getByTestId('edit-button')
     .click();
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await page
     .getByTestId(`selected-tag-${dataProduct.fullyQualifiedName}`)
@@ -599,11 +599,11 @@ export const visitGlossaryPage = async (page: Page, glossaryName: string) => {
   const glossaryResponse = page.waitForResponse('/api/v1/glossaries?fields=*');
   await sidebarClick(page, SidebarItem.GLOSSARY);
   await glossaryResponse;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await page
     .getByRole('menuitem', { name: glossaryName })
     .click({ timeout: 30000 });
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const getRandomFirstName = () => {
@@ -683,9 +683,7 @@ export const closeFirstPopupAlert = async (page: Page) => {
 export const reloadAndWaitForNetworkIdle = async (page: Page) => {
   await page.reload();
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 /**
@@ -813,9 +811,7 @@ export const testPaginationNavigation = async (
   if (waitForLoadSelector) {
     await page.locator(waitForLoadSelector).waitFor({ state: 'visible' });
   }
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   const page1Data = await page1Response.json();
   const page1FirstItem = page1Data.data?.[0];
@@ -836,9 +832,7 @@ export const testPaginationNavigation = async (
   const page2Response = await page2ResponsePromise;
   expect(page2Response.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('previous')).toBeEnabled();
   let afterValue: string | null = '';
@@ -871,9 +865,7 @@ export const testPaginationNavigation = async (
 
   const reloadResponse = await reloadResponsePromise;
   expect(reloadResponse.status()).toBe(200);
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('previous')).toBeEnabled();
   const paginationText = page.locator('[data-testid="page-indicator"]');
@@ -919,7 +911,7 @@ export const testPaginationNavigation = async (
     );
     await menuItem.click();
     await pageSizeChangePromise;
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(pageSizeDropdown).toHaveText('25 / Page');
 
@@ -961,9 +953,7 @@ export const testCompletePaginationWithSearch = async (
   await page.goto(`${baseUrl}`);
   await page.locator(waitForLoadSelector).waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   const nextButton = page.locator('[data-testid="next"]');
   const isNextEnabled = await nextButton.isEnabled();
@@ -977,9 +967,7 @@ export const testCompletePaginationWithSearch = async (
     await nextButton.click();
     const page2Response = await page2ResponsePromise;
     expect(page2Response.status()).toBe(200);
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.getByTestId('previous')).toBeEnabled();
     const paginationPage2 = page.locator('[data-testid="page-indicator"]');
@@ -1059,9 +1047,7 @@ export const testCompletePaginationWithSearch = async (
       await deleteToggle.click();
       const searchApiResponseWithToggle1 = await searchApiPromiseWithToggle1;
       expect(searchApiResponseWithToggle1.status()).toBe(200);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const searchApiPromiseWithToggle2 = page.waitForResponse((response) =>
         response.url().includes(searchApiPattern)
@@ -1070,9 +1056,7 @@ export const testCompletePaginationWithSearch = async (
       await deleteToggle.click();
       const searchApiResponseWithToggle2 = await searchApiPromiseWithToggle2;
       expect(searchApiResponseWithToggle2.status()).toBe(200);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(page.getByTestId('previous')).toBeDisabled();
       const paginationAfterToggleWithSearch = page.locator(

@@ -174,9 +174,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         const isVisible = await expertItem.isVisible().catch(() => false);
         if (isVisible) {
@@ -363,9 +361,7 @@ test.describe('Data Product Comprehensive Tests', () => {
       await page.goto(
         `/dataProduct/${encodeURIComponent(dpData.fullyQualifiedName)}`
       );
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify the data product shows the subdomain link
       await expect(page.getByTestId('domain-link')).toContainText(
@@ -860,9 +856,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
 
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Search for the specific data product
       const searchBox = page
@@ -876,9 +870,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify the row shows both display name and name
       const row = page.getByTestId(dataProduct.data.name);
@@ -915,9 +907,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
         ),
       ]);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify the data product appears in search results
       await expect(page.getByTestId(dataProduct.data.name)).toBeVisible();

@@ -35,15 +35,13 @@ import {
   waitForRecentEventsToFinishExecution,
 } from './alert';
 import { clickOutside, descriptionBox, redirectToHomePage } from './common';
-import { addMultiOwner, updateDescription } from './entity';
+import { addMultiOwner, updateDescription, waitForAllLoadersToDisappear } from './entity';
 import { addInternalDestination } from './notificationAlert';
 import { sidebarClick } from './sidebar';
 
 export const visitObservabilityAlertPage = async (page: Page) => {
   await redirectToHomePage(page);
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Set up the response promise before navigation
   const getAlerts = page.waitForResponse(

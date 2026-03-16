@@ -790,9 +790,7 @@ export const addCustomPropertiesForEntity = async ({
   });
 
   // CRITICAL: Wait for UI to update after API response
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   expect(response.status()).toBe(200);
   await expect(
@@ -922,9 +920,7 @@ export const verifyCustomPropertyInAdvancedSearch = async (
   await sidebarClick(page, SidebarItem.EXPLORE);
 
   // Wait for loader to disappear instead of networkidle
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Open advanced search dialog
   await showAdvancedSearchDialog(page);

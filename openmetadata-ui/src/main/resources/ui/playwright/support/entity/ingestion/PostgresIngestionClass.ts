@@ -23,7 +23,9 @@ import {
   redirectToHomePage,
   toastNotification,
 } from '../../../utils/common';
-import { visitEntityPage } from '../../../utils/entity';
+import { visitEntityPage,
+  waitForAllLoadersToDisappear,
+} from '../../../utils/entity';
 import { visitServiceDetailsPage } from '../../../utils/service';
 import {
   checkServiceFieldSectionHighlighting,
@@ -134,7 +136,7 @@ class PostgresIngestionClass extends ServiceBaseClass {
 
         // Header available once page loads
         await page.getByTestId('data-assets-header').waitFor();
-        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await waitForAllLoadersToDisappear(page);
         await page.getByTestId('agents').click();
         const metadataTab2 = page.locator('[data-testid="metadata-sub-tab"]');
         if (await metadataTab2.isVisible()) {
@@ -170,9 +172,7 @@ class PostgresIngestionClass extends ServiceBaseClass {
       });
 
       await test.step('Verify if usage is ingested properly', async () => {
-        await page.getByTestId('loader').first().waitFor({
-          state: 'hidden',
-        });
+        await waitForAllLoadersToDisappear(page);
         const entityResponse = page.waitForResponse(
           `/api/v1/tables/name/*.order_items?**`
         );

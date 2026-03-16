@@ -25,7 +25,9 @@ import {
   redirectToHomePage,
   toastNotification,
 } from '../../../utils/common';
-import { visitEntityPage } from '../../../utils/entity';
+import { visitEntityPage,
+  waitForAllLoadersToDisappear,
+} from '../../../utils/entity';
 import { visitLineageTab } from '../../../utils/lineage';
 import { visitServiceDetailsPage } from '../../../utils/service';
 import {
@@ -166,7 +168,7 @@ class RedshiftWithDBTIngestionClass extends ServiceBaseClass {
 
       // Header available once page loads
       await page.getByTestId('data-assets-header').waitFor();
-      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
       await page.getByTestId('agents').click();
       const metadataTab2 = page.locator('[data-testid="metadata-sub-tab"]');
       if (await metadataTab2.isVisible()) {
@@ -210,9 +212,7 @@ class RedshiftWithDBTIngestionClass extends ServiceBaseClass {
       );
 
       // Verify DBT tag category is added
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.locator('.ant-table-row').waitFor();
 

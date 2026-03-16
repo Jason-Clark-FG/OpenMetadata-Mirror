@@ -27,6 +27,7 @@ import {
   selectDomain,
 } from '../../utils/domain';
 import { sidebarClick } from '../../utils/sidebar';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const test = base.extend<{
   page: Page;
@@ -63,9 +64,7 @@ test.describe('Domain Owner Management', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Search for user with retry mechanism (ES indexing can take time)
       const searchBar = page.getByTestId('owner-select-users-search-bar');
@@ -86,9 +85,7 @@ test.describe('Domain Owner Management', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         const isVisible = await ownerItem.isVisible().catch(() => false);
         if (isVisible) {
@@ -174,9 +171,7 @@ test.describe('Domain Owner Management', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Click clear all button to remove all owners
       await page.getByTestId('clear-all-button').click();
@@ -239,9 +234,7 @@ test.describe('Domain Expert Management', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Check if user is visible
         const isVisible = await expertItem.isVisible().catch(() => false);
@@ -409,9 +402,7 @@ test.describe('Data Product UI Operations', () => {
 
       // Switch to Users tab
       await page.getByRole('tab', { name: 'Users' }).click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Search for user with retry mechanism (ES indexing can take time)
       const searchBar = page.getByTestId('owner-select-users-search-bar');
@@ -432,9 +423,7 @@ test.describe('Data Product UI Operations', () => {
         // Search using name field
         await searchBar.fill(user.getUserName());
         await searchResponse;
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         const isVisible = await ownerItem.isVisible().catch(() => false);
         if (isVisible) {
@@ -500,9 +489,7 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Wait for page to fully load
       await expect(page.getByTestId('manage-button')).toBeVisible({
@@ -549,9 +536,7 @@ test.describe('Subdomain Management', () => {
       }
 
       await page.goto(`/domain/${encodeURIComponent(subDomainFqn)}`);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Wait for page to fully load
       await expect(page.getByTestId('manage-button')).toBeVisible({

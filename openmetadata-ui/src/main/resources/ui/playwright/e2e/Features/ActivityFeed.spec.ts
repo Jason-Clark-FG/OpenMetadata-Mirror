@@ -427,9 +427,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await adminPage.getByTestId('activity_feed').click();
 
-      await adminPage.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(adminPage);
 
       await adminPage.getByTestId('comments-input-field').click();
 
@@ -461,9 +459,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
       await user1Page.getByTestId('activity_feed').click();
 
-      await user1Page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(user1Page);
 
       await user1Page.getByTestId('comments-input-field').click();
 
@@ -510,9 +506,7 @@ test.describe('Mention notifications in Notification Box', () => {
 
     await test.step('Admin user checks notification for correct user and timestamp', async () => {
       await adminPage.reload();
-      await adminPage.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(adminPage);
       const notificationBell = adminPage.getByTestId('task-notifications');
 
       await expect(notificationBell).toBeVisible();
@@ -583,9 +577,7 @@ test.describe('Mention notifications in Notification Box', () => {
       await entity.visitEntityPage(user1Page);
 
       await user1Page.getByTestId('activity_feed').click();
-      await user1Page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(user1Page);
 
       // Find a message to react to.
       const message = user1Page

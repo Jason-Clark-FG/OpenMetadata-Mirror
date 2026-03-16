@@ -44,6 +44,7 @@ import {
   ObservabilityFeature,
   selectAddObservabilityFeature,
 } from '../../../utils/dataQuality';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 const table1 = new TableClass();
 const table2 = new TableClass();
@@ -851,9 +852,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
         await page.click('[data-testid="test-cases"]');
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // get all the filters
         await page.click('[data-testid="advanced-filter"]');
@@ -1123,9 +1122,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
 
         await page.click('[data-testid="test-cases"]');
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
         await verifyFilterTestCase(page);
         await verifyFilter2TestCase(page, true);
         await visitDataQualityTab(page, filterTable1);
@@ -1183,9 +1180,7 @@ test.describe(
         await sidebarClick(page, SidebarItem.DATA_QUALITY);
         await page.click('[data-testid="test-cases"]');
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await test.step('Verify pagination controls are visible', async () => {
           await expect(

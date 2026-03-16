@@ -13,6 +13,7 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { descriptionBox, removeLandingBanner } from './common';
 import { TaskDetails } from './task';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export const REACTION_EMOJIS = ['🚀', '😕', '👀', '❤️', '🎉', '😄', '👎', '👍'];
 
@@ -126,7 +127,7 @@ export const addMentionCommentInFeed = async (
     await fetchFeedResponse;
   }
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await page.getByTestId('comments-input-field').click();
 

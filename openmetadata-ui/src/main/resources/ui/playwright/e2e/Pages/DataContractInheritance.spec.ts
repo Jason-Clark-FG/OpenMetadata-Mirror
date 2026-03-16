@@ -169,12 +169,12 @@ const saveContract = async (page: Page) => {
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 const openContractTab = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 const startAddingContract = async (page: Page) => {
@@ -712,9 +712,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify contract was saved
       await expect(page.getByTestId('contract-title')).toBeVisible();
@@ -764,9 +762,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify PATCH succeeded (200 OK)
       expect(response.status()).toBe(200);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
     });
 
     await test.step('Verify asset now has its own SLA (no inherited icon)', async () => {
@@ -897,9 +893,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
     });
 
     await test.step('Verify asset now has its own contract (non-inherited)', async () => {
@@ -1264,9 +1258,7 @@ test.describe('Data Contract Inheritance', () => {
       // Verify POST succeeded (201 Created)
       expect(response.status()).toBe(201);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify asset's own contract is displayed
       await expect(page.getByTestId('contract-title')).toContainText(
@@ -1309,9 +1301,7 @@ test.describe('Data Contract Inheritance', () => {
 
     await test.step('Verify asset now shows inherited contract from Data Product', async () => {
       // Wait for contract to reload after deletion
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Refresh the page to ensure we get the latest contract state
       await page.reload();

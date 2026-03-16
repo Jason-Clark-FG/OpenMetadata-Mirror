@@ -400,9 +400,7 @@ test.describe('User with Data Consumer Roles', () => {
     // Check CRUD for Glossary
     await sidebarClick(dataConsumerPage, SidebarItem.GLOSSARY);
 
-    await dataConsumerPage.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(dataConsumerPage);
 
     await expect(
       dataConsumerPage.locator('[data-testid="add-glossary"]')
@@ -1430,9 +1428,7 @@ base.describe(
 
         for (const entity of entities) {
           await entity.visitEntityPage(page);
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(page.getByTestId('entity-header-name')).toHaveText(
             entity.entityResponseData.name
@@ -1445,9 +1441,7 @@ base.describe(
           await page.getByTestId('activity_feed').click();
           await feedResponse;
 
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(
             page.getByTestId('global-setting-left-panel').getByText('All')
@@ -1464,9 +1458,7 @@ base.describe(
           await page.getByTestId('lineage').click();
           await lineageResponse;
 
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(
             page.getByTestId(

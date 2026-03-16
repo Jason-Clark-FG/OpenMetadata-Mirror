@@ -26,7 +26,9 @@ import {
   redirectToHomePage,
   removeSingleSelectDomain,
 } from '../../../utils/common';
-import { addMultiOwner } from '../../../utils/entity';
+import { addMultiOwner,
+  waitForAllLoadersToDisappear,
+} from '../../../utils/entity';
 import {
   addMultiOwnerInDialog,
   openAddGlossaryTermModal,
@@ -197,9 +199,7 @@ test.describe('Glossary Advanced Operations', () => {
         .getByTestId('glossary-right-panel-owner-link')
         .getByTestId('edit-owner')
         .click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Clear existing owner
       await page.click('[data-testid="clear-all-button"]');
@@ -213,9 +213,7 @@ test.describe('Glossary Advanced Operations', () => {
         user2.getUserDisplayName()
       );
       await searchOwner;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page
         .getByRole('listitem', {
@@ -283,9 +281,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit reviewer
       await page.click('[data-testid="edit-reviewer-button"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Clear existing reviewer
       await page.click('[data-testid="clear-all-button"]');
@@ -299,9 +295,7 @@ test.describe('Glossary Advanced Operations', () => {
         user2.getUserDisplayName()
       );
       await searchUser;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page
         .getByRole('listitem', {
@@ -369,9 +363,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Add initial domain via UI first
       await page.getByTestId('add-domain').click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const searchDomain1 = page.waitForResponse(
         (response) =>
@@ -395,9 +387,7 @@ test.describe('Glossary Advanced Operations', () => {
       );
       await domain1Tag.click();
       await addPatchReq;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify initial domain is visible
       await expect(page.getByTestId('domain-link')).toContainText(
@@ -406,9 +396,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click on domain to change it
       await page.getByTestId('add-domain').click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Search for new domain
       await page
@@ -439,9 +427,7 @@ test.describe('Glossary Advanced Operations', () => {
       );
       await domain2Tag.click();
       await changePatchReq;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify new domain is visible
       await expect(page.getByTestId('domain-link')).toContainText(
@@ -921,9 +907,7 @@ test.describe('Glossary Advanced Operations', () => {
         .getByTestId('edit-button')
         .click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Clear all related terms
 
@@ -1001,9 +985,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit owner button
       await page.getByTestId('edit-owner').click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Clear all owners
       await page.click('[data-testid="clear-all-button"]');
@@ -1069,9 +1051,7 @@ test.describe('Glossary Advanced Operations', () => {
 
       // Click edit reviewer button
       await page.getByTestId('edit-reviewer-button').click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Clear all reviewers
       await page.click('[data-testid="clear-all-button"]');

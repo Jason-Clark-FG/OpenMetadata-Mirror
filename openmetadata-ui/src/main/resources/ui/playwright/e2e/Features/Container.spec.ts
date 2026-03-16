@@ -23,6 +23,7 @@ import {
   testCopyLinkButton,
   validateCopiedLinkFormat,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
@@ -187,9 +188,7 @@ test.describe('Container entity specific tests ', () => {
   }) => {
     await container.visitEntityPage(page);
 
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await testCopyLinkButton({
       page,
@@ -204,9 +203,7 @@ test.describe('Container entity specific tests ', () => {
     dataConsumerPage: page,
   }) => {
     await container.visitEntityPage(page);
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.getByTestId('container-data-model-table')).toBeVisible();
 

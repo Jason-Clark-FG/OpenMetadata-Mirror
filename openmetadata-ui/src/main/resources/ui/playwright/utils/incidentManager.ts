@@ -17,6 +17,7 @@ import { TableClass } from '../support/entity/TableClass';
 import { redirectToHomePage } from './common';
 import { makeRetryRequest } from './serviceIngestion';
 import { sidebarClick } from './sidebar';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export const visitProfilerTab = async (page: Page, table: TableClass) => {
   await redirectToHomePage(page);
@@ -39,7 +40,7 @@ export const acknowledgeTask = async (data: {
 
   await page.locator(`[data-testid="${testCase}-status"] >> text=New`).waitFor();
   await page.click(`[data-testid="${testCase}"] >> text=${testCase}`);
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await page.click('[data-testid="edit-resolution-icon"]');
   await page.click('[data-testid="test-case-resolution-status-type"]');
   await page.click('[title="Ack"]');
@@ -74,15 +75,11 @@ export const addAssigneeFromPopoverWidget = async (data: {
     await page.getByTestId('assignee').getByTestId('edit-owner').click();
   }
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await page.getByRole('tab', { name: 'Users' }).click();
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   const searchUserResponse = page.waitForResponse('/api/v1/search/query?q=*');
   await page.fill(

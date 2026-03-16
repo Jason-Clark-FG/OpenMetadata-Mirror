@@ -79,7 +79,7 @@ export const visitEntityPage = async (data: {
   await waitForSearchResponse;
 
   await page.getByTestId(dataTestId).getByTestId('data-name').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await page.getByTestId('searchBox').clear();
 };
 
@@ -106,7 +106,7 @@ export const addOwner = async ({
     await page.getByRole('tab', { name: type }).click();
     await userListResponse;
   }
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const ownerSearchInput = page.getByTestId(
     `owner-select-${lowerCase(type)}-search-bar`
@@ -161,7 +161,7 @@ export const addOwner = async ({
           await ownerSearchInput.fill('');
           await ownerSearchInput.fill(owner);
           await searchRetry;
-          await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+          await waitForAllLoadersToDisappear(page);
 
           return await ownerItem.isVisible().catch(() => false);
         },
@@ -208,7 +208,7 @@ export const addOwnerWithoutValidation = async ({
       await userListResponse;
     }
   }
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const ownerSearchBar = await page
     .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
@@ -249,7 +249,7 @@ export const updateOwner = async ({
 }) => {
   await page.getByTestId('edit-owner').click();
   await page.getByRole('tab', { name: type }).click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const searchUser = page.waitForResponse(
     `/api/v1/search/query?q=*${encodeURIComponent(owner)}*`
@@ -288,7 +288,7 @@ export const removeOwnersFromList = async ({
   dataTestId?: string;
 }) => {
   await page.getByTestId('edit-owner').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   for (const ownerName of ownerNames) {
     const ownerItem = page.getByRole('listitem', {
@@ -324,7 +324,7 @@ export const removeOwner = async ({
   dataTestId?: string;
 }) => {
   await page.getByTestId('edit-owner').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
   if (type === 'Teams') {
@@ -452,7 +452,7 @@ export const addMultiOwner = async (data: {
       await updateButton.click();
       await patchRequest;
 
-      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('select-owner-tabs').waitFor({ state: 'detached' });
     }
@@ -477,7 +477,7 @@ export const assignTier = async (
   await editButton.click();
 
   // Wait for all loaders to disappear
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   // Wait for the tier selection radio buttons to be visible
   const tierRadioButton = page.getByTestId(`radio-btn-${tier}`);
@@ -502,7 +502,7 @@ export const assignTier = async (
   expect(response.status()).toBe(200);
 
   // Wait for loaders to finish
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   // Close the tier popover
   await clickOutside(page);
@@ -513,7 +513,7 @@ export const assignTier = async (
 
 export const removeTier = async (page: Page, endpoint: string) => {
   await page.getByTestId('edit-tier').click();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   const patchRequest = page.waitForResponse(
     (response) =>
       response.url().includes(`/api/v1/${endpoint}`) &&
@@ -524,7 +524,7 @@ export const removeTier = async (page: Page, endpoint: string) => {
   const response = await patchRequest;
   expect(response.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await clickOutside(page);
 
   await expect(page.getByTestId('Tier')).toContainText('--');
@@ -546,7 +546,7 @@ export const assignCertification = async (
   expect(tagsResponse.status()).toBe(200);
 
   await page.locator('.certification-card-popover').waitFor({ state: 'visible' });
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await readElementInListWithScroll(
     page,
@@ -569,7 +569,7 @@ export const assignCertification = async (
   const patchResponse = await patchRequest;
   expect(patchResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await clickOutside(page);
 
   await expect(page.getByTestId('certification-label')).toContainText(
@@ -580,7 +580,7 @@ export const assignCertification = async (
 export const removeCertification = async (page: Page, endpoint: string) => {
   await page.getByTestId('edit-certification').click();
   await page.locator('.certification-card-popover').waitFor({ state: 'visible' });
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   const patchRequest = page.waitForResponse(
     (response) =>
       response.url().includes(`/api/v1/${endpoint}`) &&
@@ -591,7 +591,7 @@ export const removeCertification = async (page: Page, endpoint: string) => {
   const response = await patchRequest;
   expect(response.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await clickOutside(page);
 
   await expect(page.getByTestId('certification-label')).toContainText('--');
@@ -642,7 +642,7 @@ export const updateDescription = async (
   }
 
   // CRITICAL: Wait for UI to update after save
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   if (validationContainerTestId) {
     if (isEmpty(description)) {
@@ -722,7 +722,7 @@ export const updateDescriptionForChildren = async (
 
   // CRITICAL: Wait for UI to update after API response
   // The modal closing doesn't guarantee the row has updated yet
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   // Verify the description was updated in the UI
   // Use a generous timeout: parallel runs under CPU load can delay row re-renders
@@ -1095,7 +1095,7 @@ export const assignGlossaryTermToChildren = async ({
   await searchGlossaryTerm;
 
   // Wait for loader to disappear after search
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   // Wait for glossary term tag to be visible before clicking
   const glossaryTermTag = page.getByTestId(
@@ -1128,7 +1128,7 @@ export const assignGlossaryTermToChildren = async ({
   await putRequest;
 
   // CRITICAL: Wait for UI to update after API responses
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(
     page
@@ -1295,7 +1295,7 @@ export const validateFollowedEntityToWidget = async (
   isFollowing: boolean
 ) => {
   await redirectToHomePage(page);
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   if (isFollowing) {
     await page.getByTestId('following-widget').isVisible();
 
@@ -1366,7 +1366,7 @@ export const createAnnouncement = async (
 
   await announcementForm(page, { ...data, startDate, endDate }, hideAlert);
   await page.reload();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('announcement-card')).toBeVisible();
   await expect(page.getByTestId('announcement-title')).toHaveText(data.title);
@@ -1939,7 +1939,7 @@ export const softDeleteEntity = async (
   );
 
   await page.reload();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   // Retry mechanism for checking deleted badge
   let deletedBadge = page.locator('[data-testid="deleted-badge"]');
   let attempts = 0;
@@ -1954,7 +1954,7 @@ export const softDeleteEntity = async (
     attempts++;
     if (attempts < maxAttempts) {
       await page.reload();
-      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
       deletedBadge = page.locator('[data-testid="deleted-badge"]');
     }
   }
@@ -1987,7 +1987,7 @@ export const softDeleteEntity = async (
 
   await restoreEntity(page);
   await page.reload();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await deletedEntityCommonChecks({
     page,
     endPoint,

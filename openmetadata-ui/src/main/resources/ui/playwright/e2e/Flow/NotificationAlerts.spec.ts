@@ -43,6 +43,7 @@ import {
   visitNotificationAlertPage,
 } from '../../utils/notificationAlert';
 import { addExternalDestination } from '../../utils/observabilityAlert';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const dashboard = new DashboardClass();
 const table = new TableClass();
@@ -216,9 +217,7 @@ test('Single Filter Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
 
     // Verify the edited alert changes
@@ -299,9 +298,7 @@ test('Multiple Filters Alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
 
     // Verify the edited alert changes
@@ -410,7 +407,7 @@ test('Conversation source alert', async ({ page }) => {
     });
 
     // Wait for UI to update after API response
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
     await expect(page.getByTestId('alert-details-container')).toBeVisible();
 
     // Verify the edited alert changes

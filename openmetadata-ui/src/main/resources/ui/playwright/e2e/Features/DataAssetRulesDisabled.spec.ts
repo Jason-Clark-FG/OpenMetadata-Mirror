@@ -60,6 +60,7 @@ import {
   addMultiOwner,
   assignGlossaryTerm,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import {
   createDatabaseRowDetails,
@@ -338,9 +339,7 @@ test.describe(
         );
         await page.click('[data-testid="bulk-edit-table"]');
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Adding some assertion to make sure that CSV loaded correctly
         await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -469,9 +468,7 @@ test.describe(
 
         await page.click('[data-testid="bulk-edit-table"]');
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Adding some assertion to make sure that CSV loaded correctly
         await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -755,9 +752,7 @@ test.describe(
 
         // Open domain selector to verify multi-select mode (checkboxes visible)
         await page.getByTestId('add-domain').click();
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Verify checkboxes ARE visible (multi-select mode)
         await expect(

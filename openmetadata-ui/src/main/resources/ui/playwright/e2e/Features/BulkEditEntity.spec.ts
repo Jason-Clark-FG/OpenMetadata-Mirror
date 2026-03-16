@@ -44,6 +44,7 @@ import {
   validateImportStatus,
 } from '../../utils/importUtils';
 import { visitServiceDetailsPage } from '../../utils/service';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({
@@ -129,9 +130,7 @@ test.describe('Bulk Edit Entity', () => {
       );
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Adding some assertion to make sure that CSV loaded correctly
       await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -264,9 +263,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Adding some assertion to make sure that CSV loaded correctly
       await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -629,9 +626,7 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Adding some assertion to make sure that CSV loaded correctly
       await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -686,9 +681,7 @@ test.describe('Bulk Edit Entity', () => {
         .locator('.inovua-react-toolkit-load-mask__background-layer')
         .waitFor({ state: 'detached' });
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await toastNotification(
         page,
@@ -723,9 +716,7 @@ test.describe('Bulk Edit Entity', () => {
 
       // Verify Custom Properties
       await page.click('[data-testid="custom_properties"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       for (const propertyName of Object.values(customPropertyRecord)) {
         await expect(page.getByText(propertyName)).toBeVisible();
@@ -774,9 +765,7 @@ test.describe('Bulk Edit Entity', () => {
       // Click on bulk edit button for the glossary term
       await page.click('[data-testid="bulk-edit-table"]');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Adding some assertion to make sure that CSV loaded correctly
       await expect(page.locator('.rdg-header-row')).toBeVisible();
@@ -837,33 +826,25 @@ test.describe('Bulk Edit Entity', () => {
 
       await updateButtonResponse;
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await toastNotification(page, /details updated successfully/);
 
       // Visit the glossary terms tab
       await page.click('[data-testid="terms"]');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Navigate to the nested glossary term to verify custom properties
       await page.click(
         `[data-testid="${additionalNestedGlossaryTerm.displayName}"]`
       );
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       // Verify Custom Properties
       await page.click('[data-testid="custom_properties"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       for (const propertyName of Object.values(customPropertyRecord)) {
         await expect(page.getByText(propertyName)).toBeVisible();

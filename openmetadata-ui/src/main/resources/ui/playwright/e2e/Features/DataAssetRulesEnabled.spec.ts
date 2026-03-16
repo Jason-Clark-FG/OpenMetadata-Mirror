@@ -57,6 +57,7 @@ import {
   addOwner,
   assignGlossaryTerm,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
@@ -264,9 +265,7 @@ test.describe(
 
         // Open domain selector to verify single-select mode (no checkboxes)
         await page.getByTestId('add-domain').click();
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Verify checkboxes are NOT visible (single-select mode)
         await expect(

@@ -38,6 +38,7 @@ import {
 import {
   addMultiOwner,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import { settingClick } from '../../utils/sidebar';
 import {
@@ -1144,9 +1145,7 @@ test.describe('Teams Page action as Owner of Team', () => {
     await teamNoOwner.visitTeamPage(ownerUserPage);
     await teamListResponse;
 
-    await ownerUserPage.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(ownerUserPage);
 
     await expect(ownerUserPage.getByTestId('edit-owner')).toBeVisible();
 

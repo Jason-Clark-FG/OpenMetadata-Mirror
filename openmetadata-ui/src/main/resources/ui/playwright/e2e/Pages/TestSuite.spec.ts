@@ -25,7 +25,9 @@ import {
   toastNotification,
   uuid,
 } from '../../utils/common';
-import { addMultiOwner, removeOwnersFromList } from '../../utils/entity';
+import { addMultiOwner, removeOwnersFromList,
+  waitForAllLoadersToDisappear,
+} from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
 const table = new TableClass();
@@ -99,9 +101,7 @@ test(
       await createTestSuiteResponse;
       await toastNotification(page, 'Test Suite created successfully.');
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
     });
 
     await test.step('Domain Add, Update and Remove', async () => {
@@ -134,9 +134,7 @@ test(
 
     await test.step('Add test case to logical test suite by owner', async () => {
       await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
-      await ownerPage.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(ownerPage);
       const testCaseResponse = ownerPage.waitForResponse(
         '/api/v1/dataQuality/testCases/search/list*'
       );
@@ -185,9 +183,7 @@ test(
       );
 
       await page.getByTestId('view-service-button').click();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
     });
 
     await test.step('Remove test case from logical test suite by owner', async () => {
@@ -219,17 +215,13 @@ test(
       await page.getByTestId('select-owner-tabs').waitFor({
         state: 'visible',
       });
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       const getOwnerList = page.waitForResponse(
         '/api/v1/search/query?q=&index=user_search_index&*'
       );
       await page.click('.ant-tabs [id*=tab-users]');
       await getOwnerList;
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const searchOwner = page.waitForResponse(
         'api/v1/search/query?q=*&index=user_search_index*'

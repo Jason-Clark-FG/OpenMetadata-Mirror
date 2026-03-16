@@ -14,6 +14,7 @@ import { expect, test } from '@playwright/test';
 import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 import { TableClass } from '../../support/entity/TableClass';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const table = new TableClass();
 
@@ -38,7 +39,7 @@ test(
     await redirectToHomePage(page);
     await table.visitEntityPage(page);
 
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     const firstColumnName = table.columnsName[0];
     const columnRowSelector = `[data-row-key$="${firstColumnName}"]`;

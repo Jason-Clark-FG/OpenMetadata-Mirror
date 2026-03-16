@@ -24,7 +24,7 @@ import {
   toastNotification,
   uuid,
 } from './common';
-import { addMultiOwner, addOwner } from './entity';
+import { addMultiOwner, addOwner, waitForAllLoadersToDisappear } from './entity';
 import { validateFormNameFieldInput } from './form';
 import { settingClick } from './sidebar';
 
@@ -98,9 +98,7 @@ export const createTeam = async (
   const response = await createTeamResponse;
   const createdTeam = await response.json();
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   return {
     ...teamData,
@@ -498,9 +496,7 @@ export const addEmailTeam = async (page: Page, email: string) => {
   await page.reload();
 
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Check for updated email
   await expect(page.locator('[data-testid="email-value"]')).toContainText(
@@ -587,9 +583,7 @@ export const executionOnOwnerTeam = async (
   const newTeamData = await createTeam(page);
 
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(
     page.getByRole('cell', { name: newTeamData.displayName })

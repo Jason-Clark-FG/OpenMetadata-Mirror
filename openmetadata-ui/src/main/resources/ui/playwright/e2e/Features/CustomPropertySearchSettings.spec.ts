@@ -28,6 +28,7 @@ import {
 } from '../../utils/customProperty';
 import { setSliderValue } from '../../utils/searchSettingUtils';
 import { settingClick } from '../../utils/sidebar';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -128,9 +129,7 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/dashboards$/
       );
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('add-field-btn').click();
 
@@ -271,9 +270,7 @@ test.describe.serial('Custom Property Search Settings', () => {
         /settings\/preferences\/search-settings\/pipelines$/
       );
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('add-field-btn').click();
 
@@ -348,9 +345,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await dashboardCard.click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const customPropertyField = page.getByTestId(
         `field-configuration-panel-extension.${dashboardPropertyName}`
@@ -367,9 +362,7 @@ test.describe.serial('Custom Property Search Settings', () => {
       );
       await pipelineCard.click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       const customPropertyField = page.getByTestId(
         `field-configuration-panel-extension.${pipelinePropertyName}`

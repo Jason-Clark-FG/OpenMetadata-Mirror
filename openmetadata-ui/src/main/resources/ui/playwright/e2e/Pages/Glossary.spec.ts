@@ -53,6 +53,7 @@ import {
   assignTag,
   updateDescription,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import {
   addAssetToGlossaryTerm,
@@ -783,9 +784,7 @@ test.describe('Glossary tests', () => {
         );
         await page.getByTestId('assets').click();
         await queryRes;
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
         await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
 
         await expect(
@@ -1501,9 +1500,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await performExpandAll(page);
 
@@ -1729,9 +1726,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await createGlossaryTerm(
         page,
@@ -2038,9 +2033,7 @@ test.describe('Glossary tests', () => {
 
         await page1.getByTestId(`tag-"${domain.data.name}"`).click();
 
-        await page1.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page1);
       });
 
       await test.step('Open Add Glossary form', async () => {
@@ -2447,9 +2440,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
       await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
@@ -2516,9 +2507,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
       await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
@@ -2610,9 +2599,7 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
       await page.locator('[role="dialog"].edit-glossary-modal').waitFor();

@@ -17,6 +17,7 @@ import {
   descriptionBox,
   redirectToHomePage,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -73,7 +74,7 @@ test.describe('TestCase Version Page', () => {
     await page.goto(
       `/test-case/${encodeURIComponent(testCase.fullyQualifiedName)}`
     );
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     /**
      * Step: Display name change
@@ -107,7 +108,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test-case-version-changed');
 
       await page.getByTestId('version-button').click();
-      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
     });
 
     /**
@@ -137,7 +138,7 @@ test.describe('TestCase Version Page', () => {
       ).toHaveText('test case description changed');
 
       await page.getByTestId('version-button').click();
-      await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
     });
 
     /**

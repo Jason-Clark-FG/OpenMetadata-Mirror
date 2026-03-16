@@ -30,6 +30,8 @@ import {
   generateEntityChildren,
   removeTagsFromChildren,
   restoreEntity,
+
+  waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
@@ -127,9 +129,7 @@ test.describe(
     }) => {
       await dashboard.visitEntityPage(page);
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="manage-button"]');
       await page.click('[data-testid="delete-button"]');
@@ -153,9 +153,7 @@ test.describe(
       );
 
       await page.reload();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       // Retry mechanism for checking deleted badge
       let deletedBadge = page.locator('[data-testid="deleted-badge"]');
       let attempts = 0;
@@ -170,9 +168,7 @@ test.describe(
         attempts++;
         if (attempts < maxAttempts) {
           await page.reload();
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
           deletedBadge = page.locator('[data-testid="deleted-badge"]');
         }
       }
@@ -190,9 +186,7 @@ test.describe(
 
       await restoreEntity(page);
       await page.reload();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('charts-table').getByTestId('no-data-placeholder')
@@ -215,9 +209,7 @@ test.describe('Data Model', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       '/dashboardDataModel/sample_superset.model.big_analytics_data_model_with_nested_columns'
     );
 
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await assignTagToChildren({
       page,
@@ -331,7 +323,7 @@ test.describe(
         )}/data-model`
       );
 
-      await page.getByTestId('loader').first().waitFor({ state: 'hidden' });
+      await waitForAllLoadersToDisappear(page);
 
       await page.locator('.ant-spin').waitFor({
         state: 'detached',

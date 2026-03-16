@@ -72,6 +72,7 @@ import {
   removeOwner,
   removeOwnersFromList,
   waitForAllLoadersToDisappear,
+
 } from '../../utils/entity';
 import { clickDataQualityStatCard } from '../../utils/entityPanel';
 import { visitServiceDetailsPage } from '../../utils/service';
@@ -942,9 +943,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           });
 
           // Wait for any loaders to disappear
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
         });
 
         await test.step('Verify NestedColumnsSection renders with correct structure', async () => {
@@ -1047,9 +1046,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await clickResponse;
 
           // Wait for loader to disappear after navigation
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           // Verify panel is still visible (navigated to nested column)
           await expect(page.locator('.column-detail-panel')).toBeVisible();
@@ -1068,9 +1065,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await prevButton.isEnabled()) {
             await prevButton.click();
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
           }
 
           const allNestedLinks = panelContainer.locator('.nested-column-name');
@@ -1100,9 +1095,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await intermediateClickResponse;
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Verify panel updated correctly
             await expect(page.locator('.column-detail-panel')).toBeVisible();
@@ -1285,9 +1278,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           if (await nestedColumnRow.getByTestId('expand-icon').isVisible()) {
             await nestedColumnRow.getByTestId('expand-icon').click();
             // Wait for expansion to complete
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Open detail panel
             const nestedColumnId = await nestedColumnRow.getAttribute(
@@ -1390,9 +1381,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           );
 
           // Wait for loader to disappear after search
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           // Wait for term option to be visible before clicking
           const termOption = page.locator('.ant-list-item').filter({
@@ -1414,9 +1403,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await updateResponse;
 
           // CRITICAL: Wait for UI to update after API response
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(
             panelContainer.getByTestId(
@@ -1522,9 +1509,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
                 .getByTestId('alert-message')
             ).toContainText('Description updated successfully');
 
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             await expect(
               panelContainer
@@ -1566,9 +1551,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await nextButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             // Verify entity link is visible after navigation
             await expect(page.getByTestId('entity-link')).toBeVisible();
@@ -1591,9 +1574,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             await prevButton.click();
 
             // Wait for loader to disappear after navigation
-            await page.getByTestId('loader').first().waitFor({
-              state: 'detached',
-            });
+            await waitForAllLoadersToDisappear(page);
 
             await expect(page.getByTestId('entity-link')).toBeVisible();
 
@@ -2183,9 +2164,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         // Navigate to the table entity page
         await entity.visitEntityPage(page);
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         // Step 1: Navigate to Data Observability tab and verify profiler tab is selected by default
         await test.step('Navigate to Data Observability tab', async () => {
@@ -2203,9 +2182,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await profilerTab.click();
           await profilerResponse;
 
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
         });
 
         // Step 2: Verify tabs UI component is rendered in Data Observability tab
@@ -2233,9 +2210,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await activityFeedTab.click();
           await activityFeedResponse;
 
-          await page.getByTestId('loader').first().waitFor({
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
         });
 
         // Step 4: Verify tabs or left component is rendered in Activity Feed tab

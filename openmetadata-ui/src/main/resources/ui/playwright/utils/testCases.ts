@@ -16,6 +16,7 @@ import * as path from 'path';
 import { TableClass } from '../support/entity/TableClass';
 import { toastNotification } from './common';
 import { fillTagDetails, pressKeyXTimes } from './importUtils';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export const getFailedRowsData = (table: TableClass) => {
   const columns = table.entity.columns.map((col) => col.name);
@@ -273,9 +274,7 @@ export const visitTestSuitePage = async (page: Page, testSuiteFqn: string) => {
   );
   await page.goto(`/test-suites/${testSuiteFqn}`);
   await testCaseListResponse;
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
   await page.getByTestId('manage-button').waitFor({
     state: 'visible',
   });
@@ -382,7 +381,7 @@ export const verifyPageAccess = async (
   );
   await page.goto(url);
   await permissionResponse;
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   if (shouldHaveAccess) {
     // Verify user has access - should stay on the page
@@ -449,9 +448,7 @@ export const verifyButtonVisibility = async (
  */
 export const navigateToBulkEditPage = async (page: Page) => {
   await page.getByTestId('bulk-edit-button').click();
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
   await expect(page.locator('.rdg-header-row')).toBeVisible();
 };
 

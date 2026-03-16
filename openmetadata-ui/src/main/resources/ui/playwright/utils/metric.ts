@@ -14,7 +14,7 @@ import { expect, Page } from '@playwright/test';
 import { EntityTypeEndpoint } from '../support/entity/Entity.interface';
 import { MetricClass } from '../support/entity/MetricClass';
 import { descriptionBox, uuid } from './common';
-import { hardDeleteEntity } from './entity';
+import { hardDeleteEntity, waitForAllLoadersToDisappear } from './entity';
 
 export const updateMetricType = async (page: Page, metric: string) => {
   await page.click(`[data-testid="edit-metric-type-button"]`);
@@ -194,7 +194,7 @@ export const updateRelatedMetric = async (
 
   await metricsResponsePromise1;
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     dataAsset.entity.name
@@ -210,7 +210,7 @@ export const updateRelatedMetric = async (
   await page.getByRole('button', { name: title, exact: true }).click();
   await metricsResponsePromise2;
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('entity-header-display-name')).toContainText(
     title

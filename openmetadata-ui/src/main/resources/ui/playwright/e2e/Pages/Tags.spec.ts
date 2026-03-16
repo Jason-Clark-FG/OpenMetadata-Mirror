@@ -24,7 +24,9 @@ import {
   redirectToHomePage,
   uuid,
 } from '../../utils/common';
-import { addMultiOwner, removeOwner } from '../../utils/entity';
+import { addMultiOwner, removeOwner,
+  waitForAllLoadersToDisappear,
+} from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
 import {
   addTagToTableColumn,
@@ -170,9 +172,7 @@ test('Classification Page', async ({ page }) => {
     await expect(page.getByTestId('add-owner')).not.toBeVisible();
 
     await page.getByTestId(tag.responseData.name).click();
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.getByTestId('disabled')).toBeVisible();
     await expect(page.getByTestId('add-domain')).not.toBeVisible();
@@ -235,9 +235,7 @@ test('Classification Page', async ({ page }) => {
     await expect(page.getByTestId('add-owner')).toBeVisible();
 
     await page.getByTestId(tag.responseData.name).click();
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.getByTestId('disabled')).not.toBeVisible();
     await expect(page.getByTestId('add-domain')).toBeVisible();
@@ -425,9 +423,7 @@ test('Classification Page', async ({ page }) => {
     await databaseSchemasPage;
 
 
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.locator('[data-testid="tags-container"]')).toContainText(
       tag
@@ -484,9 +480,7 @@ test('Classification Page', async ({ page }) => {
     // Verify term count is now 0 after deleting the tag
     await page.reload();
 
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await page.getByTestId('side-panel-classification').first().waitFor({
       state: 'visible',

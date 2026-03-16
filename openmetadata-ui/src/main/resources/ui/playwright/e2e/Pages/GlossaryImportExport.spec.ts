@@ -34,7 +34,9 @@ import {
   addCustomPropertiesForEntity,
   deleteCreatedProperty,
 } from '../../utils/customProperty';
-import { addMultiOwner } from '../../utils/entity';
+import { addMultiOwner,
+  waitForAllLoadersToDisappear,
+} from '../../utils/entity';
 import {
   selectActiveGlossary,
   selectActiveGlossaryTerm,
@@ -273,7 +275,7 @@ test.describe('Glossary Bulk Import Export', () => {
         await settingClick(page, GlobalSettingOptions.GLOSSARY_TERM, true);
 
 
-        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await waitForAllLoadersToDisappear(page);
 
         await deleteCreatedProperty(page, propertyName);
       }

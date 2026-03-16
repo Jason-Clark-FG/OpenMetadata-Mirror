@@ -17,6 +17,7 @@ import { MetricClass } from '../../support/entity/MetricClass';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
 import { addKpi, deleteKpiRequest } from '../../utils/dataInsight';
 import { sidebarClick } from '../../utils/sidebar';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -274,7 +275,7 @@ test.describe('Data Insight Page', { tag: '@data-insight' }, () => {
 
     await kpiResponse;
 
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
 
     await expect(page.locator('[data-testid="kpi-widget"]')).toBeVisible();

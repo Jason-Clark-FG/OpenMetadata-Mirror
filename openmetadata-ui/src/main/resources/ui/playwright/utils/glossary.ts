@@ -80,9 +80,7 @@ export const selectActiveGlossary = async (
     }
   }
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const selectActiveGlossaryTerm = async (
@@ -91,9 +89,7 @@ export const selectActiveGlossaryTerm = async (
 ) => {
   await page.getByTestId(glossaryTermName).click();
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(
     page.locator('[data-testid="entity-header-display-name"]')
@@ -946,7 +942,7 @@ export const verifyAssetModalFilters = async (
   }
 
   const filterWrapper = page.locator('.asset-filters-wrapper');
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await testFilterWithSpecificOption(
     page,
@@ -1573,14 +1569,14 @@ export const addMultiOwnerInDialog = async (data: {
 
   await expect(page.locator("[data-testid='select-owner-tabs']")).toBeVisible();
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await page
     .locator("[data-testid='select-owner-tabs']")
     .getByRole('tab', { name: 'Users' })
     .click();
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   if (clearAll && isMultipleOwners) {
     await page.click('[data-testid="clear-all-button"]');
@@ -1593,7 +1589,7 @@ export const addMultiOwnerInDialog = async (data: {
     await page.locator('[data-testid="owner-select-users-search-bar"]').clear();
     await page.fill('[data-testid="owner-select-users-search-bar"]', ownerName);
     await searchOwner;
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     const ownerItem = page.getByRole('listitem', {
       name: ownerName,
@@ -1858,9 +1854,7 @@ export const performExpandAll = async (page: Page) => {
   await page.getByTestId('expand-collapse-all-button').click();
   await termRes;
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const openAddGlossaryTermModal = async (page: Page) => {

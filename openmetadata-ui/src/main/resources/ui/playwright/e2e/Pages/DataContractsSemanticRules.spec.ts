@@ -46,6 +46,8 @@ import {
   updateDescription,
   updateDisplayNameForEntity,
   updateOwner,
+
+  waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import { test } from '../fixtures/pages';
 
@@ -150,9 +152,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -256,9 +256,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -363,9 +361,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -468,9 +464,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -554,9 +548,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -638,9 +630,7 @@ test.describe('Data Contracts Semantics Rule Owner', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -710,16 +700,12 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await updateDescription(page, 'New Contract Rules Setting');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -735,9 +721,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -806,16 +790,12 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await updateDescription(page, 'New Contract Rules Setting');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       await page.getByTestId('manage-contract-actions').click();
 
       await page.locator('.contract-action-dropdown').waitFor({
@@ -830,9 +810,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -885,7 +863,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await expect(async () => {
         await page.reload();
-        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await waitForAllLoadersToDisappear(page);
         await expect(
           page.getByTestId('contract-status-card-item-semantics-status')
         ).toContainText('Passed', { timeout: 5_000 });
@@ -900,16 +878,12 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await updateDescription(page, '');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       await page.getByTestId('manage-contract-actions').click();
 
       await page.locator('.contract-action-dropdown').waitFor({
@@ -924,7 +898,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await expect(async () => {
         await page.reload();
-        await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+        await waitForAllLoadersToDisappear(page);
         await expect(
           page.getByTestId('contract-status-card-item-semantics-status')
         ).toContainText('Failed', { timeout: 5_000 });
@@ -989,16 +963,12 @@ test.describe('Data Contracts Semantics Rule Description', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await updateDescription(page, '');
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -1014,9 +984,7 @@ test.describe('Data Contracts Semantics Rule Description', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1113,9 +1081,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1200,9 +1166,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1288,9 +1252,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1374,9 +1336,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1453,9 +1413,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1531,9 +1489,7 @@ test.describe('Data Contracts Semantics Rule Domain', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1652,9 +1608,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1777,9 +1731,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1861,9 +1813,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -1946,9 +1896,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2032,9 +1980,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2119,9 +2065,7 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2214,9 +2158,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await removeDataProduct(page, createdDataProducts[0].responseData);
       await assignDataProduct(page, domain.responseData, [
@@ -2224,9 +2166,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2242,9 +2182,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2318,9 +2256,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await removeDataProduct(page, createdDataProducts[1].responseData);
       await assignDataProduct(page, domain.responseData, [
@@ -2328,9 +2264,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2346,9 +2280,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2422,9 +2354,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await removeDataProduct(page, createdDataProducts[1].responseData);
       await assignDataProduct(page, domain.responseData, [
@@ -2432,9 +2362,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2450,9 +2378,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2524,9 +2450,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await removeDataProduct(page, createdDataProducts[1].responseData);
       await assignDataProduct(page, domain.responseData, [
@@ -2534,9 +2458,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       ]);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2552,9 +2474,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2621,16 +2541,12 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
       // Move to Schema Tab
       await page.getByTestId('schema').click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await removeDataProduct(page, createdDataProducts[1].responseData);
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2646,9 +2562,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2713,9 +2627,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
         // Move to Schema Tab
         await page.getByTestId('schema').click();
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await assignSingleSelectDomain(page, domain.responseData);
 
@@ -2724,9 +2636,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
         ]);
 
         await page.click('[data-testid="contract"]');
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await page.getByTestId('manage-contract-actions').click();
 
@@ -2742,9 +2652,7 @@ test.describe('Data Contracts Semantics Rule DataProduct', () => {
 
         await page.reload();
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await expect(
           page.getByTestId('contract-status-card-item-semantics-status')
@@ -2821,9 +2729,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2839,9 +2745,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -2916,9 +2820,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -2934,9 +2836,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -3008,9 +2908,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -3026,9 +2924,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -3102,9 +2998,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -3120,9 +3014,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -3189,9 +3081,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -3207,9 +3097,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')
@@ -3278,9 +3166,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
       );
 
       await page.click('[data-testid="contract"]');
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('manage-contract-actions').click();
 
@@ -3296,9 +3182,7 @@ test.describe('Data Contracts Semantics Rule DisplayName', () => {
 
       await page.reload();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(
         page.getByTestId('contract-status-card-item-semantics-status')

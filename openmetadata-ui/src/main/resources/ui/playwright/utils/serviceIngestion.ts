@@ -16,7 +16,7 @@ import { BIG_ENTITY_DELETE_TIMEOUT } from '../constant/delete';
 import { GlobalSettingOptions } from '../constant/settings';
 import { EntityTypeEndpoint } from '../support/entity/Entity.interface';
 import { getApiContext, toastNotification } from './common';
-import { getEncodedFqn } from './entity';
+import { getEncodedFqn, waitForAllLoadersToDisappear } from './entity';
 
 export enum Services {
   Database = GlobalSettingOptions.DATABASES,
@@ -85,7 +85,7 @@ export const deleteService = async (
       serviceName
     )}?currentPage=1`
   );
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('entity-header-name')).toHaveText(serviceName);
 
@@ -122,7 +122,7 @@ export const deleteService = async (
   ); // Wait for up to 5 minutes for the toast notification to appear
 
   await page.reload();
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const serviceSearchResponse = page.waitForResponse((response) => {
     const url = response.url();

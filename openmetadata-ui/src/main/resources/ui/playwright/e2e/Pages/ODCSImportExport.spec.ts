@@ -49,6 +49,7 @@ import {
   navigateToContractTab,
   openODCSImportDropdown,
 } from '../../utils/odcsImportExport';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 test.describe('ODCS Import/Export', () => {
   test.slow(true);
@@ -2002,9 +2003,7 @@ version: "1.0.0"`;
         await page.getByTestId('save-contract-btn').click();
         await saveContractResponse;
 
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await expect(page.getByTestId('contract-title')).toBeVisible();
         await expect(page.getByTestId('contract-title')).toContainText(

@@ -18,6 +18,7 @@ import {
   ObservabilityFeature,
   selectAddObservabilityFeature,
 } from '../../utils/dataQuality';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -69,9 +70,7 @@ test(
       await createTestCaseResponse;
 
       await page.reload();
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByRole('tab', { name: 'Data Quality' }).click();
       await page.getByRole('tab', { name: 'Pipeline' }).click();

@@ -126,9 +126,7 @@ export const navigateToEntityPanelTab = async (page: Page, tabName: string) => {
   });
 
   await tab.click();
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const editTags = async (page: Page, tagName: string) => {
@@ -162,9 +160,7 @@ export const editTags = async (page: Page, tagName: string) => {
   const searchTagResponse = await searchTagResponsePromise;
   expect(searchTagResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   const tagOption = page.getByTitle(tagName);
   // Wait for tag option to be visible before clicking
@@ -212,9 +208,7 @@ export const editGlossaryTerms = async (page: Page, termName?: string) => {
     );
 
     await searchBar.fill(termName);
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
     const termOption = page
       .locator('.ant-list-item')
       .filter({ hasText: termName });
@@ -273,9 +267,7 @@ export const editDomain = async (page: Page, domainName: string) => {
   const patchResponse = await patchReqPromise;
   expect(patchResponse.status()).toBe(200);
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const verifyDeletedEntityNotVisible = async (
@@ -302,9 +294,7 @@ export const verifyDeletedEntityNotVisible = async (
 
   const searchResponse = await searchResponsePromise;
   expect(searchResponse.status()).toBe(200);
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   const deletedItem = page.getByTitle(entityName);
 
@@ -319,9 +309,7 @@ export const clickDataQualityStatCard = async (
     `[data-testid="data-quality-stat-card-${statType}"]`
   );
   await statCard.click();
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const navigateToIncidentsTab = async (page: Page) => {
@@ -334,9 +322,7 @@ export const navigateToIncidentsTab = async (page: Page) => {
 
   if (await incidentsTabButton.isVisible()) {
     await incidentsTabButton.click();
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
   }
 };
 
@@ -350,9 +336,7 @@ export const removeTagsFromPanel = async (
     .locator('[data-testid="selectable-list"]')
     .waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   for (const tagName of tagDisplayNames) {
     const tagOption = page.getByTitle(tagName);
@@ -383,9 +367,7 @@ export const removeGlossaryTermFromPanel = async (
     .locator('[data-testid="selectable-list"]')
     .waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
   for (const termName of termDisplayNames) {
     const searchBar = page.getByTestId('glossary-term-select-search-bar');
     await searchBar.fill(termName);
@@ -498,7 +480,7 @@ export const assignTierToPanel = async (page: Page, tierName: string) => {
   const tierPopover = page.getByTestId('cards');
   await tierPopover.waitFor({ state: 'visible' });
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 
   const tierRadioButton = page.getByTestId(`radio-btn-${tierName}`);
   await tierRadioButton.waitFor({ state: 'visible' });
@@ -513,7 +495,7 @@ export const assignTierToPanel = async (page: Page, tierName: string) => {
 
   await patchPromise;
 
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const removeTierFromPanel = async (page: Page) => {

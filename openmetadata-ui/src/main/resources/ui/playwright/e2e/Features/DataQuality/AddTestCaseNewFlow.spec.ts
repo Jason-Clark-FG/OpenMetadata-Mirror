@@ -238,9 +238,7 @@ test.describe(
           page,
           ...tableTestCaseDetails,
         });
-        await page.getByTestId('loader').first().waitFor({
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page);
 
         await expect(page.getByTestId('entity-header-name')).toHaveText(
           `${tableTestCaseDetails.testTypeId}_test_case`
@@ -355,9 +353,7 @@ test.describe(
         })
         .click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="profiler-add-table-test-btn"]');
       await selectAddObservabilityFeature(page, ObservabilityFeature.TEST_CASE);
@@ -417,9 +413,7 @@ test.describe(
         .getByTestId('edit-button')
         .click();
 
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
       await page.getByTestId('select-all-test-cases').waitFor({
         state: 'visible',
       });

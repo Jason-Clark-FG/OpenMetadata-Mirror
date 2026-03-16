@@ -15,6 +15,7 @@ import { Page } from '@playwright/test';
 import MysqlIngestionClass from '../support/entity/ingestion/MySqlIngestionClass';
 import { getApiContext, toastNotification } from './common';
 import { visitServiceDetailsPage } from './service';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export const addAndTriggerAutoClassificationPipeline = async (
   page: Page,
@@ -63,7 +64,7 @@ export const addAndTriggerAutoClassificationPipeline = async (
   await page.click('[data-testid="view-service-button"]');
 
   // Header available once page loads
-  await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+  await waitForAllLoadersToDisappear(page);
   await page.getByTestId('agents').click();
   const metadataTab2 = page.locator('[data-testid="metadata-sub-tab"]');
   if (await metadataTab2.isVisible()) {

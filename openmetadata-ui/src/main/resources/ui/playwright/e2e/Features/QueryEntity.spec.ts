@@ -20,6 +20,7 @@ import {
   redirectToHomePage,
 } from '../../utils/common';
 import { createQueryByTableName, queryFilters } from '../../utils/query';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -124,9 +125,7 @@ test('Query Entity', async ({ page }) => {
       .click();
     await ownerListResponse;
 
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await page
       .locator("[data-testid='select-owner-tabs']")
@@ -274,9 +273,7 @@ test('Query Entity', async ({ page }) => {
     expect(upVoteResponse.status()).toBe(200);
 
     await page.reload();
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.getByTestId('extra-option-container').getByTestId('up-vote-btn')
@@ -288,9 +285,7 @@ test('Query Entity', async ({ page }) => {
       .click();
 
     await page.reload();
-    await page.getByTestId('loader').first().waitFor({
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.getByTestId('extra-option-container').getByTestId('down-vote-btn')
@@ -353,9 +348,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click(`[data-testid="table_queries"]`);
   await queryResponse;
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('previous')).toBeDisabled();
 
@@ -365,9 +358,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click('[data-testid="next"]');
   await nextResponse;
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('next')).toBeDisabled();
 
@@ -377,9 +368,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.click('[data-testid="previous"]');
   await previousResponse;
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('previous')).toBeDisabled();
 
@@ -393,9 +382,7 @@ test('Verify Query Pagination', async ({ page, browser }) => {
   await page.getByTitle('25 / Page').click();
   await pageSizeResponse;
 
-  await page.getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByText('25 / page')).toBeVisible();
 

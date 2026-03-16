@@ -14,6 +14,7 @@ import { expect, test } from '@playwright/test';
 import { redirectToHomePage } from '../../utils/common';
 import { columnPaginationTable } from '../../utils/table';
 import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -25,7 +26,7 @@ test.describe('Table Version Page', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
       '/table/sample_data.ecommerce_db.shopify.performance_test_table',
       { waitUntil: 'domcontentloaded' }
     );
-    await page.getByTestId('loader').first().waitFor({ state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
     await expect(page.getByTestId('version-button')).toHaveText(/0\.1/, {
       timeout: 30000,
     });

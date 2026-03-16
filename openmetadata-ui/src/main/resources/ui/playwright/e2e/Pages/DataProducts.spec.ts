@@ -99,9 +99,7 @@ test.describe('Data Products', () => {
   test('Data Product List Page - Initial Load', async ({ page }) => {
     await test.step('Navigate to Data Products page', async () => {
       await sidebarClick(page, SidebarItem.DATA_PRODUCT);
-      await page.getByTestId('loader').first().waitFor({
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
     });
 
     await test.step('Verify page header and controls', async () => {
