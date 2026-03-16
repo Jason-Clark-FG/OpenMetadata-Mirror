@@ -120,6 +120,7 @@ export type DataQualityReportParamsType = {
   q?: string;
   aggregationQuery: string;
   index: string;
+  domain?: string;
 };
 
 export type TestCaseDimensionResultParams = {

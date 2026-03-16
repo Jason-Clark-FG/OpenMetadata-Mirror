@@ -68,7 +68,6 @@ test(
     const testCaseName1 = table.testCasesResponseData?.[0]?.['name'];
     const testCaseName2 = table.testCasesResponseData?.[1]?.['name'];
     await page.goto('/data-quality/test-suites/bundle-suites');
-    await page.waitForLoadState('networkidle');
 
     const loggedInUserRequest = ownerPage.waitForResponse(
       `/api/v1/users/loggedInUser*`
@@ -337,7 +336,6 @@ test(
       await createTestSuiteResponse;
       await toastNotification(page, 'Test Suite created successfully.');
 
-      await page.waitForLoadState('networkidle');
       await page.waitForSelector('[data-testid="loader"]', {
         state: 'detached',
       });
@@ -372,15 +370,43 @@ test(
     });
 
     await test.step('Add test case to logical test suite by owner', async () => {
-      await addTestCaseToLogicalTestSuite(
-        ownerPage,
-        NEW_TEST_SUITE.name,
-        testCaseName2 ?? ''
+      await ownerPage.goto(`test-suites/${NEW_TEST_SUITE.name}`);
+      await ownerPage.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
+      const testCaseResponse = ownerPage.waitForResponse(
+        '/api/v1/dataQuality/testCases/search/list*'
       );
     });
 
     await test.step('Add test suite pipeline', async () => {
-      await addTestSuitePipeline(page);
+      await page.getByRole('tab', { name: 'Pipeline' }).click();
+
+      await expect(page.getByTestId('add-placeholder-button')).toBeVisible();
+
+      await page.getByTestId('add-placeholder-button').click();
+      await page.getByTestId('select-all-test-cases').click();
+
+      await expect(
+        page.getByTestId('cron-type').getByText('Day')
+      ).toBeAttached();
+
+      await page.getByTestId('deploy-button').click();
+
+      await expect(page.getByTestId('view-service-button')).toBeVisible();
+
+      await page.waitForSelector('[data-testid="body-text"]', {
+        state: 'detached',
+      });
+
+      await expect(page.getByTestId('success-line')).toContainText(
+        /has been created and deployed successfully/
+      );
+
+      await page.getByTestId('view-service-button').click();
+      await page.waitForSelector('[data-testid="loader"]', {
+        state: 'detached',
+      });
     });
 
     await test.step('Remove test case from logical test suite by owner', async () => {
