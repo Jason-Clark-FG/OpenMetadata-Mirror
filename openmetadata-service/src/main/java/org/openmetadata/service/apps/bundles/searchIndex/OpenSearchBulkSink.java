@@ -646,6 +646,9 @@ public class OpenSearchBulkSink implements BulkSink {
     if (bulkProcessor != null) {
       bulkProcessor.setFailureCallback(callback);
     }
+    if (columnBulkProcessor != null) {
+      columnBulkProcessor.setFailureCallback(callback);
+    }
   }
 
   public void setStatsCallback(SinkStatsCallback callback) {

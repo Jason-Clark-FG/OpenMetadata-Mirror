@@ -610,6 +610,9 @@ public class ElasticSearchBulkSink implements BulkSink {
     if (bulkProcessor != null) {
       bulkProcessor.setFailureCallback(callback);
     }
+    if (columnBulkProcessor != null) {
+      columnBulkProcessor.setFailureCallback(callback);
+    }
   }
 
   /**
