@@ -113,9 +113,12 @@ public class ElasticSearchBulkSink implements BulkSink {
   // Failure callback
   private volatile FailureCallback failureCallback;
 
-  // Column indexing metrics
-  private final AtomicLong columnIndexed = new AtomicLong(0);
-  private final AtomicLong columnFailed = new AtomicLong(0);
+  // Column indexing: separate bulk processor with its own lifecycle
+  private final CustomBulkProcessor columnBulkProcessor;
+  private final AtomicLong columnSinkSubmitted = new AtomicLong(0);
+  private final AtomicLong columnSinkSuccess = new AtomicLong(0);
+  private final AtomicLong columnSinkFailed = new AtomicLong(0);
+  private final AtomicLong columnBuildFailed = new AtomicLong(0);
 
   public ElasticSearchBulkSink(
       SearchRepository searchRepository,
@@ -133,6 +136,7 @@ public class ElasticSearchBulkSink implements BulkSink {
 
     // Create bulk processor
     this.bulkProcessor = createBulkProcessor(batchSize, maxConcurrentRequests, maxPayloadSizeBytes);
+    this.columnBulkProcessor = createColumnBulkProcessor(maxPayloadSizeBytes);
   }
 
   private CustomBulkProcessor createBulkProcessor(
@@ -156,6 +160,23 @@ public class ElasticSearchBulkSink implements BulkSink {
         totalSuccess,
         totalFailed,
         this::updateStats,
+        circuitBreaker);
+  }
+
+  private CustomBulkProcessor createColumnBulkProcessor(long maxPayloadSizeBytes) {
+    BulkCircuitBreaker circuitBreaker = new BulkCircuitBreaker(5, 30_000, 10_000);
+    return new CustomBulkProcessor(
+        searchClient,
+        500, // larger batch for small column docs
+        maxPayloadSizeBytes,
+        2, // fewer concurrent requests
+        1000,
+        100,
+        3,
+        columnSinkSubmitted,
+        columnSinkSuccess,
+        columnSinkFailed,
+        () -> {},
         circuitBreaker);
   }
 
@@ -231,7 +252,13 @@ public class ElasticSearchBulkSink implements BulkSink {
         if (Entity.TABLE.equals(entityType)) {
           for (EntityInterface entity : entityInterfaces) {
             CompletableFuture.runAsync(
-                () -> indexTableColumns(entity, recreateIndex, reindexContext), DOC_BUILD_EXECUTOR);
+                    () -> indexTableColumns(entity, recreateIndex, reindexContext),
+                    DOC_BUILD_EXECUTOR)
+                .exceptionally(
+                    ex -> {
+                      LOG.error("Failed to index columns for table {}", entity.getName(), ex);
+                      return null;
+                    });
           }
         }
       }
@@ -449,10 +476,9 @@ public class ElasticSearchBulkSink implements BulkSink {
         }
         long estimatedSize =
             (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
-        bulkProcessor.add(operation, docId, Entity.TABLE_COLUMN, null, estimatedSize);
-        columnIndexed.incrementAndGet();
+        columnBulkProcessor.add(operation, docId, Entity.TABLE_COLUMN, null, estimatedSize);
       } catch (Exception e) {
-        columnFailed.incrementAndGet();
+        columnBuildFailed.incrementAndGet();
         LOG.error(
             "Failed to index column {} for table {}",
             column.getFullyQualifiedName(),
@@ -462,15 +488,14 @@ public class ElasticSearchBulkSink implements BulkSink {
     }
   }
 
-  /** Get stats for column indexing (columns indexed during table processing) */
+  /** Get stats for column indexing from the dedicated column bulk processor */
   public StepStats getColumnStats() {
-    StepStats columnStats = new StepStats();
-    long indexed = columnIndexed.get();
-    long failed = columnFailed.get();
-    columnStats.setTotalRecords((int) (indexed + failed));
-    columnStats.setSuccessRecords((int) indexed);
-    columnStats.setFailedRecords((int) failed);
-    return columnStats;
+    long success = columnSinkSuccess.get();
+    long failed = columnSinkFailed.get() + columnBuildFailed.get();
+    return new StepStats()
+        .withTotalRecords((int) (success + failed))
+        .withSuccessRecords((int) success)
+        .withFailedRecords((int) failed);
   }
 
   private void updateStats() {
@@ -511,23 +536,28 @@ public class ElasticSearchBulkSink implements BulkSink {
   @Override
   public void close() {
     try {
-      // Flush any pending requests
       bulkProcessor.flush();
+      columnBulkProcessor.flush();
 
-      // Wait for completion
       boolean terminated = bulkProcessor.awaitClose(60, TimeUnit.SECONDS);
       if (!terminated) {
         LOG.warn("Bulk processor did not terminate within timeout");
       }
 
-      // Final stats update to ensure all processed records are reflected
+      boolean columnTerminated = columnBulkProcessor.awaitClose(30, TimeUnit.SECONDS);
+      if (!columnTerminated) {
+        LOG.warn("Column bulk processor did not terminate within timeout");
+      }
+
       updateStats();
 
       LOG.info(
-          "Sink closed - final stats: submitted={}, success={}, failed={}",
+          "Sink closed - final stats: submitted={}, success={}, failed={}, columns: success={}, failed={}",
           totalSubmitted.get(),
           totalSuccess.get(),
-          totalFailed.get());
+          totalFailed.get(),
+          columnSinkSuccess.get(),
+          columnSinkFailed.get() + columnBuildFailed.get());
 
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while closing bulk processor", e);
@@ -544,6 +574,7 @@ public class ElasticSearchBulkSink implements BulkSink {
   public boolean flushAndAwait(int timeoutSeconds) {
     try {
       boolean completed = bulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
+      boolean columnCompleted = columnBulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
       if (completed) {
         LOG.debug(
             "Flush complete - stats: submitted={}, success={}, failed={}",
@@ -551,7 +582,7 @@ public class ElasticSearchBulkSink implements BulkSink {
             totalSuccess.get(),
             totalFailed.get());
       }
-      return completed;
+      return completed && columnCompleted;
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while waiting for flush to complete", e);
       Thread.currentThread().interrupt();
