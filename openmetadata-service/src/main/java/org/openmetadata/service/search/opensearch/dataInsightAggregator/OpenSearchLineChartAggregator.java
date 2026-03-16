@@ -18,6 +18,7 @@ import org.openmetadata.schema.dataInsight.custom.LineChart;
 import org.openmetadata.schema.dataInsight.custom.LineChartMetric;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
+import org.openmetadata.service.search.dataInsightAggregators.DynamicChartAggregatorUtils;
 import org.openmetadata.service.search.opensearch.OsUtils;
 import os.org.opensearch.client.json.JsonData;
 import os.org.opensearch.client.opensearch._types.aggregations.Aggregate;
@@ -127,7 +128,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
                 });
 
         metricAggregations.put(metricName, termsAgg);
-        startTime = end - MILLISECONDS_IN_DAY;
+        startTime = end - DynamicChartAggregatorUtils.MILLISECONDS_IN_DAY;
 
       } else {
         Aggregation dateHistogramAgg =

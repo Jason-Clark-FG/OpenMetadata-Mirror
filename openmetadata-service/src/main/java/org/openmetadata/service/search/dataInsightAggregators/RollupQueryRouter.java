@@ -133,9 +133,7 @@ public class RollupQueryRouter {
   }
 
   private static boolean isFormulaRollupCompatible(String formula) {
-    var holders =
-        org.openmetadata.service.search.elasticsearch.dataInsightAggregators
-            .ElasticSearchDynamicChartAggregatorInterface.getFormulaList(formula);
+    var holders = DynamicChartAggregatorUtils.getFormulaList(formula);
     for (FormulaHolder holder : holders) {
       if (holder.getField() != null && !ROLLUP_METRIC_FIELDS.contains(holder.getField())) {
         return false;
