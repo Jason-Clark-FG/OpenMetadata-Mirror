@@ -1,20 +1,14 @@
 package org.openmetadata.service.search.opensearch.dataInsightAggregator;
 
-import java.util.LinkedHashMap;
 import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChart;
-import org.openmetadata.schema.dataInsight.custom.LineChart;
-import org.openmetadata.schema.dataInsight.custom.SummaryCard;
+import org.openmetadata.service.search.dataInsightAggregators.DynamicChartAggregatorUtils;
 
 public class OpenSearchDynamicChartAggregatorFactory {
   public static OpenSearchDynamicChartAggregatorInterface getAggregator(
       DataInsightCustomChart diChart) {
-    if (((LinkedHashMap) diChart.getChartDetails())
-        .get("type")
-        .equals(LineChart.Type.LINE_CHART.value())) {
+    if (DynamicChartAggregatorUtils.isLineChart(diChart)) {
       return new OpenSearchLineChartAggregator();
-    } else if (((LinkedHashMap) diChart.getChartDetails())
-        .get("type")
-        .equals(SummaryCard.Type.SUMMARY_CARD.value())) {
+    } else if (DynamicChartAggregatorUtils.isSummaryCard(diChart)) {
       return new OpenSearchSummaryCardAggregator();
     }
     return null;

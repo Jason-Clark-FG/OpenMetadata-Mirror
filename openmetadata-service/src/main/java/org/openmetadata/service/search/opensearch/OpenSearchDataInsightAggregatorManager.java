@@ -26,6 +26,7 @@ import org.openmetadata.service.jdbi3.DataInsightChartRepository;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
 import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.search.DataInsightAggregatorClient;
+import org.openmetadata.service.search.dataInsightAggregators.DynamicChartAggregatorUtils;
 import org.openmetadata.service.search.opensearch.dataInsightAggregator.OpenSearchAggregatedUnusedAssetsCountAggregator;
 import org.openmetadata.service.search.opensearch.dataInsightAggregator.OpenSearchAggregatedUnusedAssetsSizeAggregator;
 import org.openmetadata.service.search.opensearch.dataInsightAggregator.OpenSearchAggregatedUsedvsUnusedAssetsCountAggregator;
@@ -93,7 +94,7 @@ public class OpenSearchDataInsightAggregatorManager implements DataInsightAggreg
         OpenSearchDynamicChartAggregatorFactory.getAggregator(diChart);
     if (aggregator != null) {
       List<FormulaHolder> formulas = new ArrayList<>();
-      Map<String, OpenSearchLineChartAggregator.MetricFormulaHolder> metricFormulaHolder =
+      Map<String, DynamicChartAggregatorUtils.MetricFormulaHolder> metricFormulaHolder =
           new HashMap<>();
       SearchRequest searchRequest =
           aggregator.prepareSearchRequest(

@@ -269,6 +269,26 @@ public final class DynamicChartAggregatorUtils {
     return resultList;
   }
 
+  public static String getChartType(DataInsightCustomChart diChart) {
+    Object details = diChart.getChartDetails();
+    if (details instanceof java.util.LinkedHashMap) {
+      return (String) ((java.util.LinkedHashMap<?, ?>) details).get("type");
+    }
+    return null;
+  }
+
+  public static boolean isLineChart(DataInsightCustomChart diChart) {
+    return org.openmetadata.schema.dataInsight.custom.LineChart.Type.LINE_CHART
+        .value()
+        .equals(getChartType(diChart));
+  }
+
+  public static boolean isSummaryCard(DataInsightCustomChart diChart) {
+    return org.openmetadata.schema.dataInsight.custom.SummaryCard.Type.SUMMARY_CARD
+        .value()
+        .equals(getChartType(diChart));
+  }
+
   @FunctionalInterface
   public interface LineChartBucketProcessor<AggType> {
     void process(String bucketKey, String subAggName, Map<String, AggType> subAggregations);

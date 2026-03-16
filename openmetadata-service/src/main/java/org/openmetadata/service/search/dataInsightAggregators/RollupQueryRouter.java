@@ -58,14 +58,9 @@ public class RollupQueryRouter {
     }
 
     try {
-      String type =
-          details instanceof java.util.LinkedHashMap
-              ? (String) ((java.util.LinkedHashMap<?, ?>) details).get("type")
-              : null;
-
-      if (LineChart.Type.LINE_CHART.value().equals(type)) {
+      if (DynamicChartAggregatorUtils.isLineChart(chart)) {
         return canUseRollupForLineChart(JsonUtils.convertValue(details, LineChart.class));
-      } else if (SummaryCard.Type.SUMMARY_CARD.value().equals(type)) {
+      } else if (DynamicChartAggregatorUtils.isSummaryCard(chart)) {
         return canUseRollupForSummaryCard(JsonUtils.convertValue(details, SummaryCard.class));
       }
     } catch (Exception e) {
