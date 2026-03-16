@@ -57,8 +57,6 @@ import org.quartz.JobExecutionContext;
 public class DataInsightsApp extends AbstractNativeApplication {
   public static final String DATA_ASSET_INDEX_PREFIX = "di-data-assets";
   public static final String MANIFEST_INDEX_NAME = "di-manifest";
-  public static final String ROLLUP_TRANSFORM_NAME = "di-daily-rollup";
-  public static final String ROLLUP_INDEX_NAME = "di-rollup-daily";
   @Getter private Long timestamp;
   @Getter private int batchSize;
 
@@ -273,47 +271,6 @@ public class DataInsightsApp extends AbstractNativeApplication {
     }
   }
 
-  public void createRollupInfrastructure() {
-    DataInsightsSearchInterface searchInterface = getSearchInterface();
-    String rollupName = searchInterface.getStringWithClusterAlias(ROLLUP_INDEX_NAME);
-    String transformId = searchInterface.getStringWithClusterAlias(ROLLUP_TRANSFORM_NAME);
-    try {
-      if (!searchInterface.indexExists(rollupName)) {
-        String rollupMapping = searchInterface.readRollupIndexMapping();
-        searchInterface.createIndex(rollupName, rollupMapping);
-        LOG.info("[Data Insights] Created rollup index: {}", rollupName);
-      }
-      if (!searchInterface.transformExists(transformId)) {
-        String transformDef = searchInterface.readTransformDefinition();
-        searchInterface.createTransform(transformId, transformDef);
-        searchInterface.startTransform(transformId);
-        LOG.info("[Data Insights] Created and started rollup transform: {}", transformId);
-      } else {
-        String status = searchInterface.getTransformStatus(transformId);
-        if (!"started".equalsIgnoreCase(status)) {
-          searchInterface.startTransform(transformId);
-          LOG.info(
-              "[Data Insights] Restarted rollup transform: {} (was {})", transformId, status);
-        }
-      }
-    } catch (IOException ex) {
-      LOG.error("[Data Insights] Failed to create rollup infrastructure", ex);
-    }
-  }
-
-  private void stopAndDeleteTransform() {
-    DataInsightsSearchInterface searchInterface = getSearchInterface();
-    String transformId = searchInterface.getStringWithClusterAlias(ROLLUP_TRANSFORM_NAME);
-    try {
-      if (searchInterface.transformExists(transformId)) {
-        searchInterface.stopTransform(transformId);
-        LOG.info("[Data Insights] Stopped rollup transform: {}", transformId);
-      }
-    } catch (IOException ex) {
-      LOG.warn("[Data Insights] Failed to stop rollup transform: {}", transformId, ex);
-    }
-  }
-
   @Override
   public void init(App app) {
     super.init(app);
@@ -347,7 +304,6 @@ public class DataInsightsApp extends AbstractNativeApplication {
     createOrUpdateDataAssetsDataStream();
     createDataQualityDataIndex();
     createManifestIndexIfAbsent();
-    createRollupInfrastructure();
 
     jobData = new EventPublisherJob().withStats(new Stats());
   }
@@ -378,12 +334,10 @@ public class DataInsightsApp extends AbstractNativeApplication {
       }
 
       if (recreateDataAssetsIndex.isPresent() && recreateDataAssetsIndex.get().equals(true)) {
-        stopAndDeleteTransform();
         deleteDataAssetsDataStream();
         createOrUpdateDataAssetsDataStream();
         deleteDataQualityDataIndex();
         createDataQualityDataIndex();
-        createRollupInfrastructure();
       }
 
       WorkflowStats webAnalyticsStats = processWebAnalytics();

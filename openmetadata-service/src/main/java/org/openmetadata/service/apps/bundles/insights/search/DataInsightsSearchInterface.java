@@ -12,8 +12,6 @@ import org.openmetadata.service.exception.UnhandledServerException;
 public interface DataInsightsSearchInterface {
   String DATA_INSIGHTS_SEARCH_CONFIG_PATH = "/dataInsights/config.json";
   String MANIFEST_INDEX_MAPPING_FILE = "manifestIndexMapping.json";
-  String TRANSFORM_DEFINITION_FILE = "transformDefinition.json";
-  String ROLLUP_INDEX_MAPPING_FILE = "rollupIndexMapping.json";
 
   void createComponentTemplate(String name, String template) throws IOException;
 
@@ -102,20 +100,6 @@ public interface DataInsightsSearchInterface {
 
   void deleteManifestIndex(String name) throws IOException;
 
-  void createTransform(String transformId, String transformDefinition) throws IOException;
-
-  void startTransform(String transformId) throws IOException;
-
-  void stopTransform(String transformId) throws IOException;
-
-  boolean transformExists(String transformId) throws IOException;
-
-  String getTransformStatus(String transformId) throws IOException;
-
-  void createIndex(String name, String mappingJson) throws IOException;
-
-  boolean indexExists(String name) throws IOException;
-
   Map<String, ManifestEntry> getManifestEntries(String manifestIndex, List<String> entityIds)
       throws IOException;
 
@@ -134,14 +118,6 @@ public interface DataInsightsSearchInterface {
 
   default String readManifestMapping() {
     return readResource(getResourcePath() + "/" + MANIFEST_INDEX_MAPPING_FILE);
-  }
-
-  default String readTransformDefinition() {
-    return readResource(getResourcePath() + "/" + TRANSFORM_DEFINITION_FILE);
-  }
-
-  default String readRollupIndexMapping() {
-    return readResource(getResourcePath() + "/" + ROLLUP_INDEX_MAPPING_FILE);
   }
 
   String getResourcePath();

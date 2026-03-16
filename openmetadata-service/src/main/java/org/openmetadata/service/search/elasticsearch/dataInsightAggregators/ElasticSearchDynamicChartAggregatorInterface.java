@@ -180,18 +180,6 @@ public interface ElasticSearchDynamicChartAggregatorInterface {
     return prepareSearchRequest(diChart, start, end, formulas, metricHolder, live);
   }
 
-  default SearchRequest prepareSearchRequest(
-      @NotNull DataInsightCustomChart diChart,
-      long start,
-      long end,
-      List<FormulaHolder> formulas,
-      Map metricHolder,
-      boolean live,
-      String filter,
-      String targetIndex)
-      throws IOException {
-    return prepareSearchRequest(diChart, start, end, formulas, metricHolder, live, filter);
-  }
 
   DataInsightCustomChartResultList processSearchResponse(
       @NotNull DataInsightCustomChart diChart,

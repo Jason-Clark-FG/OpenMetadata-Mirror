@@ -37,7 +37,6 @@ import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.datainsight.system.DataInsightSystemChartResource;
 import org.openmetadata.service.search.SearchClient;
-import org.openmetadata.service.search.dataInsightAggregators.RollupQueryRouter;
 import org.openmetadata.service.socket.WebSocketManager;
 import org.openmetadata.service.socket.messages.ChartDataStreamMessage;
 import org.openmetadata.service.util.EntityUtil;
@@ -84,8 +83,6 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
   public static final String DI_SEARCH_INDEX_PREFIX = "di-data-assets";
 
   public static final String DI_SEARCH_INDEX = "di-data-assets-*";
-
-  public static final String DI_ROLLUP_INDEX = "di-rollup-daily";
 
   private static final Set IGNORE_OTHER_SERVICE_CHARTS =
       Set.of(
@@ -142,13 +139,6 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
     return DI_SEARCH_INDEX;
   }
 
-  public static String getDataInsightsRollupIndex() {
-    String clusterAlias = Entity.getSearchRepository().getClusterAlias();
-    if (!(clusterAlias == null || clusterAlias.isEmpty())) {
-      return String.format("%s-%s", clusterAlias, DI_ROLLUP_INDEX);
-    }
-    return DI_ROLLUP_INDEX;
-  }
 
   public static String getLiveSearchIndex(String index) {
     String clusterAlias = Entity.getSearchRepository().getClusterAlias();
@@ -746,8 +736,7 @@ public class DataInsightSystemChartRepository extends EntityRepository<DataInsig
 
   public DataInsightCustomChartResultList getPreviewData(
       DataInsightCustomChart chart, long startTimestamp, long endTimestamp) throws IOException {
-    String targetIndex = RollupQueryRouter.getTargetIndex(chart);
-    return searchClient.buildDIChart(chart, startTimestamp, endTimestamp, false, null, targetIndex);
+    return searchClient.buildDIChart(chart, startTimestamp, endTimestamp);
   }
 
   public Map<String, DataInsightCustomChartResultList> listChartData(

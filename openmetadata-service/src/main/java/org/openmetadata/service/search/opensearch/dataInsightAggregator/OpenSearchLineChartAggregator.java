@@ -48,25 +48,10 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
       boolean live,
-      String filter,
-      String targetIndex)
-      throws IOException {
-    return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricFormulaHolder, live, filter, targetIndex);
-  }
-
-  @Override
-  public SearchRequest prepareSearchRequest(
-      @NotNull DataInsightCustomChart diChart,
-      long start,
-      long end,
-      List<FormulaHolder> formulas,
-      Map metricFormulaHolder,
-      boolean live,
       String filter)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricFormulaHolder, live, filter, null);
+        diChart, start, end, formulas, metricFormulaHolder, live, filter);
   }
 
   public SearchRequest prepareSearchRequest(
@@ -78,7 +63,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       boolean live)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricFormulaHolder, live, null, null);
+        diChart, start, end, formulas, metricFormulaHolder, live, null);
   }
 
   @SuppressWarnings("unchecked")
@@ -89,8 +74,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
       boolean live,
-      String filter,
-      String targetIndex)
+      String filter)
       throws IOException {
     LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
     Map<String, Aggregation> aggregationsMap = new HashMap<>();
@@ -127,7 +111,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       }
     }
 
-    return buildSearchRequest(aggregationsMap, startTime, end, live, filter, lineChart, targetIndex);
+    return buildSearchRequest(aggregationsMap, startTime, end, live, filter, lineChart);
   }
 
   private boolean hasCustomXAxis(LineChart lineChart) {
@@ -223,8 +207,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       long end,
       boolean live,
       String filter,
-      LineChart lineChart,
-      String targetIndex) {
+      LineChart lineChart) {
     SearchRequest.Builder builder = new SearchRequest.Builder().size(0);
 
     if (!live) {
@@ -237,11 +220,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
                               .gte(JsonData.of(startTime))
                               .lte(JsonData.of(end))));
       builder.query(buildQueryWithFilter(rangeQuery, filter));
-      String index =
-          targetIndex != null
-              ? targetIndex
-              : DataInsightSystemChartRepository.getDataInsightsSearchIndex();
-      builder.index(index);
+      builder.index(DataInsightSystemChartRepository.getDataInsightsSearchIndex());
     } else {
       builder.index(
           DataInsightSystemChartRepository.getLiveSearchIndex(lineChart.getSearchIndex()));

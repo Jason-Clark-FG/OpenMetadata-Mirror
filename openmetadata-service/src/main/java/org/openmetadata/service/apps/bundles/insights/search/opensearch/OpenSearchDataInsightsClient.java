@@ -117,61 +117,6 @@ public class OpenSearchDataInsightsClient implements DataInsightsSearchInterface
   }
 
   @Override
-  public void createTransform(String transformId, String transformDefinition) throws IOException {
-    performRequest(
-        "PUT", String.format("/_plugins/_transform/%s", transformId), transformDefinition);
-  }
-
-  @Override
-  public void startTransform(String transformId) throws IOException {
-    performRequest("POST", String.format("/_plugins/_transform/%s/_start", transformId));
-  }
-
-  @Override
-  public void stopTransform(String transformId) throws IOException {
-    performRequest("POST", String.format("/_plugins/_transform/%s/_stop", transformId));
-  }
-
-  @Override
-  public boolean transformExists(String transformId) throws IOException {
-    try {
-      performRequest("GET", String.format("/_plugins/_transform/%s", transformId));
-      return true;
-    } catch (IOException e) {
-      if (e.getMessage() != null && e.getMessage().contains("404")) {
-        return false;
-      }
-      throw e;
-    }
-  }
-
-  @Override
-  public String getTransformStatus(String transformId) throws IOException {
-    var response =
-        performRequest("GET", String.format("/_plugins/_transform/%s/_stats", transformId));
-    String body = new String(response.getBody().get().bodyAsBytes());
-    if (body.contains("\"state\":\"started\"")) {
-      return "started";
-    } else if (body.contains("\"state\":\"stopped\"")) {
-      return "stopped";
-    } else if (body.contains("\"state\":\"failed\"")) {
-      return "failed";
-    }
-    return "unknown";
-  }
-
-  @Override
-  public void createIndex(String name, String mappingJson) throws IOException {
-    performRequest("PUT", String.format("/%s", name), mappingJson);
-  }
-
-  @Override
-  public boolean indexExists(String name) throws IOException {
-    var response = performRequest("HEAD", String.format("/%s", name));
-    return response.getStatus() == 200;
-  }
-
-  @Override
   public String buildMapping(
       String entityType,
       IndexMapping entityIndexMapping,

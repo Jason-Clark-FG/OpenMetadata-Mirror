@@ -37,25 +37,10 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       List<FormulaHolder> formulas,
       Map metricHolder,
       boolean live,
-      String filter,
-      String targetIndex)
-      throws IOException {
-    return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricHolder, live, filter, targetIndex);
-  }
-
-  @Override
-  public SearchRequest prepareSearchRequest(
-      @NotNull DataInsightCustomChart diChart,
-      long start,
-      long end,
-      List<FormulaHolder> formulas,
-      Map metricHolder,
-      boolean live,
       String filter)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricHolder, live, filter, null);
+        diChart, start, end, formulas, metricHolder, live, filter);
   }
 
   @Override
@@ -68,7 +53,7 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       boolean live)
       throws IOException {
     return prepareSearchRequestInternal(
-        diChart, start, end, formulas, metricHolder, live, null, null);
+        diChart, start, end, formulas, metricHolder, live, null);
   }
 
   private SearchRequest prepareSearchRequestInternal(
@@ -78,8 +63,7 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       List<FormulaHolder> formulas,
       Map metricHolder,
       boolean live,
-      String filter,
-      String targetIndex)
+      String filter)
       throws IOException {
 
     SummaryCard summaryCard = JsonUtils.convertValue(diChart.getChartDetails(), SummaryCard.class);
@@ -120,11 +104,7 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
 
       Query finalQuery = buildQueryWithFilter(rangeQuery, filter);
       searchRequestBuilder.query(finalQuery);
-      String index =
-          targetIndex != null
-              ? targetIndex
-              : DataInsightSystemChartRepository.getDataInsightsSearchIndex();
-      searchRequestBuilder.index(index);
+      searchRequestBuilder.index(DataInsightSystemChartRepository.getDataInsightsSearchIndex());
     } else {
       searchRequestBuilder.index(DataInsightSystemChartRepository.getLiveSearchIndex(null));
     }
