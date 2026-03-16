@@ -4943,6 +4943,17 @@ public interface CollectionDAO {
     List<TagLabelWithFQNHash> getTagsInternalBatch(
         @BindListFQN("targetFQNHashes") List<String> targetFQNHashes);
 
+    @SqlQuery(
+        "SELECT targetFQNHash, source, tagFQN, labelType, state, reason, appliedAt, appliedBy, metadata "
+            + "FROM tag_usage "
+            + "WHERE targetFQNHash IN (<targetFQNHashes>) "
+            + "AND tagFQN LIKE :tagFQNPrefix "
+            + "ORDER BY targetFQNHash, tagFQN")
+    @UseRowMapper(TagLabelWithFQNHashMapper.class)
+    List<TagLabelWithFQNHash> getCertTagsInternalBatch(
+        @BindListFQN("targetFQNHashes") List<String> targetFQNHashes,
+        @Bind("tagFQNPrefix") String tagFQNPrefix);
+
     /**
      * Batch fetch derived tags for multiple glossary term FQNs. Returns a map from glossary term
      * FQN to its derived tags (tags that target that glossary term).
@@ -5323,10 +5334,22 @@ public interface CollectionDAO {
 
       public TagLabel toTagLabel() {
         TagLabel tagLabel = new TagLabel();
-        tagLabel.setSource(TagLabel.TagSource.values()[this.source]);
+        TagLabel.TagSource[] sources = TagLabel.TagSource.values();
+        tagLabel.setSource(
+            this.source >= 0 && this.source < sources.length
+                ? sources[this.source]
+                : TagLabel.TagSource.CLASSIFICATION);
         tagLabel.setTagFQN(this.tagFQN);
-        tagLabel.setLabelType(TagLabel.LabelType.values()[this.labelType]);
-        tagLabel.setState(TagLabel.State.values()[this.state]);
+        TagLabel.LabelType[] labelTypes = TagLabel.LabelType.values();
+        tagLabel.setLabelType(
+            this.labelType >= 0 && this.labelType < labelTypes.length
+                ? labelTypes[this.labelType]
+                : TagLabel.LabelType.MANUAL);
+        TagLabel.State[] states = TagLabel.State.values();
+        tagLabel.setState(
+            this.state >= 0 && this.state < states.length
+                ? states[this.state]
+                : TagLabel.State.CONFIRMED);
         tagLabel.setReason(this.reason);
         tagLabel.setAppliedAt(this.appliedAt);
         tagLabel.setAppliedBy(this.appliedBy);

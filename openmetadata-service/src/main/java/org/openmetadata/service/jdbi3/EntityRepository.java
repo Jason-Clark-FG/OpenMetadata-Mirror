@@ -7173,7 +7173,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
       LocalDateTime targetDateTime = nowDateTime.plus(datePeriod);
       updatedCertification.setExpiryDate(targetDateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
 
-      deleteCertificationTag(updated.getFullyQualifiedName());
       applyCertification(updated);
 
       recordChange(FIELD_CERTIFICATION, origCertification, updatedCertification, true);
@@ -8921,9 +8920,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
           FullyQualifiedName.buildHash(entity.getFullyQualifiedName()), entity.getId());
     }
 
-    List<CollectionDAO.TagUsageDAO.TagLabelWithFQNHash> allTags;
+    List<CollectionDAO.TagUsageDAO.TagLabelWithFQNHash> certTags;
     try {
-      allTags = daoCollection.tagUsageDAO().getTagsInternalBatch(fqnList);
+      certTags =
+          daoCollection.tagUsageDAO().getCertTagsInternalBatch(fqnList, certClassification + ".%");
     } catch (Exception e) {
       LOG.warn(
           "batchFetchCertification: batch query failed, falling back to individual fetch: {}",
@@ -8934,11 +8934,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return result;
     }
 
-    for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash tagWithHash : allTags) {
-      String tagFqn = tagWithHash.getTagFQN();
-      if (!certClassification.equals(FullyQualifiedName.getParentFQN(tagFqn))) {
-        continue;
-      }
+    for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash tagWithHash : certTags) {
       UUID entityId = entityIdByFqnHash.get(tagWithHash.getTargetFQNHash());
       if (entityId == null || result.containsKey(entityId)) {
         continue;

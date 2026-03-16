@@ -356,10 +356,18 @@ public class MigrationUtil {
   private static String buildCertMetadata(Object expiryDateVal) {
     ObjectNode node = MAPPER.createObjectNode();
     if (expiryDateVal != null) {
-      try {
-        node.put("expiryDate", Long.parseLong(expiryDateVal.toString()));
-      } catch (NumberFormatException ignored) {
-        node.putNull("expiryDate");
+      if (expiryDateVal instanceof Long longVal) {
+        node.put("expiryDate", longVal);
+      } else if (expiryDateVal instanceof Number numberVal) {
+        node.put("expiryDate", numberVal.longValue());
+      } else {
+        try {
+          node.put("expiryDate", Long.parseLong(expiryDateVal.toString()));
+        } catch (NumberFormatException e) {
+          LOG.warn(
+              "buildCertMetadata: unparseable expiryDate value '{}', storing null", expiryDateVal);
+          node.putNull("expiryDate");
+        }
       }
     } else {
       node.putNull("expiryDate");

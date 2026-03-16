@@ -16,5 +16,5 @@
       "format": "utc-millisec"
     }
   },
-  "additionalProperties": true
+  "additionalProperties": false
 }
