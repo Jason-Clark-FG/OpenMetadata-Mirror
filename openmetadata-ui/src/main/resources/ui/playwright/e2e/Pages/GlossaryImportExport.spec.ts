@@ -39,7 +39,6 @@ import { addMultiOwner,
 } from '../../utils/entity';
 import {
   selectActiveGlossary,
-  selectActiveGlossaryTerm,
 } from '../../utils/glossary';
 import {
   createGlossaryTermRowDetails,
@@ -261,7 +260,10 @@ test.describe('Glossary Bulk Import Export', () => {
         page.getByTestId('bulk-import-details-modal').locator('.rdg-header-row')
       ).toBeVisible();
 
-      await page.getByTestId('close-modal-button').click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Close' })
+        .click();
 
       await expect(
         page.getByTestId('bulk-import-details-modal')
