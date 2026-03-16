@@ -21,6 +21,7 @@ SNOWFLAKE_GET_TABLE_NAMES = """
         CASE
             WHEN IS_TRANSIENT = 'YES' THEN 'TRANSIENT TABLE'
             WHEN IS_DYNAMIC = 'YES' THEN 'DYNAMIC TABLE'
+            WHEN IS_ICEBERG = 'YES' THEN 'ICEBERG TABLE'
             ELSE TABLE_TYPE
         END as TABLE_TYPE
     from information_schema.tables
@@ -38,6 +39,7 @@ from (
         CASE
             WHEN IS_TRANSIENT = 'YES' THEN 'TRANSIENT TABLE'
             WHEN IS_DYNAMIC = 'YES' THEN 'DYNAMIC TABLE'
+            WHEN IS_ICEBERG = 'YES' THEN 'ICEBERG TABLE'
             ELSE TABLE_TYPE
         END as COMPUTED_TABLE_TYPE,
         ROW_NUMBER() over (
@@ -97,6 +99,20 @@ SNOWFLAKE_FETCH_SCHEMA_TAGS = textwrap.dedent(
       and OBJECT_NAME IS NOT NULL
       and COLUMN_NAME IS NULL
       and DOMAIN = 'SCHEMA'
+      and OBJECT_DELETED IS NULL
+"""
+)
+
+SNOWFLAKE_FETCH_DATABASE_TAGS = textwrap.dedent(
+    """
+    select TAG_NAME, TAG_VALUE, OBJECT_DATABASE as DATABASE_NAME
+    from {account_usage}.tag_references
+    where OBJECT_DATABASE = '{database_name}'
+      and OBJECT_SCHEMA IS NULL
+      and OBJECT_NAME IS NULL
+      and COLUMN_NAME IS NULL
+      and DOMAIN = 'DATABASE'
+      and OBJECT_DELETED IS NULL
 """
 )
 

@@ -6,6 +6,7 @@ import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
 import static org.openmetadata.service.Entity.APPLICATION;
 import static org.openmetadata.service.Entity.FIELD_OWNERS;
 import static org.openmetadata.service.jdbi3.EntityRepository.getEntitiesFromSeedData;
+import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
 
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
@@ -87,6 +88,7 @@ import org.openmetadata.service.secrets.masker.EntityMaskerFactory;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
+import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.DeleteEntityResponse;
 import org.openmetadata.service.util.EntityUtil;
@@ -480,9 +482,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String after) {
     App installation = repository.getByName(uriInfo, name, repository.getFields("id,pipelines"));
     if (installation.getAppType().equals(AppType.Internal)) {
-      return Response.status(Response.Status.OK)
-          .entity(repository.getLatestAppRuns(installation))
-          .build();
+      AppRunRecord latestRun = repository.getLatestAppRunsOptional(installation).orElse(null);
+      if (latestRun == null) {
+        return Response.status(Response.Status.NO_CONTENT).build();
+      }
+      return Response.status(Response.Status.OK).entity(latestRun).build();
     } else {
       if (!installation.getPipelines().isEmpty()) {
         EntityReference pipelineRef = installation.getPipelines().get(0);
@@ -529,9 +533,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String after) {
     App installation = repository.getByName(uriInfo, name, repository.getFields("id,pipelines"));
     if (installation.getAppType().equals(AppType.Internal)) {
-      return Response.status(Response.Status.OK)
-          .entity(repository.getLatestAppRuns(installation))
-          .build();
+      AppRunRecord latestRun = repository.getLatestAppRunsOptional(installation).orElse(null);
+      if (latestRun == null) {
+        return Response.status(Response.Status.NO_CONTENT).build();
+      }
+      return Response.status(Response.Status.OK).entity(latestRun).build();
     } else {
       if (!installation.getPipelines().isEmpty()) {
         EntityReference pipelineRef = installation.getPipelines().get(0);
@@ -706,6 +712,14 @@ public class AppResource extends EntityResource<App, AppRepository> {
       })
   public Response create(
       @Context UriInfo uriInfo, @Context SecurityContext securityContext, @Valid CreateApp create) {
+    // Only admins can create apps with bot impersonation enabled
+    if (Boolean.TRUE.equals(create.getAllowBotImpersonation())) {
+      SubjectContext subjectContext = getSubjectContext(securityContext);
+      if (!subjectContext.isAdmin()) {
+        throw new AuthorizationException(
+            "Only admins can create applications with bot impersonation enabled");
+      }
+    }
     App app = mapper.createToEntity(create, securityContext.getUserPrincipal().getName());
     limits.enforceLimits(
         securityContext,
@@ -836,6 +850,14 @@ public class AppResource extends EntityResource<App, AppRepository> {
   public Response createOrUpdate(
       @Context UriInfo uriInfo, @Context SecurityContext securityContext, @Valid CreateApp create)
       throws SchedulerException {
+    // Only admins can create apps with bot impersonation enabled
+    if (Boolean.TRUE.equals(create.getAllowBotImpersonation())) {
+      SubjectContext subjectContext = getSubjectContext(securityContext);
+      if (!subjectContext.isAdmin()) {
+        throw new AuthorizationException(
+            "Only admins can create applications with bot impersonation enabled");
+      }
+    }
     App app = mapper.createToEntity(create, securityContext.getUserPrincipal().getName());
     AppScheduler.getInstance().deleteScheduledApplication(app);
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
@@ -1102,6 +1124,10 @@ public class AppResource extends EntityResource<App, AppRepository> {
           Map<String, Object> configPayload) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
+    if (Boolean.FALSE.equals(ApplicationHandler.getInstance().isEnabled(name))) {
+      throw AppException.byMessage(
+          name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
+    }
     if (app.getAppType().equals(AppType.Internal)) {
       ApplicationHandler.getInstance()
           .triggerApplicationOnDemand(
@@ -1150,7 +1176,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
     App app = repository.getByName(uriInfo, name, fields);
     if (Boolean.TRUE.equals(app.getSupportsInterrupt())) {
       if (app.getAppType().equals(AppType.Internal)) {
-        new Thread(() -> AppScheduler.getInstance().stopApplicationRun(app)).start();
+        Thread.ofVirtual()
+            .name("om-app-stop-" + name)
+            .start(() -> AppScheduler.getInstance().stopApplicationRun(app));
         return Response.status(Response.Status.OK)
             .entity("Application stop in progress. Please check status via.")
             .build();
@@ -1189,6 +1217,10 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String name) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
+    if (Boolean.FALSE.equals(ApplicationHandler.getInstance().isEnabled(name))) {
+      throw AppException.byMessage(
+          name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
+    }
     if (app.getAppType().equals(AppType.Internal)) {
       ApplicationHandler.getInstance()
           .installApplication(

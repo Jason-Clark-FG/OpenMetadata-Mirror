@@ -10,7 +10,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Dropdown, Menu, Segmented, Space, Typography } from 'antd';
+import {
+  Button,
+  Divider,
+  Dropdown,
+  Menu,
+  Segmented,
+  Space,
+  Typography,
+} from 'antd';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
@@ -95,8 +103,10 @@ export const ActivityFeedTab = ({
     root: document.querySelector('#center-container'),
     rootMargin: '0px 0px 2px 0px',
   });
-  const { subTab: activeTab = subTab } =
-    useRequiredParams<{ tab: EntityTabs; subTab: ActivityFeedTabs }>();
+  const { subTab: activeTab = subTab } = useRequiredParams<{
+    tab: EntityTabs;
+    subTab: ActivityFeedTabs;
+  }>();
   const [taskFilter, setTaskFilter] = useState<TaskStatusGroup>('open');
   const [isFullWidth, setIsFullWidth] = useState<boolean>(false);
   const [countData, setCountData] = useState<{
@@ -612,7 +622,11 @@ export const ActivityFeedTab = ({
   }, [activeTab, selectedThread]);
 
   return (
-    <div className="activity-feed-tab">
+    <div
+      className={classNames('activity-feed-tab', {
+        'two-panel-layout-container':
+          layoutType === ActivityFeedLayoutType.TWO_PANEL,
+      })}>
       {layoutType === ActivityFeedLayoutType.THREE_PANEL && (
         <Menu
           className="custom-menu p-t-sm"
@@ -760,6 +774,10 @@ export const ActivityFeedTab = ({
             />
           )}
       </div>
+
+      {layoutType === ActivityFeedLayoutType.THREE_PANEL && (
+        <Divider className="feed-divider h-100 m-0" type="vertical" />
+      )}
 
       <div
         className={classNames('right-container', {

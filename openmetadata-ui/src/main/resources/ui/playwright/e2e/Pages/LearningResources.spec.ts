@@ -15,6 +15,7 @@ import { GlobalSettingOptions } from '../../constant/settings';
 import { SidebarItem } from '../../constant/sidebar';
 import { Glossary } from '../../support/glossary/Glossary';
 import { LearningResourceClass } from '../../support/learning/LearningResourceClass';
+import { AdminClass } from '../../support/user/AdminClass';
 import {
   createNewPage,
   getApiContext,
@@ -27,7 +28,15 @@ import { settingClick, sidebarClick } from '../../utils/sidebar';
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
 async function goToLearningResourcesAdmin(page: Page) {
-  await redirectToHomePage(page);
+  const admin = new AdminClass();
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
+  if (page.url().includes('/signin')) {
+    await admin.login(page);
+  }
+
+  await page.waitForURL('**/my-data');
   await settingClick(page, GlobalSettingOptions.LEARNING_RESOURCES);
   await waitForAllLoadersToDisappear(page);
   await expect(page.getByTestId('learning-resources-page')).toBeVisible();
@@ -337,25 +346,213 @@ test.describe(
         );
       });
 
-      await test.step(
-        'Click resource card and verify player opens',
-        async () => {
-          const resourceCard = page.getByTestId(
-            `learning-resource-card-PW_Player_Resource_${uniqueId}`
-          );
-          await expect(resourceCard).toBeVisible();
-          await resourceCard.click();
+      await test.step('Click resource card and verify player opens', async () => {
+        const resourceCard = page.getByTestId(
+          `learning-resource-card-PW_Player_Resource_${uniqueId}`
+        );
+        await expect(resourceCard).toBeVisible();
+        await resourceCard.click();
 
-          const playerDialog = page.getByRole('dialog');
-          await expect(playerDialog).toBeVisible();
-          await expect(
-            playerDialog.getByText(`PW Player Resource ${uniqueId}`)
-          ).toBeVisible();
-        }
-      );
+        const playerDialog = page.getByRole('dialog');
+        await expect(playerDialog).toBeVisible();
+        await expect(
+          playerDialog.getByText(`PW Player Resource ${uniqueId}`)
+        ).toBeVisible();
+      });
     });
   }
 );
+
+async function applyLearningResourceFilter(
+  page: Page,
+  filterLabel: string,
+  optionKey: string
+) {
+  await page.getByTestId(`search-dropdown-${filterLabel}`).click();
+  await expect(page.getByTestId('drop-down-menu')).toBeVisible();
+  const option = page.getByTestId(optionKey);
+  await expect(option).toBeVisible();
+  await option.click();
+
+  const filterResponse = page.waitForResponse(
+    (r) =>
+      r.url().includes('/api/v1/learning/resources') &&
+      r.request().method() === 'GET'
+  );
+  const updateBtn = page.getByTestId('update-btn');
+  await expect(updateBtn).toBeVisible();
+  await expect(updateBtn).toBeEnabled();
+  await updateBtn.click();
+
+  const response = await filterResponse;
+  await waitForAllLoadersToDisappear(page);
+
+  return response;
+}
+
+test.describe('Learning Resources - Search and Filters', () => {
+  const videoResource = new LearningResourceClass({
+    resourceType: 'Video',
+    categories: ['Discovery'],
+    contexts: [{ pageId: 'glossary' }],
+    status: 'Active',
+  });
+  const storylaneResource = new LearningResourceClass({
+    resourceType: 'Storylane',
+    categories: ['DataGovernance'],
+    contexts: [{ pageId: 'lineage' }],
+    status: 'Draft',
+  });
+
+  test.beforeAll(async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await videoResource.create(apiContext);
+    await storylaneResource.create(apiContext);
+    await afterAction();
+  });
+
+  test.afterAll(async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await videoResource.delete(apiContext);
+    await storylaneResource.delete(apiContext);
+    await afterAction();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await goToLearningResourcesAdmin(page);
+  });
+
+  test('should send correct search param to API when searching', async ({
+    page,
+  }) => {
+    const searchTerm = videoResource.data.name;
+
+    await test.step('Type search term and verify API receives search param', async () => {
+      const searchResponse = page.waitForResponse(
+        (r) =>
+          r.url().includes('/api/v1/learning/resources') &&
+          r.url().includes('search=') &&
+          r.request().method() === 'GET'
+      );
+
+      await page
+        .getByRole('textbox', { name: 'Search Resource' })
+        .fill(searchTerm);
+      const response = await searchResponse;
+      await waitForAllLoadersToDisappear(page);
+
+      expect(response.url()).toContain(
+        `search=${encodeURIComponent(searchTerm)}`
+      );
+    });
+
+    await test.step('Verify search result is shown in table', async () => {
+      await expect(
+        page.getByText(
+          videoResource.data.displayName ?? videoResource.data.name
+        )
+      ).toBeVisible();
+    });
+  });
+
+  test('should send correct resourceType param when filtering by type', async ({
+    page,
+  }) => {
+    await test.step('Apply Video type filter and verify API param', async () => {
+      const response = await applyLearningResourceFilter(page, 'Type', 'Video');
+      expect(response.url()).toContain('resourceType=Video');
+    });
+
+    await test.step('Verify filter chip is shown', async () => {
+      await expect(
+        page.locator('.filter-selection-chip').filter({ hasText: 'Video' })
+      ).toBeVisible();
+    });
+  });
+
+  test('should send correct category param when filtering by category', async ({
+    page,
+  }) => {
+    await test.step('Apply Discovery category filter and verify API param', async () => {
+      const response = await applyLearningResourceFilter(
+        page,
+        'Categories',
+        'Discovery'
+      );
+      expect(response.url()).toContain('category=Discovery');
+    });
+
+    await test.step('Verify filter chip is shown', async () => {
+      await expect(page.getByTitle('Discovery')).toBeVisible();
+    });
+  });
+
+  test('should send correct pageId param when filtering by context', async ({
+    page,
+  }) => {
+    await test.step('Apply Glossary context filter and verify API param', async () => {
+      const response = await applyLearningResourceFilter(
+        page,
+        'Context',
+        'glossary'
+      );
+      expect(response.url()).toContain('pageId=glossary');
+    });
+
+    await test.step('Verify filter chip is shown', async () => {
+      await expect(page.getByTitle('Glossary')).toBeVisible();
+    });
+  });
+
+  test('should send correct status param when filtering by status', async ({
+    page,
+  }) => {
+    await test.step('Apply Active status filter and verify API param', async () => {
+      const response = await applyLearningResourceFilter(
+        page,
+        'Status',
+        'Active'
+      );
+      expect(response.url()).toContain('status=Active');
+    });
+
+    await test.step('Verify filter chip is shown', async () => {
+      await expect(page.getByTitle('Active')).toBeVisible();
+    });
+  });
+
+  test('should clear all filters and reload without filter params', async ({
+    page,
+  }) => {
+    await test.step('Apply a filter first', async () => {
+      await applyLearningResourceFilter(page, 'Type', 'Video');
+      await expect(page.getByTitle('Video')).toBeVisible();
+    });
+
+    await test.step('Clear all filters and verify clean API call', async () => {
+      const clearResponse = page.waitForResponse(
+        (r) =>
+          r.url().includes('/api/v1/learning/resources') &&
+          r.request().method() === 'GET'
+      );
+      await page.getByRole('button', { name: /clear all/i }).click();
+      const response = await clearResponse;
+      await waitForAllLoadersToDisappear(page);
+
+      expect(response.url()).not.toContain('resourceType=');
+      expect(response.url()).not.toContain('category=');
+      expect(response.url()).not.toContain('pageId=');
+      expect(response.url()).not.toContain('status=');
+      expect(response.url()).not.toContain('search=');
+    });
+
+    await test.step('Verify filter chips are gone', async () => {
+      await expect(
+        page.locator('.filter-selection-container')
+      ).not.toBeVisible();
+    });
+  });
+});
 
 test.describe(
   'Learning Resources E2E Flow',
@@ -403,23 +600,20 @@ test.describe(
         await waitForAllLoadersToDisappear(page);
       });
 
-      await test.step(
-        'Navigate to Glossary and verify resource in learning drawer',
-        async () => {
-          await sidebarClick(page, SidebarItem.GLOSSARY);
-          await waitForAllLoadersToDisappear(page);
+      await test.step('Navigate to Glossary and verify resource in learning drawer', async () => {
+        await sidebarClick(page, SidebarItem.GLOSSARY);
+        await waitForAllLoadersToDisappear(page);
 
-          const learningIcon = page.getByTestId('learning-icon');
-          await expect(learningIcon).toBeVisible();
-          await learningIcon.click();
+        const learningIcon = page.getByTestId('learning-icon');
+        await expect(learningIcon).toBeVisible();
+        await learningIcon.click();
 
-          const drawer = page.getByTestId('learning-drawer');
-          await expect(drawer).toBeVisible();
-          await scrollDrawerToShowResource(page, resourceName);
-          await expect(drawer.getByText(resourceName)).toBeVisible();
-          await page.keyboard.press('Escape');
-        }
-      );
+        const drawer = page.getByTestId('learning-drawer');
+        await expect(drawer).toBeVisible();
+        await scrollDrawerToShowResource(page, resourceName);
+        await expect(drawer.getByText(resourceName)).toBeVisible();
+        await page.keyboard.press('Escape');
+      });
     });
   }
 );

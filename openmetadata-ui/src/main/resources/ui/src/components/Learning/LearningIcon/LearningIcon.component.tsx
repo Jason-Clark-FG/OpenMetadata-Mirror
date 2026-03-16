@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Box, Button, useTheme } from '@mui/material';
+import { ArrowRight } from '@untitledui/icons';
 import { Popover } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -83,11 +83,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         {t('label.learn-how-this-feature-works')}
       </Box>
       <Button
-        endIcon={
-          <ArrowForwardIcon
-            sx={{ fontSize: theme.typography.body2.fontSize }}
-          />
-        }
+        endIcon={<ArrowRight size={14} />}
         size="small"
         sx={{
           borderRadius: theme.spacing(1.25),
@@ -102,7 +98,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         }}
         variant="text"
         onClick={handleClick}>
-        {resourceCount} {t('label.resource-plural').toLowerCase()}
+        {resourceCount} {t('label.tutorial-plural').toLowerCase()}
       </Button>
     </Box>
   );
@@ -130,9 +126,14 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
             verticalAlign: 'middle',
             position: 'relative',
             borderRadius: theme.spacing(2),
-            backgroundColor: theme.palette.grey[100],
+            backgroundColor: theme.palette.primary.light + '1A',
             padding: theme.spacing(0.5),
             height: 'fit-content',
+            color: theme.palette.primary.main,
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: theme.palette.primary.light + '33',
+            },
           }}
           onClick={handleClick}>
           <Box
@@ -146,7 +147,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
                 transform: 'scale(1.1)',
               },
             }}>
-            <LearningIconSvg height={16} width={16} />
+            <LearningIconSvg height={18} width={18} />
           </Box>
         </Box>
       </Popover>

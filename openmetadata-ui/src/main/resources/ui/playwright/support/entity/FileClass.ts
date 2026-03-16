@@ -12,6 +12,11 @@
  */
 import { APIRequestContext, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
+import {
+  Column,
+  DataType,
+  File,
+} from '../../../src/generated/entity/data/file';
 import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { uuid } from '../../utils/common';
@@ -23,16 +28,10 @@ import {
 } from './Entity.interface';
 import { EntityClass } from './EntityClass';
 
-export interface FileChildrenDetails {
-  name: string;
-  dataType: string;
-  dataTypeDisplay?: string;
-  children?: Array<FileChildrenDetails>;
-}
-
 export class FileClass extends EntityClass {
-  private fileName = `pw-file-${uuid()}`;
-  private serviceName = `pw-directory-service-${uuid()}`;
+  private readonly fileName = `pw-file-${uuid()}`;
+  private readonly directoryName = `pw-directory-${uuid()}`;
+  private readonly serviceName = `pw-directory-service-${uuid()}`;
 
   service = {
     name: this.serviceName,
@@ -62,18 +61,18 @@ export class FileClass extends EntityClass {
     },
   };
 
-  children: Array<FileChildrenDetails>;
+  children: Column[];
   entity: {
     name: string;
     displayName: string;
     service: string;
     description: string;
-    columns?: FileChildrenDetails[];
+    columns?: Column[];
   };
 
   serviceResponseData: ResponseDataType = {} as ResponseDataType;
-  entityResponseData: ResponseDataWithServiceType =
-    {} as ResponseDataWithServiceType;
+  directoryResponseData: ResponseDataType = {} as ResponseDataType;
+  entityResponseData: File = {} as File;
 
   constructor(name?: string) {
     super(EntityTypeEndpoint.File);
@@ -85,29 +84,29 @@ export class FileClass extends EntityClass {
     this.children = [
       {
         name: 'sample_column_1',
-        dataType: 'BITMAP',
+        dataType: DataType.Bitmap,
       },
       {
         name: 'sample_column_2',
-        dataType: 'BITMAP',
+        dataType: DataType.Bitmap,
         children: [
           {
             name: 'nested_column_1',
-            dataType: 'BITMAP',
+            dataType: DataType.Bitmap,
             children: [
               {
                 name: 'deeply_nested_column_1',
-                dataType: 'BIGINT',
+                dataType: DataType.Bigint,
               },
               {
                 name: 'deeply_nested_column_2',
-                dataType: 'BIGINT',
+                dataType: DataType.Bigint,
               },
             ],
           },
           {
             name: 'nested_column_2',
-            dataType: 'BIGINT',
+            dataType: DataType.Bigint,
           },
         ],
       },
@@ -130,18 +129,37 @@ export class FileClass extends EntityClass {
     );
     this.serviceResponseData = await serviceResponse.json();
 
-    // Create directories
+    // Create directory
+    const directoryResponse = await apiContext.post(
+      '/api/v1/drives/directories',
+      {
+        data: {
+          name: this.directoryName,
+          service: this.serviceResponseData.fullyQualifiedName,
+        },
+      }
+    );
+    this.directoryResponseData = await directoryResponse.json();
+
+    // Create file in directory
     const entityResponse = await apiContext.post(
       `/api/v1/${EntityTypeEndpoint.File}`,
       {
-        data: this.entity,
+        data: {
+          ...this.entity,
+          directory: this.directoryResponseData.fullyQualifiedName,
+        },
       }
     );
     this.entityResponseData = await entityResponse.json();
 
+    this.childrenSelectorId =
+      this.entityResponseData.columns?.[0]?.fullyQualifiedName ?? '';
+
     return {
-      service: serviceResponse.body,
-      entity: entityResponse.body,
+      service: this.serviceResponseData,
+      directory: this.directoryResponseData,
+      entity: this.entityResponseData,
     };
   }
 
@@ -172,16 +190,19 @@ export class FileClass extends EntityClass {
   get() {
     return {
       service: this.serviceResponseData,
+      directory: this.directoryResponseData,
       entity: this.entityResponseData,
     };
   }
 
   public set(data: {
-    entity: ResponseDataWithServiceType;
+    entity: File;
     service: ResponseDataType;
+    directory: ResponseDataType;
   }): void {
     this.entityResponseData = data.entity;
     this.serviceResponseData = data.service;
+    this.directoryResponseData = data.directory;
   }
 
   async visitEntityPage(page: Page) {
@@ -195,7 +216,7 @@ export class FileClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/driveServices/name/${encodeURIComponent(
-        this.serviceResponseData?.['fullyQualifiedName']
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

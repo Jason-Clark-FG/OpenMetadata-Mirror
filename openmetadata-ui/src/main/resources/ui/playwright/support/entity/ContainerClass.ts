@@ -13,6 +13,12 @@
 import { APIRequestContext, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
 import { isUndefined } from 'lodash';
+import {
+  Column,
+  Constraint,
+  Container,
+  DataType,
+} from '../../../src/generated/entity/data/container';
 import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { uuid } from '../../utils/common';
@@ -25,8 +31,8 @@ import {
 import { EntityClass } from './EntityClass';
 
 export class ContainerClass extends EntityClass {
-  private containerName: string;
-  private childContainerName: string;
+  private readonly containerName: string;
+  private readonly childContainerName: string;
   service: {
     name: string;
     serviceType: string;
@@ -50,16 +56,7 @@ export class ContainerClass extends EntityClass {
     service: string;
     dataModel: {
       isPartitioned: boolean;
-      columns: Array<{
-        name: string;
-        dataType: string;
-        dataLength?: number;
-        dataTypeDisplay: string;
-        description: string;
-        tags: unknown[];
-        ordinalPosition: number;
-        constraint?: string;
-      }>;
+      columns: Column[];
     };
   };
   childContainer: {
@@ -69,8 +66,7 @@ export class ContainerClass extends EntityClass {
   };
 
   serviceResponseData: ResponseDataType = {} as ResponseDataType;
-  entityResponseData: ResponseDataWithServiceType =
-    {} as ResponseDataWithServiceType;
+  entityResponseData: Container = {} as Container;
   childResponseData: ResponseDataType = {} as ResponseDataType;
   childArrayResponseData: ResponseDataType[] = [];
 
@@ -107,7 +103,7 @@ export class ContainerClass extends EntityClass {
         columns: [
           {
             name: `merchant${uuid()}`,
-            dataType: 'VARCHAR',
+            dataType: DataType.Varchar,
             dataLength: 100,
             dataTypeDisplay: 'varchar',
             description: 'The merchant for this transaction.',
@@ -116,17 +112,17 @@ export class ContainerClass extends EntityClass {
           },
           {
             name: `columbia${uuid()}`,
-            dataType: 'NUMERIC',
+            dataType: DataType.Numeric,
             dataTypeDisplay: 'numeric',
             description:
               'The ID of the executed transaction. This column is the primary key for this table.',
             tags: [],
-            constraint: 'PRIMARY_KEY',
+            constraint: Constraint.PrimaryKey,
             ordinalPosition: 1,
           },
           {
             name: `delivery${uuid()}`,
-            dataType: 'TIMESTAMP',
+            dataType: DataType.Timestamp,
             dataTypeDisplay: 'timestamp',
             description: 'The time the transaction took place.',
             tags: [],
@@ -165,7 +161,21 @@ export class ContainerClass extends EntityClass {
     this.serviceResponseData = await serviceResponse.json();
     this.entityResponseData = await entityResponse.json();
 
-    if (!isUndefined(customChildContainer)) {
+    if (isUndefined(customChildContainer)) {
+      const childContainer = {
+        ...this.childContainer,
+        parent: {
+          id: this.entityResponseData.id,
+          type: 'container',
+        },
+      };
+
+      const childResponse = await apiContext.post('/api/v1/containers', {
+        data: childContainer,
+      });
+
+      this.childResponseData = await childResponse.json();
+    } else {
       const childArrayResponseData: ResponseDataType[] = [];
       for (const child of customChildContainer) {
         const childContainer = {
@@ -183,21 +193,10 @@ export class ContainerClass extends EntityClass {
         childArrayResponseData.push(await childResponse.json());
       }
       this.childArrayResponseData = childArrayResponseData;
-    } else {
-      const childContainer = {
-        ...this.childContainer,
-        parent: {
-          id: this.entityResponseData.id,
-          type: 'container',
-        },
-      };
-
-      const childResponse = await apiContext.post('/api/v1/containers', {
-        data: childContainer,
-      });
-
-      this.childResponseData = await childResponse.json();
     }
+
+    this.childrenSelectorId =
+      this.entityResponseData.dataModel?.columns?.[0].fullyQualifiedName ?? '';
 
     return {
       service: serviceResponse.body,
@@ -213,7 +212,7 @@ export class ContainerClass extends EntityClass {
     patchData: Operation[];
   }) {
     const response = await apiContext.patch(
-      `/api/v1/containers/name/${this.entityResponseData?.['fullyQualifiedName']}`,
+      `/api/v1/containers/name/${this.entityResponseData?.fullyQualifiedName}`,
       {
         data: patchData,
         headers: {
@@ -236,10 +235,7 @@ export class ContainerClass extends EntityClass {
     };
   }
 
-  public set(data: {
-    entity: ResponseDataWithServiceType;
-    service: ResponseDataType;
-  }): void {
+  public set(data: { entity: Container; service: ResponseDataType }): void {
     this.entityResponseData = data.entity;
     this.serviceResponseData = data.service;
   }
@@ -255,7 +251,7 @@ export class ContainerClass extends EntityClass {
   async delete(apiContext: APIRequestContext) {
     const serviceResponse = await apiContext.delete(
       `/api/v1/services/storageServices/name/${encodeURIComponent(
-        this.serviceResponseData?.['fullyQualifiedName']
+        this.serviceResponseData?.fullyQualifiedName ?? ''
       )}?recursive=true&hardDelete=true`
     );
 

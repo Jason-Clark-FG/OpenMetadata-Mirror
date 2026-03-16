@@ -123,8 +123,8 @@ export class EntityDataClass {
     { name: 'bigquery_task', displayName: 'BigQuery Task' },
   ]);
   static readonly pipeline2 = new PipelineClass(undefined, [
-    { name: 'redshift_task', displayName: 'Redshift Task' },
     { name: 'presto_task', displayName: 'Presto Task' },
+    { name: 'databricks_task', displayName: 'Databricks Task' },
   ]);
   static readonly dashboardDataModel1 = new DashboardDataModelClass();
   static readonly dashboardDataModel2 = new DashboardDataModelClass();

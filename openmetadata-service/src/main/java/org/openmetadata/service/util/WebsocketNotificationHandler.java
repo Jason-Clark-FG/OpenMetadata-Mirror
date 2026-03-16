@@ -50,7 +50,9 @@ public class WebsocketNotificationHandler {
   private final ExecutorService threadScheduler;
 
   public WebsocketNotificationHandler() {
-    this.threadScheduler = Executors.newFixedThreadPool(1);
+    this.threadScheduler =
+        Executors.newFixedThreadPool(
+            1, java.lang.Thread.ofPlatform().name("om-websocket-notification").factory());
   }
 
   public void processNotifications(ContainerResponseContext responseContext) {
@@ -103,6 +105,23 @@ public class WebsocketNotificationHandler {
       String jobId, SecurityContext securityContext, String errorMessage) {
     BulkAssetsOperationMessage message =
         new BulkAssetsOperationMessage(jobId, "FAILED", null, errorMessage);
+    String jsonMessage = JsonUtils.pojoToJson(message);
+    UUID userId = getUserIdFromSecurityContext(securityContext);
+    if (userId != null) {
+      WebSocketManager.getInstance()
+          .sendToOne(userId, WebSocketManager.BULK_ASSETS_CHANNEL, jsonMessage);
+    }
+  }
+
+  public static void sendBulkAssetsOperationProgressNotification(
+      String jobId,
+      SecurityContext securityContext,
+      long progress,
+      long total,
+      String progressMessage) {
+    BulkAssetsOperationMessage message =
+        new BulkAssetsOperationMessage(
+            jobId, "IN_PROGRESS", null, null, progress, total, progressMessage);
     String jsonMessage = JsonUtils.pojoToJson(message);
     UUID userId = getUserIdFromSecurityContext(securityContext);
     if (userId != null) {

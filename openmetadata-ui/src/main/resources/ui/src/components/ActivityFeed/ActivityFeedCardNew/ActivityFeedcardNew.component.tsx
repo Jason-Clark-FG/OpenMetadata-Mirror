@@ -178,11 +178,11 @@ const ActivityFeedCardNew = ({
       return (
         <EntityPopOverCard entityFQN={entityFQN} entityType={entityType}>
           <div
-            className={classNames('text-sm', {
+            className={classNames('text-sm flex-center gap-1', {
               'max-one-line': !showThread,
             })}>
             {searchClassBase.getEntityIcon(entityType ?? '') && (
-              <span className="w-4 h-4 m-r-xss d-inline-flex align-middle">
+              <span className="w-4 h-4 d-inline-flex align-middle">
                 {searchClassBase.getEntityIcon(entityType ?? '')}
               </span>
             )}
@@ -309,7 +309,7 @@ const ActivityFeedCardNew = ({
     return (
       <Card
         className={classNames(
-          'relative activity-feed-card-new',
+          'activity-feed-card-new',
           {
             'activity-feed-card-new-right-panel m-0 gap-0':
               showThread || isPost || isOpenInDrawer,
@@ -319,101 +319,99 @@ const ActivityFeedCardNew = ({
         )}
         data-testid="feed-card-v2-sidebar">
         <Space align="start" className="w-full">
-          <Space className="d-flex" direction="vertical">
-            <div className="flex gap-2 items-start w-full relative">
-              <div className="relative z-10">
-                <UserPopOverCard profileWidth={24} userName={createdBy} />
-              </div>
+          <div className="flex gap-2 w-full">
+            <div className="flex-center flex-col">
+              <UserPopOverCard
+                className="m-r-0"
+                profileWidth={24}
+                userName={createdBy}
+              />
 
-              {/* Horizontal line connecting popover to end of container */}
-              <div className="horizontal-line " />
+              <div className="divider" />
+            </div>
 
-              <div className="d-flex flex-col w-full min-w-0 overflow-hidden">
-                <div className="d-flex flex-col align-start">
+            <div className="d-flex flex-col w-full min-w-0 overflow-hidden">
+              <div className="d-flex flex-col align-start">
+                <div
+                  className={classNames(
+                    'd-flex align-center w-full justify-between',
+                    {
+                      'header-container-card': !showThread,
+                      'header-container-right-panel': showThread,
+                    }
+                  )}>
                   <div
-                    className={classNames(
-                      'd-flex align-center w-full justify-between',
-                      {
-                        'header-container-card': !showThread,
-                        'header-container-right-panel': showThread,
-                      }
-                    )}>
-                    <div
+                    className={classNames('mr-2', {
+                      'activity-feed-user-name': !isPost,
+                      'reply-card-user-name': isPost,
+                    })}>
+                    <UserPopOverCard
                       className={classNames('mr-2', {
                         'activity-feed-user-name': !isPost,
                         'reply-card-user-name': isPost,
-                      })}>
-                      <UserPopOverCard
-                        className={classNames('mr-2', {
-                          'activity-feed-user-name': !isPost,
-                          'reply-card-user-name': isPost,
-                        })}
-                        userName={createdBy}>
-                        <Link to={getUserPath(createdBy)}>
-                          {getEntityName(user)}
-                        </Link>
-                      </UserPopOverCard>
-                    </div>
-                    {timestamp}
+                      })}
+                      userName={createdBy}>
+                      <Link to={getUserPath(createdBy)}>
+                        {getEntityName(user)}
+                      </Link>
+                    </UserPopOverCard>
                   </div>
-                  {!isPost && (
-                    <Space
-                      className={classNames('d-flex gap-1', {
-                        'header-container-card': !showThread,
-                        'flex-wrap':
-                          showThread &&
-                          entityRef?.type !== EntityType.CONTAINER,
-                        'items-start':
-                          showThread &&
-                          entityRef?.type === EntityType.CONTAINER,
-                        ' items-center':
-                          showThread &&
-                          entityRef?.type !== EntityType.CONTAINER,
-                      })}>
-                      <Typography.Text
-                        className="card-style-feed-header text-sm"
-                        data-testid="headerText">
-                        {feedHeaderText}
-                      </Typography.Text>
-
-                      {renderEntityLink}
-                    </Space>
-                  )}
+                  {timestamp}
                 </div>
-                <FeedCardBodyNew
-                  activity={activity}
-                  feed={feed}
-                  isEditPost={isEditPost}
-                  isFeedWidget={isFeedWidget}
-                  isForFeedTab={isForFeedTab}
-                  isPost={isPost}
-                  message={feedMessage}
-                  showThread={showThread}
-                  onEditCancel={() => setIsEditPost(false)}
-                  onUpdate={onUpdate}
-                />
-                {isFullSizeWidget && !isActivityEvent && feed && (
-                  <div className="m-b-md">
-                    <FeedCardFooterNew
-                      isForFeedTab
-                      feed={feed}
-                      isPost={isPost}
-                      post={post}
-                    />
-                  </div>
-                )}
-                {isFullSizeWidget && isActivityEvent && activity && (
-                  <div className="m-b-md">
-                    <ActivityEventFooter
-                      activity={activity}
-                      isForFeedTab={isForFeedTab}
-                      onActivityClick={onActivityClick}
-                    />
-                  </div>
+                {!isPost && (
+                  <Space
+                    className={classNames('d-flex gap-1', {
+                      'header-container-card': !showThread,
+                      'flex-wrap':
+                        showThread && entityRef?.type !== EntityType.CONTAINER,
+                      'items-start':
+                        showThread && entityRef?.type === EntityType.CONTAINER,
+                      ' items-center':
+                        showThread && entityRef?.type !== EntityType.CONTAINER,
+                    })}>
+                    <Typography.Text
+                      className="card-style-feed-header text-sm"
+                      data-testid="headerText">
+                      {feedHeaderText}
+                    </Typography.Text>
+
+                    {renderEntityLink}
+                  </Space>
                 )}
               </div>
+              <FeedCardBodyNew
+                activity={activity}
+                feed={feed}
+                isEditPost={isEditPost}
+                isFeedWidget={isFeedWidget}
+                isForFeedTab={isForFeedTab}
+                isPost={isPost}
+                message={feedMessage}
+                showThread={showThread}
+                onEditCancel={() => setIsEditPost(false)}
+                onUpdate={onUpdate}
+              />
+              {isFullSizeWidget && !isActivityEvent && feed && (
+                <div className="m-b-md">
+                  <FeedCardFooterNew
+                    isForFeedTab
+                    feed={feed}
+                    isPost={isPost}
+                    post={post}
+                  />
+                </div>
+              )}
+              {isFullSizeWidget && isActivityEvent && activity && (
+                <div className="m-b-md">
+                  <ActivityEventFooter
+                    activity={activity}
+                    isForFeedTab={isForFeedTab}
+                    onActivityClick={onActivityClick}
+                  />
+                </div>
+              )}
             </div>
-          </Space>
+          </div>
         </Space>
       </Card>
     );

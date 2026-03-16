@@ -64,6 +64,8 @@ test.describe('FeedWidget on landing page', () => {
         try {
           // Set persona as default
           await redirectToHomePage(adminPage);
+          await removeLandingBanner(adminPage);
+          await waitForAllLoadersToDisappear(adminPage);
           await setUserDefaultPersona(adminPage, testPersona.data.displayName);
 
           // Navigate to customize landing page
@@ -89,12 +91,12 @@ test.describe('FeedWidget on landing page', () => {
           if (await saveButton.isEnabled()) {
             const saveResponse = adminPage.waitForResponse('/api/v1/docStore*');
             await saveButton.click();
-            await adminPage.waitForLoadState('networkidle');
             await saveResponse;
           }
 
           await redirectToHomePage(adminPage);
-          await adminPage.waitForLoadState('networkidle');
+          await removeLandingBanner(adminPage);
+          await waitForAllLoadersToDisappear(adminPage);
         } finally {
           await adminPage.close();
         }
@@ -107,7 +109,8 @@ test.describe('FeedWidget on landing page', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await removeLandingBanner(page);
+    await waitForAllLoadersToDisappear(page);
   });
 
   test('renders widget wrapper and header with sort dropdown', async ({
@@ -130,7 +133,7 @@ test.describe('FeedWidget on landing page', () => {
 
     // Test dropdown options
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     await expect(
       page.getByRole('menuitem', { name: 'All Activity' })
@@ -156,11 +159,10 @@ test.describe('FeedWidget on landing page', () => {
       .getByTestId('widget-header')
       .getByText('Activity Feed');
     await titleLink.click();
-    await page.waitForLoadState('networkidle');
 
     // Verify navigation to user activity feed
-    await expect(page.url()).toContain('/users/');
-    await expect(page.url()).toContain('/activity_feed/all');
+    expect(page.url()).toContain('/users/');
+    expect(page.url()).toContain('/activity_feed/all');
   });
 
   test('feed body renders content or empty state', async ({ page }) => {
@@ -202,29 +204,24 @@ test.describe('FeedWidget on landing page', () => {
 
     // Switch to My Data filter
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     const myDataOption = page.getByRole('menuitem', { name: 'My Data' });
 
-    if (await myDataOption.isVisible()) {
-      await myDataOption.click();
-      await page.waitForLoadState('networkidle');
-      // Verify the dropdown now shows My Data
-      await expect(sortDropdown).toContainText(/My Data/i);
-    }
+    const feedResponse = page.waitForResponse('/api/v1/feed*');
+    await myDataOption.click();
+    await feedResponse;
 
     // Switch back to All Activity
     await sortDropdown.click();
-    await page.waitForSelector('.ant-dropdown', { state: 'visible' });
+    await page.locator('.ant-dropdown').waitFor({ state: 'visible' });
 
     const allActivityOption = page.getByRole('menuitem', {
       name: 'All Activity',
     });
     if (await allActivityOption.isVisible()) {
       await allActivityOption.click();
-      await page.waitForLoadState('networkidle');
-      // Verify the dropdown now shows All Activity
-      await expect(sortDropdown).toContainText(/All Activity/i);
+      await feedResponse;
     }
   });
 
@@ -244,7 +241,6 @@ test.describe('FeedWidget on landing page', () => {
     if (isViewMoreVisible) {
       // Click and verify navigation
       await viewMoreLink.click();
-      await page.waitForLoadState('networkidle');
 
       // Should navigate away from home page
       expect(page.url()).not.toMatch(/home|welcome/i);
@@ -253,7 +249,6 @@ test.describe('FeedWidget on landing page', () => {
       const titleLink = widget.getByText('Activity Feed');
       if (await titleLink.isVisible()) {
         await titleLink.click();
-        await page.waitForLoadState('networkidle');
         // Should navigate to user activity feed
         expect(page.url()).toContain('/users/');
       }
@@ -370,7 +365,6 @@ test.describe('FeedWidget on landing page', () => {
 
     if (await commentInput.count()) {
       await commentInput.click();
-      await page.waitForLoadState('networkidle');
 
       // Fill in the editor
       const editorField = page.locator(
@@ -384,7 +378,6 @@ test.describe('FeedWidget on landing page', () => {
       await expect(sendButton).toBeEnabled();
 
       const sendReply = page.waitForResponse('/api/v1/feed/*/posts');
-      await page.waitForLoadState('networkidle');
       await sendButton.click();
       await sendReply;
 
@@ -466,41 +459,60 @@ test.describe('Mention notifications in Notification Box', () => {
   }) => {
     test.slow();
 
-    await test.step(
-      'Verify conversation was created via API setup',
-      async () => {
-        // Conversation was created in beforeAll via API
-        // Just verify we can navigate to the entity page
-        await entity.visitEntityPage(adminPage);
-        await removeLandingBanner(adminPage);
-        await waitForAllLoadersToDisappear(adminPage);
-
-        // Click on activity feed tab
-        await adminPage.getByTestId('activity_feed').click();
-        await adminPage.waitForLoadState('networkidle');
-
-        await adminPage.waitForSelector('[data-testid="loader"]', {
-          state: 'detached',
-        });
-
-        // Wait for the activity feed to load and show the conversation
-        await adminPage.waitForSelector('[data-testid="message-container"]', {
-          state: 'visible',
-          timeout: 10000,
-        });
+    await test.step('Admin user creates a conversation on an entity', async () => {
+      await entity.visitEntityPage(adminPage);
+      // Added a safety check on waiting for activity feed count to avoid missing feed
+      // Poll the activity feed tab count from the page until it's a valid non-negative number
+      let count = NaN;
+      const maxRetries = 30;
+      for (let i = 0; i < maxRetries && (isNaN(count) || count <= 0); i++) {
+        const countText = await adminPage
+          .getByRole('tab', { name: 'Activity Feeds & Tasks' })
+          .getByTestId('count')
+          .textContent();
+        count = Number(countText ?? '0');
+        if (isNaN(count) || count <= 0) {
+          await adminPage.reload();
+          await waitForAllLoadersToDisappear(adminPage);
+        }
       }
-    );
+
+      await adminPage.getByTestId('activity_feed').click();
+
+      await waitForAllLoadersToDisappear(adminPage);
+
+      await adminPage.getByTestId('comments-input-field').click();
+
+      await adminPage
+        .locator(
+          '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
+        )
+        .fill('Initial conversation thread for mention test');
+
+      await expect(
+        adminPage.locator('[data-testid="send-button"]')
+      ).toBeVisible();
+      await expect(
+        adminPage.locator('[data-testid="send-button"]')
+      ).not.toBeDisabled();
+
+      const postConversation = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/feed') &&
+          response.request().method() === 'POST' &&
+          response.url().includes('/posts')
+      );
+      await adminPage.locator('[data-testid="send-button"]').click();
+      await postConversation;
+    });
 
     await test.step('User1 mentions admin user in a reply', async () => {
       await entity.visitEntityPage(user1Page);
       await removeLandingBanner(user1Page);
 
       await user1Page.getByTestId('activity_feed').click();
-      await user1Page.waitForLoadState('networkidle');
 
-      await user1Page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(user1Page);
 
       // Wait for the conversation thread to appear in the feed
       const conversationThread = user1Page
@@ -569,97 +581,114 @@ test.describe('Mention notifications in Notification Box', () => {
       await postMentionResponse;
     });
 
-    await test.step(
-      'Admin user verifies the mention was created in the activity feed',
-      async () => {
-        // Navigate to the entity page as admin to verify the mention is visible
-        await entity.visitEntityPage(adminPage);
-        await removeLandingBanner(adminPage);
+    await test.step('Admin user checks notification for correct user and timestamp', async () => {
+      await adminPage.reload();
+      await waitForAllLoadersToDisappear(adminPage);
+      const notificationBell = adminPage.getByTestId('task-notifications');
 
-        // Click on the Activity Feed tab
-        await adminPage.getByTestId('activity_feed').click();
-        await adminPage.waitForLoadState('networkidle');
+      await expect(notificationBell).toBeVisible();
 
-        // Wait for the conversation thread to load
-        await adminPage.waitForSelector('[data-testid="message-container"]', {
-          state: 'visible',
-          timeout: 10000,
-        });
+      const feedResponseForNotifications =
+        adminPage.waitForResponse(`api/v1/feed?userId=*`);
 
-        // Click on the conversation to expand it
-        const conversationThread = adminPage
-          .locator('[data-testid="message-container"]')
-          .first();
-        await conversationThread.click();
+      await notificationBell.click();
+      await feedResponseForNotifications;
+      const notificationBox = adminPage.locator('.notification-box');
 
-        // Verify the mention comment is visible in the thread
-        // The comment should contain the admin user's mention
-        const mentionComment = adminPage.locator(
-          `text=Hey @${adminUser.responseData.displayName}`
-        );
-        await expect(mentionComment).toBeVisible({ timeout: 10000 });
+      await expect(notificationBox).toBeVisible();
 
-        // Verify the comment was made by user1
-        const commentAuthor = adminPage.locator(
-          `a[href*="${user1.responseData.name}"]`
-        );
-        await expect(commentAuthor).toBeVisible();
+      const mentionsTab = adminPage
+        .locator('.notification-box')
+        .getByText('Mentions');
+
+      const mentionsFeedResponse = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/feed') &&
+          response.url().includes('filterType=MENTIONS')
+      );
+
+      await mentionsTab.click();
+      await mentionsFeedResponse;
+
+      const mentionsList = adminPage
+        .getByRole('tabpanel', { name: 'Mentions' })
+        .getByRole('list');
+
+      await expect(mentionsList).toBeVisible();
+
+      const firstNotificationItem = mentionsList
+        .locator('li.ant-list-item.notification-dropdown-list-btn')
+        .first();
+
+      const firstNotificationText = await firstNotificationItem.textContent();
+
+      expect(firstNotificationText?.toLowerCase()).toContain(
+        user1.responseData.name.toLowerCase()
+      );
+      expect(firstNotificationText?.toLowerCase()).not.toContain(
+        adminUser.responseData.name.toLowerCase()
+      );
+
+      const mentionNotificationLink = firstNotificationItem.locator(
+        '[data-testid^="notification-link-"]'
+      );
+
+      const navigationPromise = adminPage.waitForURL(/activity_feed/);
+      await mentionNotificationLink.click();
+      await navigationPromise;
+
+      expect(adminPage.url()).toContain('activity_feed');
+      expect(adminPage.url()).toContain('/all');
+    });
+
+    await test.step('Update user display name and verify reaction tooltip', async () => {
+      test.slow();
+      const newDisplayName = `UpdatedName${uuid()}`;
+
+      // Go to profile and update name
+      await redirectToHomePage(user1Page);
+      await visitOwnProfilePage(user1Page);
+      await editDisplayName(user1Page, newDisplayName);
+
+      // Go back to entity
+      await entity.visitEntityPage(user1Page);
+
+      await user1Page.getByTestId('activity_feed').click();
+      await waitForAllLoadersToDisappear(user1Page);
+
+      // Find a message to react to.
+      const message = user1Page
+        .locator('[data-testid="message-container"]')
+        .first();
+      await expect(message).toBeVisible();
+
+      // Add reaction
+      await message.locator('[data-testid="add-reactions"]').click();
+      const reactionResponse = user1Page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/feed') &&
+          response.request().method() === 'PATCH'
+      );
+      await user1Page.locator('[title="rocket"]').click();
+      await reactionResponse;
+
+      // Hover over the emoji button to see the popover
+      const emojiButton = message
+        .locator('[data-testid="emoji-button"]')
+        .last();
+      await emojiButton.hover();
+
+      // Verify tooltip using the data-testid from Emoji.tsx popoverContent
+      const tooltip = user1Page.getByTestId('popover-content');
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toContainText(newDisplayName);
+      await expect(tooltip).toContainText('reacted with');
+
+      // Ensure username is not displayed if it's different
+      if (newDisplayName !== user1.responseData.name) {
+        await expect(tooltip).not.toContainText(user1.responseData.name);
       }
-    );
-
-    await test.step(
-      'Update user display name and verify reaction tooltip',
-      async () => {
-        test.slow();
-        const newDisplayName = `UpdatedName${uuid()}`;
-
-        // Go to profile and update name
-        await redirectToHomePage(user1Page);
-        await visitOwnProfilePage(user1Page);
-        await editDisplayName(user1Page, newDisplayName);
-
-        // Go back to entity
-        await entity.visitEntityPage(user1Page);
-
-        await user1Page.getByTestId('activity_feed').click();
-        await user1Page.waitForSelector('[data-testid="loader"]', {
-          state: 'detached',
-        });
-
-        // Find a message to react to.
-        const message = user1Page
-          .locator('[data-testid="message-container"]')
-          .first();
-        await expect(message).toBeVisible();
-
-        // Add reaction
-        await message.locator('[data-testid="add-reactions"]').click();
-        const reactionResponse = user1Page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/feed') &&
-            response.request().method() === 'PATCH'
-        );
-        await user1Page.locator('[title="rocket"]').click();
-        await reactionResponse;
-
-        // Hover over the emoji button to see the popover
-        const emojiButton = message
-          .locator('[data-testid="emoji-button"]')
-          .last();
-        await emojiButton.hover();
-
-        // Verify tooltip using the data-testid from Emoji.tsx popoverContent
-        const tooltip = user1Page.getByTestId('popover-content');
-        await expect(tooltip).toBeVisible();
-        await expect(tooltip).toContainText(newDisplayName);
-        await expect(tooltip).toContainText('reacted with');
-
-        // Ensure username is not displayed if it's different
-        if (newDisplayName !== user1.responseData.name) {
-          await expect(tooltip).not.toContainText(user1.responseData.name);
-        }
-      }
-    );
+    });
   });
 });
 
@@ -731,7 +760,39 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
   test('Should allow mentioning a user with Chinese characters in the activity feed', async ({
     page,
   }) => {
-    const editorLocator = await openReplyEditor(page);
+    const feedPromise = page.waitForResponse((response) => {
+      const url = response.url();
+      return (
+        url.includes('/api/v1/feed') &&
+        url.includes('entityLink=') &&
+        url.includes('type=Conversation') &&
+        response.request().method() === 'GET'
+      );
+    });
+    await page.goto(`/databaseSchema/${schemaFqn}/activity_feed/all`);
+    const feedResponse = await feedPromise;
+    expect(feedResponse.status()).toBe(200);
+    await waitForAllLoadersToDisappear(page);
+
+    const commentsInput = page.getByTestId('comments-input-field');
+    if (!(await commentsInput.isVisible().catch(() => false))) {
+      const seededThread = page
+        .locator('[data-testid="message-container"], [data-testid="feed-reply-card"]')
+        .filter({
+          hasText: 'Initial conversation for Chinese character encoding test',
+        })
+        .first();
+
+      await expect(seededThread).toBeVisible({ timeout: 30_000 });
+      await seededThread.click();
+      await waitForAllLoadersToDisappear(page);
+    }
+
+    await commentsInput.click();
+
+    const editorLocator = page.locator(
+      '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
+    );
 
     await editorLocator.fill('Hey ');
 

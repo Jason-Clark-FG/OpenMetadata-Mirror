@@ -153,7 +153,9 @@ public class SearchListFilter extends Filter<SearchListFilter> {
     if (!nullOrEmpty(owners)) {
       String ownersList =
           Arrays.stream(owners.split(",")).collect(Collectors.joining("\", \"", "\"", "\""));
-      return String.format("{\"terms\": {\"%s\": [%s]}}", FIELD_OWNERS_ID, ownersList);
+      return String.format(
+          "{\"nested\":{\"path\":\"owners\",\"query\":{\"terms\":{\"owners.id\":[%s]}}}}",
+          ownersList);
     }
     return "";
   }

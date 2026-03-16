@@ -14,6 +14,11 @@ import { expect, test } from '@playwright/test';
 import { PLAYWRIGHT_INGESTION_TAG_OBJ } from '../../constant/config';
 import { TableClass } from '../../support/entity/TableClass';
 import { getApiContext, redirectToHomePage, uuid } from '../../utils/common';
+import {
+  ObservabilityFeature,
+  selectAddObservabilityFeature,
+} from '../../utils/dataQuality';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -50,7 +55,7 @@ test(
         })
         .click();
       await page.getByTestId('profiler-add-table-test-btn').click();
-      await page.getByTestId('test-case').click();
+      await selectAddObservabilityFeature(page, ObservabilityFeature.TEST_CASE);
       await page.getByTestId('test-case-name').clear();
       await page.getByTestId('test-case-name').fill(testCaseName);
       await page.getByTestId('test-type').locator('div').click();
@@ -65,10 +70,7 @@ test(
       await createTestCaseResponse;
 
       await page.reload();
-      await page.waitForLoadState('networkidle');
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByRole('tab', { name: 'Data Quality' }).click();
       await page.getByRole('tab', { name: 'Pipeline' }).click();
@@ -83,9 +85,13 @@ test(
 
       await expect(page.getByTestId('deploy-button')).toBeVisible();
 
+      const deployResponse = page.waitForResponse(
+        '/api/v1/services/ingestionPipelines/deploy/*'
+      );
       await page.getByTestId('deploy-button').click();
+      await deployResponse;
 
-      await page.waitForSelector('[data-testid="body-text"]', {
+      await page.getByTestId('body-text').waitFor({
         state: 'detached',
       });
 
@@ -145,8 +151,13 @@ test(
         .getByTestId('week-segment-day-option-container')
         .getByText('W')
         .click();
+      const updateDeployResponse = page.waitForResponse(
+        '/api/v1/services/ingestionPipelines/deploy/*'
+      );
       await page.getByTestId('deploy-button').click();
-      await page.waitForSelector('[data-testid="body-text"]', {
+      await updateDeployResponse;
+
+      await page.getByTestId('body-text').waitFor({
         state: 'detached',
       });
 
@@ -256,6 +267,7 @@ test(
         name: new RegExp(pipeline?.['name']),
       })
       .getByTestId('more-actions')
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
       .click({ force: true });
 
     await page
@@ -274,8 +286,13 @@ test(
       page.getByTestId(`checkbox-${testCaseNames[0]}`)
     ).not.toBeChecked();
 
+    const editDeployResponse = page.waitForResponse(
+      '/api/v1/services/ingestionPipelines/deploy/*'
+    );
     await page.getByTestId('deploy-button').click();
-    await page.waitForSelector('[data-testid="body-text"]', {
+    await editDeployResponse;
+
+    await page.getByTestId('body-text').waitFor({
       state: 'detached',
     });
 

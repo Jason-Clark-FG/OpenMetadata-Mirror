@@ -68,9 +68,16 @@ public class LineageAPI {
         optionsBuilder.build());
   }
 
-  public String exportLineage(String entityType, String entityId) throws OpenMetadataException {
+  public String exportLineage(String fqn, String type, String upstreamDepth, String downstreamDepth)
+      throws OpenMetadataException {
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    optionsBuilder.queryParam("fqn", fqn);
+    optionsBuilder.queryParam("type", type);
+    if (upstreamDepth != null) optionsBuilder.queryParam("upstreamDepth", upstreamDepth);
+    if (downstreamDepth != null) optionsBuilder.queryParam("downstreamDepth", downstreamDepth);
+
     return httpClient.executeForString(
-        HttpMethod.GET, String.format("/v1/lineage/%s/%s/export", entityType, entityId), null);
+        HttpMethod.GET, "/v1/lineage/export", null, optionsBuilder.build());
   }
 
   public String getLineageByName(
@@ -86,6 +93,19 @@ public class LineageAPI {
         String.format("/v1/lineage/%s/name/%s", entityType, encodePathSegment(fqn)),
         null,
         optionsBuilder.build());
+  }
+
+  public String searchLineage(
+      String fqn, String type, int upstreamDepth, int downstreamDepth, boolean includeDeleted)
+      throws OpenMetadataException {
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    optionsBuilder.queryParam("fqn", fqn);
+    optionsBuilder.queryParam("type", type);
+    optionsBuilder.queryParam("upstreamDepth", String.valueOf(upstreamDepth));
+    optionsBuilder.queryParam("downstreamDepth", String.valueOf(downstreamDepth));
+    optionsBuilder.queryParam("includeDeleted", String.valueOf(includeDeleted));
+    return httpClient.executeForString(
+        HttpMethod.GET, "/v1/lineage/getLineage", null, optionsBuilder.build());
   }
 
   private String encodePathSegment(String segment) {

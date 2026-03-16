@@ -10,14 +10,47 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { ThemeProvider } from '@mui/material';
-import { createMuiTheme } from '@openmetadata/ui-core-components';
 import { render, screen } from '@testing-library/react';
 import { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { FeedbackType } from '../../../generated/entity/feed/thread';
 import { MOCK_TASK_RECOGNIZER_FEEDBACK } from '../../../mocks/Task.mock';
 import FeedbackApprovalTask from './FeedbackApprovalTask';
+
+jest.mock('@openmetadata/ui-core-components', () => ({
+  BadgeWithDot: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: ReactNode;
+    'data-testid'?: string;
+  }) => <span data-testid={testId}>{children}</span>,
+  Grid: Object.assign(
+    ({
+      children,
+      'data-testid': testId,
+      className,
+    }: {
+      children: ReactNode;
+      'data-testid'?: string;
+      className?: string;
+    }) => (
+      <div className={className} data-testid={testId}>
+        {children}
+      </div>
+    ),
+    {
+      Item: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    }
+  ),
+  Typography: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: ReactNode;
+    'data-testid'?: string;
+  }) => <div data-testid={testId}>{children}</div>,
+}));
 
 jest.mock(
   '../../../components/common/RichTextEditor/RichTextEditorPreviewNew',
@@ -57,12 +90,8 @@ jest.mock('../../../utils/RouterUtils', () => ({
     .mockReturnValue('/table/sample_data.ecommerce_db.shopify.dim.shop'),
 }));
 
-const theme = createMuiTheme();
-
 const Wrapper = ({ children }: { children: ReactNode }) => (
-  <ThemeProvider theme={theme}>
-    <MemoryRouter>{children}</MemoryRouter>
-  </ThemeProvider>
+  <MemoryRouter>{children}</MemoryRouter>
 );
 
 const baseTask = {
