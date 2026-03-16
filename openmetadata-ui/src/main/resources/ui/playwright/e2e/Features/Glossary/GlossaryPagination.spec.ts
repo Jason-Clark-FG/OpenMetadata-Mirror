@@ -102,7 +102,7 @@ test.describe('Glossary tests', () => {
     await page.waitForResponse('api/v1/glossaryTerms/search?*');
 
     const partialFilteredTerms = await table
-      .locator('tbody .ant-table-row')
+      .locator('tbody tr[role="row"]')
       .count();
 
     expect(partialFilteredTerms).toBeGreaterThan(0);

@@ -169,9 +169,7 @@ test.describe(
 
         // Verify the team is moved under the business team
         await openDragDropDropdown(page, droppableTeamName);
-        const movedTeam = page.locator(
-          `tr[data-level="1"][data-row-key="${teamNameGroup}"]`
-        );
+        const movedTeam = page.locator(`tr[data-row-key="${teamNameGroup}"]`);
 
         await expect(movedTeam).toBeVisible();
       });
