@@ -340,7 +340,7 @@ export const InputOutputPortsTab = forwardRef<
                         }
                         size={SIZE.SMALL}
                         type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
-                        <Typography as="p" className="text-center">
+                        <Typography as="p" className="tw:text-center">
                           {t('message.no-input-ports-added')}
                         </Typography>
                         {permissions.EditAll && (
