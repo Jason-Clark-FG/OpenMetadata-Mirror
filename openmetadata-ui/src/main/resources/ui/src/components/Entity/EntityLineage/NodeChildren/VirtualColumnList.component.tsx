@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Stack } from '@mui/material';
+import { ButtonUtility } from '@openmetadata/ui-core-components';
 import { ChevronDown, ChevronUp } from '@untitledui/icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../../../../constants/constants';
@@ -19,7 +19,6 @@ import { useLineageStore } from '../../../../hooks/useLineageStore';
 import EntityLink from '../../../../utils/EntityLink';
 import { ColumnContent } from '../CustomNode.utils';
 import { EntityChildren, EntityChildrenItem } from './NodeChildren.interface';
-import { StyledIconButton } from './StyledIconButton';
 
 export interface VirtualColumnListProps {
   flatItems: EntityChildren;
@@ -159,16 +158,15 @@ const VirtualColumnList = ({
   return (
     <>
       {needsNavigation && (
-        <Stack alignItems="center" justifyContent="center">
-          <StyledIconButton
+        <div className="tw:flex tw:items-center tw:justify-center">
+          <ButtonUtility
+            color="tertiary"
             data-testid="column-scroll-up"
             disabled={!canScrollUp}
-            size="small"
+            icon={ChevronUp}
             onClick={handleUp}
-          >
-            <ChevronUp fontSize="small" />
-          </StyledIconButton>
-        </Stack>
+          />
+        </div>
       )}
 
       <div className="inside-current-page-items">
@@ -184,16 +182,15 @@ const VirtualColumnList = ({
       </div>
 
       {needsNavigation && (
-        <Stack alignItems="center" justifyContent="center">
-          <StyledIconButton
+        <div className="tw:flex tw:items-center tw:justify-center">
+          <ButtonUtility
+            color="tertiary"
             data-testid="column-scroll-down"
             disabled={!canScrollDown}
-            size="small"
+            icon={ChevronDown}
             onClick={handleDown}
-          >
-            <ChevronDown fontSize="small" />
-          </StyledIconButton>
-        </Stack>
+          />
+        </div>
       )}
     </>
   );
