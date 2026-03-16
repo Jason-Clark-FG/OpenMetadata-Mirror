@@ -133,7 +133,7 @@ const DataMarketplacePage = () => {
         style={{ backgroundImage: `url(${marketplaceBg})` }}>
         <div className="marketplace-grid-wrapper" dir="ltr">
           <div className="p-x-box">
-            <div className="d-flex justify-end m-b-sm">
+            <div className="d-flex justify-end m-b-xs">
               {selectedPersona && (
                 <Button
                   color="secondary"
@@ -157,7 +157,7 @@ const DataMarketplacePage = () => {
           isResizable={false}
           margin={[16, 24]}
           rowHeight={156}
-          style={{ marginTop: 24 }}>
+          style={{ marginTop: 8 }}>
           {widgets}
         </ReactGridLayout>
       </div>

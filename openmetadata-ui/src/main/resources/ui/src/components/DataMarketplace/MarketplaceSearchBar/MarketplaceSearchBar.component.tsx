@@ -11,9 +11,8 @@
  *  limitations under the License.
  */
 
-import { Button } from '@openmetadata/ui-core-components';
-import { Input, Popover, Tag, Typography } from 'antd';
-import { debounce, isEmpty } from 'lodash';
+import { Input, Popover, Typography } from 'antd';
+import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -22,10 +21,10 @@ import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
-import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecentSearches';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
 import { getDomainIcon } from '../../../utils/DomainUtils';
+import { getVisiblePopupContainer } from '../../../utils/LandingPageWidget/WidgetsUtils';
 import {
   getDomainDetailsPath,
   getEntityDetailsPath,
@@ -37,8 +36,6 @@ const PAGE_SIZE = 5;
 const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { recentSearches, addSearch, clearSearches } =
-    useMarketplaceRecentSearches();
   const [searchValue, setSearchValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
@@ -112,12 +109,11 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     (value: string) => {
       if (value.trim()) {
         debouncedFetch.cancel();
-        addSearch(value.trim());
         fetchResults(value);
         setIsOpen(true);
       }
     },
-    [addSearch, fetchResults, debouncedFetch]
+    [fetchResults, debouncedFetch]
   );
 
   const handleDataProductClick = useCallback(
@@ -139,14 +135,6 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       navigate(getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
     [navigate]
-  );
-
-  const handleRecentSearchClick = useCallback(
-    (term: string) => {
-      setSearchValue(term);
-      handleSearch(term);
-    },
-    [handleSearch]
   );
 
   const popoverContent = useMemo(() => {
@@ -242,10 +230,10 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
         <Popover
           align={{ offset: [0, 4] }}
           content={popoverContent}
-          getPopupContainer={() => containerRef.current || document.body}
+          getPopupContainer={getVisiblePopupContainer}
           open={isOpen && searchValue.trim().length > 0}
           overlayClassName="marketplace-search-overlay"
-          overlayStyle={{ width: '100%' }}
+          overlayStyle={{ width: containerRef.current?.offsetWidth }}
           placement="bottom"
           showArrow={false}
           trigger={['click']}
@@ -286,32 +274,6 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
             }
           />
         </Popover>
-      {!isEditView && !isEmpty(recentSearches) && (
-        <div
-          className="marketplace-recent-searches"
-          data-testid="marketplace-recent-searches">
-          <Typography.Text className="recent-search-label">
-            {t('label.recent-search-term-plural')}:
-          </Typography.Text>
-          <div className="recent-search-tags">
-            {recentSearches.map((term) => (
-              <Tag
-                className="recent-search-tag"
-                data-testid={`recent-search-${term}`}
-                key={term}
-                onClick={() => handleRecentSearchClick(term)}>
-                {term}
-              </Tag>
-            ))}
-          </div>
-          <Button
-            color="link-gray"
-            data-testid="clear-recent-searches"
-            onPress={clearSearches}>
-            {t('label.clear')}
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

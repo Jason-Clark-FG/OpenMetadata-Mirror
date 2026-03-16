@@ -22,7 +22,7 @@ const MarketplaceGreetingBanner = () => {
   const displayName = currentUser?.displayName || currentUser?.name || '';
 
   return (
-    <div className="text-center p-b-lg" data-testid="marketplace-greeting">
+    <div className="text-center p-b-sm" data-testid="marketplace-greeting">
       <Typography.Title
         data-testid="greeting-text"
         level={4}

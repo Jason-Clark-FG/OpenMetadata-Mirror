@@ -16,7 +16,6 @@ import { Domain } from '../../support/domain/Domain';
 import { test } from '../fixtures/pages';
 import { performAdminLogin } from '../../utils/admin';
 import {
-  closeSearchPopover,
   navigateToMarketplace,
   searchMarketplace,
 } from '../../utils/dataMarketplace';
@@ -157,81 +156,6 @@ test.describe(
           );
           await resultItem.dispatchEvent('click');
           await page.waitForURL('**/domain/**');
-        }
-      );
-    });
-
-    test('Recent searches persist, are clickable, and clearable', async ({
-      page,
-    }) => {
-      test.slow();
-
-      await test.step('Navigate and perform first search', async () => {
-        await navigateToMarketplace(page);
-        await searchMarketplace(page, 'testquery1');
-        await closeSearchPopover(page);
-      });
-
-      await test.step('Perform second search', async () => {
-        await searchMarketplace(page, 'testquery2');
-        await closeSearchPopover(page);
-      });
-
-      await test.step('Verify recent searches appear', async () => {
-        await expect(
-          page.getByTestId('marketplace-recent-searches')
-        ).toBeVisible();
-        await expect(
-          page.getByTestId('recent-search-testquery2')
-        ).toBeVisible();
-        await expect(
-          page.getByTestId('recent-search-testquery1')
-        ).toBeVisible();
-      });
-
-      await test.step(
-        'Click recent search tag re-executes search',
-        async () => {
-          const searchResponse = page.waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/search/query') &&
-              response.status() === 200
-          );
-          await page.getByTestId('recent-search-testquery1').click();
-          await searchResponse;
-
-          await expect(
-            page.getByTestId('marketplace-search-input')
-          ).toHaveValue('testquery1');
-        }
-      );
-
-      await test.step(
-        'Verify recent searches persist after reload',
-        async () => {
-          await page.reload();
-          await waitForAllLoadersToDisappear(page);
-          await expect(
-            page.getByTestId('recent-search-testquery1')
-          ).toBeVisible();
-        }
-      );
-
-      await test.step('Clear recent searches', async () => {
-        await page.getByTestId('clear-recent-searches').click();
-        await expect(
-          page.getByTestId('marketplace-recent-searches')
-        ).not.toBeVisible();
-      });
-
-      await test.step(
-        'Verify cleared state persists after reload',
-        async () => {
-          await page.reload();
-          await waitForAllLoadersToDisappear(page);
-          await expect(
-            page.getByTestId('marketplace-recent-searches')
-          ).not.toBeVisible();
         }
       );
     });
