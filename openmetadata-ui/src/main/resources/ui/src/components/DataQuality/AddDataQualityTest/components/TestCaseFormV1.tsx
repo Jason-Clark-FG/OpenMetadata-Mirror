@@ -15,6 +15,7 @@
 // IMPORTS
 // =============================================
 import { EditOutlined } from '@ant-design/icons';
+import { Alert } from '@openmetadata/ui-core-components';
 import {
   Button,
   Card,
@@ -113,7 +114,6 @@ import { getIngestionName } from '../../../../utils/ServiceUtils';
 import { generateUUID } from '../../../../utils/StringsUtils';
 import { generateEntityLink } from '../../../../utils/TableUtils';
 import { showSuccessToast } from '../../../../utils/ToastUtils';
-import AlertBar from '../../../AlertBar/AlertBar';
 import { AsyncSelect } from '../../../common/AsyncSelect/AsyncSelect';
 import SelectionCardGroup from '../../../common/SelectionCardGroup/SelectionCardGroup';
 import { SelectionOption } from '../../../common/SelectionCardGroup/SelectionCardGroup.interface';
@@ -339,8 +339,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           handleActiveField(
             selectedTestType ? `root/${selectedTestType}` : 'root/testType'
           )
-        }
-      >
+        }>
         <ParameterForm
           definition={selectedTestDefinition}
           table={selectedTableData}
@@ -579,8 +578,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           data-testid="cancel-btn"
           disabled={isFormLoading}
           type="link"
-          onClick={handleCancel}
-        >
+          onClick={handleCancel}>
           {t('label.cancel')}
         </Button>
         <Button
@@ -588,8 +586,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           htmlType="submit"
           loading={isFormLoading || isCheckingPermissions}
           type="primary"
-          onClick={() => form.submit()}
-        >
+          onClick={() => form.submit()}>
           {t('label.create')}
         </Button>
       </Space>
@@ -1061,12 +1058,13 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
       {/* Floating Error Alert - always visible at top */}
       {errorMessage && (
         <div className="floating-error-alert">
-          <AlertBar
-            defaultExpand
-            className="test-case-form-alert custom-alert-description"
-            message={errorMessage}
-            type="error"
-          />
+          <Alert
+            closable
+            title={t('label.error')}
+            variant="error"
+            onClose={() => setErrorMessage('')}>
+            {errorMessage}
+          </Alert>
         </div>
       )}
 
@@ -1090,8 +1088,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
         onFinish={handleSubmit}
         onFinishFailed={scrollToError}
         onFocus={handleFieldFocus}
-        onValuesChange={handleValuesChange}
-      >
+        onValuesChange={handleValuesChange}>
         <Card className="form-card-section" data-testid="select-table-card">
           <Form.Item
             label={t('message.select-test-level')}
@@ -1103,8 +1100,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                   entity: t('label.test-level-lowercase'),
                 }),
               },
-            ]}
-          >
+            ]}>
             <SelectionCardGroup
               options={TEST_LEVEL_OPTIONS}
               onClick={() => handleActiveField('root/testLevel')}
@@ -1132,8 +1128,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                   return Promise.resolve();
                 },
               },
-            ]}
-          >
+            ]}>
             <AsyncSelect
               allowClear
               enableInfiniteScroll
@@ -1165,8 +1160,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                     entity: t('label.column'),
                   }),
                 },
-              ]}
-            >
+              ]}>
               <Select
                 allowClear
                 showSearch
@@ -1187,8 +1181,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
               label={t('label.select-entity', {
                 entity: t('label.dimension-plural'),
               })}
-              name="dimensionColumns"
-            >
+              name="dimensionColumns">
               <Select
                 allowClear
                 showSearch
@@ -1208,8 +1201,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           {testLevelFieldValue === TestLevel.COLUMN_DIMENSION && (
             <Form.Item
               label={t('label.top-dimension-plural')}
-              name="topDimensions"
-            >
+              name="topDimensions">
               <InputNumber
                 className="w-full"
                 id="root/topDimensions"
@@ -1223,16 +1215,14 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
 
         <Card
           className="form-card-section test-type-card"
-          data-testid="test-type-card"
-        >
+          data-testid="test-type-card">
           <Form.Item className="custom-select-test-type-style m-b-md">
             {selectedTestLevel === TestLevel.TABLE && (
               <div
                 className={classNames(
                   'custom-test-type-container',
                   isCustomQuery ? 'justify-between' : 'justify-end'
-                )}
-              >
+                )}>
                 {isCustomQuery ? (
                   <>
                     <Typography.Text className="test-type-label">
@@ -1250,8 +1240,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                         handleTestDefinitionChange('');
                         handleValuesChange({ testTypeId: undefined });
                         setIsCustomQuery(false);
-                      }}
-                    >
+                      }}>
                       {t('label.select-test-type')}
                     </Button>
                   </>
@@ -1268,8 +1257,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                       handleTestDefinitionChange('tableCustomSQLQuery');
                       handleValuesChange({ testTypeId: 'tableCustomSQLQuery' });
                       setIsCustomQuery(true);
-                    }}
-                  >
+                    }}>
                     {t('label.custom-query')}
                   </Button>
                 )}
@@ -1286,8 +1274,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                   message: t('label.select-test-type'),
                 },
               ]}
-              tooltip={selectedTestDefinition?.description}
-            >
+              tooltip={selectedTestDefinition?.description}>
               <Select
                 showSearch
                 data-testid="test-type"
@@ -1318,8 +1305,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                 prevValues['useDynamicAssertion'],
                 currentValues['useDynamicAssertion']
               );
-            }}
-          >
+            }}>
             {({ getFieldValue }) =>
               getFieldValue('useDynamicAssertion') ? null : generateParamsField
             }
@@ -1335,22 +1321,17 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
 
         {shouldShowScheduler && (
           <Row gutter={[20, 20]}>
-            <Col span={24}>
-              <AlertBar
-                defaultExpand
-                className="test-case-form-alert custom-alert-description"
-                message={
-                  <Transi18next
-                    i18nKey="message.entity-pipeline-information"
-                    renderElement={<strong />}
-                    values={{
-                      entity: t('label.test-case-lowercase'),
-                      type: t('label.table-lowercase'),
-                    }}
-                  />
-                }
-                type="grey-info"
-              />
+            <Col className="m-l-md m-r-md">
+              <Alert closable title="" variant="gray">
+                <Transi18next
+                  i18nKey="message.entity-pipeline-information"
+                  renderElement={<strong />}
+                  values={{
+                    entity: t('label.test-case-lowercase'),
+                    type: t('label.table-lowercase'),
+                  }}
+                />
+              </Alert>
             </Col>
 
             <Col span={24}>
@@ -1358,8 +1339,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                 className="form-card-section"
                 data-testid="scheduler-card"
                 id="root/cron"
-                onClick={() => handleActiveField('root/cron')}
-              >
+                onClick={() => handleActiveField('root/cron')}>
                 <div className="card-title-container">
                   <Typography.Paragraph className="card-title-text">
                     {t('label.create-entity', {
@@ -1380,8 +1360,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                         <Form.Item
                           className="m-b-0"
                           name="selectAllTestCases"
-                          valuePropName="checked"
-                        >
+                          valuePropName="checked">
                           <Switch />
                         </Form.Item>
                         <Typography.Text className="font-medium">
@@ -1405,8 +1384,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                               }),
                             },
                           ]}
-                          valuePropName="selectedTest"
-                        >
+                          valuePropName="selectedTest">
                           <AddTestCaseList
                             showButton={false}
                             testCaseParams={{
@@ -1439,8 +1417,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                         <Form.Item
                           className="m-b-0"
                           name="enableDebugLog"
-                          valuePropName="checked"
-                        >
+                          valuePropName="checked">
                           <Switch />
                         </Form.Item>
                         <Typography.Paragraph className="font-medium m-0">
@@ -1453,8 +1430,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                         <Form.Item
                           className="m-b-0"
                           name="raiseOnError"
-                          valuePropName="checked"
-                        >
+                          valuePropName="checked">
                           <Switch />
                         </Form.Item>
                         <Typography.Paragraph className="font-medium m-0">
@@ -1496,8 +1472,7 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
           onClick={onCancel}
         />
       }
-      onClose={onCancel}
-    >
+      onClose={onCancel}>
       <div className="drawer-content-wrapper">
         <div className="drawer-form-content">{formContent}</div>
         <div className="drawer-doc-panel service-doc-panel markdown-parser">
