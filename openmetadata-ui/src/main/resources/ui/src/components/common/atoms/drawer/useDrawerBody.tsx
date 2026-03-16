@@ -27,8 +27,7 @@ export const useDrawerBody = (config: DrawerBodyConfig = {}) => {
   const drawerBody = useMemo(
     () => (
       <SlideoutMenu.Content className={className}>
-        {loading && <Loader />}
-        {children}
+        {loading ? <Loader /> : children}
       </SlideoutMenu.Content>
     ),
     [children, loading, className]

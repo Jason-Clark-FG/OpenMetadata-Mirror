@@ -15,7 +15,6 @@ import { SlideoutMenu } from '@openmetadata/ui-core-components';
 import { ReactNode, useCallback, useMemo, useState } from 'react';
 
 export interface DrawerConfig {
-  anchor?: 'left' | 'right' | 'top' | 'bottom';
   width?: number | string;
   onClose?: () => void;
   onOpen?: () => void;
@@ -25,15 +24,6 @@ export interface DrawerConfig {
   defaultOpen?: boolean;
   testId?: string;
 }
-
-const getWidthClassName = (width?: number | string): string | undefined => {
-  if (!width) {
-    return undefined;
-  }
-  const value = typeof width === 'number' ? `${width}px` : width;
-
-  return `tw:max-w-[${value}] tw:w-[${value}]`;
-};
 
 export const useDrawer = (config: DrawerConfig = {}) => {
   const [open, setOpen] = useState(config.defaultOpen || false);
@@ -63,19 +53,14 @@ export const useDrawer = (config: DrawerConfig = {}) => {
     [openDrawer, closeDrawer]
   );
 
-  const widthClassName = useMemo(
-    () => getWidthClassName(config.width),
-    [config.width]
-  );
-
   const drawer = useMemo(
     () => (
       <SlideoutMenu
-        {...({ className: widthClassName } as Record<string, unknown>)}
         data-testid={config.testId}
         isDismissable={config.closeOnBackdrop !== false}
         isKeyboardDismissDisabled={config.closeOnEscape === false}
         isOpen={open}
+        width={config.width}
         onOpenChange={handleOpenChange}>
         {config.children}
       </SlideoutMenu>
@@ -86,7 +71,7 @@ export const useDrawer = (config: DrawerConfig = {}) => {
       config.testId,
       config.closeOnBackdrop,
       config.closeOnEscape,
-      widthClassName,
+      config.width,
       handleOpenChange,
     ]
   );
