@@ -17,10 +17,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import RGL, { ReactGridLayoutProps, WidthProvider } from 'react-grid-layout';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
+import Loader from '../../components/common/Loader/Loader';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
 import MarketplaceSearchBar from '../../components/DataMarketplace/MarketplaceSearchBar/MarketplaceSearchBar.component';
-import Loader from '../../components/common/Loader/Loader';
-import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { TAB_GRID_MAX_COLUMNS } from '../../constants/CustomizeWidgets.constants';
 import { EntityTabs, EntityType } from '../../enums/entity.enum';
@@ -77,9 +77,7 @@ const DataMarketplacePage = () => {
           setLayout([...tabLayout].sort((a, b) => a.y - b.y));
         } else if (!isEmpty(pageData?.layout)) {
           setLayout(
-            [...(pageData?.layout as WidgetConfig[])].sort(
-              (a, b) => a.y - b.y
-            )
+            [...(pageData?.layout as WidgetConfig[])].sort((a, b) => a.y - b.y)
           );
         } else {
           setLayout(defaultLayout);
@@ -130,7 +128,9 @@ const DataMarketplacePage = () => {
       pageTitle={t('label.data-marketplace')}>
       <div
         className="marketplace-header-bg"
-        style={{ backgroundImage: `url(${marketplaceBg})` }}>
+        style={
+          { '--marketplace-bg': `url(${marketplaceBg})` } as React.CSSProperties
+        }>
         <div className="marketplace-grid-wrapper" dir="ltr">
           <div className="p-x-box">
             <div className="d-flex justify-end m-b-xs">

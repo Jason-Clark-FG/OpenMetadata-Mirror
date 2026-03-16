@@ -11,7 +11,9 @@
  *  limitations under the License.
  */
 
-import { Input, Popover, Typography } from 'antd';
+import { Input } from '@openmetadata/ui-core-components';
+import { SearchLg } from '@untitledui/icons';
+import { Popover, Typography } from 'antd';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -220,60 +222,55 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
         )}
       </div>
     );
-  }, [dataProducts, domains, isSearching, handleDataProductClick, handleDomainClick, t]);
+  }, [
+    dataProducts,
+    domains,
+    isSearching,
+    handleDataProductClick,
+    handleDomainClick,
+    t,
+  ]);
 
   return (
     <div
       className="marketplace-search-bar"
       data-testid="marketplace-search-bar"
       ref={containerRef}>
-        <Popover
-          align={{ offset: [0, 4] }}
-          content={popoverContent}
-          getPopupContainer={getVisiblePopupContainer}
-          open={isOpen && searchValue.trim().length > 0}
-          overlayClassName="marketplace-search-overlay"
-          overlayStyle={{ width: containerRef.current?.offsetWidth }}
-          placement="bottom"
-          showArrow={false}
-          trigger={['click']}
-          onOpenChange={(open) => {
-            setIsOpen(searchValue.trim().length > 0 && open);
-          }}>
-          <Input
-            autoComplete="off"
-            className="marketplace-search-input"
-            data-testid="marketplace-search-input"
-            disabled={isEditView}
-            placeholder={t('label.search-for-type', {
-              type: t('label.data-product-plural') +
-                ', ' +
-                t('label.domain-plural'),
-            })}
-            prefix={
-              <span className="marketplace-search-icon">
-                <svg
-                  fill="none"
-                  height="20"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  width="20">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" x2="16.65" y1="21" y2="16.65" />
-                </svg>
-              </span>
+      <Popover
+        align={{ offset: [0, 4] }}
+        content={popoverContent}
+        getPopupContainer={getVisiblePopupContainer}
+        open={isOpen && searchValue.trim().length > 0}
+        overlayClassName="marketplace-search-overlay"
+        overlayStyle={{ width: containerRef.current?.offsetWidth }}
+        placement="bottom"
+        showArrow={false}
+        trigger={['click']}
+        onOpenChange={(open) => {
+          setIsOpen(searchValue.trim().length > 0 && open);
+        }}>
+        <Input
+          autoComplete="off"
+          data-testid="marketplace-search-input"
+          fontSize="xs"
+          icon={SearchLg}
+          iconClassName="tw:!size-4"
+          inputClassName="tw:!pl-9"
+          isDisabled={isEditView}
+          placeholder={t('label.search-for-type', {
+            type:
+              t('label.data-product-plural') + ', ' + t('label.domain-plural'),
+          })}
+          value={searchValue}
+          wrapperClassName="marketplace-search-input tw:!items-center"
+          onChange={(value) => handleChange(value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleSearch(searchValue);
             }
-            size="large"
-            value={searchValue}
-            onChange={(e) => handleChange(e.target.value)}
-            onPressEnter={(e) =>
-              handleSearch((e.target as HTMLInputElement).value)
-            }
-          />
-        </Popover>
+          }}
+        />
+      </Popover>
     </div>
   );
 };
