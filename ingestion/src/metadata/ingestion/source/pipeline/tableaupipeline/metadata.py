@@ -149,6 +149,9 @@ class TableaupipelineSource(PipelineServiceSource):
                 execution_status = self._get_status(run)
                 start_time = self._to_timestamp(run.started_at)
                 end_time = self._to_timestamp(run.completed_at)
+                run_timestamp = end_time or start_time
+                if run_timestamp is None:
+                    continue
 
                 task_status = TaskStatus(
                     name=pipeline_details.name,
@@ -159,7 +162,7 @@ class TableaupipelineSource(PipelineServiceSource):
                 pipeline_status = PipelineStatus(
                     taskStatus=[task_status],
                     executionStatus=execution_status.value,
-                    timestamp=end_time or start_time,
+                    timestamp=run_timestamp,
                 )
                 pipeline_fqn = fqn.build(
                     metadata=self.metadata,
