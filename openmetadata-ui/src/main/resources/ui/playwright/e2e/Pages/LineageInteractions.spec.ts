@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { DashboardClass } from '../../support/entity/DashboardClass';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
@@ -33,8 +33,7 @@ import {
   verifyNodePresent,
   visitLineageTab,
 } from '../../utils/lineage';
-
-test.use({ storageState: 'playwright/.auth/admin.json' });
+import { test } from '../fixtures/pages';
 
 const table1 = new TableClass();
 const table2 = new TableClass();
@@ -293,9 +292,7 @@ test.describe('Lineage Interactions', () => {
         .getByTestId('add-pipeline');
       await addPipelineBtn.click();
 
-      await expect(
-        page.locator('[data-testid="entity-modal"]')
-      ).toBeVisible();
+      await expect(page.locator('[data-testid="entity-modal"]')).toBeVisible();
 
       await page
         .locator('[data-testid="entity-modal"]')
@@ -331,7 +328,11 @@ test.describe('Lineage Interactions', () => {
         'entityResponseData.columns',
         []
       ) as Array<{ fullyQualifiedName: string }>;
-      const topicFields = get(topic, 'entityResponseData.messageSchema.schemaFields', []) as Array<{
+      const topicFields = get(
+        topic,
+        'entityResponseData.messageSchema.schemaFields',
+        []
+      ) as Array<{
         fullyQualifiedName: string;
       }>;
 
@@ -382,7 +383,9 @@ test.describe('Lineage Interactions', () => {
       const topicNode = page.getByTestId(`lineage-node-${topicFqn}`);
       await expect(topicNode).toBeVisible();
 
-      await page.locator('.react-flow__pane').click({ position: { x: 10, y: 10 } });
+      await page
+        .locator('.react-flow__pane')
+        .click({ position: { x: 10, y: 10 } });
 
       await page.waitForTimeout(300);
     });
@@ -415,7 +418,9 @@ test.describe('Lineage Interactions', () => {
       await clickLineageNode(page, table1Fqn);
       await page.waitForTimeout(300);
 
-      await page.locator('.react-flow__pane').click({ position: { x: 10, y: 10 } });
+      await page
+        .locator('.react-flow__pane')
+        .click({ position: { x: 10, y: 10 } });
 
       await clickLineageNode(page, topicFqn);
       await page.waitForTimeout(300);
@@ -442,9 +447,7 @@ test.describe('Lineage Interactions', () => {
       if ((await upstreamExpandHandle.count()) > 0) {
         await upstreamExpandHandle.hover();
 
-        await expect(
-          page.getByText(/load upstream/i)
-        ).toBeVisible();
+        await expect(page.getByText(/load upstream/i)).toBeVisible();
 
         const lineageRes = page.waitForResponse('/api/v1/lineage/**');
         await upstreamExpandHandle.click();

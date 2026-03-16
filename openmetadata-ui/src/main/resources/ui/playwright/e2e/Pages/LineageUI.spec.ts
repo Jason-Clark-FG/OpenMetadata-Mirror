@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { PipelineClass } from '../../support/entity/PipelineClass';
@@ -27,8 +27,7 @@ import {
   performZoomOut,
   visitLineageTab,
 } from '../../utils/lineage';
-
-test.use({ storageState: 'playwright/.auth/admin.json' });
+import { test } from '../fixtures/pages';
 
 const table = new TableClass();
 const topic = new TopicClass();
@@ -122,9 +121,7 @@ test.describe('Lineage UI Controls', () => {
 
     test('Verify fit view options menu', async ({ page }) => {
       await page.getByTestId('fit-screen').click();
-      await expect(
-        page.locator('#lineage-view-options-menu')
-      ).toBeVisible();
+      await expect(page.locator('#lineage-view-options-menu')).toBeVisible();
 
       await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
       await page.waitForTimeout(500);
@@ -210,9 +207,7 @@ test.describe('Lineage UI Controls', () => {
       await lineageRes;
 
       const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-      await expect(
-        page.getByTestId(`lineage-node-${topicFqn}`)
-      ).toBeVisible();
+      await expect(page.getByTestId(`lineage-node-${topicFqn}`)).toBeVisible();
     });
 
     test('Verify service filter selection', async ({ page }) => {
@@ -262,9 +257,7 @@ test.describe('Lineage UI Controls', () => {
       const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
       await lineageRes;
 
-      await expect(
-        page.getByTestId(`lineage-node-${topicFqn}`)
-      ).toBeVisible();
+      await expect(page.getByTestId(`lineage-node-${topicFqn}`)).toBeVisible();
     });
   });
 

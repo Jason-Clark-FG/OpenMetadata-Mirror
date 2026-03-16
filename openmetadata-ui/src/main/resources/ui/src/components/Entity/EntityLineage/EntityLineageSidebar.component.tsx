@@ -34,7 +34,11 @@ interface EntityNodeProps extends HTMLAttributes<HTMLDivElement> {
   label: string;
 }
 
-const EntityNode: FC<EntityNodeProps> = memo(({ type, label, draggable }) => {
+const EntityNodeInternal: FC<EntityNodeProps> = ({
+  type,
+  label,
+  draggable,
+}) => {
   const { theme } = useApplicationStore();
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -74,7 +78,9 @@ const EntityNode: FC<EntityNodeProps> = memo(({ type, label, draggable }) => {
       </Typography.Text>
     </div>
   );
-});
+};
+
+const EntityNode = memo(EntityNodeInternal);
 
 const EntityLineageSidebar: FC<SidebarProps> = ({ show, newAddedNode }) => {
   const { t } = useTranslation();

@@ -357,7 +357,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const redrawLineage = useCallback(
     async (
       lineageData: EntityLineageResponse,
-      recenter = true,
+      recenter?: string | boolean,
       isFirstTime = false
     ) => {
       if (!reactFlowInstance?.viewportInitialized) {
@@ -454,7 +454,11 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       }));
 
       if (recenter) {
-        const rootNode = visibleNodes.find((n) => n.data.isRootNode);
+        const nodeToFocus =
+          typeof recenter === 'string' &&
+          visibleNodes.find((n) => n.data.fullyQualifiedName === recenter);
+        const rootNode =
+          nodeToFocus ?? visibleNodes.find((n) => n.data.isRootNode);
         if (rootNode) {
           centerNodePosition(rootNode, reactFlowInstance, zoomValue);
         } else if (visibleNodes.length > 0) {
@@ -483,15 +487,11 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       newLineageData: EntityLineageResponse,
       options: {
         shouldRedraw?: boolean;
-        centerNode?: boolean;
+        centerNode?: string;
         isFirstTime?: boolean;
       } = {}
     ) => {
-      const {
-        shouldRedraw = false,
-        centerNode = false,
-        isFirstTime = false,
-      } = options;
+      const { shouldRedraw = false, centerNode, isFirstTime = false } = options;
 
       setEntityLineage(newLineageData);
 
@@ -750,7 +750,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
         updateLineageData(updatedEntityLineage, {
           shouldRedraw: true,
-          centerNode: false,
+          centerNode: currentNode?.fullyQualifiedName,
           isFirstTime: false,
         });
 
@@ -1119,10 +1119,10 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         entityFqn
       );
 
-      const uniqueNodeMap = new Map<string, typeof newNodes[0]>();
+      const uniqueNodeMap = new Map<string, (typeof newNodes)[0]>();
       newNodes.forEach((n) => uniqueNodeMap.set(n.id, n));
 
-      const uniqueEdgeMap = new Map<string, typeof newEdges[0]>();
+      const uniqueEdgeMap = new Map<string, (typeof newEdges)[0]>();
       newEdges.forEach((e) => {
         const key = `${e.fromEntity.id}-${e.toEntity.id}`;
         uniqueEdgeMap.set(key, e);
@@ -1638,7 +1638,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         },
         {
           shouldRedraw: true,
-          centerNode: false,
+          centerNode: node.data.node.fullyQualifiedName,
           isFirstTime: false,
         }
       );

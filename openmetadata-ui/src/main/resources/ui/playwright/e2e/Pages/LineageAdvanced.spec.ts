@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { TableClass } from '../../support/entity/TableClass';
@@ -23,8 +23,7 @@ import {
   visitLineageTab,
 } from '../../utils/lineage';
 import { sidebarClick } from '../../utils/sidebar';
-
-test.use({ storageState: 'playwright/.auth/admin.json' });
+import { test } from '../fixtures/pages';
 
 const table = new TableClass();
 const topic = new TopicClass();
@@ -251,10 +250,7 @@ test.describe('Lineage Advanced Features', () => {
 
       await waitForAllLoadersToDisappear(page);
 
-      const tableFqn = get(
-        emptyTable,
-        'entityResponseData.fullyQualifiedName'
-      );
+      const tableFqn = get(emptyTable, 'entityResponseData.fullyQualifiedName');
       const tableNode = page.getByTestId(`lineage-node-${tableFqn}`);
       await expect(tableNode).toBeVisible();
 
