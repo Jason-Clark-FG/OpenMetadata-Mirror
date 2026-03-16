@@ -178,7 +178,7 @@ test.describe('Tag Page with Admin Roles', () => {
       .click();
 
     const updateColor = adminPage.waitForResponse(`/api/v1/tags/*`);
-    await adminPage.locator('button[type="submit"]').click();
+    await adminPage.getByTestId('save-button').click();
     await updateColor;
 
 
