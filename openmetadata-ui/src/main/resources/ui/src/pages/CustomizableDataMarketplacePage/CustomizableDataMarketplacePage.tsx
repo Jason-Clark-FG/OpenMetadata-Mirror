@@ -11,11 +11,15 @@
  *  limitations under the License.
  */
 
-import { HolderOutlined } from '@ant-design/icons';
+import { DragOutlined } from '@ant-design/icons';
 import { compare } from 'fast-json-patch';
 import { isEmpty } from 'lodash';
-import { useCallback, useMemo, useState } from 'react';
-import { useDrag, useDrop } from 'react-dnd';
+import React, { useCallback, useMemo, useState } from 'react';
+import RGL, {
+  Layout,
+  ReactGridLayoutProps,
+  WidthProvider,
+} from 'react-grid-layout';
 import { useTranslation } from 'react-i18next';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
 import MarketplaceSearchBar from '../../components/DataMarketplace/MarketplaceSearchBar/MarketplaceSearchBar.component';
@@ -24,6 +28,7 @@ import { CustomizeMyDataProps } from '../../components/MyData/CustomizableCompon
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { EntityTabs } from '../../enums/entity.enum';
 import { Page, PageType } from '../../generated/system/ui/page';
+import { useGridLayoutDirection } from '../../hooks/useGridLayoutDirection';
 import dataMarketplaceClassBase from '../../utils/DataMarketplace/DataMarketplaceClassBase';
 import { getDataMarketplaceWidgetsFromKey } from '../../utils/DataMarketplace/DataMarketplaceUtils';
 import { getEntityName } from '../../utils/EntityUtils';
@@ -32,47 +37,17 @@ import { useCustomizeStore } from '../CustomizablePage/CustomizeStore';
 import '../DataMarketplacePage/data-marketplace-page.less';
 import './customizable-data-marketplace-page.less';
 
-const DRAG_TYPE = 'MARKETPLACE_WIDGET';
+const ReactGridLayout = WidthProvider(RGL) as React.ComponentType<
+  ReactGridLayoutProps & { children?: React.ReactNode }
+>;
 
-const DraggableWidgetCard = ({
-  widget,
-  index,
-  moveWidget,
-}: {
-  widget: WidgetConfig;
-  index: number;
-  moveWidget: (from: number, to: number) => void;
-}) => {
-  const [{ isDragging }, drag, dragPreview] = useDrag({
-    type: DRAG_TYPE,
-    item: { index },
-    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
-  });
+const ROW_HEIGHT = 170;
 
-  const [, drop] = useDrop({
-    accept: DRAG_TYPE,
-    hover: (draggedItem: { index: number }) => {
-      if (draggedItem.index !== index) {
-        moveWidget(draggedItem.index, index);
-        draggedItem.index = index;
-      }
-    },
-  });
-
-  const dragHandle = (
-    <div className="marketplace-drag-handle" ref={drag}>
-      <HolderOutlined />
-    </div>
-  );
-
-  return (
-    <div
-      ref={(node) => dragPreview(drop(node))}
-      style={{ opacity: isDragging ? 0.5 : 1 }}>
-      {getDataMarketplaceWidgetsFromKey(widget, true, dragHandle)}
-    </div>
-  );
-};
+const dragHandle = (
+  <div className="marketplace-drag-handle">
+    <DragOutlined style={{ fontSize: 18 }} />
+  </div>
+);
 
 const CustomizableDataMarketplacePage = ({
   personaDetails,
@@ -91,6 +66,8 @@ const CustomizableDataMarketplacePage = ({
 
     return isEmpty(savedLayout) ? defaultLayout : savedLayout;
   });
+
+  useGridLayoutDirection();
 
   const handleReset = useCallback(async () => {
     await onSaveLayout();
@@ -121,16 +98,16 @@ const CustomizableDataMarketplacePage = ({
     return jsonPatch.length === 0;
   }, [currentPage, currentPageType, getPage]);
 
-  const moveWidget = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      const newLayout = [...layout];
-      const [moved] = newLayout.splice(fromIndex, 1);
-      newLayout.splice(toIndex, 0, moved);
+  const handleLayoutUpdate = useCallback(
+    (updatedLayout: Layout[]) => {
+      const newLayout = updatedLayout.map((item) => {
+        const widgetData = layout.find((w) => w.i === item.i);
 
-      let cumulativeY = 0;
-      newLayout.forEach((widget) => {
-        widget.y = cumulativeY;
-        cumulativeY += widget.h;
+        return {
+          ...widgetData,
+          ...item,
+          static: false,
+        } as WidgetConfig;
       });
 
       setLayout(newLayout);
@@ -154,6 +131,16 @@ const CustomizableDataMarketplacePage = ({
     [layout, currentPage, currentPageType, updateCurrentPage]
   );
 
+  const widgets = useMemo(
+    () =>
+      layout.map((widget) => (
+        <div data-grid={widget} key={widget.i}>
+          {getDataMarketplaceWidgetsFromKey(widget, true, dragHandle)}
+        </div>
+      )),
+    [layout]
+  );
+
   return (
     <PageLayoutV1
       className="bg-grey"
@@ -172,16 +159,19 @@ const CustomizableDataMarketplacePage = ({
             <MarketplaceGreetingBanner />
             <MarketplaceSearchBar isEditView />
           </div>
-          <div className="marketplace-customize-widgets p-x-box">
-            {layout.map((widget, index) => (
-              <DraggableWidgetCard
-                index={index}
-                key={widget.i}
-                moveWidget={moveWidget}
-                widget={widget}
-              />
-            ))}
-          </div>
+          <ReactGridLayout
+            useCSSTransforms
+            verticalCompact
+            className="marketplace-customize-widgets"
+            cols={1}
+            compactType="vertical"
+            draggableHandle=".marketplace-drag-handle"
+            isResizable={false}
+            margin={[0, 16]}
+            rowHeight={ROW_HEIGHT}
+            onLayoutChange={handleLayoutUpdate}>
+            {widgets}
+          </ReactGridLayout>
         </div>
       </div>
     </PageLayoutV1>

@@ -26,22 +26,25 @@
 
 .marketplace-drag-handle {
   cursor: move;
-  padding: 4px;
+  width: 41px;
+  height: 40px;
   border-radius: 6px;
-  color: #98a2b3;
+  border: 1px solid #eaecf0;
+  color: #000;
   display: flex;
   align-items: center;
+  justify-content: center;
 
   &:hover {
     background-color: #f2f4f7;
-    color: #475467;
   }
 }
 
 .marketplace-customize-widgets {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
   margin-top: 24px;
-  min-height: 500px;
+
+  .react-grid-item.react-grid-placeholder {
+    background-color: @announcement-background-dark;
+    border-radius: 12px;
+  }
 }
