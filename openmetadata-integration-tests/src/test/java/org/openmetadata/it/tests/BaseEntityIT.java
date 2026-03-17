@@ -6255,9 +6255,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
           client
               .getHttpClient()
               .executeForString(
-                  HttpMethod.GET,
-                  "/v1/changeSummary/" + getEntityType() + "/name/" + fqn,
-                  null);
+                  HttpMethod.GET, "/v1/changeSummary/" + getEntityType() + "/name/" + fqn, null);
       assertNotNull(response, "ChangeSummary response should not be null");
       JsonNode result = MAPPER.readTree(response);
       assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
@@ -6368,9 +6366,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
       client
           .getHttpClient()
           .executeForString(
-              HttpMethod.GET,
-              "/v1/changeSummary/" + getEntityType() + "/" + randomId,
-              null);
+              HttpMethod.GET, "/v1/changeSummary/" + getEntityType() + "/" + randomId, null);
       fail("Expected 404 for non-existent entity changeSummary");
     } catch (Exception e) {
       // Expected - entity not found

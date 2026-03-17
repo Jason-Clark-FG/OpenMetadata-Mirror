@@ -80,8 +80,7 @@ public class ChangeSummaryResource {
               schema = @Schema(type = "string"))
           @PathParam("entityType")
           String entityType,
-      @Parameter(description = "Entity ID", schema = @Schema(type = "UUID"))
-          @PathParam("id")
+      @Parameter(description = "Entity ID", schema = @Schema(type = "UUID")) @PathParam("id")
           UUID id,
       @Parameter(
               description =
@@ -95,16 +94,13 @@ public class ChangeSummaryResource {
           @QueryParam("limit")
           @DefaultValue("0")
           int limit,
-      @Parameter(
-              description = "Offset for pagination",
-              schema = @Schema(type = "integer"))
+      @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
           int offset) {
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
-    EntityInterface entity =
-        (EntityInterface) repository.get(null, id, repository.getFields("*"));
+    EntityInterface entity = (EntityInterface) repository.get(null, id, repository.getFields("*"));
 
     return buildResponse(entity, fieldPrefix, limit, offset);
   }
@@ -147,9 +143,7 @@ public class ChangeSummaryResource {
           @QueryParam("limit")
           @DefaultValue("0")
           int limit,
-      @Parameter(
-              description = "Offset for pagination",
-              schema = @Schema(type = "integer"))
+      @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
           int offset) {
