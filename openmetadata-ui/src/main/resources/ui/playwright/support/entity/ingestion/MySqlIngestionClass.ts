@@ -25,7 +25,8 @@ import {
   toastNotification,
   uuid,
 } from '../../../utils/common';
-import { visitEntityPage,
+import {
+  visitEntityPage,
   waitForAllLoadersToDisappear,
 } from '../../../utils/entity';
 import { visitServiceDetailsPage } from '../../../utils/service';
@@ -205,7 +206,7 @@ class MysqlIngestionClass extends ServiceBaseClass {
   }
 
   async validateIngestionDetails(page: Page) {
-    await page.locator('.ant-select-selection-item-content').waitFor();
+    await page.locator('.ant-select-selection-item-content').first().waitFor();
 
     await expect(page.locator('.ant-select-selection-item-content')).toHaveText(
       this.defaultFilters.concat([...this.excludeSchemas, ...this.tableFilter])

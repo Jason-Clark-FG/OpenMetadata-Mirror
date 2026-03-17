@@ -418,7 +418,9 @@ class ServiceBaseClass {
     if (await metadataTab2.isVisible()) {
       await metadataTab2.click();
     }
-    await page.locator(`td:has-text("${ingestionType}")`).waitFor();
+    await page
+      .locator(`[data-testid="pipeline-type"]:has-text("${ingestionType}")`)
+      .waitFor();
 
     await expect(
       page
