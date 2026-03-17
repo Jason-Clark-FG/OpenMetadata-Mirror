@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
+import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { act } from 'react-test-renderer';
 import { EntityType } from '../../../../enums/entity.enum';
 import {
   APPROVAL_TASK_FEED,
