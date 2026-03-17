@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import {
-  Button,
   ButtonGroup,
   ButtonGroupItem,
   Dropdown,
@@ -92,48 +91,45 @@ const LineageControlButtons: FC<{
 
   return (
     <div className="tw:flex tw:items-center">
-      <Dropdown.Root>
-        <Button
-          color="secondary"
-          data-testid="fit-screen"
-          iconLeading={FitViewOptionsIcon}
-          size="sm"
-        />
-        <Dropdown.Popover>
-          <Dropdown.Menu>
-            <Dropdown.Item
-              icon={FitScreenIcon}
-              id="fit-view"
-              label={t('label.fit-to-screen')}
-              onAction={handleFitView}
-            />
-            <Dropdown.Item
-              icon={FitViewOptionsIcon}
-              id="refocus-selected"
-              label={t('label.refocused-to-selected')}
-              onAction={handleRefocusSelected}
-            />
-            <Dropdown.Item
-              icon={RearrangeNodesIcon}
-              id="rearrange"
-              label={t('label.rearrange-nodes')}
-              onAction={handleRearrange}
-            />
-            <Dropdown.Item
-              icon={HomeIcon}
-              id="refocus-home"
-              label={t('label.refocused-to-home')}
-              onAction={handleRefocusHome}
-            />
-          </Dropdown.Menu>
-        </Dropdown.Popover>
-      </Dropdown.Root>
-
       <ButtonGroup onSelectionChange={() => {}}>
+        <Dropdown.Root>
+          <ButtonGroupItem
+            data-testid="fit-screen"
+            iconLeading={FitViewOptionsIcon}
+          />
+          <Dropdown.Popover>
+            <Dropdown.Menu>
+              <Dropdown.Item
+                icon={FitScreenIcon}
+                id="fit-view"
+                label={t('label.fit-to-screen')}
+                onAction={handleFitView}
+              />
+              <Dropdown.Item
+                icon={FitViewOptionsIcon}
+                id="refocus-selected"
+                label={t('label.refocused-to-selected')}
+                onAction={handleRefocusSelected}
+              />
+              <Dropdown.Item
+                icon={RearrangeNodesIcon}
+                id="rearrange"
+                label={t('label.rearrange-nodes')}
+                onAction={handleRearrange}
+              />
+              <Dropdown.Item
+                icon={HomeIcon}
+                id="refocus-home"
+                label={t('label.refocused-to-home')}
+                onAction={handleRefocusHome}
+              />
+            </Dropdown.Menu>
+          </Dropdown.Popover>
+        </Dropdown.Root>
         <Tooltip placement="top" title={t('label.mind-map')}>
           <ButtonGroupItem
             className={
-              miniMapVisible ? 'tw:bg-brand-100! tw:*:text-brand-700!' : ''
+              miniMapVisible ? 'tw:bg-brand-100 tw:*:text-brand-700' : ''
             }
             data-testid="toggle-mind-map"
             iconLeading={MapIcon}
@@ -170,7 +166,7 @@ const LineageControlButtons: FC<{
           }>
           <ButtonGroupItem
             className={
-              isFullscreen ? 'tw:bg-brand-100! tw:*:text-brand-700!' : ''
+              isFullscreen ? 'tw:bg-brand-100 tw:*:text-brand-700' : ''
             }
             data-testid={isFullscreen ? 'exit-full-screen' : 'full-screen'}
             iconLeading={isFullscreen ? ExitFullScreenIcon : FullscreenIcon}
