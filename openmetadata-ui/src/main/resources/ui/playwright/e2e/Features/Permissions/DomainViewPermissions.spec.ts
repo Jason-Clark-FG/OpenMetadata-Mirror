@@ -105,7 +105,7 @@ test.describe.skip('Domain and Data Product View Permission Denied', () => {
     }) => {
         await redirectToHomePage(testUserPage);
         await testUserPage.goto('/domain');
-        await testUserPage.waitForLoadState('networkidle');
+        await testUserPage.waitForLoadState('domcontentloaded');
 
         await expect(
             testUserPage.getByTestId('permission-error-placeholder')
@@ -117,7 +117,7 @@ test.describe.skip('Domain and Data Product View Permission Denied', () => {
     }) => {
         await redirectToHomePage(testUserPage);
         await testUserPage.goto('/dataProduct');
-        await testUserPage.waitForLoadState('networkidle');
+        await testUserPage.waitForLoadState('domcontentloaded');
 
         await expect(
             testUserPage.getByTestId('permission-error-placeholder')
@@ -132,7 +132,7 @@ test.describe.skip('Domain and Data Product View Permission Denied', () => {
         );
         await redirectToHomePage(testUserPage);
         await testUserPage.goto(`/domain/${domainFqn}`);
-        await testUserPage.waitForLoadState('networkidle');
+        await testUserPage.waitForLoadState('domcontentloaded');
 
         await expect(
             testUserPage.getByTestId('permission-error-placeholder')
@@ -147,7 +147,7 @@ test.describe.skip('Domain and Data Product View Permission Denied', () => {
         );
         await redirectToHomePage(testUserPage);
         await testUserPage.goto(`/dataProduct/${dataProductFqn}`);
-        await testUserPage.waitForLoadState('networkidle');
+        await testUserPage.waitForLoadState('domcontentloaded');
 
         await expect(
             testUserPage.getByTestId('permission-error-placeholder')
