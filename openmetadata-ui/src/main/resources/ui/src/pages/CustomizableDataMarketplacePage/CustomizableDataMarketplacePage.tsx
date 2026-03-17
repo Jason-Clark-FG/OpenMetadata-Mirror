@@ -21,11 +21,13 @@ import RGL, {
   WidthProvider,
 } from 'react-grid-layout';
 import { useTranslation } from 'react-i18next';
+import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
 import MarketplaceSearchBar from '../../components/DataMarketplace/MarketplaceSearchBar/MarketplaceSearchBar.component';
 import { CustomizablePageHeader } from '../../components/MyData/CustomizableComponents/CustomizablePageHeader/CustomizablePageHeader';
 import { CustomizeMyDataProps } from '../../components/MyData/CustomizableComponents/CustomizeMyData/CustomizeMyData.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
+import { TAB_GRID_MAX_COLUMNS } from '../../constants/CustomizeWidgets.constants';
 import { EntityTabs } from '../../enums/entity.enum';
 import { Page, PageType } from '../../generated/system/ui/page';
 import { useGridLayoutDirection } from '../../hooks/useGridLayoutDirection';
@@ -45,7 +47,7 @@ const ROW_HEIGHT = 170;
 
 const dragHandle = (
   <div className="marketplace-drag-handle">
-    <DragOutlined style={{ fontSize: 18 }} />
+    <DragOutlined />
   </div>
 );
 
@@ -64,7 +66,15 @@ const CustomizableDataMarketplacePage = ({
   const [layout, setLayout] = useState<WidgetConfig[]>(() => {
     const savedLayout = currentPage?.tabs?.[0]?.layout as WidgetConfig[];
 
-    return isEmpty(savedLayout) ? defaultLayout : savedLayout;
+    if (isEmpty(savedLayout)) {
+      return defaultLayout;
+    }
+
+    return savedLayout.map((widget) => ({
+      ...widget,
+      w: TAB_GRID_MAX_COLUMNS,
+      x: 0,
+    }));
   });
 
   useGridLayoutDirection();
@@ -106,6 +116,8 @@ const CustomizableDataMarketplacePage = ({
         return {
           ...widgetData,
           ...item,
+          w: TAB_GRID_MAX_COLUMNS,
+          x: 0,
           static: false,
         } as WidgetConfig;
       });
@@ -154,24 +166,34 @@ const CustomizableDataMarketplacePage = ({
           onReset={handleReset}
           onSave={handleSave}
         />
-        <div className="marketplace-grid-wrapper" dir="ltr">
-          <div className="p-x-box">
-            <MarketplaceGreetingBanner />
-            <MarketplaceSearchBar isEditView />
+        <div className="customize-marketplace-content">
+          <div
+            className="customize-marketplace-bg"
+            style={
+              {
+                '--marketplace-bg': `url(${marketplaceBg})`,
+              } as React.CSSProperties
+            }>
+            <div className="marketplace-grid-wrapper">
+              <MarketplaceGreetingBanner />
+              <MarketplaceSearchBar isEditView />
+            </div>
           </div>
-          <ReactGridLayout
-            useCSSTransforms
-            verticalCompact
-            className="marketplace-customize-widgets"
-            cols={1}
-            compactType="vertical"
-            draggableHandle=".marketplace-drag-handle"
-            isResizable={false}
-            margin={[0, 16]}
-            rowHeight={ROW_HEIGHT}
-            onLayoutChange={handleLayoutUpdate}>
-            {widgets}
-          </ReactGridLayout>
+          <div className="marketplace-grid-wrapper" dir="ltr">
+            <ReactGridLayout
+              useCSSTransforms
+              verticalCompact
+              className="marketplace-customize-widgets"
+              cols={TAB_GRID_MAX_COLUMNS}
+              compactType="vertical"
+              draggableHandle=".marketplace-drag-handle"
+              isResizable={false}
+              margin={[16, 24]}
+              rowHeight={ROW_HEIGHT}
+              onLayoutChange={handleLayoutUpdate}>
+              {widgets}
+            </ReactGridLayout>
+          </div>
         </div>
       </div>
     </PageLayoutV1>

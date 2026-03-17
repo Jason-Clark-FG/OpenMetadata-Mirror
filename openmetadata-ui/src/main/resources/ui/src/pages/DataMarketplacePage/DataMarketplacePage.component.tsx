@@ -11,12 +11,10 @@
  *  limitations under the License.
  */
 
-import { Button } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import RGL, { ReactGridLayoutProps, WidthProvider } from 'react-grid-layout';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
 import Loader from '../../components/common/Loader/Loader';
 import MarketplaceGreetingBanner from '../../components/DataMarketplace/MarketplaceGreetingBanner/MarketplaceGreetingBanner.component';
@@ -33,7 +31,6 @@ import {
   getWidgetsFromKey,
 } from '../../utils/CustomizePage/CustomizePageUtils';
 import dataMarketplaceClassBase from '../../utils/DataMarketplace/DataMarketplaceClassBase';
-import { getCustomizePagePath } from '../../utils/GlobalSettingsUtils';
 import { WidgetConfig } from '../CustomizablePage/CustomizablePage.interface';
 import './data-marketplace-page.less';
 
@@ -43,7 +40,6 @@ const ReactGridLayout = WidthProvider(RGL) as React.ComponentType<
 
 const DataMarketplacePage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { selectedPersona } = useApplicationStore();
 
   const defaultLayout = dataMarketplaceClassBase.getDefaultLayout(
@@ -73,12 +69,19 @@ const DataMarketplacePage = () => {
           pageData
         ) as WidgetConfig[];
 
+        const normalizeLayout = (l: WidgetConfig[]) =>
+          l
+            .map((widget) => ({
+              ...widget,
+              w: TAB_GRID_MAX_COLUMNS,
+              x: 0,
+            }))
+            .sort((a, b) => a.y - b.y);
+
         if (!isEmpty(tabLayout)) {
-          setLayout([...tabLayout].sort((a, b) => a.y - b.y));
+          setLayout(normalizeLayout(tabLayout));
         } else if (!isEmpty(pageData?.layout)) {
-          setLayout(
-            [...(pageData?.layout as WidgetConfig[])].sort((a, b) => a.y - b.y)
-          );
+          setLayout(normalizeLayout(pageData?.layout as WidgetConfig[]));
         } else {
           setLayout(defaultLayout);
         }
@@ -95,17 +98,6 @@ const DataMarketplacePage = () => {
   useEffect(() => {
     fetchDocument();
   }, [fetchDocument]);
-
-  const handleCustomize = useCallback(() => {
-    if (selectedPersona?.fullyQualifiedName) {
-      navigate(
-        getCustomizePagePath(
-          selectedPersona.fullyQualifiedName,
-          PageType.DataMarketplace
-        )
-      );
-    }
-  }, [navigate, selectedPersona]);
 
   const widgets = useMemo(
     () =>
@@ -133,16 +125,6 @@ const DataMarketplacePage = () => {
         }>
         <div className="marketplace-grid-wrapper" dir="ltr">
           <div className="p-x-box">
-            <div className="d-flex justify-end m-b-xs">
-              {selectedPersona && (
-                <Button
-                  color="secondary"
-                  data-testid="customize-marketplace-btn"
-                  onPress={handleCustomize}>
-                  {t('label.customize')}
-                </Button>
-              )}
-            </div>
             <MarketplaceGreetingBanner />
             <MarketplaceSearchBar />
           </div>

@@ -14,13 +14,41 @@
 
 .customize-details-page {
   box-shadow: @box-shadow-surface-default;
-  border: 1px solid #eaecf5;
-  background-color: #f0f9ff;
+  border: 1px solid @grey-15;
+  background-color: @blue-22;
   padding: 20px;
   border-radius: 12px;
 
   .customize-page-header {
     border: 0.5px solid @primary-3;
+  }
+}
+
+.customize-marketplace-content {
+  background-color: #fff;
+  border-radius: 12px;
+}
+
+.customize-marketplace-bg {
+  position: relative;
+  padding: 30px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: var(--marketplace-bg);
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
   }
 }
 
@@ -31,6 +59,7 @@
   border-radius: 6px;
   border: 1px solid #eaecf0;
   color: #000;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,6 +71,7 @@
 
 .marketplace-customize-widgets {
   margin-top: 24px;
+  user-select: none;
 
   .react-grid-item.react-grid-placeholder {
     background-color: @announcement-background-dark;
