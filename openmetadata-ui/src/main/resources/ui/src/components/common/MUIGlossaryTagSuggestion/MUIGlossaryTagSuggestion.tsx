@@ -30,6 +30,21 @@ import { ModifiedGlossaryTerm } from '../../Glossary/GlossaryTermTab/GlossaryTer
 import { TreeDataResponse, TreeNode } from '../atoms/asyncTreeSelect/types';
 import MUIAsyncTreeSelect from '../MUIAsyncTreeSelect/MUIAsyncTreeSelect';
 
+interface GlossaryTreeOption {
+  id: string;
+  value: string;
+  title: string;
+  children: GlossaryTreeOption[];
+  disabled: boolean;
+  selectable: boolean;
+  lazyLoad?: boolean;
+  data: ModifiedGlossaryTerm | undefined;
+}
+
+interface GlossaryWithChildren extends Glossary {
+  children?: ModifiedGlossaryTerm[];
+}
+
 export interface MUIGlossaryTagSuggestionProps {
   value?: TagLabel[];
   onChange?: (newTags: TagLabel[]) => void;
@@ -51,18 +66,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
 
   // Convert tree options to TreeNode format - shared across search and expansion
   const convertToTreeNodes = useCallback(
-    (
-      options: Array<{
-        id: string;
-        value: string;
-        title: string;
-        children?: any[];
-        disabled?: boolean;
-        selectable?: boolean;
-        lazyLoad?: boolean;
-        data?: any;
-      }>
-    ): TreeNode[] => {
+    (options: GlossaryTreeOption[]): TreeNode[] => {
       return options.map((option) => ({
         id: option.id,
         label: option.title,
@@ -89,15 +93,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
     (
       options: ModifiedGlossaryTerm[] = [],
       level = 0
-    ): Array<{
-      id: string;
-      value: string;
-      title: string;
-      children: any[];
-      disabled: boolean;
-      selectable: boolean;
-      data: any;
-    }> => {
+    ): GlossaryTreeOption[] => {
       return options.map((option) => {
         const hasChildren =
           'children' in option && option.children && option.children.length > 0;
@@ -145,7 +141,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
 
           if (Array.isArray(response)) {
             // Process each glossary with its nested terms
-            response.forEach((glossary: any) => {
+            response.forEach((glossary: GlossaryWithChildren) => {
               // Include all glossaries returned by search
               // The API returns glossaries that match the search term
               // Either in their name or in their children's names
