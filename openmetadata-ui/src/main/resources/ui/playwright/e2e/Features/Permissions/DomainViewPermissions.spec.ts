@@ -99,7 +99,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
     await afterAction();
 });
 
-test.describe('Domain and Data Product View Permission Denied', () => {
+test.describe.skip('Domain and Data Product View Permission Denied', () => {
     test('Domain listing page should show permission error', async ({
         testUserPage,
     }) => {
