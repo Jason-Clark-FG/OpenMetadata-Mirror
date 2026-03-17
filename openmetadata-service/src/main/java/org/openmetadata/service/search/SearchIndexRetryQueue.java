@@ -23,6 +23,7 @@ public final class SearchIndexRetryQueue {
   public static final String STATUS_FAILED = "FAILED";
 
   private static final int MAX_REASON_LENGTH = 8192;
+
   private static final AtomicReference<Set<String>> SUSPENDED_ENTITY_TYPES =
       new AtomicReference<>(Collections.emptySet());
   private static final AtomicBoolean SUSPEND_ALL_STREAMING = new AtomicBoolean(false);
@@ -107,6 +108,16 @@ public final class SearchIndexRetryQueue {
     } catch (Exception e) {
       return false;
     }
+  }
+
+  public static boolean isRetryableStatusCode(int status) {
+    if (status == 429 || status >= 500) {
+      return true;
+    }
+    if (status >= 400) {
+      return false;
+    }
+    return true;
   }
 
   public static void updateSuspension(Set<String> entityTypes, boolean suspendAll) {

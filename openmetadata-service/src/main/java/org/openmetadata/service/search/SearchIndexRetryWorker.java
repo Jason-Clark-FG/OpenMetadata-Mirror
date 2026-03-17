@@ -6,8 +6,10 @@ import static org.openmetadata.service.search.SearchIndexRetryQueue.STATUS_PENDI
 import static org.openmetadata.service.search.SearchIndexRetryQueue.STATUS_PENDING_RETRY_2;
 import static org.openmetadata.service.search.SearchIndexRetryQueue.normalize;
 
+import es.co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import io.dropwizard.lifecycle.Managed;
 import io.micrometer.core.instrument.Metrics;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.system.EventPublisherJob;
@@ -32,12 +35,23 @@ import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.CollectionDAO.SearchIndexJobDAO.SearchIndexJobRecord;
+import org.openmetadata.service.jdbi3.CollectionDAO.SearchIndexRetryQueueDAO.SearchIndexRetryRecord;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.workflows.searchIndex.ReindexingUtil;
+import os.org.opensearch.client.opensearch._types.OpenSearchException;
 
 /**
- * Background worker that continuously retries failed live-indexing writes from
- * {@code search_index_retry_queue}.
+ * Background worker that continuously retries failed live-indexing writes from {@code
+ * search_index_retry_queue}.
+ *
+ * <p>Resilience behaviour:
+ *
+ * <ul>
+ *   <li>Pre-check: skips claiming when the search client is unreachable, with exponential backoff.
+ *   <li>Error classification: uses HTTP status codes from ES/OS exceptions to distinguish
+ *       non-retryable client errors (4xx except 429) from retryable server/network errors.
+ *   <li>Stale recovery: reclaims records stuck IN_PROGRESS for longer than the stale threshold.
+ * </ul>
  */
 @Slf4j
 public class SearchIndexRetryWorker implements Managed {
@@ -46,11 +60,12 @@ public class SearchIndexRetryWorker implements Managed {
   private static final int POLL_INTERVAL_SECONDS = 5;
   private static final int CLAIM_BATCH_SIZE = 25;
   private static final int MAX_CASCADE_REINDEX = 5000;
+  private static final int CASCADE_BATCH_SIZE = 200;
+  private static final int MAX_BACKOFF_SECONDS = 60;
   private static final int SUSPENSION_REFRESH_INTERVAL_MS = 5000;
   private static final int CANDIDATE_TYPES_REFRESH_INTERVAL_MS = 60000;
   private static final long STALE_RECOVERY_INTERVAL_MS = 60_000;
   private static final long STALE_THRESHOLD_MS = 10 * 60 * 1000;
-  private static final int CASCADE_BATCH_SIZE = 200;
 
   private static final List<String> ACTIVE_REINDEX_JOB_STATUSES =
       List.of("RUNNING", "READY", "STOPPING");
@@ -69,11 +84,16 @@ public class SearchIndexRetryWorker implements Managed {
   private volatile String activeScopeSignature = "";
   private volatile long candidateTypesLastRefreshAt;
   private volatile List<String> cachedCandidateEntityTypes = Collections.emptyList();
+  private volatile int consecutiveUnavailableCount;
 
   public SearchIndexRetryWorker(CollectionDAO collectionDAO, SearchRepository searchRepository) {
     this.collectionDAO = collectionDAO;
     this.searchRepository = searchRepository;
   }
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
 
   @Override
   public void start() {
@@ -119,20 +139,28 @@ public class SearchIndexRetryWorker implements Managed {
     LOG.info("Stopped search index retry worker");
   }
 
+  // ---------------------------------------------------------------------------
+  // Main loop
+  // ---------------------------------------------------------------------------
+
   private void runLoop(int workerId) {
     while (running.get()) {
       try {
         refreshReindexSuspensionScopeIfNeeded();
         recoverStaleInProgressIfNeeded();
 
-        List<CollectionDAO.SearchIndexRetryQueueDAO.SearchIndexRetryRecord> claimed =
+        if (!waitForClientAvailability(workerId)) {
+          continue;
+        }
+
+        List<SearchIndexRetryRecord> claimed =
             collectionDAO.searchIndexRetryQueueDAO().claimPending(CLAIM_BATCH_SIZE);
         if (claimed.isEmpty()) {
           sleep(POLL_INTERVAL_SECONDS);
           continue;
         }
 
-        for (CollectionDAO.SearchIndexRetryQueueDAO.SearchIndexRetryRecord record : claimed) {
+        for (SearchIndexRetryRecord record : claimed) {
           if (!running.get()) {
             return;
           }
@@ -145,103 +173,11 @@ public class SearchIndexRetryWorker implements Managed {
     }
   }
 
-  private void refreshReindexSuspensionScopeIfNeeded() {
-    long now = System.currentTimeMillis();
-    if (now - lastScopeRefreshAt < SUSPENSION_REFRESH_INTERVAL_MS) {
-      return;
-    }
+  // ---------------------------------------------------------------------------
+  // Record processing
+  // ---------------------------------------------------------------------------
 
-    synchronized (scopeRefreshLock) {
-      long currentTime = System.currentTimeMillis();
-      if (currentTime - lastScopeRefreshAt < SUSPENSION_REFRESH_INTERVAL_MS) {
-        return;
-      }
-      lastScopeRefreshAt = currentTime;
-
-      List<SearchIndexJobRecord> activeJobs =
-          collectionDAO.searchIndexJobDAO().findByStatusesWithLimit(ACTIVE_REINDEX_JOB_STATUSES, 1);
-
-      if (activeJobs.isEmpty()) {
-        if (!activeScopeSignature.isEmpty() || SearchIndexRetryQueue.isStreamingSuspended()) {
-          SearchIndexRetryQueue.clearSuspension();
-          activeScopeSignature = "";
-          LOG.info("Cleared live search indexing suspension - no active reindex jobs");
-        }
-        return;
-      }
-
-      SearchIndexJobRecord activeJob = activeJobs.getFirst();
-      EventPublisherJob jobConfiguration = null;
-      try {
-        if (activeJob.jobConfiguration() != null) {
-          jobConfiguration =
-              JsonUtils.readValue(activeJob.jobConfiguration(), EventPublisherJob.class);
-        }
-      } catch (Exception e) {
-        LOG.warn("Failed to parse job configuration for active reindex job {}", activeJob.id(), e);
-      }
-
-      Set<String> requestedEntities =
-          normalizeReindexEntities(
-              jobConfiguration != null ? jobConfiguration.getEntities() : null);
-      Set<String> searchableEntities = searchRepository.getSearchEntities();
-
-      boolean containsAllToken =
-          requestedEntities.stream().anyMatch(entity -> "all".equalsIgnoreCase(entity));
-      Set<String> suspendedTypes =
-          containsAllToken ? new HashSet<>(searchableEntities) : new HashSet<>(requestedEntities);
-      suspendedTypes.retainAll(searchableEntities);
-
-      boolean suspendAll =
-          !searchableEntities.isEmpty() && suspendedTypes.containsAll(searchableEntities);
-      String newSignature = buildScopeSignature(activeJob.id(), suspendedTypes, suspendAll);
-
-      if (newSignature.equals(activeScopeSignature)) {
-        return;
-      }
-
-      activeScopeSignature = newSignature;
-      SearchIndexRetryQueue.updateSuspension(suspendedTypes, suspendAll);
-
-      if (suspendAll) {
-        int purged =
-            collectionDAO.searchIndexRetryQueueDAO().deleteByStatuses(PURGEABLE_QUEUE_STATUSES);
-        LOG.info(
-            "Activated live search indexing suspension for all entity types using reindex job {} and purged {} retry queue rows",
-            activeJob.id(),
-            purged);
-      } else {
-        LOG.info(
-            "Activated live search indexing suspension for {} entity types using reindex job {}",
-            suspendedTypes.size(),
-            activeJob.id());
-      }
-    }
-  }
-
-  private String buildScopeSignature(String jobId, Set<String> suspendedTypes, boolean suspendAll) {
-    List<String> sorted = new ArrayList<>(suspendedTypes);
-    Collections.sort(sorted);
-    return jobId + "|" + suspendAll + "|" + String.join(",", sorted);
-  }
-
-  private Set<String> normalizeReindexEntities(Set<String> rawEntities) {
-    Set<String> normalized = new HashSet<>();
-    if (rawEntities == null) {
-      return normalized;
-    }
-    for (String entityType : rawEntities) {
-      String value = SearchIndexRetryQueue.normalize(entityType);
-      if (!value.isEmpty()) {
-        normalized.add(value);
-      }
-    }
-    return normalized;
-  }
-
-  private void processRecord(CollectionDAO.SearchIndexRetryQueueDAO.SearchIndexRetryRecord record) {
-    String nextRetryStatus = nextRetryStatus(record.getRetryCount());
-
+  private void processRecord(SearchIndexRetryRecord record) {
     try {
       if (SearchIndexRetryQueue.isSuspendAllStreaming()) {
         collectionDAO
@@ -277,34 +213,49 @@ public class SearchIndexRetryWorker implements Managed {
         return;
       }
 
-      collectionDAO
-          .searchIndexRetryQueueDAO()
-          .updateFailureAndRetryCount(
-              record.getEntityId(),
-              record.getEntityFqn(),
-              "Unable to resolve entity for retry from entityId/entityFqn",
-              nextRetryStatus);
-      Metrics.counter("search.retry.processed", "result", "failure").increment();
+      recordRetryFailure(
+          record,
+          "Unable to resolve entity for retry from entityId/entityFqn",
+          nextRetryStatus(record.getRetryCount()));
     } catch (Exception e) {
-      collectionDAO
-          .searchIndexRetryQueueDAO()
-          .updateFailureAndRetryCount(
-              record.getEntityId(),
-              record.getEntityFqn(),
-              SearchIndexRetryQueue.failureReason("retryFailed", e),
-              nextRetryStatus);
-      Metrics.counter("search.retry.processed", "result", "failure").increment();
+      handleProcessingError(record, e);
+    }
+  }
+
+  private void handleProcessingError(SearchIndexRetryRecord record, Exception e) {
+    String reason = SearchIndexRetryQueue.failureReason("retryFailed", e);
+    if (isRetryable(e)) {
+      String nextStatus = nextRetryStatus(record.getRetryCount());
+      recordRetryFailure(record, reason, nextStatus);
       LOG.debug(
           "Retry failed for entityId={} entityFqn={} nextStatus={}: {}",
           record.getEntityId(),
           record.getEntityFqn(),
-          nextRetryStatus,
+          nextStatus,
+          e.getMessage());
+    } else {
+      recordRetryFailure(record, reason, STATUS_FAILED);
+      Metrics.counter("search.retry.processed", "result", "non_retryable").increment();
+      LOG.warn(
+          "Non-retryable error for entityId={} entityFqn={}, marking as FAILED: {}",
+          record.getEntityId(),
+          record.getEntityFqn(),
           e.getMessage());
     }
   }
 
-  private EntityReference resolveEntityReference(
-      CollectionDAO.SearchIndexRetryQueueDAO.SearchIndexRetryRecord record) {
+  private void recordRetryFailure(SearchIndexRetryRecord record, String reason, String status) {
+    collectionDAO
+        .searchIndexRetryQueueDAO()
+        .updateFailureAndRetryCount(record.getEntityId(), record.getEntityFqn(), reason, status);
+    Metrics.counter("search.retry.processed", "result", "failure").increment();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Entity resolution
+  // ---------------------------------------------------------------------------
+
+  private EntityReference resolveEntityReference(SearchIndexRetryRecord record) {
     String entityId = normalize(record.getEntityId());
     String entityFqn = normalize(record.getEntityFqn());
     String entityType = normalize(record.getEntityType());
@@ -434,6 +385,10 @@ public class SearchIndexRetryWorker implements Managed {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Reindexing
+  // ---------------------------------------------------------------------------
+
   private void reindexEntityCascade(EntityReference root) throws Exception {
     ArrayDeque<EntityReference> queue = new ArrayDeque<>();
     Set<String> visited = new HashSet<>();
@@ -526,12 +481,14 @@ public class SearchIndexRetryWorker implements Managed {
     }
 
     Set<String> failedEntityIds = ConcurrentHashMap.newKeySet();
+    AtomicReference<String> firstFailureDetail = new AtomicReference<>();
     BulkSink bulkSink = searchRepository.createBulkSink(200, 5, 10L * 1024L * 1024L);
     bulkSink.setFailureCallback(
         (entityType, entityId, entityFqn, errorMessage, stage) -> {
           if (entityId != null && !entityId.isEmpty()) {
             failedEntityIds.add(entityId);
           }
+          firstFailureDetail.compareAndSet(null, errorMessage);
         });
 
     try {
@@ -554,8 +511,12 @@ public class SearchIndexRetryWorker implements Managed {
     }
 
     if (!failedEntityIds.isEmpty()) {
+      String detail = firstFailureDetail.get();
       throw new RuntimeException(
-          "Retry bulk indexing failed for " + failedEntityIds.size() + " entities");
+          "Retry bulk indexing failed for "
+              + failedEntityIds.size()
+              + " entities"
+              + (detail != null ? ": " + detail : ""));
     }
   }
 
@@ -612,16 +573,151 @@ public class SearchIndexRetryWorker implements Managed {
     }
   }
 
-  private void sleep(int seconds) {
-    try {
-      Thread.sleep(seconds * 1000L);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
+  // ---------------------------------------------------------------------------
+  // Resilience: client availability, backoff, and error classification
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns {@code true} if the search client is reachable. When unreachable, backs off
+   * exponentially (5 s → 10 s → 20 s → … → 60 s cap) so the worker does not burn retries while
+   * the search cluster is down.
+   */
+  private boolean waitForClientAvailability(int workerId) {
+    if (searchRepository.getSearchClient().isClientAvailable()) {
+      consecutiveUnavailableCount = 0;
+      return true;
     }
+    consecutiveUnavailableCount++;
+    int backoffSeconds =
+        Math.min(
+            POLL_INTERVAL_SECONDS * (1 << Math.min(consecutiveUnavailableCount, 4)),
+            MAX_BACKOFF_SECONDS);
+    Metrics.counter("search.retry.client.unavailable").increment();
+    LOG.warn(
+        "Search client unavailable, worker {} backing off for {}s (attempt {})",
+        workerId,
+        backoffSeconds,
+        consecutiveUnavailableCount);
+    sleep(backoffSeconds);
+    return false;
   }
 
-  private String nextRetryStatus(int retryCount) {
-    return retryCount < 2 ? STATUS_PENDING : STATUS_FAILED;
+  /**
+   * Classifies an exception as retryable or not by inspecting the cause chain for ES/OS exceptions
+   * that carry an HTTP status code. Classification rules:
+   *
+   * <ul>
+   *   <li>{@link IOException} (connection refused, timeout) → always retryable
+   *   <li>4xx (except 429) → non-retryable (bad mapping, field limit, version conflict, …)
+   *   <li>429 / 5xx → retryable (rate-limited, server error, cluster overload)
+   *   <li>No status code found → defaults to retryable (conservative)
+   * </ul>
+   */
+  private boolean isRetryable(Throwable t) {
+    if (t instanceof IOException) {
+      return true;
+    }
+    int status = extractSearchStatusCode(t);
+    if (status > 0) {
+      return SearchIndexRetryQueue.isRetryableStatusCode(status);
+    }
+    return true;
+  }
+
+  private int extractSearchStatusCode(Throwable t) {
+    Throwable current = t;
+    while (current != null) {
+      if (current instanceof ElasticsearchException esEx) {
+        return esEx.status();
+      }
+      if (current instanceof OpenSearchException osEx) {
+        return osEx.status();
+      }
+      Throwable cause = current.getCause();
+      if (cause == current) {
+        break;
+      }
+      current = cause;
+    }
+    return -1;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Suspension and scheduling
+  // ---------------------------------------------------------------------------
+
+  private void refreshReindexSuspensionScopeIfNeeded() {
+    long now = System.currentTimeMillis();
+    if (now - lastScopeRefreshAt < SUSPENSION_REFRESH_INTERVAL_MS) {
+      return;
+    }
+
+    synchronized (scopeRefreshLock) {
+      long currentTime = System.currentTimeMillis();
+      if (currentTime - lastScopeRefreshAt < SUSPENSION_REFRESH_INTERVAL_MS) {
+        return;
+      }
+      lastScopeRefreshAt = currentTime;
+
+      List<SearchIndexJobRecord> activeJobs =
+          collectionDAO.searchIndexJobDAO().findByStatusesWithLimit(ACTIVE_REINDEX_JOB_STATUSES, 1);
+
+      if (activeJobs.isEmpty()) {
+        if (!activeScopeSignature.isEmpty() || SearchIndexRetryQueue.isStreamingSuspended()) {
+          SearchIndexRetryQueue.clearSuspension();
+          activeScopeSignature = "";
+          LOG.info("Cleared live search indexing suspension - no active reindex jobs");
+        }
+        return;
+      }
+
+      SearchIndexJobRecord activeJob = activeJobs.getFirst();
+      EventPublisherJob jobConfiguration = null;
+      try {
+        if (activeJob.jobConfiguration() != null) {
+          jobConfiguration =
+              JsonUtils.readValue(activeJob.jobConfiguration(), EventPublisherJob.class);
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to parse job configuration for active reindex job {}", activeJob.id(), e);
+      }
+
+      Set<String> requestedEntities =
+          normalizeReindexEntities(
+              jobConfiguration != null ? jobConfiguration.getEntities() : null);
+      Set<String> searchableEntities = searchRepository.getSearchEntities();
+
+      boolean containsAllToken =
+          requestedEntities.stream().anyMatch(entity -> "all".equalsIgnoreCase(entity));
+      Set<String> suspendedTypes =
+          containsAllToken ? new HashSet<>(searchableEntities) : new HashSet<>(requestedEntities);
+      suspendedTypes.retainAll(searchableEntities);
+
+      boolean suspendAll =
+          !searchableEntities.isEmpty() && suspendedTypes.containsAll(searchableEntities);
+      String newSignature = buildScopeSignature(activeJob.id(), suspendedTypes, suspendAll);
+
+      if (newSignature.equals(activeScopeSignature)) {
+        return;
+      }
+
+      activeScopeSignature = newSignature;
+      SearchIndexRetryQueue.updateSuspension(suspendedTypes, suspendAll);
+
+      if (suspendAll) {
+        int purged =
+            collectionDAO.searchIndexRetryQueueDAO().deleteByStatuses(PURGEABLE_QUEUE_STATUSES);
+        LOG.info(
+            "Activated live search indexing suspension for all entity types using reindex job {} and purged {} retry queue rows",
+            activeJob.id(),
+            purged);
+      } else {
+        LOG.info(
+            "Activated live search indexing suspension for {} entity types using reindex job {}",
+            suspendedTypes.size(),
+            activeJob.id());
+      }
+    }
   }
 
   private void recoverStaleInProgressIfNeeded() {
@@ -640,5 +736,41 @@ public class SearchIndexRetryWorker implements Managed {
     } catch (Exception e) {
       LOG.warn("Failed to recover stale IN_PROGRESS records: {}", e.getMessage());
     }
+  }
+
+  private Set<String> normalizeReindexEntities(Set<String> rawEntities) {
+    Set<String> normalized = new HashSet<>();
+    if (rawEntities == null) {
+      return normalized;
+    }
+    for (String entityType : rawEntities) {
+      String value = SearchIndexRetryQueue.normalize(entityType);
+      if (!value.isEmpty()) {
+        normalized.add(value);
+      }
+    }
+    return normalized;
+  }
+
+  private String buildScopeSignature(String jobId, Set<String> suspendedTypes, boolean suspendAll) {
+    List<String> sorted = new ArrayList<>(suspendedTypes);
+    Collections.sort(sorted);
+    return jobId + "|" + suspendAll + "|" + String.join(",", sorted);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Utilities
+  // ---------------------------------------------------------------------------
+
+  private void sleep(int seconds) {
+    try {
+      Thread.sleep(seconds * 1000L);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private String nextRetryStatus(int retryCount) {
+    return retryCount < 2 ? STATUS_PENDING : STATUS_FAILED;
   }
 }

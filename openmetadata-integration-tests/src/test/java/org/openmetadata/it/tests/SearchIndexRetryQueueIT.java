@@ -466,6 +466,39 @@ class SearchIndexRetryQueueIT {
   }
 
   // ---------------------------------------------------------------------------
+  // Status code classification tests
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void testClientErrorStatusCodesAreNotRetryable() {
+    assertFalse(SearchIndexRetryQueue.isRetryableStatusCode(400));
+    assertFalse(SearchIndexRetryQueue.isRetryableStatusCode(404));
+    assertFalse(SearchIndexRetryQueue.isRetryableStatusCode(409));
+    assertFalse(SearchIndexRetryQueue.isRetryableStatusCode(413));
+    assertFalse(SearchIndexRetryQueue.isRetryableStatusCode(422));
+  }
+
+  @Test
+  void testRateLimitStatusCodeIsRetryable() {
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(429));
+  }
+
+  @Test
+  void testServerErrorStatusCodesAreRetryable() {
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(500));
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(502));
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(503));
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(504));
+  }
+
+  @Test
+  void testSuccessAndUnknownStatusCodesAreRetryable() {
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(200));
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(0));
+    assertTrue(SearchIndexRetryQueue.isRetryableStatusCode(-1));
+  }
+
+  // ---------------------------------------------------------------------------
   // Worker integration tests
   // ---------------------------------------------------------------------------
 
@@ -628,6 +661,113 @@ class SearchIndexRetryQueueIT {
     SearchIndexRetryRecord record =
         pending.stream().filter(r -> r.getEntityId().equals(entityId)).findFirst().orElseThrow();
     assertNull(record.getClaimedAt());
+
+    retryQueueDAO.deleteByEntity(entityId, entityFqn);
+  }
+
+  @Test
+  void testWorkerExhaustsRetriesAndMarksFailed(TestNamespace ns) throws Exception {
+    String entityFqn = ns.prefix("rq") + ".exhaust.retries";
+
+    // Use a non-UUID entityId with a non-existent FQN so the worker cannot resolve or
+    // clean up the entity, forcing it through the retry count progression to FAILED.
+    retryQueueDAO.upsert(
+        "", entityFqn, "initial failure", SearchIndexRetryQueue.STATUS_PENDING, "");
+
+    SearchIndexRetryWorker worker = new SearchIndexRetryWorker(collectionDAO, searchRepository);
+    worker.start();
+    try {
+      Awaitility.await("Record should reach FAILED after exhausting retries")
+          .atMost(Duration.ofSeconds(60))
+          .pollInterval(Duration.ofSeconds(1))
+          .until(
+              () -> {
+                List<SearchIndexRetryRecord> failed =
+                    retryQueueDAO.findByStatus(SearchIndexRetryQueue.STATUS_FAILED, 1000);
+                return failed.stream().anyMatch(r -> r.getEntityFqn().equals(entityFqn));
+              });
+    } finally {
+      worker.stop();
+    }
+
+    SearchIndexRetryRecord record =
+        retryQueueDAO.findByStatus(SearchIndexRetryQueue.STATUS_FAILED, 1000).stream()
+            .filter(r -> r.getEntityFqn().equals(entityFqn))
+            .findFirst()
+            .orElseThrow();
+    assertEquals(SearchIndexRetryQueue.STATUS_FAILED, record.getStatus());
+    assertTrue(record.getRetryCount() >= 2);
+
+    retryQueueDAO.deleteByEntity("", entityFqn);
+  }
+
+  @Test
+  void testWorkerRecoversPendingRetryRecord(TestNamespace ns) throws Exception {
+    var table = createTestTable(ns);
+    String tableId = table.getId().toString();
+    String tableFqn = table.getFullyQualifiedName();
+
+    retryQueueDAO.upsert(
+        tableId,
+        tableFqn,
+        "transient failure",
+        SearchIndexRetryQueue.STATUS_PENDING_RETRY_1,
+        Entity.TABLE);
+
+    SearchIndexRetryWorker worker = new SearchIndexRetryWorker(collectionDAO, searchRepository);
+    worker.start();
+    try {
+      Awaitility.await("Worker should process PENDING_RETRY_1 record for valid entity")
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(1))
+          .until(
+              () -> {
+                List<SearchIndexRetryRecord> remaining =
+                    retryQueueDAO.findByStatuses(
+                        List.of(
+                            SearchIndexRetryQueue.STATUS_PENDING,
+                            SearchIndexRetryQueue.STATUS_PENDING_RETRY_1,
+                            SearchIndexRetryQueue.STATUS_PENDING_RETRY_2,
+                            SearchIndexRetryQueue.STATUS_IN_PROGRESS),
+                        1000);
+                return remaining.stream().noneMatch(r -> r.getEntityId().equals(tableId));
+              });
+    } finally {
+      worker.stop();
+    }
+
+    List<SearchIndexRetryRecord> allRecords =
+        retryQueueDAO.findByStatuses(
+            List.of(
+                SearchIndexRetryQueue.STATUS_PENDING,
+                SearchIndexRetryQueue.STATUS_PENDING_RETRY_1,
+                SearchIndexRetryQueue.STATUS_PENDING_RETRY_2,
+                SearchIndexRetryQueue.STATUS_IN_PROGRESS,
+                SearchIndexRetryQueue.STATUS_FAILED),
+            1000);
+    assertFalse(allRecords.stream().anyMatch(r -> r.getEntityId().equals(tableId)));
+  }
+
+  @Test
+  void testEnqueuePreservesErrorDetailInFailureReason(TestNamespace ns) {
+    String entityId = UUID.randomUUID().toString();
+    String entityFqn = ns.prefix("rq") + ".errordetail";
+
+    String reason =
+        SearchIndexRetryQueue.failureReason(
+            "createEntityIndex",
+            new RuntimeException(
+                "mapper_parsing_exception: failed to parse field [data] of type [keyword]"));
+
+    SearchIndexRetryQueue.enqueue(entityId, entityFqn, Entity.TABLE, reason);
+
+    List<SearchIndexRetryRecord> records =
+        retryQueueDAO.findByStatus(SearchIndexRetryQueue.STATUS_PENDING, 1000);
+    SearchIndexRetryRecord record =
+        records.stream().filter(r -> r.getEntityId().equals(entityId)).findFirst().orElseThrow();
+
+    assertTrue(record.getFailureReason().contains("mapper_parsing_exception"));
+    assertTrue(record.getFailureReason().startsWith("createEntityIndex:"));
 
     retryQueueDAO.deleteByEntity(entityId, entityFqn);
   }
