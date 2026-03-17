@@ -206,6 +206,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
   protected Authorizer authorizer;
   private AuthenticatorHandler authenticatorHandler;
   protected Limits limits;
+  private volatile boolean mcpServerRegistered = false;
 
   protected Jdbi jdbi;
   private Environment environment;
@@ -410,12 +411,17 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
 
   protected void registerMCPServer(
       OpenMetadataApplicationConfig catalogConfig, Environment environment) {
+    if (mcpServerRegistered) {
+      LOG.info("MCP Server already registered, skipping");
+      return;
+    }
     try {
       if (ApplicationContext.getInstance().getAppIfExists("McpApplication") != null) {
         Class<?> mcpServerClass = Class.forName("org.openmetadata.mcp.McpServer");
         McpServerProvider mcpServer =
             (McpServerProvider) mcpServerClass.getDeclaredConstructor().newInstance();
         mcpServer.initializeMcpServer(environment, authorizer, limits, catalogConfig);
+        mcpServerRegistered = true;
         LOG.info("MCP Server registered successfully");
       }
     } catch (ClassNotFoundException ex) {
@@ -1005,6 +1011,15 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
             authorizer,
             SecurityConfigurationManager.getInstance().getAuthenticatorHandler(),
             limits);
+
+    // Start the Quartz scheduler after all resources are initialized to avoid race conditions
+    // where stale triggers fire before entity repositories have seeded their data
+    try {
+      AppScheduler.getInstance().start();
+    } catch (SchedulerException e) {
+      LOG.error("Failed to start AppScheduler", e);
+    }
+
     environment.jersey().register(new AuditLogResource(authorizer, auditLogRepository));
     environment.jersey().register(new DiagnosticsResource(authorizer));
     environment.jersey().register(new JsonPatchProvider());
