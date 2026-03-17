@@ -220,9 +220,9 @@ export const PopoverTitle = React.memo(
               {displayName}
             </span>
           </Button>
-          {displayName !== name ? (
+          {displayName === name ? null : (
             <span className="text-grey-muted">{name}</span>
-          ) : null}
+          )}
           {isEmpty(userData) && <span>{userName}</span>}
         </div>
       </Space>
