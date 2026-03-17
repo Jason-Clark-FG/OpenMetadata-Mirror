@@ -12,7 +12,7 @@
  */
 
 import {
-  Button as CoreButton,
+  Button,
   ButtonUtility,
   Card,
   Typography,
@@ -344,13 +344,13 @@ const AuditLogsPage = () => {
             }}
             title={t(PAGE_HEADERS.AUDIT_LOGS.header)}
           />
-          <CoreButton
+          <Button
             color="primary"
             data-testid="export-audit-logs-button"
             iconLeading={<ExportIcon height={16} width={16} />}
-            onClick={() => setIsExportModalOpen(true)}>
+            onPress={() => setIsExportModalOpen(true)}>
             {t('label.export')}
-          </CoreButton>
+          </Button>
         </Card>
 
         {/* Content Paper */}
@@ -408,7 +408,7 @@ const AuditLogsPage = () => {
                     </div>
                   ))}
                 </div>
-                <CoreButton
+                <Button
                   className="filter-selection-clear-all"
                   color="link-gray"
                   data-testid="clear-filters"
@@ -416,7 +416,7 @@ const AuditLogsPage = () => {
                   {t('label.clear-entity', {
                     entity: t('label.all-lowercase'),
                   })}
-                </CoreButton>
+                </Button>
               </div>
             )}
           </div>

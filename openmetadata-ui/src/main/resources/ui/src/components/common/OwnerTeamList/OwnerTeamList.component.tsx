@@ -97,7 +97,9 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
                   getEntityName(owner);
 
                 return (
-                  <Dropdown.Item key={owner.id}>
+                  <Dropdown.Item
+                    key={owner.id}
+                    textValue={getEntityName(owner)}>
                     <Link
                       className="tw:block tw:no-underline tw:truncate tw:w-full tw:text-gray-900"
                       data-testid="owner-link"
