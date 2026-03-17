@@ -629,7 +629,7 @@ public class LineageRepository {
       if (fromEntity == null || toEntity == null) {
         LOG.error(
             "Entity not found for IDs: fromEntityId={}, toEntityId={}", fromEntityId, toEntityId);
-        return;
+        continue;
       }
 
       Map<String, String> baseRow = new HashMap<>();
