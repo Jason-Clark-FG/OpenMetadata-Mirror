@@ -3,7 +3,7 @@
 -- Keep this table intentionally minimal: entityId, entityFqn, failureReason, status.
 CREATE TABLE IF NOT EXISTS search_index_retry_queue (
     entityId VARCHAR(36) NOT NULL DEFAULT '',
-    entityFqn VARCHAR(512) NOT NULL DEFAULT '',
+    entityFqn VARCHAR(1024) NOT NULL DEFAULT '',
     failureReason TEXT,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     entityType VARCHAR(256) NOT NULL DEFAULT '',
