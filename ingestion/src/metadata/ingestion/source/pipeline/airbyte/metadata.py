@@ -324,6 +324,17 @@ class AirbyteSource(PipelineServiceSource):
         )
         logger.debug(f"Pipeline connection details: {pipeline_details.connection}")
 
+        if (
+            not pipeline_details.connection.sourceId
+            or not pipeline_details.connection.destinationId
+        ):
+            logger.warning(
+                f"Skipping lineage for connection"
+                f" [{pipeline_details.connection.connectionId}]"
+                f" — missing sourceId or destinationId"
+            )
+            return
+
         source_connection = self.client.get_source(pipeline_details.connection.sourceId)
         destination_connection = self.client.get_destination(
             pipeline_details.connection.destinationId
