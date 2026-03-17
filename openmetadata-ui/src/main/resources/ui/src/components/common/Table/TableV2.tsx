@@ -241,7 +241,7 @@ const TableV2 = <T extends object>(
         ? { overflowY: 'auto', maxHeight: scroll.y as string | number }
         : {}),
     };
-  }, [scroll]);
+  }, [scroll?.x, scroll?.y]);
 
   // ─── Column customization (identical to Table.tsx) ───────────────────────
 
@@ -808,7 +808,7 @@ const TableV2 = <T extends object>(
                           <UntitledTable.Cell
                             {...cellHandlerProps}
                             className={classNames(
-                              'tw:overflow-hidden',
+                              colType.ellipsis && 'tw:overflow-hidden',
                               rest.cellClassName ??
                                 'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
                             )}
@@ -835,8 +835,7 @@ const TableV2 = <T extends object>(
                             }}>
                             <div
                               className={classNames(
-                                'tw:flex tw:items-start tw:gap-1 tw:max-w-full',
-                                colType.ellipsis && 'tw:truncate'
+                                'tw:flex tw:items-start tw:gap-1 tw:max-w-full'
                               )}>
                               {showExpandInCell && (
                                 <div className="tw:flex-shrink-0">
@@ -882,7 +881,7 @@ const TableV2 = <T extends object>(
                                 </div>
                               )}
                               {colType.ellipsis ? (
-                                <div className="tw:flex-1 tw:truncate">
+                                <div className="tw:flex-1 tw:min-w-0 tw:truncate">
                                   {resolveCellValue(
                                     colType,
                                     record,

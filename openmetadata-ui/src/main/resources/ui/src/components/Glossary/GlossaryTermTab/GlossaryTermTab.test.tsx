@@ -592,9 +592,10 @@ describe('Test GlossaryTermTab component', () => {
       });
 
       await waitFor(() => {
-        const editButtons = screen.getAllByTestId('edit-button');
-        fireEvent.click(editButtons[0]);
+        expect(screen.getAllByTestId('edit-button').length).toBeGreaterThan(0);
       });
+      const editButtons = screen.getAllByTestId('edit-button');
+      fireEvent.click(editButtons[0]);
 
       expect(mockOnEditGlossaryTerm).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -612,9 +613,12 @@ describe('Test GlossaryTermTab component', () => {
       });
 
       await waitFor(() => {
-        const addButtons = screen.getAllByTestId('add-classification');
-        fireEvent.click(addButtons[0]);
+        expect(
+          screen.getAllByTestId('add-classification').length
+        ).toBeGreaterThan(0);
       });
+      const addButtons = screen.getAllByTestId('add-classification');
+      fireEvent.click(addButtons[0]);
 
       expect(mockOnAddGlossaryTerm).toHaveBeenCalledWith(
         expect.objectContaining({
