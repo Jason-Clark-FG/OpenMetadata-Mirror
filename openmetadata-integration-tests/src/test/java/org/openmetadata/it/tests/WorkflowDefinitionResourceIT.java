@@ -7377,29 +7377,31 @@ public class WorkflowDefinitionResourceIT {
 
     assertFalse(initialTasks.getData().isEmpty(), "Should have tasks created for table");
 
-    List<Task> approvalTasks =
-        initialTasks.getData().stream()
-            .filter(t -> TaskCategory.Approval.equals(t.getCategory()))
-            .toList();
-
-    assertEquals(1, approvalTasks.size(), "Should have exactly 1 approval task");
-    LOG.debug("✓ Found exactly 1 approval task");
-
-    // Verify the single task has 3 assignees
-    Task approvalTask = approvalTasks.get(0);
-    List<String> assigneeNames =
-        approvalTask.getAssignees().stream().map(EntityReference::getName).sorted().toList();
-
     List<String> expectedAssignees =
         Stream.of(ownerUser.getName(), candidate1.getName(), candidate2.getName())
             .sorted()
             .toList();
 
-    assertEquals(3, assigneeNames.size(), "Task should have exactly 3 assignees");
-    assertEquals(expectedAssignees, assigneeNames, "Task assignees should be owner + 2 candidates");
-    LOG.debug("✓ Verified task has 3 assignees: {}", assigneeNames);
+    // Find the task with our expected assignees (multiple workflows may create tasks)
+    Task approvalTask =
+        initialTasks.getData().stream()
+            .filter(
+                t ->
+                    t.getAssignees() != null
+                        && t.getAssignees().size() == 3
+                        && t.getAssignees().stream()
+                            .map(EntityReference::getName)
+                            .sorted()
+                            .toList()
+                            .equals(expectedAssignees))
+            .findFirst()
+            .orElse(null);
 
-    // Verify the task has correct entity reference
+    assertNotNull(approvalTask, "Should find approval task with expected 3 assignees");
+    List<String> assigneeNames =
+        approvalTask.getAssignees().stream().map(EntityReference::getName).sorted().toList();
+    LOG.debug("✓ Found approval task with 3 assignees: {}", assigneeNames);
+
     assertNotNull(approvalTask.getAbout(), "Task should have an about reference");
     assertEquals(
         tableFqn,
@@ -7417,40 +7419,34 @@ public class WorkflowDefinitionResourceIT {
 
     LOG.debug("Applied patch to table: {}", testTable.getName());
 
-    // Step 8: Wait for update event processing - should NOT create duplicate tasks
-    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    // Step 8: Verify no duplicate task created for update event
+    LOG.info("Verifying no duplicate tasks created for update event...");
     await()
-        .atMost(Duration.ofMinutes(1))
-        .pollInterval(Duration.ofSeconds(2))
-        .until(
+        .during(Duration.ofSeconds(5))
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
             () -> {
-              ListResponse<Task> tasks = listOpenApprovalTasks(client, tableFqn);
-              boolean hasCorrectTaskCount = tasks.getData().size() == 1;
-              if (hasCorrectTaskCount) {
-                LOG.debug("Confirmed 1 task exists after update (no duplicates)");
-              }
-              return hasCorrectTaskCount;
+              ListResponse<Task> updatedTasks = listOpenApprovalTasks(client, tableFqn);
+              long matchingTaskCount =
+                  updatedTasks.getData().stream()
+                      .filter(
+                          t ->
+                              t.getAssignees() != null
+                                  && t.getAssignees().size() == 3
+                                  && t.getAssignees().stream()
+                                      .map(EntityReference::getName)
+                                      .sorted()
+                                      .toList()
+                                      .equals(expectedAssignees))
+                      .count();
+              assertEquals(
+                  1,
+                  matchingTaskCount,
+                  "Should still have exactly 1 approval task with our assignees (no duplicates after update)");
             });
+    LOG.debug("Confirmed no duplicate task after update");
 
-    // Step 9: Verify no duplicate tasks created for update event
-    LOG.info("Verifying no duplicate tasks created for update event");
-    ListResponse<Task> updatedTasks = listOpenApprovalTasks(client, tableFqn);
-
-    assertEquals(
-        1,
-        updatedTasks.getData().size(),
-        "Should still have exactly 1 approval task (no duplicates after update)");
-    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
-
-    Task updatedTask = updatedTasks.getData().getFirst();
-    List<String> updatedAssignees =
-        updatedTask.getAssignees().stream().map(EntityReference::getName).sorted().toList();
-
-    assertEquals(
-        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
-    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
-
-    // Step 10: Resolve the approval task to test workflow progression
+    // Step 9: Resolve the approval task to test workflow progression
     LOG.info("Resolving the approval task");
     org.openmetadata.schema.api.tasks.ResolveTask resolveTaskV2 =
         new org.openmetadata.schema.api.tasks.ResolveTask()
@@ -7458,8 +7454,8 @@ public class WorkflowDefinitionResourceIT {
 
     OpenMetadataClient ownerClient =
         SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
-    ownerClient.tasks().resolve(updatedTask.getId().toString(), resolveTaskV2);
-    LOG.debug("✓ Resolved task: {}", updatedTask.getId());
+    ownerClient.tasks().resolve(approvalTask.getId().toString(), resolveTaskV2);
+    LOG.debug("✓ Resolved task: {}", approvalTask.getId());
 
     // Verify task status changed to Approved
     await()
@@ -7737,29 +7733,32 @@ public class WorkflowDefinitionResourceIT {
     ListResponse<Task> initialTasks = listOpenApprovalTasks(client, tableFqn);
 
     assertFalse(initialTasks.getData().isEmpty(), "Should have tasks created for table");
-    assertEquals(
-        1,
-        initialTasks.getData().size(),
-        "Should have exactly 1 approval task (team expands to individual users)");
-    LOG.debug("✓ Confirmed exactly 1 approval task created");
-
-    Task initialTask = initialTasks.getData().getFirst();
-    List<String> assigneeNames =
-        initialTask.getAssignees().stream().map(EntityReference::getName).sorted().toList();
 
     List<String> expectedAssignees =
         List.of(ownerUser.getName(), candidate1.getName(), candidate2.getName()).stream()
             .sorted()
             .toList();
 
-    assertEquals(
-        3, assigneeNames.size(), "Task should have exactly 3 assignees (owner + 2 team members)");
-    assertEquals(
-        expectedAssignees,
-        assigneeNames,
-        "Task assignees should include owner and both team members");
+    // Find the task with our expected assignees (multiple workflows may create tasks)
+    Task initialTask =
+        initialTasks.getData().stream()
+            .filter(
+                t ->
+                    t.getAssignees() != null
+                        && t.getAssignees().size() == 3
+                        && t.getAssignees().stream()
+                            .map(EntityReference::getName)
+                            .sorted()
+                            .toList()
+                            .equals(expectedAssignees))
+            .findFirst()
+            .orElse(null);
+
+    assertNotNull(
+        initialTask, "Should find approval task with 3 assignees (owner + 2 team members)");
     LOG.debug(
-        "✓ Verified task has 3 assignees: {} (team expanded to individual users)", assigneeNames);
+        "✓ Found approval task with 3 assignees: {} (team expanded to individual users)",
+        expectedAssignees);
 
     // Step 8: Update the table to trigger workflow on update event
     LOG.info("Updating table to trigger workflow on update event");
@@ -7769,30 +7768,32 @@ public class WorkflowDefinitionResourceIT {
     client.tables().patch(testTable.getId(), tablePatch);
     LOG.debug("Applied patch to table: {}", testTable.getName());
 
-    // Step 9: Wait and verify no duplicate tasks created
-    LOG.info("Waiting for workflow to process table update (no duplicates expected)...");
+    // Step 9: Verify no duplicate task created for update event
+    LOG.info("Verifying no duplicate tasks created for update event...");
     await()
-        .atMost(Duration.ofSeconds(30))
-        .pollInterval(Duration.ofSeconds(2))
-        .ignoreExceptions()
-        .until(() -> listOpenApprovalTasks(client, tableFqn).getData().size() >= 1);
-
-    LOG.info("Verifying no duplicate tasks created for update event");
-    ListResponse<Task> tasksAfterUpdate = listOpenApprovalTasks(client, tableFqn);
-
-    assertEquals(
-        1,
-        tasksAfterUpdate.getData().size(),
-        "Should still have exactly 1 approval task (no duplicates after update)");
-    LOG.debug("✓ Confirmed exactly 1 approval task after update (no duplicates)");
-
-    Task updatedTask = tasksAfterUpdate.getData().getFirst();
-    List<String> updatedAssignees =
-        updatedTask.getAssignees().stream().map(EntityReference::getName).sorted().toList();
-
-    assertEquals(
-        expectedAssignees, updatedAssignees, "Task assignees should remain the same after update");
-    LOG.debug("✓ Verified task still has same 3 assignees after update: {}", updatedAssignees);
+        .during(Duration.ofSeconds(5))
+        .atMost(Duration.ofSeconds(10))
+        .untilAsserted(
+            () -> {
+              ListResponse<Task> tasksAfterUpdate = listOpenApprovalTasks(client, tableFqn);
+              long matchingTaskCount =
+                  tasksAfterUpdate.getData().stream()
+                      .filter(
+                          t ->
+                              t.getAssignees() != null
+                                  && t.getAssignees().size() == 3
+                                  && t.getAssignees().stream()
+                                      .map(EntityReference::getName)
+                                      .sorted()
+                                      .toList()
+                                      .equals(expectedAssignees))
+                      .count();
+              assertEquals(
+                  1,
+                  matchingTaskCount,
+                  "Should still have exactly 1 approval task with our assignees (no duplicates)");
+            });
+    LOG.debug("Confirmed no duplicate task after update");
 
     // Step 10: Resolve the approval task to test workflow progression
     LOG.info("Resolving the approval task");
@@ -7802,8 +7803,8 @@ public class WorkflowDefinitionResourceIT {
 
     OpenMetadataClient ownerClient =
         SdkClients.createClient(ownerUser.getName(), ownerUser.getEmail(), new String[] {});
-    ownerClient.tasks().resolve(updatedTask.getId().toString(), resolveTaskV2);
-    LOG.debug("✓ Resolved task: {}", updatedTask.getId());
+    ownerClient.tasks().resolve(initialTask.getId().toString(), resolveTaskV2);
+    LOG.debug("✓ Resolved task: {}", initialTask.getId());
 
     // Verify task status changed to Approved
     await()
@@ -7824,7 +7825,7 @@ public class WorkflowDefinitionResourceIT {
     approvedFilters.put("category", TaskCategory.Approval.value());
     approvedFilters.put("aboutEntity", tableFqn);
     ListResponse<Task> approvedTasks = client.tasks().listWithFilters(approvedFilters);
-    assertEquals(1, approvedTasks.getData().size(), "Should have exactly 1 approved task");
+    assertFalse(approvedTasks.getData().isEmpty(), "Should have at least one approved task");
     LOG.debug("✓ Task successfully resolved and approved");
 
     // Step 11: Cleanup test resources

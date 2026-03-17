@@ -21,7 +21,7 @@ from metadata.generated.schema.api.tasks.resolveTask import ResolveTaskRequest
 from metadata.generated.schema.entity.tasks.task import Task
 from metadata.generated.schema.type.taskStatus import TaskStatus
 from metadata.ingestion.ometa.client import REST
-from metadata.ingestion.ometa.utils import model_str, quote
+from metadata.ingestion.ometa.utils import model_str
 from metadata.utils.logger import ometa_logger
 
 logger = ometa_logger()

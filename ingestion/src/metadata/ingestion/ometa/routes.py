@@ -72,7 +72,6 @@ from metadata.generated.schema.api.domains.createDataProduct import (
 )
 from metadata.generated.schema.api.domains.createDomain import CreateDomainRequest
 from metadata.generated.schema.api.feed.createSuggestion import CreateSuggestionRequest
-from metadata.generated.schema.api.tasks.createTask import CreateTaskRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 from metadata.generated.schema.api.policies.createPolicy import CreatePolicyRequest
 from metadata.generated.schema.api.services.createApiService import (
@@ -111,6 +110,7 @@ from metadata.generated.schema.api.services.createStorageService import (
 from metadata.generated.schema.api.services.ingestionPipelines.createIngestionPipeline import (
     CreateIngestionPipelineRequest,
 )
+from metadata.generated.schema.api.tasks.createTask import CreateTaskRequest
 from metadata.generated.schema.api.teams.createPersona import CreatePersonaRequest
 from metadata.generated.schema.api.teams.createRole import CreateRoleRequest
 from metadata.generated.schema.api.teams.createTeam import CreateTeamRequest
@@ -167,7 +167,6 @@ from metadata.generated.schema.entity.docStore.document import Document
 from metadata.generated.schema.entity.domains.dataProduct import DataProduct
 from metadata.generated.schema.entity.domains.domain import Domain
 from metadata.generated.schema.entity.feed.suggestion import Suggestion
-from metadata.generated.schema.entity.tasks.task import Task
 from metadata.generated.schema.entity.policies.policy import Policy
 from metadata.generated.schema.entity.services.apiService import ApiService
 from metadata.generated.schema.entity.services.connections.testConnectionDefinition import (
@@ -186,6 +185,7 @@ from metadata.generated.schema.entity.services.pipelineService import PipelineSe
 from metadata.generated.schema.entity.services.searchService import SearchService
 from metadata.generated.schema.entity.services.securityService import SecurityService
 from metadata.generated.schema.entity.services.storageService import StorageService
+from metadata.generated.schema.entity.tasks.task import Task
 from metadata.generated.schema.entity.teams.persona import Persona
 from metadata.generated.schema.entity.teams.role import Role
 from metadata.generated.schema.entity.teams.team import Team
