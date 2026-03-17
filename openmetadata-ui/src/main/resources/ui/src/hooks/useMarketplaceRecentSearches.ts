@@ -47,8 +47,10 @@ export const useMarketplaceRecentSearches = () => {
         return;
       }
 
+      // Read live state to avoid stale closure over preferences
+      const livePrefs = usePersistentStorage.getState().preferences;
       const entries: MarketplaceRecentSearchEntry[] = get(
-        preferences,
+        livePrefs,
         [currentUser.name, 'marketplaceRecentSearches'],
         []
       );
@@ -64,7 +66,7 @@ export const useMarketplaceRecentSearches = () => {
         marketplaceRecentSearches: filtered,
       });
     },
-    [currentUser, preferences, setUserPreference]
+    [currentUser, setUserPreference]
   );
 
   const clearSearches = useCallback(() => {
