@@ -165,18 +165,27 @@ def _parse_s3_url(s3_url: str) -> tuple:
     host = parsed.hostname or ""
 
     # Virtual-hosted style: bucket.s3[.region].amazonaws.com
-    virtual_match = re.match(r"^(.+)\.s3[.\-].*\.amazonaws\.com$", host)
+    virtual_match = re.match(r"^(.+)\.s3(?:[.\-](.+))?\.amazonaws\.com$", host)
     if virtual_match:
         bucket = virtual_match.group(1)
         key = parsed.path.lstrip("/")
+        if not key:
+            raise OpenAPIParseError(
+                f"S3 URL '{s3_url}' is missing the object key. "
+                "Expected format: https://bucket.s3.amazonaws.com/path/to/file"
+            )
         return bucket, key
 
     # Path-style: s3[.region].amazonaws.com/bucket/key
-    path_match = re.match(r"^s3[.\-].*\.amazonaws\.com$", host)
+    path_match = re.match(r"^s3(?:[.\-](.+))?\.amazonaws\.com$", host)
     if path_match:
         parts = parsed.path.lstrip("/").split("/", 1)
         if len(parts) == 2:
             return parts[0], parts[1]
+        raise OpenAPIParseError(
+            f"S3 URL '{s3_url}' is missing the object key. "
+            "Expected format: https://s3.amazonaws.com/bucket/path/to/file"
+        )
 
     raise OpenAPIParseError(
         f"Unable to parse S3 URL '{s3_url}'. "
