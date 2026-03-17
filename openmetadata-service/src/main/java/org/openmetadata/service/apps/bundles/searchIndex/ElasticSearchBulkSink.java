@@ -1,6 +1,7 @@
 package org.openmetadata.service.apps.bundles.searchIndex;
 
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.ENTITY_TYPE_KEY;
+import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.RECREATE_CONTEXT;
 import static org.openmetadata.service.workflows.searchIndex.ReindexingUtil.TARGET_INDEX_KEY;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,8 +17,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,8 +34,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
+import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.system.IndexingError;
 import org.openmetadata.schema.system.StepStats;
+import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.Entity;
@@ -40,9 +45,11 @@ import org.openmetadata.service.apps.bundles.searchIndex.stats.StageStatsTracker
 import org.openmetadata.service.apps.bundles.searchIndex.stats.StatsResult;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.exception.SearchIndexException;
+import org.openmetadata.service.search.ReindexContext;
 import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.search.elasticsearch.ElasticSearchClient;
 import org.openmetadata.service.search.elasticsearch.EsUtils;
+import org.openmetadata.service.search.indexes.ColumnSearchIndex;
 
 /**
  * Elasticsearch implementation using new Java API client with custom bulk handler
@@ -107,6 +114,15 @@ public class ElasticSearchBulkSink implements BulkSink {
   // Failure callback
   private volatile FailureCallback failureCallback;
 
+  // Column indexing: separate bulk processor with its own lifecycle
+  private final CustomBulkProcessor columnBulkProcessor;
+  private final AtomicLong columnSinkSubmitted = new AtomicLong(0);
+  private final AtomicLong columnSinkSuccess = new AtomicLong(0);
+  private final AtomicLong columnSinkFailed = new AtomicLong(0);
+  private final AtomicLong columnBuildFailed = new AtomicLong(0);
+  private final ConcurrentLinkedDeque<CompletableFuture<Void>> pendingColumnFutures =
+      new ConcurrentLinkedDeque<>();
+
   public ElasticSearchBulkSink(
       SearchRepository searchRepository,
       int batchSize,
@@ -123,6 +139,7 @@ public class ElasticSearchBulkSink implements BulkSink {
 
     // Create bulk processor
     this.bulkProcessor = createBulkProcessor(batchSize, maxConcurrentRequests, maxPayloadSizeBytes);
+    this.columnBulkProcessor = createColumnBulkProcessor(maxPayloadSizeBytes);
   }
 
   private CustomBulkProcessor createBulkProcessor(
@@ -149,6 +166,23 @@ public class ElasticSearchBulkSink implements BulkSink {
         circuitBreaker);
   }
 
+  private CustomBulkProcessor createColumnBulkProcessor(long maxPayloadSizeBytes) {
+    BulkCircuitBreaker circuitBreaker = new BulkCircuitBreaker(5, 30_000, 10_000);
+    return new CustomBulkProcessor(
+        searchClient,
+        500, // larger batch for small column docs
+        maxPayloadSizeBytes,
+        2, // fewer concurrent requests
+        1000,
+        100,
+        3,
+        columnSinkSubmitted,
+        columnSinkSuccess,
+        columnSinkFailed,
+        () -> {},
+        circuitBreaker);
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public void write(List<?> entities, Map<String, Object> contextData) throws Exception {
@@ -162,6 +196,10 @@ public class ElasticSearchBulkSink implements BulkSink {
     }
 
     Boolean recreateIndex = (Boolean) contextData.getOrDefault("recreateIndex", false);
+    ReindexContext reindexContext =
+        contextData.containsKey(RECREATE_CONTEXT)
+            ? (ReindexContext) contextData.get(RECREATE_CONTEXT)
+            : null;
 
     // Extract StageStatsTracker from context for stats recording
     StageStatsTracker tracker = extractTracker(contextData);
@@ -212,6 +250,23 @@ public class ElasticSearchBulkSink implements BulkSink {
                             DOC_BUILD_EXECUTOR))
                 .toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+        // Index columns asynchronously when processing table entities
+        if (Entity.TABLE.equals(entityType)) {
+          for (EntityInterface entity : entityInterfaces) {
+            CompletableFuture<Void> future =
+                CompletableFuture.runAsync(
+                        () -> indexTableColumns(entity, recreateIndex, reindexContext),
+                        DOC_BUILD_EXECUTOR)
+                    .exceptionally(
+                        ex -> {
+                          LOG.error("Failed to index columns for table {}", entity.getName(), ex);
+                          return null;
+                        });
+            pendingColumnFutures.add(future);
+          }
+          pendingColumnFutures.removeIf(CompletableFuture::isDone);
+        }
       }
     } catch (Exception e) {
       LOG.error("Failed to write {} entities of type {}", entities.size(), entityType, e);
@@ -376,6 +431,100 @@ public class ElasticSearchBulkSink implements BulkSink {
     }
   }
 
+  private void indexTableColumns(
+      EntityInterface entity, boolean recreateIndex, ReindexContext reindexContext) {
+    if (!(entity instanceof Table table)) {
+      return;
+    }
+
+    IndexMapping columnIndexMapping = searchRepository.getIndexMapping(Entity.TABLE_COLUMN);
+    if (columnIndexMapping == null) {
+      LOG.debug("No index mapping found for tableColumn. Skipping column indexing.");
+      return;
+    }
+
+    String columnIndexName;
+    if (reindexContext != null) {
+      Optional<String> stagedIndex = reindexContext.getStagedIndex(Entity.TABLE_COLUMN);
+      columnIndexName =
+          stagedIndex.orElse(columnIndexMapping.getIndexName(searchRepository.getClusterAlias()));
+    } else {
+      columnIndexName = columnIndexMapping.getIndexName(searchRepository.getClusterAlias());
+    }
+    List<Column> flattenedColumns = ColumnSearchIndex.flattenColumns(table.getColumns());
+
+    for (Column column : flattenedColumns) {
+      try {
+        ColumnSearchIndex columnIndex = new ColumnSearchIndex(column, table);
+        Map<String, Object> searchIndexDoc = columnIndex.buildSearchIndexDoc();
+        String json = JsonUtils.pojoToJson(searchIndexDoc);
+        String docId = searchIndexDoc.get("id").toString();
+
+        BulkOperation operation;
+        if (recreateIndex) {
+          operation =
+              BulkOperation.of(
+                  op ->
+                      op.index(
+                          idx ->
+                              idx.index(columnIndexName)
+                                  .id(docId)
+                                  .document(EsUtils.toJsonData(json))));
+        } else {
+          operation =
+              BulkOperation.of(
+                  op ->
+                      op.update(
+                          upd ->
+                              upd.index(columnIndexName)
+                                  .id(docId)
+                                  .action(a -> a.doc(EsUtils.toJsonData(json)).docAsUpsert(true))));
+        }
+        long estimatedSize =
+            (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+        columnBulkProcessor.add(operation, docId, Entity.TABLE_COLUMN, null, estimatedSize);
+      } catch (Exception e) {
+        columnBuildFailed.incrementAndGet();
+        LOG.error(
+            "Failed to index column {} for table {}",
+            column.getFullyQualifiedName(),
+            table.getFullyQualifiedName(),
+            e);
+      }
+    }
+  }
+
+  /** Get stats for column indexing from the dedicated column bulk processor */
+  public StepStats getColumnStats() {
+    long success = columnSinkSuccess.get();
+    long failed = columnSinkFailed.get() + columnBuildFailed.get();
+    return new StepStats()
+        .withTotalRecords((int) (success + failed))
+        .withSuccessRecords((int) success)
+        .withFailedRecords((int) failed);
+  }
+
+  private void drainPendingColumnFutures(int timeoutSeconds) {
+    List<CompletableFuture<Void>> remaining = new ArrayList<>();
+    CompletableFuture<Void> f;
+    while ((f = pendingColumnFutures.poll()) != null) {
+      if (!f.isDone()) {
+        remaining.add(f);
+      }
+    }
+    if (!remaining.isEmpty()) {
+      try {
+        CompletableFuture.allOf(remaining.toArray(CompletableFuture[]::new))
+            .get(timeoutSeconds, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted waiting for {} in-flight column doc-build tasks", remaining.size());
+        Thread.currentThread().interrupt();
+      } catch (Exception e) {
+        LOG.warn("Timed out waiting for {} in-flight column doc-build tasks", remaining.size());
+      }
+    }
+  }
+
   private void updateStats() {
     stats.setTotalRecords((int) totalSubmitted.get());
     stats.setSuccessRecords((int) totalSuccess.get());
@@ -414,23 +563,31 @@ public class ElasticSearchBulkSink implements BulkSink {
   @Override
   public void close() {
     try {
-      // Flush any pending requests
       bulkProcessor.flush();
 
-      // Wait for completion
+      // Wait for in-flight column doc-build tasks before flushing the column processor
+      drainPendingColumnFutures(30);
+      columnBulkProcessor.flush();
+
       boolean terminated = bulkProcessor.awaitClose(60, TimeUnit.SECONDS);
       if (!terminated) {
         LOG.warn("Bulk processor did not terminate within timeout");
       }
 
-      // Final stats update to ensure all processed records are reflected
+      boolean columnTerminated = columnBulkProcessor.awaitClose(30, TimeUnit.SECONDS);
+      if (!columnTerminated) {
+        LOG.warn("Column bulk processor did not terminate within timeout");
+      }
+
       updateStats();
 
       LOG.info(
-          "Sink closed - final stats: submitted={}, success={}, failed={}",
+          "Sink closed - final stats: submitted={}, success={}, failed={}, columns: success={}, failed={}",
           totalSubmitted.get(),
           totalSuccess.get(),
-          totalFailed.get());
+          totalFailed.get(),
+          columnSinkSuccess.get(),
+          columnSinkFailed.get() + columnBuildFailed.get());
 
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while closing bulk processor", e);
@@ -446,7 +603,17 @@ public class ElasticSearchBulkSink implements BulkSink {
   @Override
   public boolean flushAndAwait(int timeoutSeconds) {
     try {
+      long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
       boolean completed = bulkProcessor.flushAndWait(timeoutSeconds, TimeUnit.SECONDS);
+
+      long remainingNanos = deadline - System.nanoTime();
+      long remainingSecs = Math.max(1, TimeUnit.NANOSECONDS.toSeconds(remainingNanos));
+      drainPendingColumnFutures((int) remainingSecs);
+
+      remainingNanos = deadline - System.nanoTime();
+      remainingSecs = Math.max(1, TimeUnit.NANOSECONDS.toSeconds(remainingNanos));
+      boolean columnCompleted = columnBulkProcessor.flushAndWait(remainingSecs, TimeUnit.SECONDS);
+
       if (completed) {
         LOG.debug(
             "Flush complete - stats: submitted={}, success={}, failed={}",
@@ -454,7 +621,7 @@ public class ElasticSearchBulkSink implements BulkSink {
             totalSuccess.get(),
             totalFailed.get());
       }
-      return completed;
+      return completed && columnCompleted;
     } catch (InterruptedException e) {
       LOG.warn("Interrupted while waiting for flush to complete", e);
       Thread.currentThread().interrupt();
@@ -481,6 +648,9 @@ public class ElasticSearchBulkSink implements BulkSink {
     this.failureCallback = callback;
     if (bulkProcessor != null) {
       bulkProcessor.setFailureCallback(callback);
+    }
+    if (columnBulkProcessor != null) {
+      columnBulkProcessor.setFailureCallback(callback);
     }
   }
 
