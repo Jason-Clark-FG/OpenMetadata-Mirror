@@ -345,6 +345,10 @@ class ElasticSearchRBACConditionEvaluatorTest {
         jsonContext,
         "$.bool.should[?(@.term['domains.id'].value=='" + domain2.getId() + "')]",
         "domain2 should be in a should (OR) clause");
+    assertFieldExists(
+        jsonContext,
+        "$.bool.should[?(@.bool.must_not)]",
+        "should include a clause for entities with no domain");
   }
 
   @Test
@@ -373,11 +377,11 @@ class ElasticSearchRBACConditionEvaluatorTest {
 
     DocumentContext jsonContext = JsonPath.parse(generatedQuery);
 
-    assertFieldExists(jsonContext, "$.bool.must[?(@.term['domains.id'])]", "domains.id");
+    assertFieldExists(jsonContext, "$..bool.should[?(@.term['domains.id'])]", "domains.id");
 
     assertFieldExists(
         jsonContext,
-        "$.bool.must[?(@.term['domains.id'].value=='" + domain.getId().toString() + "')]",
+        "$..bool.should[?(@.term['domains.id'].value=='" + domain.getId().toString() + "')]",
         "user's domain ID");
 
     assertFieldExists(
@@ -799,7 +803,7 @@ class ElasticSearchRBACConditionEvaluatorTest {
     Query elasticQuery = ((ElasticQueryBuilder) finalQuery).build();
     String generatedQuery = serializeQueryToJson(elasticQuery);
     DocumentContext jsonContext = JsonPath.parse(generatedQuery);
-    assertFieldExists(jsonContext, "$.bool.must[?(@.term['domains.id'])]", "domains.id");
+    assertFieldExists(jsonContext, "$..bool.should[?(@.term['domains.id'])]", "domains.id");
 
     assertFieldExists(
         jsonContext,
@@ -898,7 +902,7 @@ class ElasticSearchRBACConditionEvaluatorTest {
         jsonContext, "$.bool.must[?(@.term['tags.tagFQN'].value=='Sensitive')]", "Sensitive tag");
     assertFieldExists(
         jsonContext,
-        "$.bool.must[?(@.term['domains.id'].value=='" + domain.getId().toString() + "')]",
+        "$..bool.should[?(@.term['domains.id'].value=='" + domain.getId().toString() + "')]",
         "domains.id");
   }
 
@@ -988,7 +992,7 @@ class ElasticSearchRBACConditionEvaluatorTest {
 
     assertFieldExists(
         jsonContext,
-        "$.bool.should[0].bool.must[?(@.term['domains.id'].value=='"
+        "$.bool.should[0]..bool.should[?(@.term['domains.id'].value=='"
             + domain.getId().toString()
             + "')]",
         "user's domain ID");
@@ -1031,7 +1035,7 @@ class ElasticSearchRBACConditionEvaluatorTest {
 
     assertFieldExists(
         jsonContext,
-        "$.bool.should[0].bool.must[?(@.term['domains.id'].value=='"
+        "$.bool.should[0]..bool.should[?(@.term['domains.id'].value=='"
             + domain.getId().toString()
             + "')]",
         "user's domain ID");
