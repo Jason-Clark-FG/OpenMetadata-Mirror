@@ -27,7 +27,7 @@
  *  - expandable        → tree/nested rows via record.children; expandedRowRender not supported
  *  - onRow             → onClick and onDoubleClick are forwarded to the row element
  *  - onCell            → onClick, data-*, colSpan forwarded to the underlying td element
- *  - filterIcon/filterDropdown/onFilter → filter state managed internally; confirm/close are no-ops
+ *  - filterIcon/filterDropdown/onFilter → filter state managed internally; confirm/close close the dropdown
  *
  * Sorting:
  *  - sorter: (a, b) => number  → applied client-side on full dataset before pagination
@@ -134,6 +134,7 @@ const TableV2 = <T extends object>(
   const [filterState, setFilterState] = useState<Record<string, React.Key[]>>(
     {}
   );
+  const [openFilterKey, setOpenFilterKey] = useState<string | null>(null);
   const {
     preferences: { selectedEntityTableColumns },
     setPreference,
@@ -680,7 +681,11 @@ const TableV2 = <T extends object>(
                       <div className="tw:flex tw:items-center tw:gap-1">
                         {resolveColumnTitle(colType, propsColumns)}
                         {Boolean(colType.filters || colType.filterDropdown) && (
-                          <DialogTrigger>
+                          <DialogTrigger
+                            isOpen={openFilterKey === colKey}
+                            onOpenChange={(isOpen) =>
+                              setOpenFilterKey(isOpen ? colKey : null)
+                            }>
                             <Button
                               aria-label="filter"
                               className="tw:ml-1 tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex tw:items-center"
@@ -705,7 +710,7 @@ const TableV2 = <T extends object>(
                                             [colKey]: keys,
                                           })),
                                         selectedKeys: filterState[colKey] ?? [],
-                                        confirm: () => undefined,
+                                        confirm: () => setOpenFilterKey(null),
                                         clearFilters: () =>
                                           setFilterState((prev) => {
                                             const next = { ...prev };
@@ -715,7 +720,7 @@ const TableV2 = <T extends object>(
                                           }),
                                         filters: colType.filters,
                                         visible: true,
-                                        close: () => undefined,
+                                        close: () => setOpenFilterKey(null),
                                       })
                                     : colType.filterDropdown}
                                 </div>
@@ -751,7 +756,7 @@ const TableV2 = <T extends object>(
                       className={classNames(
                         'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
                         typeof rest.rowClassName === 'function'
-                          ? rest.rowClassName(record, actualIndex, 0)
+                          ? rest.rowClassName(record, actualIndex, depth)
                           : rest.rowClassName
                       )}
                       data-level={depth}
