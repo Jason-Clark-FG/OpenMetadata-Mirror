@@ -26,6 +26,7 @@ import { Domain } from '../../../generated/entity/domains/domain';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
 import { getDomainIcon } from '../../../utils/DomainUtils';
+import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecentSearches';
 import { getVisiblePopupContainer } from '../../../utils/LandingPageWidget/WidgetsUtils';
 import {
   getDomainDetailsPath,
@@ -44,6 +45,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { addSearch } = useMarketplaceRecentSearches();
 
   const fetchResults = useCallback(async (query: string) => {
     if (!query.trim()) {
@@ -112,10 +114,11 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       if (value.trim()) {
         debouncedFetch.cancel();
         fetchResults(value);
+        addSearch(value);
         setIsOpen(true);
       }
     },
-    [fetchResults, debouncedFetch]
+    [fetchResults, debouncedFetch, addSearch]
   );
 
   const handleDataProductClick = useCallback(
