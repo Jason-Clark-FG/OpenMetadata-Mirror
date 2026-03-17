@@ -398,6 +398,16 @@ test.describe('Mention notifications in Notification Box', () => {
     await adminUser.create(apiContext);
     await adminUser.setAdminRole(apiContext);
     await user1.create(apiContext);
+
+    await apiContext.post('/api/v1/feed', {
+      data: {
+        from: adminUser.responseData.name,
+        message: 'Initial conversation thread for mention test',
+        about: `<#E::table::${entity.entityResponseData.fullyQualifiedName}>`,
+        type: 'Conversation',
+      },
+    });
+
     await afterAction();
   });
 
@@ -409,24 +419,14 @@ test.describe('Mention notifications in Notification Box', () => {
 
     await test.step('Admin user creates a conversation on an entity', async () => {
       await entity.visitEntityPage(adminPage);
-      // Added a safety check on waiting for activity feed count to avoid missing feed
-      // Poll the activity feed tab count from the page until it's a valid non-negative number
-      let count = NaN;
-      const maxRetries = 30;
-      for (let i = 0; i < maxRetries && (isNaN(count) || count <= 0); i++) {
-        const countText = await adminPage
-          .getByRole('tab', { name: 'Activity Feeds & Tasks' })
-          .getByTestId('count')
-          .textContent();
-        count = Number(countText ?? '0');
-        if (isNaN(count) || count <= 0) {
-          await adminPage.reload();
-          await waitForAllLoadersToDisappear(adminPage);
-        }
-      }
-
+      const feedResponse = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/feed') &&
+          response.request().method() === 'GET'
+      );
       await adminPage.getByTestId('activity_feed').click();
 
+      await feedResponse;
       await waitForAllLoadersToDisappear(adminPage);
 
       await adminPage.getByTestId('comments-input-field').click();
@@ -679,7 +679,9 @@ test.describe('Mentions: Chinese character encoding in activity feed', () => {
     const commentsInput = page.getByTestId('comments-input-field');
     if (!(await commentsInput.isVisible().catch(() => false))) {
       const seededThread = page
-        .locator('[data-testid="message-container"], [data-testid="feed-reply-card"]')
+        .locator(
+          '[data-testid="message-container"], [data-testid="feed-reply-card"]'
+        )
         .filter({
           hasText: 'Initial conversation for Chinese character encoding test',
         })
