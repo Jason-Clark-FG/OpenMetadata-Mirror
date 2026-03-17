@@ -190,6 +190,21 @@ jobs:
           docker compose down --remove-orphans
           sudo rm -rf ${PWD}/docker-volume
 
+  py-run-tests:
+    if: ${{ always() && !github.event.pull_request.draft }}
+    needs: [py-unit-tests, py-integration-tests]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        py-version: ["3.10", "3.11"] # , "3.12"]
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.py-unit-tests.result }}" != "success" ] || [ "${{ needs.py-integration-tests.result }}" != "success" ]; then
+            echo "Required tests did not pass"
+            exit 1
+          fi
+
   py-combine-coverage:
     if: ${{ !github.event.pull_request.draft && !cancelled() }}
     needs: [py-unit-tests, py-integration-tests]
