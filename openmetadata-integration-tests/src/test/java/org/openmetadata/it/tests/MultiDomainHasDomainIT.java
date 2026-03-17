@@ -263,6 +263,90 @@ public class MultiDomainHasDomainIT {
     }
   }
 
+  @Test
+  void test_searchWithDomain_canSeeNoDomainAssets(TestNamespace ns) throws Exception {
+    OpenMetadataClient adminClient = SdkClients.adminClient();
+    String p = ns.shortPrefix();
+
+    Domain domain = createDomain(adminClient, p + "_d1");
+    try {
+      Policy policy = createHasDomainPolicy(adminClient, p + "_pol");
+      try {
+        Role role = createRole(adminClient, p + "_role", policy.getFullyQualifiedName());
+        try {
+          Team team =
+              createTeam(adminClient, p + "_team", role, List.of(domain.getFullyQualifiedName()));
+          try {
+            String userEmail = p + "_user@test.openmetadata.org";
+            User testUser = createUser(adminClient, p + "_user", userEmail, team);
+            try {
+              DatabaseService dbService = DatabaseServiceTestFactory.createPostgres(ns);
+              try {
+                DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, dbService);
+                Column column = new Column().withName("id").withDataType(ColumnDataType.INT);
+
+                Table tableNoDomain =
+                    createTableWithoutDomain(
+                        adminClient, p + "_t_nodomain", schema.getFullyQualifiedName(), column);
+                try {
+                  boolean originalAccessControl = enableSearchAccessControl(adminClient);
+                  try {
+                    OpenMetadataClient testUserClient =
+                        SdkClients.createClient(userEmail, userEmail, new String[] {});
+
+                    Table fetched = testUserClient.tables().get(tableNoDomain.getId().toString());
+                    assertNotNull(
+                        fetched, "Test user should be able to GET no-domain table via API");
+
+                    String noDomainTableId = tableNoDomain.getId().toString();
+
+                    Awaitility.await()
+                        .atMost(Duration.ofSeconds(30))
+                        .pollInterval(Duration.ofSeconds(2))
+                        .untilAsserted(
+                            () -> {
+                              String searchResponse =
+                                  testUserClient
+                                      .search()
+                                      .query("*")
+                                      .index("table_search_index")
+                                      .size(50)
+                                      .execute();
+                              assertTrue(
+                                  searchResponse.contains(noDomainTableId),
+                                  "User with domains should see assets that have no domain assigned");
+                            });
+
+                  } finally {
+                    restoreSearchAccessControl(adminClient, originalAccessControl);
+                  }
+                } finally {
+                  adminClient.tables().delete(tableNoDomain.getId());
+                }
+              } finally {
+                adminClient
+                    .databaseServices()
+                    .delete(
+                        dbService.getId().toString(),
+                        Map.of("recursive", "true", "hardDelete", "true"));
+              }
+            } finally {
+              adminClient.users().delete(testUser.getId());
+            }
+          } finally {
+            adminClient.teams().delete(team.getId());
+          }
+        } finally {
+          adminClient.roles().delete(role.getId());
+        }
+      } finally {
+        adminClient.policies().delete(policy.getId());
+      }
+    } finally {
+      adminClient.domains().delete(domain.getId().toString());
+    }
+  }
+
   private Domain createDomain(OpenMetadataClient adminClient, String name) {
     CreateDomain createDomain =
         new CreateDomain()
@@ -329,6 +413,15 @@ public class MultiDomainHasDomainIT {
     createTable.setDatabaseSchema(schemaFqn);
     createTable.setColumns(List.of(column));
     createTable.setDomains(List.of(domainFqn));
+    return adminClient.tables().create(createTable);
+  }
+
+  private Table createTableWithoutDomain(
+      OpenMetadataClient adminClient, String name, String schemaFqn, Column column) {
+    CreateTable createTable = new CreateTable();
+    createTable.setName(name);
+    createTable.setDatabaseSchema(schemaFqn);
+    createTable.setColumns(List.of(column));
     return adminClient.tables().create(createTable);
   }
 
