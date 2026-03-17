@@ -17,6 +17,11 @@ import {
   TASK_FEED,
   TASK_FEED_RECOGNIZER_FEEDBACK,
 } from '../../../../mocks/Task.mock';
+import {
+  TaskType,
+  ThreadTaskStatus,
+  ThreadType,
+} from '../../../../generated/entity/feed/thread';
 import { TaskTabNew } from './TaskTabNew.component';
 
 jest.mock('react-router-dom', () => ({
@@ -517,5 +522,44 @@ describe('TaskTabNew Component', () => {
     });
 
     expect(screen.getByTestId('feed-replies')).toBeInTheDocument();
+  });
+
+  it('should render without crashing for RequestApproval task with plain text suggestion', async () => {
+    const { isTagsTask } = require('../../../../utils/TasksUtils');
+    isTagsTask.mockReturnValue(false);
+
+    const approvalTaskThread = {
+      ...TASK_FEED,
+      task: {
+        id: 3,
+        type: TaskType.RequestApproval,
+        assignees: [
+          {
+            id: 'd6764107-e8b4-4748-b256-c86fecc66064',
+            type: 'User',
+            name: 'xyz',
+            fullyQualifiedName: 'xyz',
+            deleted: false,
+          },
+        ],
+        status: ThreadTaskStatus.Open,
+        oldValue: 'this is a test suggestion',
+        suggestion: 'this is a different test suggestion2',
+      },
+    };
+
+    await act(async () => {
+      render(
+        <TaskTabNew
+          {...mockProps}
+          taskThread={approvalTaskThread}
+        />,
+        {
+          wrapper: MemoryRouter,
+        }
+      );
+    });
+
+    expect(screen.getByTestId('task-tab')).toBeInTheDocument();
   });
 });

@@ -174,12 +174,9 @@ export const TaskTabNew = ({
 
   const showAddSuggestionButton = useMemo(() => {
     const taskType = taskDetails?.type ?? ('' as TaskType);
-    const parsedSuggestion = [
-      TaskType.UpdateDescription,
-      TaskType.RequestDescription,
-    ].includes(taskType)
-      ? taskDetails?.suggestion
-      : JSON.parse(taskDetails?.suggestion || '[]');
+    const parsedSuggestion = isTagsTask(taskType as TaskType)
+      ? JSON.parse(taskDetails?.suggestion || '[]')
+      : taskDetails?.suggestion;
 
     return (
       [TaskType.RequestTag, TaskType.RequestDescription].includes(taskType) &&
