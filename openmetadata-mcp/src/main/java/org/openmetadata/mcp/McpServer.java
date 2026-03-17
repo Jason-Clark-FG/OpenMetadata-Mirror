@@ -140,7 +140,7 @@ public class McpServer implements McpServerProvider {
               allowedOrigins);
       McpStatelessSyncServer server =
           io.modelcontextprotocol.server.McpServer.sync(statelessOauthTransport)
-              .serverInfo("openmetadata-mcp-stateless", "0.11.2")
+              .serverInfo("openmetadata-mcp-stateless", "1.1.0")
               .capabilities(serverCapabilities)
               .build();
       addToolsToServer(server, tools);

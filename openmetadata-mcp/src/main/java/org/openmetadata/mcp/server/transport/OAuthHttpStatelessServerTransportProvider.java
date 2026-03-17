@@ -5,6 +5,7 @@ import static org.openmetadata.service.socket.SocketAddressFilter.validatePrefix
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.modelcontextprotocol.server.McpTransportContextExtractor;
 import io.modelcontextprotocol.spec.McpError;
+import io.modelcontextprotocol.spec.McpSchema;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -396,7 +397,7 @@ public class OAuthHttpStatelessServerTransportProvider extends HttpServletStatel
     response.setCharacterEncoding("UTF-8");
     response.setStatus(statusCode);
 
-    McpError error = new McpError(message);
+    McpError error = McpError.builder(McpSchema.ErrorCodes.INTERNAL_ERROR).message(message).build();
     String jsonError = getObjectMapper().writeValueAsString(error);
 
     PrintWriter writer = response.getWriter();
