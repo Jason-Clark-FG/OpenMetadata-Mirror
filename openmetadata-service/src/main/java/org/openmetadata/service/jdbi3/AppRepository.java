@@ -564,6 +564,8 @@ public class AppRepository extends EntityRepository<App> {
           "appSchedule",
           AppBoundConfigurationUtil.getAppSchedule(original),
           AppBoundConfigurationUtil.getAppSchedule(updated));
+      recordChange("configuration", original.getConfiguration(), updated.getConfiguration(), true);
+      recordChange("boundType", original.getBoundType(), updated.getBoundType());
       recordChange("bot", original.getBot(), updated.getBot());
       recordChange(
           "eventSubscriptions", original.getEventSubscriptions(), updated.getEventSubscriptions());

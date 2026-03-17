@@ -50,11 +50,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.ServiceEntityInterface;
 import org.openmetadata.schema.api.data.RestoreEntity;
 import org.openmetadata.schema.entity.app.App;
+import org.openmetadata.schema.entity.app.AppBoundType;
 import org.openmetadata.schema.entity.app.AppExtension;
 import org.openmetadata.schema.entity.app.AppRunRecord;
 import org.openmetadata.schema.entity.app.AppType;
 import org.openmetadata.schema.entity.app.CreateApp;
 import org.openmetadata.schema.entity.app.ScheduleType;
+import org.openmetadata.schema.entity.app.ServiceAppConfiguration;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServiceClientResponse;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
@@ -89,6 +91,7 @@ import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
+import org.openmetadata.service.util.AppBoundConfigurationUtil;
 import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.DeleteEntityResponse;
 import org.openmetadata.service.util.EntityUtil;
@@ -330,11 +333,16 @@ public class AppResource extends EntityResource<App, AppRepository> {
               description = "Filter pipeline status before the given end timestamp",
               schema = @Schema(type = "number"))
           @QueryParam("endTs")
-          Long endTs) {
+          Long endTs,
+      @Parameter(
+              description = "Filter runs by service Id for service-bound apps",
+              schema = @Schema(type = "string"))
+          @QueryParam("serviceId")
+          UUID serviceId) {
     App installation = repository.getByName(uriInfo, name, repository.getFields("id,pipelines"));
     ResultList<AppRunRecord> appRuns;
     if (installation.getAppType().equals(AppType.Internal)) {
-      appRuns = repository.listAppRuns(installation, limitParam, offset);
+      appRuns = repository.listAppRuns(installation, limitParam, offset, serviceId);
     } else if (!installation.getPipelines().isEmpty()) {
       EntityReference pipelineRef = installation.getPipelines().get(0);
       IngestionPipelineRepository ingestionPipelineRepository =
@@ -528,11 +536,16 @@ public class AppResource extends EntityResource<App, AppRepository> {
               schema = @Schema(type = "string"))
           @QueryParam("after")
           @DefaultValue("")
-          String after) {
+          String after,
+      @Parameter(
+              description = "Filter by service Id for service-bound apps",
+              schema = @Schema(type = "string"))
+          @QueryParam("serviceId")
+          UUID serviceId) {
     App installation = repository.getByName(uriInfo, name, repository.getFields("id,pipelines"));
     if (installation.getAppType().equals(AppType.Internal)) {
       return Response.status(Response.Status.OK)
-          .entity(repository.getLatestAppRuns(installation))
+          .entity(repository.getLatestAppRuns(installation, serviceId))
           .build();
     } else {
       if (!installation.getPipelines().isEmpty()) {
@@ -765,7 +778,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       throw new IllegalArgumentException(
           CatalogExceptionMessage.systemEntityModifyNotAllowed(app.getName(), "SystemApp"));
     }
-    AppScheduler.getInstance().deleteScheduledApplication(app);
+    AppScheduler.getInstance().deleteAllApplicationJobs(app);
     Response response = patchInternal(uriInfo, securityContext, id, patch);
     App updatedApp = (App) response.getEntity();
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
@@ -813,7 +826,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       throw new IllegalArgumentException(
           CatalogExceptionMessage.systemEntityModifyNotAllowed(app.getName(), "SystemApp"));
     }
-    AppScheduler.getInstance().deleteScheduledApplication(app);
+    AppScheduler.getInstance().deleteAllApplicationJobs(app);
     Response response = patchInternal(uriInfo, securityContext, fqn, patch);
     App updatedApp = (App) response.getEntity();
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
@@ -855,7 +868,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
     App app = mapper.createToEntity(create, securityContext.getUserPrincipal().getName());
-    AppScheduler.getInstance().deleteScheduledApplication(app);
+    AppScheduler.getInstance().deleteAllApplicationJobs(app);
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
       ApplicationHandler.getInstance()
           .installApplication(
@@ -1093,6 +1106,116 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @Path("/name/{name}/service-configuration")
+  @Operation(
+      operationId = "addServiceConfiguration",
+      summary = "Add a service configuration to a service-bound app",
+      description = "Add a service configuration to a service-bound application.",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "Service configuration added"),
+        @ApiResponse(responseCode = "400", description = "App is not service-bound"),
+        @ApiResponse(responseCode = "404", description = "Application not found")
+      })
+  public Response addServiceConfiguration(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @RequestBody(
+              description = "Service configuration to add",
+              content = @Content(mediaType = MediaType.APPLICATION_JSON))
+          ServiceAppConfiguration serviceConfig) {
+    App app = repository.getByName(uriInfo, name, repository.getFields("id"));
+    if (app.getBoundType() != AppBoundType.Service) {
+      throw new BadRequestException(
+          "Cannot add service configuration to non-service-bound application: " + name);
+    }
+
+    AppBoundConfigurationUtil.addServiceConfiguration(app, serviceConfig.getServiceRef());
+    if (serviceConfig.getConfig() != null) {
+      AppBoundConfigurationUtil.setAppConfiguration(
+          app, serviceConfig.getServiceRef().getId(), serviceConfig.getConfig());
+    }
+    if (serviceConfig.getSchedule() != null) {
+      AppBoundConfigurationUtil.setSchedule(
+          app, serviceConfig.getServiceRef().getId(), serviceConfig.getSchedule());
+    }
+
+    String updatedBy = securityContext.getUserPrincipal().getName();
+    repository.createOrUpdate(uriInfo, app, updatedBy);
+
+    UUID serviceId = serviceConfig.getServiceRef().getId();
+    if (app.getAppType() == AppType.Internal
+        && SCHEDULED_TYPES.contains(app.getScheduleType())
+        && serviceConfig.getSchedule() != null) {
+      try {
+        AppScheduler.getInstance().scheduleApplicationForService(app, serviceId);
+      } catch (Exception e) {
+        LOG.error(
+            "Failed to schedule service-bound app {} for service {}", app.getName(), serviceId, e);
+      }
+    }
+
+    return Response.status(Response.Status.OK)
+        .entity("Service configuration added for service " + serviceId)
+        .build();
+  }
+
+  @DELETE
+  @Path("/name/{name}/service-configuration/{serviceId}")
+  @Operation(
+      operationId = "removeServiceConfiguration",
+      summary = "Remove a service configuration from a service-bound app",
+      description = "Remove a service configuration and its scheduled job.",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "Service configuration removed"),
+        @ApiResponse(responseCode = "400", description = "App is not service-bound"),
+        @ApiResponse(responseCode = "404", description = "Application or service config not found")
+      })
+  public Response removeServiceConfiguration(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @Parameter(description = "Service Id to remove", schema = @Schema(type = "string"))
+          @PathParam("serviceId")
+          UUID serviceId) {
+    App app = repository.getByName(uriInfo, name, repository.getFields("id"));
+    if (app.getBoundType() != AppBoundType.Service) {
+      throw new BadRequestException(
+          "Cannot remove service configuration from non-service-bound application: " + name);
+    }
+
+    boolean removed = AppBoundConfigurationUtil.removeServiceConfiguration(app, serviceId);
+    if (!removed) {
+      throw new BadRequestException(
+          "Service configuration for service " + serviceId + " not found in app " + name);
+    }
+
+    String updatedBy = securityContext.getUserPrincipal().getName();
+    repository.createOrUpdate(uriInfo, app, updatedBy);
+
+    if (app.getAppType() == AppType.Internal) {
+      try {
+        AppScheduler.getInstance().deleteScheduledApplicationForService(app, serviceId);
+      } catch (SchedulerException e) {
+        LOG.error(
+            "Failed to delete scheduled job for app {} and service {}",
+            app.getName(),
+            serviceId,
+            e);
+      }
+    }
+
+    return Response.status(Response.Status.OK)
+        .entity("Service configuration removed for service " + serviceId)
+        .build();
+  }
+
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
   @Path("/trigger/{name}")
   @Operation(
       operationId = "triggerApplicationRun",
@@ -1113,6 +1236,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
       @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
           @PathParam("name")
           String name,
+      @Parameter(
+              description = "Service Id for service-bound apps",
+              schema = @Schema(type = "string"))
+          @QueryParam("serviceId")
+          UUID serviceId,
       @RequestBody(
               description =
                   "Configuration payload. Keys will be added to the current configuration. Delete keys by setting them to null.",
@@ -1125,9 +1253,15 @@ public class AppResource extends EntityResource<App, AppRepository> {
           name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
     }
     if (app.getAppType().equals(AppType.Internal)) {
-      ApplicationHandler.getInstance()
-          .triggerApplicationOnDemand(
-              app, Entity.getCollectionDAO(), searchRepository, configPayload);
+      if (serviceId != null) {
+        ApplicationHandler.getInstance()
+            .triggerApplicationForService(
+                app, serviceId, Entity.getCollectionDAO(), searchRepository, configPayload);
+      } else {
+        ApplicationHandler.getInstance()
+            .triggerApplicationOnDemand(
+                app, Entity.getCollectionDAO(), searchRepository, configPayload);
+      }
       return Response.status(Response.Status.OK).build();
     } else {
       if (!app.getPipelines().isEmpty()) {
@@ -1167,14 +1301,19 @@ public class AppResource extends EntityResource<App, AppRepository> {
       @Context SecurityContext securityContext,
       @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
           @PathParam("name")
-          String name) {
+          String name,
+      @Parameter(
+              description = "Service Id to stop a specific service-bound job",
+              schema = @Schema(type = "string"))
+          @QueryParam("serviceId")
+          UUID serviceId) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
     if (Boolean.TRUE.equals(app.getSupportsInterrupt())) {
       if (app.getAppType().equals(AppType.Internal)) {
         Thread.ofVirtual()
             .name("om-app-stop-" + name)
-            .start(() -> AppScheduler.getInstance().stopApplicationRun(app));
+            .start(() -> AppScheduler.getInstance().stopApplicationRun(app, serviceId));
         return Response.status(Response.Status.OK)
             .entity("Application stop in progress. Please check status via.")
             .build();
@@ -1297,7 +1436,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
     if (installedApp.getAppType().equals(AppType.Internal)) {
       try {
-        AppScheduler.getInstance().deleteScheduledApplication(installedApp);
+        AppScheduler.getInstance().deleteAllApplicationJobs(installedApp);
       } catch (SchedulerException ex) {
         LOG.error("Failed in delete Application from Scheduler.", ex);
         throw new InternalServerErrorException("Failed in Delete App from Scheduler.");

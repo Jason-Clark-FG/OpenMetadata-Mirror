@@ -5,7 +5,9 @@ import static org.openmetadata.service.apps.scheduler.AppScheduler.APP_CONFIG_KE
 import static org.openmetadata.service.apps.scheduler.AppScheduler.APP_NAME;
 import static org.openmetadata.service.apps.scheduler.AppScheduler.SERVICE_ID;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -122,6 +124,8 @@ public class OmAppJobListener implements JobListener {
         Map<String, Object> properties = new HashMap<>();
         properties.put("serviceId", serviceId.toString());
         runRecord.withProperties(properties);
+        // Also add to services array so existing DB queries can filter by service
+        runRecord.withServices(List.of(new EntityReference().withId(serviceId)));
       }
 
       boolean update = false;
@@ -168,6 +172,20 @@ public class OmAppJobListener implements JobListener {
             JsonUtils.convertObjects(
                 jobExecutionContext.getJobDetail().getJobDataMap().get(SERVICES_FIELD),
                 EntityReference.class));
+      }
+
+      // Ensure service-bound serviceId is preserved in the services list for DB filtering
+      String svcIdStr = (String) jobExecutionContext.getJobDetail().getJobDataMap().get(SERVICE_ID);
+      if (svcIdStr != null) {
+        UUID svcId = UUID.fromString(svcIdStr);
+        List<EntityReference> currentServices =
+            runRecord.getServices() != null
+                ? new ArrayList<>(runRecord.getServices())
+                : new ArrayList<>();
+        if (currentServices.stream().noneMatch(ref -> svcId.equals(ref.getId()))) {
+          currentServices.add(new EntityReference().withId(svcId));
+          runRecord.setServices(currentServices);
+        }
       }
 
       // Check if the job was stopped/interrupted

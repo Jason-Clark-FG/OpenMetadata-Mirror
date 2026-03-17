@@ -180,7 +180,7 @@ public class AppService {
       throw new IllegalArgumentException(
           CatalogExceptionMessage.systemEntityModifyNotAllowed(app.getName(), "SystemApp"));
     }
-    AppScheduler.getInstance().deleteScheduledApplication(app);
+    AppScheduler.getInstance().deleteAllApplicationJobs(app);
 
     RestUtil.PatchResponse<App> patchResponse =
         appRepository.patch(uriInfo, id, securityContext.getUserPrincipal().getName(), patch);
@@ -202,7 +202,7 @@ public class AppService {
       UriInfo uriInfo, SecurityContext securityContext, CreateApp createApp)
       throws SchedulerException {
     App app = mapper.createToEntity(createApp, securityContext.getUserPrincipal().getName());
-    AppScheduler.getInstance().deleteScheduledApplication(app);
+    AppScheduler.getInstance().deleteAllApplicationJobs(app);
 
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
       applicationHandler.installApplication(
@@ -448,8 +448,12 @@ public class AppService {
     appRepository.createOrUpdate(uriInfo, app, updatedBy);
 
     if (app.getAppType() == AppType.Internal && SCHEDULED_TYPES.contains(app.getScheduleType())) {
-      // TODO: Service-bound scheduling implementation
-      LOG.warn("Service-bound scheduling not yet implemented for app {}", app.getName());
+      try {
+        AppScheduler.getInstance().scheduleApplicationForService(app, serviceId);
+      } catch (Exception e) {
+        LOG.error(
+            "Failed to schedule service-bound app {} for service {}", app.getName(), serviceId, e);
+      }
     }
 
     return Response.status(Response.Status.OK)
@@ -478,8 +482,15 @@ public class AppService {
     appRepository.createOrUpdate(uriInfo, app, updatedBy);
 
     if (app.getAppType() == AppType.Internal) {
-      // TODO: Service-bound job deletion implementation
-      LOG.warn("Service-bound job deletion not yet implemented for app {}", app.getName());
+      try {
+        AppScheduler.getInstance().deleteScheduledApplicationForService(app, serviceId);
+      } catch (SchedulerException e) {
+        LOG.error(
+            "Failed to delete scheduled job for app {} and service {}",
+            app.getName(),
+            serviceId,
+            e);
+      }
     }
 
     return Response.status(Response.Status.OK)
@@ -676,7 +687,7 @@ public class AppService {
 
     if (installedApp.getAppType().equals(AppType.Internal)) {
       try {
-        AppScheduler.getInstance().deleteScheduledApplication(installedApp);
+        AppScheduler.getInstance().deleteAllApplicationJobs(installedApp);
       } catch (SchedulerException ex) {
         LOG.error("Failed in delete Application from Scheduler.", ex);
         throw new InternalServerErrorException("Failed in Delete App from Scheduler.");

@@ -94,11 +94,11 @@ public abstract class AbstractServiceNativeApplication extends AbstractNativeApp
 
   protected void scheduleExternalForService(
       ServiceAppConfiguration serviceConfig, String installedBy) {
-    LOG.info(
-        "Scheduling external service-bound application: {} for service {}",
-        getApp().getName(),
-        serviceConfig.getServiceRef().getId());
-    LOG.warn("External service-bound app scheduling not yet implemented");
+    throw new UnsupportedOperationException(
+        String.format(
+            "External service-bound app scheduling is not supported for app %s. "
+                + "Only internal service-bound apps can be scheduled.",
+            getApp().getName()));
   }
 
   @Override

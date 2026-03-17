@@ -101,7 +101,11 @@ public class AppBoundConfigurationUtil {
           .map(AppBoundConfiguration::getServiceAppConfig)
           .orElse(List.of())
           .stream()
-          .flatMap(config -> config.getEventSubscriptions().stream())
+          .flatMap(
+              config -> {
+                List<EntityReference> subs = config.getEventSubscriptions();
+                return subs != null ? subs.stream() : java.util.stream.Stream.empty();
+              })
           .collect(Collectors.toList());
     }
     return List.of();
@@ -171,7 +175,7 @@ public class AppBoundConfigurationUtil {
 
   public static void setAppConfiguration(App app, UUID serviceId, Object appConfiguration) {
     if (isServiceBoundApp(app)) {
-      getOrCreateServiceConfiguration(app, serviceId).setPrivateConfig(appConfiguration);
+      getOrCreateServiceConfiguration(app, serviceId).setConfig(appConfiguration);
     } else {
       setAppConfiguration(app, appConfiguration);
     }

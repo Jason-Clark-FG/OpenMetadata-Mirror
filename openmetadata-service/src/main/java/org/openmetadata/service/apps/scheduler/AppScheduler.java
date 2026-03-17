@@ -432,96 +432,89 @@ public class AppScheduler {
   }
 
   public void stopApplicationRun(App application) {
+    stopApplicationRun(application, null);
+  }
+
+  /**
+   * Stops a running application job. If serviceId is provided, only the service-specific
+   * job is stopped. Otherwise, any running job belonging to the app is stopped.
+   */
+  public void stopApplicationRun(App application, UUID serviceId) {
     try {
-      JobDetail jobDetailScheduled =
-          scheduler.getJobDetail(new JobKey(application.getName(), APPS_JOB_GROUP));
-      JobDetail jobDetailOnDemand =
-          scheduler.getJobDetail(
-              new JobKey(
-                  String.format("%s-%s", application.getName(), ON_DEMAND_JOB), APPS_JOB_GROUP));
-      boolean isJobRunning = false;
-      JobExecutionContext runningJobContext = null;
-      // Check if the job is already running
       List<JobExecutionContext> currentJobs = scheduler.getCurrentlyExecutingJobs();
       LOG.info("Currently executing jobs count: {}", currentJobs.size());
+
+      JobExecutionContext runningJobContext = null;
       for (JobExecutionContext context : currentJobs) {
-        LOG.info("Running job: {}", context.getJobDetail().getKey());
-        if ((jobDetailScheduled != null
-                && context.getJobDetail().getKey().equals(jobDetailScheduled.getKey()))
-            || (jobDetailOnDemand != null
-                && context.getJobDetail().getKey().equals(jobDetailOnDemand.getKey()))) {
-          isJobRunning = true;
-          runningJobContext = context;
-          LOG.info("Found matching job for application: {}", application.getName());
+        JobKey key = context.getJobDetail().getKey();
+        if (!APPS_JOB_GROUP.equals(key.getGroup())) {
+          continue;
         }
+        if (!isJobForApp(key.getName(), application.getName())) {
+          continue;
+        }
+        if (serviceId != null) {
+          String jobSvcId = context.getJobDetail().getJobDataMap().getString(SERVICE_ID);
+          if (jobSvcId == null || !serviceId.toString().equals(jobSvcId)) {
+            continue;
+          }
+        }
+        LOG.info(
+            "Found matching running job for application: {} (key: {})", application.getName(), key);
+        runningJobContext = context;
+        break;
       }
-      if (!isJobRunning) {
+
+      if (runningJobContext == null) {
         LOG.error(
-            "No running job found for application: {}. Scheduled key: {}, OnDemand key: {}",
+            "No running job found for application: {} (serviceId: {})",
             application.getName(),
-            jobDetailScheduled != null ? jobDetailScheduled.getKey() : "null",
-            jobDetailOnDemand != null ? jobDetailOnDemand.getKey() : "null");
+            serviceId);
         throw new UnhandledServerException("There is no job running for the application.");
       }
 
-      // Update status to STOPPED and broadcast before interrupting
-      if (runningJobContext != null) {
-        updateAndBroadcastStoppedStatus(runningJobContext);
-      }
+      updateAndBroadcastStoppedStatus(runningJobContext);
 
-      // Try to interrupt the running job
-      boolean interruptSuccessful = false;
-
-      // Check which job is actually running and interrupt it
-      for (JobExecutionContext context : currentJobs) {
-        JobKey runningJobKey = context.getJobDetail().getKey();
-        if ((jobDetailScheduled != null && runningJobKey.equals(jobDetailScheduled.getKey()))
-            || (jobDetailOnDemand != null && runningJobKey.equals(jobDetailOnDemand.getKey()))) {
-          LOG.info("Attempting to interrupt running job: {}", runningJobKey);
-          try {
-            interruptSuccessful = scheduler.interrupt(runningJobKey);
-            LOG.info("Interrupt result for {}: {}", runningJobKey, interruptSuccessful);
-
-            if (!interruptSuccessful) {
-              LOG.warn(
-                  "Interrupt returned false for job: {}. Job might not support interruption or already stopped.",
-                  runningJobKey);
-            }
-          } catch (Exception e) {
-            LOG.error("Failed to interrupt job: {}", runningJobKey, e);
-          }
+      JobKey runningJobKey = runningJobContext.getJobDetail().getKey();
+      LOG.info("Attempting to interrupt running job: {}", runningJobKey);
+      try {
+        boolean interruptSuccessful = scheduler.interrupt(runningJobKey);
+        LOG.info("Interrupt result for {}: {}", runningJobKey, interruptSuccessful);
+        if (!interruptSuccessful) {
+          LOG.warn(
+              "Interrupt returned false for job: {}. "
+                  + "Job might not support interruption or already stopped.",
+              runningJobKey);
         }
+      } catch (Exception e) {
+        LOG.error("Failed to interrupt job: {}", runningJobKey, e);
       }
 
-      // Wait briefly for the interrupt to propagate and cleanup to start before deleting
-      // the job. Deleting immediately can kill the Quartz thread before the application's
-      // stop/cleanup logic (e.g., flushing sinks, transitioning job status) can complete.
+      // Wait briefly for the interrupt to propagate before deleting
       try {
         Thread.sleep(2000);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       }
 
-      // Delete the job after interrupt has had time to propagate
-      JobKey scheduledJobKey = new JobKey(application.getName(), APPS_JOB_GROUP);
-      if (jobDetailScheduled != null) {
-        LOG.info("Deleting Scheduled Job for App: {}", application.getName());
-        try {
-          scheduler.deleteJob(scheduledJobKey);
-        } catch (SchedulerException ex) {
-          LOG.error("Failed to delete scheduled job: {}", scheduledJobKey, ex);
+      // Delete jobs matching the scope (service-specific or all for global)
+      try {
+        java.util.Set<JobKey> allJobKeys = scheduler.getJobKeys(jobGroupEquals(APPS_JOB_GROUP));
+        for (JobKey jobKey : allJobKeys) {
+          if (serviceId != null) {
+            String servicePrefix = application.getName() + "-" + serviceId;
+            if (jobKey.getName().equals(servicePrefix)
+                || jobKey.getName().startsWith(servicePrefix + "-")) {
+              deleteJobSafely(jobKey);
+            }
+          } else {
+            if (isJobForApp(jobKey.getName(), application.getName())) {
+              deleteJobSafely(jobKey);
+            }
+          }
         }
-      }
-
-      JobKey onDemandJobKey =
-          new JobKey(String.format("%s-%s", application.getName(), ON_DEMAND_JOB), APPS_JOB_GROUP);
-      if (jobDetailOnDemand != null) {
-        LOG.info("Deleting On Demand Job for App: {}", application.getName());
-        try {
-          scheduler.deleteJob(onDemandJobKey);
-        } catch (SchedulerException ex) {
-          LOG.error("Failed to delete on-demand job: {}", onDemandJobKey, ex);
-        }
+      } catch (SchedulerException ex) {
+        LOG.error("Failed to delete jobs after stop for app: {}", application.getName(), ex);
       }
     } catch (SchedulerException ex) {
       LOG.error("Failed to stop job execution for app: {}", application.getName(), ex);
@@ -672,6 +665,41 @@ public class AppScheduler {
       }
     }
     return null;
+  }
+
+  /**
+   * Returns true if the given Quartz job key belongs to the given app.
+   * Covers global ({appName}), on-demand ({appName}-OnDemandJob), and
+   * service-bound ({appName}-{serviceId}, {appName}-{serviceId}-OnDemandJob) patterns.
+   */
+  public static boolean isJobForApp(String jobKeyName, String appName) {
+    return jobKeyName.equals(appName) || jobKeyName.startsWith(appName + "-");
+  }
+
+  /**
+   * Deletes ALL Quartz jobs (global + service-bound + on-demand variants) for the given app.
+   */
+  public void deleteAllApplicationJobs(App app) throws SchedulerException {
+    java.util.Set<JobKey> allJobKeys = scheduler.getJobKeys(jobGroupEquals(APPS_JOB_GROUP));
+    for (JobKey jobKey : allJobKeys) {
+      if (isJobForApp(jobKey.getName(), app.getName())) {
+        LOG.info("Deleting application job: {}", jobKey);
+        scheduler.unscheduleJob(new TriggerKey(jobKey.getName(), APPS_TRIGGER_GROUP));
+        scheduler.deleteJob(jobKey);
+      }
+    }
+  }
+
+  private void deleteJobSafely(JobKey key) {
+    try {
+      if (scheduler.getJobDetail(key) != null) {
+        LOG.info("Deleting job: {}", key);
+        scheduler.unscheduleJob(new TriggerKey(key.getName(), APPS_TRIGGER_GROUP));
+        scheduler.deleteJob(key);
+      }
+    } catch (SchedulerException ex) {
+      LOG.error("Failed to delete job: {}", key, ex);
+    }
   }
 
   private String getServiceJobIdentity(String appName, UUID serviceId) {

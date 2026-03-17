@@ -438,7 +438,7 @@ public class ApplicationHandler {
               return;
             }
             Class<?> clz = jobDetail.getJobClass();
-            if (!jobKey.getName().equals(app.getName())
+            if (!AppScheduler.isJobForApp(jobKey.getName(), app.getName())
                 && clz.getName().equals(app.getClassName())) {
               LOG.info("deleting old job {}", jobKey.getName());
               AppScheduler.getInstance().getScheduler().deleteJob(jobKey);
