@@ -36,6 +36,7 @@ import directoryClassBase from '../DirectoryClassBase';
 import domainClassBase from '../Domain/DomainClassBase';
 import { getEntityName } from '../EntityUtils';
 import fileClassBase from '../FileClassBase';
+import glossaryTermClassBase from '../Glossary/GlossaryTermClassBase';
 import i18n from '../i18next/LocalUtil';
 import metricDetailsClassBase from '../MetricEntityUtils/MetricDetailsClassBase';
 import mlModelClassBase from '../MlModel/MlModelClassBase';
@@ -130,7 +131,7 @@ export const getTabLabelFromId = (tab: EntityTabs): string => {
 export const getDefaultTabs = (pageType?: string): Tab[] => {
   switch (pageType) {
     case PageType.GlossaryTerm:
-      return getGlossaryTermDefaultTabs();
+      return glossaryTermClassBase.getGlossaryTermDetailPageTabsIds();
     case PageType.Glossary:
       return getGlossaryDefaultTabs();
     case PageType.Table:
@@ -658,9 +659,15 @@ export const getLayoutFromCustomizedPage = (
   }
 
   if (customizedPage?.tabs?.length) {
-    return tab
+    const savedLayout = tab
       ? customizedPage.tabs?.find((t: Tab) => t.id === tab)?.layout
       : get(customizedPage, 'tabs.0.layout', []);
+
+    if (!savedLayout || (savedLayout as WidgetConfig[]).length === 0) {
+      return getDefaultWidgetForTab(pageType, tab);
+    }
+
+    return savedLayout;
   } else {
     return getDefaultWidgetForTab(pageType, tab);
   }

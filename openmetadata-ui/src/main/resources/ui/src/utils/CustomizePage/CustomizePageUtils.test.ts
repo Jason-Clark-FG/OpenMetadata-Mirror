@@ -12,11 +12,12 @@
  */
 import { TabsProps } from 'antd';
 import { EntityTabs } from '../../enums/entity.enum';
-import { PageType, Tab } from '../../generated/system/ui/page';
+import { Page, PageType, Tab } from '../../generated/system/ui/page';
 import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.interface';
 import {
   checkIfExpandViewSupported,
   getDefaultTabs,
+  getLayoutFromCustomizedPage,
   getTabDisplayName,
   getTabLabelFromId,
   getTabLabelMapFromTabs,
@@ -144,7 +145,7 @@ describe('CustomizePageUtils', () => {
     });
 
     it('should return empty object for undefined tabs', () => {
-      const result = getTabLabelMapFromTabs(undefined);
+      const result = getTabLabelMapFromTabs();
 
       expect(result).toEqual({});
     });
@@ -279,6 +280,80 @@ describe('CustomizePageUtils', () => {
       );
 
       expect(result).toEqual(widgets);
+    });
+  });
+
+  describe('getLayoutFromCustomizedPage', () => {
+    it('should return saved layout when it is non-empty', () => {
+      const savedLayout = [
+        { i: 'widget-1', x: 0, y: 0, w: 6, h: 3 },
+      ] as WidgetConfig[];
+      const customizedPage = {
+        pageType: PageType.GlossaryTerm,
+        tabs: [
+          {
+            id: EntityTabs.OVERVIEW,
+            name: EntityTabs.OVERVIEW,
+            layout: savedLayout,
+          },
+        ],
+      };
+
+      const result = getLayoutFromCustomizedPage(
+        PageType.GlossaryTerm,
+        EntityTabs.OVERVIEW,
+        customizedPage as unknown as Page
+      );
+
+      expect(result).toBe(savedLayout);
+    });
+
+    it('should fall back to default layout when saved layout is empty', () => {
+      const emptyLayout: WidgetConfig[] = [];
+      const customizedPage = {
+        pageType: PageType.GlossaryTerm,
+        tabs: [
+          {
+            id: EntityTabs.OVERVIEW,
+            name: EntityTabs.OVERVIEW,
+            layout: emptyLayout,
+          },
+        ],
+      };
+
+      const result = getLayoutFromCustomizedPage(
+        PageType.GlossaryTerm,
+        EntityTabs.OVERVIEW,
+        customizedPage as unknown as Page
+      );
+
+      // Should NOT return the empty saved layout — fallback to default
+      expect(result).not.toBe(emptyLayout);
+    });
+
+    it('should return default layout when customizedPage is null', () => {
+      const result = getLayoutFromCustomizedPage(
+        PageType.GlossaryTerm,
+        EntityTabs.OVERVIEW,
+        null
+      );
+
+      expect(result).not.toEqual([]);
+    });
+
+    it('should return default layout when customizedPage has no tabs', () => {
+      const customizedPage = {
+        pageType: PageType.GlossaryTerm,
+        tabs: [],
+      };
+
+      const result = getLayoutFromCustomizedPage(
+        PageType.GlossaryTerm,
+        EntityTabs.OVERVIEW,
+        customizedPage as unknown as Page
+      );
+
+      expect(result).not.toEqual([]);
     });
   });
 });
