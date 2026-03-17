@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { DragOutlined } from '@ant-design/icons';
+import { DotsGrid } from '@untitledui/icons';
 import { compare } from 'fast-json-patch';
 import { isEmpty } from 'lodash';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -47,7 +47,7 @@ const ROW_HEIGHT = 170;
 
 const dragHandle = (
   <div className="marketplace-drag-handle">
-    <DragOutlined />
+    <DotsGrid className="tw:size-4" />
   </div>
 );
 

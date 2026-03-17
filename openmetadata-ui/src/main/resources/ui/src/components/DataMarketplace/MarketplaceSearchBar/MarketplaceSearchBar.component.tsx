@@ -11,9 +11,8 @@
  *  limitations under the License.
  */
 
-import { Input } from '@openmetadata/ui-core-components';
+import { Input, Popover } from '@openmetadata/ui-core-components';
 import { SearchLg } from '@untitledui/icons';
-import { Popover, Typography } from 'antd';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,11 +22,10 @@ import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
+import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecentSearches';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
 import { getDomainIcon } from '../../../utils/DomainUtils';
-import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecentSearches';
-import { getVisiblePopupContainer } from '../../../utils/LandingPageWidget/WidgetsUtils';
 import {
   getDomainDetailsPath,
   getEntityDetailsPath,
@@ -148,9 +146,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     if (isSearching) {
       return (
         <div className="marketplace-search-results p-md">
-          <Typography.Text className="text-grey-muted">
+          <span className="tw:text-sm tw:text-text-tertiary">
             {t('label.loading')}...
-          </Typography.Text>
+          </span>
         </div>
       );
     }
@@ -158,9 +156,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     if (!hasResults) {
       return (
         <div className="marketplace-search-results p-md">
-          <Typography.Text className="text-grey-muted">
+          <span className="tw:text-sm tw:text-text-tertiary">
             {t('label.no-data-found')}
-          </Typography.Text>
+          </span>
         </div>
       );
     }
@@ -169,9 +167,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       <div className="marketplace-search-results">
         {dataProducts.length > 0 && (
           <div className="search-result-section">
-            <Typography.Text className="search-result-section-title">
+            <span className="search-result-section-title">
               {t('label.data-product-plural')}
-            </Typography.Text>
+            </span>
             {dataProducts.map((dp) => (
               <div
                 className="search-result-item"
@@ -188,18 +186,20 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 <div className="search-result-icon">
                   {getDataProductIconByUrl(dp.style?.iconURL)}
                 </div>
-                <Typography.Text ellipsis={{ tooltip: true }}>
+                <span
+                  className="tw:truncate tw:block tw:text-sm"
+                  title={dp.displayName || dp.name}>
                   {dp.displayName || dp.name}
-                </Typography.Text>
+                </span>
               </div>
             ))}
           </div>
         )}
         {domains.length > 0 && (
           <div className="search-result-section">
-            <Typography.Text className="search-result-section-title">
+            <span className="search-result-section-title">
               {t('label.domain-plural')}
-            </Typography.Text>
+            </span>
             {domains.map((domain) => (
               <div
                 className="search-result-item"
@@ -216,9 +216,11 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 <div className="search-result-icon">
                   {getDomainIcon(domain.style?.iconURL)}
                 </div>
-                <Typography.Text ellipsis={{ tooltip: true }}>
+                <span
+                  className="tw:truncate tw:block tw:text-sm"
+                  title={domain.displayName || domain.name}>
                   {domain.displayName || domain.name}
-                </Typography.Text>
+                </span>
               </div>
             ))}
           </div>
@@ -239,40 +241,39 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       className="marketplace-search-bar"
       data-testid="marketplace-search-bar"
       ref={containerRef}>
+      <Input
+        autoComplete="off"
+        data-testid="marketplace-search-input"
+        fontSize="xs"
+        icon={SearchLg}
+        iconClassName="tw:!size-4"
+        inputClassName="tw:!pl-9"
+        isDisabled={isEditView}
+        placeholder={t('label.search-for-type', {
+          type:
+            t('label.data-product-plural') + ', ' + t('label.domain-plural'),
+        })}
+        value={searchValue}
+        wrapperClassName="marketplace-search-input tw:!items-center"
+        onChange={(value) => handleChange(value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            handleSearch(searchValue);
+          }
+        }}
+      />
       <Popover
-        align={{ offset: [0, 4] }}
-        content={popoverContent}
-        getPopupContainer={getVisiblePopupContainer}
-        open={isOpen && searchValue.trim().length > 0}
-        overlayClassName="marketplace-search-overlay"
-        overlayStyle={{ width: containerRef.current?.offsetWidth }}
+        isNonModal
+        className="tw:w-[var(--trigger-width)]"
+        containerClassName="tw:p-0"
+        isOpen={isOpen && searchValue.trim().length > 0}
+        offset={4}
         placement="bottom"
-        showArrow={false}
-        trigger={['click']}
+        triggerRef={containerRef}
         onOpenChange={(open) => {
           setIsOpen(searchValue.trim().length > 0 && open);
         }}>
-        <Input
-          autoComplete="off"
-          data-testid="marketplace-search-input"
-          fontSize="xs"
-          icon={SearchLg}
-          iconClassName="tw:!size-4"
-          inputClassName="tw:!pl-9"
-          isDisabled={isEditView}
-          placeholder={t('label.search-for-type', {
-            type:
-              t('label.data-product-plural') + ', ' + t('label.domain-plural'),
-          })}
-          value={searchValue}
-          wrapperClassName="marketplace-search-input tw:!items-center"
-          onChange={(value) => handleChange(value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleSearch(searchValue);
-            }
-          }}
-        />
+        {popoverContent}
       </Popover>
     </div>
   );

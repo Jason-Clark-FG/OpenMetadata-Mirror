@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 
-import { Typography } from 'antd';
 import { ReactNode } from 'react';
 import './marketplace-item-card.less';
 
@@ -50,16 +49,16 @@ const MarketplaceItemCard = ({
         {icon}
       </div>
       <div className="marketplace-item-card-content">
-        <Typography.Text
-          className="marketplace-item-card-name"
-          ellipsis={{ tooltip: true }}>
+        <span
+          className="marketplace-item-card-name tw:truncate tw:block"
+          title={name}>
           {name}
-        </Typography.Text>
-        <Typography.Text
-          className="marketplace-item-card-subtitle"
-          ellipsis={{ tooltip: true }}>
+        </span>
+        <span
+          className="marketplace-item-card-subtitle tw:truncate tw:block"
+          title={subtitle}>
           {subtitle}
-        </Typography.Text>
+        </span>
       </div>
     </div>
   );

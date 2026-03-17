@@ -12,7 +12,6 @@
  */
 
 import { Button } from '@openmetadata/ui-core-components';
-import { Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty, noop } from 'lodash';
 import { useSnackbar } from 'notistack';
@@ -195,14 +194,14 @@ const MarketplaceDataProductsWidget = ({
       data-testid="marketplace-dp-widget">
       <div className="marketplace-widget-header">
         <div>
-          <Typography.Title className="marketplace-widget-title" level={5}>
+          <h5 className="marketplace-widget-title tw:text-base tw:font-semibold tw:text-text-primary tw:m-0">
             {t('label.new')} {t('label.data-product-plural')}
-          </Typography.Title>
-          <Typography.Text className="text-grey-muted text-xs">
+          </h5>
+          <span className="tw:text-xs tw:text-text-tertiary">
             {t('label.recently-created-entity', {
               entity: t('label.data-product-plural'),
             })}
-          </Typography.Text>
+          </span>
         </div>
         {dragHandle}
         {!isEditView && (
@@ -227,11 +226,11 @@ const MarketplaceDataProductsWidget = ({
         )}
       </div>
       {isEmpty(dataProducts) ? (
-        <Typography.Text className="text-grey-muted">
+        <span className="tw:text-sm tw:text-text-tertiary">
           {t('label.no-entity', {
             entity: t('label.data-product-plural'),
           })}
-        </Typography.Text>
+        </span>
       ) : (
         cardList
       )}
