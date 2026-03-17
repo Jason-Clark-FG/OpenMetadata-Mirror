@@ -10775,7 +10775,12 @@ public interface CollectionDAO {
     default List<SearchIndexRetryRecord> claimPending(int batchSize) {
       int fetchSize = Math.max(batchSize * 5, batchSize);
       List<SearchIndexRetryRecord> candidates =
-          findByStatuses(List.of("PENDING", "PENDING_RETRY_1", "PENDING_RETRY_2"), fetchSize);
+          new ArrayList<>(
+              findByStatuses(
+                  List.of("PENDING", "PENDING_RETRY_1", "PENDING_RETRY_2"), fetchSize));
+      // Shuffle so concurrent worker threads attempt different rows first,
+      // reducing wasted optimistic-lock failures on the same candidates.
+      Collections.shuffle(candidates);
       List<SearchIndexRetryRecord> claimed = new ArrayList<>();
       for (SearchIndexRetryRecord candidate : candidates) {
         if (claimed.size() >= batchSize) {

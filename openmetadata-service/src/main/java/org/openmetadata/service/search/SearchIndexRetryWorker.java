@@ -78,6 +78,7 @@ public class SearchIndexRetryWorker implements Managed {
   private final List<Thread> workerThreads = new ArrayList<>();
   private final Object scopeRefreshLock = new Object();
   private final Object candidateTypesLock = new Object();
+  private final Object staleRecoveryLock = new Object();
 
   private volatile long lastScopeRefreshAt;
   private volatile long lastStaleRecoveryAt;
@@ -725,16 +726,24 @@ public class SearchIndexRetryWorker implements Managed {
     if (now - lastStaleRecoveryAt < STALE_RECOVERY_INTERVAL_MS) {
       return;
     }
-    lastStaleRecoveryAt = now;
-    try {
-      java.sql.Timestamp cutoff = new java.sql.Timestamp(now - STALE_THRESHOLD_MS);
-      int recovered = collectionDAO.searchIndexRetryQueueDAO().recoverStaleInProgress(cutoff);
-      if (recovered > 0) {
-        Metrics.counter("search.retry.stale.recovered").increment(recovered);
-        LOG.info("Recovered {} stale IN_PROGRESS retry queue records", recovered);
+
+    synchronized (staleRecoveryLock) {
+      long currentTime = System.currentTimeMillis();
+      if (currentTime - lastStaleRecoveryAt < STALE_RECOVERY_INTERVAL_MS) {
+        return;
       }
-    } catch (Exception e) {
-      LOG.warn("Failed to recover stale IN_PROGRESS records: {}", e.getMessage());
+      lastStaleRecoveryAt = currentTime;
+
+      try {
+        java.sql.Timestamp cutoff = new java.sql.Timestamp(currentTime - STALE_THRESHOLD_MS);
+        int recovered = collectionDAO.searchIndexRetryQueueDAO().recoverStaleInProgress(cutoff);
+        if (recovered > 0) {
+          Metrics.counter("search.retry.stale.recovered").increment(recovered);
+          LOG.info("Recovered {} stale IN_PROGRESS retry queue records", recovered);
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to recover stale IN_PROGRESS records: {}", e.getMessage());
+      }
     }
   }
 

@@ -845,7 +845,7 @@ public class SearchRepository {
    * Create search indexes for multiple entities only (no lifecycle events).
    * This method is used by SearchIndexHandler.
    */
-  public void createEntitiesIndex(List<EntityInterface> entities) {
+  public void createEntitiesIndex(List<EntityInterface> entities) throws IOException {
     if (!nullOrEmpty(entities)) {
       String entityType = entities.getFirst().getEntityReference().getType();
       Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
@@ -873,28 +873,15 @@ public class SearchRepository {
         docs.add(Collections.singletonMap(entity.getId().toString(), doc));
       }
 
-      try {
-        searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
+      // createEntities is async fire-and-forget — errors are handled in its
+      // callback via the retry queue, so no try-catch is needed here.
+      searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
 
-        if (Entity.TABLE.equals(entityType)) {
-          indexColumnsForTables(entities);
-        }
-      } catch (Exception ie) {
-        for (EntityInterface entity : entities) {
-          SearchIndexRetryQueue.enqueue(
-              entity.getId() != null ? entity.getId().toString() : null,
-              entity.getFullyQualifiedName(),
-              SearchIndexRetryQueue.failureReason("createEntitiesIndex", ie));
-        }
-        LOG.error(
-            "Issue in Creating entities document for entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
-            entityType,
-            ie.getMessage(),
-            ie.getCause(),
-            ExceptionUtils.getStackTrace(ie));
-      } finally {
-        RequestLatencyContext.endSearchOperation(searchSample);
+      if (Entity.TABLE.equals(entityType)) {
+        indexColumnsForTables(entities);
       }
+
+      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 
@@ -950,7 +937,7 @@ public class SearchRepository {
    * Create search indexes for multiple entities and dispatch lifecycle events.
    * This method maintains backward compatibility.
    */
-  public void createEntities(List<EntityInterface> entities) {
+  public void createEntities(List<EntityInterface> entities) throws IOException {
     // For backward compatibility, just call the index-only method
     // EntityRepository now handles lifecycle event dispatching
     createEntitiesIndex(entities);
