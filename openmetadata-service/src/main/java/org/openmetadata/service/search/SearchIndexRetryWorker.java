@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
@@ -85,7 +86,7 @@ public class SearchIndexRetryWorker implements Managed {
   private volatile String activeScopeSignature = "";
   private volatile long candidateTypesLastRefreshAt;
   private volatile List<String> cachedCandidateEntityTypes = Collections.emptyList();
-  private volatile int consecutiveUnavailableCount;
+  private final AtomicInteger consecutiveUnavailableCount = new AtomicInteger();
 
   public SearchIndexRetryWorker(CollectionDAO collectionDAO, SearchRepository searchRepository) {
     this.collectionDAO = collectionDAO;
@@ -585,20 +586,18 @@ public class SearchIndexRetryWorker implements Managed {
    */
   private boolean waitForClientAvailability(int workerId) {
     if (searchRepository.getSearchClient().isClientAvailable()) {
-      consecutiveUnavailableCount = 0;
+      consecutiveUnavailableCount.set(0);
       return true;
     }
-    consecutiveUnavailableCount++;
+    int attempt = consecutiveUnavailableCount.incrementAndGet();
     int backoffSeconds =
-        Math.min(
-            POLL_INTERVAL_SECONDS * (1 << Math.min(consecutiveUnavailableCount, 4)),
-            MAX_BACKOFF_SECONDS);
+        Math.min(POLL_INTERVAL_SECONDS * (1 << Math.min(attempt, 4)), MAX_BACKOFF_SECONDS);
     Metrics.counter("search.retry.client.unavailable").increment();
     LOG.warn(
         "Search client unavailable, worker {} backing off for {}s (attempt {})",
         workerId,
         backoffSeconds,
-        consecutiveUnavailableCount);
+        attempt);
     sleep(backoffSeconds);
     return false;
   }
