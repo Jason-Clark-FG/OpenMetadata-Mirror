@@ -203,6 +203,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
   protected Authorizer authorizer;
   private AuthenticatorHandler authenticatorHandler;
   protected Limits limits;
+  private volatile boolean mcpServerRegistered = false;
 
   protected Jdbi jdbi;
   private Environment environment;
@@ -401,12 +402,17 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
 
   protected void registerMCPServer(
       OpenMetadataApplicationConfig catalogConfig, Environment environment) {
+    if (mcpServerRegistered) {
+      LOG.info("MCP Server already registered, skipping");
+      return;
+    }
     try {
       if (ApplicationContext.getInstance().getAppIfExists("McpApplication") != null) {
         Class<?> mcpServerClass = Class.forName("org.openmetadata.mcp.McpServer");
         McpServerProvider mcpServer =
             (McpServerProvider) mcpServerClass.getDeclaredConstructor().newInstance();
         mcpServer.initializeMcpServer(environment, authorizer, limits, catalogConfig);
+        mcpServerRegistered = true;
         LOG.info("MCP Server registered successfully");
       }
     } catch (ClassNotFoundException ex) {
