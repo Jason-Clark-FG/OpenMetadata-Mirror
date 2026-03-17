@@ -749,7 +749,7 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
           continue;
         }
 
-        updateFieldDescription(stored, updated);
+        updateFieldDescription(fieldName, stored, updated);
         updateFieldDataTypeDisplay(stored, updated);
         updateFieldDisplayName(stored, updated);
         updateTags(
@@ -771,13 +771,12 @@ public class APIEndpointRepository extends EntityRepository<APIEndpoint> {
       majorVersionChange = majorVersionChange || !deletedFields.isEmpty();
     }
 
-    private void updateFieldDescription(Field origField, Field updatedField) {
+    private void updateFieldDescription(String fieldName, Field origField, Field updatedField) {
       if (operation.isPut() && !nullOrEmpty(origField.getDescription()) && updatedByBot()) {
-        // Revert the non-empty field description if being updated by a bot
         updatedField.setDescription(origField.getDescription());
         return;
       }
-      String field = EntityUtil.getSchemaField(original, origField, FIELD_DESCRIPTION);
+      String field = EntityUtil.getFieldName(fieldName, origField.getName(), FIELD_DESCRIPTION);
       recordChange(field, origField.getDescription(), updatedField.getDescription());
     }
 

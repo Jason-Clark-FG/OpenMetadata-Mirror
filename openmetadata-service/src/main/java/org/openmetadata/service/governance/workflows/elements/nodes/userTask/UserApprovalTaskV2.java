@@ -17,7 +17,10 @@ import static org.openmetadata.service.governance.workflows.Workflow.getFlowable
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
@@ -86,7 +89,9 @@ public class UserApprovalTaskV2 implements NodeInterface {
     FieldExtension assigneesExpr =
         new FieldExtensionBuilder()
             .fieldName("assigneesExpr")
-            .fieldValue(JsonUtils.pojoToJson(nodeDefinition.getConfig().getAssignees()))
+            .fieldValue(
+                JsonUtils.pojoToJson(
+                    transformAssigneesForFlowable(nodeDefinition.getConfig().getAssignees())))
             .build();
 
     FieldExtension assigneesVarNameExpr =
@@ -306,5 +311,41 @@ public class UserApprovalTaskV2 implements NodeInterface {
     for (Message message : messages) {
       model.addMessage(message);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> transformAssigneesForFlowable(Object assigneesConfig) {
+    Map<String, Object> result = new HashMap<>();
+    Map<String, Object> config = JsonUtils.readOrConvertValue(assigneesConfig, Map.class);
+    if (config != null) {
+      result.put("addReviewers", config.getOrDefault("addReviewers", true));
+      result.put("addOwners", config.getOrDefault("addOwners", false));
+
+      Set<String> users = new HashSet<>();
+      Set<String> teams = new HashSet<>();
+
+      Object candidatesObj = config.get("candidates");
+      if (candidatesObj instanceof List) {
+        List<?> candidates = (List<?>) candidatesObj;
+        for (Object candidate : candidates) {
+          if (candidate instanceof Map) {
+            Map<String, Object> candidateMap = (Map<String, Object>) candidate;
+            String type = (String) candidateMap.get("type");
+            String fqn = (String) candidateMap.get("fullyQualifiedName");
+            if (fqn != null) {
+              if ("user".equals(type)) {
+                users.add(fqn);
+              } else if ("team".equals(type)) {
+                teams.add(fqn);
+              }
+            }
+          }
+        }
+      }
+
+      result.put("users", new ArrayList<>(users));
+      result.put("teams", new ArrayList<>(teams));
+    }
+    return result;
   }
 }

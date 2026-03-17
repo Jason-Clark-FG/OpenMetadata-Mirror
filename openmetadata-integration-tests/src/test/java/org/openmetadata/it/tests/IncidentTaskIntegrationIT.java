@@ -529,7 +529,11 @@ public class IncidentTaskIntegrationIT {
 
   private Task findTaskByStateId(OpenMetadataClient client, UUID stateId) {
     try {
-      ListParams params = new ListParams().setLimit(200).setFields("payload,assignees,about");
+      ListParams params =
+          new ListParams()
+              .setLimit(200)
+              .setFields("payload,assignees,about")
+              .addFilter("category", "Incident");
       ListResponse<Task> tasks = client.tasks().list(params);
 
       for (Task task : tasks.getData()) {

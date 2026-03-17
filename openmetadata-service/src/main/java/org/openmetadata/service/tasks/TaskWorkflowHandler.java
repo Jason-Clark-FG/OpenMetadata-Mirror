@@ -25,18 +25,25 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.type.DomainUpdatePayload;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.OwnershipUpdatePayload;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TagUpdatePayload;
+import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.schema.type.TierUpdatePayload;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
+import org.openmetadata.service.util.EntityFieldUtils;
+import org.openmetadata.service.util.FieldPathUtils;
 
 /**
  * Handles workflow integration for Task entities.
@@ -230,8 +237,8 @@ public class TaskWorkflowHandler {
         EntityReference authorRef =
             Entity.getEntityReferenceByName(Entity.USER, user, Include.NON_DELETED);
 
-        org.openmetadata.schema.type.TaskComment comment =
-            new org.openmetadata.schema.type.TaskComment()
+        TaskComment comment =
+            new TaskComment()
                 .withId(UUID.randomUUID())
                 .withMessage(commentMessage)
                 .withAuthor(authorRef)
@@ -309,7 +316,7 @@ public class TaskWorkflowHandler {
       EntityInterface entity, EntityRepository<?> repository, String user) {
     // Set entity status to Approved
     try {
-      org.openmetadata.service.util.EntityFieldUtils.setEntityField(
+      EntityFieldUtils.setEntityField(
           entity, entity.getEntityReference().getType(), user, "entityStatus", "Approved", true);
       LOG.info("[TaskWorkflowHandler] Applied GlossaryApproval for entity '{}'", entity.getName());
     } catch (Exception e) {
@@ -358,7 +365,7 @@ public class TaskWorkflowHandler {
 
       // Use FieldPathUtils for clean field update
       boolean success =
-          org.openmetadata.service.util.FieldPathUtils.updateFieldDescription(
+          FieldPathUtils.updateFieldDescription(
               entity, repository, user, fieldPath, newDescription);
 
       if (success) {
@@ -389,8 +396,7 @@ public class TaskWorkflowHandler {
 
       // Try to get tags from payload first (new format with tagsToAdd/tagsToRemove)
       if (payload != null) {
-        org.openmetadata.schema.type.TagUpdatePayload tagPayload =
-            JsonUtils.convertValue(payload, org.openmetadata.schema.type.TagUpdatePayload.class);
+        TagUpdatePayload tagPayload = JsonUtils.convertValue(payload, TagUpdatePayload.class);
 
         String fieldPath = tagPayload.getFieldPath();
         if (fieldPath != null && !fieldPath.isEmpty()) {
@@ -436,9 +442,8 @@ public class TaskWorkflowHandler {
     }
 
     try {
-      org.openmetadata.schema.type.OwnershipUpdatePayload ownerPayload =
-          JsonUtils.convertValue(
-              payload, org.openmetadata.schema.type.OwnershipUpdatePayload.class);
+      OwnershipUpdatePayload ownerPayload =
+          JsonUtils.convertValue(payload, OwnershipUpdatePayload.class);
 
       List<EntityReference> newOwners = ownerPayload.getNewOwners();
       if (newOwners == null || newOwners.isEmpty()) {
@@ -472,8 +477,7 @@ public class TaskWorkflowHandler {
     }
 
     try {
-      org.openmetadata.schema.type.TierUpdatePayload tierPayload =
-          JsonUtils.convertValue(payload, org.openmetadata.schema.type.TierUpdatePayload.class);
+      TierUpdatePayload tierPayload = JsonUtils.convertValue(payload, TierUpdatePayload.class);
 
       TagLabel newTier = tierPayload.getNewTier();
       if (newTier == null) {
@@ -501,8 +505,8 @@ public class TaskWorkflowHandler {
     }
 
     try {
-      org.openmetadata.schema.type.DomainUpdatePayload domainPayload =
-          JsonUtils.convertValue(payload, org.openmetadata.schema.type.DomainUpdatePayload.class);
+      DomainUpdatePayload domainPayload =
+          JsonUtils.convertValue(payload, DomainUpdatePayload.class);
 
       EntityReference newDomain = domainPayload.getNewDomain();
       if (newDomain == null) {
@@ -533,20 +537,71 @@ public class TaskWorkflowHandler {
     if (payload == null) return;
 
     try {
-      JsonNode payloadNode = org.openmetadata.schema.utils.JsonUtils.valueToTree(payload);
+      JsonNode payloadNode = JsonUtils.valueToTree(payload);
       String suggestionType = payloadNode.path("suggestionType").asText(null);
       String fieldPath = payloadNode.path("fieldPath").asText(null);
       String suggestedValue = payloadNode.path("suggestedValue").asText(null);
 
-      if (suggestedValue != null && fieldPath != null) {
-        LOG.info(
-            "[TaskWorkflowHandler] Applied Suggestion: type={}, fieldPath={}, value={}",
-            suggestionType,
-            fieldPath,
-            suggestedValue);
+      if (suggestedValue == null) {
+        LOG.warn("[TaskWorkflowHandler] No suggested value for Suggestion task '{}'", task.getId());
+        return;
+      }
+
+      if ("Description".equals(suggestionType)) {
+        boolean success =
+            FieldPathUtils.updateFieldDescription(
+                entity, repository, user, fieldPath, suggestedValue);
+        if (success) {
+          LOG.info("[TaskWorkflowHandler] Applied description suggestion: fieldPath={}", fieldPath);
+        } else {
+          LOG.warn(
+              "[TaskWorkflowHandler] Failed to apply description suggestion: fieldPath={}",
+              fieldPath);
+        }
+      } else if ("Tag".equals(suggestionType)) {
+        List<TagLabel> tags =
+            JsonUtils.readValue(suggestedValue, new TypeReference<List<TagLabel>>() {});
+        if (tags != null && !tags.isEmpty()) {
+          boolean isEntityLevel =
+              fieldPath == null
+                  || fieldPath.isEmpty()
+                  || fieldPath.equals("description")
+                  || !fieldPath.contains("::");
+
+          if (isEntityLevel) {
+            applyEntityLevelTags(entity, repository, user, tags);
+          } else {
+            String[] parts = fieldPath.split("::");
+            String targetFqn = entity.getFullyQualifiedName();
+            if (parts.length >= 2) {
+              targetFqn = entity.getFullyQualifiedName() + "." + parts[1];
+            }
+            repository.applyTags(tags, targetFqn);
+          }
+          LOG.info(
+              "[TaskWorkflowHandler] Applied tag suggestion: {} tags for entity '{}'",
+              tags.size(),
+              entity.getName());
+        }
+      } else {
+        LOG.debug("[TaskWorkflowHandler] Unknown suggestion type: {}", suggestionType);
       }
     } catch (Exception e) {
       LOG.error("[TaskWorkflowHandler] Failed to apply Suggestion", e);
+    }
+  }
+
+  private void applyEntityLevelTags(
+      EntityInterface entity, EntityRepository<?> repository, String user, List<TagLabel> tags) {
+    String originalJson = JsonUtils.pojoToJson(entity);
+    List<TagLabel> mergedTags =
+        org.openmetadata.service.resources.tags.TagLabelUtil.mergeTagsWithIncomingPrecedence(
+            entity.getTags(), tags);
+    entity.setTags(mergedTags);
+    String updatedJson = JsonUtils.pojoToJson(entity);
+    jakarta.json.JsonPatch patch = JsonUtils.getJsonPatch(originalJson, updatedJson);
+    if (patch != null && !patch.toJsonArray().isEmpty()) {
+      repository.patch(null, entity.getId(), user, patch, null, null);
     }
   }
 

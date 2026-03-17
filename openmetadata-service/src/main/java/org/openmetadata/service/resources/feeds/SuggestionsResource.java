@@ -61,6 +61,7 @@ import org.openmetadata.schema.type.SuggestionStatus;
 import org.openmetadata.schema.type.SuggestionType;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -70,7 +71,6 @@ import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.PostResourceContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContextInterface;
-import org.openmetadata.service.tasks.SuggestionHandler;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.RestUtil;
 
@@ -171,18 +171,18 @@ public class SuggestionsResource {
     RestUtil.validateCursors(before, after);
 
     ListFilter filter = new ListFilter(Include.NON_DELETED);
-    filter.addQueryParam("type", TaskEntityType.Suggestion.value());
+    filter.addQueryParam("taskType", TaskEntityType.Suggestion.value());
 
     TaskEntityStatus taskStatus = mapSuggestionStatusToTaskStatus(SuggestionStatus.valueOf(status));
     if (taskStatus != null) {
-      filter.addQueryParam("status", taskStatus.value());
+      filter.addQueryParam("taskStatus", taskStatus.value());
     }
 
     if (entityFQN != null) {
-      filter.addQueryParam("aboutFQN", entityFQN);
+      filter.addQueryParam("aboutEntity", entityFQN);
     }
     if (userId != null) {
-      filter.addQueryParam("createdBy", userId.toString());
+      filter.addQueryParam("createdById", userId.toString());
     }
 
     Fields fields = taskRepository.getFields(TASK_FIELDS);
@@ -196,11 +196,9 @@ public class SuggestionsResource {
     List<Suggestion> suggestions = tasks.getData().stream().map(adapter::taskToSuggestion).toList();
     addHref(uriInfo, suggestions);
 
-    return new ResultList<>(
-        suggestions,
-        tasks.getPaging().getBefore(),
-        tasks.getPaging().getAfter(),
-        tasks.getPaging().getTotal());
+    ResultList<Suggestion> result = new ResultList<>(suggestions);
+    result.setPaging(tasks.getPaging());
+    return result;
   }
 
   @GET
@@ -260,13 +258,7 @@ public class SuggestionsResource {
 
     taskRepository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
 
-    if (task.getPayload() instanceof SuggestionPayload) {
-      SuggestionHandler suggestionHandler = new SuggestionHandler();
-      suggestionHandler.approveSuggestion(task, userName, null);
-      taskRepository.storeEntity(task, true);
-    } else {
-      taskRepository.resolveTaskWithWorkflow(task, true, null, userName);
-    }
+    taskRepository.resolveTaskWithWorkflow(task, true, null, userName);
 
     Suggestion suggestion = adapter.taskToSuggestion(task);
     addHref(uriInfo, suggestion);
@@ -301,13 +293,7 @@ public class SuggestionsResource {
 
     taskRepository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
 
-    if (task.getPayload() instanceof SuggestionPayload) {
-      SuggestionHandler suggestionHandler = new SuggestionHandler();
-      suggestionHandler.rejectSuggestion(task, userName, null);
-      taskRepository.storeEntity(task, true);
-    } else {
-      taskRepository.resolveTaskWithWorkflow(task, false, null, userName);
-    }
+    taskRepository.resolveTaskWithWorkflow(task, false, null, userName);
 
     Suggestion suggestion = adapter.taskToSuggestion(task);
     addHref(uriInfo, suggestion);
@@ -345,28 +331,22 @@ public class SuggestionsResource {
     String userName = securityContext.getUserPrincipal().getName();
 
     ListFilter filter = new ListFilter(Include.NON_DELETED);
-    filter.addQueryParam("type", TaskEntityType.Suggestion.value());
-    filter.addQueryParam("status", TaskEntityStatus.Open.value());
+    filter.addQueryParam("taskType", TaskEntityType.Suggestion.value());
+    filter.addQueryParam("taskStatus", TaskEntityStatus.Open.value());
     if (entityFQN != null) {
-      filter.addQueryParam("aboutFQN", entityFQN);
+      filter.addQueryParam("aboutEntity", entityFQN);
     }
     if (userId != null) {
-      filter.addQueryParam("createdBy", userId.toString());
+      filter.addQueryParam("createdById", userId.toString());
     }
 
     Fields fields = taskRepository.getFields(TASK_FIELDS);
     ResultList<Task> tasks =
         taskRepository.listAfter(uriInfo, fields, filter, Integer.MAX_VALUE - 1, null);
 
-    SuggestionPayload.SuggestionType payloadType =
-        adapter.mapToPayloadSuggestionType(suggestionType);
+    String expectedType = adapter.mapToPayloadSuggestionType(suggestionType).value();
     List<Task> matchingTasks =
-        tasks.getData().stream()
-            .filter(
-                task ->
-                    task.getPayload() instanceof SuggestionPayload payload
-                        && payload.getSuggestionType() == payloadType)
-            .toList();
+        tasks.getData().stream().filter(task -> matchesSuggestionType(task, expectedType)).toList();
 
     if (matchingTasks.isEmpty()) {
       return new RestUtil.PutResponse<>(
@@ -378,13 +358,7 @@ public class SuggestionsResource {
 
     List<Suggestion> acceptedSuggestions = new ArrayList<>();
     for (Task task : matchingTasks) {
-      if (task.getPayload() instanceof SuggestionPayload) {
-        SuggestionHandler suggestionHandler = new SuggestionHandler();
-        suggestionHandler.approveSuggestion(task, userName, null);
-        taskRepository.storeEntity(task, true);
-      } else {
-        taskRepository.resolveTaskWithWorkflow(task, true, null, userName);
-      }
+      taskRepository.resolveTaskWithWorkflow(task, true, null, userName);
       Suggestion suggestion = adapter.taskToSuggestion(task);
       addHref(uriInfo, suggestion);
       acceptedSuggestions.add(suggestion);
@@ -424,28 +398,22 @@ public class SuggestionsResource {
     String userName = securityContext.getUserPrincipal().getName();
 
     ListFilter filter = new ListFilter(Include.NON_DELETED);
-    filter.addQueryParam("type", TaskEntityType.Suggestion.value());
-    filter.addQueryParam("status", TaskEntityStatus.Open.value());
+    filter.addQueryParam("taskType", TaskEntityType.Suggestion.value());
+    filter.addQueryParam("taskStatus", TaskEntityStatus.Open.value());
     if (entityFQN != null) {
-      filter.addQueryParam("aboutFQN", entityFQN);
+      filter.addQueryParam("aboutEntity", entityFQN);
     }
     if (userId != null) {
-      filter.addQueryParam("createdBy", userId.toString());
+      filter.addQueryParam("createdById", userId.toString());
     }
 
     Fields fields = taskRepository.getFields(TASK_FIELDS);
     ResultList<Task> tasks =
         taskRepository.listAfter(uriInfo, fields, filter, Integer.MAX_VALUE - 1, null);
 
-    SuggestionPayload.SuggestionType payloadType =
-        adapter.mapToPayloadSuggestionType(suggestionType);
+    String expectedType = adapter.mapToPayloadSuggestionType(suggestionType).value();
     List<Task> matchingTasks =
-        tasks.getData().stream()
-            .filter(
-                task ->
-                    task.getPayload() instanceof SuggestionPayload payload
-                        && payload.getSuggestionType() == payloadType)
-            .toList();
+        tasks.getData().stream().filter(task -> matchesSuggestionType(task, expectedType)).toList();
 
     if (matchingTasks.isEmpty()) {
       return new RestUtil.PutResponse<>(
@@ -457,13 +425,7 @@ public class SuggestionsResource {
 
     List<Suggestion> rejectedSuggestions = new ArrayList<>();
     for (Task task : matchingTasks) {
-      if (task.getPayload() instanceof SuggestionPayload) {
-        SuggestionHandler suggestionHandler = new SuggestionHandler();
-        suggestionHandler.rejectSuggestion(task, userName, null);
-        taskRepository.storeEntity(task, true);
-      } else {
-        taskRepository.resolveTaskWithWorkflow(task, false, null, userName);
-      }
+      taskRepository.resolveTaskWithWorkflow(task, false, null, userName);
       Suggestion suggestion = adapter.taskToSuggestion(task);
       addHref(uriInfo, suggestion);
       rejectedSuggestions.add(suggestion);
@@ -493,15 +455,23 @@ public class SuggestionsResource {
     Fields fields = taskRepository.getFields(TASK_FIELDS);
     Task existingTask = taskRepository.get(uriInfo, id, fields);
 
-    if (existingTask.getPayload() instanceof SuggestionPayload payload) {
-      if (suggestion.getDescription() != null) {
-        payload.setSuggestedValue(suggestion.getDescription());
-      }
+    Object payloadObj = existingTask.getPayload();
+    SuggestionPayload payload;
+    if (payloadObj instanceof SuggestionPayload sp) {
+      payload = sp;
+    } else if (payloadObj != null) {
+      payload = JsonUtils.convertValue(payloadObj, SuggestionPayload.class);
+      existingTask.setPayload(payload);
+    } else {
+      payload = null;
+    }
+    if (payload != null && suggestion.getDescription() != null) {
+      payload.setSuggestedValue(suggestion.getDescription());
     }
 
     existingTask.setUpdatedAt(System.currentTimeMillis());
     existingTask.setUpdatedBy(userName);
-    taskRepository.createOrUpdate(uriInfo, existingTask, userName);
+    taskRepository.storeEntity(existingTask, true);
 
     Suggestion updatedSuggestion = adapter.taskToSuggestion(existingTask);
     addHref(uriInfo, updatedSuggestion);
@@ -533,6 +503,14 @@ public class SuggestionsResource {
       @Context SecurityContext securityContext,
       @Valid CreateSuggestion create) {
     String userName = securityContext.getUserPrincipal().getName();
+
+    if (create.getType() == SuggestionType.SuggestDescription
+        && nullOrEmpty(create.getDescription())) {
+      throw new IllegalArgumentException("Description is required for SuggestDescription type");
+    }
+    if (create.getType() == SuggestionType.SuggestTagLabel && nullOrEmpty(create.getTagLabels())) {
+      throw new IllegalArgumentException("TagLabels are required for SuggestTagLabel type");
+    }
 
     Task task = adapter.createSuggestionToTask(create, userName);
 
@@ -615,8 +593,8 @@ public class SuggestionsResource {
     authorizer.authorize(securityContext, operationContext, resourceContext);
 
     ListFilter filter = new ListFilter(Include.NON_DELETED);
-    filter.addQueryParam("type", TaskEntityType.Suggestion.value());
-    filter.addQueryParam("aboutFQN", entityFQN);
+    filter.addQueryParam("taskType", TaskEntityType.Suggestion.value());
+    filter.addQueryParam("aboutEntity", entityFQN);
 
     Fields fields = taskRepository.getFields(TASK_FIELDS);
     ResultList<Task> tasks =
@@ -639,5 +617,18 @@ public class SuggestionsResource {
       case Accepted -> TaskEntityStatus.Approved;
       case Rejected -> TaskEntityStatus.Rejected;
     };
+  }
+
+  private boolean matchesSuggestionType(Task task, String expectedType) {
+    Object payload = task.getPayload();
+    if (payload == null) {
+      return false;
+    }
+    if (payload instanceof SuggestionPayload sp) {
+      return sp.getSuggestionType() != null && sp.getSuggestionType().value().equals(expectedType);
+    }
+    com.fasterxml.jackson.databind.JsonNode node = JsonUtils.valueToTree(payload);
+    String actualType = node.path("suggestionType").asText(null);
+    return expectedType.equals(actualType);
   }
 }

@@ -126,14 +126,15 @@ public class SuggestionTaskAdapter {
     suggestion.setUpdatedBy(task.getUpdatedBy());
     suggestion.setStatus(mapTaskStatusToSuggestionStatus(task.getStatus()));
 
+    SuggestionPayload payload = toSuggestionPayload(task.getPayload());
+
     EntityReference about = task.getAbout();
     if (about != null) {
-      String entityLink = buildEntityLink(about, task);
+      String entityLink = buildEntityLink(about, payload);
       suggestion.setEntityLink(entityLink);
     }
 
-    Object payloadObj = task.getPayload();
-    if (payloadObj instanceof SuggestionPayload payload) {
+    if (payload != null) {
       suggestion.setType(mapSuggestionType(payload.getSuggestionType()));
       if (payload.getSuggestionType() == SuggestionPayload.SuggestionType.DESCRIPTION) {
         suggestion.setDescription(payload.getSuggestedValue());
@@ -153,10 +154,21 @@ public class SuggestionTaskAdapter {
     return suggestion;
   }
 
-  /**
-   * Build an entity link string from a Task's about reference.
-   */
-  private String buildEntityLink(EntityReference about, Task task) {
+  private SuggestionPayload toSuggestionPayload(Object payloadObj) {
+    if (payloadObj == null) {
+      return null;
+    }
+    if (payloadObj instanceof SuggestionPayload sp) {
+      return sp;
+    }
+    try {
+      return JsonUtils.convertValue(payloadObj, SuggestionPayload.class);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  private String buildEntityLink(EntityReference about, SuggestionPayload payload) {
     StringBuilder entityLink = new StringBuilder();
     entityLink
         .append("<#E::")
@@ -164,8 +176,7 @@ public class SuggestionTaskAdapter {
         .append("::")
         .append(about.getFullyQualifiedName());
 
-    Object payloadObj = task.getPayload();
-    if (payloadObj instanceof SuggestionPayload payload) {
+    if (payload != null) {
       String fieldPath = payload.getFieldPath();
       if (fieldPath != null && !fieldPath.equals("description")) {
         if (fieldPath.contains("::")) {
