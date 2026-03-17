@@ -48,6 +48,8 @@ import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServic
 import org.openmetadata.schema.security.client.OidcClientConfig;
 import org.openmetadata.schema.security.client.OpenMetadataJWTClientConfig;
 import org.openmetadata.schema.security.scim.ScimConfiguration;
+import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
+import org.openmetadata.schema.service.configuration.elasticsearch.NaturalLanguageSearchConfiguration;
 import org.openmetadata.schema.service.configuration.slackApp.SlackAppConfiguration;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.services.connections.metadata.OpenMetadataConnection;
@@ -74,6 +76,7 @@ import org.openmetadata.service.logstorage.LogStorageInterface;
 import org.openmetadata.service.migration.MigrationValidationClient;
 import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.SearchRepository;
+import org.openmetadata.service.search.vector.client.EmbeddingClient;
 import org.openmetadata.service.secrets.SecretsManager;
 import org.openmetadata.service.secrets.SecretsManagerFactory;
 import org.openmetadata.service.secrets.masker.PasswordEntityMasker;
@@ -544,6 +547,11 @@ public class SystemRepository {
       validation.setLogStorage(logStorageValidation);
     }
 
+    if (Entity.getSearchRepository().isVectorEmbeddingEnabled()) {
+      validation.setAdditionalProperty(
+          "Semantic Search", getEmbeddingsValidation(applicationConfig));
+    }
+
     addExtraValidations(applicationConfig, validation);
 
     return validation;
@@ -551,6 +559,131 @@ public class SystemRepository {
 
   public void addExtraValidations(
       OpenMetadataApplicationConfig applicationConfig, ValidationResponse validation) {}
+
+  private StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
+    StepValidation embeddingsValidation = new StepValidation();
+    String description = "Embeddings are used to allow Semantic Search";
+    SearchRepository searchRepository = Entity.getSearchRepository();
+
+    if (searchRepository.getSearchType() == ElasticSearchConfiguration.SearchType.ELASTICSEARCH) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              "Elasticsearch is not supported for Semantic Search embeddings. Please use OpenSearch.")
+          .withPassed(false);
+    }
+
+    String configMessage = getEmbeddingConfigurationMessage(applicationConfig);
+
+    if (searchRepository.getVectorIndexService() == null) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage("Embeddings are not configured properly. " + configMessage)
+          .withPassed(false);
+    }
+
+    try {
+      return validateEmbeddingGeneration(
+          searchRepository.getEmbeddingClient(), embeddingsValidation, description, configMessage);
+    } catch (Exception e) {
+      LOG.error("Error during embedding generation validation", e);
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage("Embedding generation failed: " + e.getMessage() + ". " + configMessage)
+          .withPassed(false);
+    }
+  }
+
+  private StepValidation validateEmbeddingGeneration(
+      EmbeddingClient embeddingClient,
+      StepValidation embeddingsValidation,
+      String description,
+      String configMessage) {
+    String testText = "OpenMetadata embedding validation test";
+    float[] embedding = embeddingClient.embed(testText);
+
+    if (embedding == null) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage("Embedding generation returned null. " + configMessage)
+          .withPassed(false);
+    }
+
+    int expectedDimension = embeddingClient.getDimension();
+    if (embedding.length != expectedDimension) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              String.format(
+                  "Embedding dimension mismatch: expected %d, got %d. %s",
+                  expectedDimension, embedding.length, configMessage))
+          .withPassed(false);
+    }
+
+    boolean allZeros = true;
+    for (float value : embedding) {
+      if (value != 0.0f) {
+        allZeros = false;
+        break;
+      }
+    }
+    if (allZeros) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage("Embedding generation returned all zeros. " + configMessage)
+          .withPassed(false);
+    }
+
+    return embeddingsValidation
+        .withDescription(description)
+        .withMessage(String.format("Embeddings are working correctly. %s", configMessage))
+        .withPassed(true);
+  }
+
+  private String getEmbeddingConfigurationMessage(OpenMetadataApplicationConfig applicationConfig) {
+    try {
+      NaturalLanguageSearchConfiguration nlpConfig =
+          applicationConfig.getElasticSearchConfiguration().getNaturalLanguageSearch();
+      String provider = nlpConfig.getEmbeddingProvider();
+      if (nullOrEmpty(provider)) {
+        return "Required configuration: embeddingProvider";
+      }
+
+      return switch (provider.toLowerCase()) {
+        case "djl" -> String.format(
+            "DJL configuration: embeddingModel: %s", nlpConfig.getDjl().getEmbeddingModel());
+        case "bedrock" -> String.format(
+            "Bedrock configuration: region: %s, embeddingModelId: %s, embeddingDimension %s",
+            nlpConfig.getBedrock().getAwsConfig() != null
+                ? nlpConfig.getBedrock().getAwsConfig().getRegion()
+                : "not configured",
+            nlpConfig.getBedrock().getEmbeddingModelId(),
+            nlpConfig.getBedrock().getEmbeddingDimension());
+        case "openai" -> {
+          String openaiEndpoint =
+              nullOrEmpty(nlpConfig.getOpenai().getEndpoint())
+                  ? "api.openai.com"
+                  : nlpConfig.getOpenai().getEndpoint();
+          String deploymentInfo =
+              nullOrEmpty(nlpConfig.getOpenai().getDeploymentName())
+                  ? ""
+                  : String.format(
+                      ", deploymentName: %s", nlpConfig.getOpenai().getDeploymentName());
+          yield String.format(
+              "OpenAI configuration: endpoint: %s, embeddingModelId: %s, embeddingDimension: %s%s",
+              openaiEndpoint,
+              nlpConfig.getOpenai().getEmbeddingModelId(),
+              nlpConfig.getOpenai().getEmbeddingDimension(),
+              deploymentInfo);
+        }
+        default -> String.format(
+            "Unknown provider '%s'. Supported providers: djl, bedrock, openai", provider);
+      };
+    } catch (Exception e) {
+      LOG.error("Error getting embedding configuration", e);
+      return "Unable to determine embedding configuration";
+    }
+  }
 
   private StepValidation getDatabaseValidation(OpenMetadataApplicationConfig applicationConfig) {
     try {
@@ -570,18 +703,21 @@ public class SystemRepository {
 
   private StepValidation getSearchValidation(OpenMetadataApplicationConfig applicationConfig) {
     SearchRepository searchRepository = Entity.getSearchRepository();
-    if (Boolean.TRUE.equals(searchRepository.getSearchClient().isClientAvailable())
-        && searchRepository
-            .getSearchClient()
-            .indexExists(Entity.getSearchRepository().getIndexOrAliasName(INDEX_NAME))) {
+    if (Boolean.TRUE.equals(searchRepository.getSearchClient().isClientAvailable())) {
       if (validateDataInsights()) {
+        List<String> missingIndexes = findMissingIndexes(searchRepository);
+        String message =
+            String.format(
+                "Connected to %s", applicationConfig.getElasticSearchConfiguration().getHost());
+        if (!missingIndexes.isEmpty()) {
+          message +=
+              String.format(
+                  ". WARNING: %d missing indexes: %s", missingIndexes.size(), missingIndexes);
+        }
         return new StepValidation()
             .withDescription(ValidationStepDescription.SEARCH.key)
-            .withPassed(Boolean.TRUE)
-            .withMessage(
-                String.format(
-                    "Connected to %s",
-                    applicationConfig.getElasticSearchConfiguration().getHost()));
+            .withPassed(missingIndexes.isEmpty())
+            .withMessage(message);
       } else {
         return new StepValidation()
             .withDescription(ValidationStepDescription.SEARCH.key)
@@ -595,6 +731,22 @@ public class SystemRepository {
           .withPassed(Boolean.FALSE)
           .withMessage("Search instance is not reachable or available");
     }
+  }
+
+  private List<String> findMissingIndexes(SearchRepository searchRepository) {
+    List<String> missing = new ArrayList<>();
+    try {
+      Map<String, org.openmetadata.search.IndexMapping> indexMap =
+          searchRepository.getEntityIndexMap();
+      for (Map.Entry<String, org.openmetadata.search.IndexMapping> entry : indexMap.entrySet()) {
+        if (!searchRepository.indexExists(entry.getValue())) {
+          missing.add(entry.getKey());
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to check for missing indexes: {}", e.getMessage());
+    }
+    return missing;
   }
 
   private boolean validateDataInsights() {
@@ -623,21 +775,28 @@ public class SystemRepository {
       OpenMetadataApplicationConfig applicationConfig,
       PipelineServiceClientInterface pipelineServiceClient) {
     if (pipelineServiceClient != null) {
-      PipelineServiceClientResponse pipelineResponse = pipelineServiceClient.getServiceStatus();
-      if (pipelineResponse.getCode() == 200) {
-        return new StepValidation()
-            .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
-            .withPassed(Boolean.TRUE)
-            .withMessage(
-                String.format(
-                    "%s is available at %s",
-                    pipelineServiceClient.getPlatform(),
-                    applicationConfig.getPipelineServiceClientConfiguration().getApiEndpoint()));
-      } else {
+      try {
+        PipelineServiceClientResponse pipelineResponse = pipelineServiceClient.getServiceStatus();
+        if (pipelineResponse.getCode() == 200) {
+          return new StepValidation()
+              .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
+              .withPassed(Boolean.TRUE)
+              .withMessage(
+                  String.format(
+                      "%s is available at %s",
+                      pipelineServiceClient.getPlatform(),
+                      applicationConfig.getPipelineServiceClientConfiguration().getApiEndpoint()));
+        } else {
+          return new StepValidation()
+              .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
+              .withPassed(Boolean.FALSE)
+              .withMessage(pipelineResponse.getReason());
+        }
+      } catch (Exception e) {
         return new StepValidation()
             .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
             .withPassed(Boolean.FALSE)
-            .withMessage(pipelineResponse.getReason());
+            .withMessage(e.getMessage());
       }
     }
     return new StepValidation()

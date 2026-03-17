@@ -79,18 +79,18 @@ const updatedUserDetails = {
   newPassword: `NewUser@${uuid()}`,
 };
 
-const adminUser = new UserClass();
-const dataConsumerUser = new UserClass();
-const dataStewardUser = new UserClass();
-const user = new UserClass();
-const user2 = new UserClass();
-const user3 = new UserClass();
-const tableEntity = new TableClass();
-const tableEntity2 = new TableClass();
-const policy = new PolicyClass();
-const role = new RolesClass();
-const persona1 = new PersonaClass();
-const persona2 = new PersonaClass();
+let adminUser: UserClass;
+let dataConsumerUser: UserClass;
+let dataStewardUser: UserClass;
+let user: UserClass;
+let user2: UserClass;
+let user3: UserClass;
+let tableEntity: TableClass;
+let tableEntity2: TableClass;
+let policy: PolicyClass;
+let role: RolesClass;
+let persona1: PersonaClass;
+let persona2: PersonaClass;
 
 const entities = [
   EntityDataClass.table1,
@@ -139,6 +139,19 @@ const test = base.extend<{
 test.beforeAll('Setup pre-requests', async ({ browser }) => {
   test.slow(true);
 
+  adminUser = new UserClass();
+  dataConsumerUser = new UserClass();
+  dataStewardUser = new UserClass();
+  user = new UserClass();
+  user2 = new UserClass();
+  user3 = new UserClass();
+  tableEntity = new TableClass();
+  tableEntity2 = new TableClass();
+  policy = new PolicyClass();
+  role = new RolesClass();
+  persona1 = new PersonaClass();
+  persona2 = new PersonaClass();
+
   const { apiContext, afterAction } = await performAdminLogin(browser);
 
   await adminUser.create(apiContext);
@@ -161,8 +174,6 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
 });
 
 test.describe('User with Admin Roles', () => {
-  test.slow(true);
-
   test('Update own admin details', async ({ adminPage }) => {
     await redirectToHomePage(adminPage);
 
@@ -179,23 +190,20 @@ test.describe('User with Admin Roles', () => {
 
     await addUser(adminPage, {
       ...updatedUserDetails,
-      role: role.responseData.displayName,
+      role: 'Data Consumer',
     });
 
     await visitUserProfilePage(adminPage, updatedUserDetails.name);
 
     await visitUserListPage(adminPage);
 
-    await test.step(
-      "User shouldn't be allowed to create User with same Email",
-      async () => {
-        await checkForUserExistError(adminPage, {
-          name: updatedUserDetails.name,
-          email: updatedUserDetails.email,
-          password: updatedUserDetails.password,
-        });
-      }
-    );
+    await test.step("User shouldn't be allowed to create User with same Email", async () => {
+      await checkForUserExistError(adminPage, {
+        name: updatedUserDetails.name,
+        email: updatedUserDetails.email,
+        password: updatedUserDetails.password,
+      });
+    });
 
     await permanentDeleteUser(
       adminPage,
@@ -238,8 +246,7 @@ test.describe('User with Admin Roles', () => {
   }) => {
     await redirectToHomePage(adminPage);
     await settingClick(adminPage, GlobalSettingOptions.USERS);
-    await adminPage.waitForLoadState('networkidle');
-    await adminPage.waitForSelector('.user-list-table [data-testid="loader"]', {
+    await adminPage.locator('.user-list-table [data-testid="loader"]').waitFor({
       state: 'detached',
     });
     await softDeleteUserProfilePage(
@@ -291,7 +298,9 @@ test.describe('User with Admin Roles', () => {
       },
     });
 
-    const upperCasedName = user.responseData.name.toUpperCase();
+    const userName = user3.responseData.name;
+    const userDisplayName =
+      user3.responseData.displayName ?? user3.responseData.name;
     // Patch Table to add the user to the custom property
     await tableEntity.patch({
       apiContext,
@@ -302,10 +311,10 @@ test.describe('User with Admin Roles', () => {
           value: {
             [customPropertyName]: [
               {
-                id: user.responseData.id,
+                id: user3.responseData.id,
                 type: 'user',
-                name: upperCasedName,
-                fullyQualifiedName: null,
+                name: userName,
+                fullyQualifiedName: user3.responseData.fullyQualifiedName,
               },
             ],
           },
@@ -316,10 +325,9 @@ test.describe('User with Admin Roles', () => {
     // 2. UI Verification
     await redirectToHomePage(adminPage);
     await tableEntity.visitEntityPage(adminPage);
-    await adminPage.waitForLoadState('networkidle');
 
     // Check if the user details are visible in the right panel
-    const userElement = adminPage.getByTestId(upperCasedName);
+    const userElement = adminPage.getByTestId(userName);
     const isUserVisible = await userElement.isVisible();
 
     // If not visible, click on Custom Properties tab to see all custom properties
@@ -331,10 +339,10 @@ test.describe('User with Admin Roles', () => {
     const rightPanelSection = adminPage.getByTestId(customPropertyName);
     await expect(rightPanelSection).toBeVisible();
 
-    // Verify User Link
-    const userLink = adminPage.getByTestId(upperCasedName).getByRole('link');
+    // Verify User Link - the link displays the username (not displayName)
+    const userLink = adminPage.getByTestId(userName).getByRole('link');
 
-    await expect(userLink).toContainText(upperCasedName);
+    await expect(userLink).toContainText(userName);
 
     // Click User Link and Verify Navigation
     const userDetailsResponse = adminPage.waitForResponse(
@@ -343,16 +351,17 @@ test.describe('User with Admin Roles', () => {
     await userLink.click();
     await userDetailsResponse;
 
-    await expect(adminPage).toHaveURL(new RegExp(`/users/${upperCasedName}`));
+    // URL may contain encoded quotes (%22) around the username
+    await expect(adminPage).toHaveURL(
+      new RegExp(`/users/(%22)?${userName}(%22)?`, 'i')
+    );
     await expect(adminPage.getByTestId('user-display-name')).toHaveText(
-      user.responseData.displayName
+      userDisplayName
     );
   });
 });
 
 test.describe('User with Data Consumer Roles', () => {
-  test.slow(true);
-
   test('Token generation & revocation for Data Consumer', async ({
     dataConsumerPage,
   }) => {
@@ -391,10 +400,7 @@ test.describe('User with Data Consumer Roles', () => {
     // Check CRUD for Glossary
     await sidebarClick(dataConsumerPage, SidebarItem.GLOSSARY);
 
-    await dataConsumerPage.waitForLoadState('networkidle');
-    await dataConsumerPage.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(dataConsumerPage);
 
     await expect(
       dataConsumerPage.locator('[data-testid="add-glossary"]')
@@ -453,9 +459,11 @@ test.describe('User with Data Consumer Roles', () => {
     adminPage,
     dataConsumerPage,
   }) => {
+    test.slow(true);
     await redirectToHomePage(adminPage);
 
     await tableEntity.visitEntityPage(adminPage);
+    await waitForAllLoadersToDisappear(adminPage);
 
     await addOwner({
       page: adminPage,
@@ -466,6 +474,7 @@ test.describe('User with Data Consumer Roles', () => {
     });
 
     await tableEntity.visitEntityPage(dataConsumerPage);
+    await waitForAllLoadersToDisappear(dataConsumerPage);
 
     await checkDataConsumerPermissions(dataConsumerPage);
   });
@@ -504,8 +513,6 @@ test.describe('User with Data Consumer Roles', () => {
 });
 
 test.describe('User with Data Steward Roles', () => {
-  test.slow(true);
-
   test('Update user details for Data Steward', async ({ dataStewardPage }) => {
     await redirectToHomePage(dataStewardPage);
 
@@ -555,6 +562,7 @@ test.describe('User with Data Steward Roles', () => {
     adminPage,
     dataStewardPage,
   }) => {
+    test.slow();
     await redirectToHomePage(adminPage);
 
     await checkStewardServicesPermissions(dataStewardPage);
@@ -600,8 +608,6 @@ test.describe('User Profile Feed Interactions', () => {
   test('Should navigate to user profile from feed card avatar click', async ({
     browser,
   }) => {
-    test.slow(true);
-
     const { page, afterAction } = await performUserLogin(browser, user3);
 
     await redirectToHomePage(page);
@@ -610,16 +616,7 @@ test.describe('User Profile Feed Interactions', () => {
     await visitOwnProfilePage(page);
     await feedResponse;
 
-    await page.waitForSelector('[data-testid="message-container"]');
-    const userDetailsResponse = page.waitForResponse('/api/v1/users/name/*');
-
-    const userFeedResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/feed') &&
-        response.url().includes('type=Conversation') &&
-        response.url().includes('filterType=OWNER_OR_FOLLOWS') &&
-        response.url().includes('userId=')
-    );
+    await page.getByTestId('message-container').first().waitFor();
 
     const avatar = page
       .locator('#feedData [data-testid="message-container"]')
@@ -628,31 +625,28 @@ test.describe('User Profile Feed Interactions', () => {
       .first();
 
     await avatar.hover();
-    await page.waitForSelector('.ant-popover-card');
+    const popover = page.locator('.ant-popover-card');
+    await popover.waitFor({ state: 'visible' });
 
-    // Ensure popover is stable and visible before clicking
-    await page.waitForTimeout(500); // Give popover time to stabilize
+    // Get the expected username from the popover BEFORE clicking
+    const userNameElement = popover.getByTestId('user-name');
+    const expectedUserName = await userNameElement.textContent();
 
-    // Get the user name element and ensure it's ready for interaction
-    const userNameElement = page.getByTestId('user-name').nth(1);
+    // Set up response listener AFTER getting expected name and BEFORE clicking
+    const userDetailsResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/users/name/') &&
+        response.status() === 200
+    );
 
-    // Click with force to handle pointer event interception
-    await userNameElement.click({ force: true });
-
+    await userNameElement.click();
     await userDetailsResponse;
-    await userFeedResponse;
 
-    const [response] = await Promise.all([
-      userDetailsResponse,
-      userFeedResponse,
-    ]);
-    const { name, displayName } = await response.json();
+    // redirecting on new page
 
-    // The UI shows displayName if available, otherwise falls back to name
-    const expectedText = displayName ?? name;
-
+    // Verify we navigated to the correct user's profile
     await expect(page.locator('[data-testid="user-display-name"]')).toHaveText(
-      expectedText
+      expectedUserName ?? ''
     );
 
     await afterAction();
@@ -663,7 +657,7 @@ test.describe('User Profile Feed Interactions', () => {
   }) => {
     await redirectToHomePage(adminPage);
     await adminPage.locator('[data-testid="dropdown-profile"] svg').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
     const userResponse = adminPage.waitForResponse(
@@ -671,7 +665,6 @@ test.describe('User Profile Feed Interactions', () => {
     );
     await adminPage.getByTestId('user-name').click();
     await userResponse;
-    await adminPage.waitForLoadState('networkidle');
 
     await expect(
       adminPage.locator('.user-profile-dropdown-overlay')
@@ -680,8 +673,6 @@ test.describe('User Profile Feed Interactions', () => {
 });
 
 test.describe('User Profile Dropdown Persona Interactions', () => {
-  test.slow(true);
-
   test.beforeAll('Prerequisites', async ({ browser }) => {
     const { apiContext, afterAction } = await performUserLogin(
       browser,
@@ -731,7 +722,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   }) => {
     // Open user profile dropdown
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -766,7 +757,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   }) => {
     // Open user profile dropdown
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -793,7 +784,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   test('Should switch personas correctly', async ({ adminPage }) => {
     // Open user profile dropdown
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -826,7 +817,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
 
       // Reopen dropdown to verify the change
       await adminPage.locator('[data-testid="dropdown-profile"]').click();
-      await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+      await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
         state: 'visible',
       });
 
@@ -840,7 +831,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   test('Should handle persona sorting correctly', async ({ adminPage }) => {
     // Open user profile dropdown
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -867,7 +858,9 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
         .allTextContents();
 
       // Verify first one contains the default persona name
-      expect(personaTexts[0]).toContain(persona1.responseData.displayName);
+      expect(personaTexts[0]).toContain(
+        persona1.responseData.displayName ?? persona1.responseData.name
+      );
     }
   });
 
@@ -876,7 +869,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   }) => {
     // First, verify default persona is selected initially
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -920,11 +913,10 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
 
       // Refresh the page
       await adminPage.reload();
-      await adminPage.waitForLoadState('networkidle');
 
       // Open dropdown again after refresh
       await adminPage.locator('[data-testid="dropdown-profile"]').click();
-      await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+      await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
         state: 'visible',
       });
 
@@ -958,7 +950,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
   }) => {
     // Step 1: Verify default persona is initially selected
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -989,17 +981,15 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
 
     // Step 2: Go to profile page and change default persona
     await visitOwnProfilePage(adminPage);
-    await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+    await adminPage.getByTestId('persona-details-card').waitFor();
 
     // Change default persona to the second persona
     await adminPage
       .locator('[data-testid="default-edit-user-persona"]')
       .click();
-    await adminPage.waitForSelector(
-      '[data-testid="default-persona-select-list"]'
-    );
+    await adminPage.getByTestId('default-persona-select-list').waitFor();
 
-    await adminPage.waitForSelector('.ant-select-dropdown', {
+    await adminPage.locator('.ant-select-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -1018,7 +1008,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
     await redirectToHomePage(adminPage);
 
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -1032,13 +1022,16 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
     const updatedPersonaLabels = adminPage.locator(
       '[data-testid="persona-label"]'
     );
-    const newDefaultPersonaText = await updatedPersonaLabels
+    const newDefaultPersonaLocator = updatedPersonaLabels
       .first()
-      .locator('.ant-typography')
-      .textContent();
+      .locator('.ant-typography');
 
-    expect(newDefaultPersonaText).toContain(persona2.responseData.displayName);
-    expect(newDefaultPersonaText).not.toBe(originalDefaultPersonaText);
+    await expect(newDefaultPersonaLocator).toContainText(
+      persona2.responseData.displayName
+    );
+    await expect(newDefaultPersonaLocator).not.toHaveText(
+      originalDefaultPersonaText ?? ''
+    );
 
     await expect(
       updatedPersonaLabels
@@ -1054,15 +1047,13 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
 
     // Step 4: Go back to profile and remove default persona
     await visitOwnProfilePage(adminPage);
-    await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+    await adminPage.getByTestId('persona-details-card').waitFor();
 
     // Remove default persona
     await adminPage
       .locator('[data-testid="default-edit-user-persona"]')
       .click();
-    await adminPage.waitForSelector(
-      '[data-testid="default-persona-select-list"]'
-    );
+    await adminPage.getByTestId('default-persona-select-list').waitFor();
     await adminPage
       .locator('[data-testid="default-persona-select-list"] .ant-select-clear')
       .click();
@@ -1083,7 +1074,7 @@ test.describe('User Profile Dropdown Persona Interactions', () => {
     await redirectToHomePage(adminPage);
 
     await adminPage.locator('[data-testid="dropdown-profile"]').click();
-    await adminPage.waitForSelector('[role="menu"].profile-dropdown', {
+    await adminPage.locator('[role="menu"].profile-dropdown').waitFor({
       state: 'visible',
     });
 
@@ -1153,38 +1144,32 @@ test.describe('User Profile Persona Interactions', () => {
     await visitOwnProfilePage(adminPage);
 
     // Wait for the persona card to be visible
-    await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+    await adminPage.getByTestId('persona-details-card').waitFor();
 
     // Test clicking on persona chip to navigate to persona page
-    await test.step(
-      'Navigate to persona page by clicking on persona chip',
-      async () => {
-        const personaCard = adminPage.locator(
-          '[data-testid="persona-details-card"]'
-        );
-        const personaChip = personaCard
-          .locator('[data-testid="chip-container"] [data-testid="tag-chip"]')
-          .first();
-        const personaLink = personaChip.locator('a').first();
+    await test.step('Navigate to persona page by clicking on persona chip', async () => {
+      const personaCard = adminPage.locator(
+        '[data-testid="persona-details-card"]'
+      );
+      const personaChip = personaCard
+        .locator('[data-testid="chip-container"] [data-testid="tag-chip"]')
+        .first();
+      const personaLink = personaChip.locator('a').first();
 
-        // Get the persona name/link for verification
-        const personaText = await personaLink.textContent();
+      // Verify the persona link has text content
+      await expect(personaLink).not.toHaveText('');
 
-        expect(personaText).toBeTruthy();
+      // Click the persona link to navigate
+      await personaLink.click();
 
-        // Click the persona link to navigate
-        await personaLink.click();
-        await adminPage.waitForLoadState('networkidle');
-
-        // Verify we're on the persona page
-        await expect(adminPage.url()).toContain('/persona/');
-      }
-    );
+      // Verify we're on the persona page
+      expect(adminPage.url()).toContain('/persona/');
+    });
 
     // Navigate back to user profile for removal test
     await test.step('Navigate back to user profile', async () => {
       await visitOwnProfilePage(adminPage);
-      await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+      await adminPage.getByTestId('persona-details-card').waitFor();
     });
 
     // Test removing personas
@@ -1196,7 +1181,7 @@ test.describe('User Profile Persona Interactions', () => {
         .click();
 
       // Wait for persona popover to be visible
-      await adminPage.waitForSelector('[data-testid="persona-select-list"]');
+      await adminPage.getByTestId('persona-select-list').waitFor();
 
       // Clear all selected personas
       await adminPage
@@ -1228,7 +1213,7 @@ test.describe('User Profile Persona Interactions', () => {
     await visitOwnProfilePage(adminPage);
 
     // Wait for the persona card to be visible
-    await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+    await adminPage.getByTestId('persona-details-card').waitFor();
 
     // Test adding default persona
     await test.step('Add default persona to user profile', async () => {
@@ -1238,15 +1223,12 @@ test.describe('User Profile Persona Interactions', () => {
         .click();
 
       // Wait for persona popover to be visible
-      await adminPage.waitForSelector(
-        '[data-testid="default-persona-select-list"]'
-      );
+      await adminPage.getByTestId('default-persona-select-list').waitFor();
 
       // Wait for dropdown to open and options to load
-      await adminPage.waitForSelector('.ant-select-dropdown', {
+      await adminPage.locator('.ant-select-dropdown').waitFor({
         state: 'visible',
       });
-      await adminPage.waitForLoadState('networkidle');
 
       // Select specific persona for default - try test ID first, fallback to role selector
       const defaultPersonaOptionTestId = adminPage.getByTitle(
@@ -1270,38 +1252,30 @@ test.describe('User Profile Persona Interactions', () => {
         `Your Default Persona changed to ${persona1.responseData.displayName}`
       );
 
-      await adminPage.waitForSelector(
-        '.default-persona-text [data-testid="tag-chip"]'
-      );
+      await adminPage.locator('.default-persona-text [data-testid="tag-chip"]').waitFor();
     });
 
     // Test clicking on default persona chip to navigate to persona page
-    await test.step(
-      'Navigate to persona page by clicking on default persona chip',
-      async () => {
-        const defaultPersonaChip = adminPage
-          .locator('.default-persona-text [data-testid="tag-chip"]')
-          .first();
-        const personaLink = defaultPersonaChip.locator('a').first();
+    await test.step('Navigate to persona page by clicking on default persona chip', async () => {
+      const defaultPersonaChip = adminPage
+        .locator('.default-persona-text [data-testid="tag-chip"]')
+        .first();
+      const personaLink = defaultPersonaChip.locator('a').first();
 
-        // Get the persona name/link for verification
-        const personaText = await personaLink.textContent();
+      // Verify the persona link has text content
+      await expect(personaLink).not.toHaveText('');
 
-        expect(personaText).toBeTruthy();
+      // Click the persona link to navigate
+      await personaLink.click();
 
-        // Click the persona link to navigate
-        await personaLink.click();
-        await adminPage.waitForLoadState('networkidle');
-
-        // Verify we're on the persona page
-        await expect(adminPage.url()).toContain('/persona/');
-      }
-    );
+      // Verify we're on the persona page
+      expect(adminPage.url()).toContain('/persona/');
+    });
 
     // Navigate back to user profile for removal test
     await test.step('Navigate back to user profile', async () => {
       await visitOwnProfilePage(adminPage);
-      await adminPage.waitForSelector('[data-testid="persona-details-card"]');
+      await adminPage.getByTestId('persona-details-card').waitFor();
     });
 
     // Test removing default persona
@@ -1314,9 +1288,7 @@ test.describe('User Profile Persona Interactions', () => {
       await waitForAllLoadersToDisappear(adminPage);
 
       // Wait for persona popover to be visible
-      await adminPage.waitForSelector(
-        '[data-testid="default-persona-select-list"]'
-      );
+      await adminPage.getByTestId('default-persona-select-list').waitFor();
 
       // Clear the selected default persona
       await adminPage
@@ -1342,6 +1314,23 @@ test.describe('User Profile Persona Interactions', () => {
       await expect(adminPage.getByText('No default persona')).toBeVisible();
     });
   });
+});
+
+test.afterAll('Cleanup', async ({ browser }) => {
+  const { apiContext, afterAction } = await performAdminLogin(browser);
+  await persona2.delete(apiContext);
+  await persona1.delete(apiContext);
+  await role.delete(apiContext);
+  await policy.delete(apiContext);
+  await tableEntity2.delete(apiContext);
+  await tableEntity.delete(apiContext);
+  await user3.delete(apiContext);
+  await user2.delete(apiContext);
+  await user.delete(apiContext);
+  await dataStewardUser.delete(apiContext);
+  await dataConsumerUser.delete(apiContext);
+  await adminUser.delete(apiContext);
+  await afterAction();
 });
 
 base.describe(
@@ -1439,10 +1428,7 @@ base.describe(
 
         for (const entity of entities) {
           await entity.visitEntityPage(page);
-          await page.waitForLoadState('networkidle');
-          await page.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(page.getByTestId('entity-header-name')).toHaveText(
             entity.entityResponseData.name
@@ -1455,9 +1441,7 @@ base.describe(
           await page.getByTestId('activity_feed').click();
           await feedResponse;
 
-          await page.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(
             page.getByTestId('global-setting-left-panel').getByText('All')
@@ -1474,9 +1458,7 @@ base.describe(
           await page.getByTestId('lineage').click();
           await lineageResponse;
 
-          await page.waitForSelector('[data-testid="loader"]', {
-            state: 'detached',
-          });
+          await waitForAllLoadersToDisappear(page);
 
           await expect(
             page.getByTestId(

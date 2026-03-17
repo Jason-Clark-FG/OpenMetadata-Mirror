@@ -30,6 +30,8 @@ import { ReactComponent as IconDropdown } from '../../../assets/svg/menu.svg';
 import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
 import { ManageButtonItemLabel } from '../../../components/common/ManageButtonContentItem/ManageButtonContentItem.component';
 import { EntityHeader } from '../../../components/Entity/EntityHeader/EntityHeader.component';
+import Voting from '../../../components/Entity/Voting/Voting.component';
+import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import { AssetsTabRef } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import EntityNameModal from '../../../components/Modals/EntityNameModal/EntityNameModal.component';
@@ -75,7 +77,11 @@ import {
   getQueryFilterForDomain,
   getQueryFilterToExcludeDomainTerms,
 } from '../../../utils/DomainUtils';
-import { getEntityFeedLink, getEntityName } from '../../../utils/EntityUtils';
+import {
+  getEntityFeedLink,
+  getEntityName,
+  getEntityVoteStatus,
+} from '../../../utils/EntityUtils';
 import { getEntityVersionByField } from '../../../utils/EntityVersionUtils';
 import Fqn from '../../../utils/Fqn';
 import { showNotistackError } from '../../../utils/NotistackUtils';
@@ -98,13 +104,14 @@ import { useFormDrawerWithRef } from '../../common/atoms/drawer';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
 import { useBreadcrumbs } from '../../common/atoms/navigation/useBreadcrumbs';
 
+import { Avatar } from '@openmetadata/ui-core-components';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { FeedCounts } from '../../../interface/feed.interface';
+import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { withActivityFeed } from '../../AppRouter/withActivityFeed';
 import { CoverImage } from '../../common/CoverImage/CoverImage.component';
 import DeleteWidgetModal from '../../common/DeleteWidget/DeleteWidgetModal';
-import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 import AnnouncementCard from '../../common/EntityPageInfos/AnnouncementCard/AnnouncementCard';
 import AnnouncementDrawer from '../../common/EntityPageInfos/AnnouncementDrawer/AnnouncementDrawer';
 import { AlignRightIconButton } from '../../common/IconButtons/EditIconButton';
@@ -124,6 +131,7 @@ const DomainDetails = ({
   domain,
   onUpdate,
   onDelete,
+  onUpdateVote,
   isVersionsView = false,
   isFollowing,
   isFollowingLoading,
@@ -139,8 +147,11 @@ const DomainDetails = ({
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { getEntityPermission, permissions } = usePermissionProvider();
-  const routeParams =
-    useParams<{ fqn?: string; tab?: string; version?: string }>();
+  const routeParams = useParams<{
+    fqn?: string;
+    tab?: string;
+    version?: string;
+  }>();
   const reactNavigate = useNavigate();
   const navigate = useCallback(
     (path: string) => {
@@ -541,6 +552,18 @@ const DomainDetails = ({
     );
   }, [domainPermission]);
 
+  const voteStatus = useMemo(
+    () => getEntityVoteStatus(currentUser?.id ?? '', domain.votes),
+    [domain.votes, currentUser?.id]
+  );
+
+  const handleVoteChange = useCallback(
+    async (data: VotingDataProps) => {
+      await onUpdateVote?.(data, domain.id);
+    },
+    [onUpdateVote, domain.id]
+  );
+
   const addButtonContent = [
     ...(domainPermission.Create
       ? [
@@ -844,21 +867,10 @@ const DomainDetails = ({
 
   const iconData = useMemo(() => {
     return (
-      <EntityAvatar
+      <Avatar
         className="entity-header-avatar"
-        entity={{
-          ...domain,
-          entityType: 'domain',
-          parent: isSubDomain ? { type: 'domain' } : undefined,
-        }}
-        size={isTreeView ? 60 : 91}
-        sx={{
-          borderRadius: '5px',
-          border: '2px solid',
-          borderColor: theme.palette.allShades.white,
-          marginTop: isTreeView ? 0 : '-25px',
-          marginRight: 2,
-        }}
+        size={isTreeView ? 'md' : '2xl'}
+        {...getEntityAvatarProps({ ...domain, entityType: 'domain' })}
       />
     );
   }, [domain, isSubDomain, theme, isTreeView]);
@@ -947,6 +959,14 @@ const DomainDetails = ({
               )}
 
               <ButtonGroup className="spaced" size="small">
+                {onUpdateVote && (
+                  <Voting
+                    voteStatus={voteStatus}
+                    votes={domain.votes}
+                    onUpdateVote={handleVoteChange}
+                  />
+                )}
+
                 {domain?.version && (
                   <Tooltip
                     title={t(

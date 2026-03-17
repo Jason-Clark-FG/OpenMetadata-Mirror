@@ -14,11 +14,9 @@ import static org.openmetadata.service.util.UserUtil.updateUserWithHashedPwd;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.FileConfigurationSourceProvider;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
@@ -57,6 +55,7 @@ import org.openmetadata.schema.api.configuration.OpenMetadataBaseUrlConfiguratio
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
+import org.openmetadata.schema.auth.JWTTokenExpiry;
 import org.openmetadata.schema.configuration.SecurityConfiguration;
 import org.openmetadata.schema.email.SmtpSettings;
 import org.openmetadata.schema.entity.Bot;
@@ -171,14 +170,17 @@ public class OpenMetadataOperations implements Callable<Integer> {
   public Integer call() {
     LOG.info(
         "Subcommand needed: 'info', 'validate', 'repair', 'check-connection', "
-            + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
+            + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
             + "'dbServiceCleanup', 'relationshipCleanup', 'tagUsageCleanup', 'drop-indexes', 'remove-security-config', 'create-indexes', "
             + "'setOpenMetadataUrl', 'configureEmailSettings', 'get-security-config', 'update-security-config', 'install-app', 'delete-app', 'create-user', 'reset-password', "
-            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history'");
+            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens'");
     LOG.info(
         "Use 'reindex --auto-tune' for automatic performance optimization based on cluster capabilities");
     LOG.info(
         "Use 'cleanup-flowable-history --delete --runtime-batch-size=1000 --history-batch-size=1000' for Flowable cleanup with custom options");
+    LOG.info(
+        "Use 'regenerate-bot-tokens --expiry <value>' to regenerate all bot JWT tokens. "
+            + "Expiry values: OneHour, One (1 day), Seven (7 days), Thirty, Sixty, Ninety, Unlimited (default)");
     return 0;
   }
 
@@ -207,14 +209,16 @@ public class OpenMetadataOperations implements Callable<Integer> {
         row.add(serverChangeLog.getInstalledOn());
 
         if (serverChangeLog.getMetrics() != null) {
-          JsonObject metricsJson =
-              new Gson().fromJson(serverChangeLog.getMetrics(), JsonObject.class);
-          for (Map.Entry<String, JsonElement> entry : metricsJson.entrySet()) {
-            if (!columns.contains(entry.getKey())) {
-              columns.add(entry.getKey());
-            }
-            row.add(entry.getValue().toString());
-          }
+          JsonNode metricsJson = new ObjectMapper().readTree(serverChangeLog.getMetrics());
+          metricsJson
+              .fields()
+              .forEachRemaining(
+                  entry -> {
+                    if (!columns.contains(entry.getKey())) {
+                      columns.add(entry.getKey());
+                    }
+                    row.add(entry.getValue().toString());
+                  });
         }
         rows.add(row);
       }
@@ -953,6 +957,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
       LOG.info("OpenMetadata Database Schema is Updated.");
       LOG.info("create indexes.");
       searchRepository.createIndexes();
+      searchRepository.createOrUpdateIndexTemplates();
       Entity.cleanup();
       return 0;
     } catch (Exception e) {
@@ -993,6 +998,8 @@ public class OpenMetadataOperations implements Callable<Integer> {
         return 1;
       }
 
+      initOrganization();
+
       UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
       Set<String> fieldList = new HashSet<>(userRepository.getPatchFields().getFieldList());
       fieldList.add(AUTH_MECHANISM_FIELD);
@@ -1031,6 +1038,8 @@ public class OpenMetadataOperations implements Callable<Integer> {
       validateAndRunSystemDataMigrations(force);
       LOG.info("Update Search Indexes.");
       searchRepository.updateIndexes();
+      LOG.info("Update Index Templates.");
+      searchRepository.createOrUpdateIndexTemplates();
       printChangeLog();
       // update entities secrets if required
       new SecretsManagerUpdateService(secretsManager, config.getClusterName()).updateEntities();
@@ -1399,6 +1408,331 @@ public class OpenMetadataOperations implements Callable<Integer> {
       LOG.error("Failed to reindex due to ", e);
       return 1;
     }
+  }
+
+  @Command(
+      name = "reembed",
+      description =
+          "Drop the vector index, recreate it, and fully re-embed all entities using the configured embedding provider.")
+  public Integer reembed(
+      @Option(
+              names = {"-b", "--batch-size"},
+              defaultValue = "300",
+              description = "Number of records to process in each batch.")
+          int batchSize,
+      @Option(
+              names = {"--producer-threads"},
+              defaultValue = "10",
+              description = "Number of producer threads for reading entity batches.")
+          int producerThreads,
+      @Option(
+              names = {"--consumer-threads"},
+              defaultValue = "5",
+              description = "Number of consumer threads for embedding updates.")
+          int consumerThreads,
+      @Option(
+              names = {"--queue-size"},
+              defaultValue = "300",
+              description = "Queue size for buffering embedding tasks.")
+          int queueSize) {
+    int finalProducerThreads =
+        producerThreads <= 0
+            ? Math.max(1, Runtime.getRuntime().availableProcessors())
+            : producerThreads;
+    int finalConsumerThreads =
+        consumerThreads <= 0
+            ? Math.max(1, Runtime.getRuntime().availableProcessors())
+            : consumerThreads;
+    int finalQueueSize = Math.max(1, queueSize);
+    java.util.concurrent.BlockingQueue<ReembedTask> taskQueue =
+        new java.util.concurrent.LinkedBlockingQueue<>(finalQueueSize);
+    java.util.concurrent.atomic.AtomicBoolean producersDone =
+        new java.util.concurrent.atomic.AtomicBoolean(false);
+    java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>
+        processedCounts = new java.util.concurrent.ConcurrentHashMap<>();
+    java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>
+        failedCounts = new java.util.concurrent.ConcurrentHashMap<>();
+    java.util.concurrent.ExecutorService producerExecutor =
+        java.util.concurrent.Executors.newFixedThreadPool(
+            finalProducerThreads, Thread.ofPlatform().name("reembed-producer-", 0).factory());
+    java.util.concurrent.ExecutorService consumerExecutor =
+        java.util.concurrent.Executors.newFixedThreadPool(
+            finalConsumerThreads, Thread.ofPlatform().name("reembed-consumer-", 0).factory());
+    try {
+      if (!OpenMetadataApplicationConfigHolder.isInitialized()) {
+        parseConfig();
+      }
+      CollectionRegistry.initialize();
+      var omConfig = OpenMetadataApplicationConfigHolder.getInstance();
+      ApplicationHandler.initialize(omConfig);
+      CollectionRegistry.getInstance()
+          .loadSeedData(Entity.getJdbi(), omConfig, null, null, null, true);
+      TypeRepository typeRepository = (TypeRepository) Entity.getEntityRepository(Entity.TYPE);
+      TypeRegistry.instance().initialize(typeRepository);
+
+      SearchRepository repo = Entity.getSearchRepository();
+      if (repo == null) {
+        LOG.error("Search repository is not initialized; cannot run re-embedding");
+        return 1;
+      }
+
+      repo.prepareForReindex();
+      org.openmetadata.service.search.vector.OpenSearchVectorService vecService =
+          org.openmetadata.service.search.vector.OpenSearchVectorService.getInstance();
+      if (vecService == null || vecService.getEmbeddingClient() == null) {
+        LOG.warn("Vector embeddings are disabled or not initialized. Skipping re-embedding.");
+        return 1;
+      }
+
+      java.util.concurrent.ConcurrentHashMap<String, Integer> entityTotals =
+          new java.util.concurrent.ConcurrentHashMap<>();
+      int totalBatches = calculateReembedTotalBatches(batchSize, entityTotals);
+      java.util.concurrent.CountDownLatch producerLatch =
+          new java.util.concurrent.CountDownLatch(totalBatches);
+
+      LOG.info(
+          "Re-embedding with producers: {}, consumers: {}, queue size: {}, batch size: {}",
+          finalProducerThreads,
+          finalConsumerThreads,
+          finalQueueSize,
+          batchSize);
+
+      java.util.concurrent.CountDownLatch consumerLatch =
+          startReembedConsumers(
+              finalConsumerThreads,
+              consumerExecutor,
+              taskQueue,
+              producersDone,
+              vecService,
+              processedCounts,
+              failedCounts);
+
+      for (String entityType :
+          org.openmetadata.service.search.vector.utils.AvailableEntityTypes.LIST) {
+        int totalRecords = entityTotals.getOrDefault(entityType, 0);
+        int batches = calculateReembedNumberOfBatches(totalRecords, batchSize);
+        if (batches == 0) {
+          LOG.info("No entities found for type {}, skipping", entityType);
+          continue;
+        }
+
+        org.openmetadata.service.workflows.searchIndex.PaginatedEntitiesSource source =
+            new org.openmetadata.service.workflows.searchIndex.PaginatedEntitiesSource(
+                entityType, batchSize, List.of("*"));
+
+        LOG.info(
+            "Scheduling re-embedding for entity type {} with {} records ({} batches)",
+            entityType,
+            totalRecords,
+            batches);
+
+        for (int i = 0; i < batches; i++) {
+          int offset = i * batchSize;
+          producerExecutor.submit(
+              () -> {
+                try {
+                  org.openmetadata.schema.utils.ResultList<? extends EntityInterface> batch =
+                      source.readWithCursor(RestUtil.encodeCursor(String.valueOf(offset)));
+                  if (batch != null && batch.getData() != null && !batch.getData().isEmpty()) {
+                    taskQueue.put(new ReembedTask(entityType, batch));
+                  }
+                  if (batch != null && batch.getErrors() != null && !batch.getErrors().isEmpty()) {
+                    failedCounts
+                        .computeIfAbsent(
+                            entityType, key -> new java.util.concurrent.atomic.AtomicInteger(0))
+                        .addAndGet(batch.getErrors().size());
+                  }
+                } catch (Exception e) {
+                  LOG.warn(
+                      "Failed to read batch for entity type {} at offset {}",
+                      entityType,
+                      offset,
+                      e);
+                } finally {
+                  producerLatch.countDown();
+                }
+              });
+        }
+      }
+
+      awaitReembedProducers(producerLatch, producerExecutor);
+      producersDone.set(true);
+      signalReembedConsumersToStop(finalConsumerThreads, taskQueue);
+      consumerLatch.await();
+
+      for (String entityType :
+          org.openmetadata.service.search.vector.utils.AvailableEntityTypes.LIST) {
+        int processed =
+            processedCounts
+                .getOrDefault(entityType, new java.util.concurrent.atomic.AtomicInteger(0))
+                .get();
+        int failed =
+            failedCounts
+                .getOrDefault(entityType, new java.util.concurrent.atomic.AtomicInteger(0))
+                .get();
+        LOG.info(
+            "Finished re-embedding {} entities for type {} (failed reads: {})",
+            processed,
+            entityType,
+            failed);
+      }
+
+      LOG.info("Re-embedding completed successfully");
+      return 0;
+    } catch (Exception e) {
+      LOG.error("Failed to run full re-embedding", e);
+      return 1;
+    } finally {
+      shutdownReembedExecutor(producerExecutor, "reembed-producer");
+      shutdownReembedExecutor(consumerExecutor, "reembed-consumer");
+    }
+  }
+
+  private record ReembedTask(
+      String entityType,
+      org.openmetadata.schema.utils.ResultList<? extends EntityInterface> batch) {}
+
+  private java.util.concurrent.CountDownLatch startReembedConsumers(
+      int consumerThreads,
+      java.util.concurrent.ExecutorService consumerExecutor,
+      java.util.concurrent.BlockingQueue<ReembedTask> taskQueue,
+      java.util.concurrent.atomic.AtomicBoolean producersDone,
+      org.openmetadata.service.search.vector.OpenSearchVectorService vecService,
+      Map<String, java.util.concurrent.atomic.AtomicInteger> processedCounts,
+      Map<String, java.util.concurrent.atomic.AtomicInteger> failedCounts) {
+    java.util.concurrent.CountDownLatch consumerLatch =
+        new java.util.concurrent.CountDownLatch(consumerThreads);
+    for (int i = 0; i < consumerThreads; i++) {
+      final int consumerId = i;
+      consumerExecutor.submit(
+          () -> {
+            try {
+              runReembedConsumer(
+                  consumerId, taskQueue, producersDone, vecService, processedCounts, failedCounts);
+            } finally {
+              consumerLatch.countDown();
+            }
+          });
+    }
+    return consumerLatch;
+  }
+
+  private void runReembedConsumer(
+      int consumerId,
+      java.util.concurrent.BlockingQueue<ReembedTask> taskQueue,
+      java.util.concurrent.atomic.AtomicBoolean producersDone,
+      org.openmetadata.service.search.vector.OpenSearchVectorService vecService,
+      Map<String, java.util.concurrent.atomic.AtomicInteger> processedCounts,
+      Map<String, java.util.concurrent.atomic.AtomicInteger> failedCounts) {
+    LOG.debug("Consumer {} started", consumerId);
+    try {
+      while (!producersDone.get() || !taskQueue.isEmpty()) {
+        ReembedTask task = taskQueue.poll(100, java.util.concurrent.TimeUnit.MILLISECONDS);
+        if (task == null) {
+          continue;
+        }
+        if (task.batch() == null) {
+          break;
+        }
+        String entityType = task.entityType();
+        String entityIndexName = resolveEntityIndexName(entityType);
+        if (entityIndexName == null) {
+          LOG.warn("No index mapping found for entity type: {}, skipping batch", entityType);
+          continue;
+        }
+        for (EntityInterface entity : task.batch().getData()) {
+          try {
+            vecService.updateEntityEmbedding(entity, entityIndexName);
+            processedCounts
+                .computeIfAbsent(
+                    entityType, key -> new java.util.concurrent.atomic.AtomicInteger(0))
+                .incrementAndGet();
+          } catch (Exception e) {
+            failedCounts
+                .computeIfAbsent(
+                    entityType, key -> new java.util.concurrent.atomic.AtomicInteger(0))
+                .incrementAndGet();
+            LOG.warn("Failed to embed entity {} of type {}", entity.getId(), entityType, e);
+          }
+        }
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    } finally {
+      LOG.debug("Consumer {} stopped", consumerId);
+    }
+  }
+
+  private String resolveEntityIndexName(String entityType) {
+    try {
+      org.openmetadata.search.IndexMapping mapping =
+          Entity.getSearchRepository().getIndexMapping(entityType);
+      if (mapping == null) {
+        return null;
+      }
+      return mapping.getIndexName(Entity.getSearchRepository().getClusterAlias());
+    } catch (Exception e) {
+      LOG.warn("Failed to resolve index name for entity type {}: {}", entityType, e.getMessage());
+      return null;
+    }
+  }
+
+  private void signalReembedConsumersToStop(
+      int consumerThreads, java.util.concurrent.BlockingQueue<ReembedTask> taskQueue) {
+    for (int i = 0; i < consumerThreads; i++) {
+      taskQueue.offer(new ReembedTask("__POISON_PILL__", null));
+    }
+  }
+
+  private void awaitReembedProducers(
+      java.util.concurrent.CountDownLatch producerLatch,
+      java.util.concurrent.ExecutorService producerExecutor)
+      throws InterruptedException {
+    while (!producerLatch.await(1, java.util.concurrent.TimeUnit.SECONDS)) {
+      if (Thread.currentThread().isInterrupted()) {
+        producerExecutor.shutdownNow();
+        throw new InterruptedException("Interrupted while waiting for producers");
+      }
+    }
+  }
+
+  private void shutdownReembedExecutor(java.util.concurrent.ExecutorService executor, String name) {
+    if (executor == null) {
+      return;
+    }
+    executor.shutdown();
+    try {
+      if (!executor.awaitTermination(1, java.util.concurrent.TimeUnit.MINUTES)) {
+        LOG.warn("Forcing shutdown of {}", name);
+        executor.shutdownNow();
+      }
+    } catch (InterruptedException e) {
+      executor.shutdownNow();
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private int calculateReembedTotalBatches(int batchSize, Map<String, Integer> entityTotals) {
+    int totalBatches = 0;
+    for (String entityType :
+        org.openmetadata.service.search.vector.utils.AvailableEntityTypes.LIST) {
+      try {
+        int totalRecords = Entity.getEntityRepository(entityType).getDao().listTotalCount();
+        entityTotals.put(entityType, totalRecords);
+        totalBatches += calculateReembedNumberOfBatches(totalRecords, batchSize);
+      } catch (EntityNotFoundException e) {
+        LOG.warn(
+            "Skipping re-embedding for entity type '{}': repository not registered", entityType);
+      }
+    }
+    return totalBatches;
+  }
+
+  private int calculateReembedNumberOfBatches(int totalRecords, int batchSize) {
+    if (totalRecords <= 0 || batchSize <= 0) {
+      return 0;
+    }
+    return (int) Math.ceil((double) totalRecords / (double) batchSize);
   }
 
   @Command(name = "syncAlertOffset", description = "Sync the Alert Offset.")
@@ -1930,6 +2264,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
       LOG.info("Creating indexes for search engine...");
       parseConfig();
       searchRepository.createIndexes();
+      searchRepository.createOrUpdateIndexTemplates();
       createDataInsightsIndexes();
       Entity.cleanup();
       LOG.info("All indexes created successfully.");
@@ -2131,6 +2466,97 @@ public class OpenMetadataOperations implements Callable<Integer> {
     }
   }
 
+  /**
+   * Unlike most ops commands (e.g. deploy-pipelines) that delegate to the server API, this command
+   * operates directly on the database. This is intentional: when JWT signing keys have been rotated,
+   * all existing bot tokens — including the ingestion-bot token we'd use to authenticate against the
+   * server — are invalid. We must bypass the server to regenerate tokens in this scenario.
+   */
+  @Command(
+      name = "regenerate-bot-tokens",
+      description =
+          "Regenerates JWT tokens for all bot users. "
+              + "Use this after rotating JWT signing keys or changing the cluster name.")
+  public Integer regenerateBotTokens(
+      @Option(
+              names = {"--expiry"},
+              description =
+                  "Token expiry for regenerated tokens (OneHour, One, Seven, Thirty, Sixty, Ninety, Unlimited). "
+                      + "Defaults to Unlimited.",
+              defaultValue = "Unlimited")
+          JWTTokenExpiry expiry) {
+    try {
+      parseConfig();
+      initializeCollectionRegistry();
+      SettingsCache.initialize(config);
+      initializeSecurityConfig();
+
+      JWTTokenGenerator.getInstance()
+          .init(
+              SecurityConfigurationManager.getInstance()
+                  .getCurrentAuthConfig()
+                  .getTokenValidationAlgorithm(),
+              config.getJwtTokenConfiguration());
+
+      initOrganization();
+
+      BotRepository botRepository = (BotRepository) Entity.getEntityRepository(Entity.BOT);
+      UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
+
+      List<Bot> bots =
+          botRepository.listAll(
+              botRepository.getFields("botUser"), new ListFilter(Include.NON_DELETED));
+
+      List<List<String>> rows = new ArrayList<>();
+
+      for (Bot listedBot : bots) {
+        String botName = listedBot.getName();
+        try {
+          // Fetch individually so that setFields populates the botUser relationship
+          Bot bot = botRepository.getByName(null, botName, botRepository.getFields("botUser"));
+
+          if (bot.getBotUser() == null) {
+            rows.add(Arrays.asList(botName, "SKIPPED", "No bot user associated"));
+            continue;
+          }
+
+          User botUser =
+              userRepository.getByName(
+                  null,
+                  bot.getBotUser().getFullyQualifiedName(),
+                  new EntityUtil.Fields(Set.of("authenticationMechanism", "roles")));
+
+          if (botUser.getAuthenticationMechanism() == null
+              || botUser.getAuthenticationMechanism().getAuthType()
+                  != AuthenticationMechanism.AuthType.JWT) {
+            rows.add(Arrays.asList(botName, "SKIPPED", "Not using JWT authentication"));
+            continue;
+          }
+
+          JWTAuthMechanism newJwtAuth =
+              JWTTokenGenerator.getInstance().generateJWTToken(botUser, expiry);
+          botUser.setAuthenticationMechanism(
+              new AuthenticationMechanism()
+                  .withAuthType(AuthenticationMechanism.AuthType.JWT)
+                  .withConfig(newJwtAuth));
+          UserUtil.addOrUpdateUser(botUser);
+
+          rows.add(Arrays.asList(botName, "SUCCESS", "Token regenerated"));
+        } catch (Exception e) {
+          LOG.error("Failed to regenerate token for bot: {}", botName, e);
+          rows.add(Arrays.asList(botName, "FAILED", e.getMessage()));
+        }
+      }
+
+      boolean hasFailures = rows.stream().anyMatch(r -> "FAILED".equals(r.get(1)));
+      printToAsciiTable(Arrays.asList("Bot", "Status", "Details"), rows, "No bots found");
+      return hasFailures ? 1 : 0;
+    } catch (Exception e) {
+      LOG.error("Failed to regenerate bot tokens due to ", e);
+      return 1;
+    }
+  }
+
   @Command(
       name = "cleanup-flowable-history",
       description =
@@ -2260,10 +2686,14 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
       // Make bulk deploy API call for this chunk
       String jsonBody = JsonUtils.pojoToJson(pipelineIds);
+      String normalizedServerUrl =
+          serverUrl != null && serverUrl.endsWith("/")
+              ? serverUrl.substring(0, serverUrl.length() - 1)
+              : serverUrl;
 
       HttpRequest request =
           HttpRequest.newBuilder()
-              .uri(URI.create(serverUrl + COLLECTION_PATH + "bulk/deploy"))
+              .uri(URI.create(normalizedServerUrl + COLLECTION_PATH + "bulk/deploy"))
               .header("Authorization", "Bearer " + jwtToken)
               .header("Content-Type", "application/json")
               .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
@@ -2594,7 +3024,6 @@ public class OpenMetadataOperations implements Callable<Integer> {
           }
           roleRepository.initializeEntity(role);
         }
-        teamRepository.initOrganization();
       } catch (Exception ex) {
         LOG.error("Failed to initialize organization due to ", ex);
         throw new RuntimeException(ex);
@@ -2602,6 +3031,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
         rootLogger.setLevel(originalLevel);
       }
     }
+    teamRepository.initOrganization();
   }
 
   public static void printToAsciiTable(
@@ -2626,17 +3056,11 @@ public class OpenMetadataOperations implements Callable<Integer> {
       for (MigrationDAO.ServerChangeLog serverChangeLog : serverChangeLogs) {
         List<String> row = new ArrayList<>();
         if (serverChangeLog.getMetrics() != null) {
-          JsonObject metricsJson =
-              new Gson().fromJson(serverChangeLog.getMetrics(), JsonObject.class);
-          Set<String> keys = metricsJson.keySet();
-          columns.addAll(keys);
+          JsonNode metricsJson = new ObjectMapper().readTree(serverChangeLog.getMetrics());
+          metricsJson.fieldNames().forEachRemaining(columns::add);
           row.add(serverChangeLog.getVersion());
           row.add(serverChangeLog.getInstalledOn());
-          row.addAll(
-              metricsJson.entrySet().stream()
-                  .map(Map.Entry::getValue)
-                  .map(JsonElement::toString)
-                  .toList());
+          metricsJson.fields().forEachRemaining(entry -> row.add(entry.getValue().toString()));
           rows.add(row);
         }
       }

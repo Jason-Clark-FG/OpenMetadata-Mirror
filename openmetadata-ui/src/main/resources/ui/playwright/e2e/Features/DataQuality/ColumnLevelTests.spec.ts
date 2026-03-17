@@ -18,6 +18,7 @@ import {
   descriptionBox,
   redirectToHomePage,
 } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   clickCreateTestCaseButton,
   clickEditTestCaseButton,
@@ -313,6 +314,7 @@ test.describe(
      * 3. Edit allowed values; delete the test case.
      */
     test('Column Values To Be In Set', async ({ page }) => {
+      test.slow();
       await redirectToHomePage(page);
 
       const testCase = {
@@ -373,6 +375,12 @@ test.describe(
         );
 
         await page.click('#testCaseFormV1_params_matchEnum');
+        await page
+          .locator('#testCaseFormV1_params_matchEnum[aria-checked="true"]')
+          .waitFor({ state: 'attached' });
+        await expect(
+          page.locator('#testCaseFormV1_params_matchEnum')
+        ).toHaveAttribute('aria-checked', 'true');
 
         await clickCreateTestCaseButton(page, testCase.name);
       });
@@ -386,7 +394,21 @@ test.describe(
 
         await page.getByRole('button', { name: 'plus' }).click();
         await page.fill('#tableTestForm_params_allowedValues_2_value', 'open');
+        await page.click('#tableTestForm_params_matchEnum');
+        await page
+          .locator('#tableTestForm_params_matchEnum[aria-checked="false"]')
+          .waitFor({ state: 'attached' });
+        await expect(
+          page.locator('#tableTestForm_params_matchEnum')
+        ).toHaveAttribute('aria-checked', 'false');
         await clickUpdateButton(page);
+
+        await clickEditTestCaseButton(page, testCase.name);
+        await expect(
+          page.locator('#tableTestForm_params_matchEnum')
+        ).toHaveAttribute('aria-checked', 'false');
+
+        await page.getByTestId('cancel-btn').click();
       });
 
       await test.step('Delete', async () => {
@@ -1168,6 +1190,7 @@ test.describe(
       };
 
       await visitCreateTestCasePanelFromEntityPage(page, table);
+      await waitForAllLoadersToDisappear(page);
       await page
         .getByTestId('select-table-card')
         .getByText('Column Level')

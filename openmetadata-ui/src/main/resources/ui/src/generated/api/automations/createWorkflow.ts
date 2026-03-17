@@ -292,6 +292,10 @@ export interface RequestConnection {
  *
  * Microsoft Fabric Warehouse and Lakehouse Connection Config
  *
+ * BurstIQ LifeGraph Database Connection Config
+ *
+ * IBM Informix Database Connection Config
+ *
  * Looker Connection Config
  *
  * Metabase Connection Config
@@ -330,6 +334,9 @@ export interface RequestConnection {
  * Grafana Connection Config
  *
  * Hex Connection Config
+ *
+ * SQL Server Reporting Services (SSRS) provides a set of on-premises tools and services to
+ * create, deploy, and manage paginated reports
  *
  * Kafka Connection Config
  *
@@ -452,9 +459,9 @@ export interface ConfigObject {
      */
     docURL?: string;
     /**
-     * Open API Schema URL.
+     * OpenAPI Schema source config. Either a URL or a file path must be provided.
      */
-    openAPISchemaURL?: string;
+    openAPISchemaConnection?: OpenAPISchemaConnection;
     /**
      * Supports Metadata Extraction.
      */
@@ -593,6 +600,8 @@ export interface ConfigObject {
      * Host and port of the Microsoft Fabric SQL endpoint (e.g.,
      * your-workspace.datawarehouse.fabric.microsoft.com:1433).
      *
+     * Host and port of the Informix service.
+     *
      * URL to the Looker instance.
      *
      * Host and Port of the Metabase instance.
@@ -624,6 +633,8 @@ export interface ConfigObject {
      * URL to the Grafana instance.
      *
      * Hex API URL. For Hex.tech cloud, use https://app.hex.tech
+     *
+     * Host and Port of the Ssrs instance.
      *
      * Pipeline Service Management/UI URI.
      *
@@ -706,6 +717,8 @@ export interface ConfigObject {
      * Regex to include/exclude FHIR resource types
      *
      * Regex to only include/exclude tables that match the pattern.
+     *
+     * Regex to only include/exclude dictionaries (tables) that matches the pattern.
      */
     tableFilterPattern?: FilterPattern;
     /**
@@ -723,6 +736,12 @@ export interface ConfigObject {
      */
     usageLocation?: string;
     awsConfig?:     AWSCredentials;
+    /**
+     * Catalog ID for Athena. For S3 Tables, use the format 's3tablescatalog/<bucket-name>'. For
+     * cross-account Glue catalogs, use the AWS account ID. If not provided, defaults to the
+     * caller's AWS account.
+     */
+    catalogId?: string;
     /**
      * Optional name to give to the database in OpenMetadata. If left blank, we will use default
      * as the database name.
@@ -805,6 +824,9 @@ export interface ConfigObject {
      *
      * Ingest data from all databases (Warehouses and Lakehouses) in Microsoft Fabric. You can
      * use databaseFilterPattern on top of this.
+     *
+     * Ingest data from all databases in Informix. You can use databaseFilterPattern on top of
+     * this.
      */
     ingestAllDatabases?: boolean;
     /**
@@ -829,8 +851,6 @@ export interface ConfigObject {
      * Password to connect to Oracle.
      *
      * Password to connect to Presto.
-     *
-     * Password to connect to Redshift.
      *
      * Password to connect to Salesforce.
      *
@@ -862,11 +882,17 @@ export interface ConfigObject {
      *
      * Password to connect to ServiceNow.
      *
+     * Password to connect to BurstIQ.
+     *
+     * Password to connect to Informix.
+     *
      * Password to connect to Metabase. Required for basic authentication.
      *
      * Password to connect to PowerBI report server.
      *
      * Password to connect to MicroStrategy.
+     *
+     * Password to connect to Ssrs.
      *
      * password to connect to the Amundsen Neo4j Connection.
      *
@@ -974,6 +1000,12 @@ export interface ConfigObject {
      * Username to connect to ServiceNow. This user should have read access to sys_db_object and
      * sys_dictionary tables.
      *
+     * Username to connect to BurstIQ. This user should have privileges to read all the metadata
+     * in BurstIQ LifeGraph.
+     *
+     * Username to connect to Informix. This user should have privileges to read all the
+     * metadata in Informix.
+     *
      * Username to connect to Metabase. Required for basic authentication.
      *
      * Username to connect to PowerBI report server.
@@ -982,6 +1014,8 @@ export interface ConfigObject {
      *
      * Username to connect to MicroStrategy. This user should have privileges to read all the
      * metadata in MicroStrategy.
+     *
+     * Username to connect to Ssrs.
      *
      * username to connect to the Amundsen Neo4j Connection.
      *
@@ -1025,6 +1059,8 @@ export interface ConfigObject {
      * Choose between different authentication types for Databricks.
      *
      * Choose Auth Config Type.
+     *
+     * Choose Auth Configuration Type.
      *
      * Choose between Dremio Cloud (SaaS) or Dremio Software (self-hosted) authentication.
      *
@@ -1084,9 +1120,17 @@ export interface ConfigObject {
      * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
      * client certificate, and private key for mutual TLS authentication.
      *
+     * SSL Configuration details. Provide the CA certificate to validate the Informix server
+     * certificate. Paste the PEM content directly or upload the certificate file.
+     *
      * SSL Configuration for OpenMetadata Server
      */
-    sslConfig?:                     SSLConfigObject;
+    sslConfig?: SSLConfigObject;
+    /**
+     * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+     * without certificate verification, or 'verify-ca' to validate the server certificate
+     * against the provided CA certificate.
+     */
     sslMode?:                       SSLMode;
     supportsViewLineageExtraction?: boolean;
     /**
@@ -1157,6 +1201,25 @@ export interface ConfigObject {
      * Connect with oracle by either passing service name or database schema name.
      */
     oracleConnectionType?: OracleConnectionType;
+    /**
+     * Controls how Oracle identifier names (tables, columns, schemas) are stored in
+     * OpenMetadata. When disabled (default), Oracle's UPPERCASE unquoted identifiers (e.g.
+     * EMPLOYEES) are not guaranteed to be stored as-is — identifiers with the same letters but
+     * different case (e.g. unquoted EMPLOYEES and quoted 'employees') will collide into the
+     * same name. When enabled, names are stored exactly as Oracle persists them, which solves
+     * same-name collisions between quoted and unquoted identifiers. WARNING: enabling this
+     * after data has already been ingested with the default setting will change the stored
+     * names of all existing tables, columns, schemas, and constraints — breaking attached tags,
+     * descriptions, lineage, data quality tests, and any other metadata associated with those
+     * entities. If you must switch, soft-delete all previously ingested entities before
+     * re-ingesting.
+     */
+    preserveIdentifierCase?: boolean;
+    /**
+     * Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA
+     * privileges.
+     */
+    useDBATable?: boolean;
     /**
      * Custom OpenMetadata Classification name for Postgres policy tags.
      *
@@ -1295,6 +1358,12 @@ export interface ConfigObject {
      * Prefix of the data source.
      */
     prefix?: string;
+    /**
+     * Skip files in cold storage tiers (e.g., S3 Glacier, Azure Archive/Cool/Cold, GCS
+     * Coldline/Archive). When enabled, only files in hot/standard storage tiers will be
+     * processed.
+     */
+    skipColdStorage?: boolean;
     /**
      * Access token to connect to DOMO
      *
@@ -1435,6 +1504,8 @@ export interface ConfigObject {
     /**
      * Boolean marking if we need to verify the SSL certs for Grafana. Default to True.
      *
+     * Client SSL verification.
+     *
      * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
      * default.
      *
@@ -1492,7 +1563,26 @@ export interface ConfigObject {
      */
     includeSystemTables?: boolean;
     /**
+     * BurstIQ customer name for API requests.
+     */
+    biqCustomerName?: string;
+    /**
+     * BurstIQ Secure Data Zone (SDZ) name for API requests.
+     */
+    biqSdzName?: string;
+    /**
+     * BurstIQ Keycloak realm name (e.g., 'ems' from https://auth.burstiq.com/realms/ems).
+     */
+    realmName?: string;
+    /**
+     * Informix server name as defined in the sqlhosts file or INFORMIXSERVER environment
+     * variable.
+     */
+    serverName?: string;
+    /**
      * Regex exclude or include charts that matches the pattern.
+     *
+     * Regex to exclude or include charts that matches the pattern.
      */
     chartFilterPattern?: FilterPattern;
     /**
@@ -1728,8 +1818,6 @@ export interface ConfigObject {
     schemaRegistryURL?: string;
     /**
      * security.protocol consumer config property
-     *
-     * Kafka security protocol config
      */
     securityProtocol?: KafkaSecurityProtocol;
     /**
@@ -1783,6 +1871,12 @@ export interface ConfigObject {
      */
     host?: string;
     /**
+     * Number of leading segments to remove from asset key paths before resolving to tables. For
+     * example, if your asset keys follow the pattern 'project/environment/schema/table' but you
+     * only need 'schema/table', set this to 2.
+     */
+    stripAssetKeyPrefixLength?: number;
+    /**
      * Connection Time Limit Between OM and Dagster Graphql API in second
      */
     timeout?: number;
@@ -1800,33 +1894,9 @@ export interface ConfigObject {
      */
     uiHostPort?: string;
     /**
-     * service type of the messaging source
+     * Event broker configuration. Choose between Kafka and Kinesis.
      */
-    brokersUrl?: string;
-    /**
-     * consumer group name
-     */
-    consumerGroupName?: string;
-    /**
-     * initial Kafka consumer offset
-     */
-    consumerOffsets?: InitialConsumerOffsets;
-    /**
-     * max allowed wait time
-     */
-    poolTimeout?: number;
-    /**
-     * SASL Configuration details.
-     */
-    saslConfig?: SASLClientConfig;
-    /**
-     * max allowed inactivity time
-     */
-    sessionTimeout?: number;
-    /**
-     * topic from where Open lineage events will be pulled
-     */
-    topicName?: string;
+    brokerConfig?: BrokerConfiguration;
     /**
      * We support username/password or No Authentication
      */
@@ -2227,6 +2297,8 @@ export interface UsernamePasswordAuthentication {
  *
  * Regex to only include/exclude tables that match the pattern.
  *
+ * Regex to only include/exclude dictionaries (tables) that matches the pattern.
+ *
  * Regex exclude or include charts that matches the pattern.
  *
  * Regex to exclude or include dashboards that matches the pattern.
@@ -2234,6 +2306,8 @@ export interface UsernamePasswordAuthentication {
  * Regex exclude or include data models that matches the pattern.
  *
  * Regex to exclude or include projects that matches the pattern.
+ *
+ * Regex to exclude or include charts that matches the pattern.
  *
  * Regex to only fetch topics that matches the pattern.
  *
@@ -2367,6 +2441,8 @@ export enum AuthProvider {
  *
  * Azure Database Connection Config
  *
+ * Choose Auth Configuration Type.
+ *
  * Configuration for connecting to DataStax Astra DB in the cloud.
  *
  * Choose between Dremio Cloud (SaaS) or Dremio Software (self-hosted) authentication.
@@ -2394,6 +2470,8 @@ export enum AuthProvider {
  * SSL Certificates By Path
  *
  * AWS credentials configs.
+ *
+ * AWS credentials configuration.
  *
  * Authentication type to connect to Apache Ranger.
  *
@@ -2572,6 +2650,8 @@ export interface AuthenticationType {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials configuration.
  */
 export interface AWSCredentials {
     /**
@@ -2772,6 +2852,164 @@ export enum AuthenticationEnum {
 }
 
 /**
+ * Event broker configuration. Choose between Kafka and Kinesis.
+ *
+ * Kafka broker configuration for OpenLineage events.
+ *
+ * AWS Kinesis Data Streams configuration for OpenLineage events.
+ */
+export interface BrokerConfiguration {
+    /**
+     * Kafka bootstrap servers URL.
+     */
+    brokersUrl?: string;
+    /**
+     * Kafka consumer group name.
+     */
+    consumerGroupName?: string;
+    /**
+     * Initial Kafka consumer offset.
+     *
+     * Initial Kinesis shard iterator type.
+     */
+    consumerOffsets?: InitialConsumerOffsets;
+    /**
+     * Max allowed wait time.
+     *
+     * Poll interval in seconds.
+     */
+    poolTimeout?: number;
+    /**
+     * SASL Configuration details.
+     */
+    saslConfig?: SASLClientConfig;
+    /**
+     * Kafka security protocol config.
+     */
+    securityProtocol?: KafkaSecurityProtocol;
+    /**
+     * Max allowed inactivity time.
+     *
+     * Max inactivity timeout in seconds.
+     */
+    sessionTimeout?: number;
+    /**
+     * SSL Configuration details.
+     */
+    sslConfig?: ConsumerConfigSSLClass;
+    /**
+     * Topic from where OpenLineage events will be pulled.
+     */
+    topicName?: string;
+    /**
+     * AWS credentials configuration.
+     */
+    awsConfig?: AWSCredentials;
+    /**
+     * Kinesis Data Stream name.
+     */
+    streamName?: string;
+}
+
+/**
+ * Initial Kafka consumer offset.
+ *
+ * Initial Kinesis shard iterator type.
+ */
+export enum InitialConsumerOffsets {
+    Earliest = "earliest",
+    InitialConsumerOffsetsLATEST = "LATEST",
+    Latest = "latest",
+    TrimHorizon = "TRIM_HORIZON",
+}
+
+/**
+ * SASL Configuration details.
+ *
+ * SASL client configuration.
+ */
+export interface SASLClientConfig {
+    /**
+     * SASL security mechanism
+     */
+    saslMechanism?: SaslMechanismType;
+    /**
+     * The SASL authentication password.
+     */
+    saslPassword?: string;
+    /**
+     * The SASL authentication username.
+     */
+    saslUsername?: string;
+}
+
+/**
+ * sasl.mechanism Consumer Config property
+ *
+ * SASL Mechanism consumer config property
+ *
+ * SASL security mechanism
+ */
+export enum SaslMechanismType {
+    Gssapi = "GSSAPI",
+    Oauthbearer = "OAUTHBEARER",
+    Plain = "PLAIN",
+    ScramSHA256 = "SCRAM-SHA-256",
+    ScramSHA512 = "SCRAM-SHA-512",
+}
+
+/**
+ * Kafka security protocol config.
+ *
+ * security.protocol consumer config property
+ */
+export enum KafkaSecurityProtocol {
+    Plaintext = "PLAINTEXT",
+    SSL = "SSL",
+    SaslPlaintext = "SASL_PLAINTEXT",
+    SaslSSL = "SASL_SSL",
+}
+
+/**
+ * SSL Configuration details for DB2 connection. Provide CA certificate for server
+ * validation, and optionally client certificate and key for mutual TLS authentication.
+ *
+ * Client SSL configuration
+ *
+ * SSL Configuration details.
+ *
+ * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
+ * client certificate, and private key for mutual TLS authentication.
+ *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
+ * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
+ * connection.
+ *
+ * Schema Registry SSL Config. Configuration for enabling SSL for the Schema Registry
+ * connection.
+ *
+ * SSL Configuration for OpenMetadata Server
+ *
+ * OpenMetadata Client configured to validate SSL certificates.
+ */
+export interface ConsumerConfigSSLClass {
+    /**
+     * The CA certificate used for SSL validation.
+     */
+    caCertificate?: string;
+    /**
+     * The SSL certificate used for client authentication.
+     */
+    sslCertificate?: string;
+    /**
+     * The private key associated with the SSL certificate.
+     */
+    sslKey?: string;
+}
+
+/**
  * Iceberg Catalog configuration.
  */
 export interface IcebergCatalog {
@@ -2858,6 +3096,8 @@ export interface IcebergFileSystem {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials configuration.
  *
  * Azure Cloud Credentials
  *
@@ -2996,42 +3236,6 @@ export interface QlikCertificatesBy {
 }
 
 /**
- * SSL Configuration details for DB2 connection. Provide CA certificate for server
- * validation, and optionally client certificate and key for mutual TLS authentication.
- *
- * Client SSL configuration
- *
- * SSL Configuration details.
- *
- * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
- * client certificate, and private key for mutual TLS authentication.
- *
- * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
- * connection.
- *
- * Schema Registry SSL Config. Configuration for enabling SSL for the Schema Registry
- * connection.
- *
- * SSL Configuration for OpenMetadata Server
- *
- * OpenMetadata Client configured to validate SSL certificates.
- */
-export interface ConsumerConfigSSLClass {
-    /**
-     * The CA certificate used for SSL validation.
-     */
-    caCertificate?: string;
-    /**
-     * The SSL certificate used for client authentication.
-     */
-    sslCertificate?: string;
-    /**
-     * The private key associated with the SSL certificate.
-     */
-    sslKey?: string;
-}
-
-/**
  * Cloud provider where Snowplow is deployed
  */
 export enum CloudProvider {
@@ -3167,6 +3371,8 @@ export interface ConfigSourceConnection {
  * GCP Credentials for Google Drive API
  *
  * AWS credentials configs.
+ *
+ * AWS credentials configuration.
  */
 export interface Credentials {
     /**
@@ -3593,6 +3799,8 @@ export interface DataStorageConfig {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials configuration.
  */
 export interface AwsCredentials {
     /**
@@ -3666,6 +3874,9 @@ export enum ConnectionScheme {
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
  *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
  * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
  * connection.
  *
@@ -3691,6 +3902,10 @@ export interface ConnectionSSLConfig {
 
 /**
  * SSL Mode to connect to database.
+ *
+ * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+ * without certificate verification, or 'verify-ca' to validate the server certificate
+ * against the provided CA certificate.
  */
 export enum SSLMode {
     Allow = "allow",
@@ -3717,20 +3932,14 @@ export enum ConnectionType {
 /**
  * Client SSL verification. Make sure to configure the SSLConfig if enabled.
  *
+ * Client SSL verification.
+ *
  * Flag to verify SSL Certificate for OpenMetadata Server.
  */
 export enum VerifySSL {
     Ignore = "ignore",
     NoSSL = "no-ssl",
     Validate = "validate",
-}
-
-/**
- * initial Kafka consumer offset
- */
-export enum InitialConsumerOffsets {
-    Earliest = "earliest",
-    Latest = "latest",
 }
 
 /**
@@ -4143,6 +4352,24 @@ export interface NifiCredentialsConfiguration {
 }
 
 /**
+ * OpenAPI Schema source config. Either a URL or a file path must be provided.
+ *
+ * Open API Schema URL Connection Config
+ *
+ * Open API Schema File Path Connection Config
+ */
+export interface OpenAPISchemaConnection {
+    /**
+     * Open API Schema URL.
+     */
+    openAPISchemaURL?: string;
+    /**
+     * Path to a local OpenAPI schema file.
+     */
+    openAPISchemaFilePath?: string;
+}
+
+/**
  * Connect with oracle by either passing service name or database schema name.
  */
 export interface OracleConnectionType {
@@ -4262,41 +4489,6 @@ export enum RunMode {
 }
 
 /**
- * SASL Configuration details.
- *
- * SASL client configuration.
- */
-export interface SASLClientConfig {
-    /**
-     * SASL security mechanism
-     */
-    saslMechanism?: SaslMechanismType;
-    /**
-     * The SASL authentication password.
-     */
-    saslPassword?: string;
-    /**
-     * The SASL authentication username.
-     */
-    saslUsername?: string;
-}
-
-/**
- * sasl.mechanism Consumer Config property
- *
- * SASL Mechanism consumer config property
- *
- * SASL security mechanism
- */
-export enum SaslMechanismType {
-    Gssapi = "GSSAPI",
-    Oauthbearer = "OAUTHBEARER",
-    Plain = "PLAIN",
-    ScramSHA256 = "SCRAM-SHA-256",
-    ScramSHA512 = "SCRAM-SHA-512",
-}
-
-/**
  * SQLAlchemy driver scheme options.
  *
  * Mongo connection scheme options.
@@ -4322,6 +4514,7 @@ export enum ConfigScheme {
     Ibmi = "ibmi",
     Impala = "impala",
     Impala4 = "impala4",
+    Informix = "informix",
     Mongodb = "mongodb",
     MongodbSrv = "mongodb+srv",
     MssqlPymssql = "mssql+pymssql",
@@ -4400,18 +4593,6 @@ export interface OpenMetadataJWTClientConfig {
     jwtToken: string;
 }
 
-/**
- * security.protocol consumer config property
- *
- * Kafka security protocol config
- */
-export enum KafkaSecurityProtocol {
-    Plaintext = "PLAINTEXT",
-    SSL = "SSL",
-    SaslPlaintext = "SASL_PLAINTEXT",
-    SaslSSL = "SASL_SSL",
-}
-
 export enum SpaceType {
     Data = "Data",
     Managed = "Managed",
@@ -4429,6 +4610,9 @@ export enum SpaceType {
  *
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
+ *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
  *
  * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
  * connection.
@@ -4633,6 +4817,7 @@ export enum ConfigType {
     AzureSQL = "AzureSQL",
     BigQuery = "BigQuery",
     BigTable = "BigTable",
+    BurstIQ = "BurstIQ",
     Cassandra = "Cassandra",
     Clickhouse = "Clickhouse",
     Cockroach = "Cockroach",
@@ -4676,6 +4861,7 @@ export enum ConfigType {
     Hive = "Hive",
     Iceberg = "Iceberg",
     Impala = "Impala",
+    Informix = "Informix",
     Kafka = "Kafka",
     KafkaConnect = "KafkaConnect",
     Kinesis = "Kinesis",
@@ -4732,6 +4918,7 @@ export enum ConfigType {
     Spline = "Spline",
     Ssas = "SSAS",
     Ssis = "SSIS",
+    Ssrs = "Ssrs",
     StarRocks = "StarRocks",
     Stitch = "Stitch",
     Superset = "Superset",

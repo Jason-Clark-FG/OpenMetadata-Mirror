@@ -60,6 +60,7 @@ export type UrlParams = {
 export type ExploreSearchIndex =
   | SearchIndex.DATA_PRODUCT
   | SearchIndex.TABLE
+  | SearchIndex.COLUMN
   | SearchIndex.PIPELINE
   | SearchIndex.DASHBOARD
   | SearchIndex.DATABASE
@@ -125,6 +126,7 @@ export interface ExploreQuickFilterField {
   searchIndex?: SearchIndex;
   searchKey?: string;
   dropdownClassName?: string;
+  singleSelect?: boolean;
 }
 
 // Type for all the explore tab entities

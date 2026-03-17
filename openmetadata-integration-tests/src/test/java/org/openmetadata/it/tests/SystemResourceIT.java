@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.openmetadata.api.configuration.LogoConfiguration;
 import org.openmetadata.api.configuration.ThemeConfiguration;
 import org.openmetadata.api.configuration.UiThemePreference;
@@ -78,10 +79,11 @@ import org.openmetadata.sdk.network.RequestOptions;
  *
  * <p>Migrated from: org.openmetadata.service.resources.system.SystemResourceTest
  *
- * <p>Test isolation: Uses TestNamespace extension for test isolation Parallelization: Safe for
- * concurrent execution via @Execution(ExecutionMode.CONCURRENT)
+ * <p>Test isolation: Uses TestNamespace extension and runs isolated because tests mutate global
+ * search/system settings that can interfere with concurrently executing classes.
  */
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.SAME_THREAD)
+@Isolated
 @ExtendWith(TestNamespaceExtension.class)
 public class SystemResourceIT {
 
@@ -700,6 +702,15 @@ public class SystemResourceIT {
   void test_getDefaultSearchSettings() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
 
+    // Ensure deterministic baseline even when other tests mutate search settings.
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/system/settings/reset/" + SettingsType.SEARCH_SETTINGS.value(),
+            null,
+            RequestOptions.builder().build());
+
     String settingsJson =
         client
             .getHttpClient()
@@ -1027,6 +1038,21 @@ public class SystemResourceIT {
 
     assertEquals("NewCertification", updatedCertificationConfig.getAllowedClassification());
     assertEquals("P60D", updatedCertificationConfig.getValidityPeriod());
+
+    // Reset to original values to avoid cross-test pollution
+    certificationConfig.setAllowedClassification("Certification");
+    certificationConfig.setValidityPeriod("P30D");
+
+    Settings resetSettings =
+        new Settings()
+            .withConfigType(SettingsType.ASSET_CERTIFICATION_SETTINGS)
+            .withConfigValue(certificationConfig);
+
+    String resetJson = MAPPER.writeValueAsString(resetSettings);
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT, "/v1/system/settings", resetJson, RequestOptions.builder().build());
   }
 
   @Test

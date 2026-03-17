@@ -12,6 +12,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
+import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 import { SidebarItem } from '../../constant/sidebar';
 import { Glossary } from '../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../support/glossary/GlossaryTerm';
@@ -63,10 +64,9 @@ async function performRename(
   await patchResponse;
 
   // Wait for the UI to update
-  await page.waitForLoadState('networkidle');
 }
 
-test.describe('Multiple Rename Tests', () => {
+test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test.beforeAll('Setup admin user', async ({ browser }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
     await adminUser.create(apiContext);
@@ -212,7 +212,7 @@ test.describe('Multiple Rename Tests', () => {
 
       // Navigate to classification using side panel and displayName
       await sidebarClick(page, SidebarItem.TAGS);
-      await page.waitForSelector('[data-testid="side-panel-classification"]');
+      await page.getByTestId('side-panel-classification').first().waitFor();
       await page
         .locator('[data-testid="side-panel-classification"]')
         .filter({ hasText: classification.data.displayName })
@@ -234,8 +234,8 @@ test.describe('Multiple Rename Tests', () => {
 
         currentName = newName;
 
-        // Wait a bit for the UI to stabilize
-        await page.waitForTimeout(500);
+        // Wait for name to reflect in the header
+        await expect(page.getByTestId('entity-header-name')).toBeVisible();
       }
 
       // Verify the classification is still accessible
@@ -283,7 +283,7 @@ test.describe('Multiple Rename Tests', () => {
 
       // Navigate to tag using side panel and displayName
       await sidebarClick(page, SidebarItem.TAGS);
-      await page.waitForSelector('[data-testid="side-panel-classification"]');
+      await page.getByTestId('side-panel-classification').first().waitFor();
       await page
         .locator('[data-testid="side-panel-classification"]')
         .filter({ hasText: classification.data.displayName })
@@ -325,15 +325,14 @@ test.describe('Multiple Rename Tests', () => {
         await patchResponse;
 
         // Wait for the UI to update
-        await page.waitForLoadState('networkidle');
 
         // Verify the header shows the new name
         await expect(page.getByTestId('entity-header-name')).toContainText(
           newName
         );
 
-        // Wait a bit for the UI to stabilize
-        await page.waitForTimeout(500);
+        // Wait for name to reflect in the header
+        await expect(page.getByTestId('entity-header-name')).toBeVisible();
       }
 
       // Verify the tag is still accessible

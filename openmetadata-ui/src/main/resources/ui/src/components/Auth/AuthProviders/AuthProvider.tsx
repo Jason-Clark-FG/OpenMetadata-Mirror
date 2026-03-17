@@ -42,7 +42,6 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { UN_AUTHORIZED_EXCLUDED_PATHS } from '../../../constants/Auth.constants';
 import {
-  ES_MAX_PAGE_SIZE,
   REDIRECT_PATHNAME,
   ROUTES,
 } from '../../../constants/constants';
@@ -56,9 +55,7 @@ import { User } from '../../../generated/entity/teams/user';
 import { AuthProvider as AuthProviderEnum } from '../../../generated/settings/settings';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
-import { useDomainStore } from '../../../hooks/useDomainStore';
 import axiosClient from '../../../rest';
-import { getDomainList } from '../../../rest/domainAPI';
 import {
   fetchAuthenticationConfig,
   fetchAuthorizerConfig,
@@ -79,8 +76,6 @@ import {
   clearOidcToken,
   getOidcToken,
   getRefreshToken,
-  setOidcToken,
-  setRefreshToken,
 } from '../../../utils/SwTokenStorageUtils';
 import { showErrorToast, showInfoToast } from '../../../utils/ToastUtils';
 import { checkIfUpdateRequired } from '../../../utils/UserDataUtils';
@@ -152,7 +147,6 @@ export const AuthProvider = ({
     isAuthenticating,
     initializeAuthState,
   } = useApplicationStore();
-  const { updateDomains, updateDomainLoading } = useDomainStore();
   const tokenService = useRef<TokenService>(TokenService.getInstance());
 
   const location = useCustomLocation();
@@ -198,8 +192,7 @@ export const AuthProvider = ({
     removeSession();
 
     // Clear tokens properly during logout
-    await setOidcToken('');
-    await setRefreshToken('');
+    await clearOidcToken();
 
     setApplicationLoading(false);
 
@@ -209,21 +202,6 @@ export const AuthProvider = ({
     // Upon logout, redirect to the login page
     navigate(ROUTES.SIGNIN);
   }, [timeoutId]);
-
-  const fetchDomainList = useCallback(async () => {
-    try {
-      updateDomainLoading(true);
-      const { data } = await getDomainList({
-        limit: ES_MAX_PAGE_SIZE,
-        fields: 'parent',
-      });
-      updateDomains(data);
-    } catch (error) {
-      // silent fail
-    } finally {
-      updateDomainLoading(false);
-    }
-  }, []);
 
   const handledVerifiedUser = () => {
     if (!applicationRoutesClass.isProtectedRoute(location.pathname)) {
@@ -279,8 +257,6 @@ export const AuthProvider = ({
       if (res) {
         setCurrentUser(res);
         setIsAuthenticated(true);
-        // Fetch domains at the start
-        await fetchDomainList();
       } else {
         resetUserDetails();
       }
@@ -382,9 +358,6 @@ export const AuthProvider = ({
         if (res) {
           const userDetails = await checkIfUpdateRequired(res, newUser);
           setCurrentUser(userDetails);
-
-          // Fetch domains at the start
-          await fetchDomainList();
 
           handledVerifiedUser();
           // Start expiry timer on successful login
@@ -575,7 +548,7 @@ export const AuthProvider = ({
         // show an error toast if provider is null or not supported
         if (provider && Object.values(AuthProviderEnum).includes(provider)) {
           const configJson = getAuthConfig(authConfig);
-          validateAuthFields(configJson, t);
+          validateAuthFields(configJson);
           setJwtPrincipalClaims(authConfig.jwtPrincipalClaims);
           setJwtPrincipalClaimsMapping(authConfig.jwtPrincipalClaimsMapping);
           setAuthConfig(configJson);
@@ -656,9 +629,9 @@ export const AuthProvider = ({
           <Auth0Provider
             useRefreshTokens
             cacheLocation="memory"
-            clientId={authConfig.clientId.toString()}
-            domain={authConfig.authority.toString()}
-            redirectUri={authConfig.callbackUrl.toString()}>
+            clientId={authConfig.clientId?.toString() ?? ''}
+            domain={authConfig.authority?.toString() ?? ''}
+            redirectUri={authConfig.callbackUrl?.toString()}>
             <Auth0Authenticator ref={authenticatorRef}>
               {childElement}
             </Auth0Authenticator>

@@ -14,7 +14,10 @@ import { expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { DOMAIN_TAGS, PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../../constant/config';
+import {
+  DOMAIN_TAGS,
+  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
+} from '../../../constant/config';
 import { PolicyClass } from '../../../support/access-control/PoliciesClass';
 import { RolesClass } from '../../../support/access-control/RolesClass';
 import { TableClass } from '../../../support/entity/TableClass';
@@ -37,6 +40,7 @@ import {
   waitForImportAsyncResponse,
 } from '../../../utils/testCases';
 import { test as base } from '../../fixtures/pages';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 // CSV test data as constants
 const VALID_TEST_CASES_CSV = `name*,displayName,description,testDefinition*,entityFQN*,testSuite,parameterValues,computePassedFailedRowCount,useDynamicAssertion,inspectionQuery,tags,glossaryTerms
@@ -106,7 +110,12 @@ const getFqn = (table: TableClass): string => {
 
 test.describe(
   'Test Case Bulk Import/Export - Admin User',
-  { tag: [`${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality`, PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ.tag] },
+  {
+    tag: [
+      `${DOMAIN_TAGS.OBSERVABILITY}:Data_Quality`,
+      PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ.tag,
+    ],
+  },
   () => {
     const table = new TableClass();
 
@@ -242,22 +251,16 @@ test.describe(
 
       try {
         await test.step('Navigate to Import Page', async () => {
-          // Navigate to Data Quality tab
           await visitDataQualityTab(page, table);
-
-          await page
-            .getByTestId('table-profiler-container')
-            .getByTestId('manage-button')
-            .click();
-
+          await clickManageButton(page, 'table');
           await page.getByTestId('import-button').click();
           await expect(page).toHaveURL(/\/bulk\/import\/testCase/);
         });
 
         await test.step('Upload Invalid CSV and Verify Errors', async () => {
-          await page.waitForSelector('[type="file"]', { state: 'attached' });
+          await page.locator('[type="file"]').waitFor({ state: 'attached' });
           await page.setInputFiles('[type="file"]', csvFilePath);
-          await page.waitForSelector('[data-testid="upload-file-widget"]', {
+          await page.getByTestId('upload-file-widget').waitFor({
             state: 'hidden',
             timeout: 10000,
           });
@@ -648,9 +651,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await clickManageButton(page, 'testSuite');
       const download = await performTestCaseExport(page);
@@ -671,9 +672,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await clickManageButton(page, 'testSuite');
       await navigateToImportPage(page, /\/bulk\/import\/testCase/);
@@ -693,9 +692,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await clickManageButton(page, 'testSuite');
       await navigateToBulkEditPage(page);
@@ -718,9 +715,7 @@ test.describe(
       );
       await page.goto(`/test-suites/${testSuiteName}`);
       await testCaseListResponse;
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await clickManageButton(page, 'testSuite');
       await navigateToBulkEditPage(page);

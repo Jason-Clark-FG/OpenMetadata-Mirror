@@ -30,6 +30,7 @@ import './CustomPropertiesSection.less';
 const CustomPropertiesSection = ({
   entityData,
   entityTypeDetail,
+  emptyStateMessage,
   onExtensionUpdate,
   hasEditPermissions,
   isEntityDataLoading,
@@ -74,7 +75,7 @@ const CustomPropertiesSection = ({
     }
 
     return (
-      <div className="lineage-items-list empty-state">
+      <div className="lineage-items-list">
         <ErrorPlaceHolderNew
           className="text-grey-14"
           icon={<AddPlaceHolderIcon height={100} width={100} />}
@@ -91,7 +92,7 @@ const CustomPropertiesSection = ({
                 />
               }
               values={{
-                entity: t('label.custom-property-plural'),
+                entity: emptyStateMessage ?? t('label.entity'),
                 docs: t('label.doc-plural-lowercase'),
               }}
             />
@@ -99,7 +100,7 @@ const CustomPropertiesSection = ({
         </ErrorPlaceHolderNew>
       </div>
     );
-  }, [searchText]);
+  }, [searchText, emptyStateMessage]);
 
   if (isEntityDataLoading) {
     return <Loader size="default" />;
@@ -107,7 +108,7 @@ const CustomPropertiesSection = ({
 
   if (!viewCustomPropertiesPermission) {
     return (
-      <div className="lineage-items-list empty-state">
+      <div className="lineage-items-list">
         <ErrorPlaceHolderNew
           className="text-grey-14 permission-error-placeholder"
           type={ERROR_PLACEHOLDER_TYPE.PERMISSION}>

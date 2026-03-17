@@ -23,12 +23,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.entity.app.AppExtension;
 import org.openmetadata.schema.entity.app.AppRunRecord;
+import org.openmetadata.schema.entity.app.AppSchedule;
 import org.openmetadata.schema.entity.app.SuccessContext;
 import org.openmetadata.schema.system.EntityStats;
 import org.openmetadata.schema.system.Stats;
 import org.openmetadata.schema.system.StepStats;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.Entity;
+import org.openmetadata.service.apps.bundles.searchIndex.BulkSink;
 import org.openmetadata.service.apps.bundles.searchIndex.ReindexingJobContext;
 import org.openmetadata.service.apps.bundles.searchIndex.ReindexingProgressListener;
 import org.openmetadata.service.jdbi3.CollectionDAO;
@@ -60,6 +64,11 @@ public class DistributedJobStatsAggregator {
   private ReindexingProgressListener progressListener;
   private ReindexingJobContext jobContext;
   private final AtomicReference<IndexJobStatus> lastNotifiedStatus = new AtomicReference<>();
+  private long lastBroadcastSuccess = -1;
+  private long lastBroadcastFailed = -1;
+  private volatile BulkSink bulkSink;
+  private String cachedRunType;
+  private AppSchedule cachedScheduleInfo;
 
   public DistributedJobStatsAggregator(DistributedSearchIndexCoordinator coordinator, UUID jobId) {
     this(coordinator, jobId, null, null, DEFAULT_POLL_INTERVAL_MS);
@@ -96,6 +105,10 @@ public class DistributedJobStatsAggregator {
     this.jobContext = context;
   }
 
+  public void setBulkSink(BulkSink sink) {
+    this.bulkSink = sink;
+  }
+
   /** Safely convert long to int, capping at Integer.MAX_VALUE to prevent overflow */
   private static int safeToInt(long value) {
     if (value > Integer.MAX_VALUE) {
@@ -112,16 +125,38 @@ public class DistributedJobStatsAggregator {
    */
   public void start() {
     if (running.compareAndSet(false, true)) {
+      cacheAppRunRecordFields();
+
       scheduler =
           Executors.newSingleThreadScheduledExecutor(
               Thread.ofPlatform()
-                  .name("stats-aggregator-" + jobId.toString().substring(0, 8))
+                  .name("reindex-stats-aggregator-" + jobId.toString().substring(0, 8))
                   .factory());
 
       scheduler.scheduleAtFixedRate(
           this::aggregateAndBroadcast, 0, pollIntervalMs, TimeUnit.MILLISECONDS);
 
       LOG.info("Started stats aggregator for job {} with interval {}ms", jobId, pollIntervalMs);
+    }
+  }
+
+  private void cacheAppRunRecordFields() {
+    if (appId == null || appStartTime == null) {
+      return;
+    }
+    try {
+      CollectionDAO dao = coordinator.getCollectionDAO();
+      String json =
+          dao.appExtensionTimeSeriesDao()
+              .getByAppIdAndTimestamp(
+                  appId.toString(), appStartTime, AppExtension.ExtensionType.STATUS.toString());
+      if (json != null) {
+        AppRunRecord record = JsonUtils.readValue(json, AppRunRecord.class);
+        cachedRunType = record.getRunType();
+        cachedScheduleInfo = record.getScheduleInfo();
+      }
+    } catch (Exception e) {
+      LOG.debug("Could not cache AppRunRecord fields for aggregator", e);
     }
   }
 
@@ -159,7 +194,6 @@ public class DistributedJobStatsAggregator {
    */
   private void aggregateAndBroadcast() {
     try {
-      LOG.debug("Stats aggregator polling for job {}", jobId);
       SearchIndexJob job = coordinator.getJobWithAggregatedStats(jobId);
       if (job == null) {
         LOG.warn("Job {} not found, stopping aggregator", jobId);
@@ -167,27 +201,31 @@ public class DistributedJobStatsAggregator {
         return;
       }
 
-      LOG.debug(
-          "Aggregated stats from DB for job {}: processed={}, success={}, failed={}, status={}",
-          jobId,
-          job.getProcessedRecords(),
-          job.getSuccessRecords(),
-          job.getFailedRecords(),
-          job.getStatus());
+      // Skip broadcast if stats haven't changed (reduces log noise and DB load)
+      boolean statsChanged =
+          job.getSuccessRecords() != lastBroadcastSuccess
+              || job.getFailedRecords() != lastBroadcastFailed;
+
+      if (!statsChanged && !job.isTerminal()) {
+        return;
+      }
+
+      lastBroadcastSuccess = job.getSuccessRecords();
+      lastBroadcastFailed = job.getFailedRecords();
+
+      // Fetch server stats once and reuse for all conversions
+      CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStats =
+          fetchServerStats(job);
 
       // Convert to WebSocket message format
-      AppRunRecord appRecord = convertToAppRunRecord(job);
+      AppRunRecord appRecord = convertToAppRunRecord(job, serverStats);
 
       // Broadcast via WebSocket
       broadcastStats(appRecord);
 
       // Notify progress listener
-      notifyProgressListener(job);
+      notifyProgressListener(job, serverStats);
 
-      // Note: Do NOT auto-stop when job is terminal. The executor will call stop()
-      // after ensuring final stats are broadcast with forceUpdate(). This prevents
-      // a race condition where the aggregator stops before all partition stats are
-      // committed to the database.
       if (job.isTerminal()) {
         LOG.info(
             "Job {} is in terminal state {}, waiting for executor to stop aggregator",
@@ -200,20 +238,51 @@ public class DistributedJobStatsAggregator {
     }
   }
 
+  private CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats fetchServerStats(
+      SearchIndexJob job) {
+    try {
+      return coordinator
+          .getCollectionDAO()
+          .searchIndexServerStatsDAO()
+          .getAggregatedStats(job.getId().toString());
+    } catch (Exception e) {
+      LOG.debug("Could not fetch aggregated server stats for job {}", job.getId(), e);
+      return null;
+    }
+  }
+
   /**
    * Notify the progress listener about job status and progress.
    *
    * @param job The current job state
    */
-  private void notifyProgressListener(SearchIndexJob job) {
+  private void notifyProgressListener(
+      SearchIndexJob job,
+      CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStats) {
     if (progressListener == null || jobContext == null) {
       return;
     }
 
     try {
-      Stats stats = convertToStats(job);
+      Stats stats = convertToStats(job, serverStats);
       IndexJobStatus currentStatus = job.getStatus();
       IndexJobStatus previousStatus = lastNotifiedStatus.get();
+
+      // Set distributed metadata on context so listeners can include it in broadcasts
+      if (jobContext instanceof DistributedJobContext distributedContext) {
+        if (job.getServerStats() != null && !job.getServerStats().isEmpty()) {
+          distributedContext.setDistributedMetadata("serverStats", job.getServerStats());
+          distributedContext.setDistributedMetadata("serverCount", job.getServerStats().size());
+        }
+        if (serverStats != null) {
+          distributedContext.setDistributedMetadata("aggregatedServerStats", serverStats);
+        }
+        distributedContext.setDistributedMetadata("distributedJobId", job.getId().toString());
+        distributedContext.setDistributedMetadata("progressPercent", job.getProgressPercent());
+        if (job.getEntityStats() != null) {
+          distributedContext.setDistributedMetadata("entityTypeCount", job.getEntityStats().size());
+        }
+      }
 
       // Always notify progress updates
       progressListener.onProgressUpdate(stats, jobContext);
@@ -252,20 +321,10 @@ public class DistributedJobStatsAggregator {
    * @param job The distributed job
    * @return Stats object
    */
-  private Stats convertToStats(SearchIndexJob job) {
+  private Stats convertToStats(
+      SearchIndexJob job,
+      CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStatsAggr) {
     Stats stats = new Stats();
-
-    // Try to get aggregated server stats for accurate reader/sink breakdown
-    CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStatsAggr = null;
-    try {
-      serverStatsAggr =
-          coordinator
-              .getCollectionDAO()
-              .searchIndexServerStatsDAO()
-              .getAggregatedStats(job.getId().toString());
-    } catch (Exception e) {
-      LOG.debug("Could not fetch aggregated server stats for job {}", job.getId(), e);
-    }
 
     StepStats jobStats = new StepStats();
     jobStats.setTotalRecords(safeToInt(job.getTotalRecords()));
@@ -287,40 +346,45 @@ public class DistributedJobStatsAggregator {
     }
     stats.setEntityStats(entityStats);
 
+    // Server stats can overcount on recovery (crashed server's flushed stats + recovering server's
+    // stats for re-read records). Partition-level processedCount is the ground truth, so cap
+    // server stats to prevent reader/process/sink success exceeding what was actually processed.
+    long partitionTruth = job.getProcessedRecords();
+
     StepStats readerStats = new StepStats();
     readerStats.setTotalRecords(safeToInt(job.getTotalRecords()));
     if (serverStatsAggr != null) {
-      readerStats.setSuccessRecords(safeToInt(serverStatsAggr.readerSuccess()));
+      readerStats.setSuccessRecords(
+          safeToInt(Math.min(serverStatsAggr.readerSuccess(), partitionTruth)));
       readerStats.setFailedRecords(safeToInt(serverStatsAggr.readerFailed()));
       readerStats.setWarningRecords(safeToInt(serverStatsAggr.readerWarnings()));
     } else {
-      readerStats.setSuccessRecords(safeToInt(job.getProcessedRecords()));
+      readerStats.setSuccessRecords(safeToInt(partitionTruth));
       readerStats.setFailedRecords(0);
       readerStats.setWarningRecords(0);
     }
     stats.setReaderStats(readerStats);
 
-    // Process stats - building search index documents from entities
     StepStats processStats = new StepStats();
     if (serverStatsAggr != null) {
-      long processTotal = serverStatsAggr.processSuccess() + serverStatsAggr.processFailed();
+      long processSuccess = Math.min(serverStatsAggr.processSuccess(), partitionTruth);
+      long processTotal = processSuccess + serverStatsAggr.processFailed();
       processStats.setTotalRecords(safeToInt(processTotal));
-      processStats.setSuccessRecords(safeToInt(serverStatsAggr.processSuccess()));
+      processStats.setSuccessRecords(safeToInt(processSuccess));
       processStats.setFailedRecords(safeToInt(serverStatsAggr.processFailed()));
     } else {
-      // Fallback: assume all read records were processed successfully
-      processStats.setTotalRecords(safeToInt(job.getProcessedRecords()));
-      processStats.setSuccessRecords(safeToInt(job.getProcessedRecords()));
+      processStats.setTotalRecords(safeToInt(partitionTruth));
+      processStats.setSuccessRecords(safeToInt(partitionTruth));
       processStats.setFailedRecords(0);
     }
     stats.setProcessStats(processStats);
 
-    // Sink stats - writing to search index (only includes successfully processed docs)
     StepStats sinkStats = new StepStats();
     if (serverStatsAggr != null) {
-      long sinkTotal = serverStatsAggr.sinkSuccess() + serverStatsAggr.sinkFailed();
+      long sinkSuccess = Math.min(serverStatsAggr.sinkSuccess(), partitionTruth);
+      long sinkTotal = sinkSuccess + serverStatsAggr.sinkFailed();
       sinkStats.setTotalRecords(safeToInt(sinkTotal));
-      sinkStats.setSuccessRecords(safeToInt(serverStatsAggr.sinkSuccess()));
+      sinkStats.setSuccessRecords(safeToInt(sinkSuccess));
       sinkStats.setFailedRecords(safeToInt(serverStatsAggr.sinkFailed()));
     } else {
       sinkStats.setTotalRecords(safeToInt(job.getProcessedRecords()));
@@ -343,6 +407,15 @@ public class DistributedJobStatsAggregator {
     }
     stats.setVectorStats(vectorStats);
 
+    // Inject column stats from the bulk sink (columns are indexed as a side effect
+    // of table processing and are not tracked via partitions)
+    if (bulkSink != null) {
+      StepStats columnStats = bulkSink.getColumnStats();
+      if (columnStats != null && columnStats.getTotalRecords() > 0) {
+        stats.getEntityStats().getAdditionalProperties().put(Entity.TABLE_COLUMN, columnStats);
+      }
+    }
+
     return stats;
   }
 
@@ -352,16 +425,18 @@ public class DistributedJobStatsAggregator {
    * @param job The distributed job
    * @return AppRunRecord in the format expected by the UI
    */
-  private AppRunRecord convertToAppRunRecord(SearchIndexJob job) {
-    // Reuse the shared conversion logic for consistent stats
-    Stats stats = convertToStats(job);
+  private AppRunRecord convertToAppRunRecord(
+      SearchIndexJob job,
+      CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStats) {
+    Stats stats = convertToStats(job, serverStats);
 
     // Create AppRunRecord
     AppRunRecord appRecord = new AppRunRecord();
     // Use the actual app ID so frontend can match the record for live updates
     appRecord.setAppId(appId != null ? appId : UUID.randomUUID());
     appRecord.setStatus(convertStatus(job.getStatus()));
-    appRecord.setRunType("SearchIndexApp");
+    appRecord.setRunType(cachedRunType != null ? cachedRunType : "OnDemandJob");
+    appRecord.setScheduleInfo(cachedScheduleInfo);
     // Use the app's start time so frontend can match the record
     appRecord.setStartTime(appStartTime != null ? appStartTime : job.getStartedAt());
     appRecord.setEndTime(job.getCompletedAt());
@@ -384,18 +459,8 @@ public class DistributedJobStatsAggregator {
       successContext.withAdditionalProperty("serverCount", job.getServerStats().size());
     }
 
-    // Add aggregated server stats from the dedicated table for more accurate sink stats
-    try {
-      CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStatsAggr =
-          coordinator
-              .getCollectionDAO()
-              .searchIndexServerStatsDAO()
-              .getAggregatedStats(job.getId().toString());
-      if (serverStatsAggr != null) {
-        successContext.withAdditionalProperty("aggregatedServerStats", serverStatsAggr);
-      }
-    } catch (Exception e) {
-      LOG.debug("Could not fetch aggregated server stats for job {}", job.getId(), e);
+    if (serverStats != null) {
+      successContext.withAdditionalProperty("aggregatedServerStats", serverStats);
     }
 
     appRecord.setSuccessContext(successContext);
@@ -431,22 +496,15 @@ public class DistributedJobStatsAggregator {
     if (wsManager != null) {
       String messageJson = JsonUtils.pojoToJson(appRecord);
       wsManager.broadCastMessageToAll(SEARCH_INDEX_JOB_BROADCAST_CHANNEL, messageJson);
-      LOG.info(
-          "Broadcast distributed job stats via WebSocket - job: {}, progress: {}%, status: {}, "
-              + "success: {}, failed: {}",
+      Stats broadcastedStats =
+          (Stats) appRecord.getSuccessContext().getAdditionalProperties().get("stats");
+      LOG.debug(
+          "Broadcast job stats - job: {}, progress: {}%, status: {}, success: {}, failed: {}",
           jobId,
           appRecord.getSuccessContext().getAdditionalProperties().get("progressPercent"),
           appRecord.getStatus(),
-          appRecord.getSuccessContext().getAdditionalProperties().get("stats") != null
-              ? ((Stats) appRecord.getSuccessContext().getAdditionalProperties().get("stats"))
-                  .getJobStats()
-                  .getSuccessRecords()
-              : 0,
-          appRecord.getSuccessContext().getAdditionalProperties().get("stats") != null
-              ? ((Stats) appRecord.getSuccessContext().getAdditionalProperties().get("stats"))
-                  .getJobStats()
-                  .getFailedRecords()
-              : 0);
+          broadcastedStats != null ? broadcastedStats.getJobStats().getSuccessRecords() : 0,
+          broadcastedStats != null ? broadcastedStats.getJobStats().getFailedRecords() : 0);
     } else {
       LOG.warn("WebSocket manager not available, skipping distributed job broadcast");
     }
@@ -472,5 +530,15 @@ public class DistributedJobStatsAggregator {
    */
   public SearchIndexJob getCurrentStats() {
     return coordinator.getJobWithAggregatedStats(jobId);
+  }
+
+  public AppRunRecord buildFinalAppRunRecord() {
+    SearchIndexJob job = coordinator.getJobWithAggregatedStats(jobId);
+    if (job == null) {
+      return null;
+    }
+    CollectionDAO.SearchIndexServerStatsDAO.AggregatedServerStats serverStats =
+        fetchServerStats(job);
+    return convertToAppRunRecord(job, serverStats);
   }
 }
