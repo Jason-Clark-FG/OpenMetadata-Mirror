@@ -1,16 +1,41 @@
-.marketplace-draggable-header {
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+@import (reference) '../../styles/variables.less';
+
+.customize-details-page {
+  box-shadow: @box-shadow-surface-default;
+  border: 1px solid #eaecf5;
+  background-color: #f0f9ff;
+  padding: 20px;
+  border-radius: 12px;
+
+  .customize-page-header {
+    border: 0.5px solid @primary-3;
+  }
+}
+
+.marketplace-drag-handle {
+  cursor: move;
+  padding: 4px;
+  border-radius: 6px;
+  color: #98a2b3;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f9fafb;
-  border: 1px solid #eaecf0;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
-  font-weight: 600;
-  font-size: 14px;
-  color: #344054;
-  cursor: move;
+
+  &:hover {
+    background-color: #f2f4f7;
+    color: #475467;
+  }
 }
 
 .marketplace-customize-widgets {
@@ -18,4 +43,5 @@
   flex-direction: column;
   gap: 16px;
   margin-top: 24px;
+  min-height: 500px;
 }

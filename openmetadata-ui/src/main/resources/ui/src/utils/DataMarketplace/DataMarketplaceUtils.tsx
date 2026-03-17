@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { ReactNode } from 'react';
 import MarketplaceDataProductsWidget from '../../components/DataMarketplace/MarketplaceDataProductsWidget/MarketplaceDataProductsWidget.component';
 import MarketplaceDomainsWidget from '../../components/DataMarketplace/MarketplaceDomainsWidget/MarketplaceDomainsWidget.component';
 import { DetailPageWidgetKeys } from '../../enums/CustomizeDetailPage.enum';
@@ -18,13 +19,15 @@ import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.inte
 
 export const getDataMarketplaceWidgetsFromKey = (
   widgetConfig: WidgetConfig,
-  isEditView?: boolean
+  isEditView?: boolean,
+  dragHandle?: ReactNode
 ) => {
   if (
     widgetConfig.i.startsWith(DetailPageWidgetKeys.MARKETPLACE_DATA_PRODUCTS)
   ) {
     return (
       <MarketplaceDataProductsWidget
+        dragHandle={dragHandle}
         isEditView={isEditView}
         widgetKey={widgetConfig.i}
       />
@@ -33,6 +36,7 @@ export const getDataMarketplaceWidgetsFromKey = (
   if (widgetConfig.i.startsWith(DetailPageWidgetKeys.MARKETPLACE_DOMAINS)) {
     return (
       <MarketplaceDomainsWidget
+        dragHandle={dragHandle}
         isEditView={isEditView}
         widgetKey={widgetConfig.i}
       />

@@ -19,10 +19,7 @@ import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  INITIAL_PAGING_VALUE,
-  ROUTES,
-} from '../../../constants/constants';
+import { INITIAL_PAGING_VALUE, ROUTES } from '../../../constants/constants';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
@@ -46,7 +43,10 @@ import './marketplace-domains-widget.less';
 
 const DISPLAY_COUNT = 3;
 
-const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
+const MarketplaceDomainsWidget = ({
+  isEditView,
+  dragHandle,
+}: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { permissions } = usePermissionProvider();
@@ -187,9 +187,7 @@ const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
       data-testid="marketplace-domains-widget">
       <div className="marketplace-widget-header">
         <div>
-          <Typography.Title
-            className="marketplace-widget-title"
-            level={5}>
+          <Typography.Title className="marketplace-widget-title" level={5}>
             {t('label.new')} {t('label.domain-plural')}
           </Typography.Title>
           <Typography.Text className="text-grey-muted text-xs">
@@ -198,6 +196,7 @@ const MarketplaceDomainsWidget = ({ isEditView }: WidgetCommonProps) => {
             })}
           </Typography.Text>
         </div>
+        {dragHandle}
         {!isEditView && (
           <div className="marketplace-widget-actions">
             {permissions.domain?.Create && (

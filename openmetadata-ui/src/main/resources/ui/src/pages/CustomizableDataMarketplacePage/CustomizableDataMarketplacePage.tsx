@@ -13,7 +13,7 @@
 
 import { HolderOutlined } from '@ant-design/icons';
 import { compare } from 'fast-json-patch';
-import { isEmpty, startCase } from 'lodash';
+import { isEmpty } from 'lodash';
 import { useCallback, useMemo, useState } from 'react';
 import { useDrag, useDrop } from 'react-dnd';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +43,7 @@ const DraggableWidgetCard = ({
   index: number;
   moveWidget: (from: number, to: number) => void;
 }) => {
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag, dragPreview] = useDrag({
     type: DRAG_TYPE,
     item: { index },
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
@@ -59,19 +59,17 @@ const DraggableWidgetCard = ({
     },
   });
 
-  const widgetName = startCase(
-    widget.i.replace('KnowledgePanel.', '').replace(/\d+$/, '')
+  const dragHandle = (
+    <div className="marketplace-drag-handle" ref={drag}>
+      <HolderOutlined />
+    </div>
   );
 
   return (
     <div
-      ref={(node) => drag(drop(node))}
+      ref={(node) => dragPreview(drop(node))}
       style={{ opacity: isDragging ? 0.5 : 1 }}>
-      <div className="marketplace-draggable-header">
-        <HolderOutlined />
-        <span>{widgetName}</span>
-      </div>
-      {getDataMarketplaceWidgetsFromKey(widget, true)}
+      {getDataMarketplaceWidgetsFromKey(widget, true, dragHandle)}
     </div>
   );
 };
@@ -162,26 +160,28 @@ const CustomizableDataMarketplacePage = ({
       pageTitle={t('label.customize-entity', {
         entity: t('label.data-marketplace'),
       })}>
-      <CustomizablePageHeader
-        disableSave={disableSave}
-        personaName={getEntityName(personaDetails)}
-        onReset={handleReset}
-        onSave={handleSave}
-      />
-      <div className="marketplace-grid-wrapper" dir="ltr">
-        <div className="p-x-box">
-          <MarketplaceGreetingBanner />
-          <MarketplaceSearchBar isEditView />
-        </div>
-        <div className="marketplace-customize-widgets p-x-box">
-          {layout.map((widget, index) => (
-            <DraggableWidgetCard
-              index={index}
-              key={widget.i}
-              moveWidget={moveWidget}
-              widget={widget}
-            />
-          ))}
+      <div className="customize-details-page">
+        <CustomizablePageHeader
+          disableSave={disableSave}
+          personaName={getEntityName(personaDetails)}
+          onReset={handleReset}
+          onSave={handleSave}
+        />
+        <div className="marketplace-grid-wrapper" dir="ltr">
+          <div className="p-x-box">
+            <MarketplaceGreetingBanner />
+            <MarketplaceSearchBar isEditView />
+          </div>
+          <div className="marketplace-customize-widgets p-x-box">
+            {layout.map((widget, index) => (
+              <DraggableWidgetCard
+                index={index}
+                key={widget.i}
+                moveWidget={moveWidget}
+                widget={widget}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </PageLayoutV1>

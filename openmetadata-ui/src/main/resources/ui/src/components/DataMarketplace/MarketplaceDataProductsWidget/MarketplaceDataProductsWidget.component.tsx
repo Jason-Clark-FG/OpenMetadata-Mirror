@@ -19,10 +19,7 @@ import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  INITIAL_PAGING_VALUE,
-  ROUTES,
-} from '../../../constants/constants';
+import { INITIAL_PAGING_VALUE, ROUTES } from '../../../constants/constants';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
@@ -31,7 +28,10 @@ import { CreateDataProduct } from '../../../generated/api/domains/createDataProd
 import { CreateDomain } from '../../../generated/api/domains/createDomain';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { WidgetCommonProps } from '../../../pages/CustomizablePage/CustomizablePage.interface';
-import { addDataProducts, patchDataProduct } from '../../../rest/dataProductAPI';
+import {
+  addDataProducts,
+  patchDataProduct,
+} from '../../../rest/dataProductAPI';
 import { searchData } from '../../../rest/miscAPI';
 import { getTextFromHtmlString } from '../../../utils/BlockEditorUtils';
 import { createEntityWithCoverImage } from '../../../utils/CoverImageUploadUtils';
@@ -47,7 +47,10 @@ import './marketplace-data-products-widget.less';
 
 const DISPLAY_COUNT = 3;
 
-const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
+const MarketplaceDataProductsWidget = ({
+  isEditView,
+  dragHandle,
+}: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { permissions } = usePermissionProvider();
@@ -148,7 +151,10 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
         return;
       }
       navigate(
-        getEntityDetailsPath(EntityType.DATA_PRODUCT, dp.fullyQualifiedName ?? '')
+        getEntityDetailsPath(
+          EntityType.DATA_PRODUCT,
+          dp.fullyQualifiedName ?? ''
+        )
       );
     },
     [navigate, isEditView]
@@ -175,7 +181,9 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
 
   if (loading) {
     return (
-      <div className="marketplace-widget-section" data-testid="marketplace-dp-widget">
+      <div
+        className="marketplace-widget-section"
+        data-testid="marketplace-dp-widget">
         <Loader size="small" />
       </div>
     );
@@ -187,9 +195,7 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
       data-testid="marketplace-dp-widget">
       <div className="marketplace-widget-header">
         <div>
-          <Typography.Title
-            className="marketplace-widget-title"
-            level={5}>
+          <Typography.Title className="marketplace-widget-title" level={5}>
             {t('label.new')} {t('label.data-product-plural')}
           </Typography.Title>
           <Typography.Text className="text-grey-muted text-xs">
@@ -198,6 +204,7 @@ const MarketplaceDataProductsWidget = ({ isEditView }: WidgetCommonProps) => {
             })}
           </Typography.Text>
         </div>
+        {dragHandle}
         {!isEditView && (
           <div className="marketplace-widget-actions">
             {permissions.dataProduct?.Create && (
