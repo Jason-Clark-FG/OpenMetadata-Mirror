@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Typography } from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 
@@ -22,15 +23,16 @@ const MarketplaceGreetingBanner = () => {
 
   return (
     <div className="text-center p-b-sm" data-testid="marketplace-greeting">
-      <h4
+      <Typography
+        as="h4"
         className="tw:text-lg tw:font-semibold tw:text-text-primary tw:mb-1 tw:mt-0"
         data-testid="greeting-text">
         {t('label.hey-comma-name', { name: displayName })}
         {'\uD83D\uDC4B'}
-      </h4>
-      <span className="tw:text-sm tw:text-text-tertiary">
+      </Typography>
+      <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
         {t('message.discover-data-products-subtitle')}
-      </span>
+      </Typography>
     </div>
   );
 };

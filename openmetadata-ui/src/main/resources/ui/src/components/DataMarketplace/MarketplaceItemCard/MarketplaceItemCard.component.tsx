@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { Typography } from '@openmetadata/ui-core-components';
 import { ReactNode } from 'react';
 import './marketplace-item-card.less';
 
@@ -49,16 +50,18 @@ const MarketplaceItemCard = ({
         {icon}
       </div>
       <div className="marketplace-item-card-content">
-        <span
+        <Typography
+          as="span"
           className="marketplace-item-card-name tw:truncate tw:block"
           title={name}>
           {name}
-        </span>
-        <span
+        </Typography>
+        <Typography
+          as="span"
           className="marketplace-item-card-subtitle tw:truncate tw:block"
           title={subtitle}>
           {subtitle}
-        </span>
+        </Typography>
       </div>
     </div>
   );

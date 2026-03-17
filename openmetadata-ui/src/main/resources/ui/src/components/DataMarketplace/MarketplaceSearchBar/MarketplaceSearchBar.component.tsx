@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Input, Popover } from '@openmetadata/ui-core-components';
+import { Input, Popover, Typography } from '@openmetadata/ui-core-components';
 import { SearchLg } from '@untitledui/icons';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -146,9 +146,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     if (isSearching) {
       return (
         <div className="marketplace-search-results p-md">
-          <span className="tw:text-sm tw:text-text-tertiary">
+          <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
             {t('label.loading')}...
-          </span>
+          </Typography>
         </div>
       );
     }
@@ -156,9 +156,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     if (!hasResults) {
       return (
         <div className="marketplace-search-results p-md">
-          <span className="tw:text-sm tw:text-text-tertiary">
+          <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
             {t('label.no-data-found')}
-          </span>
+          </Typography>
         </div>
       );
     }
@@ -167,9 +167,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       <div className="marketplace-search-results">
         {dataProducts.length > 0 && (
           <div className="search-result-section">
-            <span className="search-result-section-title">
+            <Typography as="span" className="search-result-section-title">
               {t('label.data-product-plural')}
-            </span>
+            </Typography>
             {dataProducts.map((dp) => (
               <div
                 className="search-result-item"
@@ -186,20 +186,21 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 <div className="search-result-icon">
                   {getDataProductIconByUrl(dp.style?.iconURL)}
                 </div>
-                <span
+                <Typography
+                  as="span"
                   className="tw:truncate tw:block tw:text-sm"
                   title={dp.displayName || dp.name}>
                   {dp.displayName || dp.name}
-                </span>
+                </Typography>
               </div>
             ))}
           </div>
         )}
         {domains.length > 0 && (
           <div className="search-result-section">
-            <span className="search-result-section-title">
+            <Typography as="span" className="search-result-section-title">
               {t('label.domain-plural')}
-            </span>
+            </Typography>
             {domains.map((domain) => (
               <div
                 className="search-result-item"
@@ -216,11 +217,12 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 <div className="search-result-icon">
                   {getDomainIcon(domain.style?.iconURL)}
                 </div>
-                <span
+                <Typography
+                  as="span"
                   className="tw:truncate tw:block tw:text-sm"
                   title={domain.displayName || domain.name}>
                   {domain.displayName || domain.name}
-                </span>
+                </Typography>
               </div>
             ))}
           </div>

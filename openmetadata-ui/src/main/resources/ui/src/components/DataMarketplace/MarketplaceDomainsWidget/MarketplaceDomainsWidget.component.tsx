@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button } from '@openmetadata/ui-core-components';
+import { Button, Typography } from '@openmetadata/ui-core-components';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty, noop } from 'lodash';
 import { useSnackbar } from 'notistack';
@@ -186,14 +186,16 @@ const MarketplaceDomainsWidget = ({
       data-testid="marketplace-domains-widget">
       <div className="marketplace-widget-header">
         <div>
-          <h5 className="marketplace-widget-title tw:text-base tw:font-semibold tw:text-text-primary tw:m-0">
+          <Typography
+            as="h5"
+            className="marketplace-widget-title tw:text-base tw:font-semibold tw:text-text-primary tw:m-0">
             {t('label.new')} {t('label.domain-plural')}
-          </h5>
-          <span className="tw:text-xs tw:text-text-tertiary">
+          </Typography>
+          <Typography as="span" className="tw:text-xs tw:text-text-tertiary">
             {t('label.recently-created-entity', {
               entity: t('label.domain-plural'),
             })}
-          </span>
+          </Typography>
         </div>
         {dragHandle}
         {!isEditView && (
@@ -218,9 +220,9 @@ const MarketplaceDomainsWidget = ({
         )}
       </div>
       {isEmpty(domains) ? (
-        <span className="tw:text-sm tw:text-text-tertiary">
+        <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
           {t('label.no-entity', { entity: t('label.domain-plural') })}
-        </span>
+        </Typography>
       ) : (
         cardList
       )}
