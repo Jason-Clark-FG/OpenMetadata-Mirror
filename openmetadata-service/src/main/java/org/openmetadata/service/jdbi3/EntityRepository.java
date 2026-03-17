@@ -6908,18 +6908,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    if (fieldFetchers.size() <= 1) {
-      fieldFetchers.values().forEach(fetcher -> fetcher.accept(entities, fields));
-      return;
-    }
-    List<CompletableFuture<Void>> futures =
-        fieldFetchers.values().stream()
-            .map(
-                fetcher ->
-                    CompletableFuture.runAsync(
-                        () -> fetcher.accept(entities, fields), FIELD_FETCH_EXECUTOR))
-            .toList();
-    CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+    fieldFetchers.values().forEach(fetcher -> fetcher.accept(entities, fields));
   }
 
   private void fetchAndSetOwners(List<T> entities, Fields fields) {
