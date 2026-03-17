@@ -1376,7 +1376,9 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
     if (movedGlossaryTerm) {
       setIsTableLoading(true);
       const jsonPatch: Operation[] = isUndefined(movedGlossaryTerm.to)
-        ? [{ op: 'remove', path: '/parent' }]
+        ? movedGlossaryTerm.from.parent
+          ? [{ op: 'remove', path: '/parent' }]
+          : []
         : [
             {
               op: movedGlossaryTerm.from.parent ? 'replace' : 'add',
@@ -1599,7 +1601,9 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
                 <DropZone
                   className={classNames({ 'drop-over-table': isTableHovered })}
                   getDropOperation={() =>
-                    draggingRecord?.parent ? 'move' : 'cancel'
+                    draggingFqn && termsByFqn.get(draggingFqn)?.parent
+                      ? 'move'
+                      : 'cancel'
                   }
                   onDrop={async (e) => {
                     const item = e.items[0];
