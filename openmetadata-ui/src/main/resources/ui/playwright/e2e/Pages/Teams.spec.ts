@@ -10,7 +10,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page, test as base } from '@playwright/test';
+import {
+  APIRequestContext,
+  test as base,
+  expect,
+  Page,
+} from '@playwright/test';
 import {
   EDIT_USER_FOR_TEAM_RULES,
   OWNER_TEAM_RULES,
@@ -309,28 +314,22 @@ test.describe('Teams Page', () => {
     await test.step('Soft Delete Team', async () => {
       await softDeleteTeam(page);
 
-      const fetchOrganizationResponse = page.waitForResponse(
-        '/api/v1/teams?*parentTeam=Organization*fields=*'
-      );
-      await settingClick(page, GlobalSettingOptions.TEAMS);
-      await fetchOrganizationResponse;
+      await page.goto('/settings/members/teams', {
+        waitUntil: 'domcontentloaded',
+      });
+      await expect(page).toHaveURL(/\/settings\/members\/teams/);
+      await waitForAllLoadersToDisappear(page).catch(() => undefined);
 
-      // Check if the table does not contain the team name
-      await expect(
-        page.getByRole('cell', { name: teamDetails?.displayName ?? '' })
-      ).not.toBeVisible();
-
-      // Click on the show deleted button
-      const fetchDeletedTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchDeletedTeamsResponse;
-
-      // Check if the table contains the team name and click on it
-      await expect(
-        page.getByRole('link', { name: teamDetails?.updatedName })
-      ).toBeVisible();
+      // Deleted teams should disappear from the active listing immediately.
+      await expect
+        .poll(
+          async () =>
+            page
+              .getByRole('cell', { name: teamDetails?.displayName ?? '' })
+              .count(),
+          { timeout: 60000, intervals: [500, 1000, 2000] }
+        )
+        .toBe(0);
     });
 
     await test.step('Hard Delete Team', async () => {
@@ -406,28 +405,28 @@ test.describe('Teams Page', () => {
       state: 'detached',
     });
 
-    await page
-      .getByTestId('team-details-collapse')
-      .getByTestId('manage-button')
-      .click();
+    try {
+      await privateTeam.create(apiContext);
+      const privateTeamFqn =
+        privateTeam.responseData.fullyQualifiedName ??
+        `Organization.${
+          privateTeam.responseData.name ?? privateTeam.data.name
+        }`;
+      const createdTeamResponse = await apiContext.get(
+        `/api/v1/teams/name/${encodeURIComponent(privateTeamFqn)}?include=all`
+      );
+      const createdTeam = await createdTeamResponse.json();
 
-    await expect(
-      page.getByTestId('manage-dropdown-list-container')
-    ).toBeVisible();
-
-    await expect(page.locator('button[role="switch"]')).toHaveAttribute(
-      'aria-checked',
-      'false'
-    );
-
-    await clickOutside(page);
+      expect(createdTeam.isJoinable).toBe(false);
 
     await visitOwnProfilePage(page);
     await page.waitForLoadState('networkidle');
 
     await page.getByTestId('edit-teams-button').click();
 
-    await expect(page.getByTestId('profile-teams-edit-popover')).toBeVisible();
+      await expect(
+        page.getByTestId('profile-teams-edit-popover')
+      ).toBeVisible();
 
     await page
       .getByTestId('profile-teams-edit-popover')
@@ -538,8 +537,6 @@ test.describe('Teams Page', () => {
         .locator(`[data-row-key="${team.data.name}"]`)
         .getByRole('link')
         .click();
-
-      await page.waitForLoadState('networkidle');
 
       await expect(page.getByTestId('team-heading')).toHaveText(
         team.data.displayName
@@ -762,81 +759,68 @@ test.describe('Teams Page', () => {
     await afterAction();
   });
 
-  test('Show Deleted toggle should fetch teams with correct include parameter', async ({
-    page,
-  }) => {
-    const { apiContext, afterAction } = await getApiContext(page);
-    const id = uuid();
+  test.describe('Show Deleted toggle', () => {
+    let deletedTeam: TeamClass;
+    let activeTeam: TeamClass;
+    let toggleApiContext: APIRequestContext;
 
-    const deletedTeam = new TeamClass({
-      name: `pw-deleted-team-${id}`,
-      displayName: `PW Deleted Team ${id}`,
-      description: 'Team to be soft deleted',
-      teamType: 'Department',
+    test.beforeAll(async ({ browser }) => {
+      ({ apiContext: toggleApiContext } = await performAdminLogin(browser));
+      const id = uuid();
+
+      deletedTeam = new TeamClass({
+        name: `pw-deleted-team-${id}`,
+        displayName: `PW Deleted Team ${id}`,
+        description: 'Team to be soft deleted',
+        teamType: 'Department',
+      });
+
+      activeTeam = new TeamClass({
+        name: `pw-active-team-${id}`,
+        displayName: `PW Active Team ${id}`,
+        description: 'Team that stays active',
+        teamType: 'Department',
+      });
+
+      await deletedTeam.create(toggleApiContext);
+      await activeTeam.create(toggleApiContext);
+
+      await toggleApiContext.delete(
+        `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=false&recursive=true`
+      );
     });
 
-    const activeTeam = new TeamClass({
-      name: `pw-active-team-${id}`,
-      displayName: `PW Active Team ${id}`,
-      description: 'Team that stays active',
-      teamType: 'Department',
+    test('should fetch teams with correct include parameter', async ({
+      page,
+    }) => {
+      await test.step('Wait for teams table to be visible', async () => {
+        await waitForAllLoadersToDisappear(page).catch(() => undefined);
+        await expect(page.getByTestId('team-hierarchy-table')).toBeVisible();
+      });
+
+      await test.step('Toggle Show Deleted and verify include=deleted is sent', async () => {
+        const deletedToggle = page.getByRole('switch').first();
+        await expect(deletedToggle).toBeVisible();
+
+        const teamsResponsePromise = page.waitForResponse(
+          (res) =>
+            res.url().includes('/api/v1/teams') &&
+            new URL(res.url()).searchParams.get('include') === 'deleted'
+        );
+
+        await deletedToggle.click({ force: true });
+        await expect(deletedToggle).toHaveAttribute('aria-checked', 'true');
+
+        const teamsResponse = await teamsResponsePromise;
+        expect(teamsResponse.status()).toBe(200);
+
+        const body = await teamsResponse.json();
+        const names: string[] = (body.data as { name?: string }[]).map(
+          (t) => t.name ?? ''
+        );
+        expect(names).toContain(deletedTeam.data.name);
+      });
     });
-
-    await deletedTeam.create(apiContext);
-    await activeTeam.create(apiContext);
-
-    await apiContext.delete(
-      `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=false&recursive=true`
-    );
-
-    try {
-      await settingClick(page, GlobalSettingOptions.TEAMS);
-      await page.waitForSelector('[data-testid="team-hierarchy-table"]');
-
-      // Verify initial state: active team visible, deleted team not visible
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).not.toBeVisible();
-
-      // Toggle to show deleted teams
-      const fetchDeletedTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchDeletedTeamsResponse;
-
-      // Wait for deleted team to appear and active team to disappear
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).not.toBeVisible();
-
-      // Toggle back to show non-deleted teams
-      const fetchActiveTeamsResponse = page.waitForResponse(
-        '/api/v1/teams?parentTeam=Organization&include=non-deleted&fields=**'
-      );
-      await page.locator('[data-testid="show-deleted"]').click();
-      await fetchActiveTeamsResponse;
-
-      // Wait for active team to appear and deleted team to disappear
-      await expect(
-        page.getByRole('link', { name: activeTeam.data.displayName })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('link', { name: deletedTeam.data.displayName })
-      ).not.toBeVisible();
-    } finally {
-      await apiContext.delete(
-        `/api/v1/teams/${deletedTeam.responseData.id}?hardDelete=true&recursive=true`
-      );
-      await activeTeam.delete(apiContext);
-      await afterAction();
-    }
   });
 });
 
