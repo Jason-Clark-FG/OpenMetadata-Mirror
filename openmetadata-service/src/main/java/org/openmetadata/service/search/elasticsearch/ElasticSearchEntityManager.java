@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import es.co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import es.co.elastic.clients.elasticsearch.ElasticsearchClient;
 import es.co.elastic.clients.elasticsearch._types.BulkIndexByScrollFailure;
+import es.co.elastic.clients.elasticsearch._types.Conflicts;
 import es.co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import es.co.elastic.clients.elasticsearch._types.ErrorCause;
 import es.co.elastic.clients.elasticsearch._types.FieldValue;
@@ -66,6 +67,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.search.EntityManagementClient;
 import org.openmetadata.service.search.SearchClient;
 import org.openmetadata.service.search.SearchIndexRetryQueue;
+import org.openmetadata.service.search.SearchRetryUtil;
 import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.workflows.searchIndex.ReindexingUtil;
 
@@ -113,6 +115,10 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                           i.index(indexName)
                               .id(entry.getKey())
                               .document(toJsonData(entry.getValue())))));
+    }
+
+    if (operations.isEmpty()) {
+      return;
     }
 
     // Execute the async bulk request
@@ -305,6 +311,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
             u.index(indexName)
                 .id(docId)
                 .refresh(Refresh.True)
+                .retryOnConflict(3)
                 .script(
                     s ->
                         s.source(ss -> ss.scriptString(scriptTxt))
@@ -369,19 +376,22 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
     try {
       Map<String, JsonData> params = convertToJsonDataMap(doc);
 
-      client.update(
-          u ->
-              u.index(indexName)
-                  .id(docId)
-                  .refresh(Refresh.True)
-                  .scriptedUpsert(true)
-                  .upsert(params)
-                  .script(
-                      s ->
-                          s.source(ss -> ss.scriptString(scriptTxt))
-                              .lang(ScriptLanguage.Painless)
-                              .params(params)),
-          Map.class);
+      SearchRetryUtil.executeWithRetry(
+          () ->
+              client.update(
+                  u ->
+                      u.index(indexName)
+                          .id(docId)
+                          .refresh(Refresh.True)
+                          .retryOnConflict(3)
+                          .scriptedUpsert(true)
+                          .upsert(params)
+                          .script(
+                              s ->
+                                  s.source(ss -> ss.scriptString(scriptTxt))
+                                      .lang(ScriptLanguage.Painless)
+                                      .params(params)),
+                  Map.class));
 
       LOG.info(
           "Successfully updated entity in ElasticSearch for index: {}, docId: {}",
@@ -427,13 +437,8 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       client.updateByQuery(
           u ->
               u.index(Entity.getSearchRepository().getIndexOrAliasName(indexName))
-                  .query(
-                      q ->
-                          q.match(
-                              m ->
-                                  m.field(fieldAndValue.getKey())
-                                      .query(fieldAndValue.getValue())
-                                      .operator(Operator.And)))
+                  .query(exactFieldQuery(fieldAndValue))
+                  .conflicts(Conflicts.Proceed)
                   .script(
                       s ->
                           s.source(ss -> ss.scriptString(updates.getKey()))
@@ -465,13 +470,8 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
     client.updateByQuery(
         u ->
             u.index(indexNames)
-                .query(
-                    q ->
-                        q.match(
-                            m ->
-                                m.field(fieldAndValue.getKey())
-                                    .query(fieldAndValue.getValue())
-                                    .operator(Operator.And)))
+                .query(exactFieldQuery(fieldAndValue))
+                .conflicts(Conflicts.Proceed)
                 .script(
                     s ->
                         s.source(ss -> ss.scriptString(updates.getKey()))
@@ -531,13 +531,8 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           client.updateByQuery(
               u ->
                   u.index(indexName)
-                      .query(
-                          q ->
-                              q.match(
-                                  m ->
-                                      m.field(fieldAndValue.getKey())
-                                          .query(fieldAndValue.getValue())
-                                          .operator(Operator.And)))
+                      .query(exactFieldQuery(fieldAndValue))
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(ss -> ss.scriptString(ADD_UPDATE_ENTITY_RELATIONSHIP))
@@ -631,6 +626,28 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
     }
   }
 
+  private Query exactFieldQuery(Pair<String, String> fieldAndValue) {
+    String field = fieldAndValue.getKey();
+    String value = fieldAndValue.getValue();
+    if ("_id".equals(field)) {
+      return Query.of(q -> q.ids(i -> i.values(value)));
+    }
+
+    Query termOnField = Query.of(q -> q.term(t -> t.field(field).value(FieldValue.of(value))));
+    Query termOnKeyword =
+        field.endsWith(".keyword")
+            ? null
+            : Query.of(q -> q.term(t -> t.field(field + ".keyword").value(FieldValue.of(value))));
+    Query matchOnField =
+        Query.of(q -> q.match(m -> m.field(field).query(value).operator(Operator.And)));
+
+    BoolQuery.Builder bool = new BoolQuery.Builder().should(termOnField).should(matchOnField);
+    if (termOnKeyword != null) {
+      bool.should(termOnKeyword);
+    }
+    return Query.of(q -> q.bool(bool.minimumShouldMatch("1").build()));
+  }
+
   @Override
   @SneakyThrows
   public void updateLineage(
@@ -642,18 +659,14 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
 
     Map<String, JsonData> params =
         Collections.singletonMap("lineageData", JsonData.of(JsonUtils.getMap(lineageData)));
+    Query lineageQuery = buildLineageUpdateQuery(fieldAndValue);
 
     UpdateByQueryResponse response =
         client.updateByQuery(
             u ->
                 u.index(indexName)
-                    .query(
-                        q ->
-                            q.match(
-                                m ->
-                                    m.field(fieldAndValue.getKey())
-                                        .query(fieldAndValue.getValue())
-                                        .operator(Operator.And)))
+                    .query(lineageQuery)
+                    .conflicts(Conflicts.Proceed)
                     .script(
                         s ->
                             s.source(ss -> ss.scriptString(ADD_UPDATE_LINEAGE))
@@ -780,14 +793,23 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       return;
     }
 
+    if (originalUpdatedColumnFqnMap == null || originalUpdatedColumnFqnMap.isEmpty()) {
+      LOG.debug("No column updates provided for upstream lineage update.");
+      return;
+    }
+
     try {
       Map<String, JsonData> params =
           Collections.singletonMap("columnUpdates", JsonData.of(originalUpdatedColumnFqnMap));
+      Query impactedLineageQuery =
+          buildLineageColumnsQuery(new ArrayList<>(originalUpdatedColumnFqnMap.keySet()));
 
       UpdateByQueryResponse updateResponse =
           client.updateByQuery(
               req ->
                   req.index(Entity.getSearchRepository().getIndexOrAliasName(indexName))
+                      .query(impactedLineageQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(ss -> ss.scriptString(UPDATE_COLUMN_LINEAGE_SCRIPT))
@@ -822,14 +844,22 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       return;
     }
 
+    if (deletedColumns == null || deletedColumns.isEmpty()) {
+      LOG.debug("No deleted columns provided for upstream lineage cleanup.");
+      return;
+    }
+
     try {
       Map<String, JsonData> params =
           Collections.singletonMap("deletedFQNs", JsonData.of(deletedColumns));
+      Query impactedLineageQuery = buildLineageColumnsQuery(deletedColumns);
 
       UpdateByQueryResponse updateResponse =
           client.updateByQuery(
               req ->
                   req.index(Entity.getSearchRepository().getIndexOrAliasName(indexName))
+                      .query(impactedLineageQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(ss -> ss.scriptString(DELETE_COLUMN_LINEAGE_SCRIPT))
@@ -1058,6 +1088,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
               req ->
                   req.index(Entity.getSearchRepository().getIndexOrAliasName(GLOBAL_SEARCH_ALIAS))
                       .query(termQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(
@@ -1138,18 +1169,18 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
               req ->
                   req.index(indexName)
                       .query(idsQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(
                                       ss ->
-                                          ss.scriptString(
-                                              SearchClient.UPDATE_ASSET_DOMAIN_FQN_SCRIPT))
+                                          ss.scriptString(SearchClient.UPDATE_ASSET_DOMAIN_SCRIPT))
                                   .lang(ScriptLanguage.Painless)
                                   .params(params))
                       .refresh(true));
 
       LOG.info(
-          "Updated asset domain FQNs by IDs: requested={}, total={}, updated={}, noops={}, newFqns={}",
+          "Updated asset domains by IDs: requested={}, total={}, updated={}, noops={}, oldFqns={}, newFqns={}",
           assetIds.size(),
           updateResponse.total(),
           updateResponse.updated(),
@@ -1207,6 +1238,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
               req ->
                   req.index(domainIndexName)
                       .query(combinedQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(
@@ -1253,8 +1285,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           oldFqn,
           newFqn);
 
-      // Use match_all query - the script will filter and update only matching documents
-      Query matchAllQuery = Query.of(q -> q.matchAll(m -> m));
+      Query matchingDomainQuery = buildDomainFqnPrefixQuery(oldFqn);
 
       Map<String, JsonData> params =
           Map.of(
@@ -1265,7 +1296,8 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           client.updateByQuery(
               req ->
                   req.index(indexName)
-                      .query(matchAllQuery)
+                      .query(matchingDomainQuery)
+                      .conflicts(Conflicts.Proceed)
                       .script(
                           s ->
                               s.source(
@@ -1329,6 +1361,7 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
                       u ->
                           u.index(indexName)
                               .id(entity.getId().toString())
+                              .retryOnConflict(3)
                               .action(a -> a.docAsUpsert(true).doc(toJsonData(doc))))));
     }
 
@@ -1432,16 +1465,23 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       LOG.error("ElasticSearch client is not available. Cannot {}.", operation);
       return;
     }
-    client.update(
-        u ->
-            u.index(indexName)
-                .id(docId)
-                .docAsUpsert(true)
-                .refresh(Refresh.True)
-                .doc(toJsonData(doc)),
-        Map.class);
-    LOG.info(
-        "Successfully {} in ElasticSearch for index: {}, docId: {}", operation, indexName, docId);
+    SearchRetryUtil.executeWithRetry(
+        () -> {
+          client.update(
+              u ->
+                  u.index(indexName)
+                      .id(docId)
+                      .docAsUpsert(true)
+                      .refresh(Refresh.True)
+                      .retryOnConflict(3)
+                      .doc(toJsonData(doc)),
+              Map.class);
+          LOG.info(
+              "Successfully {} in ElasticSearch for index: {}, docId: {}",
+              operation,
+              indexName,
+              docId);
+        });
   }
 
   private Map<String, JsonData> convertToJsonDataMap(Map<String, Object> map) {
@@ -1489,5 +1529,38 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       innerBoolFilter = String.format("[ %s ]", schemaFqnWildcardClause);
     }
     return String.format("{\"bool\":{\"must\":%s}}", innerBoolFilter);
+  }
+
+  private Query buildLineageUpdateQuery(Pair<String, String> fieldAndValue) {
+    return exactFieldQuery(fieldAndValue);
+  }
+
+  private Query buildLineageColumnsQuery(List<String> columnFqns) {
+    List<FieldValue> values = columnFqns.stream().map(FieldValue::of).toList();
+    Query toColumnQuery =
+        Query.of(
+            q ->
+                q.terms(
+                    t ->
+                        t.field("upstreamLineage.columns.toColumn.keyword")
+                            .terms(tv -> tv.value(values))));
+    Query fromColumnsQuery =
+        Query.of(
+            q ->
+                q.terms(
+                    t ->
+                        t.field("upstreamLineage.columns.fromColumns.keyword")
+                            .terms(tv -> tv.value(values))));
+    return Query.of(
+        q -> q.bool(b -> b.should(toColumnQuery).should(fromColumnsQuery).minimumShouldMatch("1")));
+  }
+
+  private Query buildDomainFqnPrefixQuery(String oldFqn) {
+    Query prefixOnField =
+        Query.of(q -> q.prefix(p -> p.field("domains.fullyQualifiedName").value(oldFqn)));
+    Query prefixOnKeyword =
+        Query.of(q -> q.prefix(p -> p.field("domains.fullyQualifiedName.keyword").value(oldFqn)));
+    return Query.of(
+        q -> q.bool(b -> b.should(prefixOnField).should(prefixOnKeyword).minimumShouldMatch("1")));
   }
 }
