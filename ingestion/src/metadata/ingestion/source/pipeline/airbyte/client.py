@@ -44,7 +44,7 @@ from metadata.ingestion.source.pipeline.airbyte.models import (
     AirbyteWorkspace,
     AirbyteWorkspaceList,
 )
-from metadata.utils.constants import AUTHORIZATION_HEADER, NO_ACCESS_TOKEN
+from metadata.utils.constants import AUTHORIZATION_HEADER
 from metadata.utils.credentials import generate_http_basic_token
 from metadata.utils.helpers import clean_uri
 from metadata.utils.logger import ingestion_logger
@@ -66,11 +66,10 @@ class AirbyteClient:
         client_config: ClientConfig = ClientConfig(
             base_url=clean_uri(self.config.hostPort),
             api_version=self.config.apiVersion,
-            auth_header=AUTHORIZATION_HEADER,
-            auth_token=lambda: (NO_ACCESS_TOKEN, 0),
         )
 
         if self.config.auth and isinstance(self.config.auth, BasicAuthentication):
+            client_config.auth_header = AUTHORIZATION_HEADER
             client_config.auth_token_mode = "Basic"
             client_config.auth_token = lambda: (
                 generate_http_basic_token(
@@ -95,6 +94,8 @@ class AirbyteClient:
             response = self.client.get(
                 f"{path}{separator}limit={limit}&offset={offset}"
             )
+            if not response:
+                raise APIError({"message": "Empty response from Airbyte API"})
             if response.get("exceptionStack"):
                 raise APIError(response)
             parsed = response_cls.model_validate(response)
@@ -113,6 +114,8 @@ class AirbyteClient:
             return
 
         response = self.client.post("/workspaces/list")
+        if not response:
+            raise APIError({"message": "Empty response from Airbyte API"})
         if response.get("exceptionStack"):
             raise APIError(response)
         yield from AirbyteWorkspaceList.model_validate(response).workspaces
@@ -130,6 +133,8 @@ class AirbyteClient:
 
         data = {"workspaceId": workflow_id}
         response = self.client.post("/connections/list", data=json.dumps(data))
+        if not response:
+            raise APIError({"message": "Empty response from Airbyte API"})
         if response.get("exceptionStack"):
             raise APIError(response)
         yield from AirbyteConnectionList.model_validate(response).connections
@@ -149,6 +154,8 @@ class AirbyteClient:
 
         data = {"configId": connection_id, "configTypes": ["sync", "reset_connection"]}
         response = self.client.post("/jobs/list", data=json.dumps(data))
+        if not response:
+            raise APIError({"message": "Empty response from Airbyte API"})
         if response.get("exceptionStack"):
             raise APIError(response)
         yield from AirbyteSelfHostedJobList.model_validate(response).jobs
@@ -159,12 +166,16 @@ class AirbyteClient:
         """
         if self._use_public_api:
             response = self.client.get(f"/sources/{quote(source_id, safe='')}")
+            if not response:
+                raise APIError({"message": "Empty response from Airbyte API"})
             if response.get("exceptionStack"):
                 raise APIError(response)
             return AirbyteSourceResponse.model_validate(response)
 
         data = {"sourceId": source_id}
         response = self.client.post("/sources/get", data=json.dumps(data))
+        if not response:
+            raise APIError({"message": "Empty response from Airbyte API"})
         if response.get("exceptionStack"):
             raise APIError(response)
         return AirbyteSourceResponse.model_validate(response)
@@ -177,12 +188,16 @@ class AirbyteClient:
             response = self.client.get(
                 f"/destinations/{quote(destination_id, safe='')}"
             )
+            if not response:
+                raise APIError({"message": "Empty response from Airbyte API"})
             if response.get("exceptionStack"):
                 raise APIError(response)
             return AirbyteDestinationResponse.model_validate(response)
 
         data = {"destinationId": destination_id}
         response = self.client.post("/destinations/get", data=json.dumps(data))
+        if not response:
+            raise APIError({"message": "Empty response from Airbyte API"})
         if response.get("exceptionStack"):
             raise APIError(response)
         return AirbyteDestinationResponse.model_validate(response)
@@ -206,9 +221,13 @@ class AirbyteCloudClient(AirbyteClient):
                 "AirbyteCloudClient requires OAuth 2.0 Client Credentials authentication"
             )
 
+        api_version = self.config.apiVersion or "api/v1"
+        if api_version == "api/v1":
+            api_version = "api/public/v1"
+
         client_config: ClientConfig = ClientConfig(
             base_url=clean_uri(self.config.hostPort),
-            api_version=self.config.apiVersion,
+            api_version=api_version,
             auth_header=AUTHORIZATION_HEADER,
             auth_token=self._get_oauth_token,
         )
