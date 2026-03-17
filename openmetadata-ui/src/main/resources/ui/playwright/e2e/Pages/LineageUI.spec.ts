@@ -16,7 +16,8 @@ import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { PipelineClass } from '../../support/entity/PipelineClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
-import { createNewPage, redirectToHomePage } from '../../utils/common';
+import { performAdminLogin } from '../../utils/admin';
+import { redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   applyPipelineFromModal,
@@ -35,7 +36,7 @@ const pipeline = new PipelineClass();
 
 test.describe('Lineage UI Controls', () => {
   test.beforeAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
 
     await Promise.all([
       table.create(apiContext),
@@ -76,7 +77,7 @@ test.describe('Lineage UI Controls', () => {
   });
 
   test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
     await Promise.all([
       table.delete(apiContext),
       topic.delete(apiContext),

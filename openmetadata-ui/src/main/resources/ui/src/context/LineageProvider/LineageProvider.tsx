@@ -454,13 +454,15 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       }));
 
       if (recenter) {
+        // If recenter is a string, find the node with the matching fullyQualifiedName
+        // else fallback to rootNode
         const nodeToFocus =
-          typeof recenter === 'string' &&
-          visibleNodes.find((n) => n.data.fullyQualifiedName === recenter);
-        const rootNode =
-          nodeToFocus ?? visibleNodes.find((n) => n.data.isRootNode);
-        if (rootNode) {
-          centerNodePosition(rootNode, reactFlowInstance, zoomValue);
+          typeof recenter === 'string'
+            ? visibleNodes.find((n) => n.data.fullyQualifiedName === recenter)
+            : visibleNodes.find((n) => n.data.isRootNode);
+
+        if (nodeToFocus) {
+          centerNodePosition(nodeToFocus, reactFlowInstance, zoomValue);
         } else if (visibleNodes.length > 0) {
           centerNodePosition(visibleNodes[0], reactFlowInstance, zoomValue);
         }

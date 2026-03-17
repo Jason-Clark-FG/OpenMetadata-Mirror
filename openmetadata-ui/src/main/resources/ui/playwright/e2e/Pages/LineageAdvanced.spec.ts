@@ -15,6 +15,7 @@ import { get } from 'lodash';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
+import { performAdminLogin } from '../../utils/admin';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
@@ -30,7 +31,7 @@ const topic = new TopicClass();
 
 test.describe('Lineage Advanced Features', () => {
   test.beforeAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
 
     await Promise.all([table.create(apiContext), topic.create(apiContext)]);
 
@@ -88,7 +89,7 @@ test.describe('Lineage Advanced Features', () => {
   });
 
   test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
     await Promise.all([table.delete(apiContext), topic.delete(apiContext)]);
     await afterAction();
   });

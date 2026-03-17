@@ -18,6 +18,7 @@ import { MlModelClass } from '../../support/entity/MlModelClass';
 import { PipelineClass } from '../../support/entity/PipelineClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
+import { performAdminLogin } from '../../utils/admin';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
@@ -44,7 +45,7 @@ const pipeline = new PipelineClass();
 
 test.describe('Lineage Interactions', () => {
   test.beforeAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
 
     await Promise.all([
       table1.create(apiContext),
@@ -93,7 +94,7 @@ test.describe('Lineage Interactions', () => {
   });
 
   test.afterAll(async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
     await Promise.all([
       table1.delete(apiContext),
       table2.delete(apiContext),
