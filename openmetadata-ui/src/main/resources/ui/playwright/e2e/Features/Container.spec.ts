@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { expect } from '@playwright/test';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { CONTAINER_CHILDREN } from '../../constant/contianer';
 import { ContainerClass } from '../../support/entity/ContainerClass';
 import { performAdminLogin } from '../../utils/admin';
@@ -149,38 +148,78 @@ test.describe('Container entity specific tests ', () => {
     );
   });
 
-  test(
-    'expand / collapse should not appear after updating nested fields for container',
-    PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
-    async ({ page }) => {
-      await page.goto('/container/s3_storage_sample.departments.finance');
+  test('expand / collapse should not appear after updating nested fields for container', async ({
+    page,
+    browser,
+  }) => {
+    const { apiContext, afterAction: afterSetup } = await performAdminLogin(
+      browser
+    );
+    const nestedContainer = new ContainerClass();
+    const structColName = `struct_col_${uuid()}`;
+    const nestedFieldName = `nested_field_${uuid()}`;
 
-      await waitForAllLoadersToDisappear(page);
+    nestedContainer.entity.dataModel.columns = [
+      {
+        name: structColName,
+        dataType: 'STRUCT',
+        dataTypeDisplay: 'struct',
+        description: 'A struct column with nested fields.',
+        tags: [],
+        ordinalPosition: 1,
+        children: [
+          {
+            name: nestedFieldName,
+            dataType: 'VARCHAR',
+            dataLength: 100,
+            dataTypeDisplay: 'varchar',
+            description: 'A nested field inside the struct.',
+            tags: [],
+            ordinalPosition: 1,
+          },
+        ],
+      },
+    ];
 
-      await assignTagToChildren({
-        page,
-        tag: 'PersonalData.Personal',
-        rowId: 's3_storage_sample.departments.finance.budget_executor',
-        entityEndpoint: 'containers',
-      });
+    await nestedContainer.create(apiContext);
+    await afterSetup();
 
-      // Should not show expand icon for non-nested columns
-      expect(
-        page
-          .locator(
-            '[data-row-key="s3_storage_sample.departments.finance.budget_executor"]'
-          )
-          .getByTestId('expand-icon')
-      ).not.toBeVisible();
+    await redirectToHomePage(page);
+    await nestedContainer.visitEntityPage(page);
+    await waitForAllLoadersToDisappear(page);
 
-      await removeTagsFromChildren({
-        page,
-        tags: ['PersonalData.Personal'],
-        rowId: 's3_storage_sample.departments.finance.budget_executor',
-        entityEndpoint: 'containers',
-      });
-    }
-  );
+    const structRowId =
+      nestedContainer.entityResponseData.dataModel?.columns?.[0]
+        .fullyQualifiedName ?? '';
+    const nestedRowId =
+      nestedContainer.entityResponseData.dataModel?.columns?.[0]?.children?.[0]
+        .fullyQualifiedName ?? '';
+
+    // Expand the struct column to reveal the child row
+    await page
+      .locator(`[data-row-key="${structRowId}"]`)
+      .getByTestId('expand-icon')
+      .click();
+    await expect(page.locator(`[data-row-key="${nestedRowId}"]`)).toBeVisible();
+
+    await assignTagToChildren({
+      page,
+      tag: 'PersonalData.Personal',
+      rowId: nestedRowId,
+      entityEndpoint: 'containers',
+    });
+
+    await expect(
+      page.locator(`[data-row-key="${nestedRowId}"]`).getByTestId('expand-icon')
+    ).not.toBeVisible();
+
+    await removeTagsFromChildren({
+      page,
+      tags: ['PersonalData.Personal'],
+      rowId: nestedRowId,
+      entityEndpoint: 'containers',
+    });
+  });
 
   test('Copy column link button should copy the column URL to clipboard', async ({
     dataConsumerPage: page,
@@ -340,69 +379,81 @@ test.describe('Deeply nested container navigation', () => {
     await initialContainerResponse;
     await waitForAllLoadersToDisappear(page);
 
-    await test.step('correct container loads for 5-part FQN (4 nesting levels)', async () => {
-      await expect(page.getByTestId('entity-header-name')).toContainText(
-        deepContainer4Name
-      );
-    });
+    await test.step(
+      'correct container loads for 5-part FQN (4 nesting levels)',
+      async () => {
+        await expect(page.getByTestId('entity-header-name')).toContainText(
+          deepContainer4Name
+        );
+      }
+    );
 
-    await test.step('breadcrumb shows all 4 ancestor levels at L4', async () => {
-      const breadcrumb = page.getByTestId('breadcrumb');
+    await test.step(
+      'breadcrumb shows all 4 ancestor levels at L4',
+      async () => {
+        const breadcrumb = page.getByTestId('breadcrumb');
 
-      await expect(breadcrumb).toContainText(serviceName);
-      await expect(breadcrumb).toContainText(deepContainer1Name);
-      await expect(breadcrumb).toContainText(deepContainer2Name);
-      await expect(breadcrumb).toContainText(deepContainer3Name);
-    });
+        await expect(breadcrumb).toContainText(serviceName);
+        await expect(breadcrumb).toContainText(deepContainer1Name);
+        await expect(breadcrumb).toContainText(deepContainer2Name);
+        await expect(breadcrumb).toContainText(deepContainer3Name);
+      }
+    );
 
-    await test.step('clicking L3 breadcrumb link navigates to L3 and updates page', async () => {
-      const containerResponse = page.waitForResponse(
-        '/api/v1/containers/name/*'
-      );
-      await page
-        .getByTestId('breadcrumb')
-        .getByRole('link', { name: deepContainer3Name })
-        .click();
-      await containerResponse;
-      await waitForAllLoadersToDisappear(page);
+    await test.step(
+      'clicking L3 breadcrumb link navigates to L3 and updates page',
+      async () => {
+        const containerResponse = page.waitForResponse(
+          '/api/v1/containers/name/*'
+        );
+        await page
+          .getByTestId('breadcrumb')
+          .getByRole('link', { name: deepContainer3Name })
+          .click();
+        await containerResponse;
+        await waitForAllLoadersToDisappear(page);
 
-      await expect(page).toHaveURL(
-        new RegExp(`/container/${deepContainer3Fqn}$`)
-      );
-      await expect(page.getByTestId('entity-header-name')).toContainText(
-        deepContainer3Name
-      );
+        await expect(page).toHaveURL(
+          new RegExp(`/container/${deepContainer3Fqn}$`)
+        );
+        await expect(page.getByTestId('entity-header-name')).toContainText(
+          deepContainer3Name
+        );
 
-      const breadcrumb = page.getByTestId('breadcrumb');
-      await expect(breadcrumb).toContainText(serviceName);
-      await expect(breadcrumb).toContainText(deepContainer1Name);
-      await expect(breadcrumb).toContainText(deepContainer2Name);
-      await expect(breadcrumb).not.toContainText(deepContainer4Name);
-    });
+        const breadcrumb = page.getByTestId('breadcrumb');
+        await expect(breadcrumb).toContainText(serviceName);
+        await expect(breadcrumb).toContainText(deepContainer1Name);
+        await expect(breadcrumb).toContainText(deepContainer2Name);
+        await expect(breadcrumb).not.toContainText(deepContainer4Name);
+      }
+    );
 
-    await test.step('clicking L2 breadcrumb link navigates to L2 and updates page', async () => {
-      const containerResponse = page.waitForResponse(
-        '/api/v1/containers/name/*'
-      );
-      await page
-        .getByTestId('breadcrumb')
-        .getByRole('link', { name: deepContainer2Name })
-        .click();
-      await containerResponse;
-      await waitForAllLoadersToDisappear(page);
+    await test.step(
+      'clicking L2 breadcrumb link navigates to L2 and updates page',
+      async () => {
+        const containerResponse = page.waitForResponse(
+          '/api/v1/containers/name/*'
+        );
+        await page
+          .getByTestId('breadcrumb')
+          .getByRole('link', { name: deepContainer2Name })
+          .click();
+        await containerResponse;
+        await waitForAllLoadersToDisappear(page);
 
-      await expect(page).toHaveURL(
-        new RegExp(`/container/${deepContainer2Fqn}$`)
-      );
-      await expect(page.getByTestId('entity-header-name')).toContainText(
-        deepContainer2Name
-      );
+        await expect(page).toHaveURL(
+          new RegExp(`/container/${deepContainer2Fqn}$`)
+        );
+        await expect(page.getByTestId('entity-header-name')).toContainText(
+          deepContainer2Name
+        );
 
-      const breadcrumb = page.getByTestId('breadcrumb');
-      await expect(breadcrumb).toContainText(serviceName);
-      await expect(breadcrumb).toContainText(deepContainer1Name);
-      await expect(breadcrumb).not.toContainText(deepContainer3Name);
-      await expect(breadcrumb).not.toContainText(deepContainer4Name);
-    });
+        const breadcrumb = page.getByTestId('breadcrumb');
+        await expect(breadcrumb).toContainText(serviceName);
+        await expect(breadcrumb).toContainText(deepContainer1Name);
+        await expect(breadcrumb).not.toContainText(deepContainer3Name);
+        await expect(breadcrumb).not.toContainText(deepContainer4Name);
+      }
+    );
   });
 });
