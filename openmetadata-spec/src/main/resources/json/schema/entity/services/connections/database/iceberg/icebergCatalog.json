@@ -26,6 +26,9 @@
         },
         {
           "$ref": "./dynamoDbCatalogConnection.json"
+        },
+        {
+          "$ref": "./bigLakeCatalogConnection.json"
         }
       ]
     },

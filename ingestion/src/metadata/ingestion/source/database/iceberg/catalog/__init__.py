@@ -16,6 +16,9 @@ from typing import Dict, Type
 
 from pyiceberg.catalog import Catalog
 
+from metadata.generated.schema.entity.services.connections.database.iceberg.bigLakeCatalogConnection import (
+    BigLakeCatalogConnection,
+)
 from metadata.generated.schema.entity.services.connections.database.iceberg.dynamoDbCatalogConnection import (
     DynamoDbCatalogConnection,
 )
@@ -32,6 +35,9 @@ from metadata.generated.schema.entity.services.connections.database.iceberg.rest
     RestCatalogConnection,
 )
 from metadata.ingestion.source.database.iceberg.catalog.base import IcebergCatalogBase
+from metadata.ingestion.source.database.iceberg.catalog.biglake import (
+    IcebergBigLakeCatalog,
+)
 from metadata.ingestion.source.database.iceberg.catalog.dynamodb import (
     IcebergDynamoDbCatalog,
 )
@@ -48,6 +54,7 @@ class IcebergCatalogFactory:
         HiveCatalogConnection.__name__: IcebergHiveCatalog,
         GlueCatalogConnection.__name__: IcebergGlueCatalog,
         DynamoDbCatalogConnection.__name__: IcebergDynamoDbCatalog,
+        BigLakeCatalogConnection.__name__: IcebergBigLakeCatalog,
     }
 
     @classmethod

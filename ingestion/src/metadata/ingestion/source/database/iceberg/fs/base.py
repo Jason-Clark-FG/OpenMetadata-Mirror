@@ -19,8 +19,9 @@ from metadata.generated.schema.security.credentials.awsCredentials import AWSCre
 from metadata.generated.schema.security.credentials.azureCredentials import (
     AzureCredentials,
 )
+from metadata.generated.schema.security.credentials.gcpCredentials import GCPCredentials
 
-FileSystemConfig = Union[AWSCredentials, AzureCredentials, None]
+FileSystemConfig = Union[AWSCredentials, AzureCredentials, GCPCredentials, None]
 
 
 class IcebergFileSystemBase(ABC):

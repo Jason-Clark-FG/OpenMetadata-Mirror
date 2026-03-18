@@ -1,0 +1,23 @@
+{
+  "$id": "https://open-metadata.org/schema/entity/services/connections/database/iceberg/bigLakeCatalogConnection.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BigLakeCatalogConnection",
+  "description": "Iceberg BigLake Catalog configuration. Configures connection to Iceberg tables stored in Google Cloud Storage, using BigLake Metastore as the catalog.",
+  "type": "object",
+  "javaType": "org.openmetadata.schema.services.connections.database.iceberg.BigLakeCatalogConnection",
+  "properties": {
+    "projectId": {
+      "title": "GCP Project ID",
+      "description": "GCP Project ID where the BigLake resources are located.",
+      "type": "string"
+    },
+    "gcpConfig": {
+      "$ref": "../../../../../security/credentials/gcpCredentials.json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "projectId",
+    "gcpConfig"
+  ]
+}

@@ -20,11 +20,13 @@ from metadata.generated.schema.security.credentials.awsCredentials import AWSCre
 from metadata.generated.schema.security.credentials.azureCredentials import (
     AzureCredentials,
 )
+from metadata.generated.schema.security.credentials.gcpCredentials import GCPCredentials
 from metadata.ingestion.source.database.iceberg.fs.azure import AzureFileSystem
 from metadata.ingestion.source.database.iceberg.fs.base import (
     FileSystemConfig,
     IcebergFileSystemBase,
 )
+from metadata.ingestion.source.database.iceberg.fs.gcs import GcsFileSystem
 from metadata.ingestion.source.database.iceberg.fs.s3 import S3FileSystem
 
 
@@ -34,6 +36,7 @@ class IcebergFileSystemFactory:
     file_system_config_map: Dict[str, Type[IcebergFileSystemBase]] = {
         AWSCredentials.__name__: S3FileSystem,
         AzureCredentials.__name__: AzureFileSystem,
+        GCPCredentials.__name__: GcsFileSystem,
     }
 
     @classmethod

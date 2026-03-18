@@ -452,6 +452,43 @@ MOCK_GLUE_CONFIG = {
     },
 }
 
+MOCK_BIGLAKE_CONFIG = {
+    "source": {
+        "type": "iceberg",
+        "serviceName": "test_iceberg",
+        "serviceConnection": {
+            "config": {
+                "type": "Iceberg",
+                "catalog": {
+                    "name": "Batata",
+                    "connection": {
+                        "projectId": "my-gcp-project",
+                        "gcpConfig": {
+                            "gcpConfig": {
+                                "type": "service_account",
+                                "projectId": "my-gcp-project",
+                                "privateKeyId": "key-id",
+                                "privateKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAhF0MOurEMoJbmm8GWPoFB+F/Mn+bPOZVSqePW6MJV0icC8qE\nyFxNE/VnFrrFHI2Y3o6ccFrXxzxaQOgiqbF/g7vz7NI9bSuMJFE8Xq9lOBvH07Bk\nqnJMQ8P2awVxZ6TrGNlUTFVcWR7L5W0KLi/yD+L1jVILMCiDVwuVBVzsiKZjYHAh\nbFbxXdGZiJP5FJdHnWxO/oYtlMRjfCLbiDfBVOGCKcdKiYbhEQtsFNhH1TEbXiGCd\nEYkJnXRKBDaVKVBFCHrxPYJpfMEfSO1jQGlpOckKHGH4hMPJMdEBqHZ7eFJMpxCw\nTFQhO4iV3i0j5ZiVGcgD6N2s1HJgzlrnxqMkxwIDAQABAoIBAD3X0kJZdO0GBYXP\nccA6DEkP/+9xYpuahFCuabyf1CILhux5k6J0BdkflBbWNOaJPM5MiF+M3RDQ3REe\nEISNPBf5bJ1Dd/3y1AvwtJ9sSFBGp4rjYtQl2Hh3JNBbNKn2gjqSXMl2DOmRG9nm\nS2VuGJBeb1wNM8MCAk/EoLe5+TpmLaL7j1w67JAk+bdLH3jJxwS0hjGdkK3d14sp\neJkv6bB7pXBDiJqJvh+rBWOonlhF3y0r3cCZMGFI+gy/k33fGVlpbP0i9JFOLkz+\nvBG1YfELPBW5M3+p9X3M8XFBJzYzIqyAdqgR1NXvRH00JHxoZ6DaqDgRvQ6VuLiJ\ncIpCMxkCgYEA2D6Jjb8PgKZL3bXJFjxvs4l2BIQjl85I7JaHdQwK7nGVpJZ1o4KN\nTZ9f9aq08sZjVfJEXYGinHwSHH7SHPPfy9CO3lkZMT7gKp5hIsUlk7RoCaHr6ATr\nzIMVoJeLPBLz5vYgnHF1FV8B6vNEH0hT3XFNPh85jSOMAnkAqa+LMvkCgYEAoBke\nB+DNnI8bLAW8rFRl6O2bMC2EmSW8MXLWI+NBHQ8fJEGBK1opi1be0E5F02IAMNK\nrxl9TpiC5WJBvHPVNG3mJsSDpLxASNO0X8JPCVZ/nxQalFwgQL5yCj9/t/D+c0sG\nqXGJqw8F7LeqxCL+soV8oVpHBi3sb8GPnJmR1I8CgYEAx0TM9LgN+j5RsWVH8YXi\nlgtSu9ME4b8OKR7pW0UP3dM25JC3wISj30Hm3Qh/hR2ekBUihJCxhmMfYTg9cCYB\nVRQDmXJMiY/ji/MVL6Xz8hLpJUPO4F6jbm1M0MpieM/+JcL0sDp+P+dIjGqG9p90\nZ4LvqsmtVhcjJl0ELOk2x1ECgYAtUFMuQQRBDd+sYnU8K6eSI69ZCTiw+oYu1R5Y\ndXzOZ7LXbPLF1r1pJwDle7lSoIg6NNOaXGNS+zRIBP4cMy2VKxvjKsYHw5CwvHgG\nExPx1MJO4Y3yVMpMPLqaiT6UrfbVjwveGIh+sxk8ITbmmyj8MnlnlmwN1F5oD0NE\nnBfxYQKBgE2S8OHmKpaNrJiSPOVVYtJjCME5fVFO2AvSTTuJI3JTfCDulDWh7WAj\nmJU4bNL3m8f/aDhpRq+bB+YBIfa+KwBhFm1n3VNxGwSMVE+qZLfNfMN5FMr+fCNn\nzk+BFCB0QvhCLzb5M7PRSZ8zy3JEjFe7EyqOb0V3VBh7YgBPBuM\n-----END RSA PRIVATE KEY-----\n",
+                                "clientEmail": "test@my-gcp-project.iam.gserviceaccount.com",
+                                "clientId": "1234567890",
+                            },
+                        },
+                    },
+                },
+            }
+        },
+        "sourceConfig": {"config": {"type": "DatabaseMetadata"}},
+    },
+    "sink": {"type": "metadata-rest", "config": {}},
+    "workflowConfig": {
+        "openMetadataServerConfig": {
+            "hostPort": "http://localhost:8585/api",
+            "authProvider": "openmetadata",
+            "securityConfig": {"jwtToken": "iceberg"},
+        }
+    },
+}
+
 MOCK_DYNAMO_CONFIG = {
     "source": {
         "type": "iceberg",
@@ -526,6 +563,7 @@ class IcebergUnitTest(TestCase):
             MOCK_GLUE_CONFIG,
             MOCK_REST_CONFIG,
             MOCK_HIVE_CONFIG,
+            MOCK_BIGLAKE_CONFIG,
         ]:
             self.config = parse_workflow_config_gracefully(config)
             self.iceberg = IcebergSource.create(

@@ -20,6 +20,10 @@
         {
           "title": "Azure",
           "$ref": "../../../../../security/credentials/azureCredentials.json"
+        },
+        {
+          "title": "GCP",
+          "$ref": "../../../../../security/credentials/gcpCredentials.json"
         }
       ]
     }
