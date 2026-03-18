@@ -14,42 +14,50 @@
 import {
   AimOutlined,
   FullscreenOutlined,
-  NodeCollapseOutlined,
-  PartitionOutlined,
   ReloadOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
 } from '@ant-design/icons';
 import {
+  EdgeData as G6EdgeData,
+  ExtensionCategory,
+  Graph,
+  IElementEvent,
+  NodeData as G6NodeData,
+  NodePortStyleProps,
+  register,
+} from '@antv/g6';
+import { ReactNode as AntVReactNode } from '@antv/g6-extension-react';
+import {
   Button,
-  Card,
+  Divider,
   Empty,
-  Select,
+  Radio,
+  RadioProps,
   Slider,
   Space,
   Spin,
   Tooltip,
+  Typography,
 } from 'antd';
 import { AxiosError } from 'axios';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DataSet } from 'vis-data';
-import {
-  ChosenNodeValues,
-  Edge,
-  IdType,
-  Network,
-  NodeChosenNodeFunction,
-  Options,
-} from 'vis-network';
+import { EntityType } from '../../enums/entity.enum';
 import { getEntityGraphData } from '../../rest/rdfAPI';
+import { getEntityLinkFromType } from '../../utils/EntityUtils';
+import {
+  computeRadialPositions,
+  findHighlightPath,
+  MAX_NODE_WIDTH,
+  NODE_HEIGHT,
+  NODE_WIDTH,
+  transformToG6Format,
+} from '../../utils/KnowledgeGraph.utils';
 import { showErrorToast } from '../../utils/ToastUtils';
+import EntitySummaryPanel from '../Explore/EntitySummaryPanel/EntitySummaryPanel.component';
+import { SearchSourceDetails } from '../Explore/EntitySummaryPanel/EntitySummaryPanel.interface';
+import CustomNode from './GraphElements/CustomNode';
 import {
   GraphData,
   GraphNode,
@@ -58,6 +66,10 @@ import {
 import './KnowledgeGraph.style.less';
 import KnowledgeGraphNodeDetails from './KnowledgeGraphNodeDetails';
 
+register(ExtensionCategory.NODE, 'react-node', AntVReactNode);
+
+const ENTITY_UUID_REGEX = /\/([a-f0-9-]{36})$/;
+
 const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   entity,
   entityType,
@@ -65,303 +77,12 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 }) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
+  const networkRef = useRef<Graph | null>(null);
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [selectedDepth, setSelectedDepth] = useState(depth);
-  const [layout, setLayout] = useState<'hierarchical' | 'force'>(
-    'hierarchical'
-  );
-  const [, setHoveredNode] = useState<GraphNode | null>(null);
+  const [layout, setLayout] = useState<'dagre' | 'radial'>('dagre');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-
-  const networkOptions: Options = useMemo(
-    () => ({
-      nodes: {
-        shape: 'box',
-        widthConstraint: {
-          minimum: 150,
-          maximum: 250,
-        },
-        heightConstraint: {
-          minimum: 60,
-          maximum: 80,
-        },
-        font: {
-          size: 12,
-          color: '#262626',
-          face: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial',
-          multi: true,
-          align: 'left',
-        },
-        borderWidth: 1,
-        borderWidthSelected: 2,
-        shadow: {
-          enabled: true,
-          color: 'rgba(0,0,0,0.08)',
-          size: 10,
-          x: 2,
-          y: 2,
-        },
-        margin: {
-          top: 8,
-          bottom: 8,
-          left: 12,
-          right: 12,
-        },
-        borderRadius: 8,
-      },
-      edges: {
-        width: 1.5,
-        color: {
-          color: '#d9d9d9',
-          highlight: '#1890ff',
-          hover: '#40a9ff',
-        },
-        arrows: {
-          to: {
-            enabled: true,
-            scaleFactor: 1,
-            type: 'arrow',
-          },
-        },
-        font: {
-          size: 12,
-          align: 'horizontal',
-          background: 'rgba(255, 255, 255, 0.9)',
-          strokeWidth: 3,
-          strokeColor: '#ffffff',
-          vadjust: -5,
-        },
-        smooth: {
-          enabled: true,
-          type: 'cubicBezier',
-          forceDirection: 'horizontal',
-          roundness: 0.8,
-        },
-        chosen: {
-          edge: function (values: any) {
-            values.width = 2.5;
-            values.color = '#1890ff';
-            // Had to typecase to boolean to solve the type error
-            // Refer: https://github.com/visjs/vis-network/blob/382d75257bab3f8cb052b52495fc51d9ff2aff8e/types/network/Network.d.ts#L992
-          } as unknown as boolean,
-        },
-      },
-      groups: {
-        table: {
-          color: {
-            background: '#ffffff',
-            border: '#52c41a',
-            highlight: { background: '#f6ffed', border: '#52c41a' },
-            hover: { background: '#f6ffed', border: '#52c41a' },
-          },
-          font: { color: '#262626' },
-        },
-        database: {
-          color: {
-            background: '#ffffff',
-            border: '#1890ff',
-            highlight: { background: '#e6f7ff', border: '#1890ff' },
-            hover: { background: '#e6f7ff', border: '#1890ff' },
-          },
-          font: { color: '#262626' },
-        },
-        schema: {
-          color: {
-            background: '#ffffff',
-            border: '#fa8c16',
-            highlight: { background: '#fff7e6', border: '#fa8c16' },
-            hover: { background: '#fff7e6', border: '#fa8c16' },
-          },
-          font: { color: '#262626' },
-        },
-        pipeline: {
-          color: {
-            background: '#ffffff',
-            border: '#722ed1',
-            highlight: { background: '#f9f0ff', border: '#722ed1' },
-            hover: { background: '#f9f0ff', border: '#722ed1' },
-          },
-          font: { color: '#262626' },
-        },
-        dashboard: {
-          color: {
-            background: '#ffffff',
-            border: '#eb2f96',
-            highlight: { background: '#fff0f6', border: '#eb2f96' },
-            hover: { background: '#fff0f6', border: '#eb2f96' },
-          },
-          font: { color: '#262626' },
-        },
-        user: {
-          color: {
-            background: '#ffffff',
-            border: '#13c2c2',
-            highlight: { background: '#e6fffb', border: '#13c2c2' },
-            hover: { background: '#e6fffb', border: '#13c2c2' },
-          },
-          font: { color: '#262626' },
-        },
-        team: {
-          color: {
-            background: '#ffffff',
-            border: '#2f54eb',
-            highlight: { background: '#f0f5ff', border: '#2f54eb' },
-            hover: { background: '#f0f5ff', border: '#2f54eb' },
-          },
-          font: { color: '#262626' },
-        },
-        tag: {
-          color: {
-            background: '#ffffff',
-            border: '#f5222d',
-            highlight: { background: '#fff1f0', border: '#f5222d' },
-            hover: { background: '#fff1f0', border: '#f5222d' },
-          },
-          font: { color: '#262626' },
-        },
-        glossaryterm: {
-          color: {
-            background: '#ffffff',
-            border: '#faad14',
-            highlight: { background: '#fffbe6', border: '#faad14' },
-            hover: { background: '#fffbe6', border: '#faad14' },
-          },
-          font: { color: '#262626' },
-        },
-        glossary: {
-          color: {
-            background: '#ffffff',
-            border: '#d48806',
-            highlight: { background: '#fff9e6', border: '#d48806' },
-            hover: { background: '#fff9e6', border: '#d48806' },
-          },
-          font: { color: '#262626' },
-        },
-        domain: {
-          color: {
-            background: '#ffffff',
-            border: '#531dab',
-            highlight: { background: '#f9f0ff', border: '#531dab' },
-            hover: { background: '#f9f0ff', border: '#531dab' },
-          },
-          font: { color: '#262626' },
-        },
-        dataproduct: {
-          color: {
-            background: '#ffffff',
-            border: '#389e0d',
-            highlight: { background: '#f6ffed', border: '#389e0d' },
-            hover: { background: '#f6ffed', border: '#389e0d' },
-          },
-          font: { color: '#262626' },
-        },
-        topic: {
-          color: {
-            background: '#ffffff',
-            border: '#08979c',
-            highlight: { background: '#e6fffb', border: '#08979c' },
-            hover: { background: '#e6fffb', border: '#08979c' },
-          },
-          font: { color: '#262626' },
-        },
-        container: {
-          color: {
-            background: '#ffffff',
-            border: '#0958d9',
-            highlight: { background: '#f0f5ff', border: '#0958d9' },
-            hover: { background: '#f0f5ff', border: '#0958d9' },
-          },
-          font: { color: '#262626' },
-        },
-        mlmodel: {
-          color: {
-            background: '#ffffff',
-            border: '#c41d7f',
-            highlight: { background: '#fff0f6', border: '#c41d7f' },
-            hover: { background: '#fff0f6', border: '#c41d7f' },
-          },
-          font: { color: '#262626' },
-        },
-        storedprocedure: {
-          color: {
-            background: '#ffffff',
-            border: '#7cb305',
-            highlight: { background: '#fcffe6', border: '#7cb305' },
-            hover: { background: '#fcffe6', border: '#7cb305' },
-          },
-          font: { color: '#262626' },
-        },
-        searchindex: {
-          color: {
-            background: '#ffffff',
-            border: '#d4380d',
-            highlight: { background: '#fff2e8', border: '#d4380d' },
-            hover: { background: '#fff2e8', border: '#d4380d' },
-          },
-          font: { color: '#262626' },
-        },
-        default: {
-          color: {
-            background: '#ffffff',
-            border: '#d9d9d9',
-            highlight: { background: '#fafafa', border: '#8c8c8c' },
-            hover: { background: '#fafafa', border: '#8c8c8c' },
-          },
-          font: { color: '#262626' },
-        },
-      },
-      layout:
-        layout === 'hierarchical'
-          ? {
-              hierarchical: {
-                direction: 'LR',
-                sortMethod: 'directed',
-                levelSeparation: 400,
-                nodeSpacing: 200,
-                treeSpacing: 250,
-                blockShifting: true,
-                edgeMinimization: true,
-                parentCentralization: true,
-              },
-            }
-          : {
-              improvedLayout: true,
-              clusterThreshold: 150,
-            },
-      physics: {
-        enabled: layout === 'force',
-        solver: 'forceAtlas2Based',
-        forceAtlas2Based: {
-          gravitationalConstant: -300,
-          centralGravity: 0.01,
-          springLength: 350,
-          springConstant: 0.04,
-          damping: 0.3,
-          avoidOverlap: 1.5,
-        },
-        stabilization: {
-          enabled: true,
-          iterations: 200,
-          updateInterval: 25,
-        },
-        minVelocity: 0.75,
-        maxVelocity: 30,
-      },
-      interaction: {
-        hover: true,
-        tooltipDelay: 300,
-        hideEdgesOnDrag: true,
-        hideEdgesOnZoom: true,
-        navigationButtons: true,
-        keyboard: {
-          enabled: true,
-        },
-      },
-    }),
-    [layout]
-  );
 
   const fetchGraphData = useCallback(async () => {
     if (!entity?.id) {
@@ -383,328 +104,475 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     }
   }, [entity?.id, entityType, selectedDepth, t]);
 
-  useEffect(() => {
-    fetchGraphData();
-  }, [fetchGraphData]);
-
-  useEffect(() => {
-    if (!containerRef.current || !graphData || loading) {
-      return;
-    }
-
-    // Enhance nodes with better tooltips and styling
-    const enhancedNodes = graphData.nodes.map((node) => {
-      const isCurrentEntity = node.id.includes(entity?.id ?? '');
-
-      // Get icon for node type
-      const getNodeIcon = (type: string) => {
-        const icons: Record<string, string> = {
-          table: '📊',
-          database: '🗄️',
-          schema: '📁',
-          pipeline: '⚡',
-          dashboard: '📈',
-          user: '👤',
-          team: '👥',
-          tag: '🏷️',
-          glossaryterm: '📖',
-          glossary: '📚',
-          domain: '🏛️',
-          dataproduct: '📦',
-          topic: '📨',
-          container: '📦',
-          mlmodel: '🤖',
-          storedprocedure: '⚙️',
-          searchindex: '🔍',
-        };
-
-        return icons[type.toLowerCase()] || '📄';
-      };
-
-      // Create structured label for rectangular nodes
-      const icon = getNodeIcon(node.type);
-      const displayName = node.label || node.name || '';
-      const nodeLabel = `${icon} <b>${displayName}</b>\n<code>${node.type}</code>`;
-
-      return {
-        ...node,
-        label: nodeLabel,
-        title: false, // Disable default HTML tooltip
-        font: {
-          size: isCurrentEntity ? 12 : 11,
-          multi: true,
-          bold: {
-            size: isCurrentEntity ? 13 : 12,
-          },
-        },
-        borderWidth: isCurrentEntity ? 3 : 1,
-        margin: {
-          top: 10,
-          bottom: 10,
-          left: 15,
-          right: 15,
-        },
-        chosen: {
-          node: function (
-            values: ChosenNodeValues,
-            _id: IdType,
-            _selected: boolean,
-            hovering: boolean
-          ): ReturnType<NodeChosenNodeFunction> {
-            values.borderWidth = isCurrentEntity ? 4 : 2;
-            if (hovering) {
-              values.shadow = true;
-              values.shadowColor = 'rgba(0,0,0,0.2)';
-              values.shadowSize = 15;
-            }
-          },
-        },
-      } as unknown as GraphNode;
-    });
-
-    // Create vis network
-    const nodes = new DataSet(enhancedNodes);
-    const edges = new DataSet(graphData.edges as Edge[]);
-
-    const data = {
-      nodes: nodes,
-      edges: edges,
-    };
-
-    networkRef.current = new Network(
-      containerRef.current,
-      data,
-      networkOptions
-    );
-
-    // Add event handlers
-    networkRef.current.on('click', (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.get(nodeId);
-        setSelectedNode(node as unknown as GraphNode);
-      } else {
-        setSelectedNode(null);
-      }
-    });
-
-    // Add double-click handler for navigation
-    networkRef.current.on('doubleClick', (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.get(nodeId) as unknown as GraphNode;
-        if (node.type && node.id) {
-          const entityIdMatch = node.id.match(/\/([a-f0-9-]{36})$/);
-          if (entityIdMatch) {
-            const entityId = entityIdMatch[1];
-            window.open(`/${node.type}/${entityId}`, '_blank');
-          }
-        }
-      }
-    });
-
-    // Enhanced hover effects
-    networkRef.current.on('hoverNode', (params) => {
-      //   networkRef.current?.canvas.body.container.style.cursor = 'pointer';
-      const nodeId = params.node;
-      const node = nodes.get(nodeId) as unknown as GraphNode;
-      setHoveredNode(node);
-    });
-
-    networkRef.current.on('blurNode', () => {
-      //   networkRef.current?.canvas.body.container.style.cursor = 'default';
-      setHoveredNode(null);
-    });
-
-    // Stabilization complete - center on current entity
-    networkRef.current.on('stabilizationIterationsDone', () => {
-      networkRef.current?.setOptions({ physics: { enabled: false } });
-
-      // Center on current entity
-      const currentNodeId = graphData.nodes.find((node) =>
-        node.id.includes(entity?.id ?? '')
-      )?.id;
-      if (currentNodeId) {
-        networkRef.current?.focus(currentNodeId, {
-          scale: 1.2,
-          animation: {
-            duration: 1000,
-            easingFunction: 'easeInOutQuad',
-          },
-        });
-      }
-    });
-
-    return () => {
-      networkRef.current?.destroy();
-    };
-  }, [graphData, loading, networkOptions, entity?.id]);
-
-  // Re-fetch data when depth changes
-  useEffect(() => {
-    if (entity?.id) {
-      fetchGraphData();
-    }
-  }, [selectedDepth]);
+  const renderNode = useCallback(
+    (data: G6NodeData) => <CustomNode nodeData={data} />,
+    []
+  );
 
   const handleFit = () => {
-    networkRef.current?.fit({
-      animation: {
-        duration: 1000,
-        easingFunction: 'easeInOutQuad',
-      },
-    });
+    if (networkRef.current) {
+      void networkRef.current.fitView();
+    }
   };
 
-  const handleLayoutChange = (value: 'hierarchical' | 'force') => {
-    setLayout(value);
+  const handleLayoutChange: RadioProps['onChange'] = ({ target }) => {
+    setLayout(target.value);
   };
 
   const handleDepthChange = (value: number) => {
     setSelectedDepth(value);
   };
 
-  if (!entity) {
-    return <Empty description={t('message.no-entity-selected')} />;
-  }
-
   const handleZoomIn = () => {
-    const scale = networkRef.current?.getScale() || 1;
-    networkRef.current?.moveTo({ scale: scale * 1.2 });
+    if (networkRef.current) {
+      const currentZoom = networkRef.current.getZoom();
+      void networkRef.current.zoomTo(currentZoom * 1.2, {
+        duration: 300,
+        easing: 'easeCubic',
+      });
+    }
   };
 
   const handleZoomOut = () => {
-    const scale = networkRef.current?.getScale() || 1;
-    networkRef.current?.moveTo({ scale: scale * 0.8 });
+    if (networkRef.current) {
+      const currentZoom = networkRef.current.getZoom();
+      void networkRef.current.zoomTo(currentZoom * 0.8, {
+        duration: 300,
+        easing: 'easeCubic',
+      });
+    }
   };
 
   const handleFullscreen = () => {
     const graphContainer = document.querySelector('.knowledge-graph-container');
     if (graphContainer) {
       if (document.fullscreenElement) {
-        document.exitFullscreen();
+        void document.exitFullscreen();
       } else {
-        (graphContainer as HTMLElement).requestFullscreen();
+        void (graphContainer as HTMLElement).requestFullscreen();
       }
     }
   };
 
-  return (
-    <div className="knowledge-graph-container">
-      <Card title={t('label.knowledge-graph')}>
-        <div className="knowledge-graph-controls">
-          <div className="depth-slider-container">
-            <span className="depth-label">{t('label.depth')}</span>
-            <Slider
-              className="depth-slider"
-              marks={{
-                1: '1',
-                5: '5',
-                10: '10',
-              }}
-              max={10}
-              min={1}
-              tooltip={{
-                formatter: (value) => `${t('label.depth')}: ${value}`,
-              }}
-              value={selectedDepth}
-              onChange={handleDepthChange}
-            />
-          </div>
-          <Select
-            options={[
-              {
-                label: (
-                  <Space>
-                    <NodeCollapseOutlined />
-                    {t('label.force')}
-                  </Space>
-                ),
-                value: 'force',
-              },
-              {
-                label: (
-                  <Space>
-                    <PartitionOutlined />
-                    {t('label.hierarchical')}
-                  </Space>
-                ),
-                value: 'hierarchical',
-              },
-            ]}
-            size="small"
-            value={layout}
-            onChange={handleLayoutChange}
-          />
-          <Space.Compact>
-            <Tooltip title={t('label.zoom-in')}>
-              <Button
-                icon={<ZoomInOutlined />}
-                size="small"
-                onClick={handleZoomIn}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.zoom-out')}>
-              <Button
-                icon={<ZoomOutOutlined />}
-                size="small"
-                onClick={handleZoomOut}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.fit-to-screen')}>
-              <Button icon={<AimOutlined />} size="small" onClick={handleFit} />
-            </Tooltip>
-            <Tooltip title={t('label.fullscreen')}>
-              <Button
-                icon={<FullscreenOutlined />}
-                size="small"
-                onClick={handleFullscreen}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.refresh')}>
-              <Button
-                icon={<ReloadOutlined />}
-                loading={loading}
-                size="small"
-                onClick={fetchGraphData}
-              />
-            </Tooltip>
-          </Space.Compact>
-        </div>
+  useEffect(() => {
+    if (!containerRef.current || !graphData || loading) {
+      return;
+    }
 
-        {loading ? (
-          <div className="knowledge-graph-loading">
-            <Spin size="large" tip={t('label.loading-graph')} />
-          </div>
-        ) : !graphData || graphData.nodes.length === 0 ? (
-          <div className="knowledge-graph-empty">
-            <Empty
-              description={t('message.no-data-available')}
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
+    const g6Data = transformToG6Format(graphData);
+    const width = containerRef.current.offsetWidth || 800;
+    const height = containerRef.current.offsetHeight || 600;
+
+    const maxEdgeLabelLen =
+      g6Data.edges?.reduce(
+        (max, e) => Math.max(max, String(e.data?.label).length),
+        0
+      ) ?? 0;
+
+    const dagreNodesep = NODE_HEIGHT + 48;
+    const dagreRanksep = NODE_WIDTH + Math.max(100, maxEdgeLabelLen * 8);
+
+    const focusNodeId = entity?.id
+      ? (g6Data.nodes ?? []).find(
+          (n) => n.id === entity.id || n.id.endsWith(entity.id)
+        )?.id ?? entity.id
+      : '';
+
+    // Focus node keeps fixed dimensions regardless of content
+    if (focusNodeId) {
+      g6Data.nodes = (g6Data.nodes ?? []).map((node) =>
+        node.id === focusNodeId
+          ? {
+              ...node,
+              style: {
+                ...node.style,
+                size: [MAX_NODE_WIDTH, NODE_HEIGHT] as [number, number],
+              },
+            }
+          : node
+      );
+    }
+
+    if (layout === 'radial' && entity?.id) {
+      const positions = computeRadialPositions(
+        g6Data.nodes ?? [],
+        g6Data.edges ?? [],
+        focusNodeId,
+        width / 2,
+        height / 2
+      );
+      g6Data.nodes = (g6Data.nodes ?? []).map((node) => {
+        const pos = positions.get(node.id);
+
+        return pos
+          ? { ...node, style: { ...node.style, x: pos.x, y: pos.y } }
+          : node;
+      });
+
+      // Apply a uniform curveOffset to all radial edges. Because G6's offset
+      // is perpendicular to the travel direction, two edges that connect the
+      // same pair of nodes in opposite directions automatically curve to
+      // opposite sides with the same sign — keeping bidirectional arcs
+      // separated without any per-edge sign logic.
+      g6Data.edges = (g6Data.edges ?? []).map((edge) => ({
+        ...edge,
+        style: { ...edge.style, curveOffset: 50 },
+      }));
+    }
+
+    const dagrePorts: NodePortStyleProps[] = [
+      { key: 'left', placement: 'left', linkToCenter: false },
+      { key: 'right', placement: 'right', linkToCenter: false },
+    ];
+
+    const radialLeftPort = {
+      key: 'left',
+      placement: [-0.04, 0.5] as [number, number],
+      r: 6,
+      fill: '#ffffff',
+      stroke: '#d9d9d9',
+      lineWidth: 1.5,
+    };
+
+    const radialRightPort = {
+      key: 'right',
+      placement: [1.04, 0.5] as [number, number],
+      r: 6,
+      fill: '#ffffff',
+      stroke: '#d9d9d9',
+      lineWidth: 1.5,
+    };
+
+    if (layout === 'radial') {
+      // Build a position map from the already-updated node styles
+      const posMap = new Map<string, number>();
+      (g6Data.nodes ?? []).forEach((n) => {
+        posMap.set(n.id, (n.style?.x as number) ?? width / 2);
+      });
+
+      g6Data.nodes = (g6Data.nodes ?? []).map((node) => {
+        if (node.id === focusNodeId) {
+          return node;
+        }
+
+        const myX = posMap.get(node.id) ?? width / 2;
+        let needsLeft = false;
+        let needsRight = false;
+
+        (g6Data.edges ?? []).forEach((edge) => {
+          let otherId: string | null = null;
+          if (edge.source === node.id) {
+            otherId = edge.target;
+          } else if (edge.target === node.id) {
+            otherId = edge.source;
+          }
+          if (otherId !== null) {
+            const otherX = posMap.get(otherId) ?? width / 2;
+            if (otherX < myX) {
+              needsLeft = true;
+            } else {
+              needsRight = true;
+            }
+          }
+        });
+
+        const ports = [
+          ...(needsLeft ? [radialLeftPort] : []),
+          ...(needsRight ? [radialRightPort] : []),
+        ];
+
+        return { ...node, style: { ...node.style, ports } };
+      });
+    } else {
+      g6Data.nodes = (g6Data.nodes ?? []).map((node) => ({
+        ...node,
+        style: { ...node.style, ports: dagrePorts },
+      }));
+    }
+
+    const graph = new Graph({
+      container: containerRef.current,
+      width,
+      height,
+      data: g6Data,
+      layout:
+        layout === 'dagre'
+          ? {
+              type: 'dagre',
+              rankdir: 'RL',
+              nodesep: dagreNodesep,
+              ranksep: dagreRanksep,
+              radial: false,
+            }
+          : { type: 'preset' },
+      behaviors: ['drag-canvas', 'zoom-canvas', 'drag-element'],
+      node: {
+        type: 'react-node',
+        style: {
+          component: renderNode,
+        },
+      },
+      edge: {
+        type: (datum: G6EdgeData) =>
+          String(
+            datum.type ??
+              (layout === 'radial' ? 'quadratic' : 'cubic-horizontal')
+          ),
+        style: {
+          stroke: '#d9d9d9',
+          lineWidth: 1.5,
+          endArrow: true,
+          labelBackgroundPadding: [3, 6],
+        },
+        state: {
+          selected: { stroke: '#1677ff', lineWidth: 2.5, haloOpacity: 0 },
+        },
+      },
+    });
+
+    void graph.render().then(() => {
+      if (entity?.id) {
+        void graph.fitView();
+        void graph.focusElement(entity.id);
+      }
+    });
+
+    graph.on('node:click', (evt: IElementEvent) => {
+      const nodeId = evt.target.id;
+      if (nodeId) {
+        const node = graphData.nodes.find((n) => n.id === nodeId);
+        setSelectedNode(node || null);
+
+        const { nodeIds: pathNodes, edgeIds: pathEdges } = findHighlightPath(
+          focusNodeId,
+          nodeId,
+          g6Data.nodes ?? [],
+          g6Data.edges ?? []
+        );
+
+        graph.updateNodeData(
+          (g6Data.nodes ?? []).map((n) => ({
+            id: n.id,
+            data: { highlighted: pathNodes.has(n.id) },
+          }))
+        );
+        void graph.draw();
+
+        (g6Data.edges ?? []).forEach((e) => {
+          const edgeId = String(e.id);
+          void graph.setElementState(
+            edgeId,
+            pathEdges.has(edgeId) ? 'selected' : []
+          );
+        });
+      }
+    });
+
+    graph.on('node:dblclick', (evt: IElementEvent) => {
+      const nodeId = evt.target.id;
+      if (nodeId) {
+        const node = graphData.nodes.find((n) => n.id === nodeId);
+        if (node?.type && node?.fullyQualifiedName) {
+          const path = getEntityLinkFromType(
+            node.fullyQualifiedName,
+            node.type as EntityType
+          );
+
+          window.open(path, '_blank', 'noopener,noreferrer');
+        }
+      }
+    });
+
+    graph.on('node:pointerover', (evt: IElementEvent) => {
+      const nodeId = evt.target.id;
+      if (nodeId) {
+        void graph.setElementState(nodeId, 'hover');
+      }
+    });
+
+    graph.on('node:pointerleave', (evt: IElementEvent) => {
+      const nodeId = evt.target.id;
+      if (nodeId) {
+        void graph.setElementState(nodeId, []);
+      }
+    });
+
+    graph.on('canvas:click', () => {
+      setSelectedNode(null);
+
+      graph.updateNodeData(
+        (g6Data.nodes ?? []).map((n) => ({
+          id: n.id,
+          data: { highlighted: false },
+        }))
+      );
+      void graph.draw();
+
+      (g6Data.edges ?? []).forEach(
+        (e) => void graph.setElementState(String(e.id), [])
+      );
+    });
+
+    networkRef.current = graph;
+
+    return () => {
+      graph.destroy();
+    };
+  }, [graphData, loading, layout, entity?.id, transformToG6Format]);
+
+  useEffect(() => {
+    if (entity?.id) {
+      fetchGraphData();
+    }
+  }, [fetchGraphData]);
+
+  const hasNoData = !graphData || graphData.nodes.length === 0;
+
+  const graphCanvas = (
+    <>
+      <div className="knowledge-graph-canvas" ref={containerRef} />
+
+      {selectedNode &&
+        (selectedNode.fullyQualifiedName ? (
+          <div className="knowledge-graph-entity-panel">
+            <EntitySummaryPanel
+              entityDetails={{
+                details: {
+                  id:
+                    ENTITY_UUID_REGEX.exec(selectedNode.id)?.[1] ??
+                    selectedNode.id,
+                  fullyQualifiedName: selectedNode.fullyQualifiedName,
+                  entityType: selectedNode.type as EntityType,
+                  name: selectedNode.name ?? selectedNode.label,
+                  displayName: selectedNode.label,
+                } as SearchSourceDetails,
+              }}
+              handleClosePanel={() => setSelectedNode(null)}
             />
           </div>
         ) : (
-          <>
-            <div className="knowledge-graph-canvas" ref={containerRef} />
+          <KnowledgeGraphNodeDetails
+            node={selectedNode}
+            onClose={() => setSelectedNode(null)}
+            onNavigate={(nodeId) => {
+              const entityIdMatch = ENTITY_UUID_REGEX.exec(nodeId);
+              if (entityIdMatch) {
+                window.open(
+                  `/${selectedNode.type}/${entityIdMatch[1]}`,
+                  '_blank',
+                  'noopener,noreferrer'
+                );
+              }
+            }}
+          />
+        ))}
+    </>
+  );
 
-            {/* Selected node details */}
-            {selectedNode && (
-              <KnowledgeGraphNodeDetails
-                node={selectedNode}
-                onClose={() => setSelectedNode(null)}
-                onNavigate={(nodeId) => {
-                  const entityIdMatch = nodeId.match(/\/([a-f0-9-]{36})$/);
-                  if (entityIdMatch) {
-                    const entityId = entityIdMatch[1];
-                    const entityType = selectedNode.type;
-                    window.open(`/${entityType}/${entityId}`, '_blank');
-                  }
-                }}
-              />
-            )}
-          </>
-        )}
-      </Card>
+  const emptyContent = hasNoData ? (
+    <div className="knowledge-graph-empty">
+      <Empty
+        description={t('message.no-data-available')}
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+      />
+    </div>
+  ) : (
+    graphCanvas
+  );
+
+  const graphContent = loading ? (
+    <div className="knowledge-graph-loading">
+      <Spin size="large" tip={t('label.loading-graph')} />
+    </div>
+  ) : (
+    emptyContent
+  );
+
+  if (!entity) {
+    return <Empty description={t('message.no-entity-selected')} />;
+  }
+
+  return (
+    <div className="knowledge-graph-container">
+      <div className="knowledge-graph-controls">
+        <Typography.Text>
+          {t('label.view-entity', { entity: t('label.mode') }) + ':'}
+        </Typography.Text>
+        <Radio.Group
+          optionType="button"
+          options={[
+            {
+              label: t('label.hierarchical'),
+              value: 'dagre',
+            },
+            {
+              label: t('label.radial'),
+              value: 'radial',
+            },
+          ]}
+          size="small"
+          value={layout}
+          onChange={handleLayoutChange}
+        />
+
+        <Divider type="vertical" />
+
+        <div className="depth-slider-container">
+          <span className="depth-label">{t('label.node-depth') + ':'}</span>
+          <Slider
+            className="depth-slider"
+            marks={{
+              1: '1',
+              5: '5',
+              10: '10',
+            }}
+            max={10}
+            min={1}
+            tooltip={{
+              formatter: (value) => `${t('label.depth')}: ${value}`,
+            }}
+            value={selectedDepth}
+            onChange={handleDepthChange}
+          />
+        </div>
+        <Divider type="vertical" />
+        <Space.Compact>
+          <Tooltip title={t('label.zoom-in')}>
+            <Button
+              icon={<ZoomInOutlined />}
+              size="small"
+              onClick={handleZoomIn}
+            />
+          </Tooltip>
+          <Tooltip title={t('label.zoom-out')}>
+            <Button
+              icon={<ZoomOutOutlined />}
+              size="small"
+              onClick={handleZoomOut}
+            />
+          </Tooltip>
+          <Tooltip title={t('label.fit-to-screen')}>
+            <Button icon={<AimOutlined />} size="small" onClick={handleFit} />
+          </Tooltip>
+          <Tooltip title={t('label.fullscreen')}>
+            <Button
+              icon={<FullscreenOutlined />}
+              size="small"
+              onClick={handleFullscreen}
+            />
+          </Tooltip>
+          <Tooltip title={t('label.refresh')}>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              size="small"
+              onClick={fetchGraphData}
+            />
+          </Tooltip>
+        </Space.Compact>
+      </div>
+
+      {graphContent}
     </div>
   );
 };
