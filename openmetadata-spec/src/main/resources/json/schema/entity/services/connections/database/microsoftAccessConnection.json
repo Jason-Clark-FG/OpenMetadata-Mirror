@@ -12,11 +12,17 @@
       "enum": ["MicrosoftAccess"],
       "default": "MicrosoftAccess"
     },
-    "microsoftAccessScheme": {
-      "description": "SQLAlchemy driver scheme options.",
-      "type": "string",
-      "enum": ["access+pyodbc"],
-      "default": "access+pyodbc"
+    "localFilePath": {
+      "title": "Local File Path",
+      "description": "Local filesystem path to a single Access database file or a directory containing Access files.",
+      "type": "object",
+      "properties": {
+        "localFilePath": {
+          "type": "string",
+          "title": "Local File Path",
+          "description": "Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g. ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be ingested."
+        }
+      }
     }
   },
   "properties": {
@@ -26,82 +32,28 @@
       "$ref": "#/definitions/microsoftAccessType",
       "default": "MicrosoftAccess"
     },
-    "scheme": {
-      "title": "Connection Scheme",
-      "description": "SQLAlchemy driver scheme options.",
-      "$ref": "#/definitions/microsoftAccessScheme",
-      "default": "access+pyodbc"
-    },
-    "databaseFilePath": {
-      "title": "Database File Path",
-      "description": "Full path to the Microsoft Access database file (.mdb or .accdb). Example: C:\\path\\to\\database.accdb",
-      "type": "string"
-    },
-    "username": {
-      "title": "Username",
-      "description": "Username to connect to Microsoft Access database. Optional for databases without security.",
-      "type": "string"
-    },
-    "password": {
-      "title": "Password",
-      "description": "Password to connect to Microsoft Access database. Optional for databases without security.",
-      "type": "string",
-      "format": "password"
-    },
-    "databaseName": {
-      "title": "Database Name",
-      "description": "Optional name to give to the database in OpenMetadata. If left blank, we will use the filename as the database name.",
-      "type": "string"
-    },
-    "odbcDriver": {
-      "title": "ODBC Driver",
-      "description": "ODBC driver name for Microsoft Access. Default is 'Microsoft Access Driver (*.mdb, *.accdb)'.",
-      "type": "string",
-      "default": "Microsoft Access Driver (*.mdb, *.accdb)"
-    },
-    "connectionOptions": {
-      "title": "Connection Options",
-      "description": "Additional ODBC connection options as key-value pairs.",
-      "$ref": "../connectionBasicType.json#/definitions/connectionOptions"
-    },
-    "connectionArguments": {
-      "title": "Connection Arguments",
-      "description": "Additional SQLAlchemy connection arguments.",
-      "$ref": "../connectionBasicType.json#/definitions/connectionArguments"
-    },
-    "schemaFilterPattern": {
-      "title": "Default Schema Filter Pattern",
-      "description": "Regex to only include/exclude schemas that matches the pattern.",
-      "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern"
+    "connection": {
+      "title": "Access Database Location (Local Path or S3)",
+      "description": "Choose between local file system path (object) or S3 bucket location (object) for Access database files.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/localFilePath"
+        },
+        {
+          "$ref": "../storage/s3Connection.json"
+        }
+      ]
     },
     "tableFilterPattern": {
-      "title": "Default Table Filter Pattern",
+      "title": "Table Filter Pattern",
       "description": "Regex to only include/exclude tables that matches the pattern.",
       "$ref": "../../../../type/filterPattern.json#/definitions/filterPattern"
     },
     "supportsMetadataExtraction": {
       "title": "Supports Metadata Extraction",
       "$ref": "../connectionBasicType.json#/definitions/supportsMetadataExtraction"
-    },
-    "supportsDBTExtraction": {
-      "$ref": "../connectionBasicType.json#/definitions/supportsDBTExtraction"
-    },
-    "supportsProfiler": {
-      "title": "Supports Profiler",
-      "$ref": "../connectionBasicType.json#/definitions/supportsProfiler"
-    },
-    "supportsQueryComment": {
-      "title": "Supports Query Comment",
-      "$ref": "../connectionBasicType.json#/definitions/supportsQueryComment"
-    },
-    "sampleDataStorageConfig": {
-      "title": "Storage Config for Sample Data",
-      "$ref": "../connectionBasicType.json#/definitions/sampleDataStorageConfig"
-    },
-    "supportsViewLineageExtraction": {
-      "$ref": "../connectionBasicType.json#/definitions/supportsViewLineageExtraction"
     }
   },
   "additionalProperties": false,
-  "required": ["databaseFilePath"]
+  "required": ["connection"]
 }
