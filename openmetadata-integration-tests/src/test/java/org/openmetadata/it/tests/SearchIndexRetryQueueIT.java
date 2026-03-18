@@ -366,13 +366,21 @@ class SearchIndexRetryQueueIT {
     retryQueueDAO.upsert(
         entityId, entityFqn, "initial failure", SearchIndexRetryQueue.STATUS_PENDING, "table");
 
+    // Simulate the retry progression: PENDING → PENDING_RETRY_1 → PENDING_RETRY_2 → FAILED
+    String[] statusProgression = {
+      SearchIndexRetryQueue.STATUS_PENDING,
+      SearchIndexRetryQueue.STATUS_PENDING_RETRY_1,
+      SearchIndexRetryQueue.STATUS_PENDING_RETRY_2
+    };
+    String[] nextStatuses = {
+      SearchIndexRetryQueue.STATUS_PENDING_RETRY_1,
+      SearchIndexRetryQueue.STATUS_PENDING_RETRY_2,
+      SearchIndexRetryQueue.STATUS_FAILED
+    };
     for (int i = 0; i < 3; i++) {
-      retryQueueDAO.claimRecord(entityId, entityFqn, SearchIndexRetryQueue.STATUS_PENDING);
-
-      String nextStatus =
-          (i < 2) ? SearchIndexRetryQueue.STATUS_PENDING : SearchIndexRetryQueue.STATUS_FAILED;
+      retryQueueDAO.claimRecord(entityId, entityFqn, statusProgression[i]);
       retryQueueDAO.updateFailureAndRetryCount(
-          entityId, entityFqn, "attempt " + (i + 1) + " failed", nextStatus);
+          entityId, entityFqn, "attempt " + (i + 1) + " failed", nextStatuses[i]);
     }
 
     List<SearchIndexRetryRecord> failed =
@@ -698,7 +706,7 @@ class SearchIndexRetryQueueIT {
             .findFirst()
             .orElseThrow();
     assertEquals(SearchIndexRetryQueue.STATUS_FAILED, record.getStatus());
-    assertTrue(record.getRetryCount() >= 2);
+    assertEquals(3, record.getRetryCount());
 
     retryQueueDAO.deleteByEntity("", entityFqn);
   }

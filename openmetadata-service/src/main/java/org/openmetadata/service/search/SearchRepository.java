@@ -849,39 +849,41 @@ public class SearchRepository {
     if (!nullOrEmpty(entities)) {
       String entityType = entities.getFirst().getEntityReference().getType();
       Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
-      if (SearchIndexRetryQueue.isEntityTypeSuspended(entityType)) {
-        LOG.debug(
-            "Skipping live search indexing for {} entities because reindex is active for {}",
-            entities.size(),
-            entityType);
-        return;
-      }
-      if (!getSearchClient().isClientAvailable()) {
-        for (EntityInterface entity : entities) {
-          SearchIndexRetryQueue.enqueue(
-              entity.getId() != null ? entity.getId().toString() : null,
-              entity.getFullyQualifiedName(),
-              "createEntitiesIndex: Search client unavailable");
+      try {
+        if (SearchIndexRetryQueue.isEntityTypeSuspended(entityType)) {
+          LOG.debug(
+              "Skipping live search indexing for {} entities because reindex is active for {}",
+              entities.size(),
+              entityType);
+          return;
         }
-        return;
-      }
-      IndexMapping indexMapping = entityIndexMap.get(entityType);
-      List<Map<String, String>> docs = new ArrayList<>();
-      for (EntityInterface entity : entities) {
-        SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
-        String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
-        docs.add(Collections.singletonMap(entity.getId().toString(), doc));
-      }
+        if (!getSearchClient().isClientAvailable()) {
+          for (EntityInterface entity : entities) {
+            SearchIndexRetryQueue.enqueue(
+                entity.getId() != null ? entity.getId().toString() : null,
+                entity.getFullyQualifiedName(),
+                "createEntitiesIndex: Search client unavailable");
+          }
+          return;
+        }
+        IndexMapping indexMapping = entityIndexMap.get(entityType);
+        List<Map<String, String>> docs = new ArrayList<>();
+        for (EntityInterface entity : entities) {
+          SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
+          String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
+          docs.add(Collections.singletonMap(entity.getId().toString(), doc));
+        }
 
-      // createEntities is async fire-and-forget — errors are handled in its
-      // callback via the retry queue, so no try-catch is needed here.
-      searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
+        // createEntities is async fire-and-forget — errors are handled in its
+        // callback via the retry queue, so no try-catch is needed here.
+        searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
 
-      if (Entity.TABLE.equals(entityType)) {
-        indexColumnsForTables(entities);
+        if (Entity.TABLE.equals(entityType)) {
+          indexColumnsForTables(entities);
+        }
+      } finally {
+        RequestLatencyContext.endSearchOperation(searchSample);
       }
-
-      RequestLatencyContext.endSearchOperation(searchSample);
     }
   }
 

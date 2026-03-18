@@ -129,8 +129,10 @@ public final class SearchIndexRetryQueue {
       }
     }
 
-    SUSPEND_ALL_STREAMING.set(suspendAll);
+    // Set entity types before the boolean so that isEntityTypeSuspended never
+    // sees suspendAll=false with an outdated (empty) entity-types set.
     SUSPENDED_ENTITY_TYPES.set(Collections.unmodifiableSet(normalized));
+    SUSPEND_ALL_STREAMING.set(suspendAll);
   }
 
   public static void clearSuspension() {

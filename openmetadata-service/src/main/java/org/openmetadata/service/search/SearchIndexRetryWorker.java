@@ -779,6 +779,10 @@ public class SearchIndexRetryWorker implements Managed {
   }
 
   private String nextRetryStatus(int retryCount) {
-    return retryCount < 2 ? STATUS_PENDING : STATUS_FAILED;
+    return switch (retryCount) {
+      case 0 -> STATUS_PENDING_RETRY_1;
+      case 1 -> STATUS_PENDING_RETRY_2;
+      default -> STATUS_FAILED;
+    };
   }
 }
