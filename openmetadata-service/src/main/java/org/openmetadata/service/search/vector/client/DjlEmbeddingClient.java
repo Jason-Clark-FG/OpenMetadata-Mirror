@@ -16,7 +16,7 @@ import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearch
 import org.openmetadata.schema.service.configuration.elasticsearch.NaturalLanguageSearchConfiguration;
 
 @Slf4j
-public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
+public class DjlEmbeddingClient extends EmbeddingClient implements AutoCloseable {
 
   public static class EmbeddingInitializationException extends RuntimeException {
     public EmbeddingInitializationException(String message, Throwable cause) {
@@ -78,7 +78,7 @@ public class DjlEmbeddingClient implements EmbeddingClient, AutoCloseable {
   }
 
   @Override
-  public float[] embed(String text) {
+  protected float[] doEmbed(String text) {
     if (text == null || text.isBlank()) {
       LOG.debug("Null or blank text, returning zero vector");
       return new float[dimension];

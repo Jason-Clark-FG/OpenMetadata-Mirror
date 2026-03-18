@@ -51,7 +51,7 @@ class EmbeddingClientTest {
     assertEquals(1536, client1536.embed("test").length);
   }
 
-  static class MockEmbeddingClient implements EmbeddingClient {
+  static class MockEmbeddingClient extends EmbeddingClient {
     private final int dimension;
 
     MockEmbeddingClient(int dimension) {
@@ -59,7 +59,7 @@ class EmbeddingClientTest {
     }
 
     @Override
-    public float[] embed(String text) {
+    protected float[] doEmbed(String text) {
       float[] embedding = new float[dimension];
       int hash = text.hashCode();
       for (int i = 0; i < dimension; i++) {

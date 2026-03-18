@@ -2,11 +2,31 @@ package org.openmetadata.service.search.vector.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
-public interface EmbeddingClient {
-  float[] embed(String text);
+public abstract class EmbeddingClient {
+  static final int MAX_CONCURRENT_REQUESTS = 10;
 
-  default List<float[]> embedBatch(List<String> texts) {
+  private final Semaphore concurrencyLimiter = new Semaphore(MAX_CONCURRENT_REQUESTS);
+
+  protected abstract float[] doEmbed(String text);
+
+  public final float[] embed(String text) {
+    try {
+      concurrencyLimiter.acquire();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(
+          "Embedding generation was interrupted while waiting for permit", e);
+    }
+    try {
+      return doEmbed(text);
+    } finally {
+      concurrencyLimiter.release();
+    }
+  }
+
+  public List<float[]> embedBatch(List<String> texts) {
     List<float[]> results = new ArrayList<>();
     for (String text : texts) {
       results.add(embed(text));
@@ -14,7 +34,7 @@ public interface EmbeddingClient {
     return results;
   }
 
-  int getDimension();
+  public abstract int getDimension();
 
-  String getModelId();
+  public abstract String getModelId();
 }
