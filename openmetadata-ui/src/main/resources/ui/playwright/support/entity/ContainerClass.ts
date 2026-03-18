@@ -13,6 +13,12 @@
 import { APIRequestContext, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
 import { isUndefined } from 'lodash';
+import {
+  Column,
+  Constraint,
+  Container,
+  DataType,
+} from '../../../src/generated/entity/data/container';
 import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { uuid } from '../../utils/common';
