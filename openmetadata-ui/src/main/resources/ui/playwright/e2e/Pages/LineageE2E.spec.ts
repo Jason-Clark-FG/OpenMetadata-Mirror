@@ -147,7 +147,7 @@ test.describe('Lineage E2E - Column Layer Behavior', () => {
             if (entity1Columns.length > 0) {
               const firstColumn = entity1Columns[0];
               const columnLocator = page.locator(
-                `[data-testid="column-${entity1Fqn}.${firstColumn.name}"]`
+                `[data-testid="column-${firstColumn.fullyQualifiedName}"]`
               );
               await expect(columnLocator).toBeVisible();
             }
@@ -155,7 +155,7 @@ test.describe('Lineage E2E - Column Layer Behavior', () => {
             if (entity2Columns.length > 0) {
               const firstColumn = entity2Columns[0];
               const columnLocator = page.locator(
-                `[data-testid="column-${entity2Fqn}.${firstColumn.name}"]`
+                `[data-testid="column-${firstColumn.fullyQualifiedName}"]`
               );
               await expect(columnLocator).toBeVisible();
             }
@@ -308,11 +308,13 @@ test.describe('Lineage E2E - Column Edge Rendering', () => {
 
       const table1Fqn = get(
         largeTable1,
-        'entityResponseData.fullyQualifiedName'
+        'entityResponseData.fullyQualifiedName',
+        ''
       );
       const table2Fqn = get(
         largeTable2,
-        'entityResponseData.fullyQualifiedName'
+        'entityResponseData.fullyQualifiedName',
+        ''
       );
 
       const table1Col0 = `${table1Fqn}.t1_column_0`;
