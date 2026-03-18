@@ -274,6 +274,8 @@ class OpenSearchBulkSinkBehaviorTest {
       OpenSearchBulkSink sink = new OpenSearchBulkSink(searchRepository, 10, 2, 1000L);
       OpenSearchBulkSink.CustomBulkProcessor processor =
           processorConstruction.constructed().getFirst();
+      OpenSearchBulkSink.CustomBulkProcessor columnProcessor =
+          processorConstruction.constructed().get(1);
 
       setAtomicField(sink, "totalSubmitted", 3);
       setAtomicField(sink, "totalSuccess", 2);
@@ -282,14 +284,19 @@ class OpenSearchBulkSinkBehaviorTest {
       setAtomicField(sink, "processFailed", 2);
 
       when(processor.flushAndWait(5, TimeUnit.SECONDS)).thenReturn(true);
+      when(columnProcessor.flushAndWait(anyLong(), eq(TimeUnit.SECONDS))).thenReturn(true);
       when(processor.awaitClose(60, TimeUnit.SECONDS)).thenReturn(true);
+      when(columnProcessor.awaitClose(30, TimeUnit.SECONDS)).thenReturn(true);
 
       assertTrue(sink.flushAndAwait(5));
       sink.close();
 
       verify(processor).flushAndWait(5, TimeUnit.SECONDS);
+      verify(columnProcessor).flushAndWait(anyLong(), eq(TimeUnit.SECONDS));
       verify(processor).flush();
+      verify(columnProcessor).flush();
       verify(processor).awaitClose(60, TimeUnit.SECONDS);
+      verify(columnProcessor).awaitClose(30, TimeUnit.SECONDS);
       assertEquals(3, sink.getStats().getTotalRecords());
       assertEquals(2, sink.getStats().getSuccessRecords());
       assertEquals(1, sink.getStats().getFailedRecords());
