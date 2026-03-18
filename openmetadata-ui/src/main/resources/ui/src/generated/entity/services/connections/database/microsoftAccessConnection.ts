@@ -19,6 +19,7 @@ export interface MicrosoftAccessConnection {
      * database files.
      */
     connection:                  AccessDatabaseLocationLocalPathOrS3;
+    supportsLineageExtraction?:  boolean;
     supportsMetadataExtraction?: boolean;
     /**
      * Regex to only include/exclude tables that matches the pattern.
@@ -66,6 +67,7 @@ export interface AccessDatabaseLocationLocalPathOrS3 {
      * Service Type
      */
     type?: S3Type;
+    [property: string]: any;
 }
 
 /**

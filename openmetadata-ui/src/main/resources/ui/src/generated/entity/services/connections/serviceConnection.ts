@@ -839,7 +839,7 @@ export interface ConfigObject {
      *
      * Matillion Auth Configuration
      */
-    connection?: ConfigConnection;
+    connection?: ConnectionObject;
     /**
      * Tableau API version. If not provided, the version will be used from the tableau server.
      *
@@ -3147,7 +3147,7 @@ export interface DeltaLakeConfigurationSource {
      *
      * Available sources to fetch files.
      */
-    connection?: ConfigSourceConnection;
+    connection?: ConnectionClass;
     /**
      * Bucket Name of the data source.
      */
@@ -3190,7 +3190,7 @@ export interface DeltaLakeConfigurationSource {
  *
  * DataLake S3 bucket will ingest metadata of files in bucket
  */
-export interface ConfigSourceConnection {
+export interface ConnectionClass {
     /**
      * Thrift connection to the metastore service. E.g., localhost:9083
      */
@@ -3465,7 +3465,7 @@ export interface GCPImpersonateServiceAccountValues {
  *
  * Matillion ETL Auth Config.
  */
-export interface ConfigConnection {
+export interface ConnectionObject {
     /**
      * Password for Superset.
      *
@@ -3632,6 +3632,7 @@ export interface ConfigConnection {
      */
     databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
+    [property: string]: any;
 }
 
 /**
