@@ -878,7 +878,6 @@ public class OpenMetadataOperations implements Callable<Integer> {
     AppMarketPlaceDefinition definition =
         appMarketRepository.getByName(null, appName, appMarketRepository.getFields("id"));
 
-    boolean isMcpApp = "McpApplication".equals(appName);
     CreateApp createApp =
         new CreateApp()
             .withName(definition.getName())
@@ -886,7 +885,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
             .withDisplayName(definition.getDisplayName())
             .withAppSchedule(new AppSchedule().withScheduleTimeline(ScheduleTimeline.NONE))
             .withAppConfiguration(Map.of())
-            .withAllowBotImpersonation(isMcpApp);
+            .withAllowBotImpersonation(Boolean.TRUE.equals(definition.getAllowBotImpersonation()));
 
     AppMapper appMapper = new AppMapper();
     App entity = appMapper.createToEntity(createApp, ADMIN_USER_NAME);
