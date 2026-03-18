@@ -49,56 +49,6 @@ import tagClassBase from '../TagClassBase';
 import topicClassBase from '../TopicClassBase';
 import worksheetClassBase from '../WorksheetClassBase';
 
-export const getGlossaryTermDefaultTabs = () => {
-  return [
-    {
-      id: EntityTabs.OVERVIEW,
-      displayName: i18n.t(TAB_LABEL_MAP[EntityTabs.OVERVIEW]),
-      layout: customizeGlossaryTermPageClassBase.getDefaultWidgetForTab(
-        EntityTabs.OVERVIEW
-      ),
-      name: EntityTabs.OVERVIEW,
-      editable: true,
-    },
-    {
-      id: EntityTabs.GLOSSARY_TERMS,
-      displayName: i18n.t(TAB_LABEL_MAP[EntityTabs.GLOSSARY_TERMS]),
-      layout: customizeGlossaryTermPageClassBase.getDefaultWidgetForTab(
-        EntityTabs.GLOSSARY_TERMS
-      ),
-      name: EntityTabs.GLOSSARY_TERMS,
-      editable: false,
-    },
-    {
-      id: EntityTabs.ASSETS,
-      displayName: i18n.t(TAB_LABEL_MAP[EntityTabs.ASSETS]),
-      layout: customizeGlossaryTermPageClassBase.getDefaultWidgetForTab(
-        EntityTabs.ASSETS
-      ),
-      name: EntityTabs.ASSETS,
-      editable: false,
-    },
-    {
-      displayName: i18n.t(TAB_LABEL_MAP[EntityTabs.ACTIVITY_FEED]),
-      name: EntityTabs.ACTIVITY_FEED,
-      id: EntityTabs.ACTIVITY_FEED,
-      layout: customizeGlossaryTermPageClassBase.getDefaultWidgetForTab(
-        EntityTabs.ACTIVITY_FEED
-      ),
-      editable: false,
-    },
-    {
-      id: EntityTabs.CUSTOM_PROPERTIES,
-      name: EntityTabs.CUSTOM_PROPERTIES,
-      displayName: i18n.t(TAB_LABEL_MAP[EntityTabs.CUSTOM_PROPERTIES]),
-      layout: customizeGlossaryTermPageClassBase.getDefaultWidgetForTab(
-        EntityTabs.CUSTOM_PROPERTIES
-      ),
-      editable: false,
-    },
-  ];
-};
-
 export const getGlossaryDefaultTabs = () => {
   return [
     {
