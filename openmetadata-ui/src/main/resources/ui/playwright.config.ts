@@ -133,19 +133,6 @@ export default defineConfig({
       dependencies: ['setup'],
       fullyParallel: true,
     },
-    {
-      name: 'ingestion',
-      use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup', 'entity-data-setup'],
-      grep: /@ingestion/,
-      teardown: 'entity-data-teardown',
-      testIgnore: [
-        '**/nightly/**',
-        '**/DataAssetRulesEnabled.spec.ts',
-        '**/DataAssetRulesDisabled.spec.ts',
-        '**/SystemCertificationTags.spec.ts',
-      ],
-    },
     // System Certification Tags tests modify global shared state (system tags like Gold, Silver, Bronze)
     // They must run in isolation after the main chromium project to avoid flakiness
     {
