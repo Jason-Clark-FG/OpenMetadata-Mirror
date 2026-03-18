@@ -179,6 +179,12 @@ public class MigrationWorkflow {
     try {
       for (MigrationFile file : applyMigrations) {
         file.parseSQLFiles();
+        if (file.isReprocessing() && !file.hasNewStatements()) {
+          LOG.info(
+              "[MigrationWorkflow] Skipping version {} - reprocessing with no new SQL statements",
+              file.version);
+          continue;
+        }
         String extClazzName = null;
         if (file.version.contains("collate")) {
           extClazzName = file.getMigrationProcessExtClassName();
@@ -259,16 +265,23 @@ public class MigrationWorkflow {
 
   private List<MigrationFile> processNativeMigrations(
       List<String> executedMigrations, List<MigrationFile> availableMigrations) {
-    Stream<MigrationFile> availableNativeMigrations =
-        availableMigrations.stream().filter(migration -> !migration.isExtension);
+    List<MigrationFile> availableNativeMigrations =
+        availableMigrations.stream().filter(migration -> !migration.isExtension).toList();
     Optional<String> maxMigration =
         executedMigrations.stream().max(MigrationWorkflow::compareVersions);
     if (maxMigration.isPresent()) {
-      return availableNativeMigrations
-          .filter(migration -> migration.biggerThan(maxMigration.get()))
-          .toList();
+      List<MigrationFile> result = new ArrayList<>();
+      for (MigrationFile migration : availableNativeMigrations) {
+        if (migration.biggerThan(maxMigration.get())) {
+          result.add(migration);
+        } else if (compareVersions(migration.version, maxMigration.get()) == 0) {
+          migration.setReprocessing(true);
+          result.add(migration);
+        }
+      }
+      return result;
     }
-    return availableNativeMigrations.toList();
+    return availableNativeMigrations;
   }
 
   private List<MigrationFile> processExtensionMigrations(

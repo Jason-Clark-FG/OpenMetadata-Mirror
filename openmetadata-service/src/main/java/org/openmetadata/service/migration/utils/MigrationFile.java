@@ -31,6 +31,7 @@ public class MigrationFile implements Comparable<MigrationFile> {
   protected final MigrationDAO migrationDAO;
   protected final List<String> schemaChanges;
   protected final List<String> postDDLScripts;
+  private boolean reprocessing;
   public static final String DEFAULT_MIGRATION_PROCESS_CLASS =
       "org.openmetadata.service.migration.api.MigrationProcessImpl";
 
@@ -192,6 +193,18 @@ public class MigrationFile implements Comparable<MigrationFile> {
       arrayAsString.append(versionNumber);
     }
     return "v" + arrayAsString;
+  }
+
+  public boolean isReprocessing() {
+    return reprocessing;
+  }
+
+  public void setReprocessing(boolean reprocessing) {
+    this.reprocessing = reprocessing;
+  }
+
+  public boolean hasNewStatements() {
+    return !schemaChanges.isEmpty() || !postDDLScripts.isEmpty();
   }
 
   private boolean checkIfQueryPreviouslyRan(String query) {

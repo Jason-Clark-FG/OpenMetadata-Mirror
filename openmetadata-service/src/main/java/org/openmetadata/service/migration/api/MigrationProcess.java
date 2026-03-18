@@ -84,5 +84,9 @@ public interface MigrationProcess {
   // This method is to run SQL which can be part of the transaction post data migrations
   Map<String, QueryStatus> runPostDDLScripts(boolean isForceMigration);
 
+  boolean isReprocessing();
+
+  boolean hasNewStatements();
+
   void close();
 }
