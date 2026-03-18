@@ -255,6 +255,11 @@ class OpenAIEmbeddingClientTest {
           }
 
           @Override
+          public java.util.Optional<java.time.Duration> connectTimeout() {
+            return java.util.Optional.empty();
+          }
+
+          @Override
           public java.util.Optional<java.net.CookieHandler> cookieHandler() {
             return java.util.Optional.empty();
           }
