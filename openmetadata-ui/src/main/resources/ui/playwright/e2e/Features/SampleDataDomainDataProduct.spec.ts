@@ -53,7 +53,7 @@ test.describe(
       await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomainData);
       const dpRes = page.waitForResponse((response) =>
-        response.url().includes('index=data_product_search_index')
+        response.url().includes('index=dataProduct')
       );
       await page.getByTestId('data_products').click();
       await dpRes;
@@ -70,7 +70,7 @@ test.describe(
       await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomainData);
       const dpRes = page.waitForResponse((response) =>
-        response.url().includes('index=data_product_search_index')
+        response.url().includes('index=dataProduct')
       );
       await page.getByTestId('data_products').click();
       await dpRes;
@@ -78,10 +78,9 @@ test.describe(
       const dataProductCard = page.getByTestId('explore-card-TestDataProduct');
       await expect(dataProductCard).toBeVisible();
       await dataProductCard.click();
-      await page.waitForSelector(
-        '[data-testid="entity-summary-panel-container"]',
-        { state: 'visible' }
-      );
+      await page
+        .getByTestId('entity-summary-panel-container')
+        .waitFor({ state: 'visible' });
       const summaryPanel = page.getByTestId('entity-summary-panel-container');
       await expect(summaryPanel).toContainText('Test Data Product');
       await expect(summaryPanel).toContainText(
