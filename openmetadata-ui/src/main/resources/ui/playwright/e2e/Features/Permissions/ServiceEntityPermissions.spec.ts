@@ -11,12 +11,13 @@
  *  limitations under the License.
  */
 
-import { Browser, Page } from '@playwright/test';
-import { test as baseTest } from '../../../support/fixtures/userPages';
+import { Browser, expect, Page } from '@playwright/test';
+import { SERVICE_ENTITIES } from '../../../constant/service';
 import { EntityClass } from '../../../support/entity/EntityClass';
+import { test as baseTest } from '../../../support/fixtures/userPages';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
-
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   ALL_OPERATIONS,
   runCommonPermissionTests,
@@ -27,7 +28,6 @@ import {
   assignRoleToUser,
   initializePermissions,
 } from '../../../utils/permission';
-import { SERVICE_ENTITIES } from '../../../constant/service';
 
 const testUser = new UserClass();
 
@@ -115,6 +115,51 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       }
     });
 
+    test.describe('EditAll permissions', () => {
+      test.beforeAll('Initialize EditAll permissions', async ({ browser }) => {
+        const { page, afterAction } = await performAdminLogin(browser);
+        await initializePermissions(page, 'allow', ['EditAll']);
+        await assignRoleToUser(page, testUser);
+        await afterAction();
+      });
+
+      test('AutoPilot trigger button is visible with EditAll permission', async ({
+        testUserPage,
+      }) => {
+        test.slow();
+        await entity.visitEntityPage(testUserPage);
+        await waitForAllLoadersToDisappear(testUserPage);
+
+        await expect(
+          testUserPage.getByTestId('trigger-auto-pilot-application-button')
+        ).toBeVisible();
+      });
+    });
+
+    test.describe('View only permissions', () => {
+      test.beforeAll(
+        'Initialize view-only permissions',
+        async ({ browser }) => {
+          const { page, afterAction } = await performAdminLogin(browser);
+          await initializePermissions(page, 'allow', ['ViewAll']);
+          await assignRoleToUser(page, testUser);
+          await afterAction();
+        }
+      );
+
+      test('AutoPilot trigger button is hidden with view-only permission', async ({
+        testUserPage,
+      }) => {
+        test.slow();
+        await entity.visitEntityPage(testUserPage);
+        await waitForAllLoadersToDisappear(testUserPage);
+
+        await expect(
+          testUserPage.getByTestId('trigger-auto-pilot-application-button')
+        ).not.toBeVisible();
+      });
+    });
+
     test.describe('Deny permissions', () => {
       test.beforeAll('Initialize deny permissions', async ({ browser }) => {
         const { page, afterAction } = await performAdminLogin(browser);
@@ -155,6 +200,18 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
           );
         });
       }
+
+      test('AutoPilot trigger button is hidden with deny-all permissions', async ({
+        testUserPage,
+      }) => {
+        test.slow();
+        await entity.visitEntityPage(testUserPage);
+        await waitForAllLoadersToDisappear(testUserPage);
+
+        await expect(
+          testUserPage.getByTestId('trigger-auto-pilot-application-button')
+        ).not.toBeVisible();
+      });
     });
   });
 });
