@@ -14,7 +14,6 @@
 import {
   Button,
   ButtonUtility,
-  defaultColors,
   FeaturedIcon,
   Typography,
 } from '@openmetadata/ui-core-components';
@@ -93,7 +92,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         content={popoverContent}
         overlayInnerStyle={{
           borderRadius: '8px',
-          background: `linear-gradient(180deg, ${defaultColors.gray[50]} 0%, ${defaultColors.gray[50]} 100%)`,
+          background: `linear-gradient(180deg, var(--tw-color-gray-50) 0%, var(--tw-color-gray-100) 100%)`,
           padding: '2px 6px',
         }}
         placement="bottomLeft"
@@ -105,10 +104,10 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
           data-testid="learning-icon"
           icon={
             <FeaturedIcon
-              className="tw:hover:text-brand-700"
+              className="tw:hover:text-brand-700 tw:size-6"
               color="brand"
               icon={
-                <LearningIconSvg className="tw:w-4.5 tw:h-4.5 tw:hover:h-5 tw:hover:w-5" />
+                <LearningIconSvg className="tw:w-4 tw:h-4 tw:hover:h-4.5 tw:hover:w-4.5" />
               }
             />
           }
