@@ -236,6 +236,7 @@ const PlatformLineage = () => {
       <div className="d-flex justify-between items-center">
         <Select
           showSearch
+          className="w-max-500"
           data-testid="search-entity-select"
           filterOption={false}
           loading={isSearchLoading}

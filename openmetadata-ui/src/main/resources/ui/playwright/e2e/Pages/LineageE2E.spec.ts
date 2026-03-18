@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import { expect } from '@playwright/test';
-import { get } from 'lodash';
+import { camelCase, get } from 'lodash';
 import { ApiEndpointClass } from '../../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../../support/entity/ContainerClass';
 import { DashboardClass } from '../../support/entity/DashboardClass';
@@ -75,6 +75,8 @@ test.describe('Lineage E2E - Column Layer Behavior', () => {
       test(`Verify column layer activation shows columns for ${entity1Name} -> ${entity2Name}`, async ({
         page,
       }) => {
+        test.slow();
+
         const { apiContext, afterAction } = await getApiContext(page);
         const lineagePage = new LineagePageObject(page);
 
@@ -105,11 +107,11 @@ test.describe('Lineage E2E - Column Layer Behavior', () => {
             apiContext,
             {
               id: entity1.entityResponseData.id,
-              type: entity1.getType().toLowerCase(),
+              type: camelCase(entity1.getType()),
             },
             {
               id: entity2.entityResponseData.id,
-              type: entity2.getType().toLowerCase(),
+              type: camelCase(entity2.getType()),
             }
           );
 
@@ -161,8 +163,6 @@ test.describe('Lineage E2E - Column Layer Behavior', () => {
 
           await test.step('Deactivate column layer and verify columns are hidden', async () => {
             await lineagePage.deactivateColumnLayer();
-
-            await page.waitForTimeout(300);
 
             const entity1Columns = getEntityColumns(entity1, entity1Name);
             const entity2Columns = getEntityColumns(entity2, entity2Name);
@@ -250,7 +250,6 @@ test.describe('Lineage E2E - Column Edge Rendering', () => {
 
     await test.step('Activate column layer', async () => {
       await lineagePage.activateColumnLayer();
-      await page.waitForTimeout(500);
     });
 
     await test.step('Verify column edge is visible between connected columns', async () => {
@@ -460,8 +459,6 @@ test.describe('Lineage E2E - Column Highlighting on Hover and Click', () => {
     await test.step('Hover on table2.column0 and verify highlighting', async () => {
       await lineagePage.hoverColumn(table2Fqn, t2Col0Name);
 
-      await page.waitForTimeout(300);
-
       await lineagePage.verifyColumnHighlighted(table1Fqn, t1Col0Name, true);
       await lineagePage.verifyColumnHighlighted(table2Fqn, t2Col0Name, true);
 
@@ -488,8 +485,6 @@ test.describe('Lineage E2E - Column Highlighting on Hover and Click', () => {
 
     await test.step('Click table2.column1 and verify downstream path is highlighted', async () => {
       await lineagePage.clickColumn(table2Fqn, t2Col1Name);
-
-      await page.waitForTimeout(300);
 
       await lineagePage.verifyColumnHighlighted(table2Fqn, t2Col1Name, true);
       await lineagePage.verifyColumnHighlighted(table3Fqn, t3Col0Name, true);
@@ -917,8 +912,6 @@ test.describe('Lineage E2E - Edit Mode Behavior', () => {
 
     await test.step('Exit edit mode and verify column tracing is cleared', async () => {
       await lineagePage.exitEditMode();
-
-      await page.waitForTimeout(300);
 
       await lineagePage.verifyColumnHighlighted(tableFqn, firstColName, false);
     });
