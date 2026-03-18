@@ -131,7 +131,7 @@ jobs:
         uses: ./.github/actions/setup-openmetadata-test-environment
         with:
           python-version: "3.10"
-          args: ${{ matrix.shardIndex == 2 && '-d postgresql -s true' || '-d postgresql -i false -s true' }}
+          args: "-d postgresql -s true"
           ingestion_dependency: "all"
 
       - name: Setup Node.js
@@ -158,16 +158,8 @@ jobs:
               --project=DataAssetRulesDisabled \
               --project=Basic \
 
-          elif [ "${{ matrix.shardIndex }}" -eq "2" ]; then
-            echo "🔹 Running ingestion tests + chromium shard 1/5 on shard 2"
-            npx playwright test --project=ingestion
-            npx playwright test \
-              --project=chromium \
-              --grep-invert @dataAssetRules \
-              --shard=1/5
-
           else
-            # Shards 3-6 run common chromium tests equally distributed (4-way sharding)
+            # Shards 2-6 run common chromium tests equally distributed (5-way sharding)
             CHROMIUM_SHARD=$(( ${{ matrix.shardIndex }} - 1 ))
             echo "🔹 Running common chromium tests on shard ${CHROMIUM_SHARD}/5"
             npx playwright test \
