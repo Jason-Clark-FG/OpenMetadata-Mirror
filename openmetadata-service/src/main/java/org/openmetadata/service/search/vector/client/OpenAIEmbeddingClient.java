@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.Semaphore;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.service.configuration.elasticsearch.NaturalLanguageSearchConfiguration;
@@ -18,6 +19,7 @@ import org.openmetadata.schema.service.configuration.elasticsearch.Openai;
 @Slf4j
 public final class OpenAIEmbeddingClient implements EmbeddingClient {
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  static final int MAX_CONCURRENT_REQUESTS = 10;
 
   private final HttpClient httpClient;
   private final String apiKey;
@@ -25,6 +27,7 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
   private final int dimension;
   private final String endpoint;
   private final boolean isAzure;
+  private final Semaphore concurrencyLimiter;
 
   public OpenAIEmbeddingClient(ElasticSearchConfiguration config) {
     NaturalLanguageSearchConfiguration nlsCfg = config.getNaturalLanguageSearch();
@@ -61,6 +64,7 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
 
     this.endpoint = resolveEndpoint(openaiCfg);
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+    this.concurrencyLimiter = new Semaphore(MAX_CONCURRENT_REQUESTS);
 
     LOG.info(
         "Initialized OpenAIEmbeddingClient with model={}, dimension={}, endpoint={}, azure={}",
@@ -83,6 +87,7 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
     this.dimension = dimension;
     this.endpoint = endpoint;
     this.isAzure = isAzure;
+    this.concurrencyLimiter = new Semaphore(MAX_CONCURRENT_REQUESTS);
   }
 
   private String resolveEndpoint(Openai config) {
@@ -108,6 +113,13 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
   public float[] embed(String text) {
     if (text == null || text.isBlank()) {
       throw new IllegalArgumentException("Input text must not be null or blank");
+    }
+
+    try {
+      concurrencyLimiter.acquire();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException("OpenAI embedding generation was interrupted", e);
     }
 
     try {
@@ -146,6 +158,8 @@ public final class OpenAIEmbeddingClient implements EmbeddingClient {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new RuntimeException("OpenAI embedding generation was interrupted", e);
+    } finally {
+      concurrencyLimiter.release();
     }
   }
 
