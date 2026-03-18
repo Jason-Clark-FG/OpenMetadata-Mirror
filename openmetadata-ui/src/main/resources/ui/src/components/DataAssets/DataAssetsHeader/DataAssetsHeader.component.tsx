@@ -547,12 +547,11 @@ export const DataAssetsHeader = ({
       setIsAutoPilotTriggering(false);
     }
   }, [serviceCategory, afterTriggerAction]);
-
   const triggerAutoPilotApplicationButton = useMemo(() => {
     if (
       !SERVICE_TYPES.includes(entityType) ||
       EXCLUDE_AUTO_PILOT_SERVICE_TYPES.includes(entityType) ||
-      !permissions.EditAll
+      !permissions.Trigger
     ) {
       return null;
     }

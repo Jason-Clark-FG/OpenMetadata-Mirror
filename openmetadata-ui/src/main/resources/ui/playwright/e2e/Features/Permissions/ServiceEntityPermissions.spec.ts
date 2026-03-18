@@ -115,15 +115,15 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       }
     });
 
-    test.describe('EditAll permissions', () => {
-      test.beforeAll('Initialize EditAll permissions', async ({ browser }) => {
+    test.describe('Trigger permissions', () => {
+      test.beforeAll('Initialize Trigger permissions', async ({ browser }) => {
         const { page, afterAction } = await performAdminLogin(browser);
-        await initializePermissions(page, 'allow', ['EditAll']);
+        await initializePermissions(page, 'allow', ['Trigger']);
         await assignRoleToUser(page, testUser);
         await afterAction();
       });
 
-      test('AutoPilot trigger button is visible with EditAll permission', async ({
+      test('AutoPilot trigger button is visible with Trigger permission', async ({
         testUserPage,
       }) => {
         test.slow();

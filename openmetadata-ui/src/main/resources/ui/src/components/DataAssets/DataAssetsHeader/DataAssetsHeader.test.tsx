@@ -458,7 +458,7 @@ describe('DataAssetsHeader component', () => {
     expect(screen.queryByTestId('certification-label')).not.toBeInTheDocument();
   });
 
-  it('should not render the auto-pilot button when user has no EditAll permission (view-only policy)', () => {
+  it('should not render the auto-pilot button when user has no Trigger permission (view-only policy)', () => {
     render(
       <DataAssetsHeader
         {...mockProps}
@@ -472,7 +472,7 @@ describe('DataAssetsHeader component', () => {
           ...DEFAULT_ENTITY_PERMISSION,
           ViewAll: true,
           ViewBasic: true,
-          EditAll: false,
+          Trigger: false,
         }}
       />
     );
@@ -511,7 +511,7 @@ describe('DataAssetsHeader component', () => {
         }}
         disableRunAgentsButton={false}
         entityType={EntityType.DATABASE_SERVICE}
-        permissions={{ ...DEFAULT_ENTITY_PERMISSION, EditAll: true }}
+        permissions={{ ...DEFAULT_ENTITY_PERMISSION, Trigger: true }}
       />
     );
 
@@ -536,7 +536,7 @@ describe('DataAssetsHeader component', () => {
           serviceType: DatabaseServiceType.BigQuery,
         }}
         entityType={EntityType.DATABASE_SERVICE}
-        permissions={{ ...DEFAULT_ENTITY_PERMISSION, EditAll: true }}
+        permissions={{ ...DEFAULT_ENTITY_PERMISSION, Trigger: true }}
       />
     );
 
@@ -555,7 +555,7 @@ describe('DataAssetsHeader component', () => {
         }}
         disableRunAgentsButton={false}
         entityType={EntityType.DATABASE_SERVICE}
-        permissions={{ ...DEFAULT_ENTITY_PERMISSION, EditAll: true }}
+        permissions={{ ...DEFAULT_ENTITY_PERMISSION, Trigger: true }}
       />
     );
 
@@ -576,7 +576,7 @@ describe('DataAssetsHeader component', () => {
         }}
         disableRunAgentsButtonMessage={customMessage}
         entityType={EntityType.DATABASE_SERVICE}
-        permissions={{ ...DEFAULT_ENTITY_PERMISSION, EditAll: true }}
+        permissions={{ ...DEFAULT_ENTITY_PERMISSION, Trigger: true }}
       />
     );
 
@@ -596,7 +596,7 @@ describe('DataAssetsHeader component', () => {
         }}
         disableRunAgentsButton={false}
         entityType={EntityType.DATABASE_SERVICE}
-        permissions={{ ...DEFAULT_ENTITY_PERMISSION, EditAll: true }}
+        permissions={{ ...DEFAULT_ENTITY_PERMISSION, Trigger: true }}
       />
     );
 
