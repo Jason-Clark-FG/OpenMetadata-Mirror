@@ -136,18 +136,20 @@ class SearchIndexRetryQueueIT {
     String fqn2 = ns.prefix("rq") + ".b";
     String fqn3 = ns.prefix("rq") + ".c";
 
-    retryQueueDAO.upsert(id1, fqn1, "f", SearchIndexRetryQueue.STATUS_PENDING, "");
-    retryQueueDAO.upsert(id2, fqn2, "f", SearchIndexRetryQueue.STATUS_PENDING_RETRY_1, "");
-    retryQueueDAO.upsert(id3, fqn3, "f", SearchIndexRetryQueue.STATUS_FAILED, "");
+    // Use statuses that the background SearchIndexRetryWorker does not claim
+    // (COMPLETED, FAILED, IN_PROGRESS) to avoid race conditions where a worker thread
+    // changes a PENDING record to IN_PROGRESS between insert and assertion.
+    retryQueueDAO.upsert(id1, fqn1, "f", SearchIndexRetryQueue.STATUS_COMPLETED, "");
+    retryQueueDAO.upsert(id2, fqn2, "f", SearchIndexRetryQueue.STATUS_FAILED, "");
+    retryQueueDAO.upsert(id3, fqn3, "f", SearchIndexRetryQueue.STATUS_IN_PROGRESS, "");
 
-    List<SearchIndexRetryRecord> pendingRecords =
+    List<SearchIndexRetryRecord> matchedRecords =
         retryQueueDAO.findByStatuses(
-            List.of(
-                SearchIndexRetryQueue.STATUS_PENDING, SearchIndexRetryQueue.STATUS_PENDING_RETRY_1),
+            List.of(SearchIndexRetryQueue.STATUS_COMPLETED, SearchIndexRetryQueue.STATUS_FAILED),
             1000);
-    assertTrue(pendingRecords.stream().anyMatch(r -> r.getEntityId().equals(id1)));
-    assertTrue(pendingRecords.stream().anyMatch(r -> r.getEntityId().equals(id2)));
-    assertFalse(pendingRecords.stream().anyMatch(r -> r.getEntityId().equals(id3)));
+    assertTrue(matchedRecords.stream().anyMatch(r -> r.getEntityId().equals(id1)));
+    assertTrue(matchedRecords.stream().anyMatch(r -> r.getEntityId().equals(id2)));
+    assertFalse(matchedRecords.stream().anyMatch(r -> r.getEntityId().equals(id3)));
   }
 
   @Test
