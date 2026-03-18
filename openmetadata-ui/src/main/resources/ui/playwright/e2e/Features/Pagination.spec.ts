@@ -161,7 +161,12 @@ test.describe('Table columns page pagination', () => {
 
   test('should test pagination on Table columns', async ({ page }) => {
     await page.goto(`/table/${tableFqn}?pageSize=15`);
-    await testPaginationNavigation(page, '/columns', 'table', false);
+    await testPaginationNavigation(
+      page,
+      '/columns',
+      '[data-testid="entity-table"]',
+      false
+    );
   });
   test('should test Table columns complete flow with search', async ({
     page,
@@ -175,7 +180,7 @@ test.describe('Table columns page pagination', () => {
       searchApiPattern: '/columns/search',
       searchTestTerm: 'pw',
       searchParamName: 'columnSearch',
-      waitForLoadSelector: 'table',
+      waitForLoadSelector: '[data-testid="entity-table"]',
     });
   });
 });
