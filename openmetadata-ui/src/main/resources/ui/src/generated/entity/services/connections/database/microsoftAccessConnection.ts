@@ -66,7 +66,6 @@ export interface AccessDatabaseLocationLocalPathOrS3 {
      * Service Type
      */
     type?: S3Type;
-    [property: string]: any;
 }
 
 /**

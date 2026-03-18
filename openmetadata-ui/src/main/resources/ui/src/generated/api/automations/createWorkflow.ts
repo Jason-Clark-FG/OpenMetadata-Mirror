@@ -1201,7 +1201,7 @@ export interface ConfigObject {
      *
      * Choose between mysql and postgres connection for alation database
      */
-    connection?: ConnectionObject;
+    connection?: ConfigConnection;
     /**
      * Use slow logs to extract lineage.
      */
@@ -3600,7 +3600,7 @@ export interface GCPImpersonateServiceAccountValues {
  *
  * Choose between mysql and postgres connection for alation database
  */
-export interface ConnectionObject {
+export interface ConfigConnection {
     /**
      * Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g.
      * ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be
@@ -3767,7 +3767,6 @@ export interface ConnectionObject {
      */
     databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
-    [property: string]: any;
 }
 
 /**
