@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -32,20 +31,21 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
   const remainingCountLabel = `+${remainingCount}`;
   const fontSize = Math.max(8, Math.floor(avatarSize * 0.4));
 
+  const dynamicButtonStyle = {
+    width: `${avatarSize}px`,
+    height: `${avatarSize}px`,
+    fontSize: `${fontSize}px`,
+  };
+
   if (isCompactView) {
     return (
       <div className="tw:relative">
         <Button
           className={`${
             showAllOwners ? '' : 'more-owners-button'
-          } tw:text-sm tw:flex tw:items-center tw:justify-center`}
+          } tw:text-sm tw:flex tw:items-center tw:justify-center tw:min-w-fit`}
           color="link-color"
-          style={{
-            width: `${avatarSize}px`,
-            height: `${avatarSize}px`,
-            fontSize: `${fontSize}px`,
-            minWidth: 'fit-content',
-          }}
+          style={dynamicButtonStyle}
           onPress={() => setShowAllOwners((prev) => !prev)}>
           {showAllOwners ? t('label.less') : remainingCountLabel}
         </Button>
@@ -57,17 +57,10 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
     <div className="tw:relative">
       <Dropdown.Root>
         <Button
-          className={`${
-            showAllOwners ? '' : 'more-owners-button'
-          } tw:text-sm tw:flex tw:items-center tw:justify-center`}
+          className="more-owners-button tw:text-sm tw:flex tw:items-center tw:justify-center tw:min-w-fit"
           color="link-color"
-          style={{
-            width: `${avatarSize}px`,
-            height: `${avatarSize}px`,
-            fontSize: `${fontSize}px`,
-            minWidth: 'fit-content',
-          }}>
-          {showAllOwners ? t('label.less') : remainingCountLabel}
+          style={dynamicButtonStyle}>
+          {remainingCountLabel}
         </Button>
         <Dropdown.Popover>
           <Dropdown.Menu aria-label="remaining owners">

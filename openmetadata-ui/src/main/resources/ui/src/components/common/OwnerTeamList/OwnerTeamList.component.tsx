@@ -40,30 +40,16 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
   }, [owners]);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        position: 'relative',
-      }}>
+    <div className="tw:flex tw:items-center tw:relative">
       <Link
         className="no-underline"
         data-testid="owner-link"
         to={getOwnerPath(visibleTeam)}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            maxWidth: '100%',
-          }}>
+        <div className="tw:flex tw:items-center tw:gap-2 tw:max-w-full">
           <IconTeamsGrey
             className="tw:text-gray-700"
             data-testid={getEntityName(visibleTeam)}
-            style={{
-              width: avatarSize,
-              height: avatarSize,
-            }}
+            style={{ width: avatarSize, height: avatarSize }}
           />
           <div
             className={

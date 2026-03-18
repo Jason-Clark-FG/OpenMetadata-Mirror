@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { defaultColors } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { reverse } from 'lodash';
 import { ReactNode, useMemo, useState } from 'react';
@@ -60,28 +59,20 @@ const OwnerUserList = ({
     <div className="tw:w-full tw:flex tw:items-center">
       {!isCompactView && (
         <IconUser
+          className="tw:text-gray-700 tw:flex-none tw:mr-0.5"
           data-testid="user-owner-icon"
-          style={{
-            width: avatarSize,
-            height: avatarSize,
-            color: defaultColors.gray[700],
-            flex: 'none',
-            marginRight: '2px',
-          }}
+          style={{ width: avatarSize, height: avatarSize }}
         />
       )}
 
       <div
-        className={classNames('avatar-group', className)}
-        style={{
-          position: 'relative',
-          marginLeft: '4px',
-          width: '100%',
-          marginRight: isCompactView ? '8px' : '0',
-          flexDirection: isCompactView ? 'inherit' : 'row-reverse',
-          gap: isCompactView ? '8px' : '0',
-          flexWrap: isCompactView ? 'wrap' : 'initial',
-        }}>
+        className={classNames(
+          'avatar-group tw:relative tw:ml-1 tw:w-full',
+          isCompactView
+            ? 'tw:mr-2 tw:flex-row tw:gap-2 tw:flex-wrap'
+            : 'tw:mr-0 tw:flex-row-reverse tw:gap-0 tw:flex-nowrap',
+          className
+        )}>
         {renderVisibleOwners.map((owner: EntityReference) => (
           <div
             className={classNames(
