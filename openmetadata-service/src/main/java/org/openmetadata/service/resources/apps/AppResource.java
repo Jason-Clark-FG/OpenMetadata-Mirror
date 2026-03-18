@@ -1049,6 +1049,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
       @Context SecurityContext securityContext) {
     App app =
         repository.getByName(uriInfo, name, new EntityUtil.Fields(repository.getAllowedFields()));
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.EDIT_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     if (SCHEDULED_TYPES.contains(app.getScheduleType())) {
       ApplicationHandler.getInstance()
           .installApplication(
@@ -1088,6 +1091,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
       @Context SecurityContext securityContext) {
     App app =
         repository.getByName(uriInfo, name, new EntityUtil.Fields(repository.getAllowedFields()));
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.EDIT_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     // The application will have the updated appConfiguration we can use to run the `configure`
     // logic
     ApplicationHandler.getInstance()
@@ -1124,6 +1130,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
           Map<String, Object> configPayload) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
+    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.TRIGGER);
+    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     if (Boolean.FALSE.equals(ApplicationHandler.getInstance().isEnabled(name))) {
       throw AppException.byMessage(
           name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
@@ -1174,6 +1182,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String name) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
+    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.TRIGGER);
+    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     if (Boolean.TRUE.equals(app.getSupportsInterrupt())) {
       if (app.getAppType().equals(AppType.Internal)) {
         Thread.ofVirtual()
@@ -1217,6 +1227,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String name) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
+    OperationContext operationContext = new OperationContext(entityType, MetadataOperation.DEPLOY);
+    authorizer.authorize(securityContext, operationContext, getResourceContextByName(name));
     if (Boolean.FALSE.equals(ApplicationHandler.getInstance().isEnabled(name))) {
       throw AppException.byMessage(
           name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
