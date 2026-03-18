@@ -250,6 +250,11 @@ public class IndexingPipeline implements AutoCloseable {
           entityStats.setSuccessRecords(readerSuccess);
           entityStats.setFailedRecords(readerFailed);
           updateEntityAndJobStats(entityType, entityStats);
+
+          if (Entity.TABLE.equals(entityType)) {
+            updateColumnStatsFromSink();
+          }
+
           listeners.onProgressUpdate(stats.get(), null);
         } catch (Exception e) {
           LOG.error("Sink error for {}", entityType, e);
@@ -343,6 +348,7 @@ public class IndexingPipeline implements AutoCloseable {
 
   private ExecutionResult buildResult(long startTime) {
     syncSinkStats();
+    updateColumnStatsFromSink();
     Stats currentStats = stats.get();
     if (currentStats != null) {
       StatsReconciler.reconcile(currentStats);
@@ -390,6 +396,15 @@ public class IndexingPipeline implements AutoCloseable {
       es.setFailedRecords(0);
       s.getEntityStats().getAdditionalProperties().put(entityType, es);
     }
+
+    if (entities.contains(Entity.TABLE) && !entities.contains(Entity.TABLE_COLUMN)) {
+      StepStats columnStats = new StepStats();
+      columnStats.setTotalRecords(0);
+      columnStats.setSuccessRecords(0);
+      columnStats.setFailedRecords(0);
+      s.getEntityStats().getAdditionalProperties().put(Entity.TABLE_COLUMN, columnStats);
+    }
+
     s.getJobStats().setTotalRecords(total);
     s.getJobStats().setSuccessRecords(0);
     s.getJobStats().setFailedRecords(0);
@@ -477,12 +492,14 @@ public class IndexingPipeline implements AutoCloseable {
     StepStats js = s.getJobStats();
     if (js != null) {
       int totalSuccess =
-          s.getEntityStats().getAdditionalProperties().values().stream()
-              .mapToInt(StepStats::getSuccessRecords)
+          s.getEntityStats().getAdditionalProperties().entrySet().stream()
+              .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+              .mapToInt(e -> e.getValue().getSuccessRecords())
               .sum();
       int totalFailed =
-          s.getEntityStats().getAdditionalProperties().values().stream()
-              .mapToInt(StepStats::getFailedRecords)
+          s.getEntityStats().getAdditionalProperties().entrySet().stream()
+              .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+              .mapToInt(e -> e.getValue().getFailedRecords())
               .sum();
       js.setSuccessRecords(totalSuccess);
       js.setFailedRecords(totalFailed);
@@ -519,6 +536,22 @@ public class IndexingPipeline implements AutoCloseable {
     StepStats processStats = searchIndexSink.getProcessStats();
     if (processStats != null) {
       s.setProcessStats(processStats);
+    }
+  }
+
+  private void updateColumnStatsFromSink() {
+    if (searchIndexSink == null) return;
+    Stats s = stats.get();
+    if (s == null || s.getEntityStats() == null) return;
+
+    StepStats columnStats = searchIndexSink.getColumnStats();
+    if (columnStats != null && columnStats.getTotalRecords() > 0) {
+      StepStats existing = s.getEntityStats().getAdditionalProperties().get(Entity.TABLE_COLUMN);
+      if (existing != null) {
+        existing.setTotalRecords(columnStats.getTotalRecords());
+        existing.setSuccessRecords(columnStats.getSuccessRecords());
+        existing.setFailedRecords(columnStats.getFailedRecords());
+      }
     }
   }
 
