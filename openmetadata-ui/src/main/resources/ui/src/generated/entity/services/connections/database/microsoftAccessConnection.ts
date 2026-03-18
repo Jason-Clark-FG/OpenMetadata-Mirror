@@ -15,46 +15,11 @@
  */
 export interface MicrosoftAccessConnection {
     /**
-     * Additional SQLAlchemy connection arguments.
+     * Choose between local file system path (object) or S3 bucket location (object) for Access
+     * database files.
      */
-    connectionArguments?: { [key: string]: any };
-    /**
-     * Additional ODBC connection options as key-value pairs.
-     */
-    connectionOptions?: { [key: string]: string };
-    /**
-     * Full path to the Microsoft Access database file (.mdb or .accdb). Example:
-     * C:\path\to\database.accdb
-     */
-    databaseFilePath: string;
-    /**
-     * Optional name to give to the database in OpenMetadata. If left blank, we will use the
-     * filename as the database name.
-     */
-    databaseName?: string;
-    /**
-     * ODBC driver name for Microsoft Access. Default is 'Microsoft Access Driver (*.mdb,
-     * *.accdb)'.
-     */
-    odbcDriver?: string;
-    /**
-     * Password to connect to Microsoft Access database. Optional for databases without security.
-     */
-    password?:                string;
-    sampleDataStorageConfig?: SampleDataStorageConfig;
-    /**
-     * Regex to only include/exclude schemas that matches the pattern.
-     */
-    schemaFilterPattern?: FilterPattern;
-    /**
-     * SQLAlchemy driver scheme options.
-     */
-    scheme?:                        MicrosoftAccessScheme;
-    supportsDBTExtraction?:         boolean;
-    supportsMetadataExtraction?:    boolean;
-    supportsProfiler?:              boolean;
-    supportsQueryComment?:          boolean;
-    supportsViewLineageExtraction?: boolean;
+    connection:                  AccessDatabaseLocationLocalPathOrS3;
+    supportsMetadataExtraction?: boolean;
     /**
      * Regex to only include/exclude tables that matches the pattern.
      */
@@ -63,48 +28,51 @@ export interface MicrosoftAccessConnection {
      * Service Type
      */
     type?: MicrosoftAccessType;
-    /**
-     * Username to connect to Microsoft Access database. Optional for databases without security.
-     */
-    username?: string;
 }
 
 /**
- * Storage config to store sample data
+ * Choose between local file system path (object) or S3 bucket location (object) for Access
+ * database files.
+ *
+ * Local filesystem path to a single Access database file or a directory containing Access
+ * files.
+ *
+ * S3 Connection.
  */
-export interface SampleDataStorageConfig {
-    config?: DataStorageConfig;
-}
-
-/**
- * Storage config to store sample data
- */
-export interface DataStorageConfig {
+export interface AccessDatabaseLocationLocalPathOrS3 {
     /**
-     * Bucket Name
+     * Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g.
+     * ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be
+     * ingested.
      */
-    bucketName?: string;
+    localFilePath?: string;
+    awsConfig?:     AWSCredentials;
     /**
-     * Provide the pattern of the path where the generated sample data file needs to be stored.
+     * Bucket Names of the data source.
      */
-    filePathPattern?: string;
+    bucketNames?:         string[];
+    connectionArguments?: { [key: string]: any };
+    connectionOptions?:   { [key: string]: string };
     /**
-     * When this field enabled a single parquet file will be created to store sample data,
-     * otherwise we will create a new file per day
+     * Console EndPoint URL for S3-compatible services
      */
-    overwriteData?: boolean;
+    consoleEndpointURL?: string;
     /**
-     * Prefix of the data source.
+     * Regex to only fetch containers that matches the pattern.
      */
-    prefix?:        string;
-    storageConfig?: AwsCredentials;
+    containerFilterPattern?:     FilterPattern;
+    supportsMetadataExtraction?: boolean;
+    /**
+     * Service Type
+     */
+    type?: S3Type;
     [property: string]: any;
 }
 
 /**
  * AWS credentials configs.
  */
-export interface AwsCredentials {
+export interface AWSCredentials {
     /**
      * The Amazon Resource Name (ARN) of the role to assume. Required Field in case of Assume
      * Role
@@ -128,7 +96,7 @@ export interface AwsCredentials {
     /**
      * AWS Region
      */
-    awsRegion?: string;
+    awsRegion: string;
     /**
      * AWS Secret Access Key.
      */
@@ -154,7 +122,7 @@ export interface AwsCredentials {
 }
 
 /**
- * Regex to only include/exclude schemas that matches the pattern.
+ * Regex to only fetch containers that matches the pattern.
  *
  * Regex to only fetch entities that matches the pattern.
  *
@@ -172,10 +140,12 @@ export interface FilterPattern {
 }
 
 /**
- * SQLAlchemy driver scheme options.
+ * Service Type
+ *
+ * S3 service type
  */
-export enum MicrosoftAccessScheme {
-    AccessPyodbc = "access+pyodbc",
+export enum S3Type {
+    S3 = "S3",
 }
 
 /**

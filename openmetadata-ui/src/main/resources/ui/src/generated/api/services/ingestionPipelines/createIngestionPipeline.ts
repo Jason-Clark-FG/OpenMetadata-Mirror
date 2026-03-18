@@ -3312,9 +3312,6 @@ export interface ConfigObject {
      *
      * Password to connect to MSSQL.
      *
-     * Password to connect to Microsoft Access database. Optional for databases without
-     * security.
-     *
      * Password to connect to SQLite. Blank for in-memory database.
      *
      * Password to connect to Oracle.
@@ -3396,9 +3393,6 @@ export interface ConfigObject {
      *
      * Username to connect to MSSQL. This user should have privileges to read all the metadata
      * in MsSQL.
-     *
-     * Username to connect to Microsoft Access database. Optional for databases without
-     * security.
      *
      * Username to connect to MySQL. This user should have privileges to read all the metadata
      * in Mysql.
@@ -3540,6 +3534,9 @@ export interface ConfigObject {
     /**
      * Choose between API or database connection fetch metadata from superset.
      *
+     * Choose between local file system path (object) or S3 bucket location (object) for Access
+     * database files.
+     *
      * Choose between Database connection or HDB User Store connection.
      *
      * Choose between mysql and postgres connection for alation database
@@ -3550,7 +3547,7 @@ export interface ConfigObject {
      *
      * Matillion Auth Configuration
      */
-    connection?: ConfigConnection;
+    connection?: ConnectionObject;
     /**
      * Tableau API version. If not provided, the version will be used from the tableau server.
      *
@@ -3643,10 +3640,7 @@ export interface ConfigObject {
     /**
      * Mode Workspace Name
      */
-    workspaceName?: string;
-    /**
-     * Additional ODBC connection options as key-value pairs.
-     */
+    workspaceName?:     string;
     connectionOptions?: { [key: string]: string };
     /**
      * Source Python Class Name to instantiated by the ingestion workflow
@@ -3756,10 +3750,7 @@ export interface ConfigObject {
      */
     billingProjectId?: string;
     /**
-     * If using Metastore, Key-Value pairs that will be used to add configs to the
-     * SparkSession.
-     *
-     * Additional SQLAlchemy connection arguments.
+     * If using Metastore, Key-Value pairs that will be used to add configs to the SparkSession.
      */
     connectionArguments?: { [key: string]: any };
     /**
@@ -3858,9 +3849,6 @@ export interface ConfigObject {
     /**
      * Optional name to give to the database in OpenMetadata. If left blank, we will use default
      * as the database name.
-     *
-     * Optional name to give to the database in OpenMetadata. If left blank, we will use the
-     * filename as the database name.
      *
      * Optional name to give to the database in OpenMetadata. If left blank, we will use 'epic'
      * as the database name.
@@ -4069,16 +4057,6 @@ export interface ConfigObject {
      * server certificates against the certificate authority.
      */
     trustServerCertificate?: boolean;
-    /**
-     * Full path to the Microsoft Access database file (.mdb or .accdb). Example:
-     * C:\path\to\database.accdb
-     */
-    databaseFilePath?: string;
-    /**
-     * ODBC driver name for Microsoft Access. Default is 'Microsoft Access Driver (*.mdb,
-     * *.accdb)'.
-     */
-    odbcDriver?: string;
     /**
      * Use slow logs to extract lineage.
      */
@@ -5794,7 +5772,7 @@ export interface DeltaLakeConfigurationSource {
      *
      * Available sources to fetch files.
      */
-    connection?: ConfigSourceConnection;
+    connection?: ConnectionClass;
     /**
      * Bucket Name of the data source.
      */
@@ -5837,7 +5815,7 @@ export interface DeltaLakeConfigurationSource {
  *
  * DataLake S3 bucket will ingest metadata of files in bucket
  */
-export interface ConfigSourceConnection {
+export interface ConnectionClass {
     /**
      * Thrift connection to the metastore service. E.g., localhost:9083
      */
@@ -5883,6 +5861,14 @@ export interface ConfigSourceConnection {
  *
  * Mysql Database Connection Config
  *
+ * Choose between local file system path (object) or S3 bucket location (object) for Access
+ * database files.
+ *
+ * Local filesystem path to a single Access database file or a directory containing Access
+ * files.
+ *
+ * S3 Connection.
+ *
  * Choose between Database connection or HDB User Store connection.
  *
  * Sap Hana Database SQL Connection Config
@@ -5903,7 +5889,7 @@ export interface ConfigSourceConnection {
  *
  * Matillion ETL Auth Config.
  */
-export interface ConfigConnection {
+export interface ConnectionObject {
     /**
      * Password for Superset.
      *
@@ -6038,6 +6024,25 @@ export interface ConfigConnection {
      */
     useSlowLogs?: boolean;
     /**
+     * Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g.
+     * ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be
+     * ingested.
+     */
+    localFilePath?: string;
+    awsConfig?:     AWSCredentials;
+    /**
+     * Bucket Names of the data source.
+     */
+    bucketNames?: string[];
+    /**
+     * Console EndPoint URL for S3-compatible services
+     */
+    consoleEndpointURL?: string;
+    /**
+     * Regex to only fetch containers that matches the pattern.
+     */
+    containerFilterPattern?: FilterPattern;
+    /**
      * HDB Store User Key generated from the command `hdbuserstore SET <KEY> <host:port>
      * <USERNAME> <PASSWORD>`
      */
@@ -6051,6 +6056,7 @@ export interface ConfigConnection {
      */
     databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
+    [property: string]: any;
 }
 
 /**
@@ -6236,12 +6242,15 @@ export enum SSLMode {
  * Service Type
  *
  * Service type.
+ *
+ * S3 service type
  */
 export enum ConnectionType {
     Backend = "Backend",
     MatillionETL = "MatillionETL",
     Mysql = "Mysql",
     Postgres = "Postgres",
+    S3 = "S3",
     SQLite = "SQLite",
 }
 
@@ -6731,7 +6740,7 @@ export interface S3Connection {
     /**
      * Service Type
      */
-    type?: S3Type;
+    type?: S3ConnectionType;
 }
 
 /**
@@ -6739,7 +6748,7 @@ export interface S3Connection {
  *
  * S3 service type
  */
-export enum S3Type {
+export enum S3ConnectionType {
     S3 = "S3",
 }
 
@@ -6812,7 +6821,6 @@ export enum RunMode {
  * Couchbase driver scheme options.
  */
 export enum ConfigScheme {
-    AccessPyodbc = "access+pyodbc",
     AwsathenaREST = "awsathena+rest",
     Bigquery = "bigquery",
     ClickhouseHTTP = "clickhouse+http",
