@@ -35,8 +35,6 @@ export interface TableComponentProps<T>
   cellClassName?: string;
   /** React Aria drag-and-drop hooks returned by `useDragAndDrop`. */
   dragAndDropHooks?: DragAndDropHooks;
-  /** Whether the table allows dragging. */
-  allowsDragging?: boolean;
   'data-testid'?: string;
 }
 

@@ -626,8 +626,8 @@ const TableV2 = <T extends object>(
         {(() => {
           const tableContent = (
             <UntitledTable
-              allowsDragging={Boolean(dragAndDropHooks)}
               aria-label="data-table"
+              className={rest.resizableColumns ? 'tw:table-fixed' : undefined}
               dragAndDropHooks={dragAndDropHooks}
               selectedKeys={
                 rest.rowSelection?.selectedRowKeys
@@ -729,7 +729,9 @@ const TableV2 = <T extends object>(
                           </DialogTrigger>
                         )}
                       </div>
-                      {rest.resizableColumns && <ColumnResizer />}
+                      {rest.resizableColumns && (
+                        <ColumnResizer className="tw:absolute tw:right-0 tw:top-1/4 tw:h-1/2 tw:w-2 tw:cursor-col-resize tw:touch-none tw:after:absolute tw:after:left-1/2 tw:after:h-full tw:after:w-px tw:after:-translate-x-1/2 tw:after:content-[''] tw:after:bg-[--color-border-secondary] tw:data-[resizing]:after:w-0.5 tw:data-[resizing]:after:bg-[--color-border-brand]" />
+                      )}
                     </UntitledTable.Head>
                   );
                 })}
@@ -752,9 +754,8 @@ const TableV2 = <T extends object>(
 
                   return (
                     <UntitledTable.Row
-                      allowsDragging={Boolean(dragAndDropHooks)}
                       className={classNames(
-                        'tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
+                        'tw:group tw:transition-colors tw:hover:bg-secondary tw:data-[selected]:bg-secondary',
                         typeof rest.rowClassName === 'function'
                           ? rest.rowClassName(record, actualIndex, depth)
                           : rest.rowClassName
@@ -815,7 +816,9 @@ const TableV2 = <T extends object>(
                             className={classNames(
                               colType.ellipsis && 'tw:overflow-hidden',
                               rest.cellClassName ??
-                                'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top'
+                                'tw:py-2 tw:pl-4 tw:pr-2 tw:align-top',
+                              'tw:group-data-[dragging]:opacity-40',
+                              'tw:group-data-[drop-target]:bg-[#e8f4ff] tw:group-data-[drop-target]:outline tw:group-data-[drop-target]:outline-2 tw:group-data-[drop-target]:outline-dashed tw:group-data-[drop-target]:outline-[--color-border-brand] tw:group-data-[drop-target]:-outline-offset-2'
                             )}
                             key={cellKey}
                             style={{
@@ -908,7 +911,9 @@ const TableV2 = <T extends object>(
           );
 
           return rest.resizableColumns ? (
-            <ResizableTableContainer onResize={handleColumnResize}>
+            <ResizableTableContainer
+              className="tw:overflow-auto tw:relative"
+              onResize={handleColumnResize}>
               {tableContent}
             </ResizableTableContainer>
           ) : (

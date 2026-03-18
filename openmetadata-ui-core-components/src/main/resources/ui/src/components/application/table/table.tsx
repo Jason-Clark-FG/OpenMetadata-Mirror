@@ -146,7 +146,6 @@ interface TableRootProps
     AriaTableProps,
     Omit<ComponentPropsWithRef<"table">, "className" | "slot" | "style"> {
   size?: "sm" | "md";
-  allowsDragging?: boolean;
 }
 
 const TableRoot = ({ className, size = "md", ...props }: TableRootProps) => {
@@ -308,7 +307,6 @@ interface TableRowProps<T extends object>
       "children" | "className" | "onClick" | "slot" | "style" | "id"
     > {
   highlightSelectedRow?: boolean;
-  allowsDragging?: boolean;
 }
 
 const TableRow = <T extends object>({

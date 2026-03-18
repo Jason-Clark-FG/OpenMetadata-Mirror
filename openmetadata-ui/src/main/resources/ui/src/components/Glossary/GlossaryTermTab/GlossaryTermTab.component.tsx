@@ -157,7 +157,6 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isTableLoading, setIsTableLoading] = useState(true);
   const [draggingFqn, setDraggingFqn] = useState<string | null>(null);
-  const [isTableHovered, setIsTableHovered] = useState(false);
   const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
   const [isStatusDropdownVisible, setIsStatusDropdownVisible] =
     useState<boolean>(false);
@@ -1267,7 +1266,7 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
         const isLoadMoreRow = record.isLoadMoreButton;
 
         if (isLoadMoreRow) {
-          return <span className="expand-cell-empty-icon-container" />;
+          return <span className="tw:inline-flex tw:h-3 tw:w-2" />;
         }
 
         const { children, childrenCount } = record;
@@ -1278,7 +1277,11 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             <RACButton
               className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-move tw:inline-flex tw:mr-1"
               slot="drag">
-              <IconDrag className="drag-icon" height={12} width={8} />
+              <IconDrag
+                className="drag-icon tw:visible"
+                height={12}
+                width={8}
+              />
             </RACButton>
             {isLoading ? (
               <span className="m-r-xs expand-loader">
@@ -1299,9 +1302,13 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             <RACButton
               className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-move tw:inline-flex tw:mr-1"
               slot="drag">
-              <IconDrag className="drag-icon" height={12} width={8} />
+              <IconDrag
+                className="drag-icon tw:visible"
+                height={12}
+                width={8}
+              />
             </RACButton>
-            <span className="expand-cell-empty-icon-container" />
+            <span className="tw:inline-flex tw:h-3 tw:w-2" />
           </>
         );
       },
@@ -1606,7 +1613,6 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             <div>
               <div className="tw:relative">
                 <DropZone
-                  className={classNames({ 'drop-over-table': isTableHovered })}
                   getDropOperation={() =>
                     draggingRecord?.parent ? 'move' : 'cancel'
                   }
@@ -1623,13 +1629,9 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
                     if (dragRecord) {
                       handleMoveRow(dragRecord as GlossaryTerm);
                     }
-                    setIsTableHovered(false);
-                  }}
-                  onDropEnter={() => setIsTableHovered(true)}
-                  onDropExit={() => setIsTableHovered(false)}>
+                  }}>
                   <Table
                     resizableColumns
-                    allowsDragging={Boolean(dragAndDropHooks)}
                     columns={columns}
                     containerClassName="drop-over-background glossary-terms-table"
                     data-testid="glossary-terms-table"
@@ -1663,7 +1665,6 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             // This keeps the search bar and filters visible
             <Table
               resizableColumns
-              allowsDragging={Boolean(dragAndDropHooks)}
               columns={columns}
               containerClassName="glossary-terms-table"
               data-testid="glossary-terms-table"

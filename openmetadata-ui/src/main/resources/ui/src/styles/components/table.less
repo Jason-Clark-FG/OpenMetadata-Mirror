@@ -47,12 +47,6 @@
             .expand-icon {
               cursor: pointer;
             }
-
-            .expand-cell-empty-icon-container {
-              width: 8px;
-              height: 12px;
-              display: inline-flex;
-            }
           }
         }
         .ant-table-cell-row-hover {
@@ -139,15 +133,15 @@
       }
     }
   }
+}
 
-  // TableV2: no .ant-table wrapper
-  table:not(.ant-table) {
-    border-collapse: collapse;
-    tbody {
-      border: 2px dashed @primary-color;
-      tr td {
-        background: @active-color !important;
-      }
+// TableV2 whole-table drop highlight — driven by React Aria's native data-drop-target
+[data-drop-target] table:not(.ant-table) {
+  border-collapse: collapse;
+  tbody {
+    border: 2px dashed @primary-color;
+    tr td {
+      background: @active-color !important;
     }
   }
 }
@@ -195,29 +189,6 @@
   }
 }
 
-// TableV2 drag icon — always visible
-table[role='grid'] tbody tr .drag-icon {
-  visibility: visible;
-}
-
-// React Aria DnD — dragged row and drop-target row highlighting
-table[role='grid'] tbody tr[data-dragging] td {
-  opacity: 0.4;
-}
-
-table[role='grid'] tbody tr[data-drop-target] td {
-  background: @active-color !important;
-  outline: 2px dashed @primary-color;
-  outline-offset: -2px;
-}
-
-// Expand cell empty spacer — also needed outside .ant-table-bordered (e.g. TableV2)
-.expand-cell-empty-icon-container {
-  display: inline-flex;
-  height: 12px;
-  width: 8px;
-}
-
 // Table icons
 
 .table-action-icon {
@@ -245,40 +216,4 @@ table[role='grid'] tbody tr[data-drop-target] td {
   width: 6px;
   margin-right: 8px;
   color: @grey-4;
-}
-
-// React Aria ResizableTableContainer — required for ColumnResizer to work
-.react-aria-ResizableTableContainer {
-  overflow: auto;
-  position: relative;
-
-  table {
-    table-layout: fixed;
-  }
-}
-
-// React Aria ColumnResizer — positioned at right edge of th (th has position: relative)
-.react-aria-ColumnResizer {
-  cursor: col-resize;
-  height: 50%;
-  position: absolute;
-  right: 0;
-  top: 25%;
-  touch-action: none;
-  width: 8px;
-
-  &::after {
-    background-color: @border-color;
-    content: '';
-    height: 100%;
-    left: 50%;
-    position: absolute;
-    transform: translateX(-50%);
-    width: 1px;
-  }
-
-  &[data-resizing]::after {
-    background-color: @primary-color;
-    width: 2px;
-  }
 }
