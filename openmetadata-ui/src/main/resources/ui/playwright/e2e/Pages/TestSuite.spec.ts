@@ -229,7 +229,7 @@ test('Logical TestSuite', PLAYWRIGHT_INGESTION_TAG_OBJ, async ({ page, ownerPage
       state: 'detached',
     });
     const getOwnerList = page.waitForResponse(
-      '/api/v1/search/query?q=&index=user_search_index&*'
+      '/api/v1/search/query?q=&index=user&*'
     );
     await page.click('.ant-tabs [id*=tab-users]');
     await getOwnerList;
@@ -238,7 +238,7 @@ test('Logical TestSuite', PLAYWRIGHT_INGESTION_TAG_OBJ, async ({ page, ownerPage
     });
 
     const searchOwner = page.waitForResponse(
-      'api/v1/search/query?q=*&index=user_search_index*'
+      'api/v1/search/query?q=*&index=user*'
     );
     await page.fill('[data-testid="owner-select-users-search-bar"]', owner);
     await searchOwner;

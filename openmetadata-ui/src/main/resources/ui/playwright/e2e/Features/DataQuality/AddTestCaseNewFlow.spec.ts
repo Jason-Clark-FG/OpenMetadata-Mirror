@@ -27,7 +27,7 @@ test.describe('Add TestCase New Flow', { tag: [`${DOMAIN_TAGS.OBSERVABILITY}:Dat
   const selectTable = async (page: Page, table: TableClass) => {
     await page.click('[id="root\\/table"]');
     const tableResponse = page.waitForResponse(
-      '/api/v1/search/query?*index=table_search_index*'
+      '/api/v1/search/query?*index=table*'
     );
     await page.fill('[id="root\\/table"]', table.entity.name);
     await tableResponse;
@@ -165,7 +165,7 @@ test.describe('Add TestCase New Flow', { tag: [`${DOMAIN_TAGS.OBSERVABILITY}:Dat
       '/locales/en-US/OpenMetadata/TestCaseForm.md'
     );
     const tableEntityResponse = page.waitForResponse(
-      '/api/v1/search/query?q=*&index=table_search_index*'
+      '/api/v1/search/query?q=*&index=table*'
     );
     await page.getByTestId('add-test-case-btn').click();
     await tableEntityResponse;

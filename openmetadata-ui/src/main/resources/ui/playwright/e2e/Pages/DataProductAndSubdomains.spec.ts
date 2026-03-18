@@ -168,7 +168,7 @@ test.describe('Data Product Comprehensive Tests', () => {
         const searchResponse = page.waitForResponse(
           (res) =>
             res.url().includes('/api/v1/search/query') &&
-            res.url().includes('user_search_index')
+            res.url().includes('user')
         );
         // Search using name field
         await searchBar.fill(user.getUserName());
@@ -823,7 +823,7 @@ test.describe('Data Product Search and Filter', () => {
       const searchDomainRes = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('domain_search_index')
+          response.url().includes('index=domain')
       );
       await page
         .getByTestId('domain-selectable-tree')
@@ -893,9 +893,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
 
       await Promise.all([
         searchBox.fill(dataProduct.data.name),
-        page.waitForResponse(
-          '/api/v1/search/query?q=*&index=data_product_search_index*'
-        ),
+        page.waitForResponse('/api/v1/search/query?q=*&index=dataProduct*'),
       ]);
 
       await page.waitForSelector('[data-testid="loader"]', {
@@ -932,9 +930,7 @@ test.describe('Data Product Name in Entity Name Cell', () => {
 
       await Promise.all([
         searchBox.fill(dataProduct.responseData.name),
-        page.waitForResponse(
-          '/api/v1/search/query?q=*&index=data_product_search_index*'
-        ),
+        page.waitForResponse('/api/v1/search/query?q=*&index=dataProduct*'),
       ]);
 
       await page.waitForSelector('[data-testid="loader"]', {

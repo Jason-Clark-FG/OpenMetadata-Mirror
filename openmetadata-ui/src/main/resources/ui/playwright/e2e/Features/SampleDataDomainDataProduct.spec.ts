@@ -50,7 +50,7 @@ test.describe('Sample Data Domain and Data Product Validation', PLAYWRIGHT_SAMPL
     await waitForAllLoadersToDisappear(page);
     await selectDomain(page, testDomainData);
     const dpRes = page.waitForResponse((response) =>
-      response.url().includes('index=data_product_search_index')
+      response.url().includes('index=dataProduct')
     );
     await page.getByTestId('data_products').click();
     await dpRes;
@@ -67,7 +67,7 @@ test.describe('Sample Data Domain and Data Product Validation', PLAYWRIGHT_SAMPL
     await waitForAllLoadersToDisappear(page);
     await selectDomain(page, testDomainData);
     const dpRes = page.waitForResponse((response) =>
-      response.url().includes('index=data_product_search_index')
+      response.url().includes('index=dataProduct')
     );
     await page.getByTestId('data_products').click();
     await dpRes;

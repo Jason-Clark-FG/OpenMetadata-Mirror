@@ -13,6 +13,7 @@
 
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { DateRangeObject } from 'Models';
+import { SearchIndex } from '../../enums/search.enum';
 import { AuditLogActiveFilter } from '../../types/auditLogs.interface';
 import { SearchDropdownOption } from '../SearchDropdown/SearchDropdown.interface';
 import AuditLogFilters from './AuditLogFilters.component';
@@ -365,7 +366,7 @@ describe('AuditLogFilters', () => {
           query: '',
           pageNumber: 1,
           pageSize: 10,
-          searchIndex: 'user_search_index',
+          searchIndex: SearchIndex.USER,
           queryFilter: expect.objectContaining({
             query: expect.objectContaining({
               bool: expect.objectContaining({
@@ -397,7 +398,7 @@ describe('AuditLogFilters', () => {
           query: '',
           pageNumber: 1,
           pageSize: 10,
-          searchIndex: 'user_search_index',
+          searchIndex: SearchIndex.USER,
           queryFilter: expect.objectContaining({
             query: expect.objectContaining({
               bool: expect.objectContaining({
