@@ -264,6 +264,7 @@ const renderWithRouter = (props: AddTestCaseModalProps) => {
 
 describe('AddTestCaseList', () => {
   beforeEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
     mockGetListTestCaseBySearch.mockResolvedValue({
       data: [],
@@ -271,6 +272,10 @@ describe('AddTestCaseList', () => {
         total: 0,
       },
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('renders the component with initial state', async () => {
@@ -721,8 +726,6 @@ describe('AddTestCaseList', () => {
           })
         );
       });
-
-      jest.useRealTimers();
     });
   });
 
