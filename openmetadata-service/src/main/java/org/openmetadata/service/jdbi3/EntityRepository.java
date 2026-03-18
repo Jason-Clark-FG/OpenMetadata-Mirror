@@ -27,10 +27,12 @@ import static org.openmetadata.schema.type.Include.DELETED;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.schema.utils.EntityInterfaceUtil.quoteName;
 import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
+import static org.openmetadata.service.Entity.DATA_CONTRACT;
 import static org.openmetadata.service.Entity.DATA_PRODUCT;
 import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.FIELD_CERTIFICATION;
 import static org.openmetadata.service.Entity.FIELD_CHILDREN;
+import static org.openmetadata.service.Entity.FIELD_DATA_CONTRACT;
 import static org.openmetadata.service.Entity.FIELD_DATA_PRODUCTS;
 import static org.openmetadata.service.Entity.FIELD_DELETED;
 import static org.openmetadata.service.Entity.FIELD_DESCRIPTION;
@@ -376,6 +378,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected final boolean supportsVotes;
   @Getter protected final boolean supportsDomains;
   protected final boolean supportsDataProducts;
+  protected final boolean supportsDataContract;
   @Getter protected final boolean supportsReviewers;
   @Getter protected final boolean supportsExperts;
   @Getter protected final boolean supportsEntityStatus;
@@ -496,6 +499,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       this.patchFields.addField(allowedFields, FIELD_DATA_PRODUCTS);
       this.putFields.addField(allowedFields, FIELD_DATA_PRODUCTS);
     }
+    this.supportsDataContract = allowedFields.contains(FIELD_DATA_CONTRACT);
     this.supportsStyle = allowedFields.contains(FIELD_STYLE);
     if (supportsStyle) {
       this.patchFields.addField(allowedFields, FIELD_STYLE);
@@ -531,6 +535,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     fieldSupportMap.put(FIELD_EXPERTS, Pair.of(supportsExperts, this::fetchAndSetExperts));
     fieldSupportMap.put(
         FIELD_DATA_PRODUCTS, Pair.of(supportsDataProducts, this::fetchAndSetDataProducts));
+    fieldSupportMap.put(
+        FIELD_DATA_CONTRACT, Pair.of(supportsDataContract, this::fetchAndSetDataContract));
     fieldSupportMap.put(
         FIELD_CERTIFICATION, Pair.of(supportsCertification, this::fetchAndSetCertification));
 
@@ -2612,6 +2618,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (fields.contains(FIELD_EXTENSION)) count++;
     if (fields.contains(FIELD_DOMAINS)) count++;
     if (fields.contains(FIELD_DATA_PRODUCTS)) count++;
+    if (fields.contains(FIELD_DATA_CONTRACT)) count++;
     if (fields.contains(FIELD_FOLLOWERS)) count++;
     if (fields.contains(FIELD_CHILDREN)) count++;
     if (fields.contains(FIELD_EXPERTS)) count++;
@@ -2626,6 +2633,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     entity.setExtension(fields.contains(FIELD_EXTENSION) ? entity.getExtension() : null);
     entity.setDomains(fields.contains(FIELD_DOMAINS) ? entity.getDomains() : null);
     entity.setDataProducts(fields.contains(FIELD_DATA_PRODUCTS) ? entity.getDataProducts() : null);
+    entity.setDataContract(fields.contains(FIELD_DATA_CONTRACT) ? entity.getDataContract() : null);
     entity.setFollowers(fields.contains(FIELD_FOLLOWERS) ? entity.getFollowers() : null);
     entity.setChildren(fields.contains(FIELD_CHILDREN) ? entity.getChildren() : null);
     entity.setExperts(fields.contains(FIELD_EXPERTS) ? entity.getExperts() : null);
@@ -8712,6 +8720,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
+  private void fetchAndSetDataContract(List<T> entities, Fields fields) {
+    if (!fields.contains(FIELD_DATA_CONTRACT) || !supportsDataContract || nullOrEmpty(entities)) {
+      return;
+    }
+
+    Map<UUID, EntityReference> dataContractMap = batchFetchDataContract(entities);
+
+    for (T entity : entities) {
+      entity.setDataContract(dataContractMap.get(entity.getId()));
+    }
+  }
+
   private void fetchAndSetCertification(List<T> entities, Fields fields) {
     if (!fields.contains(FIELD_CERTIFICATION) || !supportsCertification || nullOrEmpty(entities)) {
       return;
@@ -8877,6 +8897,37 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private Map<UUID, List<EntityReference>> batchFetchDataProducts(List<T> entities) {
     return batchFetchToIdsOneToMany(entities, Relationship.HAS, Entity.DATA_PRODUCT);
+  }
+
+  private Map<UUID, EntityReference> batchFetchDataContract(List<T> entities) {
+    Map<UUID, EntityReference> dataContractMap = new HashMap<>();
+
+    if (entities == null || entities.isEmpty()) {
+      return dataContractMap;
+    }
+    List<CollectionDAO.EntityRelationshipObject> records =
+        daoCollection
+            .relationshipDAO()
+            .findToBatch(
+                entityListToStrings(entities), Relationship.CONTAINS.ordinal(), DATA_CONTRACT);
+
+    var contractIds =
+        records.stream().map(rec -> UUID.fromString(rec.getToId())).distinct().toList();
+
+    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, ALL);
+    var contractRefMap =
+        contractRefs.stream().collect(Collectors.toMap(EntityReference::getId, ref -> ref));
+
+    for (CollectionDAO.EntityRelationshipObject rec : records) {
+      UUID fromId = UUID.fromString(rec.getFromId());
+      UUID toId = UUID.fromString(rec.getToId());
+      EntityReference contractRef = contractRefMap.get(toId);
+      if (contractRef != null) {
+        dataContractMap.put(fromId, contractRef);
+      }
+    }
+
+    return dataContractMap;
   }
 
   private Map<UUID, AssetCertification> batchFetchCertification(List<T> entities) {

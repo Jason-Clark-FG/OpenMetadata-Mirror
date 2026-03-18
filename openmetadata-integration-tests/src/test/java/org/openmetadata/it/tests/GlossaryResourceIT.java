@@ -58,6 +58,7 @@ public class GlossaryResourceIT extends BaseEntityIT<Glossary, CreateGlossary> {
     supportsImportExport = true;
     supportsBatchImport = true;
     supportsRecursiveImport = true; // Glossary supports recursive import with hierarchical terms
+    supportsDataContract = true;
   }
 
   private Glossary lastCreatedGlossary;

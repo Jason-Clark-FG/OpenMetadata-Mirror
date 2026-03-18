@@ -77,6 +77,7 @@ public class DatabaseResourceIT extends BaseEntityIT<Database, CreateDatabase> {
     supportsLifeCycle = true;
     supportsListHistoryByTimestamp = true;
     supportsBulkAPI = true;
+    supportsDataContract = true;
   }
 
   // Store last created database for import/export tests
