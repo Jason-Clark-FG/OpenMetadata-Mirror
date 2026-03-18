@@ -22,30 +22,6 @@ SET json = JSON_SET(
 )
 WHERE JSON_CONTAINS_PATH(json, 'one', '$.preview');
 
--- Migrate apps_marketplace to new configuration structure
--- Add boundType and restructure configuration for apps that have old structure
-UPDATE apps_marketplace
-SET json = JSON_SET(
-    json,
-    '$.boundType', 'Global',
-    '$.configuration', JSON_OBJECT(
-        'globalAppConfig', JSON_OBJECT(
-            'config', COALESCE(JSON_EXTRACT(json, '$.appConfiguration'), JSON_OBJECT()),
-            'schedule', JSON_EXTRACT(json, '$.appSchedule'),
-            'privateConfig', JSON_EXTRACT(json, '$.privateConfig')
-        )
-    )
-)
-WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule');
-
--- Remove old fields from apps_marketplace
-UPDATE apps_marketplace
-SET json = JSON_REMOVE(json, '$.appConfiguration', '$.appSchedule', '$.privateConfig')
-WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfig');
-
 -- Migrate installed_apps to new configuration structure
 -- Add boundType and restructure configuration for apps that have old structure
 UPDATE installed_apps
@@ -70,11 +46,7 @@ WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
    OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule')
    OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfig');
 
--- Add boundType to any apps that still don't have it (safety fallback)
-UPDATE apps_marketplace
-SET json = JSON_SET(json, '$.boundType', 'Global')
-WHERE NOT JSON_CONTAINS_PATH(json, 'one', '$.boundType');
-
+-- Add boundType to any installed apps that still don't have it (safety fallback)
 UPDATE installed_apps
 SET json = JSON_SET(json, '$.boundType', 'Global')
 WHERE NOT JSON_CONTAINS_PATH(json, 'one', '$.boundType');

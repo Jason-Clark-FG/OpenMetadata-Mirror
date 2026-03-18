@@ -581,10 +581,7 @@ public class AppRepository extends EntityRepository<App> {
           "configuration",
           () -> {
             recordChange(
-                "configuration",
-                original.getConfiguration(),
-                updated.getConfiguration(),
-                true);
+                "configuration", original.getConfiguration(), updated.getConfiguration(), true);
           });
       compareAndUpdate(
           "boundType",

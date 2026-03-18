@@ -37,15 +37,23 @@ public class ServiceHealthCheckApp extends AbstractServiceNativeApplication {
     Object config = serviceId != null ? getServiceAppConfiguration(serviceId) : Map.of();
     LOG.info("[ServiceHealthCheck] Config for service {}: {}", serviceId, config);
 
+    int iterations = 5;
+    if (config instanceof Map) {
+      Object delay = ((Map<?, ?>) config).get("delaySeconds");
+      if (delay instanceof Number) {
+        iterations = ((Number) delay).intValue();
+      }
+    }
+
     try {
-      // Simulate work with a 5-second sleep (allows testing stop/interrupt)
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < iterations; i++) {
         if (stopped) {
           LOG.info("[ServiceHealthCheck] Job was stopped for service {}", serviceId);
           return;
         }
         Thread.sleep(1000);
-        LOG.info("[ServiceHealthCheck] Working... ({}/5) for service {}", i + 1, serviceId);
+        LOG.info(
+            "[ServiceHealthCheck] Working... ({}/{}) for service {}", i + 1, iterations, serviceId);
       }
     } catch (InterruptedException e) {
       LOG.info("[ServiceHealthCheck] Job interrupted for service {}", serviceId);

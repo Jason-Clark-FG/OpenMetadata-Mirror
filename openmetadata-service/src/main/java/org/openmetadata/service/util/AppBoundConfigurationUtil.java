@@ -282,6 +282,12 @@ public class AppBoundConfigurationUtil {
       throw new IllegalArgumentException("Cannot add service configuration to global app");
     }
 
+    // Check if a configuration already exists for this service — return it for update (upsert)
+    Optional<ServiceAppConfiguration> existing = getServiceConfiguration(app, serviceRef.getId());
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+
     ServiceAppConfiguration serviceConfig =
         new ServiceAppConfiguration().withServiceRef(serviceRef);
     getOrCreateAppBoundConfiguration(app).getServiceAppConfig().add(serviceConfig);

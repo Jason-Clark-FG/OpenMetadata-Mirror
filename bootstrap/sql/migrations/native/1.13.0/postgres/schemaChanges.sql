@@ -22,29 +22,6 @@ SET json = (json - 'preview') || jsonb_build_object(
 )
 WHERE jsonb_exists(json, 'preview');
 
--- Migrate apps_marketplace to new configuration structure
--- Add boundType and restructure configuration for apps that have old structure
-UPDATE apps_marketplace
-SET json = json || jsonb_build_object(
-    'boundType', 'Global',
-    'configuration', jsonb_build_object(
-        'globalAppConfig', jsonb_build_object(
-            'config', COALESCE(json -> 'appConfiguration', '{}'::jsonb),
-            'schedule', json -> 'appSchedule',
-            'privateConfig', json -> 'privateConfig'
-        )
-    )
-)
-WHERE jsonb_exists(json, 'appConfiguration')
-   OR jsonb_exists(json, 'appSchedule');
-
--- Remove old fields from apps_marketplace
-UPDATE apps_marketplace
-SET json = json - 'appConfiguration' - 'appSchedule' - 'privateConfig'
-WHERE jsonb_exists(json, 'appConfiguration')
-   OR jsonb_exists(json, 'appSchedule')
-   OR jsonb_exists(json, 'privateConfig');
-
 -- Migrate installed_apps to new configuration structure
 -- Add boundType and restructure configuration for apps that have old structure
 UPDATE installed_apps
@@ -68,11 +45,7 @@ WHERE jsonb_exists(json, 'appConfiguration')
    OR jsonb_exists(json, 'appSchedule')
    OR jsonb_exists(json, 'privateConfig');
 
--- Add boundType to any apps that still don't have it (safety fallback)
-UPDATE apps_marketplace
-SET json = jsonb_set(json, '{boundType}', '"Global"'::jsonb)
-WHERE NOT jsonb_exists(json, 'boundType');
-
+-- Add boundType to any installed apps that still don't have it (safety fallback)
 UPDATE installed_apps
 SET json = jsonb_set(json, '{boundType}', '"Global"'::jsonb)
 WHERE NOT jsonb_exists(json, 'boundType');

@@ -55,6 +55,7 @@ import org.openmetadata.schema.entity.app.AppExtension;
 import org.openmetadata.schema.entity.app.AppRunRecord;
 import org.openmetadata.schema.entity.app.AppType;
 import org.openmetadata.schema.entity.app.CreateApp;
+import org.openmetadata.schema.entity.app.ScheduleTimeline;
 import org.openmetadata.schema.entity.app.ScheduleType;
 import org.openmetadata.schema.entity.app.ServiceAppConfiguration;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
@@ -1137,34 +1138,38 @@ public class AppResource extends EntityResource<App, AppRepository> {
           "Cannot add service configuration to non-service-bound application: " + name);
     }
 
+    UUID serviceId = serviceConfig.getServiceRef().getId();
+
     AppBoundConfigurationUtil.addServiceConfiguration(app, serviceConfig.getServiceRef());
     if (serviceConfig.getConfig() != null) {
-      AppBoundConfigurationUtil.setAppConfiguration(
-          app, serviceConfig.getServiceRef().getId(), serviceConfig.getConfig());
+      AppBoundConfigurationUtil.setAppConfiguration(app, serviceId, serviceConfig.getConfig());
     }
     if (serviceConfig.getSchedule() != null) {
-      AppBoundConfigurationUtil.setSchedule(
-          app, serviceConfig.getServiceRef().getId(), serviceConfig.getSchedule());
+      AppBoundConfigurationUtil.setSchedule(app, serviceId, serviceConfig.getSchedule());
     }
 
     String updatedBy = securityContext.getUserPrincipal().getName();
     repository.createOrUpdate(uriInfo, app, updatedBy);
 
-    UUID serviceId = serviceConfig.getServiceRef().getId();
     if (app.getAppType() == AppType.Internal
         && SCHEDULED_TYPES.contains(app.getScheduleType())
         && serviceConfig.getSchedule() != null) {
       try {
-        AppScheduler.getInstance().scheduleApplicationForService(app, serviceId);
+        if (serviceConfig.getSchedule().getScheduleTimeline() == ScheduleTimeline.NONE) {
+          AppScheduler.getInstance().deleteScheduledApplicationForService(app, serviceId);
+        } else {
+          AppScheduler.getInstance().scheduleApplicationForService(app, serviceId);
+        }
       } catch (Exception e) {
         LOG.error(
-            "Failed to schedule service-bound app {} for service {}", app.getName(), serviceId, e);
+            "Failed to update schedule for service-bound app {} and service {}",
+            app.getName(),
+            serviceId,
+            e);
       }
     }
 
-    return Response.status(Response.Status.OK)
-        .entity("Service configuration added for service " + serviceId)
-        .build();
+    return Response.status(Response.Status.OK).entity(app).build();
   }
 
   @DELETE
@@ -1214,9 +1219,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
 
-    return Response.status(Response.Status.OK)
-        .entity("Service configuration removed for service " + serviceId)
-        .build();
+    return Response.status(Response.Status.OK).entity(app).build();
   }
 
   @POST
@@ -1258,6 +1261,10 @@ public class AppResource extends EntityResource<App, AppRepository> {
           name, "NotEnabled", "App is not enabled. Enable it from the server configuration.");
     }
     if (app.getAppType().equals(AppType.Internal)) {
+      if (AppBoundConfigurationUtil.isServiceBoundApp(app) && serviceId == null) {
+        throw new BadRequestException(
+            "Service-bound app " + name + " requires a 'serviceId' query parameter to trigger.");
+      }
       if (serviceId != null) {
         ApplicationHandler.getInstance()
             .triggerApplicationForService(
@@ -1315,6 +1322,10 @@ public class AppResource extends EntityResource<App, AppRepository> {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
     if (Boolean.TRUE.equals(app.getSupportsInterrupt())) {
+      if (AppBoundConfigurationUtil.isServiceBoundApp(app) && serviceId == null) {
+        throw new BadRequestException(
+            "Service-bound app " + name + " requires a 'serviceId' query parameter to stop.");
+      }
       if (app.getAppType().equals(AppType.Internal)) {
         Thread.ofVirtual()
             .name("om-app-stop-" + name)

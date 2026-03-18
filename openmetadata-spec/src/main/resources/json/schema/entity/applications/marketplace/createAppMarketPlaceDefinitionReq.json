@@ -141,6 +141,11 @@
       "description": "If true, multiple instances of this app can run concurrently. This is useful for apps like QueryRunner that support parallel executions with different configurations.",
       "type": "boolean",
       "default": false
+    },
+    "boundType": {
+      "description": "This schema defines the scope of the application — Global or Service-bound.",
+      "$ref": "../app.json#/definitions/appBoundType",
+      "default": "Global"
     }
   },
   "additionalProperties": false,

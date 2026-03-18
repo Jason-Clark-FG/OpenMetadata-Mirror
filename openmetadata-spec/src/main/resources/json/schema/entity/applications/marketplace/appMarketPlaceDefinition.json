@@ -179,6 +179,11 @@
       "description": "If the app support execution through the external runner.",
       "type": "boolean",
       "default": false
+    },
+    "boundType": {
+      "description": "This schema defines the scope of the application — Global or Service-bound.",
+      "$ref": "../app.json#/definitions/appBoundType",
+      "default": "Global"
     }
   },
   "additionalProperties": false,
