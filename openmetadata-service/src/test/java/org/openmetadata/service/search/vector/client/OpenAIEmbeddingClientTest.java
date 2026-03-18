@@ -250,6 +250,11 @@ class OpenAIEmbeddingClientTest {
     HttpClient mockHttpClient =
         new HttpClient() {
           @Override
+          public java.util.Optional<java.net.Authenticator> authenticator() {
+            return java.util.Optional.empty();
+          }
+
+          @Override
           public java.util.Optional<java.net.CookieHandler> cookieHandler() {
             return java.util.Optional.empty();
           }
