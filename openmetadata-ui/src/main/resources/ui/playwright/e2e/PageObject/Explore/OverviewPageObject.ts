@@ -441,6 +441,7 @@ export class OverviewPageObject extends RightPanelBase {
 
   async editOwners(ownerName: string): Promise<OverviewPageObject> {
     await this.editOwnersIcon.scrollIntoViewIfNeeded();
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.editOwnersIcon.click({ force: true });
     await this.userSearchBar.waitFor({ state: 'visible' });
     await this.userSearchBar.scrollIntoViewIfNeeded();
@@ -473,6 +474,7 @@ export class OverviewPageObject extends RightPanelBase {
     type: 'Users' | 'Teams' = 'Users'
   ): Promise<OverviewPageObject> {
     await this.editOwnersIcon.waitFor({ state: 'visible' });
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.editOwnersIcon.click({ force: true });
 
     await this.selectOwnerTabs.waitFor({ state: 'visible' });
@@ -558,6 +560,7 @@ export class OverviewPageObject extends RightPanelBase {
   ): Promise<OverviewPageObject> {
     await this.editGlossaryTermsIcon.scrollIntoViewIfNeeded();
     await this.editGlossaryTermsIcon.waitFor({ state: 'visible' });
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.editGlossaryTermsIcon.click({ force: true });
 
     await this.selectableList.waitFor({ state: 'visible' });
@@ -596,6 +599,7 @@ export class OverviewPageObject extends RightPanelBase {
   async removeTier(): Promise<OverviewPageObject> {
     await this.editTierIcon.scrollIntoViewIfNeeded();
     await this.editTierIcon.waitFor({ state: 'visible' });
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.editTierIcon.click({ force: true });
 
     await this.tierListContainer.waitFor({ state: 'visible' });
@@ -615,6 +619,7 @@ export class OverviewPageObject extends RightPanelBase {
    */
   async removeDomain(domainName: string): Promise<OverviewPageObject> {
     await this.addDomainIcon.waitFor({ state: 'visible' });
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.addDomainIcon.click({ force: true });
 
     await this.domainTree.waitFor({ state: 'visible' });
@@ -650,10 +655,11 @@ export class OverviewPageObject extends RightPanelBase {
     type: 'Users' | 'Teams' = 'Users'
   ): Promise<Locator> {
     const searchIndexMap = {
-      Users: 'user_search_index',
-      Teams: 'team_search_index',
+      Users: 'user',
+      Teams: 'team',
     };
 
+    // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
     await this.editOwnersIcon.click({ force: true });
 
     await this.selectOwnerTabsRoleTab.waitFor({ state: 'visible' });
@@ -701,7 +707,7 @@ export class OverviewPageObject extends RightPanelBase {
     const searchResponsePromise = this.page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/search/query') &&
-        response.url().includes('index=tag_search_index')
+        response.url().includes('index=tag')
     );
 
     await this.tagSearchBar.fill(tagName);
@@ -732,7 +738,7 @@ export class OverviewPageObject extends RightPanelBase {
     const searchResponsePromise = this.page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/search/query') &&
-        response.url().includes('index=glossary_term_search_index')
+        response.url().includes('index=glossaryTerm')
     );
 
     await this.glossaryTermSearchBar.fill(termName);

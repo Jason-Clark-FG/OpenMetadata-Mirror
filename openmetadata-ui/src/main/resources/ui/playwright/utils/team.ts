@@ -24,7 +24,11 @@ import {
   toastNotification,
   uuid,
 } from './common';
-import { addMultiOwner, addOwner } from './entity';
+import {
+  addMultiOwner,
+  addOwner,
+  waitForAllLoadersToDisappear,
+} from './entity';
 import { validateFormNameFieldInput } from './form';
 import { settingClick } from './sidebar';
 
@@ -72,7 +76,7 @@ export const createTeam = async (
     ...overrides,
   };
 
-  await page.waitForSelector('[role="dialog"].ant-modal');
+  await page.locator('[role="dialog"].ant-modal').waitFor();
 
   await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
@@ -98,9 +102,7 @@ export const createTeam = async (
   const response = await createTeamResponse;
   const createdTeam = await response.json();
 
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   return {
     ...teamData,
@@ -143,7 +145,7 @@ export const hardDeleteTeam = async (page: Page) => {
     .click();
   await page.getByTestId('delete-button').click();
 
-  await page.waitForSelector('[role="dialog"].ant-modal');
+  await page.locator('[role="dialog"].ant-modal').waitFor();
 
   await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 
@@ -326,7 +328,9 @@ export const searchTeam = async (
             .getByTestId('search-error-placeholder')
             .isVisible()
             .catch(() => false);
-          const matchingRows = await page.getByRole('cell', { name: teamName }).count();
+          const matchingRows = await page
+            .getByRole('cell', { name: teamName })
+            .count();
 
           return hasPlaceholder || matchingRows === 0;
         },
@@ -335,10 +339,10 @@ export const searchTeam = async (
       .toBe(true);
   } else if (options?.expectNotFound) {
     await expect
-      .poll(
-        async () => page.getByRole('cell', { name: teamName }).count(),
-        { timeout: 30000, intervals: [500, 1000, 2000] }
-      )
+      .poll(async () => page.getByRole('cell', { name: teamName }).count(), {
+        timeout: 30000,
+        intervals: [500, 1000, 2000],
+      })
       .toBe(0);
   } else {
     await expect
@@ -497,10 +501,7 @@ export const addEmailTeam = async (page: Page, email: string) => {
   // Reload the page
   await page.reload();
 
-
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Check for updated email
   await expect(page.locator('[data-testid="email-value"]')).toContainText(
@@ -586,10 +587,7 @@ export const executionOnOwnerTeam = async (
 
   const newTeamData = await createTeam(page);
 
-
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(
     page.getByRole('cell', { name: newTeamData.displayName })
