@@ -27,6 +27,7 @@ public final class OpenAIEmbeddingClient extends EmbeddingClient {
   private final boolean isAzure;
 
   public OpenAIEmbeddingClient(ElasticSearchConfiguration config) {
+    super(resolveMaxConcurrent(config));
     NaturalLanguageSearchConfiguration nlsCfg = config.getNaturalLanguageSearch();
     Openai openaiCfg = nlsCfg.getOpenai();
     if (openaiCfg == null) {

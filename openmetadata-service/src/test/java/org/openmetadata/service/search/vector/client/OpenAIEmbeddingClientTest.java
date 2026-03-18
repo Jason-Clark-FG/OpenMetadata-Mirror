@@ -355,11 +355,11 @@ class OpenAIEmbeddingClientTest {
     }
 
     assertTrue(
-        maxObservedConcurrent.get() <= EmbeddingClient.MAX_CONCURRENT_REQUESTS,
+        maxObservedConcurrent.get() <= EmbeddingClient.DEFAULT_MAX_CONCURRENT_REQUESTS,
         "Max concurrent requests ("
             + maxObservedConcurrent.get()
             + ") exceeded limit ("
-            + EmbeddingClient.MAX_CONCURRENT_REQUESTS
+            + EmbeddingClient.DEFAULT_MAX_CONCURRENT_REQUESTS
             + ")");
   }
 

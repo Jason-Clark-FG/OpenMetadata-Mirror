@@ -35,6 +35,7 @@ public class DjlEmbeddingClient extends EmbeddingClient implements AutoCloseable
   private final int dimension;
 
   public DjlEmbeddingClient(ElasticSearchConfiguration config) {
+    super(resolveMaxConcurrent(config));
     NaturalLanguageSearchConfiguration nlsCfg = config.getNaturalLanguageSearch();
     if (nlsCfg.getDjl() == null) {
       throw new IllegalArgumentException("DJL configuration is required");

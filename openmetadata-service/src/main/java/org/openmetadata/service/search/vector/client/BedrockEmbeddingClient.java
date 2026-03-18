@@ -26,6 +26,7 @@ public final class BedrockEmbeddingClient extends EmbeddingClient implements Aut
   private final int dimension;
 
   public BedrockEmbeddingClient(ElasticSearchConfiguration config) {
+    super(resolveMaxConcurrent(config));
     NaturalLanguageSearchConfiguration nlsCfg = config.getNaturalLanguageSearch();
     if (nlsCfg.getBedrock() == null) {
       throw new IllegalArgumentException("Bedrock configuration is required");
