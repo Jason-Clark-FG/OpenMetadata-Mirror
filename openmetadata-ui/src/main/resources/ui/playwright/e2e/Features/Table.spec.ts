@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { expect } from '@playwright/test';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { SidebarItem } from '../../constant/sidebar';
 import { TableClass } from '../../support/entity/TableClass';
 import { Glossary } from '../../support/glossary/Glossary';
@@ -35,7 +34,6 @@ const table1 = new TableClass();
 
 test.describe(
   'Table pagination sorting search scenarios ',
-  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
     test.beforeAll('Setup pre-requests', async ({ browser }) => {
       test.slow(true);
@@ -239,7 +237,6 @@ test.describe(
 
 test.describe(
   'Table & Data Model columns table pagination',
-  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
     test('expand collapse should only visible for nested columns', async ({
       page,
@@ -361,7 +358,6 @@ test.describe(
 
 test.describe(
   'Tags and glossary terms should be consistent for search ',
-  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
     const glossary = new Glossary();
     const glossaryTerm = new GlossaryTerm(glossary);
@@ -596,7 +592,6 @@ test.describe(
 
 test.describe(
   'Large Table Column Search & Copy Link',
-  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
     test.use({
       contextOptions: {

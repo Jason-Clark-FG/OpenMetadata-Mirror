@@ -160,12 +160,12 @@ jobs:
 
           else
             # Shards 2-6 run common chromium tests equally distributed (5-way sharding)
-            COMMON_SHARD=$(( ${{ matrix.shardIndex }} - 1 ))
-            echo "🔹 Running common chromium tests on shard ${COMMON_SHARD}/5"
+            CHROMIUM_SHARD=$(( ${{ matrix.shardIndex }} - 1 ))
+            echo "🔹 Running common chromium tests on shard ${CHROMIUM_SHARD}/5"
             npx playwright test \
               --project=chromium \
               --grep-invert @dataAssetRules \
-              --shard=${COMMON_SHARD}/5
+              --shard=${CHROMIUM_SHARD}/5
           fi
 
         env:

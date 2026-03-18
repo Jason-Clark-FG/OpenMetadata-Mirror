@@ -87,7 +87,6 @@ import {
 import { navigateToPersonaWithPagination } from '../../utils/persona';
 import { settingClick } from '../../utils/sidebar';
 import { test } from '../fixtures/pages';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 
 // Define entities that support Data Contracts
 const entitiesWithDataContracts = [
@@ -123,7 +122,7 @@ const entitySupportsQuality = (entityType: string): boolean => {
   return entityType === 'Table';
 };
 
-test.describe('Data Contracts', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, () => {
+test.describe('Data Contracts', () => {
   const user = new UserClass();
   test.slow(true);
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
