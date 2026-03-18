@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
@@ -169,8 +170,38 @@ class ReindexingOrchestratorTest {
       orchestrator.run(null);
 
       verify(context).updateAppConfiguration(any(Map.class));
+      verify(searchRepository).ensureHybridSearchPipeline();
+      verify(searchRepository).createOrUpdateIndexTemplates();
       assertEquals(EventPublisherJob.Status.COMPLETED, orchestrator.getJobData().getStatus());
       assertNotNull(orchestrator.getJobData().getStats());
+      assertTrue(ignoredStrategy.constructed().isEmpty());
+    }
+  }
+
+  @Test
+  void runContinuesWhenHybridPipelinePreflightFails() {
+    EventPublisherJob jobData = new EventPublisherJob().withEntities(Set.of());
+
+    when(context.getJobName()).thenReturn(ON_DEMAND_JOB);
+    when(context.getAppConfigJson()).thenReturn(JsonUtils.pojoToJson(jobData));
+    when(searchIndexFailureDAO.countByJobId(appRunRecord.getAppId().toString())).thenReturn(0);
+    doThrow(new RuntimeException("Pipeline creation failed"))
+        .when(searchRepository)
+        .ensureHybridSearchPipeline();
+
+    try (MockedStatic<ReindexingMetrics> metricsMock = mockStatic(ReindexingMetrics.class);
+        MockedStatic<WebSocketManager> websocketMock = mockStatic(WebSocketManager.class);
+        MockedConstruction<OrphanedIndexCleaner> ignoredCleaner = mockOrphanCleaner();
+        MockedConstruction<SingleServerIndexingStrategy> ignoredStrategy =
+            mockConstruction(SingleServerIndexingStrategy.class)) {
+      metricsMock.when(ReindexingMetrics::getInstance).thenReturn(null);
+      websocketMock.when(WebSocketManager::getInstance).thenReturn(null);
+
+      orchestrator.run(null);
+
+      verify(searchRepository).ensureHybridSearchPipeline();
+      verify(searchRepository).createOrUpdateIndexTemplates();
+      assertEquals(EventPublisherJob.Status.COMPLETED, orchestrator.getJobData().getStatus());
       assertTrue(ignoredStrategy.constructed().isEmpty());
     }
   }
