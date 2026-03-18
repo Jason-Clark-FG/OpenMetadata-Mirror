@@ -16,30 +16,8 @@ on:
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/openmetadata-service-unit-tests.yml"
-      - ".github/workflows/openmetadata-service-unit-tests-skip.yml"
-      - "openmetadata-service/**"
-      - "openmetadata-spec/**"
-      - "openmetadata-clients/**"
-      - "openmetadata-sdk/**"
-      - "common/**"
-      - "pom.xml"
-      - "Makefile"
-      - "bootstrap/**"
   pull_request:
     types: [labeled, opened, synchronize, reopened, ready_for_review]
-    paths:
-      - ".github/workflows/openmetadata-service-unit-tests.yml"
-      - ".github/workflows/openmetadata-service-unit-tests-skip.yml"
-      - "openmetadata-service/**"
-      - "openmetadata-spec/**"
-      - "openmetadata-clients/**"
-      - "openmetadata-sdk/**"
-      - "common/**"
-      - "pom.xml"
-      - "Makefile"
-      - "bootstrap/**"
 
 permissions:
   contents: read
@@ -51,14 +29,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Detect whether relevant paths changed. When no Java service files
+  # are modified the downstream jobs are skipped via their `if` condition.
+  # A job skipped by `if` reports as "Success", so required checks still pass.
+  # This replaces the old openmetadata-service-unit-tests-skip.yml companion workflow.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    outputs:
+      java: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.java }}
+    steps:
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        with:
+          filters: |
+            java:
+              - '.github/workflows/openmetadata-service-unit-tests.yml'
+              - 'openmetadata-service/**'
+              - 'openmetadata-spec/**'
+              - 'openmetadata-clients/**'
+              - 'openmetadata-sdk/**'
+              - 'common/**'
+              - 'pom.xml'
+              - 'Makefile'
+              - 'bootstrap/**'
+
   openmetadata-service-unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    needs: changes
+    if: ${{ needs.changes.outputs.java == 'true' }}
     env:
       NEW_CODE_COVERAGE_THRESHOLD: "90"
     outputs:
       jacoco-report-available: ${{ steps.jacoco-report.outputs.available }}
-    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     steps:
       - name: Require safe-to-test label
         if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'safe to test') }}
@@ -147,10 +153,10 @@ jobs:
   openmetadata-service-new-code-coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: openmetadata-service-unit-tests
+    needs: [changes, openmetadata-service-unit-tests]
+    if: ${{ needs.changes.outputs.java == 'true' && github.event_name == 'pull_request' }}
     env:
       NEW_CODE_COVERAGE_THRESHOLD: "90"
-    if: ${{ github.event_name == 'pull_request' && !github.event.pull_request.draft }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -197,3 +203,15 @@ jobs:
         with:
           header: openmetadata-service-new-code-coverage
           path: openmetadata-service/target/diff-coverage.md
+
+  # Single required-check gate for branch protection.
+  # Skipped (= "Success") when all test jobs pass or are legitimately skipped.
+  # Runs and exits 1 only when a test job fails or is cancelled.
+  # Set "OpenMetadata Service Unit Tests / openmetadata-service-unit-tests-status" as the sole required check for this workflow.
+  openmetadata-service-unit-tests-status:
+    name: openmetadata-service-unit-tests-status
+    needs: [changes, openmetadata-service-unit-tests, openmetadata-service-new-code-coverage]
+    if: ${{ failure() || cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
