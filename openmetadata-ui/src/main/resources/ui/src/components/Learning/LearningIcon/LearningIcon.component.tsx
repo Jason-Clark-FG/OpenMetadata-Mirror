@@ -104,7 +104,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
           data-testid="learning-icon"
           icon={
             <FeaturedIcon
-              className="tw:hover:text-brand-700 tw:size-6"
+              className="tw:hover:text-brand-700 tw:size-6 tw:[background:rgba(83,177,253,0.1)]"
               color="brand"
               icon={
                 <LearningIconSvg className="tw:w-4 tw:h-4 tw:hover:h-4.5 tw:hover:w-4.5" />
