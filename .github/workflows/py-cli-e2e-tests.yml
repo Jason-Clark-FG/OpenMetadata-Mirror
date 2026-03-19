@@ -198,14 +198,14 @@ jobs:
 
     - name: Rename coverage file for Python integration tests
       if: matrix.e2e-test == 'python-integration' && steps.python-integration-test.outcome == 'success' && env.DEBUG == 'false'
-      run: mv ingestion/.coverage ingestion/.coverage.python-integration
+      run: mv ingestion/.coverage .coverage.python-integration
 
     - name: Upload coverage artifact for Python integration tests
       if: matrix.e2e-test == 'python-integration' && steps.python-integration-test.outcome == 'success' && env.DEBUG == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.e2e-test }}
-        path: ingestion/.coverage.python-integration
+        path: .coverage.python-integration
         include-hidden-files: true
 
     - name: Upload coverage artifact for CLI E2E tests
