@@ -221,6 +221,9 @@ class AirbyteCloudClient(AirbyteClient):
                 "AirbyteCloudClient requires OAuth 2.0 Client Credentials authentication"
             )
 
+        # The connection schema defaults apiVersion to "api/v1" (the internal API path).
+        # AirbyteCloudClient always uses the public API, so silently promote the
+        # internal-API default to the correct public-API path.
         api_version = self.config.apiVersion or "api/v1"
         if api_version == "api/v1":
             api_version = "api/public/v1"
