@@ -3,6 +3,7 @@ package org.openmetadata.service.migration.api;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -19,6 +20,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.migration.QueryStatus;
 import org.openmetadata.service.migration.context.MigrationContext;
 import org.openmetadata.service.migration.context.MigrationWorkflowContext;
+import org.openmetadata.service.migration.utils.MigrationFile;
 
 class MigrationWorkflowTest {
 
@@ -197,18 +200,18 @@ class MigrationWorkflowTest {
     setMigrations(workflow, List.of(process));
     setCurrentMaxVersion(workflow, Optional.of("1.0.0"));
 
-    try (var contextConstruction =
+    try (var ignored =
         mockConstruction(
             MigrationWorkflowContext.class,
-            (contextMock, ignored) -> {
+            (contextMock, context) -> {
               HashMap<String, MigrationContext> contexts = new HashMap<>();
               when(contextMock.getMigrationContext()).thenReturn(contexts);
               doAnswer(
                       invocation -> {
                         String version = invocation.getArgument(0);
-                        MigrationContext context = mock(MigrationContext.class);
-                        when(context.getResults()).thenReturn(new HashMap<>());
-                        contexts.put(version, context);
+                        MigrationContext migrationContext = mock(MigrationContext.class);
+                        when(migrationContext.getResults()).thenReturn(new HashMap<>());
+                        contexts.put(version, migrationContext);
                         return null;
                       })
                   .when(contextMock)
@@ -216,11 +219,11 @@ class MigrationWorkflowTest {
               doAnswer(
                       invocation -> {
                         MigrationProcess invokedProcess = invocation.getArgument(0);
-                        MigrationContext context = mock(MigrationContext.class);
+                        MigrationContext migrationContext = mock(MigrationContext.class);
                         HashMap<String, Long> results = new HashMap<>();
                         results.put("rows", 1L);
-                        when(context.getResults()).thenReturn(results);
-                        contexts.put(invokedProcess.getVersion(), context);
+                        when(migrationContext.getResults()).thenReturn(results);
+                        contexts.put(invokedProcess.getVersion(), migrationContext);
                         return null;
                       })
                   .when(contextMock)
@@ -235,6 +238,157 @@ class MigrationWorkflowTest {
     verify(process).runPostDDLScripts(false);
     verify(migrationDAO)
         .upsertServerMigration(eq("1.1.0"), eq("/tmp/1.1.0"), anyString(), anyString());
+  }
+
+  @Test
+  void getMigrationsToApplyBackportedPatchVersionsAreIncluded() throws Exception {
+    List<String> executedMigrations = List.of("1.11.10", "1.12.0", "1.12.1");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.11.10", false),
+            createMigrationFile("1.11.11", false),
+            createMigrationFile("1.11.12", false),
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.2", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    List<String> versions = result.stream().map(m -> m.version).toList();
+    assertEquals(List.of("1.11.11", "1.11.12", "1.12.2"), versions);
+  }
+
+  @Test
+  void getMigrationsToApplyCollateVersionsAreIncluded() throws Exception {
+    List<String> executedMigrations = List.of("1.11.10", "1.12.0", "1.12.1");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.11.10", false),
+            createMigrationFile("1.11.11", false),
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.1-collate", false),
+            createMigrationFile("1.12.2", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    List<String> versions = result.stream().map(m -> m.version).toList();
+    assertEquals(List.of("1.11.11", "1.12.1-collate", "1.12.2"), versions);
+  }
+
+  @Test
+  void getMigrationsToApplyCollateVersionAlreadyExecuted() throws Exception {
+    List<String> executedMigrations = List.of("1.11.10", "1.12.0", "1.12.1", "1.12.1-collate");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.11.10", false),
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.1-collate", false),
+            createMigrationFile("1.12.2", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    List<String> versions = result.stream().map(m -> m.version).toList();
+    assertEquals(List.of("1.12.2"), versions);
+  }
+
+  @Test
+  void getMigrationsToApplyExtensionMigrationsProcessedSeparately() throws Exception {
+    List<String> executedMigrations = List.of("1.12.0", "1.12.1");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.2", false),
+            createMigrationFile("1.12.1", true),
+            createMigrationFile("1.12.2", true));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    List<String> nativeVersions =
+        result.stream().filter(m -> !m.isExtension).map(m -> m.version).toList();
+    List<String> extensionVersions =
+        result.stream().filter(m -> m.isExtension).map(m -> m.version).toList();
+
+    assertEquals(List.of("1.12.2"), nativeVersions);
+    assertEquals(List.of("1.12.2"), extensionVersions);
+  }
+
+  @Test
+  void getMigrationsToApplyNoExecutedMigrationsReturnsAll() throws Exception {
+    List<String> executedMigrations = new ArrayList<>();
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.11.10", false),
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.0-collate", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    assertEquals(3, result.size());
+  }
+
+  @Test
+  void getMigrationsToApplyAllMigrationsAlreadyExecuted() throws Exception {
+    List<String> executedMigrations = List.of("1.12.0", "1.12.1", "1.12.1-collate");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.1-collate", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void getMigrationsToApplyMultipleBackportedMinorVersions() throws Exception {
+    List<String> executedMigrations = List.of("1.10.5", "1.11.0", "1.12.0", "1.12.1");
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.10.5", false),
+            createMigrationFile("1.10.6", false),
+            createMigrationFile("1.11.0", false),
+            createMigrationFile("1.11.1", false),
+            createMigrationFile("1.11.1-collate", false),
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.2", false));
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    List<String> versions = result.stream().map(m -> m.version).toList();
+    assertEquals(List.of("1.10.6", "1.11.1", "1.11.1-collate", "1.12.2"), versions);
+  }
+
+  private MigrationFile createMigrationFile(String version, boolean isExtension) throws Exception {
+    Path parentDir = isExtension ? tempDir.resolve("extensions") : tempDir.resolve("nativeVersions");
+    Path versionDir = Files.createDirectories(parentDir.resolve(version));
+    return new MigrationFile(
+        versionDir.toFile(), migrationDAO, ConnectionType.MYSQL, config, isExtension);
   }
 
   private void createMigrationDir(Path root, String version, String sql) throws Exception {

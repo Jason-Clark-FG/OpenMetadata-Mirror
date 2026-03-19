@@ -876,27 +876,25 @@ public class SearchRepository {
         IndexMapping indexMapping = entityIndexMap.get(entityType);
         List<Map<String, String>> docs = new ArrayList<>();
         for (EntityInterface entity : entities) {
-        try {
-          SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
-          String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
-          docs.add(Collections.singletonMap(entity.getId().toString(), doc));
-        } catch (Exception ie) {
-          LOG.error(
-              "Issue in building search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
-              entity.getId(),
-              entityType,
-              ie.getMessage(),
-              ie.getCause(),
-              ExceptionUtils.getStackTrace(ie));
+          try {
+            SearchIndex index = searchIndexFactory.buildIndex(entityType, entity);
+            String doc = JsonUtils.pojoToJson(index.buildSearchIndexDoc());
+            docs.add(Collections.singletonMap(entity.getId().toString(), doc));
+          } catch (Exception ie) {
+            LOG.error(
+                "Issue in building search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+                entity.getId(),
+                entityType,
+                ie.getMessage(),
+                ie.getCause(),
+                ExceptionUtils.getStackTrace(ie));
+          }
         }
-      }
 
-      if (docs.isEmpty()) {
-        return;
-      }
+        if (docs.isEmpty()) {
+          return;
+        }
 
-      Timer.Sample searchSample = RequestLatencyContext.startSearchOperation();
-      try {
         searchClient.createEntities(indexMapping.getIndexName(clusterAlias), docs);
 
         if (Entity.TABLE.equals(entityType)) {
