@@ -341,10 +341,12 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
           {isLogLoading ? (
             <Loader />
           ) : logText ? (
-            <div className="h-80vh lazy-log-container" data-testid="lazy-log">
+            <div
+              className="lazy-log-container"
+              data-testid="lazy-log"
+              style={{ height: '60vh', overflow: 'auto' }}>
               <LazyLog
                 caseInsensitive
-                enableSearch
                 selectableLines
                 extraLines={1}
                 ref={lazyLogRef}

@@ -18,8 +18,20 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Logback appender that captures log events for app runs. Uses two-tier matching:
+ *
+ * <ol>
+ *   <li>MDC {@code appRunId} — matches the main scheduler thread
+ *   <li>Thread name prefix — matches worker threads (reindex-*, om-field-fetch-*, etc.)
+ * </ol>
+ *
+ * <p>This avoids invasive MDC propagation across every thread pool. Instead, callers register thread
+ * name prefixes at capture start, and the appender routes matching events to the right buffer.
+ */
 public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   public static final String MDC_APP_RUN_ID = "appRunId";
   public static final String MDC_APP_NAME = "appName";
@@ -29,6 +41,9 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   private static final ConcurrentHashMap<String, RunLogBuffer> activeBuffers =
       new ConcurrentHashMap<>();
 
+  private static final CopyOnWriteArrayList<ThreadPrefixBinding> threadPrefixBindings =
+      new CopyOnWriteArrayList<>();
+
   private static final DateTimeFormatter FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
 
@@ -36,11 +51,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   private static int globalMaxLinesPerRun = 100_000;
   private static int globalMaxRunsPerApp = 5;
   private static volatile boolean registered = false;
-
-  @Override
-  public void start() {
-    super.start();
-  }
 
   public void setMaxLinesPerRun(int maxLinesPerRun) {
     globalMaxLinesPerRun = maxLinesPerRun;
@@ -56,15 +66,26 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   @Override
   protected void append(ILoggingEvent event) {
+    // Fast path: check MDC
     String runId = event.getMDCPropertyMap().get(MDC_APP_RUN_ID);
-    if (runId == null) {
-      return;
+    if (runId != null) {
+      RunLogBuffer buffer = activeBuffers.get(runId);
+      if (buffer != null) {
+        buffer.append(formatLine(event));
+        return;
+      }
     }
-    RunLogBuffer buffer = activeBuffers.get(runId);
-    if (buffer == null) {
-      return;
+
+    // Second path: match thread name against registered prefixes
+    if (!threadPrefixBindings.isEmpty()) {
+      String threadName = event.getThreadName();
+      for (ThreadPrefixBinding binding : threadPrefixBindings) {
+        if (threadName.startsWith(binding.prefix)) {
+          binding.buffer.append(formatLine(event));
+          return;
+        }
+      }
     }
-    buffer.append(formatLine(event));
   }
 
   static String formatLine(ILoggingEvent event) {
@@ -78,10 +99,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
         event.getFormattedMessage());
   }
 
-  /**
-   * Programmatically registers the appender on the root logger. Dropwizard overrides logback.xml
-   * with its own YAML logging config, so we must attach ourselves at runtime.
-   */
   private static void ensureRegistered() {
     if (registered) {
       return;
@@ -100,8 +117,14 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     }
   }
 
+  /**
+   * Start capturing logs for an app run.
+   *
+   * @param threadPrefixes thread name prefixes whose log output should be captured (e.g.
+   *     "reindex-", "om-field-fetch-"). The main scheduler thread is always captured via MDC.
+   */
   public static RunLogBuffer startCapture(
-      String appRunId, String appId, String appName, String serverId) {
+      String appRunId, String appId, String appName, String serverId, String... threadPrefixes) {
     ensureRegistered();
     cleanupOldRuns(appName);
     Path logFile = getLogFilePath(appName, Long.parseLong(appRunId), serverId);
@@ -109,6 +132,11 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
         new RunLogBuffer(
             appId, appName, serverId, Long.parseLong(appRunId), globalMaxLinesPerRun, logFile);
     activeBuffers.put(appRunId, buffer);
+
+    for (String prefix : threadPrefixes) {
+      threadPrefixBindings.add(new ThreadPrefixBinding(prefix, buffer));
+    }
+
     buffer.startFlusher();
     return buffer;
   }
@@ -116,6 +144,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   public static void stopCapture(String appRunId) {
     RunLogBuffer buffer = activeBuffers.remove(appRunId);
     if (buffer != null) {
+      threadPrefixBindings.removeIf(b -> b.buffer == buffer);
       buffer.close();
     }
   }
@@ -211,5 +240,16 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   static void resetForTest() {
     registered = false;
+    threadPrefixBindings.clear();
+  }
+
+  private static class ThreadPrefixBinding {
+    final String prefix;
+    final RunLogBuffer buffer;
+
+    ThreadPrefixBinding(String prefix, RunLogBuffer buffer) {
+      this.prefix = prefix;
+      this.buffer = buffer;
+    }
   }
 }

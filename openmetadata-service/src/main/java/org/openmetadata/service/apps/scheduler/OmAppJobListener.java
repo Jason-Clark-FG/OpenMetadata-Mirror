@@ -109,14 +109,18 @@ public class OmAppJobListener implements JobListener {
       dataMap.put(SCHEDULED_APP_RUN_EXTENSION, JsonUtils.pojoToJson(runRecord));
       dataMap.put(APP_CONFIG, JsonUtils.pojoToJson(appConfig));
 
-      // Start log capture via MDC-based Logback appender
+      // Start log capture via Logback appender with thread-name prefix matching.
+      // The main scheduler thread is captured via MDC; worker threads are captured
+      // by matching their thread name prefix (no MDC propagation needed).
       String appRunId = String.valueOf(runRecord.getTimestamp());
       String serverId = ServerIdentityResolver.getInstance().getServerId();
       MDC.put(AppRunLogAppender.MDC_APP_RUN_ID, appRunId);
       MDC.put(AppRunLogAppender.MDC_APP_NAME, appName);
       MDC.put(AppRunLogAppender.MDC_SERVER_ID, serverId);
       MDC.put(AppRunLogAppender.MDC_APP_ID, jobApp.getId().toString());
-      AppRunLogAppender.startCapture(appRunId, jobApp.getId().toString(), appName, serverId);
+      String[] threadPrefixes = getThreadPrefixesForApp(appName);
+      AppRunLogAppender.startCapture(
+          appRunId, jobApp.getId().toString(), appName, serverId, threadPrefixes);
       dataMap.put(APP_RUN_LOG_ID, appRunId);
 
       // Insert new Record Run
@@ -234,5 +238,14 @@ public class OmAppJobListener implements JobListener {
         repository.addAppStatus(runRecord);
       }
     }
+  }
+
+  private static String[] getThreadPrefixesForApp(String appName) {
+    if (appName != null && appName.toLowerCase().contains("searchindex")) {
+      return new String[] {
+        "reindex-", "om-field-fetch-", "search-index-retry-",
+      };
+    }
+    return new String[0];
   }
 }
