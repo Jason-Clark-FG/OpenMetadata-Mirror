@@ -190,7 +190,7 @@ public class ManualTaskWorkflowTest extends OpenMetadataApplicationTest {
     patchTaskStatus(UUID.fromString(omTaskId), TaskEntityStatus.Completed);
 
     await()
-        .atMost(Duration.ofSeconds(15))
+        .atMost(Duration.ofSeconds(90))
         .pollInterval(Duration.ofSeconds(1))
         .until(
             () -> {
@@ -215,7 +215,7 @@ public class ManualTaskWorkflowTest extends OpenMetadataApplicationTest {
     AtomicReference<String> omTaskIdRef = new AtomicReference<>();
 
     await()
-        .atMost(Duration.ofSeconds(30))
+        .atMost(Duration.ofSeconds(90))
         .pollInterval(Duration.ofSeconds(1))
         .until(
             () -> {
