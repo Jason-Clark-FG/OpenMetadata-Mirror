@@ -98,7 +98,10 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       );
       setGraphData(data);
     } catch (error) {
-      showErrorToast(error as AxiosError, t('server.entity-graph-fetch-error'));
+      showErrorToast(
+        error as AxiosError,
+        t('server.entity-fetch-error', { entity: t('label.graph') })
+      );
     } finally {
       setLoading(false);
     }
