@@ -107,6 +107,6 @@ CREATE TABLE IF NOT EXISTS task_workflow_outbox (
     PRIMARY KEY (id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_two_pending ON task_workflow_outbox (delivered, createdAt);
-CREATE INDEX IF NOT EXISTS idx_two_pending_tasks ON task_workflow_outbox (delivered, taskId);
-CREATE INDEX IF NOT EXISTS idx_two_task_order ON task_workflow_outbox (taskId, delivered, createdAt);
+CREATE INDEX IF NOT EXISTS idx_outbox_pending ON task_workflow_outbox (delivered, createdAt);
+CREATE INDEX IF NOT EXISTS idx_outbox_pending_tasks ON task_workflow_outbox (delivered, taskId);
+CREATE INDEX IF NOT EXISTS idx_outbox_task_order ON task_workflow_outbox (taskId, delivered, createdAt);

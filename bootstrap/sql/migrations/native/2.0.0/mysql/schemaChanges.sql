@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS task_workflow_outbox (
     attempts INT NOT NULL DEFAULT 0,
     lastAttemptAt BIGINT,
     PRIMARY KEY (id),
-    INDEX idx_two_pending (delivered, createdAt),
-    INDEX idx_two_pending_tasks (delivered, taskId),
-    INDEX idx_two_task_order (taskId, delivered, createdAt)
+    INDEX idx_outbox_pending (delivered, createdAt),
+    INDEX idx_outbox_pending_tasks (delivered, taskId),
+    INDEX idx_outbox_task_order (taskId, delivered, createdAt)
 );
