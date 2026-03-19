@@ -105,8 +105,6 @@ export { NavItemButton } from "./application/app-navigation/base-components/nav-
 export { NavAccountCard, NavAccountMenu } from "./application/app-navigation/base-components/nav-account-card";
 export { MobileNavigationHeader } from "./application/app-navigation/base-components/mobile-header";
 export type { NavItemType, NavItemDividerType } from "./application/app-navigation/config";
-export { Sidebar } from "./application/app-navigation/sidebar";
-export type { SidebarProps } from "./application/app-navigation/sidebar";
 export * from "./application/table/table";
 export * from "./application/tabs/tabs";
 

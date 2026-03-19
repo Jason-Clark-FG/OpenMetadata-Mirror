@@ -126,18 +126,18 @@ export const SIDEBAR_LIST: Array<LeftSidebarItem> = [
     dataTestId: `app-bar-item-${SidebarItem.DATA_INSIGHT}`,
   },
   {
-    key: ROUTES.DATA_MARKETPLACE,
+    key: ROUTES.DATA_MARKETPLACE_SECTION,
     title: 'label.data-marketplace',
-    redirect_url: ROUTES.DATA_MARKETPLACE,
     icon: MarketplaceIcon,
-    dataTestId: `app-bar-item-${SidebarItem.DATA_MARKETPLACE}`,
-  },
-  {
-    key: 'domains-section',
-    title: 'label.domain-plural',
-    icon: DomainsIcon,
-    dataTestId: SidebarItem.DOMAINS_SECTION,
+    dataTestId: `app-bar-item-${SidebarItem.DATA_MARKETPLACE_SECTION}`,
     children: [
+      {
+        key: ROUTES.DATA_MARKETPLACE,
+        title: 'label.data-marketplace',
+        icon: MarketplaceIcon,
+        redirect_url: ROUTES.DATA_MARKETPLACE,
+        dataTestId: `app-bar-item-${SidebarItem.DATA_MARKETPLACE}`,
+      },
       {
         key: ROUTES.DOMAIN,
         title: 'label.domain-plural',

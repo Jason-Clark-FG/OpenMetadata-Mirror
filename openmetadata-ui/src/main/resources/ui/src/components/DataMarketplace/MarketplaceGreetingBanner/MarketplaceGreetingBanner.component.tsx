@@ -24,13 +24,13 @@ const MarketplaceGreetingBanner = () => {
   return (
     <div className="text-center p-b-sm" data-testid="marketplace-greeting">
       <Typography
-        as="h4"
-        className="tw:text-lg tw:font-semibold tw:text-text-primary tw:mb-1 tw:mt-0"
+        as="h3"
+        className="tw:mb-1 tw:mt-0"
         data-testid="greeting-text">
         {t('label.hey-comma-name', { name: displayName })}
         {'\uD83D\uDC4B'}
       </Typography>
-      <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
+      <Typography as="p" className="tw:text-text-tertiary">
         {t('message.discover-data-products-subtitle')}
       </Typography>
     </div>

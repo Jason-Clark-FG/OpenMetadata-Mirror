@@ -293,4 +293,6 @@ const DataProductListPage = () => {
   );
 };
 
+export { DataProductListPage };
+
 export default withPageLayout(DataProductListPage);

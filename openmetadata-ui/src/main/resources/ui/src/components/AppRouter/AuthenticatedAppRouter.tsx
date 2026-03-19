@@ -28,6 +28,8 @@ import ForbiddenPage from '../../pages/ForbiddenPage/ForbiddenPage';
 import PlatformLineage from '../../pages/PlatformLineage/PlatformLineage';
 import TagPage from '../../pages/TagPage/TagPage';
 import { checkPermission, userPermissions } from '../../utils/PermissionsUtils';
+import { DataProductListPage as PureDataProductListPage } from '../DataProduct/DataProductListPage';
+import { DomainListPage as PureDomainListPage } from '../DomainListing/DomainListPage';
 import { useApplicationsProvider } from '../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { RoutePosition } from '../Settings/Applications/plugins/AppPlugin';
 import AdminProtectedRoute from './AdminProtectedRoute';
@@ -115,6 +117,24 @@ const DataMarketplacePage = withSuspenseFallback(
     () =>
       import(
         /* webpackChunkName: "DataMarketplacePage" */ '../../pages/DataMarketplacePage/DataMarketplacePage.component'
+      )
+  )
+);
+
+const MarketplaceLayout = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "MarketplaceLayout" */ '../../pages/DataMarketplacePage/MarketplaceLayout.component'
+      )
+  )
+);
+
+const MarketplaceSubPageLayout = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "MarketplaceSubPageLayout" */ '../../pages/DataMarketplacePage/MarketplaceSubPageLayout.component'
       )
   )
 );
@@ -444,10 +464,13 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
         }
         path={ROUTES.MARKETPLACE_APP_INSTALL}
       />
-      <Route
-        element={<DataMarketplacePage />}
-        path={ROUTES.DATA_MARKETPLACE}
-      />
+      <Route element={<MarketplaceLayout />} path="/data-marketplace">
+        <Route index element={<DataMarketplacePage />} />
+        <Route element={<MarketplaceSubPageLayout />}>
+          <Route element={<PureDataProductListPage />} path="data-products" />
+          <Route element={<PureDomainListPage />} path="domains" />
+        </Route>
+      </Route>
       <Route element={<SwaggerPage />} path={ROUTES.SWAGGER} />
       <Route element={<DomainVersionPage />} path={ROUTES.DOMAIN_VERSION} />
       <Route element={<UserPage />} path={ROUTES.USER_PROFILE_WITH_SUB_TAB} />

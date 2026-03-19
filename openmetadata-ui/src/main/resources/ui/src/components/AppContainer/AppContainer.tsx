@@ -13,6 +13,7 @@
 import { Layout } from 'antd';
 import classNames from 'classnames';
 import { useCallback, useEffect } from 'react';
+import { ROUTES } from '../../constants/constants';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { LineageSettings } from '../../generated/configuration/lineageSettings';
 import { SettingType } from '../../generated/settings/settings';
@@ -24,6 +25,7 @@ import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
 import i18n from '../../utils/i18next/LocalUtil';
 import AppSidebar from '../AppSidebar/AppSidebar.component';
 import { LimitBanner } from '../common/LimitBanner/LimitBanner';
+import MarketplaceNavBar from '../DataMarketplace/MarketplaceNavBar/MarketplaceNavBar.component';
 import NavBar from '../NavBar/NavBar';
 import applicationsClassBase from '../Settings/Applications/AppDetails/ApplicationsClassBase';
 import './app-container.less';
@@ -87,7 +89,11 @@ const AppContainer = () => {
           {/* Render Appbar */}
           {applicationRoutesClass.isProtectedRoute(location.pathname) &&
           isAuthenticated ? (
-            <NavBar />
+            location.pathname.includes(ROUTES.DATA_MARKETPLACE) ? (
+              <MarketplaceNavBar />
+            ) : (
+              <NavBar />
+            )
           ) : null}
 
           {/* Render main content */}

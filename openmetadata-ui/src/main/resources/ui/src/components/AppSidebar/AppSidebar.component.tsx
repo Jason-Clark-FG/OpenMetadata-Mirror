@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 
-import { Sidebar } from '@openmetadata/ui-core-components';
 import { useLocation } from 'react-router-dom';
 import { CUSTOM_SIDEBAR_ROUTES } from '../../constants/CustomSidebar.constants';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { useSidebarStore } from '../../hooks/useSidebarStore';
 import BrandImage from '../common/BrandImage/BrandImage';
 import LeftSidebar from '../MyData/LeftSidebar/LeftSidebar.component';
+import Sidebar from '../Sidebar/Sidebar.component';
 
 const AppSidebar = () => {
   const { customItems, customBottomItems } = useSidebarStore();
@@ -35,7 +35,7 @@ const AppSidebar = () => {
   }
 
   if (!customItems) {
-    return null;
+    return <aside style={{ width: isSidebarCollapsed ? 72 : 197 }} />;
   }
 
   return (

@@ -316,4 +316,6 @@ const DomainListPage = () => {
   );
 };
 
+export { DomainListPage };
+
 export default withPageLayout(DomainListPage);
