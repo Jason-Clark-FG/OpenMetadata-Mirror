@@ -259,12 +259,30 @@ public class AppResource extends EntityResource<App, AppRepository> {
           @QueryParam("agentType")
           String agentTypes,
       @Parameter(
+              description = "Filter by bound type. Use 'Global' or 'Service'.",
+              schema =
+                  @Schema(
+                      type = "string",
+                      allowableValues = {"Global", "Service"}))
+          @QueryParam("boundType")
+          String boundType,
+      @Parameter(
+              description =
+                  "Filter by service ID. Returns only service-bound apps configured for this service.",
+              schema = @Schema(type = "string"))
+          @QueryParam("serviceId")
+          UUID serviceId,
+      @Parameter(
               description = "Include all, deleted, or non-deleted entities.",
               schema = @Schema(implementation = Include.class))
           @QueryParam("include")
           @DefaultValue("non-deleted")
           Include include) {
-    ListFilter filter = new ListFilter(include).addQueryParam("agentType", agentTypes);
+    ListFilter filter =
+        new ListFilter(include)
+            .addQueryParam("agentType", agentTypes)
+            .addQueryParam("boundType", boundType)
+            .addQueryParam("serviceId", serviceId != null ? serviceId.toString() : null);
     return super.listInternal(
         uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
   }

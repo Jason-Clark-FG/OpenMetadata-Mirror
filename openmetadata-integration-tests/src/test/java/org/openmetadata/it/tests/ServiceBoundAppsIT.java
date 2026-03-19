@@ -753,6 +753,81 @@ public class ServiceBoundAppsIT {
         app.getConfiguration().getGlobalAppConfig(), "Global app should have globalAppConfig");
   }
 
+  // ========================
+  // Group 8: List API Filters (boundType, serviceId)
+  // ========================
+
+  @Test
+  void test_listApps_filterByBoundTypeService(TestNamespace ns) {
+    String json =
+        httpClient()
+            .executeForString(HttpMethod.GET, "/v1/apps?boundType=Service&limit=100", null, null);
+    ResultList<App> apps = JsonUtils.readValue(json, new TypeReference<ResultList<App>>() {});
+
+    assertNotNull(apps);
+    assertFalse(apps.getData().isEmpty(), "Should return at least one service-bound app");
+    for (App app : apps.getData()) {
+      assertEquals(
+          AppBoundType.Service, app.getBoundType(), "All returned apps should be Service-bound");
+    }
+  }
+
+  @Test
+  void test_listApps_filterByBoundTypeGlobal(TestNamespace ns) {
+    String json =
+        httpClient()
+            .executeForString(HttpMethod.GET, "/v1/apps?boundType=Global&limit=100", null, null);
+    ResultList<App> apps = JsonUtils.readValue(json, new TypeReference<ResultList<App>>() {});
+
+    assertNotNull(apps);
+    assertFalse(apps.getData().isEmpty(), "Should return at least one global app");
+    for (App app : apps.getData()) {
+      assertEquals(AppBoundType.Global, app.getBoundType(), "All returned apps should be Global");
+    }
+  }
+
+  @Test
+  void test_listApps_filterByServiceId(TestNamespace ns) {
+    DatabaseService service = createTestService(ns);
+    UUID serviceId = service.getId();
+    addServiceConfigWithDefaults(serviceId);
+
+    String json =
+        httpClient()
+            .executeForString(
+                HttpMethod.GET, "/v1/apps?serviceId=" + serviceId + "&limit=100", null, null);
+    ResultList<App> apps = JsonUtils.readValue(json, new TypeReference<ResultList<App>>() {});
+
+    assertNotNull(apps);
+    assertFalse(apps.getData().isEmpty(), "Should return the app configured for this service");
+    boolean found = false;
+    for (App app : apps.getData()) {
+      if (APP_NAME.equals(app.getName())) {
+        found = true;
+        break;
+      }
+    }
+    assertTrue(found, APP_NAME + " should be in the list for serviceId=" + serviceId);
+  }
+
+  @Test
+  void test_listApps_filterByServiceId_excludesUnconfiguredApps(TestNamespace ns) {
+    UUID randomServiceId = UUID.randomUUID();
+
+    String json =
+        httpClient()
+            .executeForString(
+                HttpMethod.GET, "/v1/apps?serviceId=" + randomServiceId + "&limit=100", null, null);
+    ResultList<App> apps = JsonUtils.readValue(json, new TypeReference<ResultList<App>>() {});
+
+    assertNotNull(apps);
+    for (App app : apps.getData()) {
+      assertFalse(
+          APP_NAME.equals(app.getName()),
+          APP_NAME + " should NOT appear for an unconfigured service");
+    }
+  }
+
   @Test
   void test_globalApp_scheduleRouting_noRegression(TestNamespace ns) {
     String json =
