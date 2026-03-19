@@ -95,14 +95,26 @@ jobs:
       # ──────────────────────────────────────────────────────────────────────────
       # Step 3: Linting Sub-Group
       # ──────────────────────────────────────────────────────────────────────────
+      - name: Get changed UI files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          path: ${{ env.UI_WORKING_DIRECTORY }}
+          files: |
+            src/**/*.{ts,tsx,js,jsx}
+            playwright/**/*.{ts,tsx,js,jsx}
+
       - name: Linting (ESlint + Prettier + Organise Imports)
         id: linting
+        if: steps.changed-files.outputs.any_changed == 'true'
         continue-on-error: true
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          yarn organize-imports
-          yarn lint:fix
-          yarn pretty
+          yarn organize-imports-cli $CHANGED_FILES
+          NODE_OPTIONS="--max-old-space-size=8192" yarn eslint --fix --no-error-on-unmatched-pattern $CHANGED_FILES
+          yarn prettier --write --ignore-path './.prettierignore' $CHANGED_FILES
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "### 🔍 Debug: Changes detected in Linting (ESlint + Prettier + Organise Imports)"
@@ -112,12 +124,21 @@ jobs:
           git checkout -- .
           git clean -fd
 
+      - name: Get all changed UI files
+        id: changed-files-all
+        uses: tj-actions/changed-files@v44
+        with:
+          path: ${{ env.UI_WORKING_DIRECTORY }}
+
       - name: Linting - Licence header
         id: license
+        if: steps.changed-files-all.outputs.any_changed == 'true'
         continue-on-error: true
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        env:
+          CHANGED_FILES_ALL: ${{ steps.changed-files-all.outputs.all_changed_files }}
         run: |
-          yarn license-header-fix
+          yarn license-header-fix $CHANGED_FILES_ALL
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "### 🔍 Debug: Changes detected in Licence Headers"
@@ -127,9 +148,6 @@ jobs:
           git checkout -- .
           git clean -fd
 
-      - name: Playwright ESLint Check
-        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
-        run: yarn lint:playwright
 
       # ──────────────────────────────────────────────────────────────────────────
       # Step 4: I18n Sync
@@ -191,10 +209,16 @@ jobs:
 
             - **UI check style**
               - **Linting**
-                - ${{ steps.linting.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier + Organise Imports** (`yarn organize-imports && yarn lint:fix && yarn pretty`)
-                - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header** (`yarn license-header-fix`)
-              - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync** (`yarn i18n`)
-              - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs** (`yarn generate:app-docs`)
+                - ${{ steps.linting.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier + Organise Imports**
+                - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header**
+              - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync**
+              - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs**
+            
+            **💡 Easy Fix:**
+            Run the following single command locally to automatically fix all code styling issues across the workspace:
+            ```bash
+            yarn ui-checkstyle
+            ```
           edit-mode: replace
 
       - name: Delete Summary Comment if Passed
