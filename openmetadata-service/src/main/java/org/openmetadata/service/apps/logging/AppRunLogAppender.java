@@ -99,6 +99,8 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
         event.getFormattedMessage());
   }
 
+  private static final String APPENDER_NAME = "APP_RUN_LOG";
+
   private static void ensureRegistered() {
     if (registered) {
       return;
@@ -108,11 +110,16 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
         return;
       }
       LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+      Logger root = context.getLogger(Logger.ROOT_LOGGER_NAME);
+      if (root.getAppender(APPENDER_NAME) != null) {
+        registered = true;
+        return;
+      }
       AppRunLogAppender appender = new AppRunLogAppender();
       appender.setContext(context);
-      appender.setName("APP_RUN_LOG");
+      appender.setName(APPENDER_NAME);
       appender.start();
-      context.getLogger(Logger.ROOT_LOGGER_NAME).addAppender(appender);
+      root.addAppender(appender);
       registered = true;
     }
   }
@@ -158,11 +165,22 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   }
 
   public static Path getLogFilePath(String appName, long runTimestamp, String serverId) {
-    return Paths.get(logDirectory, appName, runTimestamp + "-" + serverId + ".log");
+    Path base = Paths.get(logDirectory).toAbsolutePath().normalize();
+    Path resolved =
+        base.resolve(appName).resolve(runTimestamp + "-" + serverId + ".log").normalize();
+    if (!resolved.startsWith(base)) {
+      throw new IllegalArgumentException("Invalid path components");
+    }
+    return resolved;
   }
 
   public static Path getAppLogDir(String appName) {
-    return Paths.get(logDirectory, appName);
+    Path base = Paths.get(logDirectory).toAbsolutePath().normalize();
+    Path resolved = base.resolve(appName).normalize();
+    if (!resolved.startsWith(base)) {
+      throw new IllegalArgumentException("Invalid path components");
+    }
+    return resolved;
   }
 
   public static List<String> listServersForRun(String appName, long runTimestamp) {

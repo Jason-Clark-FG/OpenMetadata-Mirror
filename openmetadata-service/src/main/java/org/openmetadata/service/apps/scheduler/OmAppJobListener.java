@@ -198,7 +198,11 @@ public class OmAppJobListener implements JobListener {
             .broadCastMessageToAll(webSocketChannelName, JsonUtils.pojoToJson(runRecord));
       }
 
-      // Stop log capture and clear MDC
+      // Update App Run Record
+      pushApplicationStatusUpdates(jobExecutionContext, runRecord, true);
+    } catch (Exception e) {
+      LOG.error("OmAppJobListener.jobWasExecuted failed unexpectedly", e);
+    } finally {
       String appRunLogId =
           (String) jobExecutionContext.getJobDetail().getJobDataMap().get(APP_RUN_LOG_ID);
       if (appRunLogId != null) {
@@ -208,11 +212,6 @@ public class OmAppJobListener implements JobListener {
       MDC.remove(AppRunLogAppender.MDC_APP_NAME);
       MDC.remove(AppRunLogAppender.MDC_SERVER_ID);
       MDC.remove(AppRunLogAppender.MDC_APP_ID);
-
-      // Update App Run Record
-      pushApplicationStatusUpdates(jobExecutionContext, runRecord, true);
-    } catch (Exception e) {
-      LOG.error("OmAppJobListener.jobWasExecuted failed unexpectedly", e);
     }
   }
 
