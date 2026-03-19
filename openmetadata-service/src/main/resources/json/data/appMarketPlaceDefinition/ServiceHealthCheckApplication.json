@@ -15,5 +15,6 @@
     "enabled": true
   },
   "supportsInterrupt": true,
+  "boundType": "Service",
   "appConfiguration": {}
 }
