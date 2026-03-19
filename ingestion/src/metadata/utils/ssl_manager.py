@@ -109,9 +109,10 @@ class SSLManager:
                     setattr(self, f"{dict_key}", self.create_temp_file(value))
 
     def create_temp_file(self, content: SecretStr):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(content.get_secret_value().encode())
-            temp_file.close()
+        cert_content = content.get_secret_value()
+        cert_content = cert_content.replace("\\n", "\n")
+        with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp_file:
+            temp_file.write(cert_content)
         self.temp_files.append(temp_file.name)
         return temp_file.name
 
@@ -185,6 +186,10 @@ class SSLManager:
                 raise ValueError(
                     "CA certificate is required for SSL mode verify-ca or verify-full"
                 )
+        if self.cert_file_path:
+            connection.connectionArguments.root["sslcert"] = self.cert_file_path
+        if self.key_file_path:
+            connection.connectionArguments.root["sslkey"] = self.key_file_path
         return connection
 
     @setup_ssl.register(SalesforceConnection)
@@ -470,7 +475,9 @@ def _(connection):
     )
     if connection.sslMode:
         return SSLManager(
-            ca=connection.sslConfig.root.caCertificate if connection.sslConfig else None
+            ca=connection.sslConfig.root.caCertificate if connection.sslConfig else None,
+            cert=connection.sslConfig.root.sslCertificate if connection.sslConfig else None,
+            key=connection.sslConfig.root.sslKey if connection.sslConfig else None,
         )
     return None
 
