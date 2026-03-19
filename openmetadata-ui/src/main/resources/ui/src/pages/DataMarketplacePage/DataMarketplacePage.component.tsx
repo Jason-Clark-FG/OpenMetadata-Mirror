@@ -45,7 +45,9 @@ const DataMarketplacePage = () => {
   );
 
   const [isLoading, setIsLoading] = useState(true);
-  const [layout, setLayout] = useState<Array<WidgetConfig>>(defaultLayout);
+  const [layout, setLayout] = useState<Array<WidgetConfig>>(() => [
+    ...defaultLayout,
+  ]);
 
   useGridLayoutDirection(false);
 
