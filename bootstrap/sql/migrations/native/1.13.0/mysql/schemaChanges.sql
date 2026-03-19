@@ -46,6 +46,11 @@ WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
    OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule')
    OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfig');
 
+-- Add default boundType to apps_marketplace for apps that don't have it yet
+UPDATE apps_marketplace
+SET json = JSON_SET(json, '$.boundType', 'Global')
+WHERE NOT JSON_CONTAINS_PATH(json, 'one', '$.boundType');
+
 -- Add boundType to any installed apps that still don't have it (safety fallback)
 UPDATE installed_apps
 SET json = JSON_SET(json, '$.boundType', 'Global')

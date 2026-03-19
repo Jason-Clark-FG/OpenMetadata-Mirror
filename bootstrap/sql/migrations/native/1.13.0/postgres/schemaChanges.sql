@@ -45,6 +45,11 @@ WHERE jsonb_exists(json, 'appConfiguration')
    OR jsonb_exists(json, 'appSchedule')
    OR jsonb_exists(json, 'privateConfig');
 
+-- Add default boundType to apps_marketplace for apps that don't have it yet
+UPDATE apps_marketplace
+SET json = jsonb_set(json, '{boundType}', '"Global"'::jsonb)
+WHERE NOT jsonb_exists(json, 'boundType');
+
 -- Add boundType to any installed apps that still don't have it (safety fallback)
 UPDATE installed_apps
 SET json = jsonb_set(json, '{boundType}', '"Global"'::jsonb)
