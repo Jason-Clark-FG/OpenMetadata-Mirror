@@ -544,7 +544,6 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          yarn organize-imports-cli $CHANGED_FILES
           yarn lint:playwright --fix --no-error-on-unmatched-pattern $CHANGED_FILES
           yarn prettier --write --ignore-path './.prettierignore' $CHANGED_FILES
           if [ -n "$(git status --porcelain)" ]; then
