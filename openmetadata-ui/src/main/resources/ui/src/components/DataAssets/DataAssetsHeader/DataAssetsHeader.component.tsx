@@ -582,7 +582,7 @@ export const DataAssetsHeader = ({
     isAutoPilotTriggering,
     triggerTheAutoPilotApplication,
     disableRunAgentsButtonMessage,
-    permissions.EditAll,
+    permissions.Trigger,
   ]);
 
   useEffect(() => {
