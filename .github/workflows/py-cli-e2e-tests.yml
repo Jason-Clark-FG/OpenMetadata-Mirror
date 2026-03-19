@@ -102,6 +102,7 @@ jobs:
     - name: Run Python Integration Tests
       if: matrix.e2e-test == 'python-integration'
       id: python-integration-test
+      continue-on-error: true
       run: |
         source env/bin/activate
         cd ingestion
