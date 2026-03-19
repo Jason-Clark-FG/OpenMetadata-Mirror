@@ -50,6 +50,7 @@ import org.openmetadata.service.exception.UnhandledServerException;
 import org.openmetadata.service.governance.workflows.flowable.sql.SqlMapper;
 import org.openmetadata.service.governance.workflows.flowable.sql.UnlockExecutionSql;
 import org.openmetadata.service.governance.workflows.flowable.sql.UnlockJobSql;
+import org.openmetadata.service.governance.workflows.outbox.TaskWorkflowOutboxDrainer;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.FeedRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -66,6 +67,7 @@ import org.openmetadata.service.util.EntityUtil;
 public class WorkflowHandler {
   private ProcessEngine processEngine;
   private final Map<Object, Object> expressionMap = new HashMap<>();
+  private TaskWorkflowOutboxDrainer outboxDrainer;
   private static WorkflowHandler instance;
   @Getter private static volatile boolean initialized = false;
 
@@ -86,6 +88,8 @@ public class WorkflowHandler {
 
     initializeExpressionMap(config);
     initializeNewProcessEngine(processEngineConfiguration);
+    this.outboxDrainer = new TaskWorkflowOutboxDrainer(processEngine.getRuntimeService());
+    this.outboxDrainer.start();
   }
 
   public void initializeExpressionMap(OpenMetadataApplicationConfig config) {
@@ -155,6 +159,12 @@ public class WorkflowHandler {
         .getSqlSessionFactory()
         .getConfiguration()
         .addMapper(SqlMapper.class);
+
+    if (outboxDrainer != null) {
+      outboxDrainer.shutdown();
+      this.outboxDrainer = new TaskWorkflowOutboxDrainer(processEngine.getRuntimeService());
+      this.outboxDrainer.start();
+    }
   }
 
   public static void initialize(OpenMetadataApplicationConfig config) {
@@ -171,6 +181,15 @@ public class WorkflowHandler {
       return instance;
     }
     throw new UnhandledServerException("WorkflowHandler is not initialized.");
+  }
+
+  public void shutdown() {
+    if (outboxDrainer != null) {
+      outboxDrainer.shutdown();
+    }
+    if (processEngine != null) {
+      processEngine.close();
+    }
   }
 
   public ProcessEngineConfiguration getProcessEngineConfiguration() {
