@@ -14,7 +14,6 @@ import { DownloadOutlined } from '@ant-design/icons';
 import { LazyLog } from '@melloware/react-logviewer';
 import { Badge, Button, Col, Empty, Row, Select, Space } from 'antd';
 import { AxiosError } from 'axios';
-import { isNil } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -26,13 +25,14 @@ import {
   getApplicationRuns,
   getAppRunTextLogs,
 } from '../../../../rest/applicationAPI';
+import APIClient from '../../../../rest/index';
 import { formatDateTimeWithTimezone } from '../../../../utils/date-time/DateTimeUtils';
+import { getEncodedFqn } from '../../../../utils/StringsUtils';
+import { getOidcToken } from '../../../../utils/SwTokenStorageUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import CopyToClipboardButton from '../../../common/CopyToClipboardButton/CopyToClipboardButton';
 import Loader from '../../../common/Loader/Loader';
 import { AppRunTextLogsProps } from './AppRunTextLogs.interface';
-
-const POLL_INTERVAL_MS = 5000;
 
 const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
   const { t } = useTranslation();
@@ -45,8 +45,9 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLogLoading, setIsLogLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const prevLogLengthRef = useRef(0);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lazyLogRef = useRef<LazyLog>(null);
 
   const appName = useMemo(
     () => appData.fullyQualifiedName ?? appData.name,
@@ -72,8 +73,6 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
       setRuns(runData);
       if (runData.length > 0 && !selectedRunTimestamp) {
         setSelectedRunTimestamp(runData[0].timestamp);
-      } else {
-        setRuns(runData);
       }
     } catch (error) {
       showErrorToast(error as AxiosError);
@@ -82,53 +81,131 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
     }
   }, [appName, selectedRunTimestamp]);
 
-  const fetchLogs = useCallback(
-    async (silent = false) => {
-      if (!selectedRunTimestamp) {
-        return;
+  const stopStream = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  }, []);
+
+  const startStream = useCallback(
+    async (runTs: number, server?: string) => {
+      stopStream();
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsStreaming(true);
+      setLogText('');
+
+      const params = new URLSearchParams();
+      if (server) {
+        params.set('serverId', server);
       }
-      if (!silent) {
-        setIsLogLoading(true);
-      }
+
+      const baseUrl = APIClient.defaults.baseURL ?? '';
+      const url = `${baseUrl}/apps/name/${getEncodedFqn(
+        appName
+      )}/runs/${runTs}/logs/stream?${params.toString()}`;
+
       try {
-        const response = await getAppRunTextLogs(
-          appName,
-          selectedRunTimestamp,
-          selectedServer
-        );
-        setLogText(response.logs);
-        setServers(response.servers);
-        if (!selectedServer && response.servers.length > 0) {
-          setSelectedServer(response.servers[0]);
+        const token = await getOidcToken();
+
+        const response = await fetch(url, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Stream failed: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+
+          const newLogLines: string[] = [];
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              newLogLines.push(line.slice(6));
+            } else if (line.startsWith('event: done')) {
+              setIsStreaming(false);
+            }
+          }
+
+          if (newLogLines.length > 0) {
+            setLogText((prev) => {
+              if (prev) {
+                return prev + '\n' + newLogLines.join('\n');
+              }
+
+              return newLogLines.join('\n');
+            });
+          }
         }
       } catch (error) {
-        if (!silent) {
+        if ((error as Error).name !== 'AbortError') {
           showErrorToast(error as AxiosError);
         }
       } finally {
-        if (!silent) {
-          setIsLogLoading(false);
-        }
+        setIsStreaming(false);
       }
     },
-    [appName, selectedRunTimestamp, selectedServer]
+    [appName, stopStream]
   );
 
-  const scrollToBottom = useCallback(() => {
-    const logsBody = document.getElementsByClassName(
-      'ReactVirtualized__Grid'
-    )[0];
-    if (!isNil(logsBody)) {
-      logsBody.scrollTop = logsBody.scrollHeight;
+  const fetchLogsOnce = useCallback(async () => {
+    if (!selectedRunTimestamp) {
+      return;
+    }
+    setIsLogLoading(true);
+    try {
+      const response = await getAppRunTextLogs(
+        appName,
+        selectedRunTimestamp,
+        selectedServer
+      );
+      setLogText(response.logs);
+      setServers(response.servers);
+      if (!selectedServer && response.servers.length > 0) {
+        setSelectedServer(response.servers[0]);
+      }
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    } finally {
+      setIsLogLoading(false);
+    }
+  }, [appName, selectedRunTimestamp, selectedServer]);
+
+  const handleJumpToEnd = useCallback(() => {
+    if (lazyLogRef.current?.listRef?.current) {
+      const totalLines = (lazyLogRef.current as { state: { count: number } })
+        .state.count;
+      lazyLogRef.current.listRef.current.scrollToIndex(totalLines - 1);
     }
   }, []);
 
-  const handleRunChange = useCallback((value: number) => {
-    setSelectedRunTimestamp(value);
-    setSelectedServer(undefined);
-    setLogText('');
-    setAutoScroll(true);
-  }, []);
+  const handleRunChange = useCallback(
+    (value: number) => {
+      stopStream();
+      setSelectedRunTimestamp(value);
+      setSelectedServer(undefined);
+      setLogText('');
+    },
+    [stopStream]
+  );
 
   const handleDownload = useCallback(async () => {
     if (!selectedRunTimestamp) {
@@ -163,36 +240,38 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
     fetchRuns();
   }, [appName]);
 
-  // Fetch logs when run/server selection changes
+  // When run/server changes: use SSE stream for active runs, one-shot fetch for completed
   useEffect(() => {
-    fetchLogs();
-  }, [selectedRunTimestamp, selectedServer]);
+    if (!selectedRunTimestamp) {
+      return;
+    }
 
-  // Poll for new logs + updated run status while the run is active
+    if (isRunActive) {
+      startStream(selectedRunTimestamp, selectedServer);
+    } else {
+      fetchLogsOnce();
+    }
+
+    return () => stopStream();
+  }, [selectedRunTimestamp, selectedServer, isRunActive]);
+
+  // Also re-fetch run statuses periodically while streaming
   useEffect(() => {
-    if (!isRunActive) {
+    if (!isStreaming) {
       return;
     }
 
     const interval = setInterval(() => {
-      fetchLogs(true);
       fetchRuns();
-    }, POLL_INTERVAL_MS);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [isRunActive, fetchLogs, fetchRuns]);
+  }, [isStreaming, fetchRuns]);
 
-  // Auto-scroll to bottom when new log content arrives during an active run
+  // Cleanup on unmount
   useEffect(() => {
-    if (
-      autoScroll &&
-      isRunActive &&
-      logText.length > prevLogLengthRef.current
-    ) {
-      setTimeout(scrollToBottom, 100);
-    }
-    prevLogLengthRef.current = logText.length;
-  }, [logText, isRunActive, autoScroll, scrollToBottom]);
+    return () => stopStream();
+  }, [stopStream]);
 
   if (isLoading) {
     return <Loader />;
@@ -234,32 +313,16 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
               </Select>
             )}
 
-            {isRunActive && <Badge color="green" text={t('label.live')} />}
+            {isStreaming && <Badge color="green" text={t('label.live')} />}
 
             <Space size="small">
-              {isRunActive && (
-                <Button
-                  data-testid="auto-scroll-button"
-                  ghost={!autoScroll}
-                  type="primary"
-                  onClick={() => {
-                    setAutoScroll((prev) => !prev);
-                    if (!autoScroll) {
-                      scrollToBottom();
-                    }
-                  }}>
-                  {autoScroll ? t('label.following') : t('label.jump-to-end')}
-                </Button>
-              )}
-              {!isRunActive && (
-                <Button
-                  ghost
-                  data-testid="jump-to-end-button"
-                  type="primary"
-                  onClick={scrollToBottom}>
-                  {t('label.jump-to-end')}
-                </Button>
-              )}
+              <Button
+                ghost
+                data-testid="jump-to-end-button"
+                type="primary"
+                onClick={handleJumpToEnd}>
+                {t('label.jump-to-end')}
+              </Button>
               {logText && <CopyToClipboardButton copyText={logText} />}
               <Button
                 data-testid="download-logs-button"
@@ -278,14 +341,13 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
           {isLogLoading ? (
             <Loader />
           ) : logText ? (
-            <div
-              className="h-min-400 lazy-log-container"
-              data-testid="lazy-log">
+            <div className="h-80vh lazy-log-container" data-testid="lazy-log">
               <LazyLog
                 caseInsensitive
                 enableSearch
                 selectableLines
                 extraLines={1}
+                ref={lazyLogRef}
                 text={logText}
               />
             </div>

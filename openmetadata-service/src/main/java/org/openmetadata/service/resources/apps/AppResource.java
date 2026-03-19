@@ -698,6 +698,122 @@ public class AppResource extends EntityResource<App, AppRepository> {
   }
 
   @GET
+  @Path("/name/{name}/runs/{runTimestamp}/logs/stream")
+  @Produces("text/event-stream")
+  @Operation(
+      operationId = "streamAppRunTextLogs",
+      summary = "Stream text logs for an app run via SSE",
+      description =
+          "Streams existing log file content, then live lines for active runs. "
+              + "Uses Server-Sent Events format.",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "SSE log stream"),
+        @ApiResponse(responseCode = "404", description = "Log file not found")
+      })
+  public Response streamAppRunTextLogs(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @Parameter(description = "Run timestamp", schema = @Schema(type = "number"))
+          @PathParam("runTimestamp")
+          Long runTimestamp,
+      @Parameter(description = "Server ID filter", schema = @Schema(type = "string"))
+          @QueryParam("serverId")
+          String serverId) {
+    repository.getByName(uriInfo, name, repository.getFields("id"));
+
+    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    if (serverId == null && !servers.isEmpty()) {
+      serverId = servers.get(0);
+    }
+
+    final String resolvedServerId = serverId;
+
+    return Response.ok()
+        .type("text/event-stream")
+        .entity(
+            (StreamingOutput)
+                output -> {
+                  try {
+                    output.write("retry: 1000\n\n".getBytes());
+                    output.flush();
+
+                    // Send existing file content line by line
+                    if (resolvedServerId != null) {
+                      java.nio.file.Path logFile =
+                          AppRunLogAppender.getLogFilePath(name, runTimestamp, resolvedServerId);
+                      if (Files.exists(logFile)) {
+                        try (java.io.BufferedReader reader =
+                            Files.newBufferedReader(
+                                logFile, java.nio.charset.StandardCharsets.UTF_8)) {
+                          String line;
+                          while ((line = reader.readLine()) != null) {
+                            output.write(
+                                ("data: " + line + "\n\n")
+                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                          }
+                          output.flush();
+                        }
+                      }
+                    }
+
+                    // If there's an active buffer, stream live lines
+                    RunLogBuffer activeBuffer =
+                        AppRunLogAppender.getBuffer(String.valueOf(runTimestamp));
+                    if (activeBuffer != null
+                        && (resolvedServerId == null
+                            || activeBuffer.getServerId().equals(resolvedServerId))) {
+
+                      // Send any pending unflushed lines
+                      for (String pending : activeBuffer.getPendingLines()) {
+                        output.write(
+                            ("data: " + pending + "\n\n")
+                                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                      }
+                      output.flush();
+
+                      // Register listener for new lines
+                      java.util.function.Consumer<String> listener =
+                          batchText -> {
+                            try {
+                              for (String logLine : batchText.split("\n")) {
+                                output.write(
+                                    ("data: " + logLine + "\n\n")
+                                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                              }
+                              output.flush();
+                            } catch (IOException e) {
+                              throw new RuntimeException(e);
+                            }
+                          };
+                      activeBuffer.addStreamListener(listener);
+
+                      try {
+                        while (!Thread.currentThread().isInterrupted()) {
+                          Thread.sleep(30000);
+                          output.write(": heartbeat\n\n".getBytes());
+                          output.flush();
+                        }
+                      } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                      } finally {
+                        activeBuffer.removeStreamListener(listener);
+                      }
+                    } else {
+                      // Run is complete, send done event and close
+                      output.write("event: done\ndata: complete\n\n".getBytes());
+                      output.flush();
+                    }
+                  } catch (Exception e) {
+                    LOG.debug("SSE stream ended for {}/{}: {}", name, runTimestamp, e.getMessage());
+                  }
+                })
+        .build();
+  }
+
+  @GET
   @Path("/{id}/versions")
   @Operation(
       operationId = "listAllInstalledApplications",

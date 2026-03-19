@@ -8,20 +8,18 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.openmetadata.schema.utils.JsonUtils;
-import org.openmetadata.service.socket.WebSocketManager;
 
 @Slf4j
 public class RunLogBuffer {
-  public static final String APP_RUN_LOGS_CHANNEL = "appRunLogs";
   private static final int FLUSH_INTERVAL_SECONDS = 3;
 
   @Getter private final String appId;
@@ -32,6 +30,7 @@ public class RunLogBuffer {
   private final int maxLines;
   private final ConcurrentLinkedQueue<String> pending = new ConcurrentLinkedQueue<>();
   private final AtomicInteger totalLineCount = new AtomicInteger(0);
+  private final List<Consumer<String>> streamListeners = new CopyOnWriteArrayList<>();
   private ScheduledExecutorService flusher;
   private BufferedWriter writer;
 
@@ -91,7 +90,7 @@ public class RunLogBuffer {
 
     String batchText = String.join("\n", batch);
     writeToFile(batchText);
-    broadcastLines(batchText);
+    notifyListeners(batchText);
   }
 
   public void close() {
@@ -105,6 +104,15 @@ public class RunLogBuffer {
     }
     flush();
     closeWriter();
+    streamListeners.clear();
+  }
+
+  public void addStreamListener(Consumer<String> listener) {
+    streamListeners.add(listener);
+  }
+
+  public void removeStreamListener(Consumer<String> listener) {
+    streamListeners.remove(listener);
   }
 
   public List<String> getPendingLines() {
@@ -147,21 +155,14 @@ public class RunLogBuffer {
     }
   }
 
-  private void broadcastLines(String batchText) {
-    try {
-      if (WebSocketManager.getInstance() != null) {
-        WebSocketManager.getInstance()
-            .broadCastMessageToAll(
-                APP_RUN_LOGS_CHANNEL,
-                JsonUtils.pojoToJson(
-                    Map.of(
-                        "appName", appName,
-                        "runTimestamp", runTimestamp,
-                        "serverId", serverId,
-                        "lines", batchText)));
+  private void notifyListeners(String batchText) {
+    for (Consumer<String> listener : streamListeners) {
+      try {
+        listener.accept(batchText);
+      } catch (Exception e) {
+        LOG.debug("Stream listener error, removing: {}", e.getMessage());
+        streamListeners.remove(listener);
       }
-    } catch (Exception e) {
-      LOG.debug("Failed to broadcast app run logs: {}", e.getMessage());
     }
   }
 }
