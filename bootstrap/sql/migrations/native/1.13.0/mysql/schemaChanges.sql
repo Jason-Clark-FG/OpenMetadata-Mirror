@@ -22,8 +22,8 @@ SET json = JSON_SET(
 )
 WHERE JSON_CONTAINS_PATH(json, 'one', '$.preview');
 
--- Migrate installed_apps to new configuration structure
--- Add boundType and restructure configuration for apps that have old structure
+-- Migrate installed_apps to new configuration structure (internal apps only)
+-- External apps keep flat format (appConfiguration, appSchedule, privateConfiguration)
 UPDATE installed_apps
 SET json = JSON_SET(
     json,
@@ -32,19 +32,21 @@ SET json = JSON_SET(
         'globalAppConfig', JSON_OBJECT(
             'config', COALESCE(JSON_EXTRACT(json, '$.appConfiguration'), JSON_OBJECT()),
             'schedule', JSON_EXTRACT(json, '$.appSchedule'),
-            'privateConfig', JSON_EXTRACT(json, '$.privateConfig')
+            'privateConfig', JSON_EXTRACT(json, '$.privateConfiguration')
         )
     )
 )
-WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule');
+WHERE (JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
+   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule'))
+   AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(json, '$.appType')), 'internal') != 'external';
 
--- Remove old fields from installed_apps
+-- Remove old fields from installed_apps (internal apps only)
 UPDATE installed_apps
-SET json = JSON_REMOVE(json, '$.appConfiguration', '$.appSchedule', '$.privateConfig')
-WHERE JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
+SET json = JSON_REMOVE(json, '$.appConfiguration', '$.appSchedule', '$.privateConfiguration')
+WHERE (JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
    OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfig');
+   OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfiguration'))
+   AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(json, '$.appType')), 'internal') != 'external';
 
 -- Add default boundType to apps_marketplace for apps that don't have it yet
 UPDATE apps_marketplace

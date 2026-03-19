@@ -111,7 +111,8 @@ public class AbstractNativeApplication extends AbstractNativeApplicationBase {
       AppRuntime runtime = getAppRuntime(app);
       validateServerExecutableApp(runtime);
       // Trigger the application with the provided configuration payload
-      Map<String, Object> appConfig = JsonUtils.getMap(app.getAppConfiguration());
+      Map<String, Object> appConfig =
+          JsonUtils.getMap(AppBoundConfigurationUtil.getAppConfiguration(app));
       if (config != null) {
         appConfig.putAll(config);
       }
@@ -151,10 +152,11 @@ public class AbstractNativeApplication extends AbstractNativeApplicationBase {
       bindExistingIngestionToApplication(ingestionPipelineRepository);
       updateAppConfig(
           ingestionPipelineRepository,
-          JsonUtils.getMap(this.getApp().getAppConfiguration()),
+          JsonUtils.getMap(AppBoundConfigurationUtil.getAppConfiguration(this.getApp())),
           updatedBy);
     } catch (EntityNotFoundException ex) {
-      Map<String, Object> config = JsonUtils.getMap(this.getApp().getAppConfiguration());
+      Map<String, Object> config =
+          JsonUtils.getMap(AppBoundConfigurationUtil.getAppConfiguration(this.getApp()));
       createAndBindIngestionPipeline(ingestionPipelineRepository, config);
     }
   }
@@ -305,11 +307,13 @@ public class AbstractNativeApplication extends AbstractNativeApplicationBase {
     App jobApp =
         appRepository.getByName(
             null, appName, appRepository.getFields("bot"), Include.NON_DELETED, true);
-    ;
     ApplicationHandler.getInstance().setAppRuntimeProperties(jobApp);
-    jobApp.setAppConfiguration(
+    Object appConfigMap =
         JsonUtils.getMapFromJson(
-            (String) jobExecutionContext.getJobDetail().getJobDataMap().get(APP_CONFIG)));
+            (String) jobExecutionContext.getJobDetail().getJobDataMap().get(APP_CONFIG));
+    if (appConfigMap != null) {
+      AppBoundConfigurationUtil.setAppConfiguration(jobApp, appConfigMap);
+    }
     // Initialise the Application
     this.init(jobApp);
 

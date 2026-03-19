@@ -208,8 +208,10 @@ public class ApplicationHandler {
     try {
       Map<String, Object> decryptedAppConfig =
           runAppInit(app, daoCollection, searchRepository, true)
-              .decryptConfiguration(JsonUtils.getMap(app.getAppConfiguration()));
-      return app.withAppConfiguration(decryptedAppConfig);
+              .decryptConfiguration(
+                  JsonUtils.getMap(AppBoundConfigurationUtil.getAppConfiguration(app)));
+      AppBoundConfigurationUtil.setAppConfiguration(app, decryptedAppConfig);
+      return app;
     } catch (ClassNotFoundException
         | NoSuchMethodException
         | InvocationTargetException
@@ -229,8 +231,10 @@ public class ApplicationHandler {
     try {
       Map<String, Object> encryptedAppConfig =
           runAppInit(app, daoCollection, searchRepository, true)
-              .encryptConfiguration(JsonUtils.getMap(app.getAppConfiguration()));
-      return app.withAppConfiguration(encryptedAppConfig);
+              .encryptConfiguration(
+                  JsonUtils.getMap(AppBoundConfigurationUtil.getAppConfiguration(app)));
+      AppBoundConfigurationUtil.setAppConfiguration(app, encryptedAppConfig);
+      return app;
     } catch (ClassNotFoundException
         | NoSuchMethodException
         | InvocationTargetException

@@ -22,8 +22,8 @@ SET json = (json - 'preview') || jsonb_build_object(
 )
 WHERE jsonb_exists(json, 'preview');
 
--- Migrate installed_apps to new configuration structure
--- Add boundType and restructure configuration for apps that have old structure
+-- Migrate installed_apps to new configuration structure (internal apps only)
+-- External apps keep flat format (appConfiguration, appSchedule, privateConfiguration)
 UPDATE installed_apps
 SET json = json || jsonb_build_object(
     'boundType', 'Global',
@@ -31,19 +31,21 @@ SET json = json || jsonb_build_object(
         'globalAppConfig', jsonb_build_object(
             'config', COALESCE(json -> 'appConfiguration', '{}'::jsonb),
             'schedule', json -> 'appSchedule',
-            'privateConfig', json -> 'privateConfig'
+            'privateConfig', json -> 'privateConfiguration'
         )
     )
 )
-WHERE jsonb_exists(json, 'appConfiguration')
-   OR jsonb_exists(json, 'appSchedule');
+WHERE (jsonb_exists(json, 'appConfiguration')
+   OR jsonb_exists(json, 'appSchedule'))
+   AND COALESCE(json->>'appType', 'internal') != 'external';
 
--- Remove old fields from installed_apps
+-- Remove old fields from installed_apps (internal apps only)
 UPDATE installed_apps
-SET json = json - 'appConfiguration' - 'appSchedule' - 'privateConfig'
-WHERE jsonb_exists(json, 'appConfiguration')
+SET json = json - 'appConfiguration' - 'appSchedule' - 'privateConfiguration'
+WHERE (jsonb_exists(json, 'appConfiguration')
    OR jsonb_exists(json, 'appSchedule')
-   OR jsonb_exists(json, 'privateConfig');
+   OR jsonb_exists(json, 'privateConfiguration'))
+   AND COALESCE(json->>'appType', 'internal') != 'external';
 
 -- Add default boundType to apps_marketplace for apps that don't have it yet
 UPDATE apps_marketplace

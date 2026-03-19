@@ -10,6 +10,7 @@ import org.openmetadata.schema.entity.app.App;
 import org.openmetadata.schema.entity.app.AppBoundConfiguration;
 import org.openmetadata.schema.entity.app.AppBoundType;
 import org.openmetadata.schema.entity.app.AppSchedule;
+import org.openmetadata.schema.entity.app.AppType;
 import org.openmetadata.schema.entity.app.GlobalAppConfiguration;
 import org.openmetadata.schema.entity.app.ServiceAppConfiguration;
 import org.openmetadata.schema.type.EntityReference;
@@ -26,9 +27,22 @@ public class AppBoundConfigurationUtil {
     return app.getBoundType() == AppBoundType.Service;
   }
 
+  public static boolean isExternalApp(App app) {
+    return app.getAppType() == AppType.External;
+  }
+
   public static Object getAppConfiguration(App app) {
+    // External apps use flat format; fall back to nested for migration transition
+    if (isExternalApp(app)) {
+      Object flat = app.getAppConfiguration();
+      return flat != null
+          ? flat
+          : getGlobalConfiguration(app).map(GlobalAppConfiguration::getConfig).orElse(null);
+    }
     if (isGlobalApp(app)) {
-      return getGlobalConfiguration(app).map(GlobalAppConfiguration::getConfig).orElse(null);
+      Object nested =
+          getGlobalConfiguration(app).map(GlobalAppConfiguration::getConfig).orElse(null);
+      return nested != null ? nested : app.getAppConfiguration();
     } else if (isServiceBoundApp(app)) {
       LOG.warn(
           "getAppConfiguration called on service-bound app {}. Consider using getServiceAppConfiguration with serviceId",
@@ -48,8 +62,16 @@ public class AppBoundConfigurationUtil {
   }
 
   public static Object getPrivateConfiguration(App app) {
+    if (isExternalApp(app)) {
+      Object flat = app.getPrivateConfiguration();
+      return flat != null
+          ? flat
+          : getGlobalConfiguration(app).map(GlobalAppConfiguration::getPrivateConfig).orElse(null);
+    }
     if (isGlobalApp(app)) {
-      return getGlobalConfiguration(app).map(GlobalAppConfiguration::getPrivateConfig).orElse(null);
+      Object nested =
+          getGlobalConfiguration(app).map(GlobalAppConfiguration::getPrivateConfig).orElse(null);
+      return nested != null ? nested : app.getPrivateConfiguration();
     }
     return null;
   }
@@ -64,8 +86,16 @@ public class AppBoundConfigurationUtil {
   }
 
   public static AppSchedule getAppSchedule(App app) {
+    if (isExternalApp(app)) {
+      AppSchedule flat = app.getAppSchedule();
+      return flat != null
+          ? flat
+          : getGlobalConfiguration(app).map(GlobalAppConfiguration::getSchedule).orElse(null);
+    }
     if (isGlobalApp(app)) {
-      return getGlobalConfiguration(app).map(GlobalAppConfiguration::getSchedule).orElse(null);
+      AppSchedule nested =
+          getGlobalConfiguration(app).map(GlobalAppConfiguration::getSchedule).orElse(null);
+      return nested != null ? nested : app.getAppSchedule();
     } else if (isServiceBoundApp(app)) {
       LOG.warn(
           "getAppSchedule called on service-bound app {}. Consider using getAppSchedule with serviceId",
@@ -156,6 +186,10 @@ public class AppBoundConfigurationUtil {
   //  }
   //
   public static void setAppConfiguration(App app, Object appConfiguration) {
+    if (isExternalApp(app)) {
+      app.setAppConfiguration(appConfiguration);
+      return;
+    }
     if (isGlobalApp(app)) {
       getOrCreateGlobalConfiguration(app).setConfig(appConfiguration);
     } else if (isServiceBoundApp(app)) {
@@ -166,10 +200,18 @@ public class AppBoundConfigurationUtil {
   }
 
   public static void unsetPrivateConfiguration(App app) {
+    if (isExternalApp(app)) {
+      app.setPrivateConfiguration(null);
+      return;
+    }
     if (isGlobalApp(app)) {
-      app.getConfiguration().getGlobalAppConfig().setPrivateConfig(null);
+      if (app.getConfiguration() != null && app.getConfiguration().getGlobalAppConfig() != null) {
+        app.getConfiguration().getGlobalAppConfig().setPrivateConfig(null);
+      }
     } else if (isServiceBoundApp(app)) {
-      app.getConfiguration().getServiceAppConfig().forEach(c -> c.setPrivateConfig(null));
+      if (app.getConfiguration() != null && app.getConfiguration().getServiceAppConfig() != null) {
+        app.getConfiguration().getServiceAppConfig().forEach(c -> c.setPrivateConfig(null));
+      }
     }
   }
 
@@ -182,6 +224,10 @@ public class AppBoundConfigurationUtil {
   }
 
   public static void setSchedule(App app, AppSchedule appSchedule) {
+    if (isExternalApp(app)) {
+      app.setAppSchedule(appSchedule);
+      return;
+    }
     if (isGlobalApp(app)) {
       getOrCreateGlobalConfiguration(app).setSchedule(appSchedule);
     } else if (isServiceBoundApp(app)) {
@@ -357,94 +403,27 @@ public class AppBoundConfigurationUtil {
       app.setBoundType(AppBoundType.Global);
     }
 
-    if (app.getConfiguration() == null && isGlobalApp(app)) {
-      GlobalAppConfiguration globalConfig = new GlobalAppConfiguration();
-
-      if (hasLegacyAppConfiguration(app)) {
-        globalConfig.setConfig(getLegacyAppConfiguration(app));
-      }
-      if (hasLegacyPrivateConfiguration(app)) {
-        globalConfig.setPrivateConfig(getLegacyPrivateConfiguration(app));
-      }
-      if (hasLegacyAppSchedule(app)) {
-        globalConfig.setSchedule(getLegacyAppSchedule(app));
-      }
-      if (hasLegacyEventSubscriptions(app)) {
-        globalConfig.setEventSubscriptions(getLegacyEventSubscriptions(app));
-      }
-
-      AppBoundConfiguration boundConfig =
-          new AppBoundConfiguration().withGlobalAppConfig(globalConfig);
-      app.setConfiguration(boundConfig);
+    // External apps keep flat format — no migration to nested structure
+    if (isExternalApp(app)) {
+      return;
     }
-  }
 
-  private static boolean hasLegacyAppConfiguration(App app) {
-    try {
-      return app.getClass().getMethod("getAppConfiguration") != null;
-    } catch (NoSuchMethodException e) {
-      return false;
+    if (!isGlobalApp(app)) {
+      return;
     }
-  }
 
-  private static Object getLegacyAppConfiguration(App app) {
-    try {
-      return app.getClass().getMethod("getAppConfiguration").invoke(app);
-    } catch (Exception e) {
-      LOG.warn("Failed to get legacy app configuration for app {}", app.getName(), e);
-      return null;
+    // Ensure configuration structure exists
+    GlobalAppConfiguration globalConfig = getOrCreateGlobalConfiguration(app);
+
+    // Fill in any missing fields from legacy top-level properties
+    if (globalConfig.getConfig() == null && app.getAppConfiguration() != null) {
+      globalConfig.setConfig(app.getAppConfiguration());
     }
-  }
-
-  private static boolean hasLegacyPrivateConfiguration(App app) {
-    try {
-      return app.getClass().getMethod("getPrivateConfiguration") != null;
-    } catch (NoSuchMethodException e) {
-      return false;
+    if (globalConfig.getPrivateConfig() == null && app.getPrivateConfiguration() != null) {
+      globalConfig.setPrivateConfig(app.getPrivateConfiguration());
     }
-  }
-
-  private static Object getLegacyPrivateConfiguration(App app) {
-    try {
-      return app.getClass().getMethod("getPrivateConfiguration").invoke(app);
-    } catch (Exception e) {
-      LOG.warn("Failed to get legacy private configuration for app {}", app.getName(), e);
-      return null;
-    }
-  }
-
-  private static boolean hasLegacyAppSchedule(App app) {
-    try {
-      return app.getClass().getMethod("getAppSchedule") != null;
-    } catch (NoSuchMethodException e) {
-      return false;
-    }
-  }
-
-  private static AppSchedule getLegacyAppSchedule(App app) {
-    try {
-      return (AppSchedule) app.getClass().getMethod("getAppSchedule").invoke(app);
-    } catch (Exception e) {
-      LOG.warn("Failed to get legacy app schedule for app {}", app.getName(), e);
-      return null;
-    }
-  }
-
-  private static boolean hasLegacyEventSubscriptions(App app) {
-    try {
-      return app.getClass().getMethod("getEventSubscriptions") != null;
-    } catch (NoSuchMethodException e) {
-      return false;
-    }
-  }
-
-  @SuppressWarnings("unchecked")
-  private static List<EntityReference> getLegacyEventSubscriptions(App app) {
-    try {
-      return (List<EntityReference>) app.getClass().getMethod("getEventSubscriptions").invoke(app);
-    } catch (Exception e) {
-      LOG.warn("Failed to get legacy event subscriptions for app {}", app.getName(), e);
-      return List.of();
+    if (globalConfig.getSchedule() == null && app.getAppSchedule() != null) {
+      globalConfig.setSchedule(app.getAppSchedule());
     }
   }
 }

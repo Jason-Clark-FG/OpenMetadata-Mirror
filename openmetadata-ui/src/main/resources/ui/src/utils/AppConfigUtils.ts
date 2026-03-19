@@ -11,53 +11,69 @@
  *  limitations under the License.
  */
 
-import { App } from '../generated/entity/applications/app';
+import { App, AppType } from '../generated/entity/applications/app';
 
 /**
- * Adapter utilities to handle app configuration structure changes.
- * Provides backward-compatible access to app configuration, schedule, and private config.
- * All apps are currently Global apps - service-bound apps will be handled in future UI updates.
+ * Mirrors backend AppBoundConfigurationUtil routing logic.
+ * External apps use flat fields (appConfiguration, appSchedule, privateConfiguration).
+ * Internal apps use nested fields (configuration.globalAppConfig.{config, schedule, privateConfig}).
+ *
+ * Intermediate type until generated types are regenerated to include 'configuration'.
  */
+interface GlobalAppConfig {
+  config?: unknown;
+  schedule?: unknown;
+  privateConfig?: unknown;
+}
 
-/**
- * Get app configuration (read-only access)
- * Returns configuration.globalAppConfig.config for Global apps
- */
+interface AppBoundConfig {
+  globalAppConfig?: GlobalAppConfig;
+}
+
+const isExternalApp = (app: App) => app.appType === AppType.External;
+
+const getGlobalAppConfig = (app: App): GlobalAppConfig | undefined =>
+  (app as unknown as Record<string, AppBoundConfig>).configuration
+    ?.globalAppConfig;
+
 export const getAppConfig = (app?: App) => {
   if (!app) {
     return undefined;
   }
 
-  return app.configuration?.globalAppConfig?.config;
+  // External apps always use flat fields
+  if (isExternalApp(app)) {
+    return app.appConfiguration;
+  }
+
+  // Internal apps: nested first, flat fallback
+  return getGlobalAppConfig(app)?.config ?? app.appConfiguration;
 };
 
-/**
- * Get app schedule (read-only access)
- * Returns configuration.globalAppConfig.schedule for Global apps
- */
 export const getAppSchedule = (app?: App) => {
   if (!app) {
     return undefined;
   }
 
-  return app.configuration?.globalAppConfig?.schedule;
+  if (isExternalApp(app)) {
+    return app.appSchedule;
+  }
+
+  return getGlobalAppConfig(app)?.schedule ?? app.appSchedule;
 };
 
-/**
- * Get app private config (read-only access)
- * Returns configuration.globalAppConfig.privateConfig for Global apps
- */
 export const getAppPrivateConfig = (app?: App) => {
   if (!app) {
     return undefined;
   }
 
-  return app.configuration?.globalAppConfig?.privateConfig;
+  if (isExternalApp(app)) {
+    return app.privateConfiguration;
+  }
+
+  return getGlobalAppConfig(app)?.privateConfig ?? app.privateConfiguration;
 };
 
-/**
- * Check if app has configuration
- */
 export const hasAppConfiguration = (app?: App) => {
   if (!app) {
     return false;
@@ -67,16 +83,26 @@ export const hasAppConfiguration = (app?: App) => {
 };
 
 /**
- * Create updated app object with new configuration
- * Handles nested structure for Global apps transparently
+ * Create updated app object with new configuration.
+ * External apps update flat appConfiguration field.
+ * Internal apps update nested configuration.globalAppConfig.config.
  */
 export const updateAppConfig = (app: App, newConfig: unknown) => {
+  if (isExternalApp(app)) {
+    return {
+      ...app,
+      appConfiguration: newConfig,
+    };
+  }
+
+  const currentGlobal = getGlobalAppConfig(app);
+
   return {
     ...app,
     configuration: {
-      ...app.configuration,
+      ...(app as unknown as Record<string, unknown>).configuration,
       globalAppConfig: {
-        ...app.configuration?.globalAppConfig,
+        ...currentGlobal,
         config: newConfig,
       },
     },
@@ -84,16 +110,26 @@ export const updateAppConfig = (app: App, newConfig: unknown) => {
 };
 
 /**
- * Create updated app object with new schedule
- * Handles nested structure for Global apps transparently
+ * Create updated app object with new schedule.
+ * External apps update flat appSchedule field.
+ * Internal apps update nested configuration.globalAppConfig.schedule.
  */
 export const updateAppSchedule = (app: App, newSchedule: unknown) => {
+  if (isExternalApp(app)) {
+    return {
+      ...app,
+      appSchedule: newSchedule,
+    };
+  }
+
+  const currentGlobal = getGlobalAppConfig(app);
+
   return {
     ...app,
     configuration: {
-      ...app.configuration,
+      ...(app as unknown as Record<string, unknown>).configuration,
       globalAppConfig: {
-        ...app.configuration?.globalAppConfig,
+        ...currentGlobal,
         schedule: newSchedule,
       },
     },
