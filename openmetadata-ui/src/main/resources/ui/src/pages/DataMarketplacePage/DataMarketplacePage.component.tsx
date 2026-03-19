@@ -113,7 +113,7 @@ const DataMarketplacePage = () => {
   }
 
   return (
-    <>
+    <div className='tw:mb-8'>
       <div
         className="marketplace-header-bg"
         style={
@@ -142,7 +142,7 @@ const DataMarketplacePage = () => {
           {widgets}
         </ReactGridLayout>
       </div>
-    </>
+    </div>
   );
 };
 
