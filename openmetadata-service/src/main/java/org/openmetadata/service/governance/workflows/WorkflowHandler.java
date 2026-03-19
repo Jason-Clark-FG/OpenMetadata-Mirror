@@ -3,7 +3,6 @@ package org.openmetadata.service.governance.workflows;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 import static org.openmetadata.service.governance.workflows.elements.TriggerFactory.getTriggerWorkflowId;
 
-import io.github.resilience4j.core.IntervalFunction;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,9 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.converter.BpmnXMLConverter;
@@ -1167,99 +1163,6 @@ public class WorkflowHandler {
     } catch (Exception e) {
       LOG.error("Error finding termination message for task {}", task.getId(), e);
       return null;
-    }
-  }
-
-  static final int MESSAGE_RETRY_ASYNC_ATTEMPTS = 5;
-  static final long MESSAGE_RETRY_INITIAL_INTERVAL_MS = 500;
-  static final long MESSAGE_RETRY_MAX_INTERVAL_MS = 5000;
-
-  private static final IntervalFunction MESSAGE_RETRY_BACKOFF =
-      IntervalFunction.ofExponentialBackoff(
-          MESSAGE_RETRY_INITIAL_INTERVAL_MS, 2.0, MESSAGE_RETRY_MAX_INTERVAL_MS);
-
-  private static final ScheduledExecutorService messageRetryScheduler =
-      Executors.newSingleThreadScheduledExecutor(
-          r ->
-              java.lang.Thread.ofPlatform()
-                  .name("ManualTask-MessageRetry")
-                  .daemon(true)
-                  .unstarted(r));
-
-  public boolean sendManualTaskMessage(String messageName, Map<String, Object> variables) {
-    if (tryDeliverMessage(messageName, variables)) {
-      return true;
-    }
-    scheduleMessageRetry(messageName, variables, 1);
-    return false;
-  }
-
-  private void scheduleMessageRetry(
-      String messageName, Map<String, Object> variables, int attempt) {
-    if (attempt > MESSAGE_RETRY_ASYNC_ATTEMPTS) {
-      LOG.warn(
-          "No message subscription '{}' found after {} async retry attempts. "
-              + "The workflow may have already completed or the subprocess is between cycles.",
-          messageName,
-          MESSAGE_RETRY_ASYNC_ATTEMPTS);
-      return;
-    }
-
-    long delayMillis = MESSAGE_RETRY_BACKOFF.apply(attempt);
-
-    LOG.debug(
-        "Scheduling message retry for '{}' in {}ms (attempt {}/{}).",
-        messageName,
-        delayMillis,
-        attempt,
-        MESSAGE_RETRY_ASYNC_ATTEMPTS);
-
-    messageRetryScheduler.schedule(
-        () -> {
-          if (!tryDeliverMessage(messageName, variables)) {
-            scheduleMessageRetry(messageName, variables, attempt + 1);
-          }
-        },
-        delayMillis,
-        TimeUnit.MILLISECONDS);
-  }
-
-  private boolean tryDeliverMessage(String messageName, Map<String, Object> variables) {
-    try {
-      RuntimeService runtimeService = processEngine.getRuntimeService();
-      Execution execution =
-          runtimeService
-              .createExecutionQuery()
-              .messageEventSubscriptionName(messageName)
-              .singleResult();
-
-      if (execution == null) {
-        return false;
-      }
-
-      runtimeService.messageEventReceived(messageName, execution.getId(), variables);
-      LOG.debug(
-          "Sent manual task message '{}' to execution '{}' with variables {}",
-          messageName,
-          execution.getId(),
-          variables.keySet());
-      return true;
-    } catch (FlowableObjectNotFoundException e) {
-      LOG.warn(
-          "Workflow execution not found when sending message '{}': {}",
-          messageName,
-          e.getMessage());
-      return false;
-    } catch (org.flowable.common.engine.api.FlowableOptimisticLockingException e) {
-      LOG.debug(
-          "Optimistic lock conflict delivering message '{}'. "
-              + "Concurrent modification detected, will retry: {}",
-          messageName,
-          e.getMessage());
-      return false;
-    } catch (Exception e) {
-      LOG.error("Failed to send manual task message '{}': {}", messageName, e.getMessage(), e);
-      return false;
     }
   }
 
