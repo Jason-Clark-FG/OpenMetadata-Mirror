@@ -173,7 +173,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
             + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
             + "'dbServiceCleanup', 'relationshipCleanup', 'tagUsageCleanup', 'drop-indexes', 'remove-security-config', 'create-indexes', "
             + "'setOpenMetadataUrl', 'configureEmailSettings', 'get-security-config', 'update-security-config', 'install-app', 'delete-app', 'create-user', 'reset-password', "
-            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens'");
+            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens', 'backup', 'restore'");
     LOG.info(
         "Use 'reindex --auto-tune' for automatic performance optimization based on cluster capabilities");
     LOG.info(
@@ -2606,6 +2606,54 @@ public class OpenMetadataOperations implements Callable<Integer> {
       return 0;
     } catch (Exception e) {
       LOG.error("Failed to cleanup Flowable history due to ", e);
+      return 1;
+    }
+  }
+
+  @Command(name = "backup", description = "Backup the entire database to a .tar.gz archive.")
+  public Integer backup(
+      @Option(
+              names = {"--backup-path"},
+              required = true,
+              description = "Path where the backup .tar.gz file will be created")
+          String backupPath) {
+    try {
+      parseConfig();
+      ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
+      String databaseName =
+          DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
+      DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);
+      backupRestore.backup(backupPath);
+      return 0;
+    } catch (Exception e) {
+      LOG.error("Backup failed", e);
+      return 1;
+    }
+  }
+
+  @Command(name = "restore", description = "Restore the database from a .tar.gz backup archive.")
+  public Integer restore(
+      @Option(
+              names = {"--backup-path"},
+              required = true,
+              description = "Path to the backup .tar.gz file to restore from")
+          String backupPath,
+      @Option(
+              names = {"--force"},
+              defaultValue = "false",
+              description =
+                  "Force restore by truncating existing tables. Without this flag, restore fails if tables have data.")
+          boolean force) {
+    try {
+      parseConfig();
+      ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
+      String databaseName =
+          DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
+      DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);
+      backupRestore.restore(backupPath, force);
+      return 0;
+    } catch (Exception e) {
+      LOG.error("Restore failed", e);
       return 1;
     }
   }
