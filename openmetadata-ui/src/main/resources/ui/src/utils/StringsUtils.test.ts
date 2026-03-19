@@ -29,13 +29,13 @@ jest.mock('./i18next/LocalUtil', () => ({
 }));
 
 import {
-  formatJsonString,
-  getDecodedFqn,
-  getEncodedFqn,
-  jsonToCSV,
-  ordinalize,
-  removeAttachmentsWithoutUrl,
-  replaceCallback,
+    formatJsonString,
+    getDecodedFqn,
+    getEncodedFqn,
+    jsonToCSV,
+    ordinalize,
+    removeAttachmentsWithoutUrl,
+    replaceCallback
 } from './StringsUtils';
 
 describe('StringsUtils', () => {

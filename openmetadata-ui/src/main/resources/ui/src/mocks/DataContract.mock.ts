@@ -11,10 +11,10 @@
  *  limitations under the License.
  */
 import {
-  Constraint,
-  DataType,
-  LabelType,
-  State,
+    Constraint,
+    DataType,
+    LabelType,
+    State
 } from '../generated/entity/data/table';
 import { ContractExecutionStatus } from '../generated/type/contractExecutionStatus';
 import { TagSource } from '../generated/type/tagLabel';

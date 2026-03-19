@@ -12,9 +12,9 @@
  */
 import { SubscriptionCategory } from '../generated/events/eventSubscription';
 import {
-  checkIfDestinationIsInternal,
-  getAlertDestinationCategoryIcons,
-  getConfigFieldFromDestinationType,
+    checkIfDestinationIsInternal,
+    getAlertDestinationCategoryIcons,
+    getConfigFieldFromDestinationType
 } from './ObservabilityUtils';
 
 describe('Observability Utils test', () => {

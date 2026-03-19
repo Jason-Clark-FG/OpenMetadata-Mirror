@@ -13,9 +13,9 @@
 
 import { ClientType } from '../generated/configuration/securityConfiguration';
 import {
-  getAuthorityUrl,
-  getCallbackUrl,
-  getServerUrl,
+    getAuthorityUrl,
+    getCallbackUrl,
+    getServerUrl
 } from '../utils/SSOURLUtils';
 
 // Default callback URL for SSO configuration

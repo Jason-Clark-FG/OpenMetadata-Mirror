@@ -17,8 +17,8 @@ import { EntityType } from '../enums/entity.enum';
 import { APIEndpoint, Field } from '../generated/entity/data/apiEndpoint';
 import { Container } from '../generated/entity/data/container';
 import {
-  Column as DataModelColumn,
-  DashboardDataModel,
+    Column as DataModelColumn,
+    DashboardDataModel
 } from '../generated/entity/data/dashboardDataModel';
 import { Mlmodel } from '../generated/entity/data/mlmodel';
 import { Pipeline } from '../generated/entity/data/pipeline';
@@ -28,24 +28,24 @@ import { Topic } from '../generated/entity/data/topic';
 import { Worksheet } from '../generated/entity/data/worksheet';
 import { TagLabel } from '../generated/type/tagLabel';
 import {
-  ColumnFieldUpdate,
-  EntityDataMap,
-  EntityDataMapValue,
-  HandleColumnFieldUpdateOptions,
-  HandleColumnFieldUpdateResult,
+    ColumnFieldUpdate,
+    EntityDataMap,
+    EntityDataMapValue,
+    HandleColumnFieldUpdateOptions,
+    HandleColumnFieldUpdateResult
 } from './ColumnUpdateUtils.interface';
 import {
-  updateContainerColumnDescription,
-  updateContainerColumnTags,
+    updateContainerColumnDescription,
+    updateContainerColumnTags
 } from './ContainerDetailUtils';
 import {
-  findFieldByFQN,
-  normalizeTags,
-  pruneEmptyChildren,
-  updateFieldDescription,
-  updateFieldDisplayName,
-  updateFieldExtension,
-  updateFieldTags,
+    findFieldByFQN,
+    normalizeTags,
+    pruneEmptyChildren,
+    updateFieldDescription,
+    updateFieldDisplayName,
+    updateFieldExtension,
+    updateFieldTags
 } from './TableUtils';
 
 // Re-export for backward compatibility

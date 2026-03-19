@@ -14,8 +14,8 @@
 import { cloneDeep, isEmpty, isUndefined } from 'lodash';
 import { COMMON_UI_SCHEMA } from '../constants/Services.constant';
 import {
-  DashboardConnection,
-  DashboardServiceType,
+    DashboardConnection,
+    DashboardServiceType
 } from '../generated/entity/services/dashboardService';
 import customDashboardConnection from '../jsons/connectionSchemas/connections/dashboard/customDashboardConnection.json';
 import domoDashboardConnection from '../jsons/connectionSchemas/connections/dashboard/domoDashboardConnection.json';

@@ -16,18 +16,18 @@ import { Operation } from 'fast-json-patch';
 import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import {
-  APPLICATION_JSON_CONTENT_TYPE_HEADER,
-  PAGE_SIZE,
+    APPLICATION_JSON_CONTENT_TYPE_HEADER,
+    PAGE_SIZE
 } from '../constants/constants';
 import { SearchIndex } from '../enums/search.enum';
 import { CreateDataProduct } from '../generated/api/domains/createDataProduct';
 import {
-  DataProductPortsView,
-  PaginatedEntities,
+    DataProductPortsView,
+    PaginatedEntities
 } from '../generated/api/domains/dataProductPortsView';
 import {
-  DataProduct,
-  EntityReference,
+    DataProduct,
+    EntityReference
 } from '../generated/entity/domains/dataProduct';
 import { EntityHistory } from '../generated/type/entityHistory';
 import { Paging } from '../generated/type/paging';

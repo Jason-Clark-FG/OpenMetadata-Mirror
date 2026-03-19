@@ -12,25 +12,25 @@
  */
 
 import {
-  AuthenticationResult,
-  BrowserCacheLocation,
-  Configuration,
-  PopupRequest,
+    AuthenticationResult,
+    BrowserCacheLocation,
+    Configuration,
+    PopupRequest
 } from '@azure/msal-browser';
 import { CookieStorage } from 'cookie-storage';
 import jwtDecode, { JwtPayload } from 'jwt-decode';
 import { first, get, isEmpty, isNil } from 'lodash';
 import { WebStorageStateStore } from 'oidc-client';
 import {
-  AuthenticationConfigurationWithScope,
-  OidcUser,
-  UserProfile,
+    AuthenticationConfigurationWithScope,
+    OidcUser,
+    UserProfile
 } from '../components/Auth/AuthProviders/AuthProvider.interface';
 import { REDIRECT_PATHNAME, ROUTES } from '../constants/constants';
 import { EMAIL_REG_EX } from '../constants/regex.constants';
 import {
-  AuthenticationConfiguration,
-  ClientType,
+    AuthenticationConfiguration,
+    ClientType
 } from '../generated/configuration/authenticationConfiguration';
 import { AuthProvider } from '../generated/settings/settings';
 import { isDev } from './EnvironmentUtils';

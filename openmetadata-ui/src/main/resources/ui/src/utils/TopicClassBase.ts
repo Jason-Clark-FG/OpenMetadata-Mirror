@@ -12,12 +12,12 @@
  */
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-  CUSTOM_PROPERTIES_WIDGET,
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  GridSizes,
-  TAGS_WIDGET,
+    CUSTOM_PROPERTIES_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    GridSizes,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { TOPIC_DUMMY_DATA } from '../constants/Topic.constant';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
@@ -28,8 +28,8 @@ import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interfa
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 import i18n from './i18next/LocalUtil';
 import {
-  getTopicDetailsPageTabs,
-  getTopicWidgetsFromKey,
+    getTopicDetailsPageTabs,
+    getTopicWidgetsFromKey
 } from './TopicDetailsUtils';
 
 export interface TopicDetailPageTabProps {

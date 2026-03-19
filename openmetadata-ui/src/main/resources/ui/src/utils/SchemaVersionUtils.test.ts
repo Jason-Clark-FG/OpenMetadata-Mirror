@@ -12,11 +12,11 @@
  */
 
 import {
-  ChangeDescription,
-  DataTypeTopic,
-  Field,
-  MessageSchemaObject,
-  SchemaType,
+    ChangeDescription,
+    DataTypeTopic,
+    Field,
+    MessageSchemaObject,
+    SchemaType
 } from '../generated/entity/data/topic';
 import { FieldChange } from '../generated/entity/services/databaseService';
 import { getVersionedSchema } from './SchemaVersionUtils';

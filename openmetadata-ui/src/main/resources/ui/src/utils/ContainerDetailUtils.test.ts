@@ -14,8 +14,8 @@
 import { EntityType } from '../enums/entity.enum';
 import { Column, DataType } from '../generated/entity/data/container';
 import {
-  updateContainerColumnDescription,
-  updateContainerColumnTags,
+    updateContainerColumnDescription,
+    updateContainerColumnTags
 } from './ContainerDetailUtils';
 import { getEntityDetailsPath } from './RouterUtils';
 

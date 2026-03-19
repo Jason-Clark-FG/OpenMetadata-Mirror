@@ -14,9 +14,9 @@
 import { SystemChartType } from '../enums/DataInsight.enum';
 import { DataInsightCustomChartResult } from '../rest/DataInsightAPI';
 import {
-  filterDistributionChartItem,
-  getFormattedTotalAssetsDataFromSocketData,
-  getPlatformInsightsChartDataFormattingMethod,
+    filterDistributionChartItem,
+    getFormattedTotalAssetsDataFromSocketData,
+    getPlatformInsightsChartDataFormattingMethod
 } from './ServiceInsightsTabUtils';
 
 describe('ServiceInsightsTabUtils', () => {

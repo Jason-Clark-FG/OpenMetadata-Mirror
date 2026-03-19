@@ -13,19 +13,19 @@
 
 import { ContainerVersionProp } from '../components/Container/ContainerVersion/ContainerVersion.interface';
 import {
-  Constraint,
-  DataType,
-  FileFormat,
-  StorageServiceType,
+    Constraint,
+    DataType,
+    FileFormat,
+    StorageServiceType
 } from '../generated/entity/data/container';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
-  mockVersionList,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler,
+    mockVersionList
 } from '../mocks/VersionCommon.mock';
 
 export const mockContainerData = {

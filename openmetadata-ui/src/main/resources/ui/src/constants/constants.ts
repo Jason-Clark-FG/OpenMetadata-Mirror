@@ -18,8 +18,8 @@ import { ReactComponent as IconSuccessBadge } from '../assets/svg/success-badge.
 import { Status } from '../generated/entity/applications/appRunRecord';
 import i18n from '../utils/i18next/LocalUtil';
 import {
-  GlobalSettingOptions,
-  GlobalSettingsMenuCategory,
+    GlobalSettingOptions,
+    GlobalSettingsMenuCategory
 } from './GlobalSettings.constants';
 
 export const LITE_GRAY_COLOR = '#DBE0EB';

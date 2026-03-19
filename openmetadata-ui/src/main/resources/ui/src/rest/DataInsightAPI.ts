@@ -15,8 +15,8 @@ import { SystemChartType } from '../enums/DataInsight.enum';
 import { DataInsightChartResult } from '../generated/dataInsight/dataInsightChartResult';
 import { ChartAggregateParam } from '../interface/data-insight.interface';
 import {
-  StartChartDataStreamConnectionResponse,
-  StopChartDataStreamConnectionResponse,
+    StartChartDataStreamConnectionResponse,
+    StopChartDataStreamConnectionResponse
 } from './DataInsightAPI.interface';
 import APIClient from './index';
 

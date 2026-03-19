@@ -12,11 +12,11 @@
  */
 import { ENTITY_PATH } from '../constants/constants';
 import {
-  DEFAULT_DATE_FORMAT,
-  DEFAULT_DATE_TIME_FORMAT,
-  DEFAULT_TIME_FORMAT,
-  SUPPORTED_DATE_TIME_FORMATS_ANTD_FORMAT_MAPPING,
-  SUPPORTED_DATE_TIME_FORMATS_LUXON_FORMAT_MAPPING,
+    DEFAULT_DATE_FORMAT,
+    DEFAULT_DATE_TIME_FORMAT,
+    DEFAULT_TIME_FORMAT,
+    SUPPORTED_DATE_TIME_FORMATS_ANTD_FORMAT_MAPPING,
+    SUPPORTED_DATE_TIME_FORMATS_LUXON_FORMAT_MAPPING
 } from '../constants/CustomProperty.constants';
 import { PAGE_HEADERS } from '../constants/PageHeaders.constant';
 import { CustomPropertyConfig } from '../generated/entity/type';

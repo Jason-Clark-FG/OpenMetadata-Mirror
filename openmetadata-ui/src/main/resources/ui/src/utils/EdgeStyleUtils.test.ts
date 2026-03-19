@@ -13,9 +13,9 @@
 import { Theme } from '@mui/material';
 import { Edge } from 'reactflow';
 import {
-  clearEdgeStyleCache,
-  computeEdgeStyle,
-  invalidateEdgeStyles,
+    clearEdgeStyleCache,
+    computeEdgeStyle,
+    invalidateEdgeStyles
 } from './EdgeStyleUtils';
 
 const createMockTheme = (): Theme =>

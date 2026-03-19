@@ -28,9 +28,9 @@ import { Topic } from '../generated/entity/data/topic';
 import { ChangeDescription } from '../generated/entity/type';
 import { getEntityName } from './EntityUtils';
 import {
-  getChangedEntityName,
-  getDiffByFieldName,
-  getEntityVersionByField,
+    getChangedEntityName,
+    getDiffByFieldName,
+    getEntityVersionByField
 } from './EntityVersionUtils';
 import { t } from './i18next/LocalUtil';
 import { stringToHTML } from './StringsUtils';

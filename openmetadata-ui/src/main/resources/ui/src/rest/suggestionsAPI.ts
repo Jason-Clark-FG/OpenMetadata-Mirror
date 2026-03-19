@@ -14,8 +14,8 @@ import { AxiosResponse } from 'axios';
 import { PagingResponse } from 'Models';
 import { SuggestionAction } from '../components/Suggestions/SuggestionsProvider/SuggestionsProvider.interface';
 import {
-  Suggestion,
-  SuggestionType,
+    Suggestion,
+    SuggestionType
 } from '../generated/entity/feed/suggestion';
 import { ListParams } from '../interface/API.interface';
 import APIClient from './index';

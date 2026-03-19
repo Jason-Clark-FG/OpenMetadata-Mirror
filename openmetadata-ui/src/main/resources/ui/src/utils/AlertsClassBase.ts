@@ -21,19 +21,19 @@ import { NotificationTemplate } from '../generated/entity/events/notificationTem
 import { User } from '../generated/entity/teams/user';
 import { CreateEventSubscription } from '../generated/events/api/createEventSubscription';
 import {
-  EventSubscription,
-  SubscriptionCategory,
+    EventSubscription,
+    SubscriptionCategory
 } from '../generated/events/eventSubscription';
 import {
-  ModifiedCreateEventSubscription,
-  ModifiedEventSubscription,
+    ModifiedCreateEventSubscription,
+    ModifiedEventSubscription
 } from '../pages/AddObservabilityPage/AddObservabilityPage.interface';
 import {
-  getConfigHeaderArrayFromObject,
-  getConfigHeaderObjectFromArray,
-  getConfigQueryParamsArrayFromObject,
-  getConfigQueryParamsObjectFromArray,
-  getRandomizedAlertName,
+    getConfigHeaderArrayFromObject,
+    getConfigHeaderObjectFromArray,
+    getConfigQueryParamsArrayFromObject,
+    getConfigQueryParamsObjectFromArray,
+    getRandomizedAlertName
 } from './Alerts/AlertsUtil';
 import { HandleAlertSaveProps } from './AlertsClassBase.interface';
 import { getEntityName } from './EntityUtils';

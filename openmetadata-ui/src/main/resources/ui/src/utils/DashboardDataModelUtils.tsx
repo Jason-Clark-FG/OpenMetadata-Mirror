@@ -37,8 +37,8 @@ import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interfa
 import { DashboardDataModelDetailPageTabProps } from './DashboardDataModelClassBase';
 import i18n, { t } from './i18next/LocalUtil';
 import {
-  getPrioritizedEditPermission,
-  getPrioritizedViewPermission,
+    getPrioritizedEditPermission,
+    getPrioritizedViewPermission
 } from './PermissionsUtils';
 const EntityLineageTab = lazy(() =>
   import('../components/Lineage/EntityLineageTab/EntityLineageTab').then(

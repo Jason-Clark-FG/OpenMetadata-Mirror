@@ -14,12 +14,12 @@
 import React from 'react';
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-  CUSTOM_PROPERTIES_WIDGET,
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  GridSizes,
-  TAGS_WIDGET,
+    CUSTOM_PROPERTIES_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    GridSizes,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { WORKSHEET_DUMMY_DATA } from '../constants/Worksheet.constant';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';

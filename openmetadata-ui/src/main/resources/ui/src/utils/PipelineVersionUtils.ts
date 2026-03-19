@@ -18,15 +18,15 @@ import { TagLabel } from '../generated/type/tagLabel';
 import { EntityDiffProps } from '../interface/EntityVersion.interface';
 import { VersionData } from '../pages/EntityVersionPage/EntityVersionPage.component';
 import {
-  getAllChangedEntityNames,
-  getAllDiffByFieldName,
-  getChangeColumnNameFromDiffValue,
-  getChangedEntityNewValue,
-  getChangedEntityOldValue,
-  getDiffByFieldName,
-  getTagsDiff,
-  getTextDiff,
-  isEndsWithField,
+    getAllChangedEntityNames,
+    getAllDiffByFieldName,
+    getChangeColumnNameFromDiffValue,
+    getChangedEntityNewValue,
+    getChangedEntityOldValue,
+    getDiffByFieldName,
+    getTagsDiff,
+    getTextDiff,
+    isEndsWithField
 } from './EntityVersionUtils';
 import { TagLabelWithStatus } from './EntityVersionUtils.interface';
 

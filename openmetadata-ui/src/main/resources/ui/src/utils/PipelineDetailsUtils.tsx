@@ -30,10 +30,10 @@ import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs, EntityType, TabSpecificField } from '../enums/entity.enum';
 import {
-  Pipeline,
-  StatusType,
-  Task,
-  TaskStatus,
+    Pipeline,
+    StatusType,
+    Task,
+    TaskStatus
 } from '../generated/entity/data/pipeline';
 import { PageType } from '../generated/system/ui/page';
 import { EntityReference } from '../generated/type/entityReference';

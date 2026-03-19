@@ -12,8 +12,8 @@
  *  limitations under the License.
  */
 import {
-  Database,
-  DatabaseServiceType,
+    Database,
+    DatabaseServiceType
 } from '../generated/entity/data/database';
 import { DatabaseSchema } from '../generated/entity/data/databaseSchema';
 import { Table, TableType } from '../generated/entity/data/table';

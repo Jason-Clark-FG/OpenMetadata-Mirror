@@ -12,10 +12,10 @@
  */
 
 import {
-  DatabaseServiceType,
-  LabelType,
-  State,
-  TagSource,
+    DatabaseServiceType,
+    LabelType,
+    State,
+    TagSource
 } from '../generated/entity/data/storedProcedure';
 
 export const mockStoredProcedureData = [

@@ -15,23 +15,23 @@ import { DefaultOptionType } from 'antd/lib/select';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import {
-  capitalize,
-  get,
-  isEmpty,
-  isNil,
-  isNull,
-  isString,
-  isUndefined,
-  round,
-  toLower,
-  toNumber,
+    capitalize,
+    get,
+    isEmpty,
+    isNil,
+    isNull,
+    isString,
+    isUndefined,
+    round,
+    toLower,
+    toNumber
 } from 'lodash';
 import {
-  CurrentState,
-  ExtraInfo,
-  RecentlySearched,
-  RecentlySearchedData,
-  RecentlyViewedData,
+    CurrentState,
+    ExtraInfo,
+    RecentlySearched,
+    RecentlySearchedData,
+    RecentlyViewedData
 } from 'Models';
 import { ReactNode } from 'react';
 import { Trans } from 'react-i18next';

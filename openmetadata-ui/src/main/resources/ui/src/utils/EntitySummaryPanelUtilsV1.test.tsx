@@ -12,26 +12,26 @@
  */
 
 import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor
 } from '@testing-library/react';
 import { EntityType } from '../enums/entity.enum';
 import {
-  Container,
-  DataType as ContainerDataType,
+    Container,
+    DataType as ContainerDataType
 } from '../generated/entity/data/container';
 import {
-  DataType as SearchIndexDataType,
-  SearchIndex,
-  SearchIndexField,
+    DataType as SearchIndexDataType,
+    SearchIndex,
+    SearchIndexField
 } from '../generated/entity/data/searchIndex';
 import {
-  Column,
-  Table as TableEntity,
-  TableType,
+    Column,
+    Table as TableEntity,
+    TableType
 } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
 import { DataType } from '../generated/settings/settings';

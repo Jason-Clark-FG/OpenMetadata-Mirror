@@ -13,9 +13,9 @@
 import { render } from '@testing-library/react';
 import { getTermQuery } from './SearchUtils';
 import {
-  getDeleteIcon,
-  getTagAssetsQueryFilter,
-  getUsageCountLink,
+    getDeleteIcon,
+    getTagAssetsQueryFilter,
+    getUsageCountLink
 } from './TagsUtils';
 
 describe('getDeleteIcon', () => {

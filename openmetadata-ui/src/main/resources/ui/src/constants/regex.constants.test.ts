@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 import {
-  ENTITY_NAME_REGEX,
-  TAG_NAME_REGEX,
-  TEST_CASE_NAME_REGEX,
+    ENTITY_NAME_REGEX,
+    TAG_NAME_REGEX,
+    TEST_CASE_NAME_REGEX
 } from './regex.constants';
 
 describe('Test Regex', () => {

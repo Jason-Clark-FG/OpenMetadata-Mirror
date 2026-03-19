@@ -17,12 +17,12 @@ import { SystemChartType } from '../enums/DataInsight.enum';
 import { DataReportIndex } from '../generated/dataInsight/dataInsightChart';
 import { DataInsightChartType } from '../generated/dataInsight/dataInsightChartResult';
 import {
-  ChartFilter,
-  entitySummeryList,
+    ChartFilter,
+    entitySummeryList
 } from '../interface/data-insight.interface';
 import {
-  getCurrentMillis,
-  getEpochMillisForPastDays,
+    getCurrentMillis,
+    getEpochMillisForPastDays
 } from '../utils/date-time/DateTimeUtils';
 import { DEFAULT_SELECTED_RANGE } from './profiler.constant';
 

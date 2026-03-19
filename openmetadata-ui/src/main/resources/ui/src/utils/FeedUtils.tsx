@@ -26,57 +26,57 @@ import { ReactComponent as UpdatedIcon } from '../assets/svg/updated-icon.svg';
 import { MentionSuggestionsItem } from '../components/ActivityFeed/FeedEditor/FeedEditor.interface';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import {
-  EntityField,
-  entityLinkRegEx,
-  EntityRegEx,
-  entityRegex,
-  EntityUrlMapType,
-  ENTITY_URL_MAP,
-  hashtagRegEx,
-  linkRegEx,
-  mentionRegEx,
-  teamsLinkRegEx,
+    EntityField,
+    entityLinkRegEx,
+    EntityRegEx,
+    entityRegex,
+    EntityUrlMapType,
+    ENTITY_URL_MAP,
+    hashtagRegEx,
+    linkRegEx,
+    mentionRegEx,
+    teamsLinkRegEx
 } from '../constants/Feeds.constants';
 import { EntityType, FqnPart, TabSpecificField } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { OwnerType } from '../enums/user.enum';
 import {
-  CardStyle,
-  EntityTestResultSummaryObject,
-  FieldOperation,
-  TestCaseStatus,
-  Thread,
-  ThreadType,
+    CardStyle,
+    EntityTestResultSummaryObject,
+    FieldOperation,
+    TestCaseStatus,
+    Thread,
+    ThreadType
 } from '../generated/entity/feed/thread';
 import { User } from '../generated/entity/teams/user';
 import {
-  deletePostById,
-  deleteThread,
-  getFeedById,
-  updatePost,
-  updateThread,
+    deletePostById,
+    deleteThread,
+    getFeedById,
+    updatePost,
+    updateThread
 } from '../rest/feedsAPI';
 import { searchQuery } from '../rest/searchAPI';
 import {
-  getEntityPlaceHolder,
-  getPartialNameFromFQN,
-  getPartialNameFromTableFQN,
-  getRandomColor,
-  Transi18next,
+    getEntityPlaceHolder,
+    getPartialNameFromFQN,
+    getPartialNameFromTableFQN,
+    getRandomColor,
+    Transi18next
 } from './CommonUtils';
 import { getRelativeCalendar } from './date-time/DateTimeUtils';
 import EntityLink from './EntityLink';
 import entityUtilClassBase from './EntityUtilClassBase';
 import {
-  ENTITY_LINK_SEPARATOR,
-  getEntityBreadcrumbs,
-  getEntityName,
+    ENTITY_LINK_SEPARATOR,
+    getEntityBreadcrumbs,
+    getEntityName
 } from './EntityUtils';
 import Fqn from './Fqn';
 import { t } from './i18next/LocalUtil';
 import {
-  getImageWithResolutionAndFallback,
-  ImageQuality,
+    getImageWithResolutionAndFallback,
+    ImageQuality
 } from './ProfilerUtils';
 import { getSanitizeContent } from './sanitize.utils';
 import { getTermQuery } from './SearchUtils';

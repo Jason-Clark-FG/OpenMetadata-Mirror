@@ -12,14 +12,14 @@
  */
 import { Typography } from 'antd';
 import {
-  first,
-  isEmpty,
-  isNil,
-  isUndefined,
-  last,
-  round,
-  sortBy,
-  toLower,
+    first,
+    isEmpty,
+    isNil,
+    isUndefined,
+    last,
+    round,
+    sortBy,
+    toLower
 } from 'lodash';
 import { ServiceTypes } from 'Models';
 import { ReactComponent as DescriptionPlaceholderIcon } from '../assets/svg/ic-flat-doc.svg';
@@ -37,8 +37,8 @@ import { EntityType } from '../enums/entity.enum';
 import { ServiceInsightsWidgetType } from '../enums/ServiceInsights.enum';
 import { ThemeConfiguration } from '../generated/configuration/uiThemePreference';
 import {
-  IngestionPipeline,
-  ProviderType,
+    IngestionPipeline,
+    ProviderType
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { DataInsightCustomChartResult } from '../rest/DataInsightAPI';
 import i18n from '../utils/i18next/LocalUtil';

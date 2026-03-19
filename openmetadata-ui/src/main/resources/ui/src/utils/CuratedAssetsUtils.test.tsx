@@ -16,13 +16,13 @@ import { useTranslation } from 'react-i18next';
 import { QueryFilterInterface } from '../pages/ExplorePage/ExplorePage.interface';
 import { searchQuery } from '../rest/searchAPI';
 import {
-  AlertMessage,
-  EMPTY_QUERY_FILTER_STRINGS,
-  getExploreURLWithFilters,
-  getModifiedQueryFilterWithSelectedAssets,
-  getSelectedResourceCount,
-  getTotalResourceCount,
-  isValidElasticsearchQuery,
+    AlertMessage,
+    EMPTY_QUERY_FILTER_STRINGS,
+    getExploreURLWithFilters,
+    getModifiedQueryFilterWithSelectedAssets,
+    getSelectedResourceCount,
+    getTotalResourceCount,
+    isValidElasticsearchQuery
 } from './CuratedAssetsUtils';
 
 jest.mock('react-i18next', () => ({

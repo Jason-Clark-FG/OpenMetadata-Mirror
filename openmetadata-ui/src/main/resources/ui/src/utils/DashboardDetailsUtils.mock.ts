@@ -12,10 +12,10 @@
  */
 
 import {
-  ChartType,
-  LabelType,
-  State,
-  TagSource,
+    ChartType,
+    LabelType,
+    State,
+    TagSource
 } from '../generated/entity/data/chart';
 import { DashboardServiceType } from '../generated/entity/data/dashboard';
 

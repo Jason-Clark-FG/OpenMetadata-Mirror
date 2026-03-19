@@ -12,12 +12,12 @@
  */
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-  CUSTOM_PROPERTIES_WIDGET,
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  GridSizes,
-  TAGS_WIDGET,
+    CUSTOM_PROPERTIES_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    GridSizes,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { DIRECTORY_DUMMY_DATA } from '../constants/Directory.constant';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
@@ -27,9 +27,9 @@ import { Tab } from '../generated/system/ui/uiCustomization';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 import {
-  DirectoryDetailPageTabProps,
-  getDirectoryDetailsPageTabs,
-  getDirectoryWidgetsFromKey,
+    DirectoryDetailPageTabProps,
+    getDirectoryDetailsPageTabs,
+    getDirectoryWidgetsFromKey
 } from './DirectoryDetailsUtils';
 import i18n from './i18next/LocalUtil';
 

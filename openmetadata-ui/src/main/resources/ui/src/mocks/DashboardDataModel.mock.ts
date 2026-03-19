@@ -12,10 +12,10 @@
  */
 
 import {
-  DashboardDataModel,
-  DashboardServiceType,
-  DataModelType,
-  DataType,
+    DashboardDataModel,
+    DashboardServiceType,
+    DataModelType,
+    DataType
 } from '../generated/entity/data/dashboardDataModel';
 
 export const MOCK_DASHBOARD_DATA_MODEL: DashboardDataModel = {

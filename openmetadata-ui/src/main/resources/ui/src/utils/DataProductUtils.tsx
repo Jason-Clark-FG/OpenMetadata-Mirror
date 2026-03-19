@@ -14,8 +14,8 @@ import Icon from '@ant-design/icons/lib/components/Icon';
 import { Space, Typography } from 'antd';
 import { noop } from 'lodash';
 import {
-  ReactComponent as DataProductIcon,
-  ReactComponent as DefaultDataProductIcon,
+    ReactComponent as DataProductIcon,
+    ReactComponent as DefaultDataProductIcon
 } from '../assets/svg/ic-data-product.svg';
 import ActivityFeedProvider from '../components/ActivityFeed/ActivityFeedProvider/ActivityFeedProvider';
 import { ActivityFeedTab } from '../components/ActivityFeed/ActivityFeedTab/ActivityFeedTab.component';
@@ -32,7 +32,7 @@ import { InputOutputPortsTab } from '../components/DataProducts/InputOutputPorts
 import EntitySummaryPanel from '../components/Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import { EntityDetailsObjectInterface } from '../components/Explore/ExplorePage.interface';
 import AssetsTabs, {
-  AssetsTabRef,
+    AssetsTabRef
 } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
@@ -46,15 +46,15 @@ import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import { QueryFilterInterface } from '../pages/ExplorePage/ExplorePage.interface';
 import {
-  convertDataProductsToEntityReferences as convertDataProductsToEntityReferencesUtil,
-  convertEntityReferencesToDataProducts as convertEntityReferencesToDataProductsUtil,
+    convertDataProductsToEntityReferences as convertDataProductsToEntityReferencesUtil,
+    convertEntityReferencesToDataProducts as convertEntityReferencesToDataProductsUtil
 } from './EntityReferenceUtils';
 
 import { getEntityName } from './EntityUtils';
 import { t } from './i18next/LocalUtil';
 import {
-  getPrioritizedEditPermission,
-  getPrioritizedViewPermission,
+    getPrioritizedEditPermission,
+    getPrioritizedViewPermission
 } from './PermissionsUtils';
 
 export interface DataProductDetailPageTabProps {

@@ -13,8 +13,8 @@
 import { useNavigate } from 'react-router-dom';
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
 import {
-  buildSchemaQueryFilter,
-  ExtraDatabaseSchemaDropdownOptions,
+    buildSchemaQueryFilter,
+    ExtraDatabaseSchemaDropdownOptions
 } from './DatabaseSchemaDetailsUtils';
 
 jest.mock(

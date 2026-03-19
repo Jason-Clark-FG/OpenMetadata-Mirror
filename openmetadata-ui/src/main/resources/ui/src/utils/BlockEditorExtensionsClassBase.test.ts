@@ -13,7 +13,7 @@
 
 import { Extensions } from '@tiptap/react';
 import blockEditorExtensionsClassBase, {
-  BlockEditorExtensionsClassBase,
+    BlockEditorExtensionsClassBase
 } from './BlockEditorExtensionsClassBase';
 
 interface MockExtension {

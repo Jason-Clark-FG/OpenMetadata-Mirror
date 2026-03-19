@@ -12,8 +12,8 @@
  */
 import axiosClient from '.';
 import {
-  LimitConfig,
-  ResourceLimit,
+    LimitConfig,
+    ResourceLimit
 } from '../context/LimitsProvider/useLimitsStore';
 import { ResourceLimitsParams } from './limitsAPI.interface';
 

@@ -17,11 +17,11 @@ import { DashboardServiceType } from '../generated/entity/services/dashboardServ
 import { VersionData } from '../pages/EntityVersionPage/EntityVersionPage.component';
 import { ENTITY_PERMISSIONS } from './Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler
 } from './VersionCommon.mock';
 
 export const mockDashboardData: Dashboard = {

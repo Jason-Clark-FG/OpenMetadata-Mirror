@@ -12,9 +12,9 @@
  */
 
 import {
-  sendMessageToServiceWorker,
-  waitForServiceWorkerController,
-  waitForServiceWorkerReady,
+    sendMessageToServiceWorker,
+    waitForServiceWorkerController,
+    waitForServiceWorkerReady
 } from './SwMessenger';
 
 // Mock service worker interfaces

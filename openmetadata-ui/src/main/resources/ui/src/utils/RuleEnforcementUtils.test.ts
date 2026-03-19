@@ -12,9 +12,9 @@
  */
 
 import {
-  EntityRule,
-  ParsedRule,
-  RuleType,
+    EntityRule,
+    ParsedRule,
+    RuleType
 } from '../context/RuleEnforcementProvider/RuleEnforcementProvider.interface';
 import { EntityType } from '../enums/entity.enum';
 import { getEntityRulesValidation, parseRule } from './RuleEnforcementUtils';

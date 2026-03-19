@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import {
-  DataType,
-  LabelType,
-  SearchIndex,
-  SearchIndexField,
-  SearchServiceType,
-  State,
-  TagSource,
+    DataType,
+    LabelType,
+    SearchIndex,
+    SearchIndexField,
+    SearchServiceType,
+    State,
+    TagSource
 } from '../generated/entity/data/searchIndex';
 
 export const MOCK_SEARCH_INDEX_FIELDS: SearchIndexField[] = [

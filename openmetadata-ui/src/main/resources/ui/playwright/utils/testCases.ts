@@ -15,8 +15,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { TableClass } from '../support/entity/TableClass';
 import { toastNotification } from './common';
-import { fillTagDetails, pressKeyXTimes } from './importUtils';
 import { waitForAllLoadersToDisappear } from './entity';
+import { fillTagDetails, pressKeyXTimes } from './importUtils';
 
 export const getFailedRowsData = (table: TableClass) => {
   const columns = table.entity.columns.map((col) => col.name);

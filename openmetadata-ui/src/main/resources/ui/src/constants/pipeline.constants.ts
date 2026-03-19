@@ -12,9 +12,9 @@
  */
 
 import {
-  Pipeline,
-  PipelineServiceType,
-  StatusType,
+    Pipeline,
+    PipelineServiceType,
+    StatusType
 } from '../generated/entity/data/pipeline';
 
 export enum PIPELINE_TASK_TABS {

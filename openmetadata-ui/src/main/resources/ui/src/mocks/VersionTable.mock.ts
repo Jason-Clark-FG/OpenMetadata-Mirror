@@ -13,10 +13,10 @@
 
 import { VersionTableProps } from '../components/Entity/VersionTable/VersionTable.interfaces';
 import {
-  Column,
-  ConstraintType,
-  DataType,
-  TableConstraint,
+    Column,
+    ConstraintType,
+    DataType,
+    TableConstraint
 } from '../generated/entity/data/table';
 
 export const mockColumnsData: Column[] = [

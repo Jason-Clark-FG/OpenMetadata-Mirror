@@ -19,31 +19,31 @@ import { ColumnsType } from 'antd/es/table';
 import { AxiosError } from 'axios';
 import { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import {
-  get,
-  isEmpty,
-  isEqual,
-  isNil,
-  isUndefined,
-  omit,
-  pick,
-  uniqueId,
-  uniqWith,
+    get,
+    isEmpty,
+    isEqual,
+    isNil,
+    isUndefined,
+    omit,
+    pick,
+    uniqueId,
+    uniqWith
 } from 'lodash';
 import { EntityTags, LoadingState } from 'Models';
 import { MouseEvent as ReactMouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Connection,
-  Edge,
-  getBezierPath,
-  getConnectedEdges,
-  getIncomers,
-  getOutgoers,
-  isNode,
-  MarkerType,
-  Node,
-  Position,
-  ReactFlowInstance,
+    Connection,
+    Edge,
+    getBezierPath,
+    getConnectedEdges,
+    getIncomers,
+    getOutgoers,
+    isNode,
+    MarkerType,
+    Node,
+    Position,
+    ReactFlowInstance
 } from 'reactflow';
 import { ReactComponent as DashboardIcon } from '../assets/svg/dashboard-grey.svg';
 import { ReactComponent as MetricIcon } from '../assets/svg/metric.svg';
@@ -55,41 +55,41 @@ import Loader from '../components/common/Loader/Loader';
 import { ExportViewport } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import CustomNodeV1 from '../components/Entity/EntityLineage/CustomNodeV1.component';
 import {
-  CustomEdgeData,
-  CustomElement,
-  EdgeData,
+    CustomEdgeData,
+    CustomElement,
+    EdgeData
 } from '../components/Entity/EntityLineage/EntityLineage.interface';
 import LoadMoreNode from '../components/Entity/EntityLineage/LoadMoreNode/LoadMoreNode';
 import {
-  EntityChildren,
-  Flatten,
+    EntityChildren,
+    Flatten
 } from '../components/Entity/EntityLineage/NodeChildren/NodeChildren.interface';
 import {
-  EdgeDetails,
-  LineageData,
-  LineageEntityReference,
-  LineageNodeType,
-  LineageSourceType,
-  NodeData,
+    EdgeDetails,
+    LineageData,
+    LineageEntityReference,
+    LineageNodeType,
+    LineageSourceType,
+    NodeData
 } from '../components/Lineage/Lineage.interface';
 import { LineagePagingInfo } from '../components/LineageTable/LineageTable.interface';
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { NO_DATA_PLACEHOLDER } from '../constants/constants';
 import {
-  DATATYPES_HAVING_SUBFIELDS,
-  LINEAGE_EXPORT_HEADERS,
-  LINEAGE_TABLE_COLUMN_LOCALIZATION_KEYS,
-  NODE_HEIGHT,
-  NODE_WIDTH,
-  ZOOM_TRANSITION_DURATION,
-  ZOOM_VALUE,
+    DATATYPES_HAVING_SUBFIELDS,
+    LINEAGE_EXPORT_HEADERS,
+    LINEAGE_TABLE_COLUMN_LOCALIZATION_KEYS,
+    NODE_HEIGHT,
+    NODE_WIDTH,
+    ZOOM_TRANSITION_DURATION,
+    ZOOM_VALUE
 } from '../constants/Lineage.constants';
 import { LineagePlatformView } from '../context/LineageProvider/LineageProvider.interface';
 import {
-  EntityLineageDirection,
-  EntityLineageNodeType,
-  EntityType,
-  FqnPart,
+    EntityLineageDirection,
+    EntityLineageNodeType,
+    EntityType,
+    FqnPart
 } from '../enums/entity.enum';
 import { AddLineage, EntitiesEdge } from '../generated/api/lineage/addLineage';
 import { LineageDirection } from '../generated/api/lineage/lineageDirection';

@@ -13,55 +13,55 @@
 
 import { Card, Typography } from 'antd';
 import {
-  first,
-  get,
-  isEmpty,
-  isInteger,
-  isString,
-  isUndefined,
-  last,
-  meanBy,
-  round,
-  startCase,
-  sumBy,
-  toNumber,
-  uniqBy,
+    first,
+    get,
+    isEmpty,
+    isInteger,
+    isString,
+    isUndefined,
+    last,
+    meanBy,
+    round,
+    startCase,
+    sumBy,
+    toNumber,
+    uniqBy
 } from 'lodash';
 import { DateTime } from 'luxon';
 import {
-  CartesianGrid,
-  LegendProps,
-  Line,
-  LineChart,
-  Surface,
-  Tooltip,
-  XAxis,
-  YAxis,
+    CartesianGrid,
+    LegendProps,
+    Line,
+    LineChart,
+    Surface,
+    Tooltip,
+    XAxis,
+    YAxis
 } from 'recharts';
 import { RangePickerProps } from '../components/common/DatePicker/DatePicker';
 import {
-  DEFAULT_CHART_OPACITY,
-  GRAPH_BACKGROUND_COLOR,
-  GRAYED_OUT_COLOR,
-  HOVER_CHART_OPACITY,
-  PLACEHOLDER_ROUTE_TAB,
-  ROUTES,
+    DEFAULT_CHART_OPACITY,
+    GRAPH_BACKGROUND_COLOR,
+    GRAYED_OUT_COLOR,
+    HOVER_CHART_OPACITY,
+    PLACEHOLDER_ROUTE_TAB,
+    ROUTES
 } from '../constants/constants';
 import {
-  BAR_CHART_MARGIN,
-  ENTITIES_SUMMARY_LIST,
-  WEB_SUMMARY_LIST,
+    BAR_CHART_MARGIN,
+    ENTITIES_SUMMARY_LIST,
+    WEB_SUMMARY_LIST
 } from '../constants/DataInsight.constants';
 import { SystemChartType } from '../enums/DataInsight.enum';
 import {
-  DataInsightChartResult,
-  DataInsightChartType,
+    DataInsightChartResult,
+    DataInsightChartType
 } from '../generated/dataInsight/dataInsightChartResult';
 import { DailyActiveUsers } from '../generated/dataInsight/type/dailyActiveUsers';
 import {
-  ChartValue,
-  DataInsightChartTooltipProps,
-  DataInsightTabs,
+    ChartValue,
+    DataInsightChartTooltipProps,
+    DataInsightTabs
 } from '../interface/data-insight.interface';
 import { DataInsightCustomChartResult } from '../rest/DataInsightAPI';
 import { entityChartColor } from '../utils/CommonUtils';

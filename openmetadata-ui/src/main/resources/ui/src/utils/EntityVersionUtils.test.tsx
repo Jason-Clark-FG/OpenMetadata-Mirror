@@ -13,21 +13,21 @@
 
 import { EntityField } from '../constants/Feeds.constants';
 import {
-  Column as ContainerColumn,
-  DataType as ContainerDataType,
+    Column as ContainerColumn,
+    DataType as ContainerDataType
 } from '../generated/entity/data/container';
 import {
-  Column as TableColumn,
-  DataType as TableDataType,
+    Column as TableColumn,
+    DataType as TableDataType
 } from '../generated/entity/data/table';
 import { DataTypeTopic, Field } from '../generated/entity/data/topic';
 import {
-  ChangeDescription,
-  FieldChange,
+    ChangeDescription,
+    FieldChange
 } from '../generated/entity/services/databaseService';
 import {
-  getComputeRowCountDiffDisplay,
-  getStringEntityDiff,
+    getComputeRowCountDiffDisplay,
+    getStringEntityDiff
 } from './EntityVersionUtils';
 
 // Mock data for testing

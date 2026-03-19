@@ -15,8 +15,8 @@ import { AxiosResponse } from 'axios';
 import { Operation } from 'fast-json-patch';
 import { CreateNotificationTemplate } from '../../src/generated/api/events/createNotificationTemplate';
 import {
-  NotificationTemplate,
-  ProviderType,
+    NotificationTemplate,
+    ProviderType
 } from '../../src/generated/entity/events/notificationTemplate';
 import { Paging } from '../../src/generated/type/paging';
 import { ListParams } from '../../src/interface/API.interface';

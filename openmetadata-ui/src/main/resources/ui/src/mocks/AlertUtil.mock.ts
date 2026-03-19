@@ -12,13 +12,13 @@
  */
 
 import {
-  EventType,
-  Status,
-  TypedEvent,
+    EventType,
+    Status,
+    TypedEvent
 } from '../generated/events/api/typedEvent';
 import {
-  SubscriptionCategory,
-  SubscriptionType,
+    SubscriptionCategory,
+    SubscriptionType
 } from '../generated/events/eventSubscription';
 
 export const mockExternalDestinationOptions = Object.values(

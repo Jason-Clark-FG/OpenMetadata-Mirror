@@ -14,8 +14,8 @@
 import { renderHook } from '@testing-library/react-hooks';
 import { useRuleEnforcementProvider } from '../context/RuleEnforcementProvider/RuleEnforcementProvider';
 import {
-  ParsedRule,
-  RuleType,
+    ParsedRule,
+    RuleType
 } from '../context/RuleEnforcementProvider/RuleEnforcementProvider.interface';
 import { EntityType } from '../enums/entity.enum';
 import { useEntityRules } from './useEntityRules';

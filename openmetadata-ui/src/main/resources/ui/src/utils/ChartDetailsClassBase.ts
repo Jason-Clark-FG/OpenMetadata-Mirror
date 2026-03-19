@@ -13,10 +13,10 @@
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import { CHART_DUMMY_DATA } from '../constants/Chart.constants';
 import {
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  TAGS_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../enums/entity.enum';
@@ -25,8 +25,8 @@ import { Tab } from '../generated/system/ui/page';
 import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import {
-  getChartDetailPageTabs,
-  getChartWidgetsFromKey,
+    getChartDetailPageTabs,
+    getChartWidgetsFromKey
 } from './ChartDetailsUtils';
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 

@@ -12,8 +12,8 @@
  */
 import { UserProfile } from '../components/Auth/AuthProviders/AuthProvider.interface';
 import {
-  extractNameFromUserProfile,
-  getNameFromUserData,
+    extractNameFromUserProfile,
+    getNameFromUserData
 } from './AuthProvider.util';
 
 const userProfile = {

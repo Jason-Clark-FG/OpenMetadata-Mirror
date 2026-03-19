@@ -12,15 +12,15 @@
  */
 import { expect, Page } from '@playwright/test';
 import {
-  DataContractSecuritySlaData,
-  DATA_CONTRACT_DETAILS,
-  DATA_CONTRACT_SECURITY_CONSUMER_DETAILS,
+    DataContractSecuritySlaData,
+    DATA_CONTRACT_DETAILS,
+    DATA_CONTRACT_SECURITY_CONSUMER_DETAILS
 } from '../constant/dataContracts';
 import { SidebarItem } from '../constant/sidebar';
 import { TableClass } from '../support/entity/TableClass';
 import { getApiContext } from './common';
-import { sidebarClick } from './sidebar';
 import { waitForAllLoadersToDisappear } from './entity';
+import { sidebarClick } from './sidebar';
 
 export const saveAndTriggerDataContractValidation = async (
   page: Page,

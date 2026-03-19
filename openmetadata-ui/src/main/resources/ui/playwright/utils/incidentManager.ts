@@ -15,9 +15,9 @@ import { SidebarItem } from '../constant/sidebar';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { TableClass } from '../support/entity/TableClass';
 import { redirectToHomePage } from './common';
+import { waitForAllLoadersToDisappear } from './entity';
 import { makeRetryRequest } from './serviceIngestion';
 import { sidebarClick } from './sidebar';
-import { waitForAllLoadersToDisappear } from './entity';
 
 export const visitProfilerTab = async (page: Page, table: TableClass) => {
   await redirectToHomePage(page);

@@ -13,15 +13,15 @@
 import { DefaultOptionType } from 'antd/lib/select';
 import { startCase } from 'lodash';
 import {
-  GlobalSettingOptions,
-  GlobalSettingsMenuCategory,
+    GlobalSettingOptions,
+    GlobalSettingsMenuCategory
 } from '../constants/GlobalSettings.constants';
 import { UIPermission } from '../context/PermissionProvider/PermissionProvider.interface';
 import {
-  BoostMode,
-  Modifier,
-  ScoreMode,
-  SearchSettings,
+    BoostMode,
+    Modifier,
+    ScoreMode,
+    SearchSettings
 } from '../generated/configuration/searchSettings';
 import { SettingCategoryData } from '../pages/SearchSettingsPage/searchSettings.interface';
 import globalSettingsClassBase from './GlobalSettingsClassBase';

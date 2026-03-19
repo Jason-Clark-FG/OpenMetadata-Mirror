@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import {
-  hasNotificationPermission,
-  shouldRequestPermission,
+    hasNotificationPermission,
+    shouldRequestPermission
 } from './BrowserNotificationUtils';
 
 // Mock the Notification object

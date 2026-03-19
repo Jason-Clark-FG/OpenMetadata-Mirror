@@ -24,8 +24,8 @@ import { getChartByFqn } from '../rest/chartsAPI';
 import { getContract } from '../rest/contractAPI';
 import { getDashboardByFqn } from '../rest/dashboardAPI';
 import {
-  getDatabaseDetailsByFQN,
-  getDatabaseSchemaDetailsByFQN,
+    getDatabaseDetailsByFQN,
+    getDatabaseSchemaDetailsByFQN
 } from '../rest/databaseAPI';
 import { getDataModelByFqn } from '../rest/dataModelsAPI';
 import { getDataProductByName } from '../rest/dataProductAPI';

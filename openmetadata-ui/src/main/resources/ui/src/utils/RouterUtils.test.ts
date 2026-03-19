@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import {
-  PLACEHOLDER_ACTION,
-  PLACEHOLDER_ROUTE_FQN,
-  PLACEHOLDER_ROUTE_TAB,
-  PLACEHOLDER_SETTING_CATEGORY,
-  ROUTES,
+    PLACEHOLDER_ACTION,
+    PLACEHOLDER_ROUTE_FQN,
+    PLACEHOLDER_ROUTE_TAB,
+    PLACEHOLDER_SETTING_CATEGORY,
+    ROUTES
 } from '../constants/constants';
 import { getSettingPath, getSettingsPathWithFqn } from './RouterUtils';
 

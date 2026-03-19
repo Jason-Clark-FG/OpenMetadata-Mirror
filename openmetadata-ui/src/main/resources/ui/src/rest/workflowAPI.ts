@@ -20,8 +20,8 @@ import { WorkflowInstanceState } from '../generated/governance/workflows/workflo
 import { getEncodedFqn } from '../utils/StringsUtils';
 import APIClient from './index';
 import {
-  WorkflowInstanceFromApplicationParams,
-  WorkflowInstanceStateParams,
+    WorkflowInstanceFromApplicationParams,
+    WorkflowInstanceStateParams
 } from './workflowAPI.interface';
 
 export const getTestConnectionDefinitionByName = async (

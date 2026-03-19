@@ -14,8 +14,8 @@
 /* eslint-disable max-len */
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
 import {
-  EntityStatus,
-  ProviderType,
+    EntityStatus,
+    ProviderType
 } from '../generated/entity/data/glossaryTerm';
 
 export const mockedGlossaryTerms = [

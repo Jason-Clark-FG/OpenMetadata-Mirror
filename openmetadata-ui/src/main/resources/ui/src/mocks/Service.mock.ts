@@ -12,44 +12,44 @@
  */
 
 import {
-  DashboardService,
-  DashboardServiceType,
+    DashboardService,
+    DashboardServiceType
 } from '../generated/entity/services/dashboardService';
 import {
-  ConfigScheme,
-  ConfigType,
-  DatabaseService,
-  DatabaseServiceType,
-  LabelType,
-  State,
-  TagSource,
+    ConfigScheme,
+    ConfigType,
+    DatabaseService,
+    DatabaseServiceType,
+    LabelType,
+    State,
+    TagSource
 } from '../generated/entity/services/databaseService';
 import {
-  MessagingService,
-  MessagingServiceType,
-  SaslMechanismType,
+    MessagingService,
+    MessagingServiceType,
+    SaslMechanismType
 } from '../generated/entity/services/messagingService';
 import {
-  MetadataService,
-  MetadataServiceType,
-  ProviderType,
+    MetadataService,
+    MetadataServiceType,
+    ProviderType
 } from '../generated/entity/services/metadataService';
 import {
-  MlmodelService,
-  MlModelServiceType,
+    MlmodelService,
+    MlModelServiceType
 } from '../generated/entity/services/mlmodelService';
 import {
-  PipelineService,
-  PipelineServiceType,
-  Type,
+    PipelineService,
+    PipelineServiceType,
+    Type
 } from '../generated/entity/services/pipelineService';
 import {
-  SearchService,
-  SearchServiceType,
+    SearchService,
+    SearchServiceType
 } from '../generated/entity/services/searchService';
 import {
-  StorageService,
-  StorageServiceType,
+    StorageService,
+    StorageServiceType
 } from '../generated/entity/services/storageService';
 
 export const MOCK_CHANGE_DESCRIPTION = {

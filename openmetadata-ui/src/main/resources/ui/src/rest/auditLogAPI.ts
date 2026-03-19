@@ -12,10 +12,10 @@
  */
 
 import {
-  AuditLogExportParams,
-  AuditLogExportResponse,
-  AuditLogListParams,
-  AuditLogListResponse,
+    AuditLogExportParams,
+    AuditLogExportResponse,
+    AuditLogListParams,
+    AuditLogListResponse
 } from '../types/auditLogs.interface';
 import APIClient from './index';
 

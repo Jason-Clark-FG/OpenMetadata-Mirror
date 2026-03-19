@@ -12,12 +12,12 @@
  */
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-  CUSTOM_PROPERTIES_WIDGET,
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  GridSizes,
-  TAGS_WIDGET,
+    CUSTOM_PROPERTIES_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    GridSizes,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { TABLE_DUMMY_DATA } from '../constants/Table.constants';
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
@@ -30,8 +30,8 @@ import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import i18n from './i18next/LocalUtil';
 import {
-  getTableDetailPageBaseTabs,
-  getTableWidgetFromKey,
+    getTableDetailPageBaseTabs,
+    getTableWidgetFromKey
 } from './TableUtils';
 
 export interface TableDetailPageTabProps {

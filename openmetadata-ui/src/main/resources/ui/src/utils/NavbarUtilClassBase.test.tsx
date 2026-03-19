@@ -13,9 +13,9 @@
 
 import { ROUTES } from '../constants/constants';
 import {
-  URL_JOIN_SLACK,
-  URL_OM_RELEASE_UPDATES,
-  URL_OPEN_METADATA_DOCS,
+    URL_JOIN_SLACK,
+    URL_OM_RELEASE_UPDATES,
+    URL_OPEN_METADATA_DOCS
 } from '../constants/URL.constants';
 import navbarUtilClassBase from './NavbarUtilClassBase';
 

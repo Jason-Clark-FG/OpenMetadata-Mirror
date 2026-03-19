@@ -15,8 +15,8 @@ import { upperFirst } from 'lodash';
 import { EntityStats } from '../components/Settings/Applications/AppLogsViewer/AppLogsViewer.interface';
 import { getEntityStatsData } from './ApplicationUtils';
 import {
-  MOCK_APPLICATION_ENTITY_STATS,
-  MOCK_APPLICATION_ENTITY_STATS_DATA,
+    MOCK_APPLICATION_ENTITY_STATS,
+    MOCK_APPLICATION_ENTITY_STATS_DATA
 } from './mocks/ApplicationUtils.mock';
 
 describe('ApplicationUtils tests', () => {

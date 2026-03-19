@@ -13,15 +13,15 @@
 import { expect, Page } from '@playwright/test';
 import { GlobalSettingOptions } from '../constant/settings';
 import {
-  descriptionBox,
-  redirectToHomePage,
-  toastNotification,
-  uuid,
+    descriptionBox,
+    redirectToHomePage,
+    toastNotification,
+    uuid
 } from './common';
 import { customFormatDateTime, getEpochMillisForFutureDays } from './dateTime';
+import { waitForAllLoadersToDisappear } from './entity';
 import { settingClick } from './sidebar';
 import { revokeToken } from './user';
-import { waitForAllLoadersToDisappear } from './entity';
 
 const botName = `a-bot-pw%test-${uuid()}`;
 

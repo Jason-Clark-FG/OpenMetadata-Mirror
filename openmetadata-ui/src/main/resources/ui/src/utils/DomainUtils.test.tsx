@@ -17,9 +17,9 @@ import { SearchIndex } from '../enums/search.enum';
 import { Domain, DomainType } from '../generated/entity/domains/domain';
 import { useDomainStore } from '../hooks/useDomainStore';
 import {
-  getQueryFilterToIncludeDomain,
-  isDomainExist,
-  withDomainFilter,
+    getQueryFilterToIncludeDomain,
+    isDomainExist,
+    withDomainFilter
 } from '../utils/DomainUtils';
 import { getPathNameFromWindowLocation } from './RouterUtils';
 

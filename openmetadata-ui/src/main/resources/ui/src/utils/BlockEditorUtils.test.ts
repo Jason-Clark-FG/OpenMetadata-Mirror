@@ -12,14 +12,14 @@
  */
 import { Editor } from '@tiptap/react';
 import {
-  formatContent,
-  formatValueBasedOnContent,
-  getHtmlStringFromMarkdownString,
-  getTextFromHtmlString,
-  isDescriptionContentEmpty,
-  isHTMLString,
-  setEditorContent,
-  transformImgTagsToFileAttachment,
+    formatContent,
+    formatValueBasedOnContent,
+    getHtmlStringFromMarkdownString,
+    getTextFromHtmlString,
+    isDescriptionContentEmpty,
+    isHTMLString,
+    setEditorContent,
+    transformImgTagsToFileAttachment
 } from './BlockEditorUtils';
 
 describe('getTextFromHtmlString', () => {

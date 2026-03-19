@@ -15,13 +15,13 @@ import { EntityFields } from '../enums/AdvancedSearch.enum';
 import { EntityType } from '../enums/entity.enum';
 import { QueryFieldInterface } from '../pages/ExplorePage/ExplorePage.interface';
 import {
-  extractTermKeys,
-  getExploreQueryFilterMust,
-  getQuickFilterObjectForEntities,
-  getQuickFilterQuery,
-  getSelectedValuesFromQuickFilter,
-  getSubLevelHierarchyKey,
-  updateTreeData,
+    extractTermKeys,
+    getExploreQueryFilterMust,
+    getQuickFilterObjectForEntities,
+    getQuickFilterQuery,
+    getSelectedValuesFromQuickFilter,
+    getSubLevelHierarchyKey,
+    updateTreeData
 } from './ExploreUtils';
 
 describe('Explore Utils', () => {

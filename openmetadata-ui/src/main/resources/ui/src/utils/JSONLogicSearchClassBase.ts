@@ -11,32 +11,32 @@
  *  limitations under the License.
  */
 import {
-  AntdConfig,
-  AsyncFetchListValuesResult,
-  Config,
-  FieldOrGroup,
-  Fields,
-  ListItem,
-  Operators,
-  SelectFieldSettings,
+    AntdConfig,
+    AsyncFetchListValuesResult,
+    Config,
+    FieldOrGroup,
+    Fields,
+    ListItem,
+    Operators,
+    SelectFieldSettings
 } from '@react-awesome-query-builder/antd';
 import { get, sortBy, toLower } from 'lodash';
 import {
-  LIST_VALUE_OPERATORS,
-  MULTISELECT_FIELD_OPERATORS,
-  RANGE_FIELD_OPERATORS,
-  TEXT_FIELD_DESCRIPTION_OPERATORS,
+    LIST_VALUE_OPERATORS,
+    MULTISELECT_FIELD_OPERATORS,
+    RANGE_FIELD_OPERATORS,
+    TEXT_FIELD_DESCRIPTION_OPERATORS
 } from '../constants/AdvancedSearch.constants';
 import { PAGE_SIZE_BASE } from '../constants/constants';
 import { SEMANTIC_TAG_OPERATORS } from '../constants/DataContract.constants';
 import {
-  COMMON_ENTITY_FIELDS_KEYS,
-  GLOSSARY_ENTITY_FIELDS_KEYS,
-  TABLE_ENTITY_FIELDS_KEYS,
+    COMMON_ENTITY_FIELDS_KEYS,
+    GLOSSARY_ENTITY_FIELDS_KEYS,
+    TABLE_ENTITY_FIELDS_KEYS
 } from '../constants/JSONLogicSearch.constants';
 import {
-  EntityFields,
-  EntityReferenceFields,
+    EntityFields,
+    EntityReferenceFields
 } from '../enums/AdvancedSearch.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { EntityStatus } from '../generated/entity/data/glossaryTerm';
@@ -45,8 +45,8 @@ import { getTags } from '../rest/tagAPI';
 import advancedSearchClassBase from './AdvancedSearchClassBase';
 import { t } from './i18next/LocalUtil';
 import {
-  getFieldsByKeys,
-  renderJSONLogicQueryBuilderButtons,
+    getFieldsByKeys,
+    renderJSONLogicQueryBuilderButtons
 } from './QueryBuilderUtils';
 
 class JSONLogicSearchClassBase {

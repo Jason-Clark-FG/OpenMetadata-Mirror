@@ -28,9 +28,9 @@ import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs, EntityType, TabSpecificField } from '../enums/entity.enum';
 import {
-  Column,
-  Container,
-  ContainerDataModel as ContainerDataModelType,
+    Column,
+    Container,
+    ContainerDataModel as ContainerDataModelType
 } from '../generated/entity/data/container';
 import { PageType } from '../generated/system/ui/uiCustomization';
 import { EntityReference } from '../generated/type/entityReference';

@@ -16,8 +16,8 @@ import { Tooltip, Typography } from 'antd';
 import React from 'react';
 import { EntityType } from '../enums/entity.enum';
 import {
-  Spreadsheet,
-  SpreadsheetMIMEType,
+    Spreadsheet,
+    SpreadsheetMIMEType
 } from '../generated/entity/data/spreadsheet';
 import { mockContainerData } from '../mocks/ContainerVersion.mock';
 import { MOCK_DASHBOARD_DATA_MODEL } from '../mocks/DashboardDataModel.mock';
@@ -28,22 +28,22 @@ import { mockMlModelDetails } from '../mocks/MlModelVersion.mock';
 import { mockPipelineData } from '../mocks/PipelineVersion.mock';
 import { MOCK_SEARCH_INDEX } from '../mocks/SearchIndex.mock';
 import {
-  MOCK_DASHBOARD_SERVICE,
-  MOCK_DATABASE_SERVICE,
-  MOCK_MESSAGING_SERVICE,
-  MOCK_METADATA_SERVICE,
-  MOCK_ML_MODEL_SERVICE,
-  MOCK_PIPLELINE_SERVICE,
-  MOCK_SEARCH_SERVICE,
-  MOCK_STORAGE_SERVICE,
+    MOCK_DASHBOARD_SERVICE,
+    MOCK_DATABASE_SERVICE,
+    MOCK_MESSAGING_SERVICE,
+    MOCK_METADATA_SERVICE,
+    MOCK_ML_MODEL_SERVICE,
+    MOCK_PIPLELINE_SERVICE,
+    MOCK_SEARCH_SERVICE,
+    MOCK_STORAGE_SERVICE
 } from '../mocks/Service.mock';
 import { mockStoredProcedureData } from '../mocks/StoredProcedure.mock';
 import { MOCK_TABLE } from '../mocks/TableData.mock';
 import { mockTopicData } from '../mocks/TopicVersion.mock';
 import {
-  ExtraInfoLabel,
-  getDataAssetsHeaderInfo,
-  getEntityExtraInfoLength,
+    ExtraInfoLabel,
+    getDataAssetsHeaderInfo,
+    getEntityExtraInfoLength
 } from './DataAssetsHeader.utils';
 
 // Mock only ExtraInfoLink, not ExtraInfoLabel as we want to test it

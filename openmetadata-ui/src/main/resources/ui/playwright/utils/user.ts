@@ -11,28 +11,26 @@
  *  limitations under the License.
  */
 
-import { Browser, expect, Page, Response } from '@playwright/test';
+import { Browser, expect, Page } from '@playwright/test';
 import {
-  GLOBAL_SETTING_PERMISSIONS,
-  SETTING_PAGE_ENTITY_PERMISSION,
+    GLOBAL_SETTING_PERMISSIONS,
+    SETTING_PAGE_ENTITY_PERMISSION
 } from '../constant/permission';
 import { VISIT_SERVICE_PAGE_DETAILS } from '../constant/service';
 import {
-  GlobalSettingOptions,
-  SETTING_CUSTOM_PROPERTIES_PATH,
-  SETTINGS_OPTIONS_PATH,
+    GlobalSettingOptions, SETTINGS_OPTIONS_PATH, SETTING_CUSTOM_PROPERTIES_PATH
 } from '../constant/settings';
 import { SidebarItem } from '../constant/sidebar';
 import { UserClass } from '../support/user/UserClass';
 import {
-  clickOutside,
-  descriptionBox,
-  descriptionBoxReadOnly,
-  getAuthContext,
-  getToken,
-  redirectToHomePage,
-  toastNotification,
-  visitOwnProfilePage,
+    clickOutside,
+    descriptionBox,
+    descriptionBoxReadOnly,
+    getAuthContext,
+    getToken,
+    redirectToHomePage,
+    toastNotification,
+    visitOwnProfilePage
 } from './common';
 import { customFormatDateTime, getEpochMillisForFutureDays } from './dateTime';
 import { waitForAllLoadersToDisappear } from './entity';

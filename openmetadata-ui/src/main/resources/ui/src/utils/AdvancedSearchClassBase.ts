@@ -12,42 +12,42 @@
  */
 
 import {
-  AntdConfig,
-  AsyncFetchListValuesResult,
-  BasicConfig,
-  Field,
-  Fields,
-  ListItem,
-  ListValues,
-  SelectFieldSettings,
+    AntdConfig,
+    AsyncFetchListValuesResult,
+    BasicConfig,
+    Field,
+    Fields,
+    ListItem,
+    ListValues,
+    SelectFieldSettings
 } from '@react-awesome-query-builder/antd';
 import { debounce, isEmpty, sortBy, toLower } from 'lodash';
 import {
-  CustomPropertyEnumConfig,
-  SearchOutputType,
+    CustomPropertyEnumConfig,
+    SearchOutputType
 } from '../components/Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import {
-  CP_TYPE_WITHOUT_KEYWORD_FIELD,
-  LIST_VALUE_OPERATORS,
-  MULTISELECT_FIELD_OPERATORS,
-  NULL_CHECK_OPERATORS,
-  NUMBER_FIELD_OPERATORS,
-  SEARCH_INDICES_WITH_COLUMNS_FIELD,
-  TAG_LABEL_TYPE_LIST_VALUES,
-  TEXT_FIELD_OPERATORS,
+    CP_TYPE_WITHOUT_KEYWORD_FIELD,
+    LIST_VALUE_OPERATORS,
+    MULTISELECT_FIELD_OPERATORS,
+    NULL_CHECK_OPERATORS,
+    NUMBER_FIELD_OPERATORS,
+    SEARCH_INDICES_WITH_COLUMNS_FIELD,
+    TAG_LABEL_TYPE_LIST_VALUES,
+    TEXT_FIELD_OPERATORS
 } from '../constants/AdvancedSearch.constants';
 import {
-  EntityFields,
-  EntityReferenceFields,
-  SuggestionField,
+    EntityFields,
+    EntityReferenceFields,
+    SuggestionField
 } from '../enums/AdvancedSearch.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { Config } from '../generated/api/data/createCustomProperty';
 import { CustomPropertySummary } from '../rest/metadataTypeAPI.interface';
 import { getAggregateFieldOptions } from '../rest/miscAPI';
 import {
-  getCustomPropertyAdvanceSearchEnumOptions,
-  renderAdvanceSearchButtons,
+    getCustomPropertyAdvanceSearchEnumOptions,
+    renderAdvanceSearchButtons
 } from './AdvancedSearchUtils';
 import { getCustomPropertyMomentFormat } from './CustomProperty.utils';
 import { buildTermQuery } from './elasticsearchQueryBuilder';

@@ -13,14 +13,14 @@
 import { mockWidget } from '../mocks/AddWidgetTabContent.mock';
 import { mockCurrentAddWidget } from '../mocks/CustomizablePage.mock';
 import {
-  getAddWidgetHandler,
-  getLandingPageLayoutWithEmptyWidgetPlaceholder,
-  getLayoutUpdateHandler,
-  getLayoutWithEmptyWidgetPlaceholder,
-  getNewWidgetPlacement,
-  getRemoveWidgetHandler,
-  getUniqueFilteredLayout,
-  getWidgetWidthLabelFromKey,
+    getAddWidgetHandler,
+    getLandingPageLayoutWithEmptyWidgetPlaceholder,
+    getLayoutUpdateHandler,
+    getLayoutWithEmptyWidgetPlaceholder,
+    getNewWidgetPlacement,
+    getRemoveWidgetHandler,
+    getUniqueFilteredLayout,
+    getWidgetWidthLabelFromKey
 } from './CustomizableLandingPageUtils';
 
 describe('CustomizableLandingPageUtils', () => {

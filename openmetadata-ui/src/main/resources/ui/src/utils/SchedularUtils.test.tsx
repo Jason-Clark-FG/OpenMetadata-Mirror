@@ -12,18 +12,18 @@
  */
 
 import {
-  mockNewFormValue1,
-  mockNewFormValue2,
-  mockNewFormValue3,
-  mockNewFormValue4,
-  mockNewFormValue5,
-  mockOldState1,
+    mockNewFormValue1,
+    mockNewFormValue2,
+    mockNewFormValue3,
+    mockNewFormValue4,
+    mockNewFormValue5,
+    mockOldState1
 } from '../mocks/Schedular.mock';
 import {
-  cronValidator,
-  getCronDefaultValue,
-  getScheduleOptionsFromSchedules,
-  getUpdatedStateFromFormState,
+    cronValidator,
+    getCronDefaultValue,
+    getScheduleOptionsFromSchedules,
+    getUpdatedStateFromFormState
 } from './SchedularUtils';
 
 describe('getCronDefaultValue function', () => {

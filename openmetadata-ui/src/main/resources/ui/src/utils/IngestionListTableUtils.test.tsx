@@ -14,9 +14,9 @@ import { render, screen } from '@testing-library/react';
 import { PipelineType } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { getScheduleDescriptionTexts } from './date-time/DateTimeUtils';
 import {
-  renderNameField,
-  renderScheduleField,
-  renderTypeField,
+    renderNameField,
+    renderScheduleField,
+    renderTypeField
 } from './IngestionListTableUtils';
 
 jest.mock('./EntityUtils', () => ({

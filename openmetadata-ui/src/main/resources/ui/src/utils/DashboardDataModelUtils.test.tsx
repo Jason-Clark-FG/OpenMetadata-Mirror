@@ -12,9 +12,9 @@
  */
 
 import {
-  DashboardDataModel,
-  DataType,
-  TagSource,
+    DashboardDataModel,
+    DataType,
+    TagSource
 } from '../generated/entity/data/dashboardDataModel';
 import { EntityReference } from '../generated/type/entityReference';
 import { LabelType, State } from '../generated/type/tagLabel';

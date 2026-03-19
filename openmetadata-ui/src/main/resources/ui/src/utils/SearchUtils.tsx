@@ -35,8 +35,8 @@ import { ReactComponent as IconTag } from '../assets/svg/tag-grey.svg';
 import { ReactComponent as IconTopic } from '../assets/svg/topic-grey.svg';
 import { WILD_CARD_CHAR } from '../constants/char.constants';
 import {
-  Option,
-  SearchSuggestions,
+    Option,
+    SearchSuggestions
 } from '../context/GlobalSearchProvider/GlobalSearchSuggestions/GlobalSearchSuggestions.interface';
 import { EntityType, FqnPart } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';

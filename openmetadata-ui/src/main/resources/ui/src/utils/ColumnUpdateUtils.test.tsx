@@ -15,8 +15,8 @@ import { EntityType } from '../enums/entity.enum';
 import { APIEndpoint, Field } from '../generated/entity/data/apiEndpoint';
 import { Container } from '../generated/entity/data/container';
 import {
-  Column as DataModelColumn,
-  DashboardDataModel,
+    Column as DataModelColumn,
+    DashboardDataModel
 } from '../generated/entity/data/dashboardDataModel';
 import { Mlmodel } from '../generated/entity/data/mlmodel';
 import { Pipeline } from '../generated/entity/data/pipeline';
@@ -25,15 +25,15 @@ import { Column, Table } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
 import { TagLabel, TagSource } from '../generated/type/tagLabel';
 import {
-  handleColumnFieldUpdate,
-  updateApiEndpointField,
-  updateContainerColumn,
-  updateDataModelColumn,
-  updateMlModelFeature,
-  updatePipelineTask,
-  updateSearchIndexField,
-  updateTableColumn,
-  updateTopicField,
+    handleColumnFieldUpdate,
+    updateApiEndpointField,
+    updateContainerColumn,
+    updateDataModelColumn,
+    updateMlModelFeature,
+    updatePipelineTask,
+    updateSearchIndexField,
+    updateTableColumn,
+    updateTopicField
 } from './ColumnUpdateUtils';
 import type { EntityDataMapValue } from './ColumnUpdateUtils.interface';
 

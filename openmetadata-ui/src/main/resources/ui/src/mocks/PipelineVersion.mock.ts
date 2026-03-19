@@ -13,17 +13,17 @@
 
 import { PipelineVersionProp } from '../components/Pipeline/PipelineVersion/PipelineVersion.interface';
 import {
-  PipelineServiceType,
-  StatusType,
+    PipelineServiceType,
+    StatusType
 } from '../generated/entity/data/pipeline';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
-  mockVersionList,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler,
+    mockVersionList
 } from '../mocks/VersionCommon.mock';
 
 const mockDescriptionChangeDiff = {

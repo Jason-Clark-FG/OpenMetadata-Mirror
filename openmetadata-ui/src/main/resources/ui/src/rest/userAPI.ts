@@ -16,8 +16,8 @@ import { Operation } from 'fast-json-patch';
 
 import { PagingResponse, RestoreRequestType } from 'Models';
 import {
-  AuthenticationMechanism,
-  CreateUser,
+    AuthenticationMechanism,
+    CreateUser
 } from '../generated/api/teams/createUser';
 import { PersonalAccessToken } from '../generated/auth/personalAccessToken';
 import { Bot } from '../generated/entity/bot';

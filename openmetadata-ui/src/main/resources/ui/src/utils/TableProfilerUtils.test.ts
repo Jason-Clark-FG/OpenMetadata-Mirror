@@ -11,16 +11,16 @@
  *  limitations under the License.
  */
 import {
-  ColumnProfile,
-  Table,
-  TableProfile,
+    ColumnProfile,
+    Table,
+    TableProfile
 } from '../generated/entity/data/table';
 import {
-  calculateColumnProfilerMetrics,
-  calculateCustomMetrics,
-  formatProfileMetricValue,
-  getColumnCustomMetric,
-  getKeyProfileMetrics,
+    calculateColumnProfilerMetrics,
+    calculateCustomMetrics,
+    formatProfileMetricValue,
+    getColumnCustomMetric,
+    getKeyProfileMetrics
 } from './TableProfilerUtils';
 import { CalculateColumnProfilerMetricsInterface } from './TableProfilerUtils.interface';
 

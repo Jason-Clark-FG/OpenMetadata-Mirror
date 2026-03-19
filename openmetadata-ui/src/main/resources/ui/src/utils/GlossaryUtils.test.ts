@@ -16,22 +16,22 @@ import { EntityType } from '../enums/entity.enum';
 import { Glossary } from '../generated/entity/data/glossary';
 import { GlossaryTerm } from '../generated/entity/data/glossaryTerm';
 import {
-  MOCKED_GLOSSARY_TERMS,
-  MOCKED_GLOSSARY_TERMS_1,
-  MOCKED_GLOSSARY_TERMS_TREE,
-  MOCKED_GLOSSARY_TERMS_TREE_1,
+    MOCKED_GLOSSARY_TERMS,
+    MOCKED_GLOSSARY_TERMS_1,
+    MOCKED_GLOSSARY_TERMS_TREE,
+    MOCKED_GLOSSARY_TERMS_TREE_1
 } from '../mocks/Glossary.mock';
 import {
-  buildTree,
-  filterTreeNodeOptions,
-  findAndUpdateNested,
-  findExpandableKeys,
-  findExpandableKeysForArray,
-  getQueryFilterToExcludeTerm,
-  glossaryTermTableColumnsWidth,
-  permissionForApproveOrReject,
-  referenceURLValidator,
-  validateReferenceURL,
+    buildTree,
+    filterTreeNodeOptions,
+    findAndUpdateNested,
+    findExpandableKeys,
+    findExpandableKeysForArray,
+    getQueryFilterToExcludeTerm,
+    glossaryTermTableColumnsWidth,
+    permissionForApproveOrReject,
+    referenceURLValidator,
+    validateReferenceURL
 } from './GlossaryUtils';
 
 describe('Glossary Utils', () => {

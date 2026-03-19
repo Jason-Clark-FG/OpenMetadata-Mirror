@@ -13,13 +13,13 @@
 
 import { Classification } from '../generated/entity/classification/classification';
 import {
-  createClassification,
-  createTag,
-  deleteClassification,
-  deleteTag,
-  getClassificationByName,
-  getTags,
-  updateTag,
+    createClassification,
+    createTag,
+    deleteClassification,
+    deleteTag,
+    getClassificationByName,
+    getTags,
+    updateTag
 } from './tagAPI';
 
 jest.mock('./index', () => ({

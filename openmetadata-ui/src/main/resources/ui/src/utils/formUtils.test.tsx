@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 import {
-  FieldTypes,
-  FormItemLayout,
-  HelperTextType,
+    FieldTypes,
+    FormItemLayout,
+    HelperTextType
 } from '../interface/FormUtils.interface';
 import { createScrollToErrorHandler, getField } from './formUtils';
 

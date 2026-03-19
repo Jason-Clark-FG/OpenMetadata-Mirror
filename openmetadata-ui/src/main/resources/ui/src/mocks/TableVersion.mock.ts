@@ -13,20 +13,20 @@
 
 import { TableVersionProp } from '../components/Database/TableVersion/TableVersion.interface';
 import {
-  Constraint,
-  DatabaseServiceType,
-  DataType,
-  Table,
-  TableType,
+    Constraint,
+    DatabaseServiceType,
+    DataType,
+    Table,
+    TableType
 } from '../generated/entity/data/table';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
-  mockVersionList,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler,
+    mockVersionList
 } from '../mocks/VersionCommon.mock';
 
 export const mockTableData: Table = {

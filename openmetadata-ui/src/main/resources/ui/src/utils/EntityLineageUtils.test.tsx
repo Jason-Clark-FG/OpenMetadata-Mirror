@@ -13,8 +13,8 @@
 
 import { Edge, Node } from 'reactflow';
 import {
-  EdgeDetails,
-  LineageData,
+    EdgeDetails,
+    LineageData
 } from '../components/Lineage/Lineage.interface';
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { EntityType } from '../enums/entity.enum';
@@ -23,22 +23,22 @@ import { LineageDirection } from '../generated/api/lineage/lineageDirection';
 import { MOCK_NODES_AND_EDGES } from '../mocks/Lineage.mock';
 import { addLineage } from '../rest/miscAPI';
 import {
-  addLineageHandler,
-  createNewEdge,
-  getAllTracedEdges,
-  getColumnFunctionValue,
-  getColumnLineageData,
-  getConnectedNodesEdges,
-  getEntityChildrenAndLabel,
-  getLineageDetailsObject,
-  getLineageEdge,
-  getLineageEdgeForAPI,
-  getLineageTableConfig,
-  getNodesBoundsReactFlow,
-  getUpdatedColumnsFromEdge,
-  getUpstreamDownstreamNodesEdges,
-  getViewportForBoundsReactFlow,
-  parseLineageData,
+    addLineageHandler,
+    createNewEdge,
+    getAllTracedEdges,
+    getColumnFunctionValue,
+    getColumnLineageData,
+    getConnectedNodesEdges,
+    getEntityChildrenAndLabel,
+    getLineageDetailsObject,
+    getLineageEdge,
+    getLineageEdgeForAPI,
+    getLineageTableConfig,
+    getNodesBoundsReactFlow,
+    getUpdatedColumnsFromEdge,
+    getUpstreamDownstreamNodesEdges,
+    getViewportForBoundsReactFlow,
+    parseLineageData
 } from './EntityLineageUtils';
 jest.mock('../rest/miscAPI', () => ({
   addLineage: jest.fn(),

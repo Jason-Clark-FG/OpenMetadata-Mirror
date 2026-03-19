@@ -12,12 +12,12 @@
  */
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-  CUSTOM_PROPERTIES_WIDGET,
-  DATA_PRODUCTS_WIDGET,
-  DESCRIPTION_WIDGET,
-  GLOSSARY_TERMS_WIDGET,
-  GridSizes,
-  TAGS_WIDGET,
+    CUSTOM_PROPERTIES_WIDGET,
+    DATA_PRODUCTS_WIDGET,
+    DESCRIPTION_WIDGET,
+    GLOSSARY_TERMS_WIDGET,
+    GridSizes,
+    TAGS_WIDGET
 } from '../constants/CustomizeWidgets.constants';
 import { DATABASE_SCHEMA_DUMMY_DATA } from '../constants/Database.constants';
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
@@ -29,8 +29,8 @@ import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 import {
-  getDataBaseSchemaPageBaseTabs,
-  getDatabaseSchemaWidgetsFromKey,
+    getDataBaseSchemaPageBaseTabs,
+    getDatabaseSchemaWidgetsFromKey
 } from './DatabaseSchemaDetailsUtils';
 import i18n from './i18next/LocalUtil';
 

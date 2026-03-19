@@ -14,8 +14,8 @@ import { RJSFSchema } from '@rjsf/utils';
 import { cloneDeep, isEmpty, isUndefined } from 'lodash';
 import { ServiceCategory } from '../enums/service.enum';
 import {
-  Pipeline,
-  PipelineType as WorkflowType,
+    Pipeline,
+    PipelineType as WorkflowType
 } from '../generated/api/services/ingestionPipelines/createIngestionPipeline';
 import apiServiceMetadataPipeline from '../jsons/ingestionSchemas/apiServiceMetadataPipeline.json';
 import dashboardMetadataPipeline from '../jsons/ingestionSchemas/dashboardServiceMetadataPipeline.json';

@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import {
-  Dashboard,
-  DashboardServiceType,
-  DashboardType,
+    Dashboard,
+    DashboardServiceType,
+    DashboardType
 } from '../generated/entity/data/dashboard';
 import {
-  DashboardDataModel,
-  DataModelType,
+    DashboardDataModel,
+    DataModelType
 } from '../generated/entity/data/dashboardDataModel';
 import { DataType } from '../generated/entity/data/table';
 

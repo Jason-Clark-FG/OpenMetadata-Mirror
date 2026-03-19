@@ -12,9 +12,9 @@
  */
 
 import {
-  Container,
-  DataType,
-  TagSource,
+    Container,
+    DataType,
+    TagSource
 } from '../generated/entity/data/container';
 import { EntityReference } from '../generated/type/entityReference';
 import { LabelType, State } from '../generated/type/tagLabel';

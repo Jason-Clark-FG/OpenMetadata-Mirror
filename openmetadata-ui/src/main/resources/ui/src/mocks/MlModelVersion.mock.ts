@@ -13,18 +13,18 @@
 
 import { MlModelVersionProp } from '../components/MlModel/MlModelVersion/MlModelVersion.interface';
 import {
-  FeatureSourceDataType,
-  FeatureType,
-  MlModelServiceType,
+    FeatureSourceDataType,
+    FeatureType,
+    MlModelServiceType
 } from '../generated/entity/data/mlmodel';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
-  mockVersionList,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler,
+    mockVersionList
 } from '../mocks/VersionCommon.mock';
 
 export const mockMlModelDetails = {

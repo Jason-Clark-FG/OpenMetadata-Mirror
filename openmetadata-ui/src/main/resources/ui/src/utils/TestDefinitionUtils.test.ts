@@ -12,12 +12,12 @@
  */
 
 import {
-  TestDefinition,
-  TestPlatform,
+    TestDefinition,
+    TestPlatform
 } from '../generated/tests/testDefinition';
 import {
-  isExternalTestDefinition,
-  mapUrlValueToOption,
+    isExternalTestDefinition,
+    mapUrlValueToOption
 } from './TestDefinitionUtils';
 
 describe('TestDefinitionUtils', () => {

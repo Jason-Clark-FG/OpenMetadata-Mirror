@@ -15,8 +15,8 @@ import { EntityType } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { EntityUtilClassBase } from './EntityUtilClassBase';
 import {
-  getEntityDetailsPath,
-  getGlossaryTermDetailsPath,
+    getEntityDetailsPath,
+    getGlossaryTermDetailsPath
 } from './RouterUtils';
 import { getTestSuiteDetailsPath } from './TestSuiteUtils';
 

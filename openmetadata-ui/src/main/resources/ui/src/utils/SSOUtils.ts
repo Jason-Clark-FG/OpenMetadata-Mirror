@@ -24,16 +24,16 @@ import { ErrorSchema } from '@rjsf/utils';
 import { AxiosError } from 'axios';
 import { isNil } from 'lodash';
 import {
-  AuthenticationConfiguration,
-  AuthorizerConfiguration,
-  DEFAULT_AUTHORIZER_CLASS_NAME,
-  DEFAULT_CALLBACK_URL,
-  DEFAULT_CONTAINER_REQUEST_FILTER,
-  GOOGLE_SSO_DEFAULTS,
-  OIDC_SSO_DEFAULTS,
-  PROVIDERS_WITHOUT_BOT_PRINCIPALS,
-  PROVIDER_FIELD_MAPPINGS,
-  SAML_SSO_DEFAULTS,
+    AuthenticationConfiguration,
+    AuthorizerConfiguration,
+    DEFAULT_AUTHORIZER_CLASS_NAME,
+    DEFAULT_CALLBACK_URL,
+    DEFAULT_CONTAINER_REQUEST_FILTER,
+    GOOGLE_SSO_DEFAULTS,
+    OIDC_SSO_DEFAULTS,
+    PROVIDERS_WITHOUT_BOT_PRINCIPALS,
+    PROVIDER_FIELD_MAPPINGS,
+    SAML_SSO_DEFAULTS
 } from '../constants/SSO.constant';
 import { ClientType } from '../generated/configuration/securityConfiguration';
 import { AuthProvider } from '../generated/settings/settings';

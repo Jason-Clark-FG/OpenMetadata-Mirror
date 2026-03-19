@@ -15,12 +15,12 @@ import { StoredProcedureVersionProp } from '../components/Database/StoredProcedu
 import { DatabaseServiceType, TableType } from '../generated/entity/data/table';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-  mockBackHandler,
-  mockDomain,
-  mockOwner,
-  mockTier,
-  mockVersionHandler,
-  mockVersionList,
+    mockBackHandler,
+    mockDomain,
+    mockOwner,
+    mockTier,
+    mockVersionHandler,
+    mockVersionList
 } from '../mocks/VersionCommon.mock';
 
 const mockData = {
