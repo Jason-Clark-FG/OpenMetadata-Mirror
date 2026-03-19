@@ -171,7 +171,15 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
     }
 
     if (isWorkflowManagedTaskStatusChange(event)) {
-      enqueueTaskMessage(event);
+      try {
+        enqueueTaskMessage(event);
+      } catch (Exception e) {
+        LOG.error(
+            "Failed to enqueue outbox message for task '{}': {}",
+            event.getEntityId(),
+            e.getMessage(),
+            e);
+      }
     }
 
     Function<ChangeEvent, Map<String, Object>> handler = handlerRegistry.get(event.getEntityType());
