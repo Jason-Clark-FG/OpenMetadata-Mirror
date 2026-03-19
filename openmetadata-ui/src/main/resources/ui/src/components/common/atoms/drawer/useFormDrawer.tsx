@@ -129,10 +129,10 @@ export const useFormDrawer = <T,>(config: FormDrawerConfig<T>) => {
         testId: submitTestId,
         loading: loading || isSubmitting,
         disabled: loading || isSubmitting,
-        onClick: async () => {
+        onClick: () => {
           try {
             setIsSubmitting(true);
-            await onSubmit({} as T);
+            onSubmit({} as T);
             // Don't close drawer here - let consumer handle it after successful API call
           } catch {
             // Form submission error handled by caller
