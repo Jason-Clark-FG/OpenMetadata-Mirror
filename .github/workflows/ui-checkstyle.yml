@@ -101,7 +101,6 @@ jobs:
           path: ${{ env.UI_WORKING_DIRECTORY }}
           files: |
             src/**/*.{ts,tsx,js,jsx}
-            playwright/**/*.{ts,tsx,js,jsx}
 
       - name: Linting (ESlint + Prettier + Organise Imports)
         id: linting
@@ -117,6 +116,34 @@ jobs:
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "### 🔍 Debug: Changes detected in Linting (ESlint + Prettier + Organise Imports)"
+            git status --porcelain
+            git diff
+          fi
+          git checkout -- .
+          git clean -fd
+
+      - name: Get changed Playwright files
+        id: changed-files-playwright
+        uses: tj-actions/changed-files@v44
+        with:
+          path: ${{ env.UI_WORKING_DIRECTORY }}
+          files: |
+            playwright/**/*.{ts,tsx,js,jsx}
+
+      - name: Playwright ESLint Check
+        id: playwright-linting
+        if: steps.changed-files-playwright.outputs.any_changed == 'true'
+        continue-on-error: true
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        env:
+          CHANGED_FILES: ${{ steps.changed-files-playwright.outputs.all_changed_files }}
+        run: |
+          yarn organize-imports-cli $CHANGED_FILES
+          NODE_OPTIONS="--max-old-space-size=8192" yarn eslint --fix --no-error-on-unmatched-pattern $CHANGED_FILES
+          yarn prettier --write --ignore-path './.prettierignore' $CHANGED_FILES
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes=true" >> "$GITHUB_OUTPUT"
+            echo "### 🔍 Debug: Changes detected in Playwright Linting"
             git status --porcelain
             git diff
           fi
@@ -196,7 +223,7 @@ jobs:
           body-includes: '### 🔍 UI Style Check Summary'
 
       - name: Create or Update Summary Comment
-        if: steps.linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
+        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
@@ -209,6 +236,7 @@ jobs:
             - **UI check style**
               - **Linting**
                 - ${{ steps.linting.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier + Organise Imports**
+                - ${{ steps.playwright-linting.outputs.changes == 'true' && '❌' || '✅' }} **Playwright ESLint + Prettier**
                 - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header**
               - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync**
               - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs**
@@ -221,7 +249,7 @@ jobs:
           edit-mode: replace
 
       - name: Delete Summary Comment if Passed
-        if: steps.linting.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
+        if: steps.linting.outputs.changes != 'true' && steps.playwright-linting.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -232,7 +260,7 @@ jobs:
             })
 
       - name: Fail if any check detected changes or failed
-        if: steps.linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.linting.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
+        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.linting.outcome != 'success' || steps.playwright-linting.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
         run: |
           echo "One or more checkstyle steps introduced changes or did not complete successfully."
           exit 1
