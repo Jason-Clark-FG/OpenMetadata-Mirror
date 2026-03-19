@@ -132,6 +132,8 @@ public class SearchIndexExecutor implements AutoCloseable {
   private final Map<String, AtomicInteger> entityBatchFailures = new ConcurrentHashMap<>();
   private final Set<String> promotedEntities = ConcurrentHashMap.newKeySet();
   private final Map<String, StageStatsTracker> sinkTrackers = new ConcurrentHashMap<>();
+  private static final long SINK_SYNC_INTERVAL_MS = 2000;
+  private volatile long lastSinkSyncTime = 0;
 
   record IndexingTask<T>(String entityType, ResultList<T> entities, int offset, int retryCount) {
     IndexingTask(String entityType, ResultList<T> entities, int offset) {
@@ -231,6 +233,7 @@ public class SearchIndexExecutor implements AutoCloseable {
     entityBatchFailures.clear();
     promotedEntities.clear();
     sinkTrackers.clear();
+    lastSinkSyncTime = 0;
     initStatsManager();
   }
 
@@ -508,9 +511,9 @@ public class SearchIndexExecutor implements AutoCloseable {
     try {
       writeEntitiesToSink(entityType, entities, contextData);
 
-      // Update entity stats for progress reporting (uses reader counts, sink synced at end)
       StepStats currentEntityStats = createEntityStats(entities);
       handleTaskSuccess(entityType, entities, currentEntityStats);
+      periodicSyncSinkStats();
     } catch (SearchIndexException e) {
       handleSearchIndexException(entityType, entities, e);
     } catch (Exception e) {
@@ -1516,6 +1519,14 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
   }
 
+  private void periodicSyncSinkStats() {
+    long now = System.currentTimeMillis();
+    if (now - lastSinkSyncTime >= SINK_SYNC_INTERVAL_MS) {
+      lastSinkSyncTime = now;
+      syncSinkStatsFromBulkSink();
+    }
+  }
+
   private void updateEntityStats(Stats statsObj, String entityType, StepStats currentEntityStats) {
     if (statsObj.getEntityStats() == null
         || statsObj.getEntityStats().getAdditionalProperties() == null) {
@@ -1528,6 +1539,11 @@ public class SearchIndexExecutor implements AutoCloseable {
           entityStats.getSuccessRecords() + currentEntityStats.getSuccessRecords());
       entityStats.withFailedRecords(
           entityStats.getFailedRecords() + currentEntityStats.getFailedRecords());
+
+      int actual = entityStats.getSuccessRecords() + entityStats.getFailedRecords();
+      if (actual > entityStats.getTotalRecords()) {
+        entityStats.setTotalRecords(actual);
+      }
     }
   }
 
@@ -1536,6 +1552,12 @@ public class SearchIndexExecutor implements AutoCloseable {
     if (jobStats == null || statsObj.getEntityStats() == null) {
       return;
     }
+
+    int totalRecords =
+        statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
+            .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+            .mapToInt(e -> e.getValue().getTotalRecords())
+            .sum();
 
     int totalSuccess =
         statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
@@ -1549,7 +1571,15 @@ public class SearchIndexExecutor implements AutoCloseable {
             .mapToInt(e -> e.getValue().getFailedRecords())
             .sum();
 
-    jobStats.withSuccessRecords(totalSuccess).withFailedRecords(totalFailed);
+    jobStats
+        .withTotalRecords(totalRecords)
+        .withSuccessRecords(totalSuccess)
+        .withFailedRecords(totalFailed);
+
+    StepStats readerStats = statsObj.getReaderStats();
+    if (readerStats != null && totalRecords > readerStats.getTotalRecords()) {
+      readerStats.setTotalRecords(totalRecords);
+    }
   }
 
   private IndexingError createSinkError(String message) {
