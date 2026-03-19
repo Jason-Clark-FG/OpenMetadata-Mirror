@@ -402,7 +402,7 @@ const MarketplaceNavBar = () => {
                 }
               />
             </Tooltip>
-            <div className="tw:ml-4">
+            <div className="tw:ml-10">
               <MarketplaceNav />
             </div>
           </div>

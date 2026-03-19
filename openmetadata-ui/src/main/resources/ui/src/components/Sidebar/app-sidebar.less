@@ -19,22 +19,22 @@
 
   // Active: solid blue background + white text + icon
   a[aria-current='page'] {
-    background-color: var(--color-bg-brand-solid) !important;
+    background-color: var(--tw-color-bg-brand-solid) !important;
 
     span,
     [aria-hidden='true'] {
-      color: var(--color-text-primary_on-brand) !important;
+      color: var(--tw-color-text-primary_on-brand) !important;
     }
   }
 
   // Hover on inactive: light brand blue
   a:not([aria-current='page']):hover {
-    background-color: var(--color-bg-brand-primary) !important;
+    background-color: var(--tw-color-bg-brand-primary) !important;
   }
 
   // Hover on active: slightly deeper brand
   a[aria-current='page']:hover {
-    background-color: var(--color-bg-brand-solid_hover) !important;
+    background-color: var(--tw-color-bg-brand-solid_hover) !important;
   }
 
   // No underlines

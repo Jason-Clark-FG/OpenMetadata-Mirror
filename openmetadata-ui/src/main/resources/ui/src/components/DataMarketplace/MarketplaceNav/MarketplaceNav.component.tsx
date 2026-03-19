@@ -13,10 +13,10 @@
 
 import { Dropdown } from '@openmetadata/ui-core-components';
 import { ChevronDown } from '@untitledui/icons';
-import { useMemo } from 'react';
+import { Key, useMemo } from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
-import { Key, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { MARKETPLACE_NAV_ITEMS } from '../../../constants/MarketplaceNav.constants';
 
 const MarketplaceNav = () => {
@@ -34,14 +34,14 @@ const MarketplaceNav = () => {
   );
 
   const handleAction = (key: Key) => {
-    navigate(key as string);
+    navigate(key.toString());
   };
 
   return (
     <Dropdown.Root>
-      <AriaButton className="tw:flex tw:items-center tw:gap-1 tw:cursor-pointer tw:border-none tw:bg-transparent tw:p-0 tw:text-sm tw:font-semibold tw:text-brand-secondary tw:outline-none">
+      <AriaButton className="tw:flex tw:items-center tw:gap-1 tw:cursor-pointer tw:border-none tw:bg-transparent tw:p-0 tw:text-xl tw:font-semibold tw:text-brand-secondary tw:outline-none">
         {t('label.data-marketplace')}
-        <ChevronDown className="tw:size-4" />
+        <ChevronDown className="tw:size-5 tw:font-semilbold" />
       </AriaButton>
       <Dropdown.Popover>
         <Dropdown.Menu onAction={handleAction}>

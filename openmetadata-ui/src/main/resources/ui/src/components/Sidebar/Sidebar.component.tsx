@@ -67,7 +67,11 @@ const Sidebar = ({
       {bottomItems && (
         <>
           <div className="tw:flex-1" />
-          <NavList activeUrl={activeUrl} items={bottomItems} />
+          <NavList
+            activeUrl={activeUrl}
+            className="tw:pb-4"
+            items={bottomItems}
+          />
         </>
       )}
     </aside>
