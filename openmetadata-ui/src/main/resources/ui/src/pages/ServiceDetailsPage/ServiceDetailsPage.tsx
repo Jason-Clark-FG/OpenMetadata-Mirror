@@ -1934,7 +1934,7 @@ const ServiceDetailsPage: FunctionComponent = () => {
       ...servicePermission,
       Trigger: permissions[ResourceEntity.ALL]?.Trigger || false,
     }),
-    [servicePermission, permissions]
+    [servicePermission, permissions[ResourceEntity.ALL]]
   );
 
   const afterAutoPilotAppTrigger = useCallback(() => {
