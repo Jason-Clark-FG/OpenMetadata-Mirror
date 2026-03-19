@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { DownloadOutlined } from '@ant-design/icons';
-import { LazyLog } from '@melloware/react-logviewer';
 import { Badge, Button, Col, Empty, Row, Select, Space } from 'antd';
 import { AxiosError } from 'axios';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -47,7 +46,7 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const lazyLogRef = useRef<LazyLog>(null);
+  const logContainerRef = useRef<HTMLPreElement>(null);
 
   const appName = useMemo(
     () => appData.fullyQualifiedName ?? appData.name,
@@ -190,10 +189,8 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
   }, [appName, selectedRunTimestamp, selectedServer]);
 
   const handleJumpToEnd = useCallback(() => {
-    if (lazyLogRef.current?.listRef?.current) {
-      const totalLines = (lazyLogRef.current as { state: { count: number } })
-        .state.count;
-      lazyLogRef.current.listRef.current.scrollToIndex(totalLines - 1);
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, []);
 
@@ -341,18 +338,25 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
           {isLogLoading ? (
             <Loader />
           ) : logText ? (
-            <div
-              className="lazy-log-container"
+            <pre
               data-testid="lazy-log"
-              style={{ height: '60vh', overflow: 'auto' }}>
-              <LazyLog
-                caseInsensitive
-                selectableLines
-                extraLines={1}
-                ref={lazyLogRef}
-                text={logText}
-              />
-            </div>
+              ref={logContainerRef}
+              style={{
+                height: '60vh',
+                overflow: 'auto',
+                margin: 0,
+                padding: '12px',
+                backgroundColor: '#222',
+                color: '#fff',
+                fontSize: '12px',
+                fontFamily: '"Monaco", "Menlo", "Consolas", monospace',
+                lineHeight: 1.6,
+                borderRadius: '4px',
+                whiteSpace: 'pre',
+                tabSize: 4,
+              }}>
+              {logText}
+            </pre>
           ) : (
             <Empty description={t('message.no-data-available')} />
           )}
