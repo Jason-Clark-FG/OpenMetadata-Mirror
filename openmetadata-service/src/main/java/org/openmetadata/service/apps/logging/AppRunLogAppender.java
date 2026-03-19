@@ -69,10 +69,13 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     // Fast path: check MDC
     String runId = event.getMDCPropertyMap().get(MDC_APP_RUN_ID);
     if (runId != null) {
-      RunLogBuffer buffer = activeBuffers.get(runId);
-      if (buffer != null) {
-        buffer.append(formatLine(event));
-        return;
+      String mdcAppName = event.getMDCPropertyMap().get(MDC_APP_NAME);
+      if (mdcAppName != null) {
+        RunLogBuffer buffer = activeBuffers.get(bufferKey(mdcAppName, runId));
+        if (buffer != null) {
+          buffer.append(formatLine(event));
+          return;
+        }
       }
     }
 
@@ -130,6 +133,10 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
    * @param threadPrefixes thread name prefixes whose log output should be captured (e.g.
    *     "reindex-", "om-field-fetch-"). The main scheduler thread is always captured via MDC.
    */
+  public static String bufferKey(String appName, String runTimestamp) {
+    return appName + "-" + runTimestamp;
+  }
+
   public static RunLogBuffer startCapture(
       String appRunId, String appId, String appName, String serverId, String... threadPrefixes) {
     ensureRegistered();
@@ -138,7 +145,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     RunLogBuffer buffer =
         new RunLogBuffer(
             appId, appName, serverId, Long.parseLong(appRunId), globalMaxLinesPerRun, logFile);
-    activeBuffers.put(appRunId, buffer);
+    activeBuffers.put(bufferKey(appName, appRunId), buffer);
 
     for (String prefix : threadPrefixes) {
       threadPrefixBindings.add(new ThreadPrefixBinding(prefix, buffer));
@@ -148,16 +155,16 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     return buffer;
   }
 
-  public static void stopCapture(String appRunId) {
-    RunLogBuffer buffer = activeBuffers.remove(appRunId);
+  public static void stopCapture(String appName, String appRunId) {
+    RunLogBuffer buffer = activeBuffers.remove(bufferKey(appName, appRunId));
     if (buffer != null) {
       threadPrefixBindings.removeIf(b -> b.buffer == buffer);
       buffer.close();
     }
   }
 
-  public static RunLogBuffer getBuffer(String appRunId) {
-    return activeBuffers.get(appRunId);
+  public static RunLogBuffer getBuffer(String appName, String runTimestamp) {
+    return activeBuffers.get(bufferKey(appName, runTimestamp));
   }
 
   public static String getLogDirectory() {
@@ -228,10 +235,10 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   static void cleanupOldRuns(String appName) {
     List<Long> timestamps = listRunTimestamps(appName);
-    if (timestamps.size() < globalMaxRunsPerApp) {
+    if (timestamps.size() <= globalMaxRunsPerApp) {
       return;
     }
-    List<Long> toDelete = timestamps.subList(globalMaxRunsPerApp - 1, timestamps.size());
+    List<Long> toDelete = timestamps.subList(globalMaxRunsPerApp, timestamps.size());
     Path appDir = getAppLogDir(appName);
     for (long ts : toDelete) {
       try (DirectoryStream<Path> stream = Files.newDirectoryStream(appDir, ts + "-*.log")) {

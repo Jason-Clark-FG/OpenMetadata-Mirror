@@ -55,7 +55,7 @@ class AppRunLogAppenderTest {
   void eventsWithMdcAreCapturedInBuffer() {
     String runId = "1000";
     AppRunLogAppender.startCapture(runId, "app-id-1", "TestApp", "server1");
-    RunLogBuffer buffer = AppRunLogAppender.getBuffer(runId);
+    RunLogBuffer buffer = AppRunLogAppender.getBuffer("TestApp", runId);
     assertNotNull(buffer);
 
     Map<String, String> mdc = new HashMap<>();
@@ -68,24 +68,24 @@ class AppRunLogAppenderTest {
     assertEquals(1, pending.size());
     assertTrue(pending.get(0).contains("hello world"));
 
-    AppRunLogAppender.stopCapture(runId);
+    AppRunLogAppender.stopCapture("TestApp", runId);
   }
 
   @Test
   void stopCaptureRemovesBuffer() {
     String runId = "2000";
     AppRunLogAppender.startCapture(runId, "app-id-2", "TestApp", "server1");
-    assertNotNull(AppRunLogAppender.getBuffer(runId));
+    assertNotNull(AppRunLogAppender.getBuffer("TestApp", runId));
 
-    AppRunLogAppender.stopCapture(runId);
-    assertNull(AppRunLogAppender.getBuffer(runId));
+    AppRunLogAppender.stopCapture("TestApp", runId);
+    assertNull(AppRunLogAppender.getBuffer("TestApp", runId));
   }
 
   @Test
   void logFileIsCreatedOnFlush() throws IOException {
     String runId = "3000";
     AppRunLogAppender.startCapture(runId, "app-id-3", "TestApp", "server1");
-    RunLogBuffer buffer = AppRunLogAppender.getBuffer(runId);
+    RunLogBuffer buffer = AppRunLogAppender.getBuffer("TestApp", runId);
 
     buffer.append("line one");
     buffer.append("line two");
@@ -97,7 +97,7 @@ class AppRunLogAppenderTest {
     assertTrue(content.contains("line one"));
     assertTrue(content.contains("line two"));
 
-    AppRunLogAppender.stopCapture(runId);
+    AppRunLogAppender.stopCapture("TestApp", runId);
   }
 
   @Test
@@ -142,8 +142,26 @@ class AppRunLogAppenderTest {
 
     AppRunLogAppender.cleanupOldRuns("CleanApp");
 
-    assertTrue(Files.exists(appDir.resolve("3000-s1.log")));
-    assertFalse(Files.exists(appDir.resolve("1000-s1.log")));
+    assertTrue(Files.exists(appDir.resolve("3000-s1.log")), "newest run should be kept");
+    assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "2nd newest run should be kept");
+    assertFalse(Files.exists(appDir.resolve("1000-s1.log")), "oldest run should be deleted");
+
+    AppRunLogAppender.setMaxRunsPerAppForTest(5);
+  }
+
+  @Test
+  void cleanupOldRunsKeepsExactlyMaxRuns() throws IOException {
+    AppRunLogAppender.setMaxRunsPerAppForTest(2);
+
+    Path appDir = tempDir.resolve("ExactApp");
+    Files.createDirectories(appDir);
+    Files.createFile(appDir.resolve("1000-s1.log"));
+    Files.createFile(appDir.resolve("2000-s1.log"));
+
+    AppRunLogAppender.cleanupOldRuns("ExactApp");
+
+    assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "should not delete when at limit");
+    assertTrue(Files.exists(appDir.resolve("1000-s1.log")), "should not delete when at limit");
 
     AppRunLogAppender.setMaxRunsPerAppForTest(5);
   }
@@ -152,7 +170,7 @@ class AppRunLogAppenderTest {
   void concurrentWritesFromMultipleThreadsAreSafe() throws InterruptedException {
     String runId = "7000";
     AppRunLogAppender.startCapture(runId, "app-id-7", "ConcurrentApp", "server1");
-    RunLogBuffer buffer = AppRunLogAppender.getBuffer(runId);
+    RunLogBuffer buffer = AppRunLogAppender.getBuffer("ConcurrentApp", runId);
 
     int threadCount = 10;
     int linesPerThread = 100;
@@ -173,7 +191,7 @@ class AppRunLogAppenderTest {
     }
 
     assertEquals(threadCount * linesPerThread, buffer.getTotalLineCount());
-    AppRunLogAppender.stopCapture(runId);
+    AppRunLogAppender.stopCapture("ConcurrentApp", runId);
   }
 
   private LoggingEvent createEvent(String message, Map<String, String> mdc) {

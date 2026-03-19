@@ -127,11 +127,14 @@ public class OmAppJobListener implements JobListener {
       pushApplicationStatusUpdates(jobExecutionContext, runRecord, update);
     } catch (Exception e) {
       LOG.error("OmAppJobListener.jobToBeExecuted failed unexpectedly", e);
+      cleanupLogCapture(jobExecutionContext);
     }
   }
 
   @Override
-  public void jobExecutionVetoed(JobExecutionContext jobExecutionContext) {}
+  public void jobExecutionVetoed(JobExecutionContext jobExecutionContext) {
+    cleanupLogCapture(jobExecutionContext);
+  }
 
   @Override
   public void jobWasExecuted(
@@ -203,15 +206,7 @@ public class OmAppJobListener implements JobListener {
     } catch (Exception e) {
       LOG.error("OmAppJobListener.jobWasExecuted failed unexpectedly", e);
     } finally {
-      String appRunLogId =
-          (String) jobExecutionContext.getJobDetail().getJobDataMap().get(APP_RUN_LOG_ID);
-      if (appRunLogId != null) {
-        AppRunLogAppender.stopCapture(appRunLogId);
-      }
-      MDC.remove(AppRunLogAppender.MDC_APP_RUN_ID);
-      MDC.remove(AppRunLogAppender.MDC_APP_NAME);
-      MDC.remove(AppRunLogAppender.MDC_SERVER_ID);
-      MDC.remove(AppRunLogAppender.MDC_APP_ID);
+      cleanupLogCapture(jobExecutionContext);
     }
   }
 
@@ -237,6 +232,22 @@ public class OmAppJobListener implements JobListener {
         repository.addAppStatus(runRecord);
       }
     }
+  }
+
+  private static void cleanupLogCapture(JobExecutionContext context) {
+    try {
+      String appRunLogId = (String) context.getJobDetail().getJobDataMap().get(APP_RUN_LOG_ID);
+      String appName = (String) context.getJobDetail().getJobDataMap().get(APP_NAME);
+      if (appRunLogId != null && appName != null) {
+        AppRunLogAppender.stopCapture(appName, appRunLogId);
+      }
+    } catch (Exception e) {
+      LOG.debug("Error stopping log capture", e);
+    }
+    MDC.remove(AppRunLogAppender.MDC_APP_RUN_ID);
+    MDC.remove(AppRunLogAppender.MDC_APP_NAME);
+    MDC.remove(AppRunLogAppender.MDC_SERVER_ID);
+    MDC.remove(AppRunLogAppender.MDC_APP_ID);
   }
 
   private static String[] getThreadPrefixesForApp(String appName) {

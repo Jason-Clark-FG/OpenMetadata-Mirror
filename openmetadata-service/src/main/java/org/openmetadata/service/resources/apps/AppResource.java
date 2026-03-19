@@ -595,6 +595,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
     }
+    if (serverId != null && !servers.contains(serverId)) {
+      throw new BadRequestException("Invalid serverId");
+    }
 
     StringBuilder logs = new StringBuilder();
     if (serverId != null) {
@@ -608,7 +611,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
 
-    RunLogBuffer activeBuffer = AppRunLogAppender.getBuffer(String.valueOf(runTimestamp));
+    RunLogBuffer activeBuffer = AppRunLogAppender.getBuffer(name, String.valueOf(runTimestamp));
     if (activeBuffer != null && (serverId == null || activeBuffer.getServerId().equals(serverId))) {
       List<String> pending = activeBuffer.getPendingLines();
       if (!pending.isEmpty()) {
@@ -655,7 +658,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
     }
-    if (serverId == null) {
+    if (serverId == null || !servers.contains(serverId)) {
       throw new EntityNotFoundException("No log files found for this run");
     }
 
@@ -727,6 +730,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
     List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
+    }
+    if (serverId != null && !servers.contains(serverId)) {
+      throw new BadRequestException("Invalid serverId");
     }
 
     final String resolvedServerId = serverId;

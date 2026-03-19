@@ -156,7 +156,10 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
         }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
-          showErrorToast(error as AxiosError);
+          showErrorToast(
+            t('server.unexpected-response'),
+            (error as Error).message
+          );
         }
       } finally {
         setIsStreaming(false);
@@ -235,7 +238,7 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
   // Initial load
   useEffect(() => {
     fetchRuns();
-  }, [appName]);
+  }, [fetchRuns]);
 
   // When run/server changes: use SSE stream for active runs, one-shot fetch for completed
   useEffect(() => {
@@ -250,9 +253,16 @@ const AppRunTextLogs = ({ appData }: AppRunTextLogsProps) => {
     }
 
     return () => stopStream();
-  }, [selectedRunTimestamp, selectedServer, isRunActive]);
+  }, [
+    selectedRunTimestamp,
+    selectedServer,
+    isRunActive,
+    startStream,
+    fetchLogsOnce,
+    stopStream,
+  ]);
 
-  // Also re-fetch run statuses periodically while streaming
+  // Re-fetch run statuses periodically while streaming
   useEffect(() => {
     if (!isStreaming) {
       return;
