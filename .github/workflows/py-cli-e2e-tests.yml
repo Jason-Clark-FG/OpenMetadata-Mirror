@@ -216,6 +216,7 @@ jobs:
       with:
         name: coverage-${{ matrix.e2e-test }}
         path: .coverage.${{ matrix.e2e-test }}
+        include-hidden-files: true
 
     - name: Upload tests artifact
       if: (steps.e2e-test.outcome == 'success' || steps.python-unittest.outcome == 'success' || steps.python-integration-test.outcome == 'success') && env.DEBUG == 'false'
