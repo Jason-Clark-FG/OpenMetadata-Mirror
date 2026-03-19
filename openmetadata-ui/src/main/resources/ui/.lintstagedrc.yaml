@@ -19,11 +19,11 @@
   # Generate App Docs
   - yarn generate:app-docs
 
-'src/**/*.{ts,tsx,js,jsx}':
+'{src,playwright}/**/*.{ts,tsx,js,jsx}':
   # Organize Imports
   - organize-imports-cli
   # Run ESLint on specific files (lint-staged will pass files as arguments)
   - bash -c 'NODE_OPTIONS="--max-old-space-size=8192" npx eslint --fix "$@"' --
 
 # Run Prettier
-'src/**': prettier --write
+'{src,playwright}/**': prettier --write
