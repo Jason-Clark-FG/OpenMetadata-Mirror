@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ibatis.exceptions.PersistenceException;
@@ -48,9 +49,11 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.openmetadata.schema.entity.events.EventSubscription;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
+import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
+import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.events.errors.EventPublisherException;
 
@@ -332,6 +335,63 @@ class WorkflowEventConsumerTest {
   @Test
   void testGetEventSubscriptionForDestination() {
     assertEquals(eventSubscription, consumer.getEventSubscriptionForDestination());
+  }
+
+  @Test
+  void isWorkflowManagedTaskStatusChange_rejects_non_update_events() throws Exception {
+    Method method =
+        WorkflowEventConsumer.class.getDeclaredMethod(
+            "isWorkflowManagedTaskStatusChange", ChangeEvent.class);
+    method.setAccessible(true);
+
+    ChangeEvent created = new ChangeEvent();
+    created.setEventType(EventType.ENTITY_CREATED);
+    created.setEntityType("task");
+    assertFalse((boolean) method.invoke(null, created));
+  }
+
+  @Test
+  void isWorkflowManagedTaskStatusChange_rejects_non_task_entities() throws Exception {
+    Method method =
+        WorkflowEventConsumer.class.getDeclaredMethod(
+            "isWorkflowManagedTaskStatusChange", ChangeEvent.class);
+    method.setAccessible(true);
+
+    ChangeEvent tableUpdate = new ChangeEvent();
+    tableUpdate.setEventType(EventType.ENTITY_UPDATED);
+    tableUpdate.setEntityType("table");
+    assertFalse((boolean) method.invoke(null, tableUpdate));
+  }
+
+  @Test
+  void isWorkflowManagedTaskStatusChange_rejects_missing_changeDescription() throws Exception {
+    Method method =
+        WorkflowEventConsumer.class.getDeclaredMethod(
+            "isWorkflowManagedTaskStatusChange", ChangeEvent.class);
+    method.setAccessible(true);
+
+    ChangeEvent noDesc = new ChangeEvent();
+    noDesc.setEventType(EventType.ENTITY_UPDATED);
+    noDesc.setEntityType("task");
+    assertFalse((boolean) method.invoke(null, noDesc));
+  }
+
+  @Test
+  void isWorkflowManagedTaskStatusChange_rejects_non_status_field_changes() throws Exception {
+    Method method =
+        WorkflowEventConsumer.class.getDeclaredMethod(
+            "isWorkflowManagedTaskStatusChange", ChangeEvent.class);
+    method.setAccessible(true);
+
+    ChangeEvent nonStatusChange = new ChangeEvent();
+    nonStatusChange.setEventType(EventType.ENTITY_UPDATED);
+    nonStatusChange.setEntityType("task");
+    ChangeDescription cd = new ChangeDescription();
+    FieldChange fc = new FieldChange();
+    fc.setName("description");
+    cd.setFieldsUpdated(List.of(fc));
+    nonStatusChange.setChangeDescription(cd);
+    assertFalse((boolean) method.invoke(null, nonStatusChange));
   }
 
   private ChangeEvent createChangeEvent(String userName, EventType eventType) {
