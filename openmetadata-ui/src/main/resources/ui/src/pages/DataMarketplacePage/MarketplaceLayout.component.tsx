@@ -11,62 +11,12 @@
  *  limitations under the License.
  */
 
-import {
-  Cube01,
-  Globe01,
-  Home02,
-  Settings01,
-  ShoppingBag01,
-} from '@untitledui/icons';
-import { useLayoutEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
 import PageLayoutV2 from '../../components/PageLayoutV2/PageLayoutV2';
-import { ROUTES } from '../../constants/constants';
-import { useSidebarStore } from '../../hooks/useSidebarStore';
 
 const MarketplaceLayout = () => {
   const { t } = useTranslation();
-  const { setCustomItems, clearCustomItems } = useSidebarStore();
-
-  const sidebarItems = useMemo(
-    () => [
-      { label: t('label.home'), href: ROUTES.MY_DATA, icon: Home02 },
-      {
-        label: t('label.data-marketplace'),
-        href: ROUTES.DATA_MARKETPLACE,
-        icon: ShoppingBag01,
-      },
-      {
-        label: t('label.data-product-plural'),
-        href: `${ROUTES.DATA_MARKETPLACE}/data-products`,
-        icon: Cube01,
-      },
-      {
-        label: t('label.domain-plural'),
-        href: `${ROUTES.DATA_MARKETPLACE}/domains`,
-        icon: Globe01,
-      },
-    ],
-    [t]
-  );
-
-  const sidebarBottomItems = useMemo(
-    () => [
-      {
-        label: t('label.setting-plural'),
-        href: ROUTES.SETTINGS,
-        icon: Settings01,
-      },
-    ],
-    [t]
-  );
-
-  useLayoutEffect(() => {
-    setCustomItems(sidebarItems, sidebarBottomItems);
-
-    return () => clearCustomItems();
-  }, [sidebarItems, sidebarBottomItems]);
 
   return (
     <PageLayoutV2 pageTitle={t('label.data-marketplace')}>

@@ -12,55 +12,18 @@
  */
 
 import { useLocation } from 'react-router-dom';
-import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
-import { useSidebarStore } from '../../hooks/useSidebarStore';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
-import BrandImage from '../common/BrandImage/BrandImage';
 import LeftSidebar from '../MyData/LeftSidebar/LeftSidebar.component';
 import Sidebar from '../Sidebar/Sidebar.component';
 
 const AppSidebar = () => {
-  const { customItems, customBottomItems } = useSidebarStore();
   const { pathname } = useLocation();
-  const {
-    preferences: { isSidebarCollapsed },
-  } = useCurrentUserPreferences();
 
-  const isCustomRoute = isNewLayoutRoute(pathname);
-
-  if (!customItems && !isCustomRoute) {
-    return <LeftSidebar />;
+  if (isNewLayoutRoute(pathname)) {
+    return <Sidebar />;
   }
 
-  if (!customItems) {
-    return null;
-  }
-
-  return (
-    <Sidebar
-      activeUrl={pathname}
-      bottomItems={customBottomItems ?? undefined}
-      collapsed={isSidebarCollapsed}
-      collapsedLogo={
-        <BrandImage
-          isMonoGram
-          className="tw:h-10 tw:w-auto"
-          dataTestId="image"
-          height={40}
-          width="auto"
-        />
-      }
-      items={customItems}
-      logo={
-        <BrandImage
-          className="tw:h-10 tw:w-auto"
-          dataTestId="image"
-          height={40}
-          width="auto"
-        />
-      }
-    />
-  );
+  return <LeftSidebar />;
 };
 
 export default AppSidebar;

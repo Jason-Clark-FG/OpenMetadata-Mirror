@@ -11,6 +11,59 @@
  *  limitations under the License.
  */
 
+import {
+  NavItemDividerType,
+  NavItemType,
+} from '@openmetadata/ui-core-components';
+import {
+  Cube01,
+  Globe01,
+  Home02,
+  Settings01,
+  ShoppingBag01,
+} from '@untitledui/icons';
+import { t } from '../utils/i18next/LocalUtil';
 import { ROUTES } from './constants';
 
 export const CUSTOM_SIDEBAR_ROUTES = [ROUTES.DATA_MARKETPLACE];
+
+interface SidebarConfig {
+  items: (NavItemType | NavItemDividerType)[];
+  bottomItems?: (NavItemType | NavItemDividerType)[];
+}
+
+const getMarketplaceSidebarConfig = (): SidebarConfig => ({
+  items: [
+    { label: t('label.home'), href: ROUTES.MY_DATA, icon: Home02 },
+    {
+      label: t('label.data-marketplace'),
+      href: ROUTES.DATA_MARKETPLACE,
+      icon: ShoppingBag01,
+    },
+    {
+      label: t('label.data-product-plural'),
+      href: `${ROUTES.DATA_MARKETPLACE}/data-products`,
+      icon: Cube01,
+    },
+    {
+      label: t('label.domain-plural'),
+      href: `${ROUTES.DATA_MARKETPLACE}/domains`,
+      icon: Globe01,
+    },
+  ],
+  bottomItems: [
+    {
+      label: t('label.setting-plural'),
+      href: ROUTES.SETTINGS,
+      icon: Settings01,
+    },
+  ],
+});
+
+export const getSidebarConfig = (pathname: string): SidebarConfig | null => {
+  if (pathname.startsWith(ROUTES.DATA_MARKETPLACE)) {
+    return getMarketplaceSidebarConfig();
+  }
+
+  return null;
+};

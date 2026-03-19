@@ -11,39 +11,33 @@
  *  limitations under the License.
  */
 
-import type {
-  NavItemDividerType,
-  NavItemType,
-} from '@openmetadata/ui-core-components';
 import { NavList } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { getSidebarConfig } from '../../constants/CustomSidebar.constants';
+import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
+import BrandImage from '../common/BrandImage/BrandImage';
 import './app-sidebar.less';
 
 export interface SidebarProps {
-  items: (NavItemType | NavItemDividerType)[];
-  bottomItems?: (NavItemType | NavItemDividerType)[];
-  activeUrl?: string;
-  collapsed?: boolean;
-  collapsedWidth?: number;
-  expandedWidth?: number;
-  logo?: ReactNode;
-  collapsedLogo?: ReactNode;
   className?: string;
 }
 
-const Sidebar = ({
-  items,
-  bottomItems,
-  activeUrl,
-  collapsed = false,
-  collapsedWidth = 72,
-  expandedWidth = 197,
-  logo,
-  collapsedLogo,
-  className,
-}: SidebarProps) => {
+const COLLAPSED_WIDTH = 72;
+const EXPANDED_WIDTH = 197;
+
+const Sidebar = ({ className }: SidebarProps) => {
+  const { pathname } = useLocation();
+  const {
+    preferences: { isSidebarCollapsed: collapsed },
+  } = useCurrentUserPreferences();
+
+  const config = getSidebarConfig(pathname);
+
+  if (!config) {
+    return null;
+  }
+
   return (
     <aside
       className={classNames(
@@ -52,32 +46,45 @@ const Sidebar = ({
         className
       )}
       data-testid="app-sidebar"
-      style={{ width: collapsed ? collapsedWidth : expandedWidth }}>
-      {(logo || collapsedLogo) && (
-        <div
-          className={classNames(
-            'tw:flex tw:items-center tw:my-5',
-            collapsed ? 'tw:justify-center' : 'tw:pl-6'
-          )}>
-          <Link
-            className="flex-shrink-0 tw:bg-transparent"
-            id="openmetadata_logo"
-            to="/">
-            {collapsed ? collapsedLogo ?? logo : logo}
-          </Link>
-        </div>
-      )}
+      style={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}>
+      <div
+        className={classNames(
+          'tw:flex tw:items-center tw:my-5',
+          collapsed ? 'tw:justify-center' : 'tw:pl-6'
+        )}>
+        <Link
+          className="flex-shrink-0 tw:bg-transparent"
+          id="openmetadata_logo"
+          to="/">
+          {collapsed ? (
+            <BrandImage
+              isMonoGram
+              className="tw:h-10 tw:w-auto"
+              dataTestId="image"
+              height={40}
+              width="auto"
+            />
+          ) : (
+            <BrandImage
+              className="tw:h-10 tw:w-auto"
+              dataTestId="image"
+              height={40}
+              width="auto"
+            />
+          )}
+        </Link>
+      </div>
 
       <div className="app-sidebar-link tw:flex tw:flex-col tw:flex-1 tw:overflow-y-auto">
-        <NavList activeUrl={activeUrl} items={items} />
+        <NavList activeUrl={pathname} items={config.items} />
 
-        {bottomItems && (
+        {config.bottomItems && (
           <>
             <div className="tw:flex-1" />
             <NavList
-              activeUrl={activeUrl}
+              activeUrl={pathname}
               className="tw:pb-4"
-              items={bottomItems}
+              items={config.bottomItems}
             />
           </>
         )}
