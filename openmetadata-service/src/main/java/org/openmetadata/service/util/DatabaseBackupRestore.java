@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -117,6 +118,30 @@ public class DatabaseBackupRestore {
               + "AND tc.constraint_type = 'PRIMARY KEY' "
               + "ORDER BY kcu.ordinal_position";
       return handle.createQuery(sql).bind("table", tableName).mapTo(String.class).list();
+    }
+  }
+
+  Set<String> discoverBinaryColumns(Handle handle, String tableName) {
+    String sql;
+    if (connectionType == ConnectionType.MYSQL) {
+      sql =
+          "SELECT column_name FROM information_schema.columns "
+              + "WHERE table_schema = :db AND table_name = :table "
+              + "AND data_type IN ('blob', 'tinyblob', 'mediumblob', 'longblob', 'binary', 'varbinary')";
+      return new HashSet<>(
+          handle
+              .createQuery(sql)
+              .bind("db", databaseName)
+              .bind("table", tableName)
+              .mapTo(String.class)
+              .list());
+    } else {
+      sql =
+          "SELECT column_name FROM information_schema.columns "
+              + "WHERE table_schema = current_schema() AND table_name = :table "
+              + "AND data_type = 'bytea'";
+      return new HashSet<>(
+          handle.createQuery(sql).bind("table", tableName).mapTo(String.class).list());
     }
   }
 
@@ -219,10 +244,15 @@ public class DatabaseBackupRestore {
       Files.deleteIfExists(tempFile);
     }
 
+    Set<String> binaryColumns = discoverBinaryColumns(handle, tableName);
+
     ObjectNode tableInfo = MAPPER.createObjectNode();
     ArrayNode columnsArray = MAPPER.createArrayNode();
     columns.forEach(columnsArray::add);
     tableInfo.set("columns", columnsArray);
+    ArrayNode binaryColumnsArray = MAPPER.createArrayNode();
+    binaryColumns.forEach(binaryColumnsArray::add);
+    tableInfo.set("binaryColumns", binaryColumnsArray);
     tableInfo.put("rowCount", rowCount);
     tablesMetadata.set(tableName, tableInfo);
 
@@ -400,8 +430,14 @@ public class DatabaseBackupRestore {
         List<String> columns = new ArrayList<>();
         tableMetaNode.get("columns").forEach(col -> columns.add(col.asText()));
 
+        Set<String> binaryColumns = new HashSet<>();
+        JsonNode binaryColumnsNode = tableMetaNode.get("binaryColumns");
+        if (binaryColumnsNode != null) {
+          binaryColumnsNode.forEach(col -> binaryColumns.add(col.asText()));
+        }
+
         LOG.info("Restoring table {}", tableName);
-        int rowCount = insertRowsStreaming(handle, tableName, columns, tais);
+        int rowCount = insertRowsStreaming(handle, tableName, columns, binaryColumns, tais);
         LOG.info("Restored table {} ({} rows)", tableName, rowCount);
       }
     }
@@ -445,7 +481,11 @@ public class DatabaseBackupRestore {
   }
 
   int insertRowsStreaming(
-      Handle handle, String tableName, List<String> columns, TarArchiveInputStream tais)
+      Handle handle,
+      String tableName,
+      List<String> columns,
+      Set<String> binaryColumns,
+      TarArchiveInputStream tais)
       throws IOException {
     String quotedColumns = quoteColumns(columns);
     String placeholders = columns.stream().map(c -> "?").collect(Collectors.joining(", "));
@@ -471,8 +511,8 @@ public class DatabaseBackupRestore {
           JsonNode val = row.get(col);
           if (val == null || val.isNull()) {
             batch.bind(idx, (Object) null);
-          } else if (val.isBinary()) {
-            batch.bind(idx, val.binaryValue());
+          } else if (binaryColumns.contains(col)) {
+            batch.bind(idx, Base64.getDecoder().decode(val.asText()));
           } else if (val.isNumber()) {
             if (val.isLong() || val.isInt() || val.isBigInteger()) {
               batch.bind(idx, val.longValue());
