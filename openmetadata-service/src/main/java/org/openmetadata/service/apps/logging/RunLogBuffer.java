@@ -50,9 +50,13 @@ public class RunLogBuffer {
   }
 
   public void append(String line) {
-    if (totalLineCount.getAndIncrement() >= maxLines) {
-      return;
-    }
+    int current;
+    do {
+      current = totalLineCount.get();
+      if (current >= maxLines) {
+        return;
+      }
+    } while (!totalLineCount.compareAndSet(current, current + 1));
     pending.offer(line);
   }
 

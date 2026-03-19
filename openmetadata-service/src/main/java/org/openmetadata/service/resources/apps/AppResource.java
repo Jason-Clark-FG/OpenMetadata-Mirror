@@ -622,10 +622,13 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
 
+    String logContent = logs.toString();
+    int lineCount =
+        logContent.isEmpty() ? 0 : (int) logContent.chars().filter(c -> c == '\n').count() + 1;
     Map<String, Object> result = new HashMap<>();
-    result.put("logs", logs.toString());
+    result.put("logs", logContent);
     result.put("servers", servers);
-    result.put("totalLines", logs.toString().isEmpty() ? 0 : logs.toString().split("\n").length);
+    result.put("totalLines", lineCount);
     return Response.ok(result).build();
   }
 
@@ -767,7 +770,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
                     // If there's an active buffer, stream live lines
                     RunLogBuffer activeBuffer =
-                        AppRunLogAppender.getBuffer(String.valueOf(runTimestamp));
+                        AppRunLogAppender.getBuffer(name, String.valueOf(runTimestamp));
                     if (activeBuffer != null
                         && (resolvedServerId == null
                             || activeBuffer.getServerId().equals(resolvedServerId))) {
@@ -798,7 +801,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
                       try {
                         while (!Thread.currentThread().isInterrupted()) {
-                          Thread.sleep(30000);
+                          Thread.sleep(5000);
                           output.write(": heartbeat\n\n".getBytes());
                           output.flush();
                         }
