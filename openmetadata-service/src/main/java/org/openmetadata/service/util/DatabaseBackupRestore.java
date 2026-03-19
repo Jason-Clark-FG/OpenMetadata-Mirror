@@ -1,5 +1,9 @@
 package org.openmetadata.service.util;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -10,11 +14,15 @@ import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.sql.Types;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -53,7 +61,8 @@ public class DatabaseBackupRestore {
     } else {
       sql =
           "SELECT table_name FROM information_schema.tables "
-              + "WHERE table_type = 'BASE TABLE' AND table_schema = 'public' ORDER BY table_name";
+              + "WHERE table_type = 'BASE TABLE' AND table_schema = current_schema() "
+              + "ORDER BY table_name";
       return handle.createQuery(sql).mapTo(String.class).list();
     }
   }
@@ -75,10 +84,38 @@ public class DatabaseBackupRestore {
     } else {
       sql =
           "SELECT column_name FROM information_schema.columns "
-              + "WHERE table_schema = 'public' AND table_name = :table "
+              + "WHERE table_schema = current_schema() AND table_name = :table "
               + "AND (is_generated = 'NEVER' OR is_generated IS NULL) "
               + "AND (column_default NOT LIKE 'nextval%' OR column_default IS NULL) "
               + "ORDER BY ordinal_position";
+      return handle.createQuery(sql).bind("table", tableName).mapTo(String.class).list();
+    }
+  }
+
+  List<String> discoverPrimaryKeyColumns(Handle handle, String tableName) {
+    String sql;
+    if (connectionType == ConnectionType.MYSQL) {
+      sql =
+          "SELECT kcu.column_name FROM information_schema.key_column_usage kcu "
+              + "WHERE kcu.table_schema = :db AND kcu.table_name = :table "
+              + "AND kcu.constraint_name = 'PRIMARY' "
+              + "ORDER BY kcu.ordinal_position";
+      return handle
+          .createQuery(sql)
+          .bind("db", databaseName)
+          .bind("table", tableName)
+          .mapTo(String.class)
+          .list();
+    } else {
+      sql =
+          "SELECT kcu.column_name "
+              + "FROM information_schema.table_constraints tc "
+              + "JOIN information_schema.key_column_usage kcu "
+              + "ON tc.constraint_name = kcu.constraint_name "
+              + "AND tc.table_schema = kcu.table_schema "
+              + "WHERE tc.table_schema = current_schema() AND tc.table_name = :table "
+              + "AND tc.constraint_type = 'PRIMARY KEY' "
+              + "ORDER BY kcu.ordinal_position";
       return handle.createQuery(sql).bind("table", tableName).mapTo(String.class).list();
     }
   }
@@ -118,11 +155,16 @@ public class DatabaseBackupRestore {
 
       jdbi.useHandle(
           handle -> {
-            List<String> tables = discoverTables(handle);
-            LOG.info("Discovered {} tables", tables.size());
+            beginRepeatableReadTransaction(handle);
+            try {
+              List<String> tables = discoverTables(handle);
+              LOG.info("Discovered {} tables", tables.size());
 
-            for (String tableName : tables) {
-              backupTable(handle, tableName, taos, tablesMetadata);
+              for (String tableName : tables) {
+                backupTable(handle, tableName, taos, tablesMetadata);
+              }
+            } finally {
+              commitTransaction(handle);
             }
           });
 
@@ -138,6 +180,19 @@ public class DatabaseBackupRestore {
     }
   }
 
+  private void beginRepeatableReadTransaction(Handle handle) {
+    if (connectionType == ConnectionType.MYSQL) {
+      handle.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+      handle.execute("START TRANSACTION");
+    } else {
+      handle.execute("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+    }
+  }
+
+  private void commitTransaction(Handle handle) {
+    handle.execute("COMMIT");
+  }
+
   private void backupTable(
       Handle handle, String tableName, TarArchiveOutputStream taos, ObjectNode tablesMetadata)
       throws IOException {
@@ -150,66 +205,110 @@ public class DatabaseBackupRestore {
     String quotedColumns = quoteColumns(columns);
     String quotedTable = quoteIdentifier(tableName);
 
-    int offset = 0;
-    ArrayNode allRows = MAPPER.createArrayNode();
+    List<String> pkColumns = discoverPrimaryKeyColumns(handle, tableName);
+    String orderByClause = buildOrderByClause(pkColumns, columns);
 
-    while (true) {
-      String sql =
-          String.format(
-              "SELECT %s FROM %s LIMIT %d OFFSET %d",
-              quotedColumns, quotedTable, BATCH_SIZE, offset);
-      List<Map<String, Object>> rows = handle.createQuery(sql).mapToMap().list();
-
-      for (Map<String, Object> row : rows) {
-        ObjectNode rowNode = MAPPER.createObjectNode();
-        for (String col : columns) {
-          Object val = row.get(col);
-          if (val == null) {
-            rowNode.putNull(col);
-          } else if (val instanceof Number number) {
-            if (val instanceof Long l) {
-              rowNode.put(col, l);
-            } else if (val instanceof Integer i) {
-              rowNode.put(col, i);
-            } else if (val instanceof Double d) {
-              rowNode.put(col, d);
-            } else if (val instanceof Float f) {
-              rowNode.put(col, f);
-            } else {
-              rowNode.put(col, number.longValue());
-            }
-          } else if (val instanceof Boolean b) {
-            rowNode.put(col, b);
-          } else if (val instanceof byte[] bytes) {
-            rowNode.put(col, bytes);
-          } else {
-            rowNode.put(col, val.toString());
-          }
-        }
-        allRows.add(rowNode);
-      }
-
-      if (rows.size() < BATCH_SIZE) {
-        break;
-      }
-      offset += BATCH_SIZE;
+    Path tempFile = Files.createTempFile("backup_" + tableName + "_", ".json");
+    int rowCount;
+    try {
+      rowCount =
+          writeTableToTempFile(
+              handle, quotedColumns, quotedTable, orderByClause, columns, tempFile);
+      addTempFileToTar(taos, tempFile, "tables/" + tableName + ".json");
+    } finally {
+      Files.deleteIfExists(tempFile);
     }
-
-    byte[] tableData = MAPPER.writeValueAsBytes(allRows);
-    TarArchiveEntry entry = new TarArchiveEntry("tables/" + tableName + ".json");
-    entry.setSize(tableData.length);
-    taos.putArchiveEntry(entry);
-    taos.write(tableData);
-    taos.closeArchiveEntry();
 
     ObjectNode tableInfo = MAPPER.createObjectNode();
     ArrayNode columnsArray = MAPPER.createArrayNode();
     columns.forEach(columnsArray::add);
     tableInfo.set("columns", columnsArray);
-    tableInfo.put("rowCount", allRows.size());
+    tableInfo.put("rowCount", rowCount);
     tablesMetadata.set(tableName, tableInfo);
 
-    LOG.info("Backed up table {} ({} rows, {} columns)", tableName, allRows.size(), columns.size());
+    LOG.info("Backed up table {} ({} rows, {} columns)", tableName, rowCount, columns.size());
+  }
+
+  private String buildOrderByClause(List<String> pkColumns, List<String> allColumns) {
+    List<String> orderColumns = pkColumns.isEmpty() ? List.of(allColumns.get(0)) : pkColumns;
+    return " ORDER BY "
+        + orderColumns.stream().map(this::quoteIdentifier).collect(Collectors.joining(", "));
+  }
+
+  private int writeTableToTempFile(
+      Handle handle,
+      String quotedColumns,
+      String quotedTable,
+      String orderByClause,
+      List<String> columns,
+      Path tempFile)
+      throws IOException {
+    int rowCount = 0;
+    try (OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile.toFile()));
+        JsonGenerator gen = new JsonFactory().createGenerator(os)) {
+      gen.setCodec(MAPPER);
+      gen.writeStartArray();
+
+      int offset = 0;
+      while (true) {
+        String sql =
+            String.format(
+                "SELECT %s FROM %s%s LIMIT %d OFFSET %d",
+                quotedColumns, quotedTable, orderByClause, BATCH_SIZE, offset);
+        List<Map<String, Object>> rows = handle.createQuery(sql).mapToMap().list();
+
+        for (Map<String, Object> row : rows) {
+          gen.writeStartObject();
+          for (String col : columns) {
+            Object val = row.get(col);
+            if (val == null) {
+              gen.writeNullField(col);
+            } else if (val instanceof Number number) {
+              if (number instanceof Long l) {
+                gen.writeNumberField(col, l);
+              } else if (number instanceof Integer i) {
+                gen.writeNumberField(col, i);
+              } else if (number instanceof Double d) {
+                gen.writeNumberField(col, d);
+              } else if (number instanceof Float f) {
+                gen.writeNumberField(col, f);
+              } else {
+                gen.writeNumberField(col, number.longValue());
+              }
+            } else if (val instanceof Boolean b) {
+              gen.writeBooleanField(col, b);
+            } else if (val instanceof byte[] bytes) {
+              gen.writeBinaryField(col, bytes);
+            } else {
+              gen.writeStringField(col, val.toString());
+            }
+          }
+          gen.writeEndObject();
+          rowCount++;
+        }
+
+        if (rows.size() < BATCH_SIZE) {
+          break;
+        }
+        offset += BATCH_SIZE;
+      }
+
+      gen.writeEndArray();
+    }
+    return rowCount;
+  }
+
+  private void addTempFileToTar(TarArchiveOutputStream taos, Path tempFile, String entryName)
+      throws IOException {
+    long fileSize = Files.size(tempFile);
+    TarArchiveEntry entry = new TarArchiveEntry(entryName);
+    entry.setSize(fileSize);
+    taos.putArchiveEntry(entry);
+
+    try (FileInputStream fis = new FileInputStream(tempFile.toFile())) {
+      fis.transferTo(taos);
+    }
+    taos.closeArchiveEntry();
   }
 
   public void restore(String backupPath, boolean force) throws IOException {
@@ -232,6 +331,9 @@ public class DatabaseBackupRestore {
 
     ObjectNode tablesMetadata = (ObjectNode) metadata.get("tables");
 
+    Set<String> validTables = new HashSet<>();
+    tablesMetadata.fieldNames().forEachRemaining(validTables::add);
+
     jdbi.useHandle(
         handle -> {
           if (force) {
@@ -239,15 +341,15 @@ public class DatabaseBackupRestore {
           } else {
             validateTablesEmpty(handle, tablesMetadata);
           }
-        });
 
-    try {
-      jdbi.useHandle(this::disableForeignKeyChecks);
-      restoreTablesFromArchive(backupPath, tablesMetadata);
-      LOG.info("Restore completed successfully");
-    } finally {
-      jdbi.useHandle(this::enableForeignKeyChecks);
-    }
+          disableForeignKeyChecks(handle);
+          try {
+            restoreTablesFromArchive(handle, backupPath, tablesMetadata, validTables);
+            LOG.info("Restore completed successfully");
+          } finally {
+            enableForeignKeyChecks(handle);
+          }
+        });
   }
 
   public static ObjectNode readBackupMetadata(String backupPath) throws IOException {
@@ -267,7 +369,8 @@ public class DatabaseBackupRestore {
     throw new IOException("metadata.json not found in backup archive");
   }
 
-  private void restoreTablesFromArchive(String backupPath, ObjectNode tablesMetadata)
+  private void restoreTablesFromArchive(
+      Handle handle, String backupPath, ObjectNode tablesMetadata, Set<String> validTables)
       throws IOException {
     try (FileInputStream fis = new FileInputStream(backupPath);
         BufferedInputStream bis = new BufferedInputStream(fis);
@@ -282,6 +385,12 @@ public class DatabaseBackupRestore {
         }
 
         String tableName = name.substring("tables/".length(), name.length() - ".json".length());
+
+        if (!validTables.contains(tableName)) {
+          LOG.warn("Table {} from archive not in metadata, skipping", tableName);
+          continue;
+        }
+
         JsonNode tableMetaNode = tablesMetadata.get(tableName);
         if (tableMetaNode == null) {
           LOG.warn("No metadata found for table {}, skipping", tableName);
@@ -291,16 +400,9 @@ public class DatabaseBackupRestore {
         List<String> columns = new ArrayList<>();
         tableMetaNode.get("columns").forEach(col -> columns.add(col.asText()));
 
-        byte[] content = tais.readAllBytes();
-        ArrayNode rows = (ArrayNode) MAPPER.readTree(content);
-
-        if (rows.isEmpty()) {
-          LOG.info("Table {} has no rows, skipping", tableName);
-          continue;
-        }
-
-        LOG.info("Restoring table {} ({} rows)", tableName, rows.size());
-        jdbi.useHandle(handle -> insertRows(handle, tableName, columns, rows));
+        LOG.info("Restoring table {}", tableName);
+        int rowCount = insertRowsStreaming(handle, tableName, columns, tais);
+        LOG.info("Restored table {} ({} rows)", tableName, rowCount);
       }
     }
   }
@@ -342,40 +444,63 @@ public class DatabaseBackupRestore {
     }
   }
 
-  void insertRows(Handle handle, String tableName, List<String> columns, ArrayNode rows) {
+  int insertRowsStreaming(
+      Handle handle, String tableName, List<String> columns, TarArchiveInputStream tais)
+      throws IOException {
     String quotedColumns = quoteColumns(columns);
-    String placeholders = columns.stream().map(c -> ":" + c).collect(Collectors.joining(", "));
+    String placeholders = columns.stream().map(c -> "?").collect(Collectors.joining(", "));
     String sql =
         String.format(
             "INSERT INTO %s (%s) VALUES (%s)",
             quoteIdentifier(tableName), quotedColumns, placeholders);
 
-    int totalRows = rows.size();
-    for (int start = 0; start < totalRows; start += BATCH_SIZE) {
-      int end = Math.min(start + BATCH_SIZE, totalRows);
+    int totalRows = 0;
+    try (JsonParser parser = new JsonFactory().createParser(tais)) {
+      JsonToken token = parser.nextToken();
+      if (token != JsonToken.START_ARRAY) {
+        return 0;
+      }
+
       var batch = handle.prepareBatch(sql);
-      for (int i = start; i < end; i++) {
-        JsonNode row = rows.get(i);
-        for (String col : columns) {
+      int batchCount = 0;
+
+      while (parser.nextToken() != JsonToken.END_ARRAY) {
+        ObjectNode row = MAPPER.readTree(parser);
+        for (int idx = 0; idx < columns.size(); idx++) {
+          String col = columns.get(idx);
           JsonNode val = row.get(col);
           if (val == null || val.isNull()) {
-            batch.bindNull(col, Types.VARCHAR);
+            batch.bind(idx, (Object) null);
+          } else if (val.isBinary()) {
+            batch.bind(idx, val.binaryValue());
           } else if (val.isNumber()) {
             if (val.isLong() || val.isInt() || val.isBigInteger()) {
-              batch.bind(col, val.longValue());
+              batch.bind(idx, val.longValue());
             } else {
-              batch.bind(col, val.doubleValue());
+              batch.bind(idx, val.doubleValue());
             }
           } else if (val.isBoolean()) {
-            batch.bind(col, val.booleanValue());
+            batch.bind(idx, val.booleanValue());
           } else {
-            batch.bind(col, val.asText());
+            batch.bind(idx, val.asText());
           }
         }
         batch.add();
+        batchCount++;
+        totalRows++;
+
+        if (batchCount >= BATCH_SIZE) {
+          batch.execute();
+          batch = handle.prepareBatch(sql);
+          batchCount = 0;
+        }
       }
-      batch.execute();
+
+      if (batchCount > 0) {
+        batch.execute();
+      }
     }
+    return totalRows;
   }
 
   private void disableForeignKeyChecks(Handle handle) {
@@ -396,9 +521,9 @@ public class DatabaseBackupRestore {
 
   String quoteIdentifier(String identifier) {
     if (connectionType == ConnectionType.MYSQL) {
-      return "`" + identifier + "`";
+      return "`" + identifier.replace("`", "``") + "`";
     }
-    return "\"" + identifier + "\"";
+    return "\"" + identifier.replace("\"", "\"\"") + "\"";
   }
 
   String quoteColumns(List<String> columns) {
