@@ -767,7 +767,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
                     // If there's an active buffer, stream live lines
                     RunLogBuffer activeBuffer =
-                        AppRunLogAppender.getBuffer(String.valueOf(runTimestamp));
+                        AppRunLogAppender.getBuffer(name, String.valueOf(runTimestamp));
                     if (activeBuffer != null
                         && (resolvedServerId == null
                             || activeBuffer.getServerId().equals(resolvedServerId))) {
