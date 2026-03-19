@@ -20,12 +20,15 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.ApplicationHandler;
+import org.openmetadata.service.apps.bundles.searchIndex.distributed.ServerIdentityResolver;
+import org.openmetadata.service.apps.logging.AppRunLogAppender;
 import org.openmetadata.service.jdbi3.AppRepository;
 import org.openmetadata.service.socket.WebSocketManager;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.quartz.JobListener;
+import org.slf4j.MDC;
 
 @Slf4j
 public class OmAppJobListener implements JobListener {
@@ -38,6 +41,7 @@ public class OmAppJobListener implements JobListener {
   public static final String JOB_LISTENER_NAME = "OM_JOB_LISTENER";
   public static final String SERVICES_FIELD = "services";
   public static final String APP_ID = "appId";
+  private static final String APP_RUN_LOG_ID = "appRunLogId";
 
   protected OmAppJobListener() {
     this.repository = new AppRepository();
@@ -104,6 +108,16 @@ public class OmAppJobListener implements JobListener {
       // Put the Context in the Job Data Map
       dataMap.put(SCHEDULED_APP_RUN_EXTENSION, JsonUtils.pojoToJson(runRecord));
       dataMap.put(APP_CONFIG, JsonUtils.pojoToJson(appConfig));
+
+      // Start log capture via MDC-based Logback appender
+      String appRunId = String.valueOf(runRecord.getTimestamp());
+      String serverId = ServerIdentityResolver.getInstance().getServerId();
+      MDC.put(AppRunLogAppender.MDC_APP_RUN_ID, appRunId);
+      MDC.put(AppRunLogAppender.MDC_APP_NAME, appName);
+      MDC.put(AppRunLogAppender.MDC_SERVER_ID, serverId);
+      MDC.put(AppRunLogAppender.MDC_APP_ID, jobApp.getId().toString());
+      AppRunLogAppender.startCapture(appRunId, jobApp.getId().toString(), appName, serverId);
+      dataMap.put(APP_RUN_LOG_ID, appRunId);
 
       // Insert new Record Run
       pushApplicationStatusUpdates(jobExecutionContext, runRecord, update);
@@ -179,6 +193,17 @@ public class OmAppJobListener implements JobListener {
         WebSocketManager.getInstance()
             .broadCastMessageToAll(webSocketChannelName, JsonUtils.pojoToJson(runRecord));
       }
+
+      // Stop log capture and clear MDC
+      String appRunLogId =
+          (String) jobExecutionContext.getJobDetail().getJobDataMap().get(APP_RUN_LOG_ID);
+      if (appRunLogId != null) {
+        AppRunLogAppender.stopCapture(appRunLogId);
+      }
+      MDC.remove(AppRunLogAppender.MDC_APP_RUN_ID);
+      MDC.remove(AppRunLogAppender.MDC_APP_NAME);
+      MDC.remove(AppRunLogAppender.MDC_SERVER_ID);
+      MDC.remove(AppRunLogAppender.MDC_APP_ID);
 
       // Update App Run Record
       pushApplicationStatusUpdates(jobExecutionContext, runRecord, true);

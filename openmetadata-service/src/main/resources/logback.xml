@@ -23,8 +23,14 @@
     <logger name="org.openmetadata.service.apps.bundles.searchIndex" level="INFO" />
     <!-- Slow request diagnostics: set to WARN to enable, OFF to disable -->
     <logger name="org.openmetadata.slowrequest" level="${SLOW_REQUEST_LOG_LEVEL:-OFF}" />
+    <appender name="APP_RUN_LOG" class="org.openmetadata.service.apps.logging.AppRunLogAppender">
+        <logDirectory>${APP_RUN_LOG_DIR:-./logs/app-runs}</logDirectory>
+        <maxLinesPerRun>${APP_RUN_LOG_MAX_LINES:-100000}</maxLinesPerRun>
+        <maxRunsPerApp>${APP_RUN_LOG_MAX_RUNS:-5}</maxRunsPerApp>
+    </appender>
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="STDOUT" />
         <appender-ref ref="file"/>
+        <appender-ref ref="APP_RUN_LOG"/>
     </root>
 </configuration>

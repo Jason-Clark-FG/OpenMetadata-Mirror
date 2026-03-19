@@ -38,7 +38,10 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.core.UriInfo;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -70,6 +73,8 @@ import org.openmetadata.service.OpenMetadataApplicationConfig;
 import org.openmetadata.service.apps.AppException;
 import org.openmetadata.service.apps.ApplicationContext;
 import org.openmetadata.service.apps.ApplicationHandler;
+import org.openmetadata.service.apps.logging.AppRunLogAppender;
+import org.openmetadata.service.apps.logging.RunLogBuffer;
 import org.openmetadata.service.apps.scheduler.AppScheduler;
 import org.openmetadata.service.clients.pipeline.PipelineServiceClientFactory;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
@@ -557,6 +562,139 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
     throw new BadRequestException("Failed to Get Logs for the Installation.");
+  }
+
+  @GET
+  @Path("/name/{name}/runs/{runTimestamp}/logs")
+  @Operation(
+      operationId = "getAppRunTextLogs",
+      summary = "Get text logs for an app run",
+      description = "Retrieve captured text logs for a specific internal app run.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Log text with metadata",
+            content = @Content(mediaType = "application/json")),
+        @ApiResponse(responseCode = "404", description = "Log file not found")
+      })
+  public Response getAppRunTextLogs(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @Parameter(description = "Run timestamp", schema = @Schema(type = "number"))
+          @PathParam("runTimestamp")
+          Long runTimestamp,
+      @Parameter(description = "Server ID filter", schema = @Schema(type = "string"))
+          @QueryParam("serverId")
+          String serverId) {
+    repository.getByName(uriInfo, name, repository.getFields("id"));
+
+    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    if (serverId == null && !servers.isEmpty()) {
+      serverId = servers.get(0);
+    }
+
+    StringBuilder logs = new StringBuilder();
+    if (serverId != null) {
+      java.nio.file.Path logFile = AppRunLogAppender.getLogFilePath(name, runTimestamp, serverId);
+      if (Files.exists(logFile)) {
+        try {
+          logs.append(Files.readString(logFile));
+        } catch (IOException e) {
+          throw new InternalServerErrorException("Failed to read log file: " + e.getMessage());
+        }
+      }
+    }
+
+    RunLogBuffer activeBuffer = AppRunLogAppender.getBuffer(String.valueOf(runTimestamp));
+    if (activeBuffer != null && (serverId == null || activeBuffer.getServerId().equals(serverId))) {
+      List<String> pending = activeBuffer.getPendingLines();
+      if (!pending.isEmpty()) {
+        if (logs.length() > 0 && !logs.toString().endsWith("\n")) {
+          logs.append("\n");
+        }
+        logs.append(String.join("\n", pending));
+      }
+    }
+
+    Map<String, Object> result = new HashMap<>();
+    result.put("logs", logs.toString());
+    result.put("servers", servers);
+    result.put("totalLines", logs.toString().isEmpty() ? 0 : logs.toString().split("\n").length);
+    return Response.ok(result).build();
+  }
+
+  @GET
+  @Path("/name/{name}/runs/{runTimestamp}/logs/download")
+  @Produces("text/plain")
+  @Operation(
+      operationId = "downloadAppRunTextLogs",
+      summary = "Download text logs for an app run",
+      description = "Download captured text logs as a plain text file.",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "Log file content"),
+        @ApiResponse(responseCode = "404", description = "Log file not found")
+      })
+  public Response downloadAppRunTextLogs(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @Parameter(description = "Run timestamp", schema = @Schema(type = "number"))
+          @PathParam("runTimestamp")
+          Long runTimestamp,
+      @Parameter(description = "Server ID filter", schema = @Schema(type = "string"))
+          @QueryParam("serverId")
+          String serverId) {
+    repository.getByName(uriInfo, name, repository.getFields("id"));
+
+    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    if (serverId == null && !servers.isEmpty()) {
+      serverId = servers.get(0);
+    }
+    if (serverId == null) {
+      throw new EntityNotFoundException("No log files found for this run");
+    }
+
+    java.nio.file.Path logFile = AppRunLogAppender.getLogFilePath(name, runTimestamp, serverId);
+    if (!Files.exists(logFile)) {
+      throw new EntityNotFoundException("Log file not found");
+    }
+
+    String fileName = name + "-" + runTimestamp + "-" + serverId + ".log";
+    final java.nio.file.Path filePath = logFile;
+    return Response.ok((StreamingOutput) output -> Files.copy(filePath, output))
+        .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
+        .build();
+  }
+
+  @GET
+  @Path("/name/{name}/runs/{runTimestamp}/logs/servers")
+  @Operation(
+      operationId = "getAppRunLogServers",
+      summary = "List servers that have logs for an app run",
+      description = "Returns a list of server IDs that captured logs for the given run.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of server IDs",
+            content = @Content(mediaType = "application/json"))
+      })
+  public Response getAppRunLogServers(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
+          @PathParam("name")
+          String name,
+      @Parameter(description = "Run timestamp", schema = @Schema(type = "number"))
+          @PathParam("runTimestamp")
+          Long runTimestamp) {
+    repository.getByName(uriInfo, name, repository.getFields("id"));
+    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    return Response.ok(Map.of("servers", servers)).build();
   }
 
   @GET
