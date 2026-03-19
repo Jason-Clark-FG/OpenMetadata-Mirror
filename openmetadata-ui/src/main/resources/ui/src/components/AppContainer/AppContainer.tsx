@@ -25,7 +25,6 @@ import i18n from '../../utils/i18next/LocalUtil';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import AppSidebar from '../AppSidebar/AppSidebar.component';
 import { LimitBanner } from '../common/LimitBanner/LimitBanner';
-import MarketplaceNavBar from '../DataMarketplace/MarketplaceNavBar/MarketplaceNavBar.component';
 import NavBar from '../NavBar/NavBar';
 import applicationsClassBase from '../Settings/Applications/AppDetails/ApplicationsClassBase';
 import './app-container.less';
@@ -46,7 +45,7 @@ const AppContainer = () => {
 
   const renderNavBar = () => {
     if (isNewLayoutRoute(location.pathname)) {
-      return <MarketplaceNavBar />;
+      return null;
     }
 
     return <NavBar />;
