@@ -173,7 +173,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
             + "'drop-create', 'changelog', 'migrate', 'migrate-secrets', 'reindex', 'reembed', 'reindex-rdf', 'reindexdi', 'deploy-pipelines', "
             + "'dbServiceCleanup', 'relationshipCleanup', 'tagUsageCleanup', 'drop-indexes', 'remove-security-config', 'create-indexes', "
             + "'setOpenMetadataUrl', 'configureEmailSettings', 'get-security-config', 'update-security-config', 'install-app', 'delete-app', 'create-user', 'reset-password', "
-            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens', 'backup', 'restore'");
+            + "'syncAlertOffset', 'analyze-tables', 'cleanup-flowable-history', 'regenerate-bot-tokens', 'backup', 'restore', 'test-migration'");
     LOG.info(
         "Use 'reindex --auto-tune' for automatic performance optimization based on cluster capabilities");
     LOG.info(
@@ -2654,6 +2654,31 @@ public class OpenMetadataOperations implements Callable<Integer> {
       return 0;
     } catch (Exception e) {
       LOG.error("Restore failed", e);
+      return 1;
+    }
+  }
+
+  @Command(
+      name = "test-migration",
+      description =
+          "Test database migrations by restoring a backup and running pending migrations with before/after validation.")
+  public Integer testMigration(
+      @Option(
+              names = {"--backup-path"},
+              required = true,
+              description =
+                  "Path to the backup .tar.gz file to restore and test migrations against")
+          String backupPath) {
+    try {
+      parseConfig();
+      ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
+      DatasourceConfig.initialize(connType.label);
+      MigrationTestRunner runner =
+          new MigrationTestRunner(
+              jdbi, connType, config, nativeSQLScriptRootPath, extensionSQLScriptRootPath);
+      return runner.run(backupPath);
+    } catch (Exception e) {
+      LOG.error("Migration test failed", e);
       return 1;
     }
   }
