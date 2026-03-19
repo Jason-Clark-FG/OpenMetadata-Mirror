@@ -215,7 +215,7 @@ public class DatabaseBackupRestore {
   public void restore(String backupPath, boolean force) throws IOException {
     LOG.info("Starting database restore from {}", backupPath);
 
-    ObjectNode metadata = readMetadata(backupPath);
+    ObjectNode metadata = readBackupMetadata(backupPath);
     String backupDbType = metadata.get("databaseType").asText();
     if (!backupDbType.equals(connectionType.name())) {
       throw new IllegalStateException(
@@ -250,7 +250,7 @@ public class DatabaseBackupRestore {
     }
   }
 
-  private ObjectNode readMetadata(String backupPath) throws IOException {
+  public static ObjectNode readBackupMetadata(String backupPath) throws IOException {
     try (FileInputStream fis = new FileInputStream(backupPath);
         BufferedInputStream bis = new BufferedInputStream(fis);
         GzipCompressorInputStream gzis = new GzipCompressorInputStream(bis);

@@ -46,7 +46,7 @@ public class MigrationWorkflow {
   public static final String SUCCESS_MSG = "Success";
   public static final String FAILED_MSG = "Failed due to : ";
   public static final String CURRENT = "Current";
-  private List<MigrationProcess> migrations;
+  @Getter private List<MigrationProcess> migrations;
   private final String nativeSQLScriptRootPath;
   private final ConnectionType connectionType;
   private final String extensionSQLScriptRootPath;
