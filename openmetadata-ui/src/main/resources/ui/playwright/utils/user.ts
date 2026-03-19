@@ -616,9 +616,13 @@ export const checkStewardServicesPermissions = async (page: Page) => {
   // Perform search actions
   await page.click('[data-testid="search-dropdown-Data Assets"]');
 
-  await page.getByTestId('drop-down-menu').getByTestId('loader').first().waitFor({
-    state: 'detached',
-  });
+  await page
+    .getByTestId('drop-down-menu')
+    .getByTestId('loader')
+    .first()
+    .waitFor({
+      state: 'detached',
+    });
 
   const dataAssetDropdownRequest = page.waitForResponse(
     '/api/v1/search/aggregate?index=dataAsset&field=entityType.keyword*'
@@ -642,7 +646,6 @@ export const checkStewardServicesPermissions = async (page: Page) => {
 
   // Click on the entity link in the drawer title
   await page.click('.summary-panel-container [data-testid="entity-link"]');
-
 };
 
 export const checkStewardPermissions = async (page: Page) => {
@@ -856,9 +859,7 @@ export const settingPageOperationPermissionCheck = async (page: Page) => {
   await redirectToHomePage(page);
 
   for (const id of Object.values(SETTING_PAGE_ENTITY_PERMISSION)) {
-    const apiResponse = id?.api
-      ? page.waitForResponse(id.api)
-      : undefined;
+    const apiResponse = id?.api ? page.waitForResponse(id.api) : undefined;
     // Navigate to settings and respective tab page
     await settingClick(page, id.testid as SettingOptionsType);
     if (apiResponse) {

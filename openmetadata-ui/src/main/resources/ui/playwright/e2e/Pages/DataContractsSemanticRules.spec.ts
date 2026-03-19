@@ -46,7 +46,6 @@ import {
   updateDescription,
   updateDisplayNameForEntity,
   updateOwner,
-
   waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import { test } from '../fixtures/pages';
@@ -1555,19 +1554,19 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await saveAndTriggerDataContractValidation(page, true);
 
-        // After the reload inside saveAndTriggerDataContractValidation, the
-        // version button in the header reflects the entity's current version.
-        // Read it from the UI so the rule always matches regardless of how many
-        // bumps session consolidation produced.
-        const actualVersionText = await page
-          .getByTestId('version-button')
-          .textContent();
-        // eslint-disable-next-line playwright/prefer-web-first-assertions
-        expect(
-          actualVersionText,
-          'Could not read current entity version from version-button'
-        ).toBeTruthy();
-        const actualVersion = actualVersionText!.trim();
+      // After the reload inside saveAndTriggerDataContractValidation, the
+      // version button in the header reflects the entity's current version.
+      // Read it from the UI so the rule always matches regardless of how many
+      // bumps session consolidation produced.
+      const actualVersionText = await page
+        .getByTestId('version-button')
+        .textContent();
+      // eslint-disable-next-line playwright/prefer-web-first-assertions
+      expect(
+        actualVersionText,
+        'Could not read current entity version from version-button'
+      ).toBeTruthy();
+      const actualVersion = actualVersionText!.trim();
 
       // Edit the contract to set the rule to the actual entity version, then
       // re-validate to confirm the IS check now passes.
@@ -1672,24 +1671,24 @@ test.describe('Data Contracts Semantics Rule Version', () => {
 
       await saveAndTriggerDataContractValidation(page, true);
 
-        // After the reload inside saveAndTriggerDataContractValidation, the
-        // version button in the header reflects the entity's current version.
-        // The next step assigns a domain which bumps the version by 0.1, so
-        // set the IS NOT rule to that future version — when the domain is
-        // assigned the entity version will equal the rule value, causing the
-        // IS NOT check to fail as expected.
-          const currentVersionText = await page
-            .getByTestId('version-button')
-            .textContent();
-          // eslint-disable-next-line playwright/prefer-web-first-assertions
-          expect(
-            currentVersionText,
-            'Could not read current entity version from version-button'
-          ).toBeTruthy();
-          const currentVersion = currentVersionText!;
-          const domainBumpedVersion = (
-            Math.round((Number.parseFloat(currentVersion) + 0.1) * 10) / 10
-          ).toFixed(1);
+      // After the reload inside saveAndTriggerDataContractValidation, the
+      // version button in the header reflects the entity's current version.
+      // The next step assigns a domain which bumps the version by 0.1, so
+      // set the IS NOT rule to that future version — when the domain is
+      // assigned the entity version will equal the rule value, causing the
+      // IS NOT check to fail as expected.
+      const currentVersionText = await page
+        .getByTestId('version-button')
+        .textContent();
+      // eslint-disable-next-line playwright/prefer-web-first-assertions
+      expect(
+        currentVersionText,
+        'Could not read current entity version from version-button'
+      ).toBeTruthy();
+      const currentVersion = currentVersionText!;
+      const domainBumpedVersion = (
+        Math.round((Number.parseFloat(currentVersion) + 0.1) * 10) / 10
+      ).toFixed(1);
 
       // Edit the contract to target the post-domain version, then re-validate
       // to confirm the IS NOT check still passes at the current version.

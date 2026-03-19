@@ -37,7 +37,11 @@ import {
   toastNotification,
   uuid,
 } from './common';
-import { getEntityDisplayName, getTextFromHtmlString, waitForAllLoadersToDisappear } from './entity';
+import {
+  getEntityDisplayName,
+  getTextFromHtmlString,
+  waitForAllLoadersToDisappear,
+} from './entity';
 import { validateFormNameFieldInput } from './form';
 import {
   addFilterWithUsersListInput,
@@ -1172,9 +1176,7 @@ export const checkRecentEventDetails = async ({
       // Open collapse
       await page.getByTestId(`event-collapse-${event.data[0].id}`).click();
 
-      await page
-        .getByTestId(`event-details-${event.data[0].id}`)
-        .waitFor();
+      await page.getByTestId(`event-details-${event.data[0].id}`).waitFor();
 
       // Check if table id is present in event details
       await expect(
