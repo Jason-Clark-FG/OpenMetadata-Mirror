@@ -8,10 +8,12 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -172,6 +174,19 @@ public class MigrationWorkflow {
     List<MigrationFile> applyMigrations;
     if (!nullOrEmpty(executedMigrations) && !forceMigrations) {
       applyMigrations = getMigrationsToApply(executedMigrations, availableMigrations);
+      if (currentMaxMigrationVersion.isPresent()) {
+        String maxVersion = currentMaxMigrationVersion.get();
+        Optional<MigrationFile> currentVersionFile =
+            availableMigrations.stream()
+                .filter(f -> !f.isExtension && f.version.equals(maxVersion))
+                .findFirst();
+        if (currentVersionFile.isPresent()) {
+          MigrationFile reprocessFile = currentVersionFile.get();
+          reprocessFile.setReprocessing(true);
+          applyMigrations = new ArrayList<>(applyMigrations);
+          applyMigrations.addFirst(reprocessFile);
+        }
+      }
     } else {
       applyMigrations = availableMigrations;
     }
@@ -246,46 +261,42 @@ public class MigrationWorkflow {
     return numbers;
   }
 
+  static boolean sameOrHigherMajorMinor(String version, String maxVersion) {
+    int[] v = parseVersion(version);
+    int[] max = parseVersion(maxVersion);
+    if (v[0] != max[0]) return v[0] > max[0];
+    return v[1] >= max[1];
+  }
+
   /**
    * We'll take the max from native migrations and double-check if there's any extension migration
    * pending to be applied
    */
   public List<MigrationFile> getMigrationsToApply(
       List<String> executedMigrations, List<MigrationFile> availableMigrations) {
+    Set<String> executedSet = new HashSet<>(executedMigrations);
     List<MigrationFile> migrationsToApply = new ArrayList<>();
-    List<MigrationFile> nativeMigrationsToApply =
-        processNativeMigrations(executedMigrations, availableMigrations);
-    List<MigrationFile> extensionMigrationsToApply =
-        processExtensionMigrations(executedMigrations, availableMigrations);
-
-    migrationsToApply.addAll(nativeMigrationsToApply);
-    migrationsToApply.addAll(extensionMigrationsToApply);
+    migrationsToApply.addAll(processNativeMigrations(executedSet, availableMigrations));
+    migrationsToApply.addAll(processExtensionMigrations(executedSet, availableMigrations));
     return migrationsToApply;
   }
 
   private List<MigrationFile> processNativeMigrations(
-      List<String> executedMigrations, List<MigrationFile> availableMigrations) {
-    List<MigrationFile> availableNativeMigrations =
-        availableMigrations.stream().filter(migration -> !migration.isExtension).toList();
+      Set<String> executedMigrations, List<MigrationFile> availableMigrations) {
     Optional<String> maxMigration =
         executedMigrations.stream().max(MigrationWorkflow::compareVersions);
-    if (maxMigration.isPresent()) {
-      List<MigrationFile> result = new ArrayList<>();
-      for (MigrationFile migration : availableNativeMigrations) {
-        if (migration.biggerThan(maxMigration.get())) {
-          result.add(migration);
-        } else if (compareVersions(migration.version, maxMigration.get()) == 0) {
-          migration.setReprocessing(true);
-          result.add(migration);
-        }
-      }
-      return result;
-    }
-    return availableNativeMigrations;
+    return availableMigrations.stream()
+        .filter(migration -> !migration.isExtension)
+        .filter(migration -> !executedMigrations.contains(migration.version))
+        .filter(
+            migration ->
+                maxMigration.isEmpty()
+                    || sameOrHigherMajorMinor(migration.version, maxMigration.get()))
+        .toList();
   }
 
   private List<MigrationFile> processExtensionMigrations(
-      List<String> executedMigrations, List<MigrationFile> availableMigrations) {
+      Set<String> executedMigrations, List<MigrationFile> availableMigrations) {
     return availableMigrations.stream()
         .filter(migration -> migration.isExtension)
         .filter(migration -> !executedMigrations.contains(migration.version))
@@ -353,8 +364,12 @@ public class MigrationWorkflow {
             // Schema Changes
             runSchemaChanges(row, process);
 
-            // Data Migration
-            runStepAndAddStatus(row, process::runDataMigration);
+            // Data Migration - skip for reprocessing (continuous migration only runs new SQL)
+            if (process.isReprocessing()) {
+              row.add(SUCCESS_MSG);
+            } else {
+              runStepAndAddStatus(row, process::runDataMigration);
+            }
 
             // Post DDL Scripts
             runPostDDLChanges(row, process);
