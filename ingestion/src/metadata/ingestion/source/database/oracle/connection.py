@@ -15,12 +15,14 @@ Source connection handler
 import os
 import sys
 from copy import deepcopy
+from functools import partial
 from typing import Optional
 from urllib.parse import quote_plus
 
 import oracledb
 from oracledb.exceptions import DatabaseError
 from pydantic import SecretStr
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from metadata.generated.schema.entity.automations.workflow import (
@@ -44,8 +46,12 @@ from metadata.ingestion.connections.builders import (
 )
 from metadata.ingestion.connections.connection import BaseConnection
 from metadata.ingestion.connections.secrets import connection_with_options_secrets
-from metadata.ingestion.connections.test_connections import test_connection_db_common
+from metadata.ingestion.connections.test_connections import (
+    test_connection_steps,
+    test_query,
+)
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.source.connections_utils import kill_active_connections
 from metadata.ingestion.source.database.oracle.queries import (
     CHECK_ACCESS_TO_ALL,
     TEST_MATERIALIZED_VIEWS,
@@ -90,6 +96,32 @@ class OracleConnection(BaseConnection[OracleConnectionConfig, Engine]):
             get_connection_args_fn=get_connection_args_common,
         )
 
+    def _check_access_with_fallback(self, engine) -> None:
+        """
+        Try DBA_TABLES first; if access is denied (ORA-00942) fall back to
+        ALL_TABLES and update both the dialect prefix and the service connection
+        so that the rest of the ingestion uses the correct views.
+        """
+        dba_query = CHECK_ACCESS_TO_ALL.format(prefix="DBA")
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(dba_query)).fetchone()
+            engine.dialect.table_prefix = "DBA"
+        except Exception as dba_err:
+            if "ORA-00942" in str(dba_err):
+                logger.warning(
+                    "User does not have access to DBA_TABLES (ORA-00942). "
+                    "Falling back to ALL_TABLES. Grant 'SELECT ANY DICTIONARY' "
+                    "or 'SELECT_CATALOG_ROLE' to the Oracle user for full metadata coverage."
+                )
+                all_query = CHECK_ACCESS_TO_ALL.format(prefix="ALL")
+                with engine.connect() as conn:
+                    conn.execute(text(all_query)).fetchone()
+                engine.dialect.table_prefix = "ALL"
+                self.service_connection.useDBATable = False
+            else:
+                raise
+
     def test_connection(
         self,
         metadata: OpenMetadata,
@@ -102,23 +134,37 @@ class OracleConnection(BaseConnection[OracleConnectionConfig, Engine]):
         """
         table_prefix = get_table_prefix_from_connection(self.service_connection)
         self.client.dialect.table_prefix = table_prefix
-        test_conn_queries = {
-            "CheckAccess": CHECK_ACCESS_TO_ALL.format(prefix=table_prefix),
-            "PackageAccess": TEST_ORACLE_GET_STORED_PACKAGES.format(
-                prefix=table_prefix
+
+        test_fn = {
+            "CheckAccess": partial(self._check_access_with_fallback, self.client),
+            "PackageAccess": partial(
+                test_query,
+                statement=TEST_ORACLE_GET_STORED_PACKAGES.format(prefix=table_prefix),
+                engine=self.client,
             ),
-            "GetMaterializedViews": TEST_MATERIALIZED_VIEWS.format(prefix=table_prefix),
-            "GetQueryHistory": TEST_QUERY_HISTORY,
+            "GetMaterializedViews": partial(
+                test_query,
+                statement=TEST_MATERIALIZED_VIEWS.format(prefix=table_prefix),
+                engine=self.client,
+            ),
+            "GetQueryHistory": partial(
+                test_query,
+                statement=TEST_QUERY_HISTORY,
+                engine=self.client,
+            ),
         }
 
-        return test_connection_db_common(
+        result = test_connection_steps(
             metadata=metadata,
-            engine=self.client,
-            service_connection=self.service_connection,
+            test_fn=test_fn,
+            service_type=self.service_connection.type.value,
             automation_workflow=automation_workflow,
-            queries=test_conn_queries,
             timeout_seconds=timeout_seconds,
         )
+
+        kill_active_connections(self.client)
+
+        return result
 
     def get_connection_dict(self) -> dict:
         """
