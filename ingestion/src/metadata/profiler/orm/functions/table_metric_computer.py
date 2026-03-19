@@ -30,11 +30,20 @@ from sqlalchemy import (
     literal,
     select,
 )
+from sqlalchemy import text as sa_text
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.sql.expression import ColumnOperators, and_, cte
 from sqlalchemy.types import String
 
 from metadata.generated.schema.entity.data.table import Table as OMTable
 from metadata.generated.schema.entity.data.table import TableType
+from metadata.generated.schema.entity.services.connections.database.timescaleConnection import (
+    TimescaleConnection as TimescaleConnectionConfig,
+)
+from metadata.ingestion.source.database.timescale.queries import (
+    TIMESCALE_GET_APPROXIMATE_METRICS,
+    TIMESCALE_IS_HYPERTABLE,
+)
 from metadata.profiler.metrics.registry import Metrics
 from metadata.profiler.orm.registry import Dialects
 from metadata.profiler.processor.runner import QueryRunner
@@ -451,6 +460,63 @@ class PostgresTableMetricComputer(BaseTableMetricComputer):
         return res
 
 
+class TimescaleTableMetricComputer(PostgresTableMetricComputer):
+    """TimescaleDB Table Metric Computer
+
+    Uses TimescaleDB-specific catalog views instead of expensive pg_catalog queries:
+    - approximate_row_count() instead of pg_class.reltuples (faster for hypertables)
+    - hypertable_size() instead of pg_total_relation_size() (chunk-aware, avoids
+      iterating over all chunks individually)
+
+    Falls back to the standard PostgreSQL logic for non-hypertables.
+    """
+
+    def _is_hypertable(self) -> bool:
+        """Check if the current table is a TimescaleDB hypertable."""
+        try:
+            result = self.runner._session.execute(
+                sa_text(TIMESCALE_IS_HYPERTABLE),
+                {"schema": self.schema_name, "table": self.table_name},
+            ).first()
+            return result is not None
+        except Exception:
+            return False
+
+    def compute(self):
+        """Compute table metrics using TimescaleDB-specific functions for hypertables."""
+        if not self._is_hypertable():
+            return super().compute()
+        try:
+            fqn = f'"{self.schema_name}"."{self.table_name}"'
+            result = self.runner._session.execute(
+                sa_text(TIMESCALE_GET_APPROXIMATE_METRICS),
+                {"fqn": fqn},
+            ).first()
+
+            if result and result.row_count is not None:
+                col_names_val = ",".join(inspect(self.runner.raw_dataset).c.keys())
+                col_count_val = len(inspect(self.runner.raw_dataset).c)
+                Row = namedtuple(
+                    "Row",
+                    [ROW_COUNT, SIZE_IN_BYTES, COLUMN_NAMES, COLUMN_COUNT],
+                )
+                return Row(
+                    rowCount=int(result.row_count),
+                    sizeInBytes=int(result.size_bytes) if result.size_bytes else None,
+                    columnNames=col_names_val,
+                    columnCount=col_count_val,
+                )
+        except Exception:
+            logger.debug(
+                "TimescaleDB-specific metric query failed for %s.%s, "
+                "falling back to PostgreSQL logic",
+                self.schema_name,
+                self.table_name,
+            )
+
+        return super().compute()
+
+
 class RedshiftTableMetricComputer(BaseTableMetricComputer):
     """Redshift Table Metric Computer"""
 
@@ -541,6 +607,59 @@ class MSSQLTableMetricComputer(BaseTableMetricComputer):
             .outerjoin(
                 size_cte,
                 table_meta.c.object_id == size_cte.c.object_id,
+            )
+            .where(
+                table_meta.c.schema_name == self.schema_name,
+                table_meta.c.table_name == self.table_name,
+            )
+        )
+
+        # sys.dm_db_partition_stats provides row count and size for standard MSSQL.
+        # Microsoft Fabric blocks this DMV (error 15871), so Fabric connectors use
+        # sys.partitions instead. This try/except ensures compatibility if the DMV
+        # is not available.
+        try:
+            res = self.runner._session.execute(query).first()
+        except ProgrammingError as err:
+            logger.debug(
+                "sys.dm_db_partition_stats not available, falling back to sys.partitions: %s",
+                err,
+            )
+            return self._compute_with_partitions(table_meta)
+
+        if not res:
+            return None
+        if res.rowCount is None or (
+            res.rowCount == 0 and self._entity.tableType == TableType.View
+        ):
+            return super().compute()
+        return res
+
+    def _compute_with_partitions(self, table_meta):
+        """Fallback using sys.partitions for engines where dm_db_partition_stats is unavailable."""
+        row_count_cte = cte(
+            self._build_query(
+                [
+                    Column("object_id"),
+                    func.sum(Column("rows")).cast(BigInteger).label("row_count"),
+                ],
+                self._build_table("partitions", "sys"),
+                [Column("index_id").in_([0, 1])],
+            ).group_by(Column("object_id"))
+        )
+
+        columns = [
+            row_count_cte.c.row_count.label(ROW_COUNT),
+            table_meta.c.create_date.label(CREATE_DATETIME),
+            *self._get_col_names_and_count(),
+        ]
+
+        query = (
+            select(*columns)
+            .select_from(table_meta)
+            .join(
+                row_count_cte,
+                table_meta.c.object_id == row_count_cte.c.object_id,
             )
             .where(
                 table_meta.c.schema_name == self.schema_name,
@@ -786,15 +905,29 @@ class TableMetricComputer:
         self._runner = runner
         self._metrics = metrics
         self._conn_config = conn_config
+
+        effective_dialect = self._resolve_dialect(dialect, conn_config)
         self.table_metric_computer: AbstractTableMetricComputer = (
             table_metric_computer_factory.construct(
-                self._dialect,
+                effective_dialect,
                 runner=self._runner,
                 metrics=self._metrics,
                 conn_config=self._conn_config,
                 entity=self._entity,
             )
         )
+
+    @staticmethod
+    def _resolve_dialect(dialect: str, conn_config) -> str:
+        """Resolve the effective dialect for the table metric computer.
+
+        TimescaleDB uses the PostgreSQL SQLAlchemy dialect but requires its own
+        metric computer. We detect this by checking the connection config type.
+        """
+        if dialect == Dialects.Postgres:
+            if isinstance(conn_config, TimescaleConnectionConfig):
+                return Dialects.Timescale
+        return dialect
 
     def compute(self):
         """Compute table metrics"""
@@ -852,3 +985,4 @@ table_metric_computer_factory.register(Dialects.Db2, DB2TableMetricComputer)
 table_metric_computer_factory.register(Dialects.Vertica, VerticaTableMetricComputer)
 table_metric_computer_factory.register(Dialects.Hana, SAPHanaTableMetricComputer)
 table_metric_computer_factory.register(Dialects.Informix, InformixTableMetricComputer)
+table_metric_computer_factory.register(Dialects.Timescale, TimescaleTableMetricComputer)

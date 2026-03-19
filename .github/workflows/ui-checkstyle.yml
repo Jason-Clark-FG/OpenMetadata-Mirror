@@ -24,13 +24,18 @@ on:
       - "openmetadata-ui/src/main/resources/ui/**"
       - "openmetadata-spec/src/main/resources/json/schema/**"
       - ".github/workflows/ui-checkstyle.yml"
+      - openmetadata-ui/src/main/resources/ui/playwright/**
+      - openmetadata-ui/src/main/resources/ui/eslint.config.mjs
 
 permissions:
   contents: read
 
 concurrency:
-  group: ui-checkstyle-${{ github.head_ref }}
+  group: ui-checkstyle-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
+
+env:
+  UI_WORKING_DIRECTORY: openmetadata-ui/src/main/resources/ui
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
@@ -93,7 +98,7 @@ jobs:
       - name: Linting (ESlint + Prettier + Organise Imports)
         id: linting
         continue-on-error: true
-        working-directory: openmetadata-ui/src/main/resources/ui
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         run: |
           yarn organize-imports
           yarn lint:fix
@@ -110,7 +115,7 @@ jobs:
       - name: Linting - Licence header
         id: license
         continue-on-error: true
-        working-directory: openmetadata-ui/src/main/resources/ui
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         run: |
           yarn license-header-fix
           if [ -n "$(git status --porcelain)" ]; then
@@ -122,13 +127,17 @@ jobs:
           git checkout -- .
           git clean -fd
 
+      - name: Playwright ESLint Check
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        run: yarn lint:playwright
+
       # ──────────────────────────────────────────────────────────────────────────
       # Step 4: I18n Sync
       # ──────────────────────────────────────────────────────────────────────────
       - name: I18n sync
         id: i18n
         continue-on-error: true
-        working-directory: openmetadata-ui/src/main/resources/ui
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         run: |
           yarn i18n
           if [ -n "$(git status --porcelain)" ]; then

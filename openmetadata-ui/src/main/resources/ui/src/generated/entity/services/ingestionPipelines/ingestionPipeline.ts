@@ -2816,6 +2816,8 @@ export interface DBTPrefixConfig {
 /**
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Azure Cloud Credentials
@@ -4474,10 +4476,6 @@ export interface ConfigObject {
      * Database of the data source. This is the name of your Fabric Warehouse or Lakehouse. This
      * is optional parameter, if you would like to restrict the metadata reading to a single
      * database. When left blank, OpenMetadata Ingestion attempts to scan all the databases.
-     *
-     * Database of the data source. This is an optional parameter, if you would like to restrict
-     * the metadata reading to a single database. If left blank, OpenMetadata ingestion attempts
-     * to scan all the databases.
      */
     database?: string;
     /**
@@ -4510,6 +4508,9 @@ export interface ConfigObject {
      *
      * Ingest data from all databases (Warehouses and Lakehouses) in Microsoft Fabric. You can
      * use databaseFilterPattern on top of this.
+     *
+     * Ingest data from all databases in Informix. You can use databaseFilterPattern on top of
+     * this.
      */
     ingestAllDatabases?: boolean;
     /**
@@ -5526,6 +5527,8 @@ export enum AuthMechanismEnum {
  *
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Authentication type to connect to Apache Ranger.
@@ -5705,6 +5708,8 @@ export interface AuthenticationTypeForTableau {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  */
@@ -6112,6 +6117,8 @@ export interface IcebergFileSystem {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  *
@@ -6614,6 +6621,8 @@ export interface DataStorageConfig {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  */
@@ -7159,6 +7168,8 @@ export interface NifiCredentialsConfiguration {
  * Open API Schema URL Connection Config
  *
  * Open API Schema File Path Connection Config
+ *
+ * Open API Schema S3 Connection Config
  */
 export interface OpenAPISchemaConnection {
     /**
@@ -7169,6 +7180,15 @@ export interface OpenAPISchemaConnection {
      * Path to a local OpenAPI schema file.
      */
     openAPISchemaFilePath?: string;
+    /**
+     * AWS credentials required to access the S3 file.
+     */
+    awsCredentials?: AWSCredentials;
+    /**
+     * S3 URL of the OpenAPI schema file (JSON or YAML). Example:
+     * https://bucket-name.s3.amazonaws.com/path/to/openapi_schema.json
+     */
+    openAPISchemaS3URL?: string;
 }
 
 /**

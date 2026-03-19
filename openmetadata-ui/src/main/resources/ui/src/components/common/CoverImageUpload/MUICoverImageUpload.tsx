@@ -16,7 +16,6 @@ import { RefreshCcw01, Trash01, UploadCloud01 } from '@untitledui/icons';
 import { useSnackbar } from 'notistack';
 import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Loader from '../Loader/Loader';
 import { showNotistackError } from '../../../utils/NotistackUtils';
 import imageClassBase from '../../BlockEditor/Extensions/image/ImageClassBase';
 import MUIFileUpload from '../FileUpload/MUIFileUpload';
@@ -24,6 +23,7 @@ import {
   FileUploadValue,
   FileValidationResult,
 } from '../FileUpload/MUIFileUpload.interface';
+import Loader from '../Loader/Loader';
 import { MUICoverImageUploadProps } from './CoverImageUpload.interface';
 
 const DEFAULT_MAX_SIZE_MB = 5;
