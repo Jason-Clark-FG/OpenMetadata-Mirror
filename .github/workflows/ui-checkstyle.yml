@@ -113,7 +113,6 @@ jobs:
           yarn organize-imports-cli $CHANGED_FILES
           NODE_OPTIONS="--max-old-space-size=8192" yarn eslint --fix --no-error-on-unmatched-pattern $CHANGED_FILES
           yarn prettier --write --ignore-path './.prettierignore' $CHANGED_FILES
-          yarn tsc --noEmit
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "### 🔍 Debug: Changes detected in Linting (ESlint + Prettier + Organise Imports)"
@@ -122,6 +121,12 @@ jobs:
           fi
           git checkout -- .
           git clean -fd
+
+      - name: TypeScript Type Check (src)
+        id: tsc
+        continue-on-error: true
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        run: yarn tsc --noEmit
 
       - name: Get changed Playwright files
         id: changed-files-playwright
@@ -142,7 +147,6 @@ jobs:
           yarn organize-imports-cli $CHANGED_FILES
           NODE_OPTIONS="--max-old-space-size=8192" yarn eslint --fix --no-error-on-unmatched-pattern $CHANGED_FILES
           yarn prettier --write --ignore-path './.prettierignore' $CHANGED_FILES
-          yarn tsc --project playwright/tsconfig.json --noEmit
           if [ -n "$(git status --porcelain)" ]; then
             echo "changes=true" >> "$GITHUB_OUTPUT"
             echo "### 🔍 Debug: Changes detected in Playwright Linting"
@@ -151,6 +155,13 @@ jobs:
           fi
           git checkout -- .
           git clean -fd
+
+      - name: TypeScript Type Check (playwright)
+        id: tsc-playwright
+        if: steps.changed-files-playwright.outputs.any_changed == 'true'
+        continue-on-error: true
+        working-directory: ${{ env.UI_WORKING_DIRECTORY }}
+        run: yarn tsc --project playwright/tsconfig.json --noEmit
 
       - name: Get all changed UI files
         id: changed-files-all
@@ -225,7 +236,7 @@ jobs:
           body-includes: '### 🔍 UI Style Check Summary'
 
       - name: Create or Update Summary Comment
-        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true'
+        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.tsc.outcome == 'failure' || steps.tsc-playwright.outcome == 'failure'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
@@ -240,6 +251,9 @@ jobs:
                 - ${{ steps.linting.outputs.changes == 'true' && '❌' || '✅' }} **ESlint + Prettier + Organise Imports**
                 - ${{ steps.playwright-linting.outputs.changes == 'true' && '❌' || '✅' }} **Playwright ESLint + Prettier**
                 - ${{ steps.license.outputs.changes == 'true' && '❌' || '✅' }} **Licence header**
+              - **TypeScript**
+                - ${{ steps.tsc.outcome == 'failure' && '❌' || '✅' }} **Type Check (src)** (`yarn tsc --noEmit`)
+                - ${{ steps.tsc-playwright.outcome == 'failure' && '❌' || '✅' }} **Type Check (playwright)** (`yarn tsc --project playwright/tsconfig.json --noEmit`)
               - ${{ steps.i18n.outputs.changes == 'true' && '❌' || '✅' }} **I18n sync**
               - ${{ steps.docs.outputs.changes == 'true' && '❌' || '✅' }} **generate:app-docs**
             
@@ -251,7 +265,7 @@ jobs:
           edit-mode: replace
 
       - name: Delete Summary Comment if Passed
-        if: steps.linting.outputs.changes != 'true' && steps.playwright-linting.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.fc.outputs.comment-id != ''
+        if: steps.linting.outputs.changes != 'true' && steps.playwright-linting.outputs.changes != 'true' && steps.license.outputs.changes != 'true' && steps.i18n.outputs.changes != 'true' && steps.docs.outputs.changes != 'true' && steps.tsc.outcome != 'failure' && steps.tsc-playwright.outcome != 'failure' && steps.fc.outputs.comment-id != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -262,7 +276,7 @@ jobs:
             })
 
       - name: Fail if any check detected changes or failed
-        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.linting.outcome != 'success' || steps.playwright-linting.outcome != 'success' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
+        if: steps.linting.outputs.changes == 'true' || steps.playwright-linting.outputs.changes == 'true' || steps.license.outputs.changes == 'true' || steps.i18n.outputs.changes == 'true' || steps.docs.outputs.changes == 'true' || steps.linting.outcome != 'success' || steps.playwright-linting.outcome != 'success' || steps.tsc.outcome == 'failure' || steps.tsc-playwright.outcome == 'failure' || steps.license.outcome != 'success' || steps.i18n.outcome != 'success' || steps.docs.outcome != 'success'
         run: |
           echo "One or more checkstyle steps introduced changes or did not complete successfully."
           exit 1
