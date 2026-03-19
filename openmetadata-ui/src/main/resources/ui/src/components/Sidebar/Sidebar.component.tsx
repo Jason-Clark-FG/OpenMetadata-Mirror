@@ -18,6 +18,7 @@ import type {
 import { NavList } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import './app-sidebar.less';
 
 export interface SidebarProps {
@@ -58,22 +59,29 @@ const Sidebar = ({
             'tw:flex tw:items-center tw:my-5',
             collapsed ? 'tw:justify-center' : 'tw:pl-6'
           )}>
-          {collapsed ? collapsedLogo ?? logo : logo}
+          <Link
+            className="flex-shrink-0 tw:bg-transparent"
+            id="openmetadata_logo"
+            to="/">
+            {collapsed ? collapsedLogo ?? logo : logo}
+          </Link>
         </div>
       )}
 
-      <NavList activeUrl={activeUrl} items={items} />
+      <div className="app-sidebar-link tw:flex tw:flex-col tw:flex-1 tw:overflow-y-auto">
+        <NavList activeUrl={activeUrl} items={items} />
 
-      {bottomItems && (
-        <>
-          <div className="tw:flex-1" />
-          <NavList
-            activeUrl={activeUrl}
-            className="tw:pb-4"
-            items={bottomItems}
-          />
-        </>
-      )}
+        {bottomItems && (
+          <>
+            <div className="tw:flex-1" />
+            <NavList
+              activeUrl={activeUrl}
+              className="tw:pb-4"
+              items={bottomItems}
+            />
+          </>
+        )}
+      </div>
     </aside>
   );
 };

@@ -13,7 +13,6 @@
 import { Layout } from 'antd';
 import classNames from 'classnames';
 import { useCallback, useEffect } from 'react';
-import { ROUTES } from '../../constants/constants';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { LineageSettings } from '../../generated/configuration/lineageSettings';
 import { SettingType } from '../../generated/settings/settings';
@@ -23,6 +22,7 @@ import { getLimitConfig } from '../../rest/limitsAPI';
 import { getSettingsByType } from '../../rest/settingConfigAPI';
 import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
 import i18n from '../../utils/i18next/LocalUtil';
+import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import AppSidebar from '../AppSidebar/AppSidebar.component';
 import { LimitBanner } from '../common/LimitBanner/LimitBanner';
 import MarketplaceNavBar from '../DataMarketplace/MarketplaceNavBar/MarketplaceNavBar.component';
@@ -43,6 +43,14 @@ const AppContainer = () => {
   const { isAuthenticated } = useApplicationStore();
 
   const { setConfig, bannerDetails } = useLimitStore();
+
+  const renderNavBar = () => {
+    if (isNewLayoutRoute(location.pathname)) {
+      return <MarketplaceNavBar />;
+    }
+
+    return <NavBar />;
+  };
 
   const fetchAppConfigurations = useCallback(async () => {
     try {
@@ -88,13 +96,9 @@ const AppContainer = () => {
         <Layout>
           {/* Render Appbar */}
           {applicationRoutesClass.isProtectedRoute(location.pathname) &&
-          isAuthenticated ? (
-            location.pathname.includes(ROUTES.DATA_MARKETPLACE) ? (
-              <MarketplaceNavBar />
-            ) : (
-              <NavBar />
-            )
-          ) : null}
+          isAuthenticated
+            ? renderNavBar()
+            : null}
 
           {/* Render main content */}
           <Content>

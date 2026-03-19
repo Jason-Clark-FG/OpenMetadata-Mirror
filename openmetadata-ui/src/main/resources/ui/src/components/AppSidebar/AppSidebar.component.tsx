@@ -12,9 +12,9 @@
  */
 
 import { useLocation } from 'react-router-dom';
-import { CUSTOM_SIDEBAR_ROUTES } from '../../constants/CustomSidebar.constants';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { useSidebarStore } from '../../hooks/useSidebarStore';
+import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import BrandImage from '../common/BrandImage/BrandImage';
 import LeftSidebar from '../MyData/LeftSidebar/LeftSidebar.component';
 import Sidebar from '../Sidebar/Sidebar.component';
@@ -26,16 +26,14 @@ const AppSidebar = () => {
     preferences: { isSidebarCollapsed },
   } = useCurrentUserPreferences();
 
-  const isCustomRoute = CUSTOM_SIDEBAR_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isCustomRoute = isNewLayoutRoute(pathname);
 
   if (!customItems && !isCustomRoute) {
     return <LeftSidebar />;
   }
 
   if (!customItems) {
-    return <aside style={{ width: isSidebarCollapsed ? 72 : 197 }} />;
+    return null;
   }
 
   return (
