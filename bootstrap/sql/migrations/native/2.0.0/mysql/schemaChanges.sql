@@ -90,3 +90,20 @@ CREATE TABLE IF NOT EXISTS activity_stream_config (
 -- Add stageResult generated column to workflow_instance_state_time_series
 ALTER TABLE workflow_instance_state_time_series
 ADD COLUMN stageResult VARCHAR(256) GENERATED ALWAYS AS (json_unquote(json_extract(json, '$.stage.result'))) STORED NULL;
+
+-- Task Workflow Outbox - Transactional outbox for ManualTask message delivery
+-- Messages are enqueued by WorkflowEventConsumer and drained by TaskWorkflowOutboxDrainer
+CREATE TABLE IF NOT EXISTS task_workflow_outbox (
+    id VARCHAR(36) NOT NULL,
+    taskId VARCHAR(36) NOT NULL,
+    status VARCHAR(64) NOT NULL,
+    updatedBy VARCHAR(256),
+    createdAt BIGINT NOT NULL,
+    delivered TINYINT(1) NOT NULL DEFAULT 0,
+    attempts INT NOT NULL DEFAULT 0,
+    lastAttemptAt BIGINT,
+    PRIMARY KEY (id),
+    INDEX idx_two_pending (delivered, createdAt),
+    INDEX idx_two_pending_tasks (delivered, taskId),
+    INDEX idx_two_task_order (taskId, delivered, createdAt)
+);

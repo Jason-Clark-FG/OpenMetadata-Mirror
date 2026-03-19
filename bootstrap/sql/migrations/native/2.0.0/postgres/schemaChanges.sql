@@ -93,3 +93,20 @@ CREATE INDEX IF NOT EXISTS idx_activity_config_enabled ON activity_stream_config
 -- Add stageResult generated column to workflow_instance_state_time_series
 ALTER TABLE workflow_instance_state_time_series
 ADD COLUMN stageResult VARCHAR(256) GENERATED ALWAYS AS (json -> 'stage' ->> 'result') STORED;
+
+-- Task Workflow Outbox - Transactional outbox for ManualTask message delivery
+CREATE TABLE IF NOT EXISTS task_workflow_outbox (
+    id character varying(36) NOT NULL,
+    taskId character varying(36) NOT NULL,
+    status character varying(64) NOT NULL,
+    updatedBy character varying(256),
+    createdAt bigint NOT NULL,
+    delivered boolean NOT NULL DEFAULT FALSE,
+    attempts integer NOT NULL DEFAULT 0,
+    lastAttemptAt bigint,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_two_pending ON task_workflow_outbox (delivered, createdAt);
+CREATE INDEX IF NOT EXISTS idx_two_pending_tasks ON task_workflow_outbox (delivered, taskId);
+CREATE INDEX IF NOT EXISTS idx_two_task_order ON task_workflow_outbox (taskId, delivered, createdAt);
