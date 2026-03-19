@@ -117,6 +117,10 @@ public class MigrationTestRunner {
         }
 
         if (migrationFailed) {
+          LOG.warn(
+              "Migration {} failed. The database is in a partially-migrated state. "
+                  + "Re-restore the backup before retrying.",
+              version);
           break;
         }
       }
@@ -196,16 +200,16 @@ public class MigrationTestRunner {
     String separator = "-".repeat(totalWidth);
     String doubleSeparator = "=".repeat(totalWidth);
 
-    System.out.println(doubleSeparator);
-    System.out.println(centerText("Migration Test Summary", totalWidth));
-    System.out.println(doubleSeparator);
-    System.out.printf(" Source version  : %s%n", sourceVersion);
-    System.out.printf(" Target version  : %s%n", targetVersion);
-    System.out.printf(" Database type   : %s%n", dbType);
-    System.out.printf(" Backup timestamp: %s%n", backupTimestamp);
-    System.out.println(separator);
-    System.out.printf(headerFmt + "%n", "Migration", "Test", "Phase", "Result");
-    System.out.println(separator);
+    LOG.info(doubleSeparator);
+    LOG.info(centerText("Migration Test Summary", totalWidth));
+    LOG.info(doubleSeparator);
+    LOG.info(" Source version  : {}", sourceVersion);
+    LOG.info(" Target version  : {}", targetVersion);
+    LOG.info(" Database type   : {}", dbType);
+    LOG.info(" Backup timestamp: {}", backupTimestamp);
+    LOG.info(separator);
+    LOG.info(String.format(headerFmt, "Migration", "Test", "Phase", "Result"));
+    LOG.info(separator);
 
     int passed = 0;
     int failed = 0;
@@ -222,10 +226,10 @@ public class MigrationTestRunner {
         failed++;
       }
 
-      System.out.printf(headerFmt + "%n", entry.version(), entry.testName(), entry.phase(), result);
+      LOG.info(String.format(headerFmt, entry.version(), entry.testName(), entry.phase(), result));
 
       if (!entry.passed() && !entry.detail().isEmpty() && !"-".equals(entry.phase())) {
-        System.out.printf(
+        String detailFmt =
             " %-"
                 + colVersion
                 + "s|   %-"
@@ -234,17 +238,14 @@ public class MigrationTestRunner {
                 + colPhase
                 + "s| %-"
                 + colResult
-                + "s%n",
-            "",
-            entry.detail(),
-            "",
-            "");
+                + "s";
+        LOG.info(String.format(detailFmt, "", entry.detail(), "", ""));
       }
     }
 
-    System.out.println(separator);
-    System.out.printf(" Total: %d passed, %d failed%n", passed, failed);
-    System.out.println(doubleSeparator);
+    LOG.info(separator);
+    LOG.info(" Total: {} passed, {} failed", passed, failed);
+    LOG.info(doubleSeparator);
   }
 
   private static String centerText(String text, int width) {

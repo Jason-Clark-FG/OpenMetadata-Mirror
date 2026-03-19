@@ -2668,7 +2668,19 @@ public class OpenMetadataOperations implements Callable<Integer> {
               required = true,
               description =
                   "Path to the backup .tar.gz file to restore and test migrations against")
-          String backupPath) {
+          String backupPath,
+      @Option(
+              names = {"--force"},
+              defaultValue = "false",
+              description =
+                  "Force execution. This command restores a backup (truncating all tables) before running migrations. Pass --force to confirm.")
+          boolean force) {
+    if (!force) {
+      LOG.error(
+          "test-migration restores a backup which truncates all existing tables. "
+              + "Pass --force to confirm you want to proceed.");
+      return 1;
+    }
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
