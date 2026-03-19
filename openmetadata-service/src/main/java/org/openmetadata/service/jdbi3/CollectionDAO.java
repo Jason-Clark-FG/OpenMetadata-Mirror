@@ -166,6 +166,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.audit.AuditLogRecord;
 import org.openmetadata.service.audit.AuditLogRecordMapper;
+import org.openmetadata.service.governance.workflows.outbox.OutboxEntry;
 import org.openmetadata.service.jdbi3.CollectionDAO.TagUsageDAO.TagLabelMapper;
 import org.openmetadata.service.jdbi3.CollectionDAO.UsageDAO.UsageDetailsMapper;
 import org.openmetadata.service.jdbi3.FeedRepository.FilterType;
@@ -375,6 +376,9 @@ public interface CollectionDAO {
 
   @CreateSqlObject
   TaskDAO taskDAO();
+
+  @CreateSqlObject
+  TaskWorkflowOutboxDAO taskWorkflowOutboxDAO();
 
   @CreateSqlObject
   StoredProcedureDAO storedProcedureDAO();
@@ -3093,6 +3097,64 @@ public interface CollectionDAO {
                 + "AND ((json->>'deleted')::boolean = false OR json->>'deleted' IS NULL)",
         connectionType = POSTGRES)
     String fetchTaskByTestCaseResolutionStatusId(@Bind("stateId") String stateId);
+  }
+
+  interface TaskWorkflowOutboxDAO {
+
+    @SqlUpdate(
+        "INSERT INTO task_workflow_outbox (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
+            + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)")
+    void insertEntry(
+        @Bind("id") String id,
+        @Bind("taskId") String taskId,
+        @Bind("status") String status,
+        @Bind("updatedBy") String updatedBy,
+        @Bind("createdAt") long createdAt);
+
+    @SqlQuery("SELECT DISTINCT taskId FROM task_workflow_outbox WHERE delivered = false")
+    List<String> findDistinctPendingTaskIds();
+
+    @SqlQuery(
+        "SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts, lastAttemptAt"
+            + " FROM task_workflow_outbox"
+            + " WHERE taskId = :taskId AND delivered = false"
+            + " ORDER BY createdAt ASC LIMIT 1"
+            + " FOR UPDATE SKIP LOCKED")
+    @RegisterRowMapper(OutboxEntryRowMapper.class)
+    OutboxEntry findAndLockOldestPending(@Bind("taskId") String taskId);
+
+    @SqlUpdate(
+        "UPDATE task_workflow_outbox"
+            + " SET delivered = true, lastAttemptAt = :now"
+            + " WHERE id = :id")
+    void markDelivered(@Bind("id") String id, @Bind("now") long now);
+
+    @SqlUpdate(
+        "UPDATE task_workflow_outbox"
+            + " SET attempts = :attempts, lastAttemptAt = :now"
+            + " WHERE id = :id")
+    void recordFailedAttempt(
+        @Bind("id") String id, @Bind("attempts") int attempts, @Bind("now") long now);
+
+    @SqlUpdate("DELETE FROM task_workflow_outbox WHERE delivered = true AND createdAt < :cutoff")
+    int cleanupDelivered(@Bind("cutoff") long cutoffTimestamp);
+
+    class OutboxEntryRowMapper implements RowMapper<OutboxEntry> {
+      @Override
+      public OutboxEntry map(ResultSet rs, StatementContext ctx) throws SQLException {
+        return OutboxEntry.builder()
+            .id(rs.getString("id"))
+            .taskId(rs.getString("taskId"))
+            .status(rs.getString("status"))
+            .updatedBy(rs.getString("updatedBy"))
+            .createdAt(rs.getLong("createdAt"))
+            .delivered(rs.getBoolean("delivered"))
+            .attempts(rs.getInt("attempts"))
+            .lastAttemptAt(
+                rs.getObject("lastAttemptAt") != null ? rs.getLong("lastAttemptAt") : null)
+            .build();
+      }
+    }
   }
 
   interface FieldRelationshipDAO {
