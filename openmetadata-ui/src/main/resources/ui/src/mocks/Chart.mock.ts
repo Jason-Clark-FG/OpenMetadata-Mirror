@@ -11,12 +11,12 @@
  *  limitations under the License.
  */
 import {
-    Chart,
-    ChartType,
-    DashboardServiceType,
-    LabelType,
-    State,
-    TagSource
+  Chart,
+  ChartType,
+  DashboardServiceType,
+  LabelType,
+  State,
+  TagSource,
 } from '../generated/entity/data/chart';
 
 export const MOCK_CHART_DATA: Chart = {

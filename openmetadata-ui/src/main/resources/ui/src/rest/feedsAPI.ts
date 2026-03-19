@@ -20,11 +20,11 @@ import { CloseTask } from '../generated/api/feed/closeTask';
 import { CreateThread } from '../generated/api/feed/createThread';
 import { ResolveTask } from '../generated/api/feed/resolveTask';
 import {
-    Post,
-    TaskDetails,
-    Thread,
-    ThreadTaskStatus,
-    ThreadType
+  Post,
+  TaskDetails,
+  Thread,
+  ThreadTaskStatus,
+  ThreadType,
 } from '../generated/entity/feed/thread';
 import { Paging } from '../generated/type/paging';
 import { EntityFieldThreadCount } from '../interface/feed.interface';

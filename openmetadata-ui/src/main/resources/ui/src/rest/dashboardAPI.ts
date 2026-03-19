@@ -16,8 +16,8 @@ import { Operation } from 'fast-json-patch';
 import { PagingResponse, PagingWithoutTotal, RestoreRequestType } from 'Models';
 import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import {
-    APPLICATION_JSON_CONTENT_TYPE_HEADER,
-    PAGE_SIZE
+  APPLICATION_JSON_CONTENT_TYPE_HEADER,
+  PAGE_SIZE,
 } from '../constants/constants';
 import { Dashboard } from '../generated/entity/data/dashboard';
 import { EntityHistory } from '../generated/type/entityHistory';

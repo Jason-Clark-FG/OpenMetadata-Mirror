@@ -24,8 +24,8 @@ import Text from '@tiptap/extension-text';
 import { Extensions } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
-    ExtensionOptions,
-    FileType
+  ExtensionOptions,
+  FileType,
 } from '../components/BlockEditor/BlockEditor.interface';
 import BlockAndDragDrop from '../components/BlockEditor/Extensions/BlockAndDragDrop/BlockAndDragDrop';
 import { Callout } from '../components/BlockEditor/Extensions/Callout/Callout';

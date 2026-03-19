@@ -13,10 +13,10 @@
  */
 
 import {
-    DataModel,
-    DataType,
-    ModelType,
-    Table
+  DataModel,
+  DataType,
+  ModelType,
+  Table,
 } from '../generated/entity/data/table';
 import { LabelType, State, TagSource } from '../generated/tests/testCase';
 

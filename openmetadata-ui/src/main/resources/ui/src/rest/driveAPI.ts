@@ -23,11 +23,11 @@ import { EntityHistory } from '../generated/type/entityHistory';
 import { EntityReference } from '../generated/type/entityReference';
 import { Include } from '../generated/type/include';
 import {
-    DriveAssetEntityTypes,
-    GetDirectoriesParams,
-    GetFilesParams,
-    GetSpreadsheetParams,
-    GetWorksheetsParams
+  DriveAssetEntityTypes,
+  GetDirectoriesParams,
+  GetFilesParams,
+  GetSpreadsheetParams,
+  GetWorksheetsParams,
 } from './driveAPI.interface';
 import APIClient from './index';
 

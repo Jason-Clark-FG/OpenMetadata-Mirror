@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import {
-    CleanupPolicy,
-    DataTypeTopic,
-    MessagingServiceType,
-    SchemaType,
-    Topic
+  CleanupPolicy,
+  DataTypeTopic,
+  MessagingServiceType,
+  SchemaType,
+  Topic,
 } from '../generated/entity/data/topic';
 
 export const TOPIC_DUMMY_DATA: Topic = {

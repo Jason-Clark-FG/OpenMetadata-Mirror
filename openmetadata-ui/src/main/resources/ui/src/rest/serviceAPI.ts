@@ -15,8 +15,8 @@ import { AxiosResponse } from 'axios';
 import { RestoreRequestType, ServicesUpdateRequest } from 'Models';
 import { WILD_CARD_CHAR } from '../constants/char.constants';
 import {
-    APPLICATION_JSON_CONTENT_TYPE_HEADER,
-    PAGE_SIZE
+  APPLICATION_JSON_CONTENT_TYPE_HEADER,
+  PAGE_SIZE,
 } from '../constants/constants';
 import { TabSpecificField } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
@@ -25,9 +25,9 @@ import { EntityHistory } from '../generated/type/entityHistory';
 import { Include } from '../generated/type/include';
 import { ListParams } from '../interface/API.interface';
 import {
-    DomainSupportedServiceTypes,
-    ServiceResponse,
-    ServicesType
+  DomainSupportedServiceTypes,
+  ServiceResponse,
+  ServicesType,
 } from '../interface/service.interface';
 import { getEncodedFqn } from '../utils/StringsUtils';
 import APIClient from './index';

@@ -13,8 +13,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-    DEFAULT_DOMAIN_VALUE,
-    DOMAIN_STORAGE_KEY
+  DEFAULT_DOMAIN_VALUE,
+  DOMAIN_STORAGE_KEY,
 } from '../constants/constants';
 import { EntityReference } from '../generated/entity/type';
 import { DomainStore } from '../interface/store.interface';

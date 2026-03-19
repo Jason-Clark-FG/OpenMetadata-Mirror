@@ -13,29 +13,29 @@
 
 import { Divider, Space, Typography } from 'antd';
 import {
-    ArrayChange,
-    Change,
-    diffArrays,
-    diffWords,
-    diffWordsWithSpace
+  ArrayChange,
+  Change,
+  diffArrays,
+  diffWords,
+  diffWordsWithSpace,
 } from 'diff';
 import {
-    cloneDeep,
-    get,
-    isEmpty,
-    isEqual,
-    isObject,
-    isUndefined,
-    startCase,
-    toString,
-    uniqBy,
-    uniqueId
+  cloneDeep,
+  get,
+  isEmpty,
+  isEqual,
+  isObject,
+  isUndefined,
+  startCase,
+  toString,
+  uniqBy,
+  uniqueId,
 } from 'lodash';
 import { Fragment, ReactNode } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import {
-    ExtentionEntities,
-    ExtentionEntitiesKeys
+  ExtentionEntities,
+  ExtentionEntitiesKeys,
 } from '../components/common/CustomPropertyTable/CustomPropertyTable.interface';
 import { OwnerLabel } from '../components/common/OwnerLabel/OwnerLabel.component';
 import { BulkImportVersionSummary } from '../components/Entity/EntityVersionTimeLine/BulkImportVersionSummary/BulkImportVersionSummary.component';
@@ -50,22 +50,22 @@ import { Column as DataModelColumn } from '../generated/entity/data/dashboardDat
 import { Column as TableColumn } from '../generated/entity/data/table';
 import { Field } from '../generated/entity/data/topic';
 import {
-    ChangeDescription,
-    FieldChange
+  ChangeDescription,
+  FieldChange,
 } from '../generated/entity/services/databaseService';
 import { MetadataService } from '../generated/entity/services/metadataService';
 import { EntityReference } from '../generated/entity/type';
 import { TestCaseParameterValue } from '../generated/tests/testCase';
 import { TagLabel } from '../generated/type/tagLabel';
 import {
-    EntityDiffProps,
-    EntityDiffWithMultiChanges
+  EntityDiffProps,
+  EntityDiffWithMultiChanges,
 } from '../interface/EntityVersion.interface';
 import { getEntityBreadcrumbs, getEntityName } from './EntityUtils';
 import {
-    AssetsChildForVersionPages,
-    TagLabelWithStatus,
-    VersionEntityTypes
+  AssetsChildForVersionPages,
+  TagLabelWithStatus,
+  VersionEntityTypes,
 } from './EntityVersionUtils.interface';
 import { t } from './i18next/LocalUtil';
 import { getJSONFromString, isValidJSONString } from './StringsUtils';

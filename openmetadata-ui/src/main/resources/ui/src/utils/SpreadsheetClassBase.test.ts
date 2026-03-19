@@ -14,12 +14,12 @@
 import React from 'react';
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-    CUSTOM_PROPERTIES_WIDGET,
-    DATA_PRODUCTS_WIDGET,
-    DESCRIPTION_WIDGET,
-    GLOSSARY_TERMS_WIDGET,
-    GridSizes,
-    TAGS_WIDGET
+  CUSTOM_PROPERTIES_WIDGET,
+  DATA_PRODUCTS_WIDGET,
+  DESCRIPTION_WIDGET,
+  GLOSSARY_TERMS_WIDGET,
+  GridSizes,
+  TAGS_WIDGET,
 } from '../constants/CustomizeWidgets.constants';
 import { SPREADSHEET_DUMMY_DATA } from '../constants/Spreadsheet.constant';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
@@ -27,7 +27,7 @@ import { EntityTabs } from '../enums/entity.enum';
 import { Spreadsheet } from '../generated/entity/data/spreadsheet';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import spreadsheetClassBase, {
-    SpreadsheetClassBase
+  SpreadsheetClassBase,
 } from './SpreadsheetClassBase';
 import { SpreadsheetDetailPageTabProps } from './SpreadsheetDetailsUtils';
 

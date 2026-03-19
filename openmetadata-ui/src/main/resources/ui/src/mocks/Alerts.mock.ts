@@ -13,19 +13,19 @@
 
 import { PagingResponse } from 'Models';
 import {
-    EventType,
-    Status,
-    TypedEvent
+  EventType,
+  Status,
+  TypedEvent,
 } from '../generated/events/api/typedEvent';
 import {
-    AlertType,
-    Effect,
-    EventSubscription,
-    InputType,
-    PrefixCondition,
-    ProviderType,
-    SubscriptionCategory,
-    SubscriptionType
+  AlertType,
+  Effect,
+  EventSubscription,
+  InputType,
+  PrefixCondition,
+  ProviderType,
+  SubscriptionCategory,
+  SubscriptionType,
 } from '../generated/events/eventSubscription';
 
 export const mockAlertDetails: EventSubscription = {

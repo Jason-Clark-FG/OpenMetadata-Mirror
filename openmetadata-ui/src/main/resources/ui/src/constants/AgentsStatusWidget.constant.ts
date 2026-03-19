@@ -14,9 +14,9 @@
 import { AgentStatus } from '../enums/ServiceInsights.enum';
 import { PipelineType } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import {
-    COLLATE_AUTO_TIER_APP_NAME,
-    COLLATE_DATA_QUALITY_APP_NAME,
-    COLLATE_DOCUMENTATION_APP_NAME
+  COLLATE_AUTO_TIER_APP_NAME,
+  COLLATE_DATA_QUALITY_APP_NAME,
+  COLLATE_DOCUMENTATION_APP_NAME,
 } from './Applications.constant';
 
 export const AUTOPILOT_AGENTS_ORDERED_LIST = [

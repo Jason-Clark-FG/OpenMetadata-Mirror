@@ -35,12 +35,12 @@ import KPIWidget from '../components/MyData/Widgets/KPIWidget/KPIWidget.componen
 import MyTaskWidget from '../components/MyData/Widgets/MyTaskWidget/MyTaskWidget';
 import TotalDataAssetsWidget from '../components/MyData/Widgets/TotalDataAssetsWidget/TotalDataAssetsWidget.component';
 import {
-    LandingPageWidgetKeys,
-    WidgetWidths
+  LandingPageWidgetKeys,
+  WidgetWidths,
 } from '../enums/CustomizablePage.enum';
 import {
-    WidgetCommonProps,
-    WidgetConfig
+  WidgetCommonProps,
+  WidgetConfig,
 } from '../pages/CustomizablePage/CustomizablePage.interface';
 
 class CustomizeMyDataPageClassBase {

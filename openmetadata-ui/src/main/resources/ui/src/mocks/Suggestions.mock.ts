@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import {
-    Suggestion,
-    SuggestionType
+  Suggestion,
+  SuggestionType,
 } from '../generated/entity/feed/suggestion';
 import { EntityReference } from '../generated/type/entityReference';
 

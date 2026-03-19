@@ -13,10 +13,10 @@
 import { EntityType } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import {
-    getEntityTypeFromSearchIndex,
-    getGroupLabel,
-    getTermQuery,
-    parseBucketsData
+  getEntityTypeFromSearchIndex,
+  getGroupLabel,
+  getTermQuery,
+  parseBucketsData,
 } from './SearchUtils';
 
 // Add type definition for ESQueryClause to fix type errors

@@ -29,8 +29,8 @@ import { ERROR_PLACEHOLDER_TYPE } from '../enums/common.enum';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs, EntityType, TabSpecificField } from '../enums/entity.enum';
 import {
-    SearchIndex as SearchIndexEntity,
-    SearchIndexField
+  SearchIndex as SearchIndexEntity,
+  SearchIndexField,
 } from '../generated/entity/data/searchIndex';
 import { PageType } from '../generated/system/ui/page';
 import { EntityReference } from '../generated/type/entityReference';

@@ -16,18 +16,18 @@ import { EntityType } from '../enums/entity.enum';
 import { TestCaseStatus } from '../generated/tests/testCase';
 import { TestCaseResolutionStatusTypes } from '../generated/tests/testCaseResolutionStatus';
 import {
-    buildDataQualityDashboardFilters,
-    buildMustEsFilterForOwner,
-    buildMustEsFilterForTags
+  buildDataQualityDashboardFilters,
+  buildMustEsFilterForOwner,
+  buildMustEsFilterForTags,
 } from '../utils/DataQuality/DataQualityUtils';
 import {
-    fetchCountOfIncidentStatusTypeByDays,
-    fetchEntityCoveredWithDQ,
-    fetchIncidentTimeMetrics,
-    fetchTestCaseStatusMetricsByDays,
-    fetchTestCaseSummary,
-    fetchTestCaseSummaryByDimension,
-    fetchTotalEntityCount
+  fetchCountOfIncidentStatusTypeByDays,
+  fetchEntityCoveredWithDQ,
+  fetchIncidentTimeMetrics,
+  fetchTestCaseStatusMetricsByDays,
+  fetchTestCaseSummary,
+  fetchTestCaseSummaryByDimension,
+  fetchTotalEntityCount,
 } from './dataQualityDashboardAPI';
 import { getDataQualityReport } from './testAPI';
 

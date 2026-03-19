@@ -14,12 +14,12 @@
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import { CONTAINER_DUMMY_DATA } from '../constants/Contianer.constants';
 import {
-    CUSTOM_PROPERTIES_WIDGET,
-    DATA_PRODUCTS_WIDGET,
-    DESCRIPTION_WIDGET,
-    GLOSSARY_TERMS_WIDGET,
-    GridSizes,
-    TAGS_WIDGET
+  CUSTOM_PROPERTIES_WIDGET,
+  DATA_PRODUCTS_WIDGET,
+  DESCRIPTION_WIDGET,
+  GLOSSARY_TERMS_WIDGET,
+  GridSizes,
+  TAGS_WIDGET,
 } from '../constants/CustomizeWidgets.constants';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../enums/entity.enum';
@@ -28,8 +28,8 @@ import { Tab } from '../generated/system/ui/uiCustomization';
 import { FeedCounts } from '../interface/feed.interface';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import {
-    getContainerDetailPageTabs,
-    getContainerWidgetsFromKey
+  getContainerDetailPageTabs,
+  getContainerWidgetsFromKey,
 } from './ContainerDetailUtils';
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 import i18n from './i18next/LocalUtil';

@@ -12,18 +12,18 @@
  */
 
 import {
-    getSession,
-    removeSession,
-    setSession
+  getSession,
+  removeSession,
+  setSession,
 } from '@analytics/session-utils';
 import Analytics, { AnalyticsInstance } from 'analytics';
 import {
-    WebAnalyticEventData,
-    WebAnalyticEventType
+  WebAnalyticEventData,
+  WebAnalyticEventType,
 } from '../generated/analytics/webAnalyticEventData';
 import {
-    CustomEvent,
-    CustomEventTypes
+  CustomEvent,
+  CustomEventTypes,
 } from '../generated/analytics/webAnalyticEventType/customEvent';
 import { PageViewEvent } from '../generated/analytics/webAnalyticEventType/pageViewEvent';
 import { postWebAnalyticEvent } from '../rest/WebAnalyticsAPI';

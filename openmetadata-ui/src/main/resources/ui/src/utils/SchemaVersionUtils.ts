@@ -15,24 +15,24 @@ import { cloneDeep, isEmpty, isEqual, isUndefined } from 'lodash';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import { EntityField } from '../constants/Feeds.constants';
 import {
-    ChangeDescription,
-    DataTypeTopic,
-    Field,
-    MessageSchemaObject
+  ChangeDescription,
+  DataTypeTopic,
+  Field,
+  MessageSchemaObject,
 } from '../generated/entity/data/topic';
 import { APISchema } from '../generated/type/apiSchema';
 import { EntityDiffProps } from '../interface/EntityVersion.interface';
 import {
-    getAllChangedEntityNames,
-    getAllDiffByFieldName,
-    getChangeColumnNameFromDiffValue,
-    getChangedEntityName,
-    getDiffByFieldName,
-    getEntityDescriptionDiff,
-    getEntityTagDiff,
-    getStringEntityDiff,
-    getTextDiff,
-    isEndsWithField
+  getAllChangedEntityNames,
+  getAllDiffByFieldName,
+  getChangeColumnNameFromDiffValue,
+  getChangedEntityName,
+  getDiffByFieldName,
+  getEntityDescriptionDiff,
+  getEntityTagDiff,
+  getStringEntityDiff,
+  getTextDiff,
+  isEndsWithField,
 } from './EntityVersionUtils';
 
 export function getNewFieldFromSchemaFieldDiff(

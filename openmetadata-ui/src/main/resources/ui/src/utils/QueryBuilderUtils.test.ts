@@ -13,16 +13,16 @@
 import { Fields } from '@react-awesome-query-builder/antd';
 import { EntityType } from '../enums/entity.enum';
 import {
-    QueryFieldInterface,
-    QueryFilterInterface
+  QueryFieldInterface,
+  QueryFilterInterface,
 } from '../pages/ExplorePage/ExplorePage.interface';
 import {
-    addEntityTypeFilter,
-    buildExploreUrlParams,
-    getEntityTypeAggregationFilter,
-    getJsonTreeFromQueryFilter,
-    jsonLogicToElasticsearch,
-    resolveFieldType
+  addEntityTypeFilter,
+  buildExploreUrlParams,
+  getEntityTypeAggregationFilter,
+  getJsonTreeFromQueryFilter,
+  jsonLogicToElasticsearch,
+  resolveFieldType,
 } from './QueryBuilderUtils';
 
 jest.mock('./StringsUtils', () => ({

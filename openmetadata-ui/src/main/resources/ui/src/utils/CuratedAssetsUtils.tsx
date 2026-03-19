@@ -25,8 +25,8 @@ import { SearchIndex } from '../enums/search.enum';
 import { QueryFilterInterface } from '../pages/ExplorePage/ExplorePage.interface';
 import { searchQuery } from '../rest/searchAPI';
 import {
-    getEntityTypeAggregationFilter,
-    getJsonTreeFromQueryFilter
+  getEntityTypeAggregationFilter,
+  getJsonTreeFromQueryFilter,
 } from './QueryBuilderUtils';
 import { getExplorePath } from './RouterUtils';
 

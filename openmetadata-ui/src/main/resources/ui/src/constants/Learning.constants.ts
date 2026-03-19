@@ -13,9 +13,9 @@
 
 import { ReactNode } from 'react';
 import {
-    ResourceCategory,
-    ResourceType,
-    Status as LearningResourceStatus
+  ResourceCategory,
+  ResourceType,
+  Status as LearningResourceStatus,
 } from '../generated/entity/learning/learningResource';
 
 export { LearningResourceStatus, ResourceCategory, ResourceType };

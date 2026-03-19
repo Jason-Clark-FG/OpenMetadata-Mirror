@@ -12,9 +12,9 @@
  */
 
 import {
-    DataType,
-    SearchIndex,
-    TagSource
+  DataType,
+  SearchIndex,
+  TagSource,
 } from '../generated/entity/data/searchIndex';
 import { EntityReference } from '../generated/type/entityReference';
 import { LabelType, State } from '../generated/type/tagLabel';

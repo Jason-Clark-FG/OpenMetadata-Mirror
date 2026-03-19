@@ -46,7 +46,9 @@ export const processGenericOptions = (
     const aggregations = result.value?.data.aggregations || {};
     const aggregationValues = Object.values(aggregations);
     if (aggregationValues.length > 0) {
-      buckets = (aggregationValues[0] as { buckets?: AggregationBucket[] })?.buckets || [];
+      buckets =
+        (aggregationValues[0] as { buckets?: AggregationBucket[] })?.buckets ||
+        [];
     }
   }
 

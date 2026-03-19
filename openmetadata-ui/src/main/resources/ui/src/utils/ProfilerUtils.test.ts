@@ -12,8 +12,8 @@
  */
 
 import {
-    getImageWithResolutionAndFallback,
-    ImageQuality
+  getImageWithResolutionAndFallback,
+  ImageQuality,
 } from './ProfilerUtils';
 
 const mockImageList = {

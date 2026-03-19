@@ -20,8 +20,8 @@ import { ReactComponent as PausedIcon } from '../assets/svg/ic-pause.svg';
 import { ReactComponent as TimeDateIcon } from '../assets/svg/time-date.svg';
 import { NO_DATA_PLACEHOLDER } from '../constants/constants';
 import {
-    IngestionPipeline,
-    PipelineType
+  IngestionPipeline,
+  PipelineType,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { getScheduleDescriptionTexts } from './date-time/DateTimeUtils';
 import { getEntityName, highlightSearchText } from './EntityUtils';

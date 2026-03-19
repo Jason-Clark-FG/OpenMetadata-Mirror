@@ -12,11 +12,11 @@
  */
 
 import {
-    filterSelectOptions,
-    getFirstAlphanumeric,
-    getTableFQNFromColumnFQN,
-    isLinearGradient,
-    normalizeToArray
+  filterSelectOptions,
+  getFirstAlphanumeric,
+  getTableFQNFromColumnFQN,
+  isLinearGradient,
+  normalizeToArray,
 } from './CommonUtils';
 
 describe('Tests for CommonUtils', () => {

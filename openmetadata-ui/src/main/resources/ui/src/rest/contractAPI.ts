@@ -13,14 +13,14 @@
 import { AxiosResponse } from 'axios';
 import { Operation } from 'fast-json-patch';
 import {
-    ContractAllResult,
-    ContractResultFilter
+  ContractAllResult,
+  ContractResultFilter,
 } from '../components/DataContract/ContractDetailTab/contract.interface';
 import { EntityType } from '../enums/entity.enum';
 import { CreateDataContract } from '../generated/api/data/createDataContract';
 import {
-    DataContract,
-    EntityStatus
+  DataContract,
+  EntityStatus,
 } from '../generated/entity/data/dataContract';
 import { ContractValidation } from '../generated/entity/datacontract/contractValidation';
 import { DataContractResult } from '../generated/entity/datacontract/dataContractResult';

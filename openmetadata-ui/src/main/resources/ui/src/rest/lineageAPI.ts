@@ -14,13 +14,13 @@
 import { CSVExportResponse } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import { LineageConfig } from '../components/Entity/EntityLineage/EntityLineage.interface';
 import {
-    EdgeDetails,
-    EntityLineageResponse,
-    LineageData
+  EdgeDetails,
+  EntityLineageResponse,
+  LineageData,
 } from '../components/Lineage/Lineage.interface';
 import {
-    LineageNodeData,
-    LineagePagingInfo
+  LineageNodeData,
+  LineagePagingInfo,
 } from '../components/LineageTable/LineageTable.interface';
 import { EntityType } from '../enums/entity.enum';
 import { AddLineage } from '../generated/api/lineage/addLineage';

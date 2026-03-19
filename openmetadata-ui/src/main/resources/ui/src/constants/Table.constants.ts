@@ -13,14 +13,14 @@
 
 import { StoredProcedure } from '../generated/entity/data/storedProcedure';
 import {
-    Constraint,
-    ConstraintType,
-    DatabaseServiceType,
-    DataType,
-    PartitionIntervalTypes,
-    RelationshipType,
-    Table,
-    TableType
+  Constraint,
+  ConstraintType,
+  DatabaseServiceType,
+  DataType,
+  PartitionIntervalTypes,
+  RelationshipType,
+  Table,
+  TableType,
 } from '../generated/entity/data/table';
 
 export const TABLE_SCROLL_VALUE = { x: 1200 };

@@ -11,10 +11,10 @@
  *  limitations under the License.
  */
 import {
-    DriveServiceType,
-    EntityStatus,
-    File,
-    FileType
+  DriveServiceType,
+  EntityStatus,
+  File,
+  FileType,
 } from '../generated/entity/data/file';
 
 export const FILE_DUMMY_DATA: File = {

@@ -27,34 +27,34 @@ import { Skeleton, Typography } from 'antd';
 import { groupBy, isEmpty, isUndefined, reduce } from 'lodash';
 import { AgentsInfo } from '../components/ServiceInsights/AgentsStatusWidget/AgentsStatusWidget.interface';
 import {
-    AgentsLiveInfo,
-    CollateAgentLiveInfo
+  AgentsLiveInfo,
+  CollateAgentLiveInfo,
 } from '../components/ServiceInsights/ServiceInsightsTab.interface';
 import {
-    AUTOPILOT_AGENTS_ORDERED_LIST,
-    AUTOPILOT_AGENTS_STATUS_ORDERED_LIST
+  AUTOPILOT_AGENTS_ORDERED_LIST,
+  AUTOPILOT_AGENTS_STATUS_ORDERED_LIST,
 } from '../constants/AgentsStatusWidget.constant';
 import {
-    COLLATE_AUTO_TIER_APP_NAME,
-    COLLATE_DATA_QUALITY_APP_NAME,
-    COLLATE_DOCUMENTATION_APP_NAME
+  COLLATE_AUTO_TIER_APP_NAME,
+  COLLATE_DATA_QUALITY_APP_NAME,
+  COLLATE_DOCUMENTATION_APP_NAME,
 } from '../constants/Applications.constant';
 import { NO_RUNS_STATUS } from '../constants/ServiceInsightsTab.constants';
 import { AgentStatus } from '../enums/ServiceInsights.enum';
 import { App } from '../generated/entity/applications/app';
 import {
-    AppRunRecord,
-    Status
+  AppRunRecord,
+  Status,
 } from '../generated/entity/applications/appRunRecord';
 import {
-    IngestionPipeline,
-    PipelineState,
-    PipelineType,
-    ProviderType
+  IngestionPipeline,
+  PipelineState,
+  PipelineType,
+  ProviderType,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import {
-    WorkflowInstance,
-    WorkflowStatus
+  WorkflowInstance,
+  WorkflowStatus,
 } from '../generated/governance/workflows/workflowInstance';
 import { t } from './i18next/LocalUtil';
 

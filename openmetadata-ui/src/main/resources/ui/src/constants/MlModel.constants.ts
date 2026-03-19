@@ -11,10 +11,10 @@
  *  limitations under the License.
  */
 import {
-    FeatureSourceDataType,
-    FeatureType,
-    Mlmodel,
-    MlModelServiceType
+  FeatureSourceDataType,
+  FeatureType,
+  Mlmodel,
+  MlModelServiceType,
 } from '../generated/entity/data/mlmodel';
 
 export const ML_MODEL_DUMMY_DATA: Mlmodel = {

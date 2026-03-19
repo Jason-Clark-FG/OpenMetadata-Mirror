@@ -21,8 +21,8 @@ import { ReactComponent as SlackIcon } from '../assets/svg/slack.svg';
 import { ReactComponent as TeamIcon } from '../assets/svg/team-colored-icon.svg';
 import { ReactComponent as UserIcon } from '../assets/svg/user-colored-icon.svg';
 import {
-    ReactComponent as AssigneeIcon,
-    ReactComponent as OwnerIcon
+  ReactComponent as AssigneeIcon,
+  ReactComponent as OwnerIcon,
 } from '../assets/svg/user.svg';
 import { ReactComponent as GenericIcon } from '../assets/svg/webhook.svg';
 import { SubscriptionCategory } from '../generated/events/eventSubscription';

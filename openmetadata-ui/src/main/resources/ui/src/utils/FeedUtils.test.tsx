@@ -16,15 +16,15 @@ import { SearchIndex } from '../enums/search.enum';
 import { CardStyle, FieldOperation } from '../generated/entity/feed/thread';
 import { getPartialNameFromTableFQN } from './CommonUtils';
 import {
-    entityDisplayName,
-    getBackendFormat,
-    getEntityField,
-    getEntityFQN,
-    getEntityType,
-    getFeedHeaderTextFromCardStyle,
-    getFieldOperationIcon,
-    getFrontEndFormat,
-    suggestions
+  entityDisplayName,
+  getBackendFormat,
+  getEntityField,
+  getEntityFQN,
+  getEntityType,
+  getFeedHeaderTextFromCardStyle,
+  getFieldOperationIcon,
+  getFrontEndFormat,
+  suggestions,
 } from './FeedUtils';
 
 jest.mock('../rest/searchAPI', () => ({

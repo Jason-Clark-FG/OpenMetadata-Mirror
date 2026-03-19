@@ -15,13 +15,13 @@ import { AxiosResponse } from 'axios';
 import { Operation } from 'fast-json-patch';
 import { PagingResponse } from 'Models';
 import {
-    CreateIngestionPipeline,
-    PipelineType
+  CreateIngestionPipeline,
+  PipelineType,
 } from '../generated/api/services/ingestionPipelines/createIngestionPipeline';
 import {
-    IngestionPipeline,
-    PipelineStatus,
-    ProviderType
+  IngestionPipeline,
+  PipelineStatus,
+  ProviderType,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { PipelineServiceClientResponse } from '../generated/entity/services/ingestionPipelines/pipelineServiceClientResponse';
 import { Paging } from '../generated/type/paging';

@@ -11,17 +11,17 @@
  *  limitations under the License.
  */
 import {
-    DEFAULT_DATE_FORMAT,
-    DEFAULT_DATE_TIME_FORMAT,
-    DEFAULT_TIME_FORMAT,
-    ENTITY_REFERENCE_OPTIONS,
-    SUPPORTED_DATE_TIME_FORMATS_ANTD_FORMAT_MAPPING
+  DEFAULT_DATE_FORMAT,
+  DEFAULT_DATE_TIME_FORMAT,
+  DEFAULT_TIME_FORMAT,
+  ENTITY_REFERENCE_OPTIONS,
+  SUPPORTED_DATE_TIME_FORMATS_ANTD_FORMAT_MAPPING,
 } from '../constants/CustomProperty.constants';
 import {
-    formatTableCellValue,
-    getCustomPropertyDateTimeDefaultFormat,
-    getCustomPropertyEntityPathname,
-    getCustomPropertyMomentFormat
+  formatTableCellValue,
+  getCustomPropertyDateTimeDefaultFormat,
+  getCustomPropertyEntityPathname,
+  getCustomPropertyMomentFormat,
 } from './CustomProperty.utils';
 
 describe('CustomProperty.utils', () => {

@@ -13,8 +13,8 @@
 import { cloneDeep, isNil, reduce } from 'lodash';
 import { SERVICE_FILTER_PATTERN_FIELDS } from '../constants/ServiceConnection.constants';
 import {
-    ServiceCategory,
-    ServiceNestedConnectionFields
+  ServiceCategory,
+  ServiceNestedConnectionFields,
 } from '../enums/service.enum';
 import { ServiceConnectionFilterPatternFields } from '../enums/ServiceConnection.enum';
 import { APIServiceType } from '../generated/entity/data/apiCollection';

@@ -11,18 +11,18 @@
  *  limitations under the License.
  */
 import {
-    Column,
-    Constraint,
-    DataType
+  Column,
+  Constraint,
+  DataType,
 } from '../generated/entity/data/container';
 import {
-    FeedbackType,
-    Post,
-    RecognizerFeedback,
-    TaskType,
-    Thread,
-    ThreadTaskStatus,
-    ThreadType
+  FeedbackType,
+  Post,
+  RecognizerFeedback,
+  TaskType,
+  Thread,
+  ThreadTaskStatus,
+  ThreadType,
 } from '../generated/entity/feed/thread';
 
 /* eslint-disable max-len */

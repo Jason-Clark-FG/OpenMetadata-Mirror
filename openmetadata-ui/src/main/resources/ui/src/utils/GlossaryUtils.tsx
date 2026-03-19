@@ -24,18 +24,18 @@ import { ModifiedGlossaryTerm } from '../components/Glossary/GlossaryTermTab/Glo
 import { ModifiedGlossary } from '../components/Glossary/useGlossary.store';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import {
-    ICON_DIMENSION,
-    SUCCESS_COLOR,
-    TEXT_BODY_COLOR,
-    TEXT_GREY_MUTED
+  ICON_DIMENSION,
+  SUCCESS_COLOR,
+  TEXT_BODY_COLOR,
+  TEXT_GREY_MUTED,
 } from '../constants/constants';
 import { GlossaryTermDetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityType } from '../enums/entity.enum';
 import { Glossary } from '../generated/entity/data/glossary';
 import {
-    EntityStatus,
-    GlossaryTerm,
-    TermReference
+  EntityStatus,
+  GlossaryTerm,
+  TermReference,
 } from '../generated/entity/data/glossaryTerm';
 import { Domain } from '../generated/entity/domains/domain';
 import { Thread } from '../generated/entity/feed/thread';

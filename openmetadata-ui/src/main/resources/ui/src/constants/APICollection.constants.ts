@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import {
-    APICollection,
-    APIServiceType
+  APICollection,
+  APIServiceType,
 } from '../generated/entity/data/apiCollection';
 import {
-    APIEndpoint,
-    APIRequestMethod,
-    DataTypeTopic
+  APIEndpoint,
+  APIRequestMethod,
+  DataTypeTopic,
 } from '../generated/entity/data/apiEndpoint';
 
 export const API_COLLECTION_DUMMY_DATA: APICollection = {

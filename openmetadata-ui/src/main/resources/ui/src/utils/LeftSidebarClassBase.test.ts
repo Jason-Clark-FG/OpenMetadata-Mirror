@@ -16,7 +16,7 @@ import { ReactComponent as HomeIcon } from '../assets/svg/ic-home.svg';
 import { LeftSidebarItem } from '../components/MyData/LeftSidebar/LeftSidebar.interface';
 import { SIDEBAR_LIST } from '../constants/LeftSidebar.constants';
 import leftSidebarClassBase, {
-    LeftSidebarClassBase
+  LeftSidebarClassBase,
 } from './LeftSidebarClassBase';
 
 jest.mock('../constants/LeftSidebar.constants', () => ({

@@ -13,7 +13,7 @@
 import { render, screen } from '@testing-library/react';
 import { FC } from 'react';
 import entityRightPanelClassBase, {
-    EntityRightPanelClassBase
+  EntityRightPanelClassBase,
 } from './EntityRightPanelClassBase';
 
 describe('EntityRightPanelClassBase', () => {

@@ -23,10 +23,10 @@ import Fqn from './Fqn';
 import i18n from './i18next/LocalUtil';
 import { getSettingsPathFromPipelineType } from './IngestionUtils';
 import {
-    getApplicationDetailsPath,
-    getDataQualityPagePath,
-    getLogEntityPath,
-    getSettingPath
+  getApplicationDetailsPath,
+  getDataQualityPagePath,
+  getLogEntityPath,
+  getSettingPath,
 } from './RouterUtils';
 import { getTestSuiteDetailsPath } from './TestSuiteUtils';
 

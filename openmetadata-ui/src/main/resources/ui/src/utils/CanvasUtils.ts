@@ -14,16 +14,16 @@ import { Edge, Node, Position, Viewport } from 'reactflow';
 import { EntityChildren } from '../components/Entity/EntityLineage/NodeChildren/NodeChildren.interface';
 import { LINEAGE_CHILD_ITEMS_PER_PAGE } from '../constants/constants';
 import {
-    COLUMN_NODE_HEIGHT,
-    NODE_HEIGHT,
-    NODE_HEIGHT_WITH_CHILDREN,
-    NODE_WIDTH
+  COLUMN_NODE_HEIGHT,
+  NODE_HEIGHT,
+  NODE_HEIGHT_WITH_CHILDREN,
+  NODE_WIDTH,
 } from '../constants/Lineage.constants';
 import { EntityType } from '../enums/entity.enum';
 import { useLineageStore } from '../hooks/useLineageStore';
 import {
-    getEdgePathData,
-    getEntityChildrenAndLabel
+  getEdgePathData,
+  getEntityChildrenAndLabel,
 } from './EntityLineageUtils';
 
 export interface BoundingBox {

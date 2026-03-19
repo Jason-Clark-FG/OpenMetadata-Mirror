@@ -12,14 +12,14 @@
  */
 import { ServiceCategory } from '../enums/service.enum';
 import {
-    Pipeline,
-    PipelineType as WorkflowType
+  Pipeline,
+  PipelineType as WorkflowType,
 } from '../generated/api/services/ingestionPipelines/createIngestionPipeline';
 
 import {
-    cleanWorkFlowData,
-    getMetadataSchemaByServiceCategory,
-    getSchemaByWorkflowType
+  cleanWorkFlowData,
+  getMetadataSchemaByServiceCategory,
+  getSchemaByWorkflowType,
 } from './IngestionWorkflowUtils';
 
 const MOCK_WORKFLOW_DATA = {

@@ -16,9 +16,9 @@ import { TestCaseStatus } from '../generated/tests/testCase';
 import { TestCaseResolutionStatusTypes } from '../generated/tests/testCaseResolutionStatus';
 import { DataQualityDashboardChartFilters } from '../pages/DataQuality/DataQualityPage.interface';
 import {
-    buildDataQualityDashboardFilters,
-    buildMustEsFilterForOwner,
-    buildMustEsFilterForTags
+  buildDataQualityDashboardFilters,
+  buildMustEsFilterForOwner,
+  buildMustEsFilterForTags,
 } from '../utils/DataQuality/DataQualityUtils';
 import { DataQualityReportParamsType, getDataQualityReport } from './testAPI';
 

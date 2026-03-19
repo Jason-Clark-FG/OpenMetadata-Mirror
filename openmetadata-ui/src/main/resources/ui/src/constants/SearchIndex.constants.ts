@@ -11,10 +11,10 @@
  *  limitations under the License.
  */
 import {
-    DataType,
-    IndexType,
-    SearchIndex,
-    SearchServiceType
+  DataType,
+  IndexType,
+  SearchIndex,
+  SearchServiceType,
 } from '../generated/entity/data/searchIndex';
 
 export const SEARCH_INDEX_DUMMY_DATA: SearchIndex = {

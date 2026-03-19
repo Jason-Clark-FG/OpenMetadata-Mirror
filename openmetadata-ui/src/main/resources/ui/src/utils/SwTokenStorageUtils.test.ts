@@ -12,11 +12,11 @@
  */
 
 import {
-    getOidcToken,
-    getRefreshToken,
-    isServiceWorkerAvailable,
-    setOidcToken,
-    setRefreshToken
+  getOidcToken,
+  getRefreshToken,
+  isServiceWorkerAvailable,
+  setOidcToken,
+  setRefreshToken,
 } from './SwTokenStorageUtils';
 
 // Mock SwTokenStorage

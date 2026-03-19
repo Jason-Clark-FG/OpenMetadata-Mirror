@@ -12,10 +12,10 @@
  */
 
 import {
-    DataAssetRuleValidation,
-    EntityRule,
-    ParsedRule,
-    RuleType
+  DataAssetRuleValidation,
+  EntityRule,
+  ParsedRule,
+  RuleType,
 } from '../context/RuleEnforcementProvider/RuleEnforcementProvider.interface';
 import { EntityType } from '../enums/entity.enum';
 

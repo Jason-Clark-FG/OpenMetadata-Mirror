@@ -16,8 +16,8 @@ import { Operation } from 'fast-json-patch';
 import { PagingResponse } from 'Models';
 import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import {
-    APPLICATION_JSON_CONTENT_TYPE_HEADER,
-    PAGE_SIZE_MEDIUM
+  APPLICATION_JSON_CONTENT_TYPE_HEADER,
+  PAGE_SIZE_MEDIUM,
 } from '../constants/constants';
 import { TabSpecificField } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';

@@ -39,47 +39,47 @@ import { ExploreSearchIndex } from '../components/Explore/ExplorePage.interface'
 import { ExploreTreeNode } from '../components/Explore/ExploreTree/ExploreTree.interface';
 import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import {
-    API_ENDPOINT_DROPDOWN_ITEMS,
-    COLUMN_DROPDOWN_ITEMS,
-    COMMON_DROPDOWN_ITEMS,
-    CONTAINER_DROPDOWN_ITEMS,
-    DASHBOARD_DATA_MODEL_TYPE,
-    DASHBOARD_DROPDOWN_ITEMS,
-    DATA_ASSET_DROPDOWN_ITEMS,
-    DATA_PRODUCT_DROPDOWN_ITEMS,
-    GLOSSARY_DROPDOWN_ITEMS,
-    ML_MODEL_DROPDOWN_ITEMS,
-    PIPELINE_DROPDOWN_ITEMS,
-    SEARCH_INDEX_DROPDOWN_ITEMS,
-    TABLE_DROPDOWN_ITEMS,
-    TAG_DROPDOWN_ITEMS,
-    TOPIC_DROPDOWN_ITEMS
+  API_ENDPOINT_DROPDOWN_ITEMS,
+  COLUMN_DROPDOWN_ITEMS,
+  COMMON_DROPDOWN_ITEMS,
+  CONTAINER_DROPDOWN_ITEMS,
+  DASHBOARD_DATA_MODEL_TYPE,
+  DASHBOARD_DROPDOWN_ITEMS,
+  DATA_ASSET_DROPDOWN_ITEMS,
+  DATA_PRODUCT_DROPDOWN_ITEMS,
+  GLOSSARY_DROPDOWN_ITEMS,
+  ML_MODEL_DROPDOWN_ITEMS,
+  PIPELINE_DROPDOWN_ITEMS,
+  SEARCH_INDEX_DROPDOWN_ITEMS,
+  TABLE_DROPDOWN_ITEMS,
+  TAG_DROPDOWN_ITEMS,
+  TOPIC_DROPDOWN_ITEMS,
 } from '../constants/AdvancedSearch.constants';
 import {
-    columnSortingFields,
-    entitySortingFields,
-    INITIAL_SORT_FIELD,
-    tableSortingFields,
-    tagSortingFields,
-    TAGS_INITIAL_SORT_FIELD
+  columnSortingFields,
+  entitySortingFields,
+  INITIAL_SORT_FIELD,
+  tableSortingFields,
+  tagSortingFields,
+  TAGS_INITIAL_SORT_FIELD,
 } from '../constants/explore.constants';
 import {
-    Option,
-    SearchSuggestions
+  Option,
+  SearchSuggestions,
 } from '../context/GlobalSearchProvider/GlobalSearchSuggestions/GlobalSearchSuggestions.interface';
 import { EntityType } from '../enums/entity.enum';
 import { ExplorePageTabs } from '../enums/Explore.enum';
 import { SearchIndex } from '../enums/search.enum';
 import { TestSuite } from '../generated/tests/testCase';
 import {
-    SearchSourceAlias,
-    TableSearchSource
+  SearchSourceAlias,
+  TableSearchSource,
 } from '../interface/search.interface';
 import { TabsInfoData } from '../pages/ExplorePage/ExplorePage.interface';
 import {
-    getEntityBreadcrumbs,
-    getEntityLinkFromType,
-    getEntityName
+  getEntityBreadcrumbs,
+  getEntityLinkFromType,
+  getEntityName,
 } from './EntityUtils';
 import { t } from './i18next/LocalUtil';
 import { getChartDetailsPath } from './RouterUtils';

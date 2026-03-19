@@ -39,11 +39,11 @@ import { t } from './i18next/LocalUtil';
 import { getLinkForFqn } from './ServiceUtils';
 import { stringToHTML } from './StringsUtils';
 import {
-    dataProductTableObject,
-    descriptionTableObject,
-    domainTableObject,
-    ownerTableObject,
-    tagTableObject
+  dataProductTableObject,
+  descriptionTableObject,
+  domainTableObject,
+  ownerTableObject,
+  tagTableObject,
 } from './TableColumn.util';
 import { getUsagePercentile } from './TableUtils';
 

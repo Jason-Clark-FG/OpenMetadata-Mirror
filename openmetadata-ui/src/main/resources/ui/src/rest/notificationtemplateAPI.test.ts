@@ -14,17 +14,17 @@
 import { Operation } from 'fast-json-patch';
 import { CreateNotificationTemplate } from '../generated/api/events/createNotificationTemplate';
 import {
-    NotificationTemplate,
-    ProviderType
+  NotificationTemplate,
+  ProviderType,
 } from '../generated/entity/events/notificationTemplate';
 import APIClient from '../rest/index';
 import {
-    createNotificationTemplate,
-    deleteNotificationTemplate,
-    getAllNotificationTemplates,
-    getNotificationTemplateByFqn,
-    patchNotificationTemplate,
-    validateNotificationTemplate
+  createNotificationTemplate,
+  deleteNotificationTemplate,
+  getAllNotificationTemplates,
+  getNotificationTemplateByFqn,
+  patchNotificationTemplate,
+  validateNotificationTemplate,
 } from './notificationtemplateAPI';
 
 jest.mock('./index');

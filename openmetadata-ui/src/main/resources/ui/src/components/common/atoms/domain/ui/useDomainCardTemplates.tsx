@@ -53,7 +53,10 @@ export const useDomainCardTemplates = () => {
     () =>
       (
         entity: Domain,
-        renderCell: (entity: Domain, column: ColumnConfig<Domain>) => React.ReactNode
+        renderCell: (
+          entity: Domain,
+          column: ColumnConfig<Domain>
+        ) => React.ReactNode
       ) =>
         (
           <>
@@ -150,7 +153,10 @@ export const useDomainCardTemplates = () => {
     () =>
       (
         entity: DataProduct,
-        renderCell: (entity: DataProduct, column: ColumnConfig<DataProduct>) => React.ReactNode
+        renderCell: (
+          entity: DataProduct,
+          column: ColumnConfig<DataProduct>
+        ) => React.ReactNode
       ) =>
         (
           <>

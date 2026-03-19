@@ -14,9 +14,9 @@
 import { AnalyticsData } from './../components/WebAnalytics/WebAnalytics.interface';
 import { postWebAnalyticEvent } from './../rest/WebAnalyticsAPI';
 import {
-    getAnalyticInstance,
-    getReferrerPath,
-    trackCustomEvent
+  getAnalyticInstance,
+  getReferrerPath,
+  trackCustomEvent,
 } from './WebAnalyticsUtils';
 
 const userId = 'userId';

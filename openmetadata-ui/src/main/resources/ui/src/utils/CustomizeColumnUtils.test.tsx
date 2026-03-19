@@ -12,8 +12,8 @@
  */
 import { TableColumnDropdownList } from '../components/common/Table/Table.interface';
 import {
-    getCustomizeColumnDetails,
-    getReorderedColumns
+  getCustomizeColumnDetails,
+  getReorderedColumns,
 } from './CustomizeColumnUtils';
 
 describe('CustomizeColumnUtils', () => {

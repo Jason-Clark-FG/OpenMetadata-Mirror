@@ -17,21 +17,21 @@ import { EntityType } from '../enums/entity.enum';
 import { User } from '../generated/entity/teams/user';
 import { EntityReference } from '../generated/entity/type';
 import {
-    AlertType,
-    EventSubscription,
-    SubscriptionCategory,
-    SubscriptionType
+  AlertType,
+  EventSubscription,
+  SubscriptionCategory,
+  SubscriptionType,
 } from '../generated/events/eventSubscription';
 import {
-    ModifiedCreateEventSubscription,
-    ModifiedDestination
+  ModifiedCreateEventSubscription,
+  ModifiedDestination,
 } from '../pages/AddObservabilityPage/AddObservabilityPage.interface';
 import {
-    getConfigHeaderArrayFromObject,
-    getConfigHeaderObjectFromArray,
-    getConfigQueryParamsArrayFromObject,
-    getConfigQueryParamsObjectFromArray,
-    getRandomizedAlertName
+  getConfigHeaderArrayFromObject,
+  getConfigHeaderObjectFromArray,
+  getConfigQueryParamsArrayFromObject,
+  getConfigQueryParamsObjectFromArray,
+  getRandomizedAlertName,
 } from './Alerts/AlertsUtil';
 import alertsClassBase, { AlertsClassBase } from './AlertsClassBase';
 import { getEntityName } from './EntityUtils';

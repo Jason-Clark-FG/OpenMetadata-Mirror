@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import {
-    CardStyle,
-    FieldOperation,
-    GeneratedBy,
-    Thread,
-    ThreadType
+  CardStyle,
+  FieldOperation,
+  GeneratedBy,
+  Thread,
+  ThreadType,
 } from '../generated/entity/feed/thread';
 
 export const MOCK_DESCRIPTION_FEED_1: Thread = {

@@ -17,8 +17,8 @@ import { PagingWithoutTotal, RestoreRequestType } from 'Models';
 import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import { APPLICATION_JSON_CONTENT_TYPE_HEADER } from '../constants/constants';
 import {
-    Database,
-    DatabaseProfilerConfig as ProfilerConfig
+  Database,
+  DatabaseProfilerConfig as ProfilerConfig,
 } from '../generated/entity/data/database';
 import { DatabaseSchema } from '../generated/entity/data/databaseSchema';
 import { EntityReference } from '../generated/entity/type';

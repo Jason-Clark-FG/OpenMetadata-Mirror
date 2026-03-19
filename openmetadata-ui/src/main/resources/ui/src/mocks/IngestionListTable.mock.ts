@@ -21,18 +21,18 @@ import { ServiceCategory } from '../enums/service.enum';
 import { DatabaseServiceType } from '../generated/entity/data/database';
 import { ConfigType } from '../generated/entity/services/databaseService';
 import {
-    AuthProvider,
-    FluffyType as AirflowConfigType,
-    IngestionPipeline,
-    LogLevels,
-    OpenmetadataType,
-    PipelineState,
-    PipelineType,
-    ProviderType,
-    SearchIndexMappingLanguage,
-    SecretsManagerClientLoader,
-    SecretsManagerProvider,
-    VerifySSL
+  AuthProvider,
+  FluffyType as AirflowConfigType,
+  IngestionPipeline,
+  LogLevels,
+  OpenmetadataType,
+  PipelineState,
+  PipelineType,
+  ProviderType,
+  SearchIndexMappingLanguage,
+  SecretsManagerClientLoader,
+  SecretsManagerProvider,
+  VerifySSL,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { ENTITY_PERMISSIONS } from './Permissions.mock';
 

@@ -12,9 +12,9 @@
  */
 
 import {
-    FeatureType,
-    Mlmodel,
-    TagSource
+  FeatureType,
+  Mlmodel,
+  TagSource,
 } from '../generated/entity/data/mlmodel';
 import { EntityReference } from '../generated/type/entityReference';
 import { LabelType, State } from '../generated/type/tagLabel';

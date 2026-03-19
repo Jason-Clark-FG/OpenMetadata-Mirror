@@ -18,10 +18,10 @@ import { groupBy, isUndefined, map, toLower } from 'lodash';
 import React from 'react';
 import { MenuOptions } from '../constants/execution.constants';
 import {
-    PipelineStatus,
-    StatusType,
-    Task,
-    TaskStatus
+  PipelineStatus,
+  StatusType,
+  Task,
+  TaskStatus,
 } from '../generated/entity/data/pipeline';
 import { formatDateTime, formatDuration } from './date-time/DateTimeUtils';
 import { t } from './i18next/LocalUtil';

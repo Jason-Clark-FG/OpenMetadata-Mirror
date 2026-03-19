@@ -16,20 +16,20 @@ import { MetricChartType } from '../components/Database/Profiler/ProfilerDashboa
 import { NO_DATA_PLACEHOLDER } from '../constants/constants';
 import { SystemProfile } from '../generated/api/data/createTableProfile';
 import {
-    ColumnProfile,
-    Table,
-    TableProfile
+  ColumnProfile,
+  Table,
+  TableProfile,
 } from '../generated/entity/data/table';
 import { CustomMetric } from '../generated/tests/customMetric';
 import { calculatePercentage, formatNumberWithComma } from './CommonUtils';
 import {
-    customFormatDateTime,
-    DATE_TIME_12_HOUR_FORMAT
+  customFormatDateTime,
+  DATE_TIME_12_HOUR_FORMAT,
 } from './date-time/DateTimeUtils';
 import { isHasKey } from './ObjectUtils';
 import {
-    CalculateColumnProfilerMetricsInterface,
-    ColumnMetricsInterface
+  CalculateColumnProfilerMetricsInterface,
+  ColumnMetricsInterface,
 } from './TableProfilerUtils.interface';
 
 export const calculateRowCountMetrics = (

@@ -20,8 +20,8 @@ import { User } from './../generated/entity/teams/user';
 import { getImages } from './CommonUtils';
 import i18n from './i18next/LocalUtil';
 import {
-    getImageWithResolutionAndFallback,
-    ImageQuality
+  getImageWithResolutionAndFallback,
+  ImageQuality,
 } from './ProfilerUtils';
 import { showErrorToast } from './ToastUtils';
 import userClassBase from './UserClassBase';

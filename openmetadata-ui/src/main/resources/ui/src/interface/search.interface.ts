@@ -23,8 +23,8 @@ import { Container } from '../generated/entity/data/container';
 import { Dashboard } from '../generated/entity/data/dashboard';
 import { DashboardDataModel } from '../generated/entity/data/dashboardDataModel';
 import {
-    Database,
-    DatabaseServiceType
+  Database,
+  DatabaseServiceType,
 } from '../generated/entity/data/database';
 import { DatabaseSchema } from '../generated/entity/data/databaseSchema';
 import { Directory } from '../generated/entity/data/directory';

@@ -39,7 +39,7 @@
     "generate:app-docs": "node generateApplicationDocs.js",
     "generate:e2e-docs": "PLAYWRIGHT_IS_OSS=true node playwright/doc-generator/generate.js",
     "organize-imports": "yarn organize-imports-cli src/**/*.ts && yarn organize-imports-cli src/**/*.tsx && yarn organize-imports-cli playwright/**/*.ts",
-    "ui-checkstyle": "yarn organize-imports && yarn lint:fix && yarn lint:playwright --fix && yarn pretty && yarn license-header-fix && yarn i18n && yarn generate:app-docs"
+    "ui-checkstyle": "yarn organize-imports && yarn lint:fix && yarn lint:playwright --fix && yarn pretty && yarn license-header-fix && yarn i18n && yarn generate:app-docs && yarn tsc --noEmit && yarn tsc --project playwright/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@analytics/session-utils": "^0.1.17",

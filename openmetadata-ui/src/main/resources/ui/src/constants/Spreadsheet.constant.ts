@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 import {
-    DriveServiceType,
-    EntityStatus,
-    Spreadsheet
+  DriveServiceType,
+  EntityStatus,
+  Spreadsheet,
 } from '../generated/entity/data/spreadsheet';
 
 export const SPREADSHEET_DUMMY_DATA: Spreadsheet = {

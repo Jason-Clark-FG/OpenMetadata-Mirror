@@ -17,9 +17,9 @@ import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../enums/entity.enum';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import {
-    getWorksheetDetailsPageTabs,
-    getWorksheetWidgetsFromKey,
-    WorksheetDetailPageTabProps
+  getWorksheetDetailsPageTabs,
+  getWorksheetWidgetsFromKey,
+  WorksheetDetailPageTabProps,
 } from './WorksheetDetailsUtils';
 
 jest.mock('../components/common/TabsLabel/TabsLabel.component', () => {

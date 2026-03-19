@@ -13,11 +13,11 @@
 
 import { EntityType } from '../enums/entity.enum';
 import {
-    Constraint,
-    Container,
-    DataType,
-    FileFormat,
-    StorageServiceType
+  Constraint,
+  Container,
+  DataType,
+  FileFormat,
+  StorageServiceType,
 } from '../generated/entity/data/container';
 
 export const CONTAINER_DUMMY_DATA: Container = {

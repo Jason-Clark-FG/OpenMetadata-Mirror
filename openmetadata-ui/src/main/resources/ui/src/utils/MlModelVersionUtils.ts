@@ -14,20 +14,20 @@
 import { cloneDeep, isEqual } from 'lodash';
 import { EntityField } from '../constants/Feeds.constants';
 import {
-    ChangeDescription,
-    MlFeature,
-    Mlmodel
+  ChangeDescription,
+  MlFeature,
+  Mlmodel,
 } from '../generated/entity/data/mlmodel';
 import { VersionData } from '../pages/EntityVersionPage/EntityVersionPage.component';
 import {
-    getAllChangedEntityNames,
-    getAllDiffByFieldName,
-    getChangedEntityNewValue,
-    getChangedEntityOldValue,
-    getDiffByFieldName,
-    getTagsDiff,
-    getTextDiff,
-    removeDuplicateTags
+  getAllChangedEntityNames,
+  getAllDiffByFieldName,
+  getChangedEntityNewValue,
+  getChangedEntityOldValue,
+  getDiffByFieldName,
+  getTagsDiff,
+  getTextDiff,
+  removeDuplicateTags,
 } from './EntityVersionUtils';
 import { TagLabelWithStatus } from './EntityVersionUtils.interface';
 

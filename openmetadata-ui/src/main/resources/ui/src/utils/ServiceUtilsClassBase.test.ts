@@ -13,7 +13,7 @@
 import { EntityType } from '../enums/entity.enum';
 import { ExplorePageTabs } from '../enums/Explore.enum';
 import serviceUtilClassBase, {
-    ServiceUtilClassBase
+  ServiceUtilClassBase,
 } from './ServiceUtilClassBase';
 
 // Mock dependencies to avoid compilation errors

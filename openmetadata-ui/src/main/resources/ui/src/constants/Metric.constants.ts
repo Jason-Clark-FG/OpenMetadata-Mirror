@@ -12,14 +12,14 @@
  *  limitations under the License.
  */
 import {
-    LabelType,
-    Language,
-    Metric,
-    MetricGranularity,
-    MetricType,
-    State,
-    TagSource,
-    UnitOfMeasurement
+  LabelType,
+  Language,
+  Metric,
+  MetricGranularity,
+  MetricType,
+  State,
+  TagSource,
+  UnitOfMeasurement,
 } from '../generated/entity/data/metric';
 
 export const METRIC_DUMMY_DATA: Metric = {

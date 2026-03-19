@@ -13,9 +13,9 @@
 import { Config, ConfigContext } from '@react-awesome-query-builder/core';
 import { SearchOutputType } from '../components/Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import {
-    MULTISELECT_FIELD_OPERATORS,
-    NUMBER_FIELD_OPERATORS,
-    TEXT_FIELD_OPERATORS
+  MULTISELECT_FIELD_OPERATORS,
+  NUMBER_FIELD_OPERATORS,
+  TEXT_FIELD_OPERATORS,
 } from '../constants/AdvancedSearch.constants';
 import { EntityFields } from '../enums/AdvancedSearch.enum';
 import { SearchIndex } from '../enums/search.enum';

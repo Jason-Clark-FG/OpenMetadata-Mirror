@@ -14,8 +14,8 @@ import { upperFirst } from 'lodash';
 import { StatusType } from '../components/common/StatusBadge/StatusBadge.interface';
 import { EntityStatsData } from '../components/Settings/Applications/AppLogsViewer/AppLogsViewer.interface';
 import {
-    Status,
-    StepStats
+  Status,
+  StepStats,
 } from '../generated/entity/applications/appRunRecord';
 
 export const getStatusTypeForApplication = (status: Status) => {

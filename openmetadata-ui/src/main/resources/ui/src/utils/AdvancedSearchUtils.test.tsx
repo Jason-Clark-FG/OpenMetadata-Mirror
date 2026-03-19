@@ -16,54 +16,54 @@ import { SearchOutputType } from '../components/Explore/AdvanceSearchProvider/Ad
 import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import { SearchDropdownOption } from '../components/SearchDropdown/SearchDropdown.interface';
 import {
-    COMMON_DROPDOWN_ITEMS,
-    DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS,
-    GLOSSARY_ASSETS_DROPDOWN_ITEMS,
-    LINEAGE_DROPDOWN_ITEMS,
-    TAG_ASSETS_DROPDOWN_ITEMS
+  COMMON_DROPDOWN_ITEMS,
+  DOMAIN_DATAPRODUCT_DROPDOWN_ITEMS,
+  GLOSSARY_ASSETS_DROPDOWN_ITEMS,
+  LINEAGE_DROPDOWN_ITEMS,
+  TAG_ASSETS_DROPDOWN_ITEMS,
 } from '../constants/AdvancedSearch.constants';
 import {
-    EntityFields,
-    EntityReferenceFields
+  EntityFields,
+  EntityReferenceFields,
 } from '../enums/AdvancedSearch.enum';
 import { EntityType } from '../enums/entity.enum';
 import { SearchIndex } from '../enums/search.enum';
 import advancedSearchClassBase from './AdvancedSearchClassBase';
 import {
-    getAssetsPageQuickFilters,
-    getChartsOptions,
-    getColumnsOptions,
-    getEmptyJsonTree,
-    getEmptyJsonTreeForQueryBuilder,
-    getOptionsFromAggregationBucket,
-    getSchemaFieldOptions,
-    getSearchDropdownLabels,
-    getSearchLabel,
-    getSelectedOptionLabelString,
-    getServiceOptions,
-    getTasksOptions,
-    processCustomPropertyField,
-    processEntityTypeFields
+  getAssetsPageQuickFilters,
+  getChartsOptions,
+  getColumnsOptions,
+  getEmptyJsonTree,
+  getEmptyJsonTreeForQueryBuilder,
+  getOptionsFromAggregationBucket,
+  getSchemaFieldOptions,
+  getSearchDropdownLabels,
+  getSearchLabel,
+  getSelectedOptionLabelString,
+  getServiceOptions,
+  getTasksOptions,
+  processCustomPropertyField,
+  processEntityTypeFields,
 } from './AdvancedSearchUtils';
 import {
-    highlightedItemLabel,
-    mockBucketOptions,
-    mockGetChartsOptionsData,
-    mockGetChartsOptionsDataWithoutDN,
-    mockGetChartsOptionsDataWithoutNameDN,
-    mockGetColumnOptionsData,
-    mockGetColumnOptionsDataWithoutDN,
-    mockGetSchemaFieldOptionsData,
-    mockGetSchemaFieldOptionsDataWithoutDN,
-    mockGetServiceOptionData,
-    mockGetServiceOptionDataWithoutDN,
-    mockGetServiceOptionDataWithoutNameDN,
-    mockGetTasksOptionsData,
-    mockGetTasksOptionsDataWithoutDN,
-    mockItemLabel,
-    mockLongOptionsArray,
-    mockOptionsArray,
-    mockShortOptionsArray
+  highlightedItemLabel,
+  mockBucketOptions,
+  mockGetChartsOptionsData,
+  mockGetChartsOptionsDataWithoutDN,
+  mockGetChartsOptionsDataWithoutNameDN,
+  mockGetColumnOptionsData,
+  mockGetColumnOptionsDataWithoutDN,
+  mockGetSchemaFieldOptionsData,
+  mockGetSchemaFieldOptionsDataWithoutDN,
+  mockGetServiceOptionData,
+  mockGetServiceOptionDataWithoutDN,
+  mockGetServiceOptionDataWithoutNameDN,
+  mockGetTasksOptionsData,
+  mockGetTasksOptionsDataWithoutDN,
+  mockItemLabel,
+  mockLongOptionsArray,
+  mockOptionsArray,
+  mockShortOptionsArray,
 } from './mocks/AdvancedSearchUtils.mock';
 
 jest.mock('./AdvancedSearchClassBase', () => ({

@@ -13,8 +13,8 @@
 
 import { filter, startCase } from 'lodash';
 import {
-    SubscriptionCategory,
-    SubscriptionType
+  SubscriptionCategory,
+  SubscriptionType,
 } from '../generated/events/eventSubscription';
 import { getAlertDestinationCategoryIcons } from '../utils/ObservabilityUtils';
 

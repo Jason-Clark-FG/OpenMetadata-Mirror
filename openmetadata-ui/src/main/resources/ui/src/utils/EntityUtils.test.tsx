@@ -20,39 +20,39 @@ import { TestSuite } from '../generated/tests/testCase';
 import { MOCK_CHART_DATA } from '../mocks/Chart.mock';
 import { MOCK_TABLE, MOCK_TIER_DATA } from '../mocks/TableData.mock';
 import {
-    columnSorter,
-    getBreadcrumbForTestSuite,
-    getColumnSorter,
-    getDomainDisplayName,
-    getEntityBreadcrumbs,
-    getEntityLinkFromType,
-    getEntityOverview,
-    hasCustomPropertiesTab,
-    hasLineageTab,
-    hasSchemaTab,
-    highlightEntityNameAndDescription,
-    highlightSearchArrayElement,
-    highlightSearchText
+  columnSorter,
+  getBreadcrumbForTestSuite,
+  getColumnSorter,
+  getDomainDisplayName,
+  getEntityBreadcrumbs,
+  getEntityLinkFromType,
+  getEntityOverview,
+  hasCustomPropertiesTab,
+  hasLineageTab,
+  hasSchemaTab,
+  highlightEntityNameAndDescription,
+  highlightSearchArrayElement,
+  highlightSearchText,
 } from './EntityUtils';
 import {
-    entityWithoutNameAndDescHighlight,
-    highlightedEntityDescription,
-    highlightedEntityDisplayName,
-    mockDatabaseUrl,
-    mockEntityForDatabase,
-    mockEntityForDatabaseSchema,
-    mockHighlightedResult,
-    mockHighlights,
-    mockSearchText,
-    mockServiceUrl,
-    mockSettingUrl,
-    mockText,
-    mockUrl
+  entityWithoutNameAndDescHighlight,
+  highlightedEntityDescription,
+  highlightedEntityDisplayName,
+  mockDatabaseUrl,
+  mockEntityForDatabase,
+  mockEntityForDatabaseSchema,
+  mockHighlightedResult,
+  mockHighlights,
+  mockSearchText,
+  mockServiceUrl,
+  mockSettingUrl,
+  mockText,
+  mockUrl,
 } from './mocks/EntityUtils.mock';
 import {
-    getEntityDetailsPath,
-    getServiceDetailsPath,
-    getSettingPath
+  getEntityDetailsPath,
+  getServiceDetailsPath,
+  getSettingPath,
 } from './RouterUtils';
 import { getServiceRouteFromServiceType } from './ServiceUtils';
 import { getTierTags } from './TableUtils';

@@ -13,12 +13,12 @@
 
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import {
-    CUSTOM_PROPERTIES_WIDGET,
-    DATA_PRODUCTS_WIDGET,
-    DESCRIPTION_WIDGET,
-    GLOSSARY_TERMS_WIDGET,
-    GridSizes,
-    TAGS_WIDGET
+  CUSTOM_PROPERTIES_WIDGET,
+  DATA_PRODUCTS_WIDGET,
+  DESCRIPTION_WIDGET,
+  GLOSSARY_TERMS_WIDGET,
+  GridSizes,
+  TAGS_WIDGET,
 } from '../constants/CustomizeWidgets.constants';
 import { PIPELINE_DUMMY_DATA } from '../constants/pipeline.constants';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
@@ -30,8 +30,8 @@ import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interfa
 import { getTabLabelFromId } from './CustomizePage/CustomizePageUtils';
 import i18n from './i18next/LocalUtil';
 import {
-    getPipelineDetailPageTabs,
-    getPipelineWidgetsFromKey
+  getPipelineDetailPageTabs,
+  getPipelineWidgetsFromKey,
 } from './PipelineDetailsUtils';
 
 export interface PipelineDetailPageTabProps {

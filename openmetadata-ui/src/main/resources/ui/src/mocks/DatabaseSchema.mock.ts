@@ -12,8 +12,8 @@
  */
 
 import {
-    DatabaseSchema,
-    DatabaseServiceType
+  DatabaseSchema,
+  DatabaseServiceType,
 } from '../generated/entity/data/databaseSchema';
 
 export const MOCK_DATABASE_SCHEMA: DatabaseSchema = {

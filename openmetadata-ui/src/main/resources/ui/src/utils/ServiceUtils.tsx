@@ -17,12 +17,12 @@ import { startCase } from 'lodash';
 import { ServiceTypes } from 'Models';
 import React from 'react';
 import {
-    GlobalSettingOptions,
-    GlobalSettingsMenuCategory
+  GlobalSettingOptions,
+  GlobalSettingsMenuCategory,
 } from '../constants/GlobalSettings.constants';
 import {
-    SERVICE_TYPES_ENUM,
-    SERVICE_TYPE_MAP
+  SERVICE_TYPES_ENUM,
+  SERVICE_TYPE_MAP,
 } from '../constants/Services.constant';
 import { ResourceEntity } from '../context/PermissionProvider/PermissionProvider.interface';
 import { PROMISE_STATE } from '../enums/common.enum';
@@ -33,29 +33,29 @@ import { StorageServiceType } from '../generated/entity/data/container';
 import { Database } from '../generated/entity/data/database';
 import { MlModelServiceType } from '../generated/entity/data/mlmodel';
 import {
-    DashboardService,
-    DashboardServiceType
+  DashboardService,
+  DashboardServiceType,
 } from '../generated/entity/services/dashboardService';
 import { DatabaseServiceType } from '../generated/entity/services/databaseService';
 import { DriveServiceType } from '../generated/entity/services/driveService';
 import { PipelineType as IngestionPipelineType } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import {
-    MessagingService,
-    MessagingServiceType
+  MessagingService,
+  MessagingServiceType,
 } from '../generated/entity/services/messagingService';
 import { MlmodelService } from '../generated/entity/services/mlmodelService';
 import {
-    PipelineService,
-    PipelineServiceType
+  PipelineService,
+  PipelineServiceType,
 } from '../generated/entity/services/pipelineService';
 import { DatabaseServiceSearchSource } from '../interface/search.interface';
 import { ServicesType } from '../interface/service.interface';
 import { getEntityCount } from '../rest/miscAPI';
 import { searchService } from '../rest/serviceAPI';
 import {
-    getEntityDeleteMessage,
-    pluralize,
-    replaceAllSpacialCharWith_
+  getEntityDeleteMessage,
+  pluralize,
+  replaceAllSpacialCharWith_,
 } from './CommonUtils';
 import { getDashboardURL } from './DashboardServiceUtils';
 import entityUtilClassBase from './EntityUtilClassBase';

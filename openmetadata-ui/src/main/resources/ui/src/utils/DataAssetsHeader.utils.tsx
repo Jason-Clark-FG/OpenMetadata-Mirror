@@ -20,14 +20,14 @@ import { isArray, isEmpty, isObject, isUndefined } from 'lodash';
 import React, { ReactNode } from 'react';
 import { ReactComponent as IconExternalLink } from '../assets/svg/external-links.svg';
 import {
-    DataAssetHeaderInfo,
-    DataAssetsHeaderProps,
-    DataAssetsType,
-    DataAssetsWithServiceField
+  DataAssetHeaderInfo,
+  DataAssetsHeaderProps,
+  DataAssetsType,
+  DataAssetsWithServiceField,
 } from '../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
 import {
-    DATA_ASSET_ICON_DIMENSION,
-    NO_DATA_PLACEHOLDER
+  DATA_ASSET_ICON_DIMENSION,
+  NO_DATA_PLACEHOLDER,
 } from '../constants/constants';
 import { EntityType } from '../enums/entity.enum';
 import { APICollection } from '../generated/entity/data/apiCollection';
@@ -46,8 +46,8 @@ import { Pipeline } from '../generated/entity/data/pipeline';
 import { SearchIndex } from '../generated/entity/data/searchIndex';
 import { Spreadsheet } from '../generated/entity/data/spreadsheet';
 import {
-    StoredProcedure,
-    StoredProcedureCodeObject
+  StoredProcedure,
+  StoredProcedureCodeObject,
 } from '../generated/entity/data/storedProcedure';
 import { Table } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
@@ -65,10 +65,10 @@ import { SecurityService } from '../generated/entity/services/securityService';
 import { StorageService } from '../generated/entity/services/storageService';
 import { formatDateTime } from './date-time/DateTimeUtils';
 import {
-    getBreadcrumbForEntitiesWithServiceOnly,
-    getBreadcrumbForEntityWithParent,
-    getBreadcrumbForTable,
-    getEntityBreadcrumbs
+  getBreadcrumbForEntitiesWithServiceOnly,
+  getBreadcrumbForEntityWithParent,
+  getBreadcrumbForTable,
+  getEntityBreadcrumbs,
 } from './EntityUtils';
 import { getEntityDetailsPath } from './RouterUtils';
 import { bytesToSize } from './StringsUtils';

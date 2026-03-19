@@ -18,13 +18,13 @@ import axiosClient from '.';
 import { CreateEventSubscription } from '../generated/events/api/createEventSubscription';
 import { Destination } from '../generated/events/api/testEventSubscriptionDestination';
 import {
-    Status as TypedEventStatus,
-    TypedEvent
+  Status as TypedEventStatus,
+  TypedEvent,
 } from '../generated/events/api/typedEvent';
 import {
-    AlertType,
-    EventSubscription,
-    Status
+  AlertType,
+  EventSubscription,
+  Status,
 } from '../generated/events/eventSubscription';
 import { FilterResourceDescriptor } from '../generated/events/filterResourceDescriptor';
 import { Function } from '../generated/type/function';

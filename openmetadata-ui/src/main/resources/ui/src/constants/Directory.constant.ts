@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import {
-    Directory,
-    DriveServiceType
+  Directory,
+  DriveServiceType,
 } from '../generated/entity/data/directory';
 
 export const DIRECTORY_DUMMY_DATA: Directory = {

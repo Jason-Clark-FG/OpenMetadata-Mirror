@@ -16,18 +16,18 @@ import { isEmpty, isUndefined, startCase, uniq } from 'lodash';
 import { ServicesUpdateRequest, ServiceTypes } from 'Models';
 import ErrorPlaceHolder from '../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import {
-    DATA_INSIGHTS_PIPELINE_DOCS,
-    ELASTIC_SEARCH_RE_INDEX_PIPELINE_DOCS,
-    INGESTION_FRAMEWORK_DEPLOYMENT_DOCS,
-    WORKFLOWS_METADATA_DOCS
+  DATA_INSIGHTS_PIPELINE_DOCS,
+  ELASTIC_SEARCH_RE_INDEX_PIPELINE_DOCS,
+  INGESTION_FRAMEWORK_DEPLOYMENT_DOCS,
+  WORKFLOWS_METADATA_DOCS,
 } from '../constants/docs.constants';
 import {
-    GlobalSettingOptions,
-    GlobalSettingsMenuCategory
+  GlobalSettingOptions,
+  GlobalSettingsMenuCategory,
 } from '../constants/GlobalSettings.constants';
 import {
-    INGESTION_ACTION_TYPE,
-    PIPELINE_TYPE_LOCALIZATION
+  INGESTION_ACTION_TYPE,
+  PIPELINE_TYPE_LOCALIZATION,
 } from '../constants/Ingestions.constant';
 import { SERVICE_FILTER_PATTERN_FIELDS } from '../constants/ServiceConnection.constants';
 import { SERVICE_INGESTION_PIPELINE_TYPES } from '../constants/Services.constant';
@@ -41,9 +41,9 @@ import { PipelineType } from '../generated/api/services/ingestionPipelines/creat
 import { UIThemePreference } from '../generated/configuration/uiThemePreference';
 import { HiveMetastoreConnectionDetails as Connection } from '../generated/entity/services/databaseService';
 import {
-    IngestionPipeline,
-    PipelineState,
-    StepSummary
+  IngestionPipeline,
+  PipelineState,
+  StepSummary,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { SearchSourceAlias } from '../interface/search.interface';
 import { DataObj, ServicesType } from '../interface/service.interface';
@@ -51,16 +51,16 @@ import { Transi18next } from './CommonUtils';
 import i18n from './i18next/LocalUtil';
 import { getSchemaByWorkflowType } from './IngestionWorkflowUtils';
 import {
-    getServiceDetailsPath,
-    getSettingPath,
-    getSettingsPathWithFqn
+  getServiceDetailsPath,
+  getSettingPath,
+  getSettingsPathWithFqn,
 } from './RouterUtils';
 import { getDayCron } from './SchedularUtils';
 import { getFilteredSchema } from './ServiceConnectionUtils';
 import serviceUtilClassBase from './ServiceUtilClassBase';
 import {
-    getReadableCountString,
-    getServiceRouteFromServiceType
+  getReadableCountString,
+  getServiceRouteFromServiceType,
 } from './ServiceUtils';
 
 const { t } = i18n;

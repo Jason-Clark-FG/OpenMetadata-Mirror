@@ -13,14 +13,14 @@
 
 import { has } from 'lodash';
 import {
-    OperationPermission,
-    ResourceEntity,
-    UIPermission
+  OperationPermission,
+  ResourceEntity,
+  UIPermission,
 } from '../context/PermissionProvider/PermissionProvider.interface';
 import {
-    Access,
-    Permission,
-    ResourcePermission
+  Access,
+  Permission,
+  ResourcePermission,
 } from '../generated/entity/policies/accessControl/resourcePermission';
 import { Operation } from '../generated/entity/policies/policy';
 

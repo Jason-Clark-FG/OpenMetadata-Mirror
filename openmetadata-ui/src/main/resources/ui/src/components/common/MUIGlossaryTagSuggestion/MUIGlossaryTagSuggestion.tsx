@@ -90,10 +90,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
 
   // Custom function to convert glossary terms to tree options with names as IDs
   const convertGlossaryTermsToTreeOptionsWithNames = useCallback(
-    (
-      options: ModifiedGlossaryTerm[] = [],
-      level = 0
-    ): GlossaryTreeOption[] => {
+    (options: ModifiedGlossaryTerm[] = [], level = 0): GlossaryTreeOption[] => {
       return options.map((option) => {
         const hasChildren =
           'children' in option && option.children && option.children.length > 0;

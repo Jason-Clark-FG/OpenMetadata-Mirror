@@ -11,12 +11,12 @@
  *  limitations under the License.
  */
 import {
-    ResourceEntity,
-    UIPermission
+  ResourceEntity,
+  UIPermission,
 } from '../context/PermissionProvider/PermissionProvider.interface';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import globalSettingsClassBase, {
-    GlobalSettingsClassBase
+  GlobalSettingsClassBase,
 } from './GlobalSettingsClassBase';
 import { userPermissions } from './PermissionsUtils';
 

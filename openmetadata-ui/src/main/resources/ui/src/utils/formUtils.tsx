@@ -13,17 +13,17 @@
 import { TooltipProps as MUITooltipProps } from '@mui/material/Tooltip';
 import { ErrorTransformer } from '@rjsf/utils';
 import {
-    Alert,
-    Checkbox,
-    Divider,
-    Form,
-    FormItemProps,
-    Input,
-    InputNumber,
-    Select,
-    Switch,
-    TooltipProps,
-    Typography
+  Alert,
+  Checkbox,
+  Divider,
+  Form,
+  FormItemProps,
+  Input,
+  InputNumber,
+  Select,
+  Switch,
+  TooltipProps,
+  Typography,
 } from 'antd';
 import { RuleObject } from 'antd/lib/form';
 import { TooltipPlacement } from 'antd/lib/tooltip';
@@ -51,7 +51,7 @@ import MUIGlossaryTagSuggestion from '../components/common/MUIGlossaryTagSuggest
 import MUISelect from '../components/common/MUISelect/MUISelect';
 import MUITextField from '../components/common/MUITextField/MUITextField';
 import MUIUserTeamSelect, {
-    MUIUserTeamSelectProps
+  MUIUserTeamSelectProps,
 } from '../components/common/MUIUserTeamSelect/MUIUserTeamSelect';
 import RichTextEditor from '../components/common/RichTextEditor/RichTextEditor';
 import { RichTextEditorProp } from '../components/common/RichTextEditor/RichTextEditor.interface';
@@ -59,7 +59,7 @@ import SanitizedInput from '../components/common/SanitizedInput/SanitizedInput';
 import SliderWithInput from '../components/common/SliderWithInput/SliderWithInput';
 import { SliderWithInputProps } from '../components/common/SliderWithInput/SliderWithInput.interface';
 import TagSuggestion, {
-    TagSuggestionProps
+  TagSuggestionProps,
 } from '../components/common/TagSuggestion/TagSuggestion';
 import { UserSelectableList } from '../components/common/UserSelectableList/UserSelectableList.component';
 import { UserSelectableListProps } from '../components/common/UserSelectableList/UserSelectableList.interface';
@@ -67,18 +67,18 @@ import { UserTeamSelectableList } from '../components/common/UserTeamSelectableL
 import { UserSelectDropdownProps } from '../components/common/UserTeamSelectableList/UserTeamSelectableList.interface';
 import UserTeamSelectableListSearchInput from '../components/common/UserTeamSelectableListSearchInput/UserTeamSelectableListSearchInput.component';
 import MUIAutocomplete, {
-    MUIAutocompleteProps
+  MUIAutocompleteProps,
 } from '../components/form/MUIAutocomplete';
 import MUISwitch, { MUISwitchProps } from '../components/form/MUISwitch';
 import { HTTP_STATUS_CODE } from '../constants/Auth.constants';
 import {
-    FieldProp,
-    FieldTypes,
-    FormItemLayout,
-    HelperTextType
+  FieldProp,
+  FieldTypes,
+  FormItemLayout,
+  HelperTextType,
 } from '../interface/FormUtils.interface';
 import AntDTagSuggestion, {
-    TagSuggestionProps as AntDTagSuggestionProps
+  TagSuggestionProps as AntDTagSuggestionProps,
 } from '../pages/TasksPage/shared/TagSuggestion';
 import { t } from './i18next/LocalUtil';
 import { getErrorText } from './StringsUtils';

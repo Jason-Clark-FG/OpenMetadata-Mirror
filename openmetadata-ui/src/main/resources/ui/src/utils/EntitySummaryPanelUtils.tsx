@@ -28,8 +28,8 @@ import DomainSummary from '../components/Explore/EntitySummaryPanel/DomainSummar
 import GlossaryTermSummary from '../components/Explore/EntitySummaryPanel/GlossaryTermSummary/GlossaryTermSummary.component';
 import SummaryList from '../components/Explore/EntitySummaryPanel/SummaryList/SummaryList.component';
 import {
-    BasicEntityInfo,
-    HighlightedTagLabel
+  BasicEntityInfo,
+  HighlightedTagLabel,
 } from '../components/Explore/EntitySummaryPanel/SummaryList/SummaryList.interface';
 import TagsSummary from '../components/Explore/EntitySummaryPanel/TagsSummary/TagsSummary.component';
 import MetricExpression from '../components/Metric/MetricExpression/MetricExpression';
@@ -54,8 +54,8 @@ import { MlFeature, Mlmodel } from '../generated/entity/data/mlmodel';
 import { Pipeline, Task } from '../generated/entity/data/pipeline';
 import { SearchIndex } from '../generated/entity/data/searchIndex';
 import {
-    StoredProcedure,
-    StoredProcedureCodeObject
+  StoredProcedure,
+  StoredProcedureCodeObject,
 } from '../generated/entity/data/storedProcedure';
 import { Column, Table, TableConstraint } from '../generated/entity/data/table';
 import { Field, Topic } from '../generated/entity/data/topic';

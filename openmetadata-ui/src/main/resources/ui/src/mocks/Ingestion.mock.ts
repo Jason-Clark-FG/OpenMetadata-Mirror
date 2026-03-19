@@ -15,9 +15,9 @@ import { IngestionProps } from '../components/Settings/Services/Ingestion/ingest
 import { AirflowStatusContextType } from '../context/AirflowStatusProvider/AirflowStatusProvider.interface';
 import { AuthProvider } from '../generated/entity/services/connections/serviceConnection';
 import {
-    IngestionPipeline,
-    PipelineState,
-    PipelineType
+  IngestionPipeline,
+  PipelineState,
+  PipelineType,
 } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { ServicesType } from '../interface/service.interface';
 

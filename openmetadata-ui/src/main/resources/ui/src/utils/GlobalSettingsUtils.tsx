@@ -14,8 +14,8 @@
 import i18next from 'i18next';
 import { PLACEHOLDER_ROUTE_FQN, ROUTES } from '../constants/constants';
 import {
-    GlobalSettingOptions,
-    GlobalSettingsMenuCategory
+  GlobalSettingOptions,
+  GlobalSettingsMenuCategory,
 } from '../constants/GlobalSettings.constants';
 import { EntityType } from '../enums/entity.enum';
 import globalSettingsClassBase from './GlobalSettingsClassBase';

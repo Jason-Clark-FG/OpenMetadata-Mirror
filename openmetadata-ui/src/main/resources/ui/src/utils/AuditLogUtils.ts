@@ -13,10 +13,10 @@
 
 import { TFunction } from 'i18next';
 import {
-    AuditLogActiveFilter,
-    AuditLogFilterCategoryType,
-    AuditLogListParams,
-    TimeFilterValue
+  AuditLogActiveFilter,
+  AuditLogFilterCategoryType,
+  AuditLogListParams,
+  TimeFilterValue,
 } from '../types/auditLogs.interface';
 
 export const getAuditLogCategoryLabel = (

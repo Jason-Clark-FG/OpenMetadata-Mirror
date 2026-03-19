@@ -25,18 +25,18 @@
 
 import { TopicVersionProp } from '../components/Topic/TopicVersion/TopicVersion.interface';
 import {
-    CleanupPolicy,
-    MessagingServiceType
+  CleanupPolicy,
+  MessagingServiceType,
 } from '../generated/entity/data/topic';
 import { DataTypeTopic, SchemaType } from '../generated/type/schema';
 import { ENTITY_PERMISSIONS } from '../mocks/Permissions.mock';
 import {
-    mockBackHandler,
-    mockDomain,
-    mockOwner,
-    mockTier,
-    mockVersionHandler,
-    mockVersionList
+  mockBackHandler,
+  mockDomain,
+  mockOwner,
+  mockTier,
+  mockVersionHandler,
+  mockVersionList,
 } from '../mocks/VersionCommon.mock';
 
 export const mockTopicData = {

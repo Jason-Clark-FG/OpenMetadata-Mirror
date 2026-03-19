@@ -37,9 +37,9 @@ import EntitySummaryPanel from '../components/Explore/EntitySummaryPanel/EntityS
 import AssetsTabs from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import {
-    DEFAULT_DOMAIN_VALUE,
-    DE_ACTIVE_COLOR,
-    NO_DATA_PLACEHOLDER
+  DEFAULT_DOMAIN_VALUE,
+  DE_ACTIVE_COLOR,
+  NO_DATA_PLACEHOLDER,
 } from '../constants/constants';
 import { DOMAIN_TYPE_DATA } from '../constants/Domain.constants';
 import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
@@ -52,8 +52,8 @@ import { PageType } from '../generated/system/ui/page';
 import { useDomainStore } from '../hooks/useDomainStore';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import {
-    QueryFieldInterface,
-    QueryFilterInterface
+  QueryFieldInterface,
+  QueryFilterInterface,
 } from '../pages/ExplorePage/ExplorePage.interface';
 import { DomainDetailPageTabProps } from './Domain/DomainClassBase';
 import { getEntityName, getEntityReferenceFromEntity } from './EntityUtils';
@@ -61,8 +61,8 @@ import Fqn from './Fqn';
 import { t } from './i18next/LocalUtil';
 import { renderIcon } from './IconUtils';
 import {
-    getPrioritizedEditPermission,
-    getPrioritizedViewPermission
+  getPrioritizedEditPermission,
+  getPrioritizedViewPermission,
 } from './PermissionsUtils';
 import { getDomainPath, getPathNameFromWindowLocation } from './RouterUtils';
 

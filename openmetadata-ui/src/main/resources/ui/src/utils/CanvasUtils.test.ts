@@ -12,20 +12,20 @@
  */
 import { Edge, Node, Viewport } from 'reactflow';
 import {
-    BoundingBox,
-    boundsIntersect,
-    drawArrowMarker,
-    getBezierEndTangentAngle,
-    getEdgeAngle,
-    getEdgeBounds,
-    getEdgeCoordinates,
-    getNodeHeight,
-    getViewportBounds,
-    hasSignificantViewportChange,
-    inverseTransformPoint,
-    isEdgeInViewport,
-    setupCanvas,
-    transformPoint
+  BoundingBox,
+  boundsIntersect,
+  drawArrowMarker,
+  getBezierEndTangentAngle,
+  getEdgeAngle,
+  getEdgeBounds,
+  getEdgeCoordinates,
+  getNodeHeight,
+  getViewportBounds,
+  hasSignificantViewportChange,
+  inverseTransformPoint,
+  isEdgeInViewport,
+  setupCanvas,
+  transformPoint,
 } from './CanvasUtils';
 
 const createMockCanvas = (): HTMLCanvasElement => {

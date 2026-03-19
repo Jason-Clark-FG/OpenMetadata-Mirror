@@ -12,12 +12,12 @@
  */
 import { Typography } from '@openmetadata/ui-core-components';
 import {
-    Button,
-    Col,
-    Row,
-    Segmented,
-    Table,
-    Typography as AntTypography
+  Button,
+  Col,
+  Row,
+  Segmented,
+  Table,
+  Typography as AntTypography,
 } from 'antd';
 import { isEmpty } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,7 +31,6 @@ import { PAGE_SIZE_LARGE } from '../constants/constants';
 import { EntityType } from '../enums/entity.enum';
 import { APICollection } from '../generated/entity/data/apiCollection';
 import { APIEndpoint } from '../generated/entity/data/apiEndpoint';
-import { Column as ContainerColumn } from '../generated/entity/data/container';
 import { Container } from '../generated/entity/data/container';
 import { Dashboard } from '../generated/entity/data/dashboard';
 import { Database } from '../generated/entity/data/database';
@@ -40,19 +39,19 @@ import { Pipeline, Task } from '../generated/entity/data/pipeline';
 import { SearchIndex } from '../generated/entity/data/searchIndex';
 import { Column, Table as TableEntity } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
+import { EntityReference } from '../generated/entity/type';
 import { Include } from '../generated/type/include';
 import { Paging } from '../generated/type/paging';
 import { Field } from '../generated/type/schema';
 import { TagLabel } from '../generated/type/tagLabel';
-import { EntityReference } from '../generated/entity/type';
 import {
-    getDataModelColumnsByFQN,
-    searchDataModelColumnsByFQN
+  getDataModelColumnsByFQN,
+  searchDataModelColumnsByFQN,
 } from '../rest/dataModelsAPI';
 import {
-    getTableColumnsByFQN,
-    getTableList,
-    searchTableColumnsByFQN
+  getTableColumnsByFQN,
+  getTableList,
+  searchTableColumnsByFQN,
 } from '../rest/tableAPI';
 import { GenericNestedField } from './EntitySummaryPanelUtilsV1.interface';
 import { getEntityName } from './EntityUtils';

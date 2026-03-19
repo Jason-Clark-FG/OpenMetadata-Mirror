@@ -17,9 +17,9 @@ import { DetailPageWidgetKeys } from '../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../enums/entity.enum';
 import { WidgetConfig } from '../pages/CustomizablePage/CustomizablePage.interface';
 import {
-    DirectoryDetailPageTabProps,
-    getDirectoryDetailsPageTabs,
-    getDirectoryWidgetsFromKey
+  DirectoryDetailPageTabProps,
+  getDirectoryDetailsPageTabs,
+  getDirectoryWidgetsFromKey,
 } from './DirectoryDetailsUtils';
 
 jest.mock('../components/common/TabsLabel/TabsLabel.component', () => {

@@ -11,9 +11,9 @@
  *  limitations under the License.
  */
 import {
-    ExclamationCircleOutlined,
-    InfoCircleOutlined,
-    WarningOutlined
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import { get, isEmpty, isString } from 'lodash';

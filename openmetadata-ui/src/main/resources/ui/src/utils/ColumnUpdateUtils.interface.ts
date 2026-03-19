@@ -15,8 +15,8 @@ import { EntityType } from '../enums/entity.enum';
 import { APIEndpoint, Field } from '../generated/entity/data/apiEndpoint';
 import { Container } from '../generated/entity/data/container';
 import {
-    Column as DataModelColumn,
-    DashboardDataModel
+  Column as DataModelColumn,
+  DashboardDataModel,
 } from '../generated/entity/data/dashboardDataModel';
 import { Mlmodel } from '../generated/entity/data/mlmodel';
 import { Pipeline } from '../generated/entity/data/pipeline';

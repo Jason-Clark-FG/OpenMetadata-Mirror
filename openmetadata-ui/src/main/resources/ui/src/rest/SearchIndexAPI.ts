@@ -17,8 +17,8 @@ import { PagingResponse, PagingWithoutTotal, RestoreRequestType } from 'Models';
 import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import { APPLICATION_JSON_CONTENT_TYPE_HEADER } from '../constants/constants';
 import {
-    EntityReference,
-    SearchIndex
+  EntityReference,
+  SearchIndex,
 } from '../generated/entity/data/searchIndex';
 import { EntityHistory } from '../generated/type/entityHistory';
 import { Include } from '../generated/type/include';

@@ -12,8 +12,8 @@
  */
 import { WidgetWidths } from '../enums/CustomizablePage.enum';
 import {
-    DetailPageWidgetKeys,
-    GlossaryTermDetailPageWidgetKeys
+  DetailPageWidgetKeys,
+  GlossaryTermDetailPageWidgetKeys,
 } from '../enums/CustomizeDetailPage.enum';
 import { EntityType } from '../enums/entity.enum';
 import { TagSource } from '../generated/type/tagLabel';

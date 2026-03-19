@@ -13,8 +13,8 @@
 import { AxiosResponse } from 'axios';
 import { Operation } from 'fast-json-patch';
 import {
-    AuthenticationConfiguration,
-    AuthorizerConfiguration
+  AuthenticationConfiguration,
+  AuthorizerConfiguration,
 } from '../constants/SSO.constant';
 import APIClient from './index';
 

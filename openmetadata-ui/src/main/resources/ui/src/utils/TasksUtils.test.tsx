@@ -18,11 +18,11 @@ import { mockTableData } from '../mocks/TableVersion.mock';
 import { MOCK_ASSIGNEE_DATA } from '../mocks/Task.mock';
 import { getUserAndTeamSearch } from '../rest/miscAPI';
 import {
-    fetchOptions,
-    getEntityTableName,
-    getTaskAssignee,
-    getTaskEntityFQN,
-    getTaskMessage
+  fetchOptions,
+  getEntityTableName,
+  getTaskAssignee,
+  getTaskEntityFQN,
+  getTaskMessage,
 } from './TasksUtils';
 
 jest.mock('../rest/miscAPI', () => ({

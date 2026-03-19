@@ -14,18 +14,18 @@ import { Theme } from '@mui/material';
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { Edge, Position, useNodes, useReactFlow, useViewport } from 'reactflow';
 import {
-    CanvasButton,
-    createCanvasButton,
-    drawCanvasButton,
-    ECanvasButtonType,
-    isPointInButton
+  CanvasButton,
+  createCanvasButton,
+  drawCanvasButton,
+  ECanvasButtonType,
+  isPointInButton,
 } from '../utils/CanvasButtonUtils';
 import {
-    drawArrowMarker,
-    getBezierEndTangentAngle,
-    getEdgeCoordinates,
-    isEdgeInViewport,
-    setupCanvas
+  drawArrowMarker,
+  getBezierEndTangentAngle,
+  getEdgeCoordinates,
+  isEdgeInViewport,
+  setupCanvas,
 } from '../utils/CanvasUtils';
 import { computeEdgeStyle } from '../utils/EdgeStyleUtils';
 import { getEdgePathData } from '../utils/EntityLineageUtils';

@@ -21,16 +21,16 @@ import { CreateTestDefinition } from '../generated/api/tests/createTestDefinitio
 import { CreateTestSuite } from '../generated/api/tests/createTestSuite';
 import { DataQualityReport } from '../generated/tests/dataQualityReport';
 import {
-    TestCase,
-    TestCaseDimensionResult,
-    TestCaseResult,
-    TestCaseStatus
+  TestCase,
+  TestCaseDimensionResult,
+  TestCaseResult,
+  TestCaseStatus,
 } from '../generated/tests/testCase';
 import {
-    DataQualityDimensions,
-    EntityType,
-    TestDefinition,
-    TestPlatform
+  DataQualityDimensions,
+  EntityType,
+  TestDefinition,
+  TestPlatform,
 } from '../generated/tests/testDefinition';
 import { TestSuite, TestSummary } from '../generated/tests/testSuite';
 import { EntityHistory } from '../generated/type/entityHistory';
