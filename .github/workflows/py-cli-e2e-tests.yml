@@ -94,6 +94,10 @@ jobs:
         nox --no-venv -s unit-tests
       shell: bash
 
+    - name: Rename coverage file for Python unit tests
+      if: matrix.e2e-test == 'python-unittests' && steps.python-unittest.outcome == 'success' && env.DEBUG == 'false'
+      run: mv ingestion/.coverage .coverage.python-unittests
+
     - name: Run Python Integration Tests
       if: matrix.e2e-test == 'python-integration'
       id: python-integration-test
@@ -189,7 +193,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.e2e-test }}
-        path: ingestion/.coverage
+        path: .coverage.python-unittests
         include-hidden-files: true
 
     - name: Rename coverage file for Python integration tests
