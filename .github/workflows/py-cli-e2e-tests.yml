@@ -222,7 +222,7 @@ jobs:
         sudo rm -rf ${PWD}/docker-volume
 
     - name: Slack on Failure
-      if: steps.e2e-test.outcome == 'failure' && env.DEBUG == 'false'
+      if: (steps.e2e-test.outcome == 'failure' || steps.python-unittest.outcome == 'failure' || steps.python-integration-test.outcome == 'failure') && env.DEBUG == 'false'
       uses: slackapi/slack-github-action@v1.23.0
       with:
         payload: |
