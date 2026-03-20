@@ -58,9 +58,16 @@ public class SetupDelegate extends BaseDelegate {
               + "'");
     }
 
+    @SuppressWarnings("unchecked")
+    Map<String, Object> assigneesConfig = (Map<String, Object>) configMap.get("assignees");
+
     UUID taskId =
         SetupImpl.createTask(
-            entityLinkStr, template.taskCategory(), template.taskType(), workflowInstanceId);
+            entityLinkStr,
+            template.taskCategory(),
+            template.taskType(),
+            workflowInstanceId,
+            assigneesConfig);
 
     varHandler.setNodeVariable(OM_TASK_ID_VARIABLE, taskId.toString());
     varHandler.setNodeVariable(RESULT_VARIABLE, TaskEntityStatus.Open.value());

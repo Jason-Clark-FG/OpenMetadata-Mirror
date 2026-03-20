@@ -12,6 +12,10 @@ public class CloseTaskDelegate extends BaseDelegate {
   @Override
   protected void innerExecute(DelegateExecution execution) {
     String taskIdStr = (String) varHandler.getNodeVariable(SetupDelegate.OM_TASK_ID_VARIABLE);
+    if (taskIdStr == null) {
+      throw new IllegalStateException(
+          "[ManualTask.CloseTask] omTaskId variable is missing; cannot close task.");
+    }
     UUID taskId = UUID.fromString(taskIdStr);
 
     String updatedBy = (String) execution.getVariable(UPDATED_BY_VARIABLE);

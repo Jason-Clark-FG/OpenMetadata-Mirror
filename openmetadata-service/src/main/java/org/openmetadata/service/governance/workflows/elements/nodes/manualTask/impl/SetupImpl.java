@@ -1,6 +1,8 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.manualTask.impl;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
@@ -27,7 +29,8 @@ public class SetupImpl {
       String entityLinkStr,
       TaskCategory category,
       TaskEntityType taskType,
-      UUID workflowInstanceId) {
+      UUID workflowInstanceId,
+      Map<String, Object> assigneesConfig) {
 
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
 
@@ -45,7 +48,7 @@ public class SetupImpl {
     EntityReference createdByRef =
         Entity.getEntityReferenceByName(Entity.USER, updatedBy, Include.NON_DELETED);
 
-    List<EntityReference> assignees = resolveOwnerAssignees(entity);
+    List<EntityReference> assignees = resolveAssignees(entity, assigneesConfig);
 
     Task task =
         new Task()
@@ -77,12 +80,44 @@ public class SetupImpl {
     return task.getId();
   }
 
-  private static List<EntityReference> resolveOwnerAssignees(EntityInterface entity) {
-    List<EntityReference> owners = entity.getOwners();
-    if (owners != null && !owners.isEmpty()) {
-      return owners;
+  @SuppressWarnings("unchecked")
+  private static List<EntityReference> resolveAssignees(
+      EntityInterface entity, Map<String, Object> assigneesConfig) {
+    List<EntityReference> assignees = new ArrayList<>();
+
+    boolean addOwners = true;
+    boolean addReviewers = false;
+    List<String> specificUsers = List.of();
+
+    if (assigneesConfig != null) {
+      addOwners = (boolean) assigneesConfig.getOrDefault("addOwners", true);
+      addReviewers = (boolean) assigneesConfig.getOrDefault("addReviewers", false);
+      Object specific = assigneesConfig.get("specificUsers");
+      if (specific instanceof List<?> list) {
+        specificUsers = (List<String>) list;
+      }
     }
-    return List.of();
+
+    if (addOwners && entity.getOwners() != null) {
+      assignees.addAll(entity.getOwners());
+    }
+
+    if (addReviewers && entity.getReviewers() != null) {
+      assignees.addAll(entity.getReviewers());
+    }
+
+    for (String userFqn : specificUsers) {
+      try {
+        assignees.add(Entity.getEntityReferenceByName(Entity.USER, userFqn, Include.NON_DELETED));
+      } catch (Exception e) {
+        LOG.warn(
+            "[ManualTask.SetupImpl] Could not resolve specific user '{}': {}",
+            userFqn,
+            e.getMessage());
+      }
+    }
+
+    return assignees;
   }
 
   private static String buildDescription(EntityInterface entity, TaskEntityType taskType) {

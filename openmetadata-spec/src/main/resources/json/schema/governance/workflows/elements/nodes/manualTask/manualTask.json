@@ -38,8 +38,32 @@
       "properties": {
         "template": {
           "title": "Task Template",
-          "description": "Name of the task template. Resolved at runtime to full configuration (statuses, terminalStatuses, taskCategory, taskType, assignees). Will become an entity reference when Task Templates are implemented.",
+          "description": "Name of the task template. Resolved at runtime to full configuration (statuses, terminalStatuses, taskCategory, taskType). Will become an entity reference when Task Templates are implemented.",
           "type": "string"
+        },
+        "assignees": {
+          "title": "Assignees",
+          "description": "Configuration for who gets assigned to the created task.",
+          "type": "object",
+          "properties": {
+            "addOwners": {
+              "description": "Add the entity Owners to the assignees list.",
+              "type": "boolean",
+              "default": true
+            },
+            "addReviewers": {
+              "description": "Add the entity Reviewers to the assignees list.",
+              "type": "boolean",
+              "default": false
+            },
+            "specificUsers": {
+              "description": "Specific users to add to the assignees list (by fully qualified name).",
+              "type": "array",
+              "items": { "type": "string" },
+              "default": []
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": ["template"],
@@ -77,5 +101,6 @@
       "items": { "type": "string" },
       "default": []
     }
-  }
+  },
+  "required": ["name", "config"]
 }
