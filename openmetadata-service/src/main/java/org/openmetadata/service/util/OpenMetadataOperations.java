@@ -2620,6 +2620,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
+      DatasourceConfig.initialize(connType.label);
       String databaseName =
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
       DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);
@@ -2647,6 +2648,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
+      DatasourceConfig.initialize(connType.label);
       String databaseName =
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
       DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);

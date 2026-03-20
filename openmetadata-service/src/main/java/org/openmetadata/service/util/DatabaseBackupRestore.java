@@ -15,6 +15,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -39,6 +40,7 @@ import org.openmetadata.service.jdbi3.locator.ConnectionType;
 public class DatabaseBackupRestore {
 
   private static final int BATCH_SIZE = 1000;
+  private static final long MAX_METADATA_SIZE = 10 * 1024 * 1024;
   private static final ObjectMapper MAPPER =
       new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
@@ -232,6 +234,7 @@ public class DatabaseBackupRestore {
 
     List<String> pkColumns = discoverPrimaryKeyColumns(handle, tableName);
     String orderByClause = buildOrderByClause(pkColumns, columns);
+    Set<String> binaryColumns = discoverBinaryColumns(handle, tableName);
 
     Path tempFile = Files.createTempFile("backup_" + tableName + "_", ".json");
     int rowCount;
@@ -243,8 +246,6 @@ public class DatabaseBackupRestore {
     } finally {
       Files.deleteIfExists(tempFile);
     }
-
-    Set<String> binaryColumns = discoverBinaryColumns(handle, tableName);
 
     ObjectNode tableInfo = MAPPER.createObjectNode();
     ArrayNode columnsArray = MAPPER.createArrayNode();
@@ -302,6 +303,8 @@ public class DatabaseBackupRestore {
                 gen.writeNumberField(col, d);
               } else if (number instanceof Float f) {
                 gen.writeNumberField(col, f);
+              } else if (number instanceof BigDecimal bd) {
+                gen.writeNumberField(col, bd);
               } else {
                 gen.writeNumberField(col, number.longValue());
               }
@@ -366,14 +369,13 @@ public class DatabaseBackupRestore {
 
     jdbi.useHandle(
         handle -> {
-          if (force) {
-            truncateAllTables(handle, tablesMetadata);
-          } else {
-            validateTablesEmpty(handle, tablesMetadata);
-          }
-
           disableForeignKeyChecks(handle);
           try {
+            if (force) {
+              truncateAllTables(handle, tablesMetadata);
+            } else {
+              validateTablesEmpty(handle, tablesMetadata);
+            }
             restoreTablesFromArchive(handle, backupPath, tablesMetadata, validTables);
             LOG.info("Restore completed successfully");
           } finally {
@@ -391,7 +393,11 @@ public class DatabaseBackupRestore {
       TarArchiveEntry entry;
       while ((entry = tais.getNextEntry()) != null) {
         if ("metadata.json".equals(entry.getName())) {
-          byte[] content = tais.readAllBytes();
+          if (entry.getSize() > MAX_METADATA_SIZE) {
+            throw new IOException(
+                "metadata.json exceeds maximum allowed size of " + MAX_METADATA_SIZE + " bytes");
+          }
+          byte[] content = tais.readNBytes((int) entry.getSize());
           return (ObjectNode) MAPPER.readTree(content);
         }
       }
@@ -465,19 +471,14 @@ public class DatabaseBackupRestore {
 
   private void truncateAllTables(Handle handle, ObjectNode tablesMetadata) {
     LOG.info("Truncating all target tables (force mode)");
-    disableForeignKeyChecks(handle);
-    try {
-      tablesMetadata
-          .fieldNames()
-          .forEachRemaining(
-              tableName -> {
-                String sql = String.format("TRUNCATE TABLE %s", quoteIdentifier(tableName));
-                handle.execute(sql);
-                LOG.info("Truncated table {}", tableName);
-              });
-    } finally {
-      enableForeignKeyChecks(handle);
-    }
+    tablesMetadata
+        .fieldNames()
+        .forEachRemaining(
+            tableName -> {
+              String sql = String.format("TRUNCATE TABLE %s", quoteIdentifier(tableName));
+              handle.execute(sql);
+              LOG.info("Truncated table {}", tableName);
+            });
   }
 
   int insertRowsStreaming(
