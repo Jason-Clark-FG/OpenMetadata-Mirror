@@ -170,47 +170,37 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
       return;
     }
 
-    if (isWorkflowManagedTaskStatusChange(event)) {
-      try {
-        enqueueTaskMessage(event);
-      } catch (Exception e) {
-        LOG.error(
-            "Failed to enqueue outbox message for task '{}': {}",
-            event.getEntityId(),
-            e.getMessage(),
-            e);
-      }
-    }
-
+    // Signal broadcast (always runs first, for any workflow triggers listening)
     Function<ChangeEvent, Map<String, Object>> handler = handlerRegistry.get(event.getEntityType());
 
-    if (handler == null) {
-      LOG.debug("No handler found in registry for entity type {}", event.getEntityType());
-      return;
+    if (handler != null) {
+      LOG.debug("WorkflowEventConsumer - Generated Signal: {}", signal);
+
+      try {
+        Map<String, Object> variables = handler.apply(event);
+
+        if (variables != null && !variables.isEmpty()) {
+          LOG.info("WorkflowEventConsumer - Triggering with signal: {}", signal);
+          Retry.decorateRunnable(
+                  retry, () -> WorkflowHandler.getInstance().triggerWithSignal(signal, variables))
+              .run();
+        }
+      } catch (Exception exc) {
+        LOG.error("WorkflowEventConsumer - Error processing event", exc);
+        String message =
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, event, exc.getMessage());
+        LOG.error(message);
+        throw new EventPublisherException(
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
+            Pair.of(subscriptionDestination.getId(), event));
+      }
     }
 
-    LOG.debug("WorkflowEventConsumer - Generated Signal: {}", signal);
-
-    Map<String, Object> variables;
-    try {
-      variables = handler.apply(event);
-
-      if (variables != null && !variables.isEmpty()) {
-        LOG.info("WorkflowEventConsumer - Triggering with signal: {}", signal);
-        Retry.decorateRunnable(
-                retry, () -> WorkflowHandler.getInstance().triggerWithSignal(signal, variables))
-            .run();
-      }
-    } catch (Exception exc) {
-      LOG.error("WorkflowEventConsumer - Error processing event", exc);
-      String message =
-          CatalogExceptionMessage.eventPublisherFailedToPublish(
-              GOVERNANCE_WORKFLOW_CHANGE_EVENT, event, exc.getMessage());
-      LOG.error(message);
-      throw new EventPublisherException(
-          CatalogExceptionMessage.eventPublisherFailedToPublish(
-              GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
-          Pair.of(subscriptionDestination.getId(), event));
+    // Outbox enqueue (after signal succeeds — exception propagates for event retry)
+    if (isWorkflowManagedTaskStatusChange(event)) {
+      Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event)).run();
     }
   }
 
@@ -318,11 +308,18 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
       return false;
     }
     try {
-      Task task = Entity.getEntity(Entity.TASK, event.getEntityId(), "", Include.ALL);
-      return task.getWorkflowInstanceId() != null;
+      Task task;
+      if (event.getEntity() instanceof String str) {
+        task = JsonUtils.readValue(str, Task.class);
+      } else {
+        task = JsonUtils.convertValue(event.getEntity(), Task.class);
+      }
+      return task != null && task.getWorkflowInstanceId() != null;
     } catch (Exception e) {
       LOG.debug(
-          "Could not fetch task '{}' for workflow check: {}", event.getEntityId(), e.getMessage());
+          "Could not parse task from event entity for '{}': {}",
+          event.getEntityId(),
+          e.getMessage());
       return false;
     }
   }

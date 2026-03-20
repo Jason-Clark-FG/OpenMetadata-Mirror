@@ -19,7 +19,9 @@ import org.openmetadata.service.jdbi3.CollectionDAO;
 public class TaskWorkflowOutboxDrainer {
 
   static final long POLL_INTERVAL_SECONDS = 30;
+  static final int MAX_ATTEMPTS = 100;
   private static final int WARN_AFTER_ATTEMPTS = 10;
+  private static final long CLEANUP_RETENTION_MS = 7L * 24 * 60 * 60 * 1000;
 
   private final RuntimeService runtimeService;
   private final ScheduledExecutorService scheduler;
@@ -52,50 +54,63 @@ public class TaskWorkflowOutboxDrainer {
 
   void drainAll() {
     try {
+      List<OutboxEntry> candidates =
+          Entity.getCollectionDAO().taskWorkflowOutboxDAO().findAllOldestPending(MAX_ATTEMPTS);
+
+      if (candidates.isEmpty()) {
+        return;
+      }
+
+      LOG.debug("Outbox drainer found {} tasks with pending messages", candidates.size());
+
+      for (OutboxEntry candidate : candidates) {
+        processEntry(candidate);
+      }
+
+      Entity.getCollectionDAO()
+          .taskWorkflowOutboxDAO()
+          .cleanupDelivered(System.currentTimeMillis() - CLEANUP_RETENTION_MS);
+    } catch (Exception e) {
+      LOG.error("Outbox drainer cycle failed", e);
+    }
+  }
+
+  private void processEntry(OutboxEntry candidate) {
+    try {
       Entity.getJdbi()
           .useTransaction(
               handle -> {
                 CollectionDAO.TaskWorkflowOutboxDAO dao =
                     handle.attach(CollectionDAO.TaskWorkflowOutboxDAO.class);
 
-                List<OutboxEntry> entries = dao.findAndLockAllOldestPending();
-                if (entries.isEmpty()) {
+                OutboxEntry locked = dao.lockById(candidate.getId());
+                if (locked == null) {
                   return;
                 }
 
-                LOG.debug("Outbox drainer locked {} messages for delivery", entries.size());
+                boolean success = tryDeliver(locked);
+                long now = System.currentTimeMillis();
 
-                for (OutboxEntry entry : entries) {
-                  processEntry(dao, entry);
+                if (success) {
+                  dao.markDelivered(locked.getId(), now);
+                } else {
+                  int newAttempts = locked.getAttempts() + 1;
+                  dao.recordFailedAttempt(locked.getId(), newAttempts, now);
+
+                  if (newAttempts >= WARN_AFTER_ATTEMPTS) {
+                    LOG.warn(
+                        "Outbox message '{}' for task '{}' (status='{}') has failed {}/{} delivery"
+                            + " attempts",
+                        locked.getId(),
+                        locked.getTaskId(),
+                        locked.getStatus(),
+                        newAttempts,
+                        MAX_ATTEMPTS);
+                  }
                 }
               });
     } catch (Exception e) {
-      LOG.error("Outbox drainer cycle failed", e);
-    }
-  }
-
-  private void processEntry(CollectionDAO.TaskWorkflowOutboxDAO dao, OutboxEntry entry) {
-    try {
-      boolean success = tryDeliver(entry);
-      long now = System.currentTimeMillis();
-
-      if (success) {
-        dao.markDelivered(entry.getId(), now);
-      } else {
-        int newAttempts = entry.getAttempts() + 1;
-        dao.recordFailedAttempt(entry.getId(), newAttempts, now);
-
-        if (newAttempts >= WARN_AFTER_ATTEMPTS) {
-          LOG.warn(
-              "Outbox message '{}' for task '{}' (status='{}') has failed {} delivery attempts",
-              entry.getId(),
-              entry.getTaskId(),
-              entry.getStatus(),
-              newAttempts);
-        }
-      }
-    } catch (Exception e) {
-      LOG.error("Failed to process outbox entry for task '{}'", entry.getTaskId(), e);
+      LOG.error("Failed to process outbox entry for task '{}'", candidate.getTaskId(), e);
     }
   }
 
