@@ -115,7 +115,7 @@ public class MigrationTestRunner {
               new MigrationTestEntry(version, "migration execution", "RUN", false, e.getMessage()));
         }
 
-        if (testCase != null) {
+        if (testCase != null && !migrationFailed) {
           entries.addAll(runValidation(testCase::validateAfter, handle, version, "AFTER"));
         } else if (!migrationFailed) {
           entries.add(new MigrationTestEntry(version, "(no tests)", "-", true, ""));
@@ -177,8 +177,9 @@ public class MigrationTestRunner {
     String base = version.contains("-") ? version.split("-")[0] : version;
     String[] parts = base.split("\\.");
     StringBuilder sb = new StringBuilder("v");
-    for (String part : parts) {
-      sb.append(Integer.parseInt(part));
+    for (int i = 0; i < parts.length; i++) {
+      if (i > 0) sb.append("_");
+      sb.append(Integer.parseInt(parts[i]));
     }
     return sb.toString();
   }

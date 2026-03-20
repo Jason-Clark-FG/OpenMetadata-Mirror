@@ -68,17 +68,26 @@ class DatabaseBackupRestoreTest {
   }
 
   @Test
-  void testQuoteIdentifierMySQLWithEmbeddedBacktick() {
+  void testQuoteIdentifierMySQLRejectsInvalidIdentifier() {
     DatabaseBackupRestore mysqlInstance =
         new DatabaseBackupRestore(null, ConnectionType.MYSQL, "testdb");
-    assertEquals("`col``name`", mysqlInstance.quoteIdentifier("col`name"));
+    assertThrows(IllegalArgumentException.class, () -> mysqlInstance.quoteIdentifier("col`name"));
   }
 
   @Test
-  void testQuoteIdentifierPostgresWithEmbeddedDoubleQuote() {
+  void testQuoteIdentifierPostgresRejectsInvalidIdentifier() {
     DatabaseBackupRestore pgInstance =
         new DatabaseBackupRestore(null, ConnectionType.POSTGRES, "testdb");
-    assertEquals("\"col\"\"name\"", pgInstance.quoteIdentifier("col\"name"));
+    assertThrows(IllegalArgumentException.class, () -> pgInstance.quoteIdentifier("col\"name"));
+  }
+
+  @Test
+  void testQuoteIdentifierRejectsSqlInjection() {
+    DatabaseBackupRestore mysqlInstance =
+        new DatabaseBackupRestore(null, ConnectionType.MYSQL, "testdb");
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> mysqlInstance.quoteIdentifier("foo; DROP TABLE users; --"));
   }
 
   @Test

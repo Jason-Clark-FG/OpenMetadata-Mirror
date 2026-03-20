@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -41,6 +42,7 @@ public class DatabaseBackupRestore {
 
   public static final int DEFAULT_BATCH_SIZE = 1000;
   private static final long MAX_METADATA_SIZE = 10 * 1024 * 1024;
+  private static final Pattern SAFE_IDENTIFIER = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
   private static final ObjectMapper MAPPER =
       new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
@@ -568,10 +570,13 @@ public class DatabaseBackupRestore {
   }
 
   String quoteIdentifier(String identifier) {
-    if (connectionType == ConnectionType.MYSQL) {
-      return "`" + identifier.replace("`", "``") + "`";
+    if (!SAFE_IDENTIFIER.matcher(identifier).matches()) {
+      throw new IllegalArgumentException("Invalid SQL identifier: " + identifier);
     }
-    return "\"" + identifier.replace("\"", "\"\"") + "\"";
+    if (connectionType == ConnectionType.MYSQL) {
+      return "`" + identifier + "`";
+    }
+    return "\"" + identifier + "\"";
   }
 
   String quoteColumns(List<String> columns) {
