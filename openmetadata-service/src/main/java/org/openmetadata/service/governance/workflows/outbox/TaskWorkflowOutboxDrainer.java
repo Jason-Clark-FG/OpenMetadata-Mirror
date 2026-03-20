@@ -20,6 +20,7 @@ public class TaskWorkflowOutboxDrainer {
 
   static final long POLL_INTERVAL_SECONDS = 30;
   static final int MAX_ATTEMPTS = 100;
+  static final int BATCH_SIZE = 500;
   private static final int WARN_AFTER_ATTEMPTS = 10;
   private static final long CLEANUP_RETENTION_MS = 7L * 24 * 60 * 60 * 1000;
 
@@ -55,7 +56,9 @@ public class TaskWorkflowOutboxDrainer {
   void drainAll() {
     try {
       List<OutboxEntry> candidates =
-          Entity.getCollectionDAO().taskWorkflowOutboxDAO().findAllOldestPending(MAX_ATTEMPTS);
+          Entity.getCollectionDAO()
+              .taskWorkflowOutboxDAO()
+              .findAllOldestPending(MAX_ATTEMPTS, BATCH_SIZE);
 
       if (candidates.isEmpty()) {
         return;
@@ -67,9 +70,13 @@ public class TaskWorkflowOutboxDrainer {
         processEntry(candidate);
       }
 
-      Entity.getCollectionDAO()
-          .taskWorkflowOutboxDAO()
-          .cleanupDelivered(System.currentTimeMillis() - CLEANUP_RETENTION_MS);
+      try {
+        Entity.getCollectionDAO()
+            .taskWorkflowOutboxDAO()
+            .cleanupDelivered(System.currentTimeMillis() - CLEANUP_RETENTION_MS);
+      } catch (Exception e) {
+        LOG.warn("Outbox cleanup failed, will retry next cycle", e);
+      }
     } catch (Exception e) {
       LOG.error("Outbox drainer cycle failed", e);
     }

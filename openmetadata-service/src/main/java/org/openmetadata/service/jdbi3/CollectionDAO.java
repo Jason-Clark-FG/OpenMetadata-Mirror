@@ -3119,9 +3119,12 @@ public interface CollectionDAO {
             + "     ROW_NUMBER() OVER (PARTITION BY taskId ORDER BY createdAt ASC, id ASC) AS rn"
             + "   FROM task_workflow_outbox"
             + "   WHERE delivered = false AND attempts < :maxAttempts"
-            + " ) ranked WHERE rn = 1")
+            + " ) ranked WHERE rn = 1"
+            + " ORDER BY attempts ASC, createdAt ASC"
+            + " LIMIT :batchSize")
     @RegisterRowMapper(OutboxEntryRowMapper.class)
-    List<OutboxEntry> findAllOldestPending(@Bind("maxAttempts") int maxAttempts);
+    List<OutboxEntry> findAllOldestPending(
+        @Bind("maxAttempts") int maxAttempts, @Bind("batchSize") int batchSize);
 
     @SqlQuery(
         "SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts, lastAttemptAt"
