@@ -215,7 +215,8 @@ public class McpOAuthIT extends McpTestBase {
     Assumptions.assumeTrue(
         registeredClientId != null, "Skipped: dynamic client registration (Order 3) did not run");
 
-    String formBody = "client_id=" + registeredClientId + "&client_secret=" + registeredClientSecret;
+    String formBody =
+        "client_id=" + registeredClientId + "&client_secret=" + registeredClientSecret;
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(getMcpUrl("/mcp/token")))
