@@ -3521,6 +3521,8 @@ export interface ServiceConnection {
  *
  * Airflow Metadata Database Connection Config
  *
+ * Airflow REST API Connection Config
+ *
  * Wherescape Metadata Database Connection Config
  *
  * SSIS Metadata Database Connection Config
@@ -3630,6 +3632,8 @@ export interface ConfigObject {
      * token to connect to Qlik Cloud.
      *
      * Hex API token for authentication. Can be personal or workspace token.
+     *
+     * Bearer token for API authentication.
      *
      * To Connect to Dagster Cloud
      *
@@ -3828,6 +3832,8 @@ export interface ConfigObject {
      *
      * Pipeline Service Management/UI URI.
      *
+     * URL to the Airflow REST API. E.g., http://localhost:8080
+     *
      * Pipeline Service Management/UI URL.
      *
      * Spline REST Server Host & Port.
@@ -3940,6 +3946,8 @@ export interface ConfigObject {
      * password to connect  to the Atlas.
      *
      * Password to connect to the Collibra.
+     *
+     * Password for basic authentication to the Airflow API.
      */
     password?: string;
     /**
@@ -4065,6 +4073,8 @@ export interface ConfigObject {
      *
      * Username to connect to the Collibra. This user should have privileges to read all the
      * metadata in Collibra.
+     *
+     * Username for basic authentication to the Airflow API.
      */
     username?: string;
     /**
@@ -4137,6 +4147,8 @@ export interface ConfigObject {
      *
      * OpenMetadata server API version to use.
      *
+     * Airflow REST API version.
+     *
      * Airbyte API version.
      */
     apiVersion?: string;
@@ -4198,6 +4210,8 @@ export interface ConfigObject {
      * Client SSL verification.
      *
      * Flag to verify SSL Certificate for OpenMetadata Server.
+     *
+     * Whether to verify SSL certificates when connecting to the Airflow API.
      *
      * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
      * default.
@@ -5174,6 +5188,8 @@ export interface ConfigObject {
     glossaryFilterPattern?: FilterPattern;
     /**
      * Pipeline Service Number Of Status
+     *
+     * Number of past DAG runs to fetch for status history.
      */
     numberOfStatus?: number;
     /**
@@ -7574,6 +7590,7 @@ export enum PurpleType {
     Adls = "ADLS",
     Airbyte = "Airbyte",
     Airflow = "Airflow",
+    AirflowAPI = "AirflowApi",
     Alation = "Alation",
     AlationSink = "AlationSink",
     Amundsen = "Amundsen",
