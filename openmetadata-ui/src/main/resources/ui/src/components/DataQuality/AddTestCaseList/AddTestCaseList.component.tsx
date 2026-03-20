@@ -69,6 +69,7 @@ import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interf
 import { AddTestCaseModalProps } from './AddTestCaseList.interface';
 import AddTestCaseListFilters from './AddTestCaseListFilters.component';
 import { AddTestCaseListFilterKey } from './AddTestCaseListFilters.constants';
+import { normalizeSelectedTestProp } from './AddTestCaseListForm.utils';
 
 export const AddTestCaseList = ({
   onCancel,
@@ -171,6 +172,11 @@ export const AddTestCaseList = ({
         (key) => key.split('::').pop() ?? '--'
       ),
     [filterColumns, columnOptionsFromApi]
+  );
+
+  const selectedTestNames = useMemo(
+    () => normalizeSelectedTestProp(selectedTest),
+    [selectedTest]
   );
 
   const handleSearch = (value: string) => {
@@ -289,12 +295,12 @@ export const AddTestCaseList = ({
         const testCaseResponse = await getListTestCaseBySearch(mergedParams);
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
-        if (selectedTest) {
+        if (selectedTestNames.length > 0) {
           setSelectedItems((pre) => {
             const selectedItemsMap = new Map();
             pre?.forEach((item) => selectedItemsMap.set(item.id, item));
             testCaseResponse.data.forEach((hit) => {
-              if (selectedTest.includes(hit.name)) {
+              if (selectedTestNames.includes(hit.name)) {
                 selectedItemsMap.set(hit.id ?? '', hit);
               }
             });
@@ -314,7 +320,7 @@ export const AddTestCaseList = ({
     },
     [
       testCaseFilters,
-      selectedTest,
+      selectedTestNames,
       testCaseParams,
       filterStatus,
       filterTestType,
