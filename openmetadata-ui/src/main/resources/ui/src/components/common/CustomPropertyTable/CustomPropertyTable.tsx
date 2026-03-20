@@ -215,7 +215,7 @@ export const CustomPropertyTable = <T extends ExtentionEntitiesKeys>({
       <div className="h-full flex-center border-default border-radius-sm">
         <ErrorPlaceHolder
           className="border-none"
-          contentMaxWidth="24rem"
+          contentMaxWidthClass="tw:max-w-96"
           icon={<CustomPropertyEmpty />}
           type={ERROR_PLACEHOLDER_TYPE.CORE_CREATE}>
           <Transi18next

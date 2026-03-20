@@ -36,7 +36,7 @@ const ErrorPlaceHolder = ({
   placeholderText,
   permissionValue,
   buttonTitle,
-  contentMaxWidth,
+  contentMaxWidthClass,
 }: ErrorPlaceholderProps) => {
   const getErrorPlaceHolder = () => {
     switch (type) {
@@ -61,7 +61,7 @@ const ErrorPlaceHolder = ({
             buttonId={buttonId}
             buttonTitle={buttonTitle}
             className={className}
-            contentMaxWidth={contentMaxWidth}
+            contentMaxWidthClass={contentMaxWidthClass}
             heading={heading}
             icon={icon}
             permission={permission}

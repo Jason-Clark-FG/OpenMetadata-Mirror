@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { PlusOutlined } from '@ant-design/icons';
 import { Button, Typography } from '@openmetadata/ui-core-components';
-import { Plus } from '@untitledui/icons';
 import classNames from 'classnames';
 import { ReactNode } from 'react';
 
@@ -24,7 +24,7 @@ export interface CoreCreateErrorPlaceHolderProps {
   permission?: boolean;
   buttonTitle?: string;
   onClick?: () => void;
-  contentMaxWidth?: string;
+  contentMaxWidthClass?: string;
 }
 
 const CoreCreateErrorPlaceHolder = ({
@@ -36,7 +36,7 @@ const CoreCreateErrorPlaceHolder = ({
   buttonTitle,
   permission = false,
   onClick,
-  contentMaxWidth,
+  contentMaxWidthClass = 'tw:max-w-64',
 }: CoreCreateErrorPlaceHolderProps) => {
   return (
     <div
@@ -49,10 +49,12 @@ const CoreCreateErrorPlaceHolder = ({
       <div className="tw:text-center">
         {icon && <div className="m-b-xs">{icon}</div>}
         <div
-          className="tw:flex tw:items-center tw:flex-col"
-          style={{ maxWidth: contentMaxWidth ?? '16rem' }}>
+          className={classNames(
+            'tw:flex tw:items-center tw:flex-col',
+            contentMaxWidthClass
+          )}>
           {heading && (
-            <Typography as="p" className="tw:text-md tw:text-gray-400">
+            <Typography as="p" className="tw:text-gray-400" size="text-md">
               {heading}
             </Typography>
           )}
@@ -62,7 +64,7 @@ const CoreCreateErrorPlaceHolder = ({
               className="tw:mt-3 tw:min-w-40"
               color="primary"
               data-testid={buttonId}
-              iconLeading={<Plus className="tw:text-white" />}
+              iconLeading={<PlusOutlined />}
               onClick={onClick}>
               {buttonTitle}
             </Button>
