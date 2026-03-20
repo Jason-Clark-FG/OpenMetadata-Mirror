@@ -3111,23 +3111,20 @@ public interface CollectionDAO {
         @Bind("updatedBy") String updatedBy,
         @Bind("createdAt") long createdAt);
 
-    @SqlQuery("SELECT DISTINCT taskId FROM task_workflow_outbox WHERE delivered = false")
-    List<String> findDistinctPendingTaskIds();
-
     @SqlQuery(
-        "SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts, lastAttemptAt"
-            + " FROM task_workflow_outbox"
-            + " WHERE taskId = :taskId AND delivered = false"
-            + " ORDER BY createdAt ASC LIMIT 1"
+        "SELECT o.id, o.taskId, o.status, o.updatedBy, o.createdAt,"
+            + " o.delivered, o.attempts, o.lastAttemptAt"
+            + " FROM task_workflow_outbox o"
+            + " INNER JOIN ("
+            + "   SELECT taskId, MIN(createdAt) AS minCreatedAt"
+            + "   FROM task_workflow_outbox"
+            + "   WHERE delivered = false"
+            + "   GROUP BY taskId"
+            + " ) oldest ON o.taskId = oldest.taskId AND o.createdAt = oldest.minCreatedAt"
+            + " WHERE o.delivered = false"
             + " FOR UPDATE SKIP LOCKED")
     @RegisterRowMapper(OutboxEntryRowMapper.class)
-    OutboxEntry findAndLockOldestPending(@Bind("taskId") String taskId);
-
-    @SqlQuery(
-        "SELECT createdAt FROM task_workflow_outbox"
-            + " WHERE taskId = :taskId AND delivered = false"
-            + " ORDER BY createdAt ASC LIMIT 1")
-    Long findOldestPendingCreatedAt(@Bind("taskId") String taskId);
+    List<OutboxEntry> findAndLockAllOldestPending();
 
     @SqlUpdate(
         "UPDATE task_workflow_outbox"
