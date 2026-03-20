@@ -114,6 +114,7 @@ class DbtcloudSource(PipelineServiceSource):
         self.context.get().latest_run = None
         self.context.get().current_job_id = job_id
         self.context.get().current_runs = None
+        self.context.get().pipeline_fqn = None
         try:
             task_list: List[Task] = []
             runs_list: List = []
@@ -153,7 +154,8 @@ class DbtcloudSource(PipelineServiceSource):
             )
 
             pipeline_request = CreatePipelineRequest(
-                name=EntityName(pipeline_details.name),
+                name=EntityName(str(pipeline_details.id)),
+                displayName=pipeline_details.name,
                 description=Markdown(pipeline_details.description),
                 sourceUrl=SourceUrl(connection_url),
                 tasks=self._get_task_list(job_id=pipeline_details.id),
@@ -369,7 +371,7 @@ class DbtcloudSource(PipelineServiceSource):
         Get Pipeline Name
         """
         try:
-            return pipeline_details.name
+            return str(pipeline_details.id)
         except Exception as exc:
             logger.debug(traceback.format_exc())
             logger.error(f"Failed to get pipeline name due to : {exc}")

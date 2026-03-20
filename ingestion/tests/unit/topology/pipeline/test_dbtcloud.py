@@ -438,7 +438,8 @@ EXPECTED_JOB_DETAILS = DBTJob(
 )
 
 EXPECTED_CREATED_PIPELINES = CreatePipelineRequest(
-    name=EntityName(root="New job"),
+    name=EntityName(root="70403103936332"),
+    displayName="New job",
     description=Markdown(root="Example Job Description"),
     sourceUrl=SourceUrl(
         root="https://abc12.us1.dbt.com/deploy/70403103922125/projects/70403103926818/jobs/70403103936332"
@@ -457,9 +458,9 @@ MOCK_PIPELINE_SERVICE = PipelineService(
 
 MOCK_PIPELINE = Pipeline(
     id="2aaa012e-099a-11ed-861d-0242ac120002",
-    name=EntityName(root="New job"),
-    fullyQualifiedName="dbtcloud_pipeline_test.New job",
-    displayName="OpenMetadata DBTCloud Workflow",
+    name=EntityName(root="70403103936332"),
+    fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
+    displayName="New job",
     description=Markdown(root="Example Job Description"),
     sourceUrl=SourceUrl(
         root="https://abc12.us1.dbt.com/deploy/70403103922125/projects/70403103926818/jobs/70403103936332"
@@ -494,7 +495,7 @@ EXPECTED_PROJECT_FILTERS = ["70403103922127", "70403103922128"]
 
 EXPECTED_ENVIRONMENT_FILTERS = ["70403103931988", "70403103931989"]
 
-EXPECTED_PIPELINE_NAME = str(MOCK_JOB_RESULT["data"][0]["name"])
+EXPECTED_PIPELINE_NAME = str(MOCK_JOB_RESULT["data"][0]["id"])
 
 
 class DBTCloudUnitTest(TestCase):
@@ -551,6 +552,7 @@ class DBTCloudUnitTest(TestCase):
 
         # Compare individual fields instead of entire objects
         self.assertEqual(pipeline.name, EXPECTED_CREATED_PIPELINES.name)
+        self.assertEqual(pipeline.displayName, "New job")
         self.assertEqual(pipeline.description, EXPECTED_CREATED_PIPELINES.description)
         self.assertEqual(pipeline.sourceUrl, EXPECTED_CREATED_PIPELINES.sourceUrl)
         self.assertEqual(
@@ -795,7 +797,7 @@ class DBTCloudUnitTest(TestCase):
         """
         # Mock the context with latest run ID
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -819,8 +821,8 @@ class DBTCloudUnitTest(TestCase):
         # Create mock entities
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -850,10 +852,10 @@ class DBTCloudUnitTest(TestCase):
                 if entity == Pipeline:
                     # Handle both string FQN and FullyQualifiedEntityName
                     if isinstance(fqn, str):
-                        if fqn == "dbtcloud_pipeline_test.New job":
+                        if fqn == "dbtcloud_pipeline_test.70403103936332":
                             return mock_pipeline
                     elif isinstance(fqn, FullyQualifiedEntityName):
-                        if fqn.root == "dbtcloud_pipeline_test.New job":
+                        if fqn.root == "dbtcloud_pipeline_test.70403103936332":
                             return mock_pipeline
                 elif entity == Table:
                     fqn_str = str(fqn) if not isinstance(fqn, str) else fqn
@@ -1174,7 +1176,7 @@ class DBTCloudUnitTest(TestCase):
         """
         # Mock the context
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -1187,8 +1189,8 @@ class DBTCloudUnitTest(TestCase):
         # Create mock entities
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -1566,7 +1568,7 @@ class DBTCloudUnitTest(TestCase):
         """
         # Set up context
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -1587,8 +1589,8 @@ class DBTCloudUnitTest(TestCase):
 
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -1860,7 +1862,7 @@ class DBTCloudUnitTest(TestCase):
 
         # Mock the context
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -1882,8 +1884,8 @@ class DBTCloudUnitTest(TestCase):
 
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -1959,7 +1961,7 @@ class DBTCloudUnitTest(TestCase):
 
         # Mock the context
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -1981,8 +1983,8 @@ class DBTCloudUnitTest(TestCase):
 
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -2117,7 +2119,7 @@ class DBTCloudUnitTest(TestCase):
 
         # Mock the context
         self.dbtcloud.context.get().__dict__["latest_run_id"] = 70403110257794
-        self.dbtcloud.context.get().__dict__["pipeline"] = "New job"
+        self.dbtcloud.context.get().__dict__["pipeline"] = "70403103936332"
         self.dbtcloud.context.get().__dict__[
             "pipeline_service"
         ] = "dbtcloud_pipeline_test"
@@ -2139,8 +2141,8 @@ class DBTCloudUnitTest(TestCase):
 
         mock_pipeline = Pipeline(
             id=uuid.uuid4(),
-            name="New job",
-            fullyQualifiedName="dbtcloud_pipeline_test.New job",
+            name="70403103936332",
+            fullyQualifiedName="dbtcloud_pipeline_test.70403103936332",
             service=EntityReference(id=uuid.uuid4(), type="pipelineService"),
         )
 
@@ -2216,3 +2218,119 @@ class DBTCloudUnitTest(TestCase):
                 # Note: Actual lineage generation depends on entity resolution (FQN matching)
                 # The key test is that no exception was raised when processing
                 # a source with runGeneratedAt=None
+
+    def test_get_task_list_resets_pipeline_fqn(self):
+        """
+        Test that _get_task_list resets pipeline_fqn to None.
+        This prevents a stale FQN from a previous pipeline's lineage
+        processing from leaking into the next pipeline's status ingestion.
+        """
+        # Simulate stale pipeline_fqn from a previous pipeline's lineage stage
+        self.dbtcloud.context.get().pipeline_fqn = "dbtcloud_pipeline_test.Previous Job"
+
+        with patch.object(self.dbtcloud.client, "get_runs", return_value=iter([])):
+            self.dbtcloud._get_task_list(job_id=12345)
+
+        # pipeline_fqn must be reset to None so yield_pipeline_status
+        # falls back to fqn.build() with the correct pipeline name
+        ctx = self.dbtcloud.context.get()
+        self.assertFalse(
+            hasattr(ctx, "pipeline_fqn") and ctx.pipeline_fqn,
+            "pipeline_fqn should be None after _get_task_list resets it",
+        )
+
+    def test_yield_pipeline_status_uses_correct_fqn_after_reset(self):
+        """
+        Test that yield_pipeline_status falls back to fqn.build() when
+        pipeline_fqn is None, ensuring status goes to the correct pipeline.
+        """
+        # Set up context as it would be after _get_task_list resets pipeline_fqn
+        self.dbtcloud.context.get().__dict__["pipeline_fqn"] = None
+        self.dbtcloud.context.get().__dict__["pipeline"] = "Current Job"
+        self.dbtcloud.context.get().__dict__[
+            "pipeline_service"
+        ] = "dbtcloud_pipeline_test"
+
+        mock_run = DBTRun(
+            id=99999,
+            status=1,
+            state="Success",
+            started_at="2024-05-27 10:42:20.621788+00:00",
+            finished_at="2024-05-28 10:42:52.622408+00:00",
+        )
+        self.dbtcloud.context.get().__dict__["current_runs"] = [mock_run]
+
+        job = DBTJob(
+            id=12345,
+            name="Current Job",
+            state=1,
+            job_type="other",
+            created_at="2024-05-27T10:42:10.111442+00:00",
+            updated_at="2024-05-27T10:42:10.111459+00:00",
+            project_id=70403103926818,
+        )
+
+        results = list(self.dbtcloud.yield_pipeline_status(job))
+
+        self.assertEqual(len(results), 1)
+        status_result = results[0].right
+        # Should use fqn.build() which produces service_name.pipeline_name
+        self.assertIn("Current Job", status_result.pipeline_fqn)
+        self.assertIn("dbtcloud_pipeline_test", status_result.pipeline_fqn)
+
+    def test_yield_pipeline_status_multi_job_no_cross_contamination(self):
+        """
+        Simulate the multi-job scenario that caused the original bug:
+        After Job A's lineage sets pipeline_fqn, Job B's _get_task_list
+        must reset it so Job B's status goes to the correct pipeline.
+        """
+        # --- Job A processing ---
+        # Simulate Job A's lineage setting pipeline_fqn (this happens in stage 4)
+        self.dbtcloud.context.get().pipeline_fqn = "dbtcloud_pipeline_test.Job A"
+
+        # --- Job B processing ---
+        # Job B's yield_pipeline calls _get_task_list which should reset pipeline_fqn
+        job_b_run = DBTRun(
+            id=88888,
+            status=1,
+            state="Success",
+            href="https://test.dbt.com/runs/88888/",
+            started_at="2024-06-01 10:00:00.000000+00:00",
+            finished_at="2024-06-01 11:00:00.000000+00:00",
+        )
+
+        with patch.object(
+            self.dbtcloud.client, "get_runs", return_value=iter([job_b_run])
+        ):
+            self.dbtcloud._get_task_list(job_id=54321)
+
+        # Verify pipeline_fqn was reset
+        ctx = self.dbtcloud.context.get()
+        self.assertFalse(
+            hasattr(ctx, "pipeline_fqn") and ctx.pipeline_fqn,
+            "pipeline_fqn should be None after _get_task_list resets it",
+        )
+
+        # Now simulate yield_pipeline_status for Job B
+        self.dbtcloud.context.get().__dict__["pipeline"] = "Job B"
+        self.dbtcloud.context.get().__dict__[
+            "pipeline_service"
+        ] = "dbtcloud_pipeline_test"
+
+        job_b = DBTJob(
+            id=54321,
+            name="Job B",
+            state=1,
+            job_type="other",
+            created_at="2024-06-01T10:00:00.000000+00:00",
+            updated_at="2024-06-01T10:00:00.000000+00:00",
+            project_id=70403103926818,
+        )
+
+        results = list(self.dbtcloud.yield_pipeline_status(job_b))
+
+        self.assertEqual(len(results), 1)
+        status_result = results[0].right
+        # Must NOT contain Job A's FQN — that was the original bug
+        self.assertNotIn("Job A", status_result.pipeline_fqn)
+        self.assertIn("Job B", status_result.pipeline_fqn)
