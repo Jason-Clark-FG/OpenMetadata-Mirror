@@ -278,6 +278,14 @@ public class AppResource extends EntityResource<App, AppRepository> {
           @QueryParam("include")
           @DefaultValue("non-deleted")
           Include include) {
+    if (boundType != null) {
+      try {
+        AppBoundType.fromValue(boundType);
+      } catch (IllegalArgumentException e) {
+        throw new BadRequestException(
+            "Invalid boundType '" + boundType + "'. Allowed values: Global, Service");
+      }
+    }
     ListFilter filter =
         new ListFilter(include)
             .addQueryParam("agentType", agentTypes)
@@ -1151,6 +1159,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
               content = @Content(mediaType = MediaType.APPLICATION_JSON))
           ServiceAppConfiguration serviceConfig) {
     App app = repository.getByName(uriInfo, name, repository.getFields("id"));
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.EDIT_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContextById(app.getId()));
     if (app.getBoundType() != AppBoundType.Service) {
       throw new BadRequestException(
           "Cannot add service configuration to non-service-bound application: " + name);
@@ -1211,6 +1222,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
           @PathParam("serviceId")
           UUID serviceId) {
     App app = repository.getByName(uriInfo, name, repository.getFields("id"));
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.EDIT_ALL);
+    authorizer.authorize(securityContext, operationContext, getResourceContextById(app.getId()));
     if (app.getBoundType() != AppBoundType.Service) {
       throw new BadRequestException(
           "Cannot remove service configuration from non-service-bound application: " + name);

@@ -36,7 +36,8 @@ SET json = json || jsonb_build_object(
     )
 )
 WHERE (jsonb_exists(json, 'appConfiguration')
-   OR jsonb_exists(json, 'appSchedule'))
+   OR jsonb_exists(json, 'appSchedule')
+   OR jsonb_exists(json, 'privateConfiguration'))
    AND COALESCE(json->>'appType', 'internal') != 'external';
 
 -- Remove old fields from installed_apps (internal apps only)

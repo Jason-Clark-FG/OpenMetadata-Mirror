@@ -37,7 +37,8 @@ SET json = JSON_SET(
     )
 )
 WHERE (JSON_CONTAINS_PATH(json, 'one', '$.appConfiguration')
-   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule'))
+   OR JSON_CONTAINS_PATH(json, 'one', '$.appSchedule')
+   OR JSON_CONTAINS_PATH(json, 'one', '$.privateConfiguration'))
    AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(json, '$.appType')), 'internal') != 'external';
 
 -- Remove old fields from installed_apps (internal apps only)

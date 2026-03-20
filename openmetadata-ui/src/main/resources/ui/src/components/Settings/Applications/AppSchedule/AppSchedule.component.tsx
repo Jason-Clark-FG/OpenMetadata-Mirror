@@ -157,12 +157,7 @@ const AppSchedule = ({
       },
       defaultCron: getCronDefaultValue(appData?.name ?? ''),
     };
-  }, [
-    appData.name,
-    appData.appType,
-    getAppSchedule(appData),
-    pipelineSchedules,
-  ]);
+  }, [appData, pipelineSchedules]);
 
   const translatedSchedularOptions = useMemo(
     () =>
@@ -194,8 +189,7 @@ const AppSchedule = ({
                 </Typography.Text>
                 <Typography.Text
                   className="font-medium"
-                  data-testid="schedule-type"
-                >
+                  data-testid="schedule-type">
                   {(getAppSchedule(appData) as AppScheduleClass)
                     .scheduleTimeline ?? ''}
                 </Typography.Text>
@@ -208,8 +202,7 @@ const AppSchedule = ({
                   </Typography.Text>
                   <Typography.Text
                     className="font-medium"
-                    data-testid="cron-string"
-                  >
+                    data-testid="cron-string">
                     {cronString}
                   </Typography.Text>
                 </div>
@@ -226,8 +219,7 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isDeployLoading}
                   type="primary"
-                  onClick={onDeployTrigger}
-                >
+                  onClick={onDeployTrigger}>
                   {t('label.deploy')}
                 </Button>
               )}
@@ -237,8 +229,7 @@ const AppSchedule = ({
                   data-testid="edit-button"
                   disabled={appData.deleted}
                   type="primary"
-                  onClick={() => setShowModal(true)}
-                >
+                  onClick={() => setShowModal(true)}>
                   {t('label.edit')}
                 </Button>
               )}
@@ -249,8 +240,7 @@ const AppSchedule = ({
                   disabled={appData.deleted}
                   loading={isRunLoading}
                   type="primary"
-                  onClick={onAppTrigger}
-                >
+                  onClick={onAppTrigger}>
                   {t('label.run-now')}
                 </Button>
               )}
@@ -272,8 +262,7 @@ const AppSchedule = ({
         okText={t('label.save')}
         open={showModal}
         title={t('label.update-entity', { entity: t('label.schedule') })}
-        width={650}
-      >
+        width={650}>
         <ScheduleInterval
           isEditMode
           buttonProps={{

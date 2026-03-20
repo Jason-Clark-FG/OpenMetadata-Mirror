@@ -348,7 +348,11 @@ public class AppBoundConfigurationUtil {
     List<ServiceAppConfiguration> serviceConfigs =
         Optional.ofNullable(app.getConfiguration())
             .map(AppBoundConfiguration::getServiceAppConfig)
-            .orElse(List.of());
+            .orElse(null);
+
+    if (serviceConfigs == null || serviceConfigs.isEmpty()) {
+      return false;
+    }
 
     return serviceConfigs.removeIf(
         config ->
