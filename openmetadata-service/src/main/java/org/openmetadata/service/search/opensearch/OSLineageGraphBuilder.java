@@ -18,6 +18,7 @@ import static org.openmetadata.service.util.LineageUtil.getNodeInformation;
 import com.nimbusds.jose.util.Pair;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -611,143 +612,30 @@ public class OSLineageGraphBuilder
     upstreamDepthCounts.put(0, 1);
     downstreamDepthCounts.put(0, 1);
 
-    // When there's a query filter, use path preservation to get accurate counts
-    boolean needsPathPreservation = !nullOrEmpty(queryFilter) && hasNodeLevelFilters(queryFilter);
+    String countFilter = getStructuralFilterOnly(queryFilter);
 
-    if (needsPathPreservation) {
-      // Use path preservation approach - fetch all, filter in-memory, count by depth
-      return getLineagePaginationInfoWithPathPreservation(
-          fqn, upstreamDepth, downstreamDepth, queryFilter, includeDeleted, entityType);
-    }
-
-    // Get upstream pagination info
     if (upstreamDepth > 0) {
       upstreamDepthCounts.putAll(
           getDepthWiseEntityCounts(
               fqn,
               LineageDirection.UPSTREAM,
               upstreamDepth,
-              queryFilter,
+              countFilter,
               includeDeleted,
               entityType));
     }
 
-    // Get downstream pagination info
     if (downstreamDepth > 0) {
       downstreamDepthCounts.putAll(
           getDepthWiseEntityCounts(
               fqn,
               LineageDirection.DOWNSTREAM,
               downstreamDepth,
-              queryFilter,
+              countFilter,
               includeDeleted,
               entityType));
     }
 
-    // Build pagination info response
-    LineagePaginationInfo paginationInfo = new LineagePaginationInfo();
-
-    // Calculate totals
-    int totalUpstream = upstreamDepthCounts.values().stream().mapToInt(Integer::intValue).sum();
-    int totalDownstream = downstreamDepthCounts.values().stream().mapToInt(Integer::intValue).sum();
-
-    paginationInfo.setTotalUpstreamEntities(totalUpstream);
-    paginationInfo.setTotalDownstreamEntities(totalDownstream);
-
-    // Set max depths
-    paginationInfo.setMaxUpstreamDepth(
-        upstreamDepthCounts.keySet().stream().mapToInt(i -> i).max().orElse(0));
-    paginationInfo.setMaxDownstreamDepth(
-        downstreamDepthCounts.keySet().stream().mapToInt(i -> i).max().orElse(0));
-
-    // Convert to depth info arrays
-    List<DepthInfo> upstreamDepthInfo = new ArrayList<>();
-    for (Map.Entry<Integer, Integer> entry : upstreamDepthCounts.entrySet()) {
-      DepthInfo depthInfo = new DepthInfo();
-      depthInfo.setDepth(entry.getKey());
-      depthInfo.setEntityCount(entry.getValue());
-      upstreamDepthInfo.add(depthInfo);
-    }
-
-    List<DepthInfo> downstreamDepthInfo = new ArrayList<>();
-    for (Map.Entry<Integer, Integer> entry : downstreamDepthCounts.entrySet()) {
-      DepthInfo depthInfo = new DepthInfo();
-      depthInfo.setDepth(entry.getKey());
-      depthInfo.setEntityCount(entry.getValue());
-      downstreamDepthInfo.add(depthInfo);
-    }
-
-    paginationInfo.setUpstreamDepthInfo(upstreamDepthInfo);
-    paginationInfo.setDownstreamDepthInfo(downstreamDepthInfo);
-
-    return paginationInfo;
-  }
-
-  /**
-   * Gets pagination info using path preservation - fetches all lineage first,
-   * then filters in-memory and counts by depth.
-   */
-  private LineagePaginationInfo getLineagePaginationInfoWithPathPreservation(
-      String fqn,
-      int upstreamDepth,
-      int downstreamDepth,
-      String queryFilter,
-      boolean includeDeleted,
-      String entityType)
-      throws IOException {
-
-    Map<Integer, Integer> upstreamDepthCounts = new HashMap<>();
-    Map<Integer, Integer> downstreamDepthCounts = new HashMap<>();
-    upstreamDepthCounts.put(0, 1);
-    downstreamDepthCounts.put(0, 1);
-
-    // Fetch upstream lineage with path preservation
-    if (upstreamDepth > 0) {
-      EntityCountLineageRequest upstreamRequest =
-          new EntityCountLineageRequest()
-              .withFqn(fqn)
-              .withDirection(LineageDirection.UPSTREAM)
-              .withMaxDepth(upstreamDepth)
-              .withQueryFilter(queryFilter)
-              .withIncludeDeleted(includeDeleted)
-              .withFrom(0)
-              .withSize(10000);
-
-      SearchLineageResult upstreamResult = searchLineageByEntityCount(upstreamRequest);
-      if (upstreamResult != null && upstreamResult.getNodes() != null) {
-        for (NodeInformation node : upstreamResult.getNodes().values()) {
-          if (node.getNodeDepth() != null && node.getNodeDepth() > 0) {
-            int depth = node.getNodeDepth();
-            upstreamDepthCounts.merge(depth, 1, Integer::sum);
-          }
-        }
-      }
-    }
-
-    // Fetch downstream lineage with path preservation
-    if (downstreamDepth > 0) {
-      EntityCountLineageRequest downstreamRequest =
-          new EntityCountLineageRequest()
-              .withFqn(fqn)
-              .withDirection(LineageDirection.DOWNSTREAM)
-              .withMaxDepth(downstreamDepth)
-              .withQueryFilter(queryFilter)
-              .withIncludeDeleted(includeDeleted)
-              .withFrom(0)
-              .withSize(10000);
-
-      SearchLineageResult downstreamResult = searchLineageByEntityCount(downstreamRequest);
-      if (downstreamResult != null && downstreamResult.getNodes() != null) {
-        for (NodeInformation node : downstreamResult.getNodes().values()) {
-          if (node.getNodeDepth() != null && node.getNodeDepth() > 0) {
-            int depth = node.getNodeDepth();
-            downstreamDepthCounts.merge(depth, 1, Integer::sum);
-          }
-        }
-      }
-    }
-
-    // Build pagination info response
     LineagePaginationInfo paginationInfo = new LineagePaginationInfo();
 
     int totalUpstream = upstreamDepthCounts.values().stream().mapToInt(Integer::intValue).sum();
@@ -768,6 +656,7 @@ public class OSLineageGraphBuilder
       depthInfo.setEntityCount(entry.getValue());
       upstreamDepthInfo.add(depthInfo);
     }
+    upstreamDepthInfo.sort(Comparator.comparingInt(DepthInfo::getDepth));
 
     List<DepthInfo> downstreamDepthInfo = new ArrayList<>();
     for (Map.Entry<Integer, Integer> entry : downstreamDepthCounts.entrySet()) {
@@ -776,6 +665,7 @@ public class OSLineageGraphBuilder
       depthInfo.setEntityCount(entry.getValue());
       downstreamDepthInfo.add(depthInfo);
     }
+    downstreamDepthInfo.sort(Comparator.comparingInt(DepthInfo::getDepth));
 
     paginationInfo.setUpstreamDepthInfo(upstreamDepthInfo);
     paginationInfo.setDownstreamDepthInfo(downstreamDepthInfo);
