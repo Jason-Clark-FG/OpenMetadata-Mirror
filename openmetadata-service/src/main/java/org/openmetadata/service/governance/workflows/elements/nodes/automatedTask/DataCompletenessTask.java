@@ -1,8 +1,12 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.getFlowableElementId;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
@@ -65,6 +69,17 @@ public class DataCompletenessTask implements NodeInterface {
     // Get configuration with defaults if null
     var config = nodeDefinition.getConfig();
 
+    Map<String, String> inputNamespaceMap = new HashMap<>();
+    if (nodeDefinition.getInputNamespaceMap() != null) {
+      @SuppressWarnings("unchecked")
+      Map<String, String> converted =
+          JsonUtils.convertValue(nodeDefinition.getInputNamespaceMap(), Map.class);
+      if (converted != null) {
+        inputNamespaceMap.putAll(converted);
+      }
+    }
+    inputNamespaceMap.putIfAbsent(ENTITY_LIST_VARIABLE, GLOBAL_NAMESPACE);
+
     List<FieldExtension> fieldExtensions =
         List.of(
             new FieldExtensionBuilder()
@@ -77,11 +92,7 @@ public class DataCompletenessTask implements NodeInterface {
                 .build(),
             new FieldExtensionBuilder()
                 .fieldName("inputNamespaceMapExpr")
-                .fieldValue(
-                    JsonUtils.pojoToJson(
-                        nodeDefinition.getInputNamespaceMap() != null
-                            ? nodeDefinition.getInputNamespaceMap()
-                            : new java.util.HashMap<>()))
+                .fieldValue(JsonUtils.pojoToJson(inputNamespaceMap))
                 .build());
 
     ServiceTaskBuilder builder =

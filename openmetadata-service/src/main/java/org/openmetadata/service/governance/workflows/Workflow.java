@@ -12,6 +12,7 @@ public class Workflow {
   public static final String INGESTION_PIPELINE_ID_VARIABLE = "ingestionPipelineId";
   public static final String RELATED_ENTITY_VARIABLE = "relatedEntity";
   public static final String ENTITY_LIST_VARIABLE = "entityList";
+  public static final String FALSE_ENTITY_LIST_VARIABLE = "false_entityList";
   public static final String BATCH_SINK_PROCESSED_VARIABLE = "batchSinkProcessed";
   public static final String TRIGGERING_OBJECT_ID_VARIABLE = "triggeringObjectId";
   public static final String RECOGNIZER_FEEDBACK = "recognizerFeedback";

@@ -9,13 +9,22 @@
   "trigger": {
     "type": "eventBasedEntity",
     "config": {
-      "entityTypes": ["glossaryTerm"],
-      "events": ["Created", "Updated"],
+      "entityTypes": [
+        "glossaryTerm"
+      ],
+      "events": [
+        "Created",
+        "Updated"
+      ],
       "exclude": [],
       "include": [],
       "filter": {}
     },
-    "output": ["relatedEntity", "updatedBy"]
+    "output": [
+      "entityList",
+      "relatedEntity",
+      "updatedBy"
+    ]
   },
   "nodes": [
     {
@@ -63,7 +72,7 @@
         "rules": "{\"and\":[{\"isReviewer\":{\"var\":\"updatedBy\"}}]}"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -76,7 +85,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "global"
       }
     },
@@ -89,7 +98,7 @@
         "rules": "{\"and\":[{\"some\":[{\"var\":\"reviewers\"},{\"!=\":[{\"var\":\"fullyQualifiedName\"},null]}]}]}"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -101,7 +110,7 @@
         "rules": "{\"and\":[{\"!!\":[{\"var\":\"description\"}]}]}"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -114,7 +123,7 @@
         "fieldValue": "In Review"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -127,7 +136,7 @@
         "fieldValue": "Draft"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -157,7 +166,7 @@
         "rules": "{\"and\":[{\"==\":[{\"var\":\"version\"},0.1]}]}"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -170,7 +179,7 @@
         "fieldValue": "In Review"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "global"
       }
     },
@@ -191,7 +200,9 @@
       "inputNamespaceMap": {
         "relatedEntity": "global"
       },
-      "output": ["updatedBy"]
+      "output": [
+        "updatedBy"
+      ]
     },
     {
       "type": "automatedTask",
@@ -200,7 +211,7 @@
       "displayName": "Rollback Glossary Term Changes",
       "config": {},
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "ApprovalForUpdates"
       }
     },
@@ -214,7 +225,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "ApprovalForUpdates"
       }
     },
@@ -240,7 +251,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "ApproveGlossaryTerm"
       }
     },
@@ -254,7 +265,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global"
+        "entityList": "global"
       }
     },
     {
@@ -267,7 +278,7 @@
         "fieldValue": "Rejected"
       },
       "inputNamespaceMap": {
-        "relatedEntity": "global",
+        "entityList": "global",
         "updatedBy": "ApproveGlossaryTerm"
       }
     }

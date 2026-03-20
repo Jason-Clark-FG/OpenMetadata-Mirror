@@ -49,7 +49,7 @@
     "input": {
       "type": "array",
       "items": { "type":  "string" },
-      "default": ["relatedEntity"],
+      "default": ["entityList"],
       "additionalItems": false,
       "minItems": 1,
       "maxItems": 1
@@ -57,13 +57,20 @@
     "inputNamespaceMap": {
       "type": "object",
       "properties": {
+        "entityList": {
+          "type": "string"
+        },
         "relatedEntity": {
-          "type": "string",
-          "default": "global"
+          "type": "string"
         }
       },
-      "additionalProperties": false,
-      "required": ["relatedEntity"]
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["entityList", "falseEntityList"],
+      "additionalItems": false
     },
     "branches": {
       "type": "array",
