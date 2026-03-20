@@ -169,7 +169,7 @@ public class McpOAuthIT extends McpTestBase {
 
   @Test
   @Order(7)
-  void testTokenEndpoint_getMethod_returns405() throws Exception {
+  void testTokenEndpoint_getMethod_returns404() throws Exception {
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(getMcpUrl("/mcp/token")))
@@ -180,13 +180,22 @@ public class McpOAuthIT extends McpTestBase {
 
     HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertThat(response.statusCode()).isEqualTo(405);
+    // Token endpoint only handles POST; GET falls through to 404
+    assertThat(response.statusCode()).isEqualTo(404);
   }
 
   @Test
   @Order(8)
   void testTokenEndpoint_invalidGrantType_returns400() throws Exception {
-    String formBody = "grant_type=client_credentials&client_id=nonexistent";
+    Assumptions.assumeTrue(
+        registeredClientId != null, "Skipped: dynamic client registration (Order 3) did not run");
+
+    String formBody =
+        "grant_type=client_credentials"
+            + "&client_id="
+            + registeredClientId
+            + "&client_secret="
+            + registeredClientSecret;
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(getMcpUrl("/mcp/token")))
@@ -203,7 +212,10 @@ public class McpOAuthIT extends McpTestBase {
   @Test
   @Order(9)
   void testTokenEndpoint_missingGrantType_returns400() throws Exception {
-    String formBody = "client_id=nonexistent";
+    Assumptions.assumeTrue(
+        registeredClientId != null, "Skipped: dynamic client registration (Order 3) did not run");
+
+    String formBody = "client_id=" + registeredClientId + "&client_secret=" + registeredClientSecret;
     HttpRequest request =
         HttpRequest.newBuilder()
             .uri(URI.create(getMcpUrl("/mcp/token")))
@@ -219,6 +231,23 @@ public class McpOAuthIT extends McpTestBase {
 
   @Test
   @Order(10)
+  void testTokenEndpoint_unknownClient_returns401() throws Exception {
+    String formBody = "grant_type=authorization_code&client_id=nonexistent&client_secret=fake";
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(getMcpUrl("/mcp/token")))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .POST(HttpRequest.BodyPublishers.ofString(formBody))
+            .timeout(Duration.ofSeconds(30))
+            .build();
+
+    HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+
+    assertThat(response.statusCode()).isEqualTo(401);
+  }
+
+  @Test
+  @Order(11)
   void testRevocationEndpoint_invalidToken_returns200() throws Exception {
     Assumptions.assumeTrue(
         registeredClientId != null, "Skipped: dynamic client registration (Order 3) did not run");
@@ -245,7 +274,7 @@ public class McpOAuthIT extends McpTestBase {
   }
 
   @Test
-  @Order(11)
+  @Order(12)
   void testMcpEndpointWithoutAuth_returns401() throws Exception {
     Map<String, Object> toolCall = McpTestUtils.createSearchMetadataToolCall("test", 5, "table");
 
@@ -265,7 +294,7 @@ public class McpOAuthIT extends McpTestBase {
   }
 
   @Test
-  @Order(12)
+  @Order(13)
   void testMcpEndpointWithInvalidToken_returns401() throws Exception {
     Map<String, Object> toolCall = McpTestUtils.createSearchMetadataToolCall("test", 5, "table");
 
