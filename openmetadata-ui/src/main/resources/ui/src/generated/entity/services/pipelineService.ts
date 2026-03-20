@@ -186,6 +186,8 @@ export interface PipelineConnection {
 /**
  * Airflow Metadata Database Connection Config
  *
+ * Airflow REST API Connection Config
+ *
  * Wherescape Metadata Database Connection Config
  *
  * SSIS Metadata Database Connection Config
@@ -245,6 +247,8 @@ export interface ConfigObject {
     /**
      * Pipeline Service Management/UI URI.
      *
+     * URL to the Airflow REST API. E.g., http://localhost:8080
+     *
      * Pipeline Service Management/UI URL.
      *
      * Host and port of the Databricks service.
@@ -261,6 +265,8 @@ export interface ConfigObject {
     hostPort?: string;
     /**
      * Pipeline Service Number Of Status
+     *
+     * Number of past DAG runs to fetch for status history.
      */
     numberOfStatus?: number;
     /**
@@ -279,6 +285,39 @@ export interface ConfigObject {
      */
     type?: PipelineServiceType;
     /**
+     * Airflow REST API version.
+     *
+     * Airbyte API version.
+     */
+    apiVersion?: string;
+    /**
+     * Password for basic authentication to the Airflow API.
+     */
+    password?: string;
+    /**
+     * Bearer token for API authentication.
+     *
+     * To Connect to Dagster Cloud
+     *
+     * Generated Token to connect to Databricks.
+     *
+     * Generated Token to connect to DBTCloud.
+     *
+     * Token to connect to Stitch api doc
+     */
+    token?: string;
+    /**
+     * Username for basic authentication to the Airflow API.
+     */
+    username?: string;
+    /**
+     * Whether to verify SSL certificates when connecting to the Airflow API.
+     *
+     * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
+     * default.
+     */
+    verifySSL?: boolean | VerifySSL;
+    /**
      * Underlying database connection
      */
     databaseConnection?: DatabaseConnectionClass;
@@ -295,10 +334,6 @@ export interface ConfigObject {
      * e.g. local_kafka
      */
     messagingServiceName?: string;
-    /**
-     * Airbyte API version.
-     */
-    apiVersion?: string;
     /**
      * Choose between Basic authentication (for self-hosted) or OAuth 2.0 client credentials
      * (for Airbyte Cloud)
@@ -320,11 +355,6 @@ export interface ConfigObject {
     limit?:     number;
     sslConfig?: Config;
     /**
-     * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
-     * default.
-     */
-    verifySSL?: boolean | VerifySSL;
-    /**
      * URL to the Dagster instance
      *
      * DBT cloud Access URL.
@@ -340,16 +370,6 @@ export interface ConfigObject {
      * Connection Time Limit Between OM and Dagster Graphql API in second
      */
     timeout?: number;
-    /**
-     * To Connect to Dagster Cloud
-     *
-     * Generated Token to connect to Databricks.
-     *
-     * Generated Token to connect to DBTCloud.
-     *
-     * Token to connect to Stitch api doc
-     */
-    token?: string;
     /**
      * We support username/password or client certificate authentication
      */
@@ -1310,6 +1330,7 @@ export enum S3Type {
 export enum PipelineServiceType {
     Airbyte = "Airbyte",
     Airflow = "Airflow",
+    AirflowAPI = "AirflowApi",
     CustomPipeline = "CustomPipeline",
     DBTCloud = "DBTCloud",
     Dagster = "Dagster",

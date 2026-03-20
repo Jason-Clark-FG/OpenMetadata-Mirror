@@ -879,6 +879,8 @@ export interface RequestConnection {
  *
  * Airflow Metadata Database Connection Config
  *
+ * Airflow REST API Connection Config
+ *
  * Wherescape Metadata Database Connection Config
  *
  * SSIS Metadata Database Connection Config
@@ -1002,6 +1004,8 @@ export interface ConfigObject {
      * token to connect to Qlik Cloud.
      *
      * Hex API token for authentication. Can be personal or workspace token.
+     *
+     * Bearer token for API authentication.
      *
      * To Connect to Dagster Cloud
      *
@@ -1167,6 +1171,8 @@ export interface ConfigObject {
      * Host and Port of the Ssrs instance.
      *
      * Pipeline Service Management/UI URI.
+     *
+     * URL to the Airflow REST API. E.g., http://localhost:8080
      *
      * Pipeline Service Management/UI URL.
      *
@@ -1424,6 +1430,8 @@ export interface ConfigObject {
      *
      * Password to connect to Ssrs.
      *
+     * Password for basic authentication to the Airflow API.
+     *
      * password to connect to the Amundsen Neo4j Connection.
      *
      * password to connect  to the Atlas.
@@ -1546,6 +1554,8 @@ export interface ConfigObject {
      * metadata in MicroStrategy.
      *
      * Username to connect to Ssrs.
+     *
+     * Username for basic authentication to the Airflow API.
      *
      * username to connect to the Amundsen Neo4j Connection.
      *
@@ -2036,6 +2046,8 @@ export interface ConfigObject {
      *
      * Client SSL verification.
      *
+     * Whether to verify SSL certificates when connecting to the Airflow API.
+     *
      * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
      * default.
      *
@@ -2175,6 +2187,8 @@ export interface ConfigObject {
      * Sigma API version.
      *
      * ThoughtSpot API version to use
+     *
+     * Airflow REST API version.
      *
      * Airbyte API version.
      *
@@ -2356,6 +2370,8 @@ export interface ConfigObject {
     topicFilterPattern?: FilterPattern;
     /**
      * Pipeline Service Number Of Status
+     *
+     * Number of past DAG runs to fetch for status history.
      */
     numberOfStatus?: number;
     /**
@@ -5161,6 +5177,7 @@ export enum ConfigType {
     Adls = "ADLS",
     Airbyte = "Airbyte",
     Airflow = "Airflow",
+    AirflowAPI = "AirflowApi",
     Alation = "Alation",
     AlationSink = "AlationSink",
     Amundsen = "Amundsen",
