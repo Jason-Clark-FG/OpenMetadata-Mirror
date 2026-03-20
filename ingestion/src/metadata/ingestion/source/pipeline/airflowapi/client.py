@@ -16,6 +16,7 @@ import traceback
 from typing import List, Optional
 from urllib.parse import quote
 
+import requests
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 
@@ -36,6 +37,22 @@ from metadata.utils.logger import ingestion_logger
 logger = ingestion_logger()
 
 
+def _try_exchange_jwt(host: str, username: str, password: str, verify) -> Optional[str]:
+    """POST {host}/auth/token to get a JWT Bearer token (Airflow 3.x). Returns None on failure."""
+    try:
+        resp = requests.post(
+            f"{host}/auth/token",
+            json={"username": username, "password": password},
+            timeout=10,
+            verify=verify,
+        )
+        resp.raise_for_status()
+        return resp.json().get("access_token")
+    except Exception:
+        logger.debug("JWT token exchange failed (likely Airflow 2.x): %s", traceback.format_exc())
+        return None
+
+
 class AirflowApiClient:
     """
     Client to interact with the Airflow REST API (v1 for Airflow 2.x, v2 for Airflow 3.x)
@@ -51,11 +68,20 @@ class AirflowApiClient:
         if config.token:
             auth_token_value = config.token.get_secret_value()
         elif config.username and config.password:
-            auth_token_mode = "Basic"
-            credentials = f"{config.username}:{config.password.get_secret_value()}"
-            auth_token_value = base64.b64encode(credentials.encode("utf-8")).decode(
-                "utf-8"
+            jwt = _try_exchange_jwt(
+                clean_uri(str(config.hostPort)),
+                config.username,
+                config.password.get_secret_value(),
+                config.verifySSL,
             )
+            if jwt:
+                auth_token_value = jwt
+            else:
+                auth_token_mode = "Basic"
+                credentials = f"{config.username}:{config.password.get_secret_value()}"
+                auth_token_value = base64.b64encode(credentials.encode("utf-8")).decode(
+                    "utf-8"
+                )
 
         client_config = ClientConfig(
             base_url=clean_uri(str(config.hostPort)),
@@ -164,9 +190,13 @@ class AirflowApiClient:
 
         owners = dag_data.get("owners") or []
 
-        schedule = dag_data.get("schedule_interval")
-        if isinstance(schedule, dict):
-            schedule = schedule.get("value")
+        # API v2 (Airflow 3) uses timetable_summary; v1 (Airflow 2) uses schedule_interval
+        if self.api_version == "v2":
+            schedule = dag_data.get("timetable_summary")
+        else:
+            schedule = dag_data.get("schedule_interval")
+            if isinstance(schedule, dict):
+                schedule = schedule.get("value")
 
         try:
             task_response = self.get_dag_tasks(dag_id)
