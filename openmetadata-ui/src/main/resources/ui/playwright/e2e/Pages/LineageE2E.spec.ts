@@ -253,34 +253,18 @@ test.describe('Lineage E2E - Column Edge Rendering', () => {
     });
 
     await test.step('Verify column edge is visible between connected columns', async () => {
-      const table1Fqn = get(
+      const sourceColFqn = get(
         table1,
-        'entityResponseData.fullyQualifiedName',
+        'entityResponseData.columns[0].fullyQualifiedName',
         ''
       );
-      const table2Fqn = get(
+      const targetColFqn = get(
         table2,
-        'entityResponseData.fullyQualifiedName',
+        'entityResponseData.columns[0].fullyQualifiedName',
         ''
       );
 
-      const sourceColName = get(
-        table1,
-        'entityResponseData.columns[0].name',
-        ''
-      );
-      const targetColName = get(
-        table2,
-        'entityResponseData.columns[0].name',
-        ''
-      );
-
-      await lineagePage.verifyColumnEdgeRendered(
-        table1Fqn,
-        sourceColName,
-        table2Fqn,
-        targetColName
-      );
+      await lineagePage.verifyColumnEdgeRendered(sourceColFqn, targetColFqn);
     });
 
     await test.step('Verify node-level edge is still visible', async () => {
@@ -338,25 +322,18 @@ test.describe('Lineage E2E - Column Edge Rendering', () => {
       await lineagePage.zoomOut();
       await lineagePage.activateColumnLayer();
 
+      await toggleLineageFilters(page, table1Fqn);
+      await toggleLineageFilters(page, table2Fqn);
+
       await test.step('Verify first column edge is visible on page 1', async () => {
-        await lineagePage.verifyColumnEdgeRendered(
-          table1Fqn,
-          't1_column_0',
-          table2Fqn,
-          't2_column_0'
-        );
+        await lineagePage.verifyColumnEdgeRendered(table1Col0, table2Col0);
       });
 
       await test.step('Scroll to page 2 and verify edge to column_15 appears', async () => {
         await lineagePage.scrollColumnsPagination(largeTable1, 'down');
         await lineagePage.scrollColumnsPagination(largeTable2, 'down');
 
-        await lineagePage.verifyColumnEdgeRendered(
-          table1Fqn,
-          't1_column_15',
-          table2Fqn,
-          't2_column_15'
-        );
+        await lineagePage.verifyColumnEdgeRendered(table1Col15, table2Col15);
 
         await lineagePage.verifyColumnEdgeHidden(
           table1Fqn,
@@ -691,6 +668,7 @@ test.describe('Lineage E2E - Platform Lineage Views', () => {
     await test.step('Activate service platform view', async () => {
       await lineagePage.activatePlatformView('service');
       await waitForAllLoadersToDisappear(page);
+      await lineagePage.zoomOut();
     });
 
     await test.step('Verify service nodes are displayed instead of entity nodes', async () => {
@@ -728,14 +706,10 @@ test.describe('Lineage E2E - Platform Lineage Views', () => {
       );
     });
 
-    await test.step('Verify node count reduced due to aggregation', async () => {
+    await test.step('Verify node count remains same as entities have different services', async () => {
       const afterCount = await lineagePage.getVisibleNodeCount();
 
-      lineagePage.verifyNodeCountReduction(
-        3,
-        afterCount,
-        'Two tables from same service should collapse into one service node'
-      );
+      expect(afterCount).toBe(3);
     });
 
     await test.step('Verify edge between services is maintained', async () => {

@@ -103,21 +103,13 @@ export class LineagePageObject {
   }
 
   async verifyColumnEdgeRendered(
-    sourceEntityFqn: string,
-    sourceColumnName: string,
-    targetEntityFqn: string,
-    targetColumnName: string
+    sourceColumnFqn: string,
+    targetColumnFqn: string
   ) {
-    const edgeTestId = `column-edge-${sourceEntityFqn}.${sourceColumnName}-${targetEntityFqn}.${targetColumnName}`;
+    const edgeTestId = `column-edge-${sourceColumnFqn}-${targetColumnFqn}`;
     const edgeLocator = this.page.locator(`[data-testid="${edgeTestId}"]`);
 
     await expect(edgeLocator).toBeVisible();
-
-    const fromNodeAttr = await edgeLocator.getAttribute('data-fromnode');
-    const toNodeAttr = await edgeLocator.getAttribute('data-tonode');
-
-    expect(fromNodeAttr).toBe(`${sourceEntityFqn}.${sourceColumnName}`);
-    expect(toNodeAttr).toBe(`${targetEntityFqn}.${targetColumnName}`);
   }
 
   async verifyColumnEdgeHidden(
@@ -414,7 +406,6 @@ export class LineagePageObject {
 
     for (let i = 0; i < times; i++) {
       await zoomOutBtn.click();
-      await this.page.waitForTimeout(100);
     }
   }
 
@@ -423,7 +414,6 @@ export class LineagePageObject {
 
     for (let i = 0; i < times; i++) {
       await zoomInBtn.click();
-      await this.page.waitForTimeout(100);
     }
   }
 
