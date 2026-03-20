@@ -2616,14 +2616,22 @@ public class OpenMetadataOperations implements Callable<Integer> {
               names = {"--backup-path"},
               required = true,
               description = "Path where the backup .tar.gz file will be created")
-          String backupPath) {
+          String backupPath,
+      @Option(
+              names = {"--batch-size"},
+              defaultValue = "1000",
+              description =
+                  "Number of rows to read/write per batch. Default: "
+                      + DatabaseBackupRestore.DEFAULT_BATCH_SIZE)
+          int batchSize) {
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
       DatasourceConfig.initialize(connType.label);
       String databaseName =
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
-      DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);
+      DatabaseBackupRestore backupRestore =
+          new DatabaseBackupRestore(jdbi, connType, databaseName, batchSize);
       backupRestore.backup(backupPath);
       return 0;
     } catch (Exception e) {
@@ -2644,14 +2652,22 @@ public class OpenMetadataOperations implements Callable<Integer> {
               defaultValue = "false",
               description =
                   "Force restore by truncating existing tables. Without this flag, restore fails if tables have data.")
-          boolean force) {
+          boolean force,
+      @Option(
+              names = {"--batch-size"},
+              defaultValue = "1000",
+              description =
+                  "Number of rows to insert per batch. Default: "
+                      + DatabaseBackupRestore.DEFAULT_BATCH_SIZE)
+          int batchSize) {
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
       DatasourceConfig.initialize(connType.label);
       String databaseName =
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
-      DatabaseBackupRestore backupRestore = new DatabaseBackupRestore(jdbi, connType, databaseName);
+      DatabaseBackupRestore backupRestore =
+          new DatabaseBackupRestore(jdbi, connType, databaseName, batchSize);
       backupRestore.restore(backupPath, force);
       return 0;
     } catch (Exception e) {
@@ -2676,7 +2692,14 @@ public class OpenMetadataOperations implements Callable<Integer> {
               defaultValue = "false",
               description =
                   "Force execution. This command restores a backup (truncating all tables) before running migrations. Pass --force to confirm.")
-          boolean force) {
+          boolean force,
+      @Option(
+              names = {"--batch-size"},
+              defaultValue = "1000",
+              description =
+                  "Number of rows per batch during restore. Default: "
+                      + DatabaseBackupRestore.DEFAULT_BATCH_SIZE)
+          int batchSize) {
     if (!force) {
       LOG.error(
           "test-migration restores a backup which truncates all existing tables. "
@@ -2690,7 +2713,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
       MigrationTestRunner runner =
           new MigrationTestRunner(
               jdbi, connType, config, nativeSQLScriptRootPath, extensionSQLScriptRootPath);
-      return runner.run(backupPath);
+      return runner.run(backupPath, batchSize);
     } catch (Exception e) {
       LOG.error("Migration test failed", e);
       return 1;

@@ -43,11 +43,16 @@ public class MigrationTestRunner {
   }
 
   public int run(String backupPath) throws IOException {
+    return run(backupPath, DatabaseBackupRestore.DEFAULT_BATCH_SIZE);
+  }
+
+  public int run(String backupPath, int batchSize) throws IOException {
     DatabaseBackupRestore backupRestore =
         new DatabaseBackupRestore(
             jdbi,
             connectionType,
-            DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl()));
+            DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl()),
+            batchSize);
     backupRestore.restore(backupPath, true);
 
     ObjectNode metadata = DatabaseBackupRestore.readBackupMetadata(backupPath);

@@ -39,7 +39,7 @@ import org.openmetadata.service.jdbi3.locator.ConnectionType;
 @Slf4j
 public class DatabaseBackupRestore {
 
-  private static final int BATCH_SIZE = 1000;
+  public static final int DEFAULT_BATCH_SIZE = 1000;
   private static final long MAX_METADATA_SIZE = 10 * 1024 * 1024;
   private static final ObjectMapper MAPPER =
       new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -47,11 +47,18 @@ public class DatabaseBackupRestore {
   private final Jdbi jdbi;
   private final ConnectionType connectionType;
   private final String databaseName;
+  private final int batchSize;
 
   public DatabaseBackupRestore(Jdbi jdbi, ConnectionType connectionType, String databaseName) {
+    this(jdbi, connectionType, databaseName, DEFAULT_BATCH_SIZE);
+  }
+
+  public DatabaseBackupRestore(
+      Jdbi jdbi, ConnectionType connectionType, String databaseName, int batchSize) {
     this.jdbi = jdbi;
     this.connectionType = connectionType;
     this.databaseName = databaseName;
+    this.batchSize = batchSize;
   }
 
   public List<String> discoverTables(Handle handle) {
@@ -285,7 +292,7 @@ public class DatabaseBackupRestore {
         String sql =
             String.format(
                 "SELECT %s FROM %s%s LIMIT %d OFFSET %d",
-                quotedColumns, quotedTable, orderByClause, BATCH_SIZE, offset);
+                quotedColumns, quotedTable, orderByClause, batchSize, offset);
         List<Map<String, Object>> rows = handle.createQuery(sql).mapToMap().list();
 
         for (Map<String, Object> row : rows) {
@@ -320,10 +327,10 @@ public class DatabaseBackupRestore {
           rowCount++;
         }
 
-        if (rows.size() < BATCH_SIZE) {
+        if (rows.size() < batchSize) {
           break;
         }
-        offset += BATCH_SIZE;
+        offset += batchSize;
       }
 
       gen.writeEndArray();
@@ -530,7 +537,7 @@ public class DatabaseBackupRestore {
         batchCount++;
         totalRows++;
 
-        if (batchCount >= BATCH_SIZE) {
+        if (batchCount >= batchSize) {
           batch.execute();
           batch = handle.prepareBatch(sql);
           batchCount = 0;
