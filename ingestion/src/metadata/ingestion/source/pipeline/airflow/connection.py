@@ -239,13 +239,19 @@ def test_connection(
 
     def test_task_detail_access(session):
         try:
+            if IS_AIRFLOW_3:
+                # Airflow 3.x changed DAG storage: the `data` column in
+                # `serialized_dag` is NULL (data moved to bundles/compressed
+                # format). Querying it causes 'NoneType' subscript errors.
+                # Fall back to a dag_id-only query to confirm table access.
+                return session.query(SerializedDagModel.dag_id).first()
+
             json_data_column = (
                 SerializedDagModel._data  # For 2.3.0 onwards # pylint: disable=protected-access
                 if hasattr(SerializedDagModel, "_data")
                 else SerializedDagModel.data  # For 2.2.5 and 2.1.4
             )
             result = session.query(json_data_column).first()
-
             retrieved_tasks = result[0]["dag"]["tasks"]
             return retrieved_tasks
         except Exception as e:
