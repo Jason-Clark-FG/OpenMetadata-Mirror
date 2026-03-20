@@ -37,7 +37,7 @@ public class Migration extends MigrationProcessImpl {
       MigrationUtil.migrateCertificationToTagUsage(handle, ConnectionType.MYSQL);
     } catch (Exception e) {
       LOG.error(
-          "Failed to migrate certification from entity JSON to tag_usage in v1123 migration. "
+          "Failed to migrate certification from entity JSON to tag_usage in v1124 migration. "
               + "Certification data may be inconsistent until re-saved.",
           e);
     }

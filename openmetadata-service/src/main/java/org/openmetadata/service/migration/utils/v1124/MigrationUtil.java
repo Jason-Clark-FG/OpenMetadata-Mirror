@@ -297,7 +297,9 @@ public class MigrationUtil {
                 "SELECT id, fqnHash, "
                     + "json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN' AS tagFQN, "
                     + "json::json -> 'certification' ->> 'expiryDate' AS expiryDate "
-                    + "FROM %s WHERE json::jsonb ? 'certification' LIMIT %d",
+                    + "FROM %s WHERE json::jsonb ? 'certification' "
+                    + "AND json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN' IS NOT NULL "
+                    + "LIMIT %d",
                 table, CERT_BATCH_SIZE)
             : String.format(
                 "SELECT id, fqnHash, "
@@ -305,6 +307,7 @@ public class MigrationUtil {
                     + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.expiryDate')) AS expiryDate "
                     + "FROM %s "
                     + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
+                    + "AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')) IS NOT NULL "
                     + "LIMIT %d",
                 table, CERT_BATCH_SIZE);
 
@@ -350,12 +353,12 @@ public class MigrationUtil {
           .add();
     }
     if (selectedIds.isEmpty()) {
-      return rows.size();
+      return 0;
     }
     batch.execute();
     handle.createUpdate(updateSql).bindList("ids", selectedIds).execute();
 
-    return rows.size();
+    return selectedIds.size();
   }
 
   private static String buildCertMetadata(Object expiryDateVal) {
