@@ -30,7 +30,8 @@
       "title": "Host And Port",
       "description": "URL to the Airflow REST API. E.g., http://localhost:8080",
       "type": "string",
-      "format": "uri"
+      "format": "uri",
+      "expose": true
     },
     "username": {
       "title": "Username",

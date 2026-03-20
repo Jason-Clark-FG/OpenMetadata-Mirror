@@ -213,13 +213,25 @@ class AirflowApiSource(PipelineServiceSource):
                 ]
 
                 timestamp = datetime_to_ts(dag_run.execution_date)
+                if timestamp is None:
+                    timestamp = datetime_to_ts(dag_run.start_date)
+                if timestamp is None:
+                    timestamp = datetime_to_ts(dag_run.end_date)
+                if timestamp is None:
+                    logger.debug(
+                        "Skipping DAG run %s for %s — no timestamp available",
+                        dag_run.dag_run_id,
+                        pipeline_details.dag_id,
+                    )
+                    continue
+
                 pipeline_status = PipelineStatus(
                     executionId=dag_run.dag_run_id,
                     taskStatus=task_statuses,
                     executionStatus=STATUS_MAP.get(
                         dag_run.state, StatusType.Pending.value
                     ),
-                    timestamp=Timestamp(timestamp) if timestamp else None,
+                    timestamp=Timestamp(timestamp),
                 )
                 pipeline_fqn = fqn.build(
                     metadata=self.metadata,

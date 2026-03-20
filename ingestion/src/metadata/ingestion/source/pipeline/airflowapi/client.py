@@ -16,6 +16,9 @@ import traceback
 from typing import List, Optional
 from urllib.parse import quote
 
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError
+
 from metadata.generated.schema.entity.services.connections.pipeline.airflowApiConnection import (
     AirflowApiConnection,
 )
@@ -80,18 +83,19 @@ class AirflowApiClient:
         return self._detected_version
 
     def _detect_api_version(self) -> str:
-        try:
-            self.client.get("/v2/version")
-            return "v2"
-        except Exception:
-            logger.debug(traceback.format_exc())
-            logger.info("Airflow API v2 not available, falling back to v1")
-        try:
-            self.client.get("/v1/version")
-            return "v1"
-        except Exception:
-            logger.debug(traceback.format_exc())
-            logger.warning("Could not detect Airflow API version, defaulting to v1")
+        for version in ("v2", "v1"):
+            try:
+                self.client.get(f"/{version}/version")
+                return version
+            except HTTPError as exc:
+                if exc.response is not None and exc.response.status_code in (401, 403):
+                    raise
+                logger.debug(traceback.format_exc())
+            except (RequestsConnectionError, TimeoutError, OSError):
+                raise
+            except Exception:
+                logger.debug(traceback.format_exc())
+        logger.warning("Could not detect Airflow API version, defaulting to v1")
         return "v1"
 
     @property
@@ -150,9 +154,13 @@ class AirflowApiClient:
         tags = []
         for tag in tags_raw:
             if isinstance(tag, dict):
-                tags.append(tag.get("name", ""))
+                name = tag.get("name")
+            elif isinstance(tag, str):
+                name = tag
             else:
-                tags.append(str(tag))
+                continue
+            if name:
+                tags.append(str(name))
 
         owners = dag_data.get("owners") or []
 
