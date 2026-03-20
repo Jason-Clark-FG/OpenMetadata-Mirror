@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -302,7 +303,8 @@ public class MigrationUtil {
             ? String.format(
                 "SELECT id, fqnHash, "
                     + "json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN' AS tagFQN, "
-                    + "json::json -> 'certification' ->> 'expiryDate' AS expiryDate "
+                    + "json::json -> 'certification' ->> 'expiryDate' AS expiryDate, "
+                    + "json::json -> 'certification' ->> 'appliedDate' AS appliedDate "
                     + "FROM %s WHERE json::jsonb ? 'certification' "
                     + "AND json::json -> 'certification' -> 'tagLabel' ->> 'tagFQN' IS NOT NULL "
                     + "LIMIT %d",
@@ -310,7 +312,8 @@ public class MigrationUtil {
             : String.format(
                 "SELECT id, fqnHash, "
                     + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')) AS tagFQN, "
-                    + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.expiryDate')) AS expiryDate "
+                    + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.expiryDate')) AS expiryDate, "
+                    + "JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.appliedDate')) AS appliedDate "
                     + "FROM %s "
                     + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
                     + "AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.certification.tagLabel.tagFQN')) IS NOT NULL "
@@ -325,12 +328,12 @@ public class MigrationUtil {
     String insertSql =
         isPostgres
             ? "INSERT INTO tag_usage "
-                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :metadata) "
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, appliedAt, metadata) "
+                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :appliedAt, :metadata) "
                 + "ON CONFLICT (source, tagFQNHash, targetFQNHash) DO NOTHING"
             : "INSERT IGNORE INTO tag_usage "
-                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :metadata)";
+                + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, appliedAt, metadata) "
+                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :appliedAt, :metadata)";
 
     String updateSql =
         "UPDATE "
@@ -355,6 +358,7 @@ public class MigrationUtil {
           .bind("targetFQNHash", row.get("fqnhash").toString())
           .bind("labelType", CERT_LABEL_TYPE)
           .bind("state", CERT_STATE)
+          .bind("appliedAt", toTimestamp(row.get("applieddate")))
           .bind("metadata", buildCertMetadata(row.get("expirydate")))
           .add();
     }
@@ -365,6 +369,20 @@ public class MigrationUtil {
     handle.createUpdate(updateSql).bindList("ids", selectedIds).execute();
 
     return selectedIds.size();
+  }
+
+  private static Timestamp toTimestamp(Object epochMillisVal) {
+    if (epochMillisVal == null) return null;
+    try {
+      long epochMillis =
+          epochMillisVal instanceof Number num
+              ? num.longValue()
+              : Long.parseLong(epochMillisVal.toString());
+      return new Timestamp(epochMillis);
+    } catch (NumberFormatException e) {
+      LOG.warn("toTimestamp: unparseable appliedDate value '{}', using null", epochMillisVal);
+      return null;
+    }
   }
 
   private static String buildCertMetadata(Object expiryDateVal) {

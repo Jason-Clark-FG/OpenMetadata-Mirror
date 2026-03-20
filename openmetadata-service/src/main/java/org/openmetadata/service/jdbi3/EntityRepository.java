@@ -4510,6 +4510,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   protected void applyCertification(T entity) {
     if (!supportsCertification || entity.getCertification() == null) return;
+    AssetCertification existing = getCertification(entity);
+    AssetCertification incoming = entity.getCertification();
+    if (existing != null
+        && existing.getTagLabel() != null
+        && incoming.getTagLabel() != null
+        && existing.getTagLabel().getTagFQN().equals(incoming.getTagLabel().getTagFQN())) {
+      return;
+    }
     deleteCertificationTag(entity.getFullyQualifiedName());
     AssetCertification cert = entity.getCertification();
     TagLabel tagLabel = cert.getTagLabel();
