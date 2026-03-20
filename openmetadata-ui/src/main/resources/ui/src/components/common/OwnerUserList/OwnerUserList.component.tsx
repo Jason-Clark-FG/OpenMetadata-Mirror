@@ -16,6 +16,7 @@ import { ReactNode, useMemo, useState } from 'react';
 import { ReactComponent as IconUser } from '../../../assets/svg/user.svg';
 import { EntityReference } from '../../../generated/entity/type';
 import { OwnerItem } from '../OwnerItem/OwnerItem';
+import { AVATAR_SIZE_CLASS_MAP } from '../OwnerUserTeamList/OwnerUserTeamList.constants';
 import { OwnerReveal } from '../RemainingOwner/OwnerReveal';
 
 interface OwnerUserListProps {
@@ -59,18 +60,22 @@ const OwnerUserList = ({
     <div className="tw:w-full tw:flex tw:items-center">
       {!isCompactView && (
         <IconUser
-          className="tw:text-gray-700 tw:flex-none tw:mr-0.5"
+          className={classNames(
+            'tw:text-gray-700 tw:flex-none tw:mr-0.5',
+            AVATAR_SIZE_CLASS_MAP[avatarSize]
+          )}
           data-testid="user-owner-icon"
-          style={{ width: avatarSize, height: avatarSize }}
         />
       )}
 
       <div
         className={classNames(
           'avatar-group tw:relative tw:ml-1 tw:w-full',
-          isCompactView
-            ? 'tw:mr-2 tw:flex-row tw:gap-2 tw:flex-wrap'
-            : 'tw:mr-0 tw:flex-row-reverse tw:gap-0 tw:flex-nowrap',
+          {
+            'tw:mr-2 tw:flex-row tw:gap-2 tw:flex-wrap': isCompactView,
+            'tw:mr-0 tw:flex-row-reverse tw:gap-0 tw:flex-nowrap':
+              !isCompactView,
+          },
           className
         )}>
         {renderVisibleOwners.map((owner: EntityReference) => (

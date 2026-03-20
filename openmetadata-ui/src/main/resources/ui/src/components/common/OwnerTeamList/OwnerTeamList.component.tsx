@@ -12,12 +12,13 @@
  */
 
 import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import React, { ReactNode, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { ReactComponent as IconTeamsGrey } from '../../../assets/svg/teams-grey.svg';
 import { EntityReference } from '../../../generated/entity/type';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
+import { AVATAR_SIZE_CLASS_MAP } from '../OwnerUserTeamList/OwnerUserTeamList.constants';
 
 export interface OwnerTeamListProps {
   owners: EntityReference[];
@@ -41,31 +42,35 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
 
   return (
     <div className="tw:flex tw:items-center tw:relative">
-      <Link
-        className="no-underline"
+      <Button
+        color="link-gray"
         data-testid="owner-link"
-        to={getOwnerPath(visibleTeam)}>
-        <div className="tw:flex tw:items-center tw:gap-2 tw:max-w-full">
+        href={getOwnerPath(visibleTeam)}
+        iconLeading={
           <IconTeamsGrey
-            className="tw:text-gray-700"
-            data-testid={getEntityName(visibleTeam)}
-            style={{ width: avatarSize, height: avatarSize }}
+            className={classNames(
+              'tw:text-gray-700',
+              AVATAR_SIZE_CLASS_MAP[avatarSize]
+            )}
           />
+        }>
+        <div className="tw:flex tw:items-center tw:gap-2 tw:max-w-full">
           <div
-            className={
-              placement === 'vertical' || owners.length < 2
-                ? 'tw:max-w-30 tw:overflow-hidden'
-                : 'tw:max-w-12.5 tw:overflow-hidden'
-            }>
+            className={classNames('tw:overflow-hidden', {
+              'tw:max-w-30': placement === 'vertical' || owners.length < 2,
+              'tw:max-w-12.5': placement !== 'vertical' && owners.length >= 2,
+            })}>
             <Typography
               as="p"
-              className="tw:text-xs tw:font-medium tw:leading-none tw:truncate tw:m-0">
+              className="tw:leading-none tw:truncate tw:m-0"
+              size="text-xs"
+              weight="medium">
               {ownerDisplayName?.get(visibleTeam.name ?? '') ??
                 getEntityName(visibleTeam)}
             </Typography>
           </div>
         </div>
-      </Link>
+      </Button>
 
       {owners.length > 1 && (
         <Dropdown.Root>
@@ -86,12 +91,13 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
                   <Dropdown.Item
                     key={owner.id}
                     textValue={getEntityName(owner)}>
-                    <Link
-                      className="tw:block tw:no-underline tw:truncate tw:w-full tw:text-gray-900"
+                    <Button
+                      color="link-gray"
                       data-testid="owner-link"
-                      to={getOwnerPath(owner)}>
+                      href={getOwnerPath(owner)}>
+                      {' '}
                       {name}
-                    </Link>
+                    </Button>
                   </Dropdown.Item>
                 );
               })}

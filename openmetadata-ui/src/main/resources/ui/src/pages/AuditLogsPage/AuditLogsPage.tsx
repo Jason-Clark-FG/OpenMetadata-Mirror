@@ -381,15 +381,15 @@ const AuditLogsPage = () => {
                       key={filter.category}>
                       <div className="filter-selection-chip-content tw:overflow-hidden">
                         <Typography
-                          as="span"
-                          className="tw:text-gray-600 tw:font-medium">
+                          className="tw:text-gray-600"
+                          weight="medium">
                           {filter.categoryLabel}:{' '}
                         </Typography>
                         <div className="tw:max-w-87 tw:overflow-hidden">
                           <Typography
-                            as="span"
-                            className="tw:text-brand-600 tw:truncate tw:block tw:font-medium"
-                            title={filter.value.label}>
+                            className="tw:text-brand-600 tw:truncate tw:block"
+                            title={filter.value.label}
+                            weight="medium">
                             {filter.category === 'time' &&
                             filter.value.key === 'customRange'
                               ? t('label.custom-range')
@@ -428,12 +428,7 @@ const AuditLogsPage = () => {
 
           {/* Pagination */}
           {logs.length > 0 && (
-            <div
-              className="tw:shrink-0 tw:p-2 tw:flex tw:justify-center"
-              style={{
-                boxShadow:
-                  '0 -13px 16px -4px rgba(10, 13, 18, 0.04), 0 -4px 6px -2px rgba(10, 13, 18, 0.03)',
-              }}>
+            <div className="tw:shrink-0 tw:p-2 tw:flex tw:justify-center tw:shadow-[inset_0px_1px_0px_0px] tw:shadow-border-secondary">
               <NextPrevious
                 currentPage={currentPage}
                 isLoading={isLoading}
@@ -471,11 +466,14 @@ const AuditLogsPage = () => {
         onCancel={handleExportModalClose}
         onOk={handleExport}>
         <div className="tw:w-full tw:flex tw:flex-col tw:gap-4">
-          <Typography as="p" className="tw:text-md">
+          <Typography as="p" size="text-md">
             {t('message.export-audit-logs-description')}
           </Typography>
           <div>
-            <Typography as="p" className="tw:mb-2! tw:text-gray-400 tw:text-md">
+            <Typography
+              as="p"
+              className="tw:mb-2! tw:text-gray-400"
+              size="text-md">
               {t('label.date-range')} <span className="tw:text-red-600">*</span>
             </Typography>
             <DatePicker.RangePicker
@@ -507,7 +505,7 @@ const AuditLogsPage = () => {
                 size="small"
                 status="active"
               />
-              <Typography as="p" className="tw:mt-2! tw:text-md">
+              <Typography as="p" className="tw:mt-2!" size="text-md">
                 {exportJob.message ?? t('message.exporting')}
               </Typography>
             </div>
