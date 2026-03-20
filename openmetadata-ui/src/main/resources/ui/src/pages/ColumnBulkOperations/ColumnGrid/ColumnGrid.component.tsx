@@ -144,13 +144,13 @@ const ColumnGridTruncatingTagBadges: React.FC<
   const remaining = tags.length - visibleTags.length;
 
   return (
-    <div className="tw:flex tw:min-w-0 tw:max-w-full tw:items-center tw:gap-1.5 tw:overflow-hidden">
+    <div className="tw:flex tw:min-w-0 tw:w-full tw:items-center tw:gap-1.5 tw:overflow-hidden">
       {visibleTags.map((tag: TagLabel, index: number) => {
         const fullLabel = tag.name || tag.tagFQN.split('.').pop() || '';
 
         return (
           <div
-            className="tw:flex tw:min-w-0 tw:max-w-full tw:flex-1 tw:basis-0 tw:items-center tw:justify-start tw:overflow-hidden"
+            className="tw:min-w-0 tw:flex-1 tw:basis-0 tw:overflow-hidden"
             key={tag.tagFQN}
             title={fullLabel}>
             {renderBadge(tag, index)}
@@ -851,8 +851,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
             color={index === 0 ? 'gray' : 'blue'}
             size="sm"
             type="color">
-            {index === 0 && <TagIcon className="tw:size-3 tw:shrink-0" />}
-            <div className="tw:min-w-0 tw:flex-1 tw:overflow-hidden">
+            {index === 0 ? <TagIcon className="tw:size-3 tw:shrink-0" /> : null}
+            <div className="tw:min-w-0 tw:flex-1">
               <Typography as="span" className="tw:block tw:min-w-0 tw:truncate">
                 {tag.name || tag.tagFQN.split('.').pop()}
               </Typography>
@@ -890,7 +890,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                 color="gray"
                 size="sm"
                 type="color">
-                <div className="tw:min-w-0 tw:flex-1 tw:overflow-hidden">
+                <div className="tw:min-w-0 tw:flex-1">
                   <Typography
                     as="span"
                     className="tw:block tw:min-w-0 tw:truncate">
@@ -936,6 +936,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const renderColumnNameCellFinal = useCallback(
     (entity: ColumnGridRowData) => {
       const columnNameButtonClass = classNames(
+        'tw:flex tw:flex-1 tw:min-w-0 tw:items-center tw:justify-start',
+        'tw:overflow-hidden',
         'tw:[&>span[data-text]]:block',
         'tw:[&>span[data-text]]:min-w-0',
         'tw:[&>span[data-text]]:w-full',
@@ -969,20 +971,22 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         const isGroupExpanded = columnGridListing.expandedRows.has(entity.id);
 
         return (
-          <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
-            <ButtonUtility
-              color="tertiary"
-              icon={
-                <ChevronRight
-                  className={classNames(
-                    'tw:size-4 tw:transition-transform',
-                    isGroupExpanded && 'tw:rotate-90'
-                  )}
-                />
-              }
-              size="sm"
-              onClick={expandHandler}
-            />
+          <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
+            <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
+              <ButtonUtility
+                color="tertiary"
+                icon={
+                  <ChevronRight
+                    className={classNames(
+                      'tw:size-4 tw:transition-transform',
+                      isGroupExpanded && 'tw:rotate-90'
+                    )}
+                  />
+                }
+                size="sm"
+                onClick={expandHandler}
+              />
+            </div>
             <Button
               className={columnNameButtonClass}
               color="tertiary"
@@ -1031,25 +1035,25 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         );
 
         return (
-          <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
-            {hasChildren && (
-              <ButtonUtility
-                color="tertiary"
-                icon={
-                  <ChevronRight
-                    className={classNames(
-                      'tw:size-4 tw:transition-transform',
-                      isStructExpanded && 'tw:rotate-90'
-                    )}
-                  />
-                }
-                size="sm"
-                onClick={structExpandHandler}
-              />
-            )}
-            <Typography
-              as="span"
-              className="tw:flex-1 tw:min-w-0 tw:truncate tw:pl-3">
+          <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
+            <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
+              {hasChildren ? (
+                <ButtonUtility
+                  color="tertiary"
+                  icon={
+                    <ChevronRight
+                      className={classNames(
+                        'tw:size-4 tw:transition-transform',
+                        isStructExpanded && 'tw:rotate-90'
+                      )}
+                    />
+                  }
+                  size="sm"
+                  onClick={structExpandHandler}
+                />
+              ) : null}
+            </div>
+            <Typography as="span" className="tw:min-w-0 tw:truncate">
               {nameWithCount}
             </Typography>
           </div>
@@ -1088,22 +1092,24 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       );
 
       return (
-        <div className="tw:flex tw:w-full tw:min-w-0 tw:items-center tw:gap-1 tw:overflow-hidden">
-          {hasStructChildren && (
-            <ButtonUtility
-              color="tertiary"
-              icon={
-                <ChevronRight
-                  className={classNames(
-                    'tw:size-4 tw:transition-transform',
-                    isOccurrenceExpanded && 'tw:rotate-90'
-                  )}
-                />
-              }
-              size="sm"
-              onClick={occurrenceExpandHandler}
-            />
-          )}
+        <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
+          <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
+            {hasStructChildren ? (
+              <ButtonUtility
+                color="tertiary"
+                icon={
+                  <ChevronRight
+                    className={classNames(
+                      'tw:size-4 tw:transition-transform',
+                      isOccurrenceExpanded && 'tw:rotate-90'
+                    )}
+                  />
+                }
+                size="sm"
+                onClick={occurrenceExpandHandler}
+              />
+            ) : null}
+          </div>
           <Button
             className={columnNameButtonClass}
             color="tertiary"
