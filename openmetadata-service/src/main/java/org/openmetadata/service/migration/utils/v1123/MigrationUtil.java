@@ -6,11 +6,13 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.PreparedBatch;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -239,6 +241,9 @@ public class MigrationUtil {
   }
 
   private static final int CERT_BATCH_SIZE = 500;
+  private static final int CERT_SOURCE = TagLabel.TagSource.CLASSIFICATION.ordinal();
+  private static final int CERT_LABEL_TYPE = TagLabel.LabelType.AUTOMATED.ordinal();
+  private static final int CERT_STATE = TagLabel.State.CONFIRMED.ordinal();
 
   public static void migrateCertificationToTagUsage(Handle handle, ConnectionType connType) {
     String[] entityTables = {
@@ -277,7 +282,7 @@ public class MigrationUtil {
   }
 
   private static int migrateCertificationForTable(
-      Handle handle, ConnectionType connType, String table) throws InterruptedException {
+      Handle handle, ConnectionType connType, String table) {
     int totalMigrated = 0;
     while (true) {
       int batchMigrated = migrateCertificationBatch(handle, connType, table);
@@ -285,7 +290,6 @@ public class MigrationUtil {
       if (batchMigrated < CERT_BATCH_SIZE) {
         break;
       }
-      Thread.sleep(100);
     }
     return totalMigrated;
   }
@@ -316,41 +320,52 @@ public class MigrationUtil {
       return 0;
     }
 
+    // Pin the exact row IDs from the SELECT so the UPDATE targets the same rows — not an
+    // independently re-evaluated batch that may differ under concurrent load or non-deterministic
+    // ordering.
+    List<String> selectedIds =
+        rows.stream().map(r -> r.get("id").toString()).collect(Collectors.toList());
+
     String insertSql =
         isPostgres
             ? "INSERT INTO tag_usage "
                 + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "VALUES (0, :tagFQN, :tagFQNHash, :targetFQNHash, 2, 1, 'admin', :metadata) "
+                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :metadata) "
                 + "ON CONFLICT (source, tagFQNHash, targetFQNHash) DO NOTHING"
             : "INSERT IGNORE INTO tag_usage "
                 + "(source, tagFQN, tagFQNHash, targetFQNHash, labelType, state, appliedBy, metadata) "
-                + "VALUES (0, :tagFQN, :tagFQNHash, :targetFQNHash, 2, 1, 'admin', :metadata)";
+                + "VALUES (:source, :tagFQN, :tagFQNHash, :targetFQNHash, :labelType, :state, 'admin', :metadata)";
 
+    String updateSql =
+        "UPDATE "
+            + table
+            + (isPostgres
+                ? " SET json = (json::jsonb - 'certification')::json WHERE id IN (<ids>)"
+                : " SET json = JSON_REMOVE(json, '$.certification') WHERE id IN (<ids>)");
+
+    // INSERT first — if this succeeds but the UPDATE below fails, entities will have certification
+    // in both JSON and tag_usage. The app reads from tag_usage so certification remains visible.
+    // This is the safe failure mode: stale JSON is benign; missing tag_usage entry is not.
+    // We intentionally do NOT wrap in a transaction: this migration runs once in production (no
+    // --force re-run), so a rollback would permanently skip those rows rather than retry them.
     PreparedBatch batch = handle.prepareBatch(insertSql);
     for (Map<String, Object> row : rows) {
       String tagFQN = (String) row.get("tagfqn");
       if (tagFQN == null) continue;
       batch
+          .bind("source", CERT_SOURCE)
           .bind("tagFQN", tagFQN)
           .bind("tagFQNHash", FullyQualifiedName.buildHash(tagFQN))
           .bind("targetFQNHash", row.get("fqnhash").toString())
+          .bind("labelType", CERT_LABEL_TYPE)
+          .bind("state", CERT_STATE)
           .bind("metadata", buildCertMetadata(row.get("expirydate")))
           .add();
     }
     batch.execute();
+    handle.createUpdate(updateSql).bindList("ids", selectedIds).execute();
 
-    String updateSql =
-        isPostgres
-            ? String.format(
-                "UPDATE %s SET json = (json::jsonb - 'certification')::json "
-                    + "WHERE id IN (SELECT id FROM %s WHERE json::jsonb ? 'certification' LIMIT %d)",
-                table, table, CERT_BATCH_SIZE)
-            : String.format(
-                "UPDATE %s SET json = JSON_REMOVE(json, '$.certification') "
-                    + "WHERE JSON_CONTAINS_PATH(json, 'one', '$.certification') = 1 "
-                    + "LIMIT %d",
-                table, CERT_BATCH_SIZE);
-    return handle.createUpdate(updateSql).execute();
+    return rows.size();
   }
 
   private static String buildCertMetadata(Object expiryDateVal) {
