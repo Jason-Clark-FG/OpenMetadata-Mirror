@@ -3123,6 +3123,12 @@ public interface CollectionDAO {
     @RegisterRowMapper(OutboxEntryRowMapper.class)
     OutboxEntry findAndLockOldestPending(@Bind("taskId") String taskId);
 
+    @SqlQuery(
+        "SELECT createdAt FROM task_workflow_outbox"
+            + " WHERE taskId = :taskId AND delivered = false"
+            + " ORDER BY createdAt ASC LIMIT 1")
+    Long findOldestPendingCreatedAt(@Bind("taskId") String taskId);
+
     @SqlUpdate(
         "UPDATE task_workflow_outbox"
             + " SET delivered = true, lastAttemptAt = :now"

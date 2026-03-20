@@ -82,6 +82,15 @@ public class TaskWorkflowOutboxDrainer {
                   return;
                 }
 
+                Long oldestCreatedAt = dao.findOldestPendingCreatedAt(taskId);
+                if (oldestCreatedAt != null && entry.getCreatedAt() > oldestCreatedAt) {
+                  LOG.debug(
+                      "Skipping task '{}': an older message (createdAt={}) is locked by another worker",
+                      taskId,
+                      oldestCreatedAt);
+                  return;
+                }
+
                 boolean success = tryDeliver(entry);
                 long now = System.currentTimeMillis();
 
