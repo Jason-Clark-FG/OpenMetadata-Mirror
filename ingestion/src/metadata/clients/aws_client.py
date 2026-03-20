@@ -58,6 +58,7 @@ VALID_AWS_REGIONS = {
     "ap-southeast-3",
     "ap-southeast-4",
     "ap-southeast-5",
+    "ap-southeast-6",
     "ap-southeast-7",
     "ca-central-1",
     "ca-west-1",
@@ -129,11 +130,16 @@ class AWSClient:
         if self.config and self.config.awsRegion:
             region = self.config.awsRegion
             if region not in VALID_AWS_REGIONS:
-                raise ValueError(
-                    f"Invalid AWS Region: '{region}'. "
-                    f"This looks like it might be an availability zone rather than a region. "
-                    f"Expected one of: {', '.join(sorted(VALID_AWS_REGIONS))}"
-                )
+                msg = f"Invalid AWS Region: '{region}'."
+                if any(
+                    region.startswith(r) and len(region) == len(r) + 1
+                    for r in VALID_AWS_REGIONS
+                ):
+                    msg += (
+                        " This looks like an availability zone rather than a region."
+                    )
+                msg += f" Expected one of:" f" {', '.join(sorted(VALID_AWS_REGIONS))}"
+                raise ValueError(msg)
 
     @staticmethod
     def get_assume_role_config(

@@ -27,6 +27,7 @@ class TestAWSClientRegionValidation:
             "us-west-2",
             "eu-west-1",
             "ap-southeast-1",
+            "ap-southeast-6",
             "us-gov-west-1",
             "cn-north-1",
         ],
@@ -68,10 +69,16 @@ class TestAWSClientRegionValidation:
         with pytest.raises(ValueError, match="us-west-2b"):
             AWSClient(config)
 
-    def test_error_message_suggests_availability_zone(self):
+    def test_availability_zone_error_includes_hint(self):
         config = AWSCredentials(awsRegion="us-west-2b")
         with pytest.raises(ValueError, match="availability zone"):
             AWSClient(config)
+
+    def test_non_az_error_omits_az_hint(self):
+        config = AWSCredentials(awsRegion="invalid-region")
+        with pytest.raises(ValueError, match="Invalid AWS Region") as exc_info:
+            AWSClient(config)
+        assert "availability zone" not in str(exc_info.value)
 
     def test_none_config_accepted(self):
         client = AWSClient(None)
