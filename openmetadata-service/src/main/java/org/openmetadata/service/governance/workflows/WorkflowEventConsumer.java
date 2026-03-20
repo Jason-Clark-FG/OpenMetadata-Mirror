@@ -198,9 +198,17 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
       }
     }
 
-    // Outbox enqueue (after signal succeeds — exception propagates for event retry)
+    // Outbox enqueue (after signal succeeds — exception wrapped for event retry)
     if (isWorkflowManagedTaskStatusChange(event)) {
-      Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event)).run();
+      try {
+        Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event)).run();
+      } catch (Exception exc) {
+        LOG.error("Failed to enqueue outbox message for task '{}'", event.getEntityId(), exc);
+        throw new EventPublisherException(
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
+            Pair.of(subscriptionDestination.getId(), event));
+      }
     }
   }
 
