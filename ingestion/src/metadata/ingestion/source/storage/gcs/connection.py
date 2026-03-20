@@ -37,6 +37,7 @@ from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.storage.gcs.client import MultiProjectClient
 from metadata.utils.constants import THREE_MIN
 from metadata.utils.credentials import set_google_credentials
+from metadata.utils.filters import filter_by_container
 from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
@@ -102,8 +103,15 @@ class Tester:
             return
         else:
             for project_id, client in self.client.storage_client.clients.items():
-                bucket = next(client.list_buckets())
-                self.bucket_tests.append(BucketTestState(project_id, bucket.name))
+                for bucket in client.list_buckets():
+                    if not filter_by_container(
+                        self.connection.containerFilterPattern,
+                        container_name=bucket.name,
+                    ):
+                        self.bucket_tests.append(
+                            BucketTestState(project_id, bucket.name)
+                        )
+                        break
 
     def get_bucket(self):
         if not self.bucket_tests:
