@@ -328,7 +328,8 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
     String newStatus = null;
     for (FieldChange fc : event.getChangeDescription().getFieldsUpdated()) {
       if ("status".equals(fc.getName())) {
-        newStatus = JsonUtils.readOrConvertValue(fc.getNewValue(), String.class);
+        Object newValue = fc.getNewValue();
+        newStatus = newValue instanceof String s ? s : String.valueOf(newValue);
         break;
       }
     }

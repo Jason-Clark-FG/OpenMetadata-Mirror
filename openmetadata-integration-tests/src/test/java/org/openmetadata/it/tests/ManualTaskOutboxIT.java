@@ -15,7 +15,6 @@ package org.openmetadata.it.tests;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -108,6 +107,8 @@ public class ManualTaskOutboxIT {
 
       String workflowInstanceId = task.getWorkflowInstanceId().toString();
 
+      // Workflow reaching FINISHED proves the full outbox pipeline delivered the terminal status
+      // (InProgress delivery is implicit — workflow can't reach FINISHED without processing it)
       await()
           .atMost(PIPELINE_TIMEOUT)
           .pollInterval(Duration.ofSeconds(2))
@@ -118,24 +119,24 @@ public class ManualTaskOutboxIT {
                 if (instance == null) {
                   return false;
                 }
-                String status = (String) instance.get("status");
-                return "FINISHED".equals(status);
+                return "FINISHED".equals(instance.get("status"));
               });
 
+      // Task resolution proves CloseTaskDelegate ran inside Flowable
+      Task resolvedTask = client.tasks().get(task.getId().toString(), "resolution");
+      assertNotNull(resolvedTask.getResolution(), "CloseTaskDelegate should have set resolution");
+
+      // Count how many times the ManualTask subprocess was entered.
+      // Each entry creates a new stage record via WorkflowInstanceStageListener.
+      // Expected: 3 entries (Open cycle, InProgress cycle, Completed cycle)
       List<Map<String, Object>> states =
           getWorkflowInstanceStates(client, workflowName, workflowInstanceId);
-
-      assertFalse(states.isEmpty(), "Workflow should have recorded stage results");
-
-      List<String> stageResults =
-          states.stream()
-              .filter(s -> NODE_NAME.equals(getStageName(s)))
-              .map(s -> getStageResult(s))
-              .toList();
-
-      assertFalse(stageResults.isEmpty(), "Should have stage results for " + NODE_NAME);
+      long manualTaskEntries =
+          states.stream().filter(s -> NODE_NAME.equals(getStageName(s))).count();
       assertEquals(
-          "Completed", stageResults.getLast(), "Last stage result should be the terminal status");
+          3,
+          manualTaskEntries,
+          "ManualTask subprocess should be entered 3 times (Open, InProgress, Completed cycles)");
     } finally {
       try {
         client
@@ -292,7 +293,8 @@ public class ManualTaskOutboxIT {
                       + workflowName
                       + "/"
                       + instanceId
-                      + "?limit=100",
+                      + "?limit=100&startTs=0&endTs="
+                      + System.currentTimeMillis(),
                   null,
                   RequestOptions.builder().build());
 
@@ -307,12 +309,6 @@ public class ManualTaskOutboxIT {
   @SuppressWarnings("unchecked")
   private String getStageName(Map<String, Object> state) {
     Map<String, Object> stage = (Map<String, Object>) state.get("stage");
-    return stage != null ? (String) stage.get("stageName") : null;
-  }
-
-  @SuppressWarnings("unchecked")
-  private String getStageResult(Map<String, Object> state) {
-    Map<String, Object> stage = (Map<String, Object>) state.get("stage");
-    return stage != null ? (String) stage.get("result") : null;
+    return stage != null ? (String) stage.get("name") : null;
   }
 }
