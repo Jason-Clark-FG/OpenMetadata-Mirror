@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -163,7 +164,7 @@ public class McpOAuthIT extends McpTestBase {
 
     HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertThat(response.statusCode()).isIn(200, 400);
+    assertThat(response.statusCode()).isEqualTo(400);
   }
 
   @Test
@@ -219,12 +220,15 @@ public class McpOAuthIT extends McpTestBase {
   @Test
   @Order(10)
   void testRevocationEndpoint_invalidToken_returns200() throws Exception {
+    Assumptions.assumeTrue(
+        registeredClientId != null, "Skipped: dynamic client registration (Order 3) did not run");
+
     String formBody =
         "token=invalid-token&token_type_hint=access_token"
             + "&client_id="
-            + (registeredClientId != null ? registeredClientId : "test-client")
+            + registeredClientId
             + "&client_secret="
-            + (registeredClientSecret != null ? registeredClientSecret : "test-secret");
+            + registeredClientSecret;
 
     HttpRequest request =
         HttpRequest.newBuilder()
@@ -237,7 +241,7 @@ public class McpOAuthIT extends McpTestBase {
     HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
 
     // RFC 7009: revocation endpoint returns 200 even for invalid tokens
-    assertThat(response.statusCode()).isIn(200, 401);
+    assertThat(response.statusCode()).isEqualTo(200);
   }
 
   @Test
