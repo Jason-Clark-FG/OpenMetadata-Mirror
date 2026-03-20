@@ -1286,16 +1286,20 @@ public class OSLineageGraphBuilder
 
   /**
    * Checks if the query filter contains node-level filters that require path preservation.
-   * Only name/displayName searches need path preservation to find nodes at all depths.
-   * Tag, tier, domain, service filters are indexed in ES and work directly.
+   * These filters need path preservation because the lineage BFS traverses layer by layer,
+   * and applying entity-level filters during traversal prevents reaching deeper matching nodes
+   * through non-matching intermediate nodes.
    */
   private boolean hasNodeLevelFilters(String queryFilter) {
     if (nullOrEmpty(queryFilter)) {
       return false;
     }
-    // Only enable path preservation for name/displayName search (used in search box)
-    // Other filters (tag, domain, tier, service) work directly in ES
-    return queryFilter.contains("displayName") || queryFilter.contains("\"name\"");
+    return queryFilter.contains("displayName")
+        || queryFilter.contains("\"name\"")
+        || queryFilter.contains("tier.tagFQN")
+        || queryFilter.contains("tags.tagFQN")
+        || queryFilter.contains("owner")
+        || queryFilter.contains("domain");
   }
 
   /**

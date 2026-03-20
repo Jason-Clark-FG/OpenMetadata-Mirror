@@ -180,7 +180,7 @@ public class LineagePathPreserver {
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(rootFqn); // Always include root
 
-    // Filter upstream edges - keep only edges with matching columns
+    // Filter upstream edges - keep only edges with matching columns, narrowed to matching entries
     if (result.getUpstreamEdges() != null) {
       Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredUpstream =
           new HashMap<>();
@@ -188,8 +188,10 @@ public class LineagePathPreserver {
           .getUpstreamEdges()
           .forEach(
               (docId, edge) -> {
-                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter)) {
-                  filteredUpstream.put(docId, edge);
+                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
+                    ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
+                if (!matched.isEmpty()) {
+                  filteredUpstream.put(docId, edge.withColumns(matched));
                   if (edge.getFromEntity() != null) {
                     matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
                   }
@@ -201,7 +203,7 @@ public class LineagePathPreserver {
       result.setUpstreamEdges(filteredUpstream);
     }
 
-    // Filter downstream edges - keep only edges with matching columns
+    // Filter downstream edges - keep only edges with matching columns, narrowed to matching entries
     if (result.getDownstreamEdges() != null) {
       Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredDownstream =
           new HashMap<>();
@@ -209,8 +211,10 @@ public class LineagePathPreserver {
           .getDownstreamEdges()
           .forEach(
               (docId, edge) -> {
-                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter)) {
-                  filteredDownstream.put(docId, edge);
+                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
+                    ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
+                if (!matched.isEmpty()) {
+                  filteredDownstream.put(docId, edge.withColumns(matched));
                   if (edge.getFromEntity() != null) {
                     matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
                   }
@@ -309,7 +313,7 @@ public class LineagePathPreserver {
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(rootFqn); // Always include root
 
-    // Filter upstream edges - keep only edges with matching columns
+    // Filter upstream edges - keep only matching column lineages within each edge
     if (result.getUpstreamEdges() != null) {
       Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredUpstream =
           new HashMap<>();
@@ -317,8 +321,11 @@ public class LineagePathPreserver {
           .getUpstreamEdges()
           .forEach(
               (docId, edge) -> {
-                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter, metadataCache)) {
-                  filteredUpstream.put(docId, edge);
+                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
+                    ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
+                        edge, columnFilter, metadataCache);
+                if (!matched.isEmpty()) {
+                  filteredUpstream.put(docId, edge.withColumns(matched));
                   if (edge.getFromEntity() != null) {
                     matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
                   }
@@ -330,7 +337,7 @@ public class LineagePathPreserver {
       result.setUpstreamEdges(filteredUpstream);
     }
 
-    // Filter downstream edges - keep only edges with matching columns
+    // Filter downstream edges - keep only matching column lineages within each edge
     if (result.getDownstreamEdges() != null) {
       Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredDownstream =
           new HashMap<>();
@@ -338,8 +345,11 @@ public class LineagePathPreserver {
           .getDownstreamEdges()
           .forEach(
               (docId, edge) -> {
-                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter, metadataCache)) {
-                  filteredDownstream.put(docId, edge);
+                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
+                    ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
+                        edge, columnFilter, metadataCache);
+                if (!matched.isEmpty()) {
+                  filteredDownstream.put(docId, edge.withColumns(matched));
                   if (edge.getFromEntity() != null) {
                     matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
                   }

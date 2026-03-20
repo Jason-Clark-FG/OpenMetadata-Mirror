@@ -170,6 +170,139 @@ public class ColumnFilterMatcher {
   }
 
   /**
+   * Filters the columns list of an edge to only include column lineages matching the filter.
+   * Returns a new list with only matching ColumnLineage entries, or empty if none match.
+   */
+  public static List<ColumnLineage> filterMatchingColumns(
+      EsLineageData edge, String columnFilter) {
+    if (edge == null || nullOrEmpty(columnFilter)) {
+      return edge != null ? edge.getColumns() : new ArrayList<>();
+    }
+
+    List<ColumnLineage> columns = edge.getColumns();
+    if (nullOrEmpty(columns)) {
+      return new ArrayList<>();
+    }
+
+    List<FilterCriteria> criteriaList = buildCriteriaList(columnFilter);
+    if (criteriaList.isEmpty()) {
+      return columns;
+    }
+
+    List<ColumnLineage> matching = new ArrayList<>();
+    for (ColumnLineage colLineage : columns) {
+      if (matchesAllCriteria(colLineage, criteriaList)) {
+        matching.add(colLineage);
+      }
+    }
+    return matching;
+  }
+
+  /**
+   * Filters the columns list of an edge using metadata cache for tag/glossary matching.
+   * Returns a new list with only matching ColumnLineage entries.
+   */
+  public static List<ColumnLineage> filterMatchingColumnsWithMetadata(
+      EsLineageData edge, String columnFilter, ColumnMetadataCache metadataCache) {
+    if (edge == null || nullOrEmpty(columnFilter)) {
+      return edge != null ? edge.getColumns() : new ArrayList<>();
+    }
+
+    List<ColumnLineage> columns = edge.getColumns();
+    if (nullOrEmpty(columns)) {
+      return new ArrayList<>();
+    }
+
+    List<FilterCriteria> criteriaList = buildCriteriaList(columnFilter);
+    if (criteriaList.isEmpty()) {
+      return columns;
+    }
+
+    List<ColumnLineage> matching = new ArrayList<>();
+    for (ColumnLineage colLineage : columns) {
+      if (matchesAllCriteriaWithMetadata(colLineage, criteriaList, metadataCache)) {
+        matching.add(colLineage);
+      }
+    }
+    return matching;
+  }
+
+  /**
+   * Builds a unified list of FilterCriteria from any supported filter format.
+   */
+  private static List<FilterCriteria> buildCriteriaList(String columnFilter) {
+    List<FilterCriteria> criteriaList = new ArrayList<>();
+
+    if (isEsQueryFormat(columnFilter)) {
+      criteriaList.addAll(parseEsQueryFilter(columnFilter));
+    } else if (columnFilter.contains(",")) {
+      Map<String, List<String>> grouped = parseMultipleFiltersGrouped(columnFilter);
+      for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
+        for (String value : entry.getValue()) {
+          criteriaList.add(new FilterCriteria(entry.getKey(), value));
+        }
+      }
+    } else {
+      FilterCriteria criteria = parseColumnFilter(columnFilter);
+      if (criteria != null) {
+        criteriaList.add(criteria);
+      }
+    }
+
+    return criteriaList;
+  }
+
+  /**
+   * Checks if a single ColumnLineage matches all filter criteria (name-based).
+   */
+  private static boolean matchesAllCriteria(
+      ColumnLineage colLineage, List<FilterCriteria> criteriaList) {
+    for (FilterCriteria criteria : criteriaList) {
+      if (!matchesColumnLineage(colLineage, criteria)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Checks if a single ColumnLineage matches all filter criteria with metadata support.
+   */
+  private static boolean matchesAllCriteriaWithMetadata(
+      ColumnLineage colLineage,
+      List<FilterCriteria> criteriaList,
+      ColumnMetadataCache metadataCache) {
+    for (FilterCriteria criteria : criteriaList) {
+      if (requiresMetadata(criteria) && metadataCache != null) {
+        ColumnMetadataCache.ColumnFilterCriteria metadataCriteria = toMetadataCriteria(criteria);
+        if (metadataCriteria != null) {
+          boolean matches = false;
+          if (colLineage.getToColumn() != null
+              && metadataCache.matchesFilter(colLineage.getToColumn(), metadataCriteria)) {
+            matches = true;
+          }
+          if (!matches && colLineage.getFromColumns() != null) {
+            for (String fromCol : colLineage.getFromColumns()) {
+              if (metadataCache.matchesFilter(fromCol, metadataCriteria)) {
+                matches = true;
+                break;
+              }
+            }
+          }
+          if (!matches) {
+            return false;
+          }
+        }
+      } else {
+        if (!matchesColumnLineage(colLineage, criteria)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * Extracts all column FQNs from an edge for metadata loading.
    */
   public static Set<String> extractColumnFqns(EsLineageData edge) {
@@ -493,7 +626,18 @@ public class ColumnFilterMatcher {
       return false;
     }
 
-    // Legacy format
+    // Handle comma-separated filters (e.g., "columnName:val,tag:PII")
+    if (columnFilter.contains(",")) {
+      Map<String, List<String>> grouped = parseMultipleFiltersGrouped(columnFilter);
+      for (String filterType : grouped.keySet()) {
+        if (filterType.equals("tag") || filterType.equals("glossary")) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Single filter format
     FilterCriteria criteria = parseColumnFilter(columnFilter);
     return criteria != null && requiresMetadata(criteria);
   }

@@ -419,10 +419,24 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
       setLoading(true);
 
       if (impactLevel === EImpactLevel.ColumnLevel) {
+        // Use nodeDepth from the depth dropdown instead of lineageConfig defaults
+        // so column-level view respects the user's depth selection
+        const columnLevelConfig = {
+          ...lineageConfig,
+          upstreamDepth:
+            lineageDirection === LineageDirection.Upstream
+              ? nodeDepth
+              : lineageConfig.upstreamDepth,
+          downstreamDepth:
+            lineageDirection === LineageDirection.Downstream
+              ? nodeDepth
+              : lineageConfig.downstreamDepth,
+        };
+
         const res = await getLineageDataByFQN({
           fqn,
           entityType,
-          config: lineageConfig,
+          config: columnLevelConfig,
           queryFilter,
           columnFilter: columnFilterValue,
         });
@@ -537,8 +551,34 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   ]);
 
   const filterNodeIds = useMemo(() => {
+    if (impactLevel === EImpactLevel.ColumnLevel) {
+      // For column-level, collect IDs from both source and impacted entities
+      const columnNodes =
+        lineageDirection === LineageDirection.Downstream
+          ? downstreamColumnLineageNodes
+          : upstreamColumnLineageNodes;
+
+      const idSet = new Set<string>();
+      columnNodes.forEach((node) => {
+        if (node.fromEntity?.id) {
+          idSet.add(node.fromEntity.id);
+        }
+        if (node.toEntity?.id) {
+          idSet.add(node.toEntity.id);
+        }
+      });
+
+      return [...idSet];
+    }
+
     return filterNodes.map((node) => node.id ?? '');
-  }, [filterNodes]);
+  }, [
+    filterNodes,
+    impactLevel,
+    lineageDirection,
+    downstreamColumnLineageNodes,
+    upstreamColumnLineageNodes,
+  ]);
 
   // Card header with search and filter options
   const cardHeader = useMemo(() => {
