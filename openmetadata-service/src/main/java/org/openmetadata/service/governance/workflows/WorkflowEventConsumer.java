@@ -200,8 +200,9 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
 
     // Outbox enqueue (after signal succeeds — exception wrapped for event retry)
     if (isWorkflowManagedTaskStatusChange(event)) {
+      String outboxId = UUID.randomUUID().toString();
       try {
-        Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event)).run();
+        Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event, outboxId)).run();
       } catch (Exception exc) {
         LOG.error("Failed to enqueue outbox message for task '{}'", event.getEntityId(), exc);
         throw new EventPublisherException(
@@ -332,7 +333,7 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
     }
   }
 
-  private static void enqueueTaskMessage(ChangeEvent event) {
+  private static void enqueueTaskMessage(ChangeEvent event, String outboxId) {
     String newStatus = null;
     for (FieldChange fc : event.getChangeDescription().getFieldsUpdated()) {
       if ("status".equals(fc.getName())) {
@@ -348,14 +349,13 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
       return;
     }
 
-    String id = UUID.randomUUID().toString();
     String taskId = event.getEntityId().toString();
     String updatedBy = event.getUserName();
     long createdAt = event.getTimestamp();
 
     Entity.getCollectionDAO()
         .taskWorkflowOutboxDAO()
-        .insertEntry(id, taskId, newStatus, updatedBy, createdAt);
+        .insertEntry(outboxId, taskId, newStatus, updatedBy, createdAt);
 
     LOG.info(
         "Enqueued outbox message for task '{}': status='{}', updatedBy='{}'",

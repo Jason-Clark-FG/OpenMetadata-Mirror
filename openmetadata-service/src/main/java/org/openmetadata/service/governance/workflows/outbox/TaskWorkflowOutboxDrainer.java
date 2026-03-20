@@ -73,7 +73,7 @@ public class TaskWorkflowOutboxDrainer {
       try {
         Entity.getCollectionDAO()
             .taskWorkflowOutboxDAO()
-            .cleanupDelivered(System.currentTimeMillis() - CLEANUP_RETENTION_MS);
+            .cleanup(System.currentTimeMillis() - CLEANUP_RETENTION_MS, MAX_ATTEMPTS);
       } catch (Exception e) {
         LOG.warn("Outbox cleanup failed, will retry next cycle", e);
       }

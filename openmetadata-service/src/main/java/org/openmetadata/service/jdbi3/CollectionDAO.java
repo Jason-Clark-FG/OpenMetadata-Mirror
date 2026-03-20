@@ -3147,8 +3147,11 @@ public interface CollectionDAO {
     void recordFailedAttempt(
         @Bind("id") String id, @Bind("attempts") int attempts, @Bind("now") long now);
 
-    @SqlUpdate("DELETE FROM task_workflow_outbox WHERE delivered = true AND createdAt < :cutoff")
-    int cleanupDelivered(@Bind("cutoff") long cutoffTimestamp);
+    @SqlUpdate(
+        "DELETE FROM task_workflow_outbox"
+            + " WHERE (delivered = true AND createdAt < :cutoff)"
+            + " OR (delivered = false AND attempts >= :maxAttempts AND lastAttemptAt < :cutoff)")
+    int cleanup(@Bind("cutoff") long cutoff, @Bind("maxAttempts") int maxAttempts);
 
     class OutboxEntryRowMapper implements RowMapper<OutboxEntry> {
       @Override
