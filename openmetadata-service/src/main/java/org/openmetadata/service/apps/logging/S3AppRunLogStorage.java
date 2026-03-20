@@ -1,10 +1,12 @@
 package org.openmetadata.service.apps.logging;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -25,6 +27,7 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
+import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
 
 @Slf4j
 public class S3AppRunLogStorage implements AppRunLogStorageProvider {
@@ -55,10 +58,15 @@ public class S3AppRunLogStorage implements AppRunLogStorageProvider {
     this.s3Client = builder.build();
   }
 
+  /**
+   * Returns an OutputStream that buffers to a local temp file. On close(), the temp file is
+   * uploaded to S3. This avoids the GET+PUT-every-3-seconds anti-pattern — we write locally during
+   * the run and upload once when it finishes.
+   */
   @Override
   public OutputStream getOutputStream(String appName, long runTimestamp, String serverId) {
     String key = s3Key(appName, runTimestamp, serverId);
-    return new S3AppendOutputStream(s3Client, bucketName, key);
+    return new S3BufferedOutputStream(s3Client, bucketName, key);
   }
 
   @Override
@@ -88,15 +96,16 @@ public class S3AppRunLogStorage implements AppRunLogStorageProvider {
   public List<String> listServers(String appName, long runTimestamp) {
     List<String> servers = new ArrayList<>();
     String keyPrefix = prefix + appName + "/" + runTimestamp + "-";
-    var response =
-        s3Client.listObjectsV2(
+    ListObjectsV2Iterable pages =
+        s3Client.listObjectsV2Paginator(
             ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).build());
-    for (S3Object obj : response.contents()) {
-      String key = obj.key();
-      String fileName = key.substring(key.lastIndexOf('/') + 1);
-      String serverPrefix = runTimestamp + "-";
-      if (fileName.startsWith(serverPrefix) && fileName.endsWith(".log")) {
-        servers.add(fileName.substring(serverPrefix.length(), fileName.length() - 4));
+    for (var page : pages) {
+      for (S3Object obj : page.contents()) {
+        String fileName = obj.key().substring(obj.key().lastIndexOf('/') + 1);
+        String serverPrefix = runTimestamp + "-";
+        if (fileName.startsWith(serverPrefix) && fileName.endsWith(".log")) {
+          servers.add(fileName.substring(serverPrefix.length(), fileName.length() - 4));
+        }
       }
     }
     return servers;
@@ -106,17 +115,19 @@ public class S3AppRunLogStorage implements AppRunLogStorageProvider {
   public List<Long> listRunTimestamps(String appName) {
     Set<Long> timestamps = new TreeSet<>(Comparator.reverseOrder());
     String keyPrefix = prefix + appName + "/";
-    var response =
-        s3Client.listObjectsV2(
+    ListObjectsV2Iterable pages =
+        s3Client.listObjectsV2Paginator(
             ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).build());
-    for (S3Object obj : response.contents()) {
-      String fileName = obj.key().substring(obj.key().lastIndexOf('/') + 1);
-      int dashIdx = fileName.indexOf('-');
-      if (dashIdx > 0) {
-        try {
-          timestamps.add(Long.parseLong(fileName.substring(0, dashIdx)));
-        } catch (NumberFormatException ignored) {
-          // skip
+    for (var page : pages) {
+      for (S3Object obj : page.contents()) {
+        String fileName = obj.key().substring(obj.key().lastIndexOf('/') + 1);
+        int dashIdx = fileName.indexOf('-');
+        if (dashIdx > 0) {
+          try {
+            timestamps.add(Long.parseLong(fileName.substring(0, dashIdx)));
+          } catch (NumberFormatException ignored) {
+            // skip
+          }
         }
       }
     }
@@ -126,12 +137,14 @@ public class S3AppRunLogStorage implements AppRunLogStorageProvider {
   @Override
   public void deleteRun(String appName, long runTimestamp) {
     String keyPrefix = prefix + appName + "/" + runTimestamp + "-";
-    var response =
-        s3Client.listObjectsV2(
+    ListObjectsV2Iterable pages =
+        s3Client.listObjectsV2Paginator(
             ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).build());
-    for (S3Object obj : response.contents()) {
-      s3Client.deleteObject(
-          DeleteObjectRequest.builder().bucket(bucketName).key(obj.key()).build());
+    for (var page : pages) {
+      for (S3Object obj : page.contents()) {
+        s3Client.deleteObject(
+            DeleteObjectRequest.builder().bucket(bucketName).key(obj.key()).build());
+      }
     }
   }
 
@@ -163,62 +176,57 @@ public class S3AppRunLogStorage implements AppRunLogStorageProvider {
   }
 
   /**
-   * OutputStream that buffers content and uploads to S3 on close. For app run logs, we
-   * append-and-upload since S3 doesn't support true append. Each flush reads the existing object,
-   * appends new content, and writes back.
+   * Buffers writes to a local temp file, then uploads to S3 on close(). This avoids the
+   * GET+PUT-every-flush anti-pattern. The RunLogBuffer flushes every 3s to this OutputStream, but
+   * the actual S3 upload only happens once when the run completes and close() is called.
    */
-  private static class S3AppendOutputStream extends OutputStream {
+  private static class S3BufferedOutputStream extends OutputStream {
     private final S3Client client;
     private final String bucket;
     private final String key;
-    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private final Path tempFile;
+    private final OutputStream fileStream;
 
-    S3AppendOutputStream(S3Client client, String bucket, String key) {
+    S3BufferedOutputStream(S3Client client, String bucket, String key) {
       this.client = client;
       this.bucket = bucket;
       this.key = key;
+      try {
+        this.tempFile = Files.createTempFile("app-run-log-", ".log");
+        this.fileStream =
+            Files.newOutputStream(tempFile, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+      } catch (IOException e) {
+        throw new RuntimeException("Failed to create temp file for S3 log buffering", e);
+      }
     }
 
     @Override
-    public void write(int b) {
-      buffer.write(b);
+    public void write(int b) throws IOException {
+      fileStream.write(b);
     }
 
     @Override
-    public void write(byte[] b, int off, int len) {
-      buffer.write(b, off, len);
+    public void write(byte[] b, int off, int len) throws IOException {
+      fileStream.write(b, off, len);
     }
 
     @Override
     public void flush() throws IOException {
-      if (buffer.size() == 0) {
-        return;
-      }
-      byte[] newContent = buffer.toByteArray();
-      buffer.reset();
-
-      byte[] existing = new byte[0];
-      try {
-        existing =
-            client
-                .getObject(GetObjectRequest.builder().bucket(bucket).key(key).build())
-                .readAllBytes();
-      } catch (NoSuchKeyException e) {
-        // first write
-      }
-
-      byte[] combined = new byte[existing.length + newContent.length];
-      System.arraycopy(existing, 0, combined, 0, existing.length);
-      System.arraycopy(newContent, 0, combined, existing.length, newContent.length);
-
-      client.putObject(
-          PutObjectRequest.builder().bucket(bucket).key(key).build(),
-          RequestBody.fromBytes(combined));
+      fileStream.flush();
     }
 
     @Override
     public void close() throws IOException {
-      flush();
+      fileStream.close();
+      try {
+        if (Files.size(tempFile) > 0) {
+          client.putObject(
+              PutObjectRequest.builder().bucket(bucket).key(key).build(),
+              RequestBody.fromFile(tempFile));
+        }
+      } finally {
+        Files.deleteIfExists(tempFile);
+      }
     }
   }
 }

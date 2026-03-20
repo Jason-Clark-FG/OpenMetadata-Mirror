@@ -799,6 +799,12 @@ public class AppResource extends EntityResource<App, AppRepository> {
                       try {
                         while (!Thread.currentThread().isInterrupted()) {
                           Thread.sleep(5000);
+                          if (AppRunLogAppender.getBuffer(name, String.valueOf(runTimestamp))
+                              == null) {
+                            output.write("event: done\ndata: complete\n\n".getBytes());
+                            output.flush();
+                            break;
+                          }
                           output.write(": heartbeat\n\n".getBytes());
                           output.flush();
                         }

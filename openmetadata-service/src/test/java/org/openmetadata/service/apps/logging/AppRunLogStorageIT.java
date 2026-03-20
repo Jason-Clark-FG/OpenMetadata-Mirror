@@ -197,19 +197,19 @@ class AppRunLogStorageIT {
     }
 
     @Test
-    void s3AppendViaPutUpdatesContent() throws Exception {
+    void s3SingleStreamMultipleFlushes() throws Exception {
       S3AppRunLogStorage storage = createS3Storage();
 
-      try (OutputStream os = storage.getOutputStream("S3Append", 500L, "s1")) {
-        os.write("first write\n".getBytes(StandardCharsets.UTF_8));
-      }
-      try (OutputStream os = storage.getOutputStream("S3Append", 500L, "s1")) {
-        os.write("second write\n".getBytes(StandardCharsets.UTF_8));
+      try (OutputStream os = storage.getOutputStream("S3Stream", 500L, "s1")) {
+        os.write("first batch\n".getBytes(StandardCharsets.UTF_8));
+        os.flush();
+        os.write("second batch\n".getBytes(StandardCharsets.UTF_8));
+        os.flush();
       }
 
-      String content = storage.readLogs("S3Append", 500L, "s1");
-      assertTrue(content.contains("first write"));
-      assertTrue(content.contains("second write"));
+      String content = storage.readLogs("S3Stream", 500L, "s1");
+      assertTrue(content.contains("first batch"));
+      assertTrue(content.contains("second batch"));
     }
   }
 
