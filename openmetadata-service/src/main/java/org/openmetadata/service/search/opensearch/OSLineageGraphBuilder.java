@@ -675,12 +675,10 @@ public class OSLineageGraphBuilder
 
   public SearchLineageResult searchLineageByEntityCount(EntityCountLineageRequest request)
       throws IOException {
-    boolean needsPathPreservation =
-        Boolean.TRUE.equals(request.getPreservePaths())
-            || hasNodeLevelFilters(request.getQueryFilter());
+    boolean hasQueryFilter = !nullOrEmpty(request.getQueryFilter());
     boolean hasColumnFilter = !nullOrEmpty(request.getColumnFilter());
 
-    if (!needsPathPreservation && !hasColumnFilter) {
+    if (!hasQueryFilter && !hasColumnFilter) {
       java.util.Optional<SearchLineageResult> cached = checkEntityCountCache(request);
       if (cached.isPresent()) {
         LOG.debug(
@@ -693,12 +691,10 @@ public class OSLineageGraphBuilder
 
     SearchLineageResult result;
 
-    if (needsPathPreservation) {
+    if (hasQueryFilter) {
       EntityCountLineageRequest unfilteredRequest =
-          JsonUtils.deepCopy(request, EntityCountLineageRequest.class)
-              .withQueryFilter(getStructuralFilterOnly(request.getQueryFilter()));
+          JsonUtils.deepCopy(request, EntityCountLineageRequest.class).withQueryFilter(null);
       result = searchLineageByEntityCountInternal(unfilteredRequest);
-
       result = applyInMemoryFiltersWithPathPreservationForEntityCount(result, request);
     } else {
       result = searchLineageByEntityCountInternal(request);
@@ -708,7 +704,7 @@ public class OSLineageGraphBuilder
       result = applyColumnFiltering(result, convertToSearchLineageRequest(request));
     }
 
-    if (!needsPathPreservation && !hasColumnFilter) {
+    if (!hasQueryFilter && !hasColumnFilter) {
       cacheEntityCountResult(request, result);
     }
 
@@ -951,10 +947,23 @@ public class OSLineageGraphBuilder
         if (hit.source() != null) {
           Map<String, Object> esDoc = OsUtils.jsonDataToMap(hit.source());
           if (!esDoc.isEmpty()) {
-            String entityFqn = esDoc.get(FQN_FIELD).toString();
-            entitiesAtDepth.add(entityFqn);
-            if (!visitedFqns.contains(entityFqn)) {
-              nextLevel.put(FullyQualifiedName.buildHash(entityFqn), entityFqn);
+            if (direction.equals(LineageDirection.DOWNSTREAM)) {
+              String entityFqn = esDoc.get(FQN_FIELD).toString();
+              entitiesAtDepth.add(entityFqn);
+              if (!visitedFqns.contains(entityFqn)) {
+                nextLevel.put(FullyQualifiedName.buildHash(entityFqn), entityFqn);
+              }
+            } else {
+              List<EsLineageData> upstreamEntities = getUpstreamLineageListIfExist(esDoc);
+              for (EsLineageData data : upstreamEntities) {
+                if (data.getFromEntity() != null) {
+                  String fromFqn = data.getFromEntity().getFullyQualifiedName();
+                  entitiesAtDepth.add(fromFqn);
+                  if (!visitedFqns.contains(fromFqn)) {
+                    nextLevel.put(FullyQualifiedName.buildHash(fromFqn), fromFqn);
+                  }
+                }
+              }
             }
           }
         }
@@ -1183,16 +1192,9 @@ public class OSLineageGraphBuilder
    * through non-matching intermediate nodes.
    */
   private boolean hasNodeLevelFilters(String queryFilter) {
-    if (nullOrEmpty(queryFilter)) {
-      return false;
-    }
-    return queryFilter.contains("displayName")
-        || queryFilter.contains("\"name\"")
-        || queryFilter.contains("tier.tagFQN")
-        || queryFilter.contains("tags.tagFQN")
-        || queryFilter.contains("owner")
-        || queryFilter.contains("domain")
-        || queryFilter.contains("service");
+    // All filters (tag, tier, domain, service, owner, name) are indexed in ES and work directly.
+    // Path preservation is not needed for any node-level filters.
+    return false;
   }
 
   /**
