@@ -123,20 +123,25 @@ class AirflowApiClient:
             f"/dagRuns/{quote(dag_run_id, safe='')}/taskInstances"
         )
 
-    def get_all_dags(self, limit: int = 100) -> List[dict]:
-        result = []
+    def _paginate(self, path: str, key: str, limit: int = 100) -> List[dict]:
+        result: List[dict] = []
         offset = 0
-        while True:
-            response = self.list_dags(limit=limit, offset=offset)
-            dags = response.get("dags", [])
-            if not dags:
+        total = limit  # ensure first iteration runs
+        while offset < total:
+            separator = "&" if "?" in path else "?"
+            response = self.client.get(
+                f"{path}{separator}limit={limit}&offset={offset}"
+            )
+            page = response.get(key, [])
+            if not page:
                 break
-            result.extend(dags)
-            total = response.get("total_entries", 0)
+            result.extend(page)
+            total = response.get("total_entries", len(result))
             offset += limit
-            if offset >= total:
-                break
         return result
+
+    def get_all_dags(self) -> List[dict]:
+        return self._paginate(f"{self._prefix}/dags", key="dags")
 
     def build_dag_details(self, dag_data: dict) -> AirflowApiDagDetails:
         dag_id = dag_data["dag_id"]
@@ -214,8 +219,11 @@ class AirflowApiClient:
         self, dag_id: str, dag_run_id: str
     ) -> List[AirflowApiTaskInstance]:
         try:
-            response = self.get_task_instances(dag_id, dag_run_id)
-            instances_data = response.get("task_instances", [])
+            path = (
+                f"{self._prefix}/dags/{quote(dag_id, safe='')}"
+                f"/dagRuns/{quote(dag_run_id, safe='')}/taskInstances"
+            )
+            instances_data = self._paginate(path, key="task_instances")
         except Exception as exc:
             logger.warning(
                 f"Could not fetch task instances for {dag_id}/{dag_run_id}: {exc}"

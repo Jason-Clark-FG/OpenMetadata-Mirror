@@ -308,3 +308,116 @@ class TestSourceUrlGeneration:
         assert "taskinstance/list" in url
         assert "_flt_3_dag_id=my_dag" in url
         assert "_flt_3_task_id=my_task" in url
+
+
+def _make_client(mock_rest_cls, api_version="v1"):
+    mock_rest_cls.return_value = MagicMock()
+    config = MagicMock()
+    config.hostPort = "http://localhost:8080"
+    config.token = None
+    config.username = None
+    config.password = None
+    config.apiVersion = MagicMock()
+    config.apiVersion.value = api_version
+    config.verifySSL = True
+    client = AirflowApiClient(config)
+    return client, mock_rest_cls.return_value
+
+
+class TestPaginateGetAllDags:
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_single_page(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+        mock_rest.get.return_value = {
+            "dags": [{"dag_id": "a"}, {"dag_id": "b"}],
+            "total_entries": 2,
+        }
+
+        result = client.get_all_dags()
+        assert len(result) == 2
+        assert result[0]["dag_id"] == "a"
+        assert mock_rest.get.call_count == 1
+
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_multiple_pages(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+
+        page1 = {
+            "dags": [{"dag_id": f"dag_{i}"} for i in range(100)],
+            "total_entries": 250,
+        }
+        page2 = {
+            "dags": [{"dag_id": f"dag_{i}"} for i in range(100, 200)],
+            "total_entries": 250,
+        }
+        page3 = {
+            "dags": [{"dag_id": f"dag_{i}"} for i in range(200, 250)],
+            "total_entries": 250,
+        }
+        mock_rest.get.side_effect = [page1, page2, page3]
+
+        result = client.get_all_dags()
+        assert len(result) == 250
+        assert result[0]["dag_id"] == "dag_0"
+        assert result[-1]["dag_id"] == "dag_249"
+        assert mock_rest.get.call_count == 3
+
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_empty_response(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+        mock_rest.get.return_value = {"dags": [], "total_entries": 0}
+
+        result = client.get_all_dags()
+        assert result == []
+
+
+class TestPaginateTaskInstances:
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_single_page_task_instances(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+        mock_rest.get.return_value = {
+            "task_instances": [
+                {"task_id": "t1", "state": "success"},
+                {"task_id": "t2", "state": "failed"},
+            ],
+            "total_entries": 2,
+        }
+
+        result = client.get_task_instances_for_run("dag1", "run1")
+        assert len(result) == 2
+        assert result[0].task_id == "t1"
+        assert result[0].state == "success"
+        assert result[1].task_id == "t2"
+        assert result[1].state == "failed"
+
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_multi_page_task_instances(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+
+        page1 = {
+            "task_instances": [
+                {"task_id": f"t_{i}", "state": "success"} for i in range(100)
+            ],
+            "total_entries": 150,
+        }
+        page2 = {
+            "task_instances": [
+                {"task_id": f"t_{i}", "state": "success"} for i in range(100, 150)
+            ],
+            "total_entries": 150,
+        }
+        mock_rest.get.side_effect = [page1, page2]
+
+        result = client.get_task_instances_for_run("big_dag", "run1")
+        assert len(result) == 150
+        assert result[0].task_id == "t_0"
+        assert result[-1].task_id == "t_149"
+        assert mock_rest.get.call_count == 2
+
+    @patch("metadata.ingestion.source.pipeline.airflowapi.client.TrackedREST")
+    def test_task_instances_api_error_returns_empty(self, mock_rest_cls):
+        client, mock_rest = _make_client(mock_rest_cls)
+        mock_rest.get.side_effect = Exception("Connection refused")
+
+        result = client.get_task_instances_for_run("dag1", "run1")
+        assert result == []
