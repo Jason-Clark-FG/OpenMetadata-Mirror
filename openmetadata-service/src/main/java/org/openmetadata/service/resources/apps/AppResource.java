@@ -1,5 +1,6 @@
 package org.openmetadata.service.resources.apps;
 
+import static org.openmetadata.common.utils.CommonUtil.listOf;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
@@ -118,6 +119,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
           ScheduleType.NoSchedule,
           ScheduleType.OnlyManual);
   private final AppMapper mapper = new AppMapper();
+
+  @Override
+  protected List<MetadataOperation> getEntitySpecificOperations() {
+    return listOf(MetadataOperation.TRIGGER, MetadataOperation.DEPLOY);
+  }
 
   @Override
   public void initialize(OpenMetadataApplicationConfig config) {
