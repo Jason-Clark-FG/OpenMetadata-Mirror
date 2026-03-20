@@ -68,6 +68,7 @@ import org.openmetadata.service.apps.bundles.searchIndex.OrphanedIndexCleaner;
 import org.openmetadata.service.apps.scheduler.AppScheduler;
 import org.openmetadata.service.exception.UnhandledServerException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.monitoring.LatencyPhase;
 import org.openmetadata.service.resources.Collection;
 import org.openmetadata.service.search.IndexManagementClient.IndexStats;
 import org.openmetadata.service.search.SearchClient;
@@ -88,6 +89,7 @@ import os.org.opensearch.client.opensearch.core.search.Suggest;
 @Tag(name = "Search", description = "APIs related to search and suggest.")
 @Produces(MediaType.APPLICATION_JSON)
 @Collection(name = "search")
+@LatencyPhase
 public class SearchResource {
   private final SearchRepository searchRepository;
   private final Authorizer authorizer;
@@ -139,7 +141,7 @@ public class SearchResource {
           @QueryParam("q")
           String query,
       @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
-          @DefaultValue("table_search_index")
+          @DefaultValue("table")
           @QueryParam("index")
           String index,
       @Parameter(description = "Filter documents by deleted param. By default deleted is false")
@@ -320,7 +322,7 @@ public class SearchResource {
       @Parameter(description = "NLQ query string in natural language") @QueryParam("q")
           String nlqQuery,
       @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
-          @DefaultValue("table_search_index")
+          @DefaultValue("table")
           @QueryParam("index")
           String index,
       @Parameter(description = "Filter documents by deleted param. By default deleted is false")
@@ -452,7 +454,7 @@ public class SearchResource {
       @Parameter(description = "field name") @QueryParam("fieldName") String fieldName,
       @Parameter(description = "field value") @QueryParam("fieldValue") String fieldValue,
       @Parameter(description = "Search Index name, defaults to table_search_index")
-          @DefaultValue("table_search_index")
+          @DefaultValue("table")
           @QueryParam("index")
           String index,
       @Parameter(description = "Filter documents by deleted param. By default deleted is false")
@@ -505,7 +507,7 @@ public class SearchResource {
   public Response aggregate(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
-      @DefaultValue("table_search_index") @QueryParam("index") String index,
+      @DefaultValue("table") @QueryParam("index") String index,
       @Parameter(description = "Field in an entity.") @QueryParam("field") String fieldName,
       @Parameter(description = "value for searching in aggregation")
           @DefaultValue("")

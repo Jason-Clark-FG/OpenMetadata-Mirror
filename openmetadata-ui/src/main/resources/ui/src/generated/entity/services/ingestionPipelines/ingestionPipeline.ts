@@ -661,6 +661,9 @@ export interface OpenMetadataJWTClientConfig {
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
  *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
  * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
  * connection.
  *
@@ -1252,7 +1255,7 @@ export interface Pipeline {
     /**
      * Number of threads to use during metric computations
      */
-    threadCount?: number;
+    threadCount?: number | null;
     /**
      * Profiler Timeout in Seconds
      */
@@ -2813,6 +2816,8 @@ export interface DBTPrefixConfig {
 /**
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Azure Cloud Credentials
@@ -2824,6 +2829,8 @@ export interface DBTPrefixConfig {
  * GCP credentials configs.
  *
  * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
  *
  * GCP Credentials for Google Drive API
  */
@@ -3489,11 +3496,15 @@ export interface ServiceConnection {
  *
  * BurstIQ LifeGraph Database Connection Config
  *
+ * IBM Informix Database Connection Config
+ *
  * Kafka Connection Config
  *
  * Redpanda Connection Config
  *
  * Kinesis Connection Config
+ *
+ * Google Cloud Pub/Sub Connection Config
  *
  * Custom Messaging Service Connection to build a source that is not supported by
  * OpenMetadata yet.
@@ -3806,6 +3817,10 @@ export interface ConfigObject {
      * Host and port of the Microsoft Fabric SQL endpoint (e.g.,
      * your-workspace.datawarehouse.fabric.microsoft.com:1433).
      *
+     * Host and port of the Informix service.
+     *
+     * Pub/Sub APIs URL. For local testing with the emulator, use http://localhost:8085.
+     *
      * Host and port of the Amundsen Neo4j Connection. This expect a URI format like:
      * bolt://localhost:7687.
      *
@@ -3923,6 +3938,8 @@ export interface ConfigObject {
      * Password to connect to ServiceNow.
      *
      * Password to connect to BurstIQ.
+     *
+     * Password to connect to Informix.
      *
      * password to connect to the Amundsen Neo4j Connection.
      *
@@ -4043,6 +4060,9 @@ export interface ConfigObject {
      *
      * Username to connect to BurstIQ. This user should have privileges to read all the metadata
      * in BurstIQ LifeGraph.
+     *
+     * Username to connect to Informix. This user should have privileges to read all the
+     * metadata in Informix.
      *
      * username to connect to the Amundsen Neo4j Connection.
      *
@@ -4171,6 +4191,9 @@ export interface ConfigObject {
      *
      * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
      * client certificate, and private key for mutual TLS authentication.
+     *
+     * SSL Configuration details. Provide the CA certificate to validate the Informix server
+     * certificate. Paste the PEM content directly or upload the certificate file.
      *
      * SSL Configuration for OpenMetadata Server
      */
@@ -4327,7 +4350,7 @@ export interface ConfigObject {
      *
      * GCP Credentials for Google Drive API
      */
-    credentials?: GCPCredentials;
+    credentials?: CredentialsClass;
     /**
      * Regex to only include/exclude databases that matches the pattern.
      *
@@ -4491,6 +4514,9 @@ export interface ConfigObject {
      *
      * Ingest data from all databases (Warehouses and Lakehouses) in Microsoft Fabric. You can
      * use databaseFilterPattern on top of this.
+     *
+     * Ingest data from all databases in Informix. You can use databaseFilterPattern on top of
+     * this.
      */
     ingestAllDatabases?: boolean;
     /**
@@ -4559,7 +4585,12 @@ export interface ConfigObject {
     /**
      * License file name to connect to DB2.
      */
-    licenseFileName?:               string;
+    licenseFileName?: string;
+    /**
+     * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+     * without certificate verification, or 'verify-ca' to validate the server certificate
+     * against the provided CA certificate.
+     */
     sslMode?:                       SSLMode;
     supportsViewLineageExtraction?: boolean;
     /**
@@ -4644,6 +4675,11 @@ export interface ConfigObject {
      * re-ingesting.
      */
     preserveIdentifierCase?: boolean;
+    /**
+     * Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA
+     * privileges.
+     */
+    useDBATable?: boolean;
     /**
      * Custom OpenMetadata Classification name for Postgres policy tags.
      *
@@ -4882,6 +4918,11 @@ export interface ConfigObject {
      */
     realmName?: string;
     /**
+     * Informix server name as defined in the sqlhosts file or INFORMIXSERVER environment
+     * variable.
+     */
+    serverName?: string;
+    /**
      * basic.auth.user.info schema registry config property, Client HTTP credentials in the form
      * of username:password.
      */
@@ -4947,6 +4988,31 @@ export interface ConfigObject {
      * Regex to only fetch topics that matches the pattern.
      */
     topicFilterPattern?: FilterPattern;
+    /**
+     * GCP credentials configuration for authenticating with Pub/Sub.
+     */
+    gcpConfig?: GcpConfigClass;
+    /**
+     * Include dead letter topics in metadata extraction.
+     */
+    includeDeadLetterTopics?: boolean;
+    /**
+     * Include subscription metadata for each topic.
+     */
+    includeSubscriptions?: boolean;
+    /**
+     * GCP Project ID where Pub/Sub topics are located. If not specified, will be read from
+     * credentials.
+     */
+    projectId?: string;
+    /**
+     * Enable fetching schemas from Pub/Sub Schema Registry.
+     */
+    schemaRegistryEnabled?: boolean;
+    /**
+     * Connect to a Pub/Sub emulator rather than the production service.
+     */
+    useEmulator?: boolean;
     /**
      * Enable encryption for the Amundsen Neo4j Connection.
      */
@@ -5492,6 +5558,8 @@ export enum AuthMechanismEnum {
  *
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Authentication type to connect to Apache Ranger.
@@ -5671,6 +5739,8 @@ export interface AuthenticationTypeForTableau {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  */
@@ -6078,6 +6148,8 @@ export interface IcebergFileSystem {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  *
@@ -6581,6 +6653,8 @@ export interface DataStorageConfig {
 /**
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  */
 export interface AwsCredentials {
@@ -6657,6 +6731,9 @@ export enum ConnectionScheme {
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
  *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
  * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
  * connection.
  *
@@ -6680,6 +6757,10 @@ export interface ConnectionSSLConfig {
 
 /**
  * SSL Mode to connect to database.
+ *
+ * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+ * without certificate verification, or 'verify-ca' to validate the server certificate
+ * against the provided CA certificate.
  */
 export enum SSLMode {
     Allow = "allow",
@@ -6708,6 +6789,8 @@ export enum ConnectionType {
  *
  * GCP Credentials
  *
+ * GCP credentials configuration for authenticating with Pub/Sub.
+ *
  * GCP Credentials for Google Drive API
  *
  * Azure Cloud Credentials
@@ -6716,7 +6799,7 @@ export enum ConnectionType {
  *
  * Azure Credentials
  */
-export interface GCPCredentials {
+export interface CredentialsClass {
     /**
      * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
      * Credentials Path
@@ -6883,6 +6966,27 @@ export enum FHIRVersion {
     Dstu2 = "DSTU2",
     R4 = "R4",
     Stu3 = "STU3",
+}
+
+/**
+ * GCP credentials configs.
+ *
+ * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
+ *
+ * GCP Credentials for Google Drive API
+ */
+export interface GcpConfigClass {
+    /**
+     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+     * Credentials Path
+     */
+    gcpConfig: GCPCredentialsConfiguration;
+    /**
+     * we enable the authenticated service account to impersonate another service account
+     */
+    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
 }
 
 /**
@@ -7118,6 +7222,8 @@ export interface NifiCredentialsConfiguration {
  * Open API Schema URL Connection Config
  *
  * Open API Schema File Path Connection Config
+ *
+ * Open API Schema S3 Connection Config
  */
 export interface OpenAPISchemaConnection {
     /**
@@ -7128,6 +7234,15 @@ export interface OpenAPISchemaConnection {
      * Path to a local OpenAPI schema file.
      */
     openAPISchemaFilePath?: string;
+    /**
+     * AWS credentials required to access the S3 file.
+     */
+    awsCredentials?: AWSCredentials;
+    /**
+     * S3 URL of the OpenAPI schema file (JSON or YAML). Example:
+     * https://bucket-name.s3.amazonaws.com/path/to/openapi_schema.json
+     */
+    openAPISchemaS3URL?: string;
 }
 
 /**
@@ -7275,6 +7390,7 @@ export enum ConfigScheme {
     Ibmi = "ibmi",
     Impala = "impala",
     Impala4 = "impala4",
+    Informix = "informix",
     Mongodb = "mongodb",
     MongodbSrv = "mongodb+srv",
     MssqlPymssql = "mssql+pymssql",
@@ -7315,6 +7431,9 @@ export enum SpaceType {
  *
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
+ *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
  *
  * Consumer Config SSL Config. Configuration for enabling SSL for the Consumer Config
  * connection.
@@ -7561,6 +7680,7 @@ export enum PurpleType {
     Hive = "Hive",
     Iceberg = "Iceberg",
     Impala = "Impala",
+    Informix = "Informix",
     Kafka = "Kafka",
     KafkaConnect = "KafkaConnect",
     Kinesis = "Kinesis",
@@ -7590,6 +7710,7 @@ export enum PurpleType {
     PowerBI = "PowerBI",
     PowerBIReportServer = "PowerBIReportServer",
     Presto = "Presto",
+    PubSub = "PubSub",
     QlikCloud = "QlikCloud",
     QlikSense = "QlikSense",
     QuickSight = "QuickSight",
