@@ -32,7 +32,7 @@ interface SidebarConfig {
   bottomItems?: (NavItemType | NavItemDividerType)[];
 }
 
-const getMarketplaceSidebarConfig = (): SidebarConfig => ({
+export const MARKETPLACE_SIDEBAR_CONFIG: SidebarConfig = {
   items: [
     { label: t('label.home'), href: ROUTES.MY_DATA, icon: Home02 },
     {
@@ -58,12 +58,4 @@ const getMarketplaceSidebarConfig = (): SidebarConfig => ({
       icon: Settings01,
     },
   ],
-});
-
-export const getSidebarConfig = (pathname: string): SidebarConfig | null => {
-  if (pathname.startsWith(ROUTES.DATA_MARKETPLACE)) {
-    return getMarketplaceSidebarConfig();
-  }
-
-  return null;
 };

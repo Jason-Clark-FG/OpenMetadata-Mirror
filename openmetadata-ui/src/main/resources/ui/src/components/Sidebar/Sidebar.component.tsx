@@ -14,8 +14,9 @@
 import { NavList } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { Link, useLocation } from 'react-router-dom';
-import { getSidebarConfig } from '../../constants/CustomSidebar.constants';
+import { MARKETPLACE_SIDEBAR_CONFIG } from '../../constants/CustomSidebar.constants';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
+import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import BrandImage from '../common/BrandImage/BrandImage';
 import './app-sidebar.less';
 
@@ -32,11 +33,11 @@ const Sidebar = ({ className }: SidebarProps) => {
     preferences: { isSidebarCollapsed: collapsed },
   } = useCurrentUserPreferences();
 
-  const config = getSidebarConfig(pathname);
-
-  if (!config) {
+  if (!isNewLayoutRoute(pathname)) {
     return null;
   }
+
+  const config = MARKETPLACE_SIDEBAR_CONFIG;
 
   return (
     <aside
