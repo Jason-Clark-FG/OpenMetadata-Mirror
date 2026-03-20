@@ -1,6 +1,7 @@
 package org.openmetadata.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,5 +30,25 @@ class MigrationTestRunnerTest {
   @Test
   void testVersionToPackageMajorOnly() {
     assertEquals("v200", MigrationTestRunner.versionToPackage("2.0.0"));
+  }
+
+  @Test
+  void testVersionToPackageTwoParts() {
+    assertEquals("v10", MigrationTestRunner.versionToPackage("1.0"));
+  }
+
+  @Test
+  void testVersionToPackageSinglePart() {
+    assertEquals("v3", MigrationTestRunner.versionToPackage("3"));
+  }
+
+  @Test
+  void testVersionToPackageInvalidNonNumericThrows() {
+    assertThrows(NumberFormatException.class, () -> MigrationTestRunner.versionToPackage("abc"));
+  }
+
+  @Test
+  void testVersionToPackageWithExtensionTwoParts() {
+    assertEquals("v16", MigrationTestRunner.versionToPackage("1.6-SNAPSHOT"));
   }
 }
