@@ -12,6 +12,10 @@ public abstract class EmbeddingClient {
   private final Semaphore concurrencyLimiter;
 
   protected EmbeddingClient(int maxConcurrentRequests) {
+    if (maxConcurrentRequests < 1) {
+      throw new IllegalArgumentException(
+          "maxConcurrentRequests must be >= 1, but was " + maxConcurrentRequests);
+    }
     this.concurrencyLimiter = new Semaphore(maxConcurrentRequests);
   }
 
