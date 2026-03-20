@@ -17,15 +17,25 @@ import { DeleteModal } from './DeleteModal';
 jest.mock('@openmetadata/ui-core-components', () => ({
   Button: jest
     .fn()
-    .mockImplementation(({ children, onPress, isDisabled, ...rest }) => (
-      <button disabled={isDisabled} onClick={onPress} {...rest}>
-        {children}
-      </button>
-    )),
+    .mockImplementation(
+      ({ children, onPress, isDisabled, isLoading, ...rest }) => (
+        <button disabled={isDisabled} onClick={onPress} {...rest}>
+          {isLoading ? <div data-testid="loader" /> : children}
+        </button>
+      )
+    ),
   Dialog: Object.assign(
     jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
     {
       Header: jest
+        .fn()
+        .mockImplementation(({ children }) => <div>{children}</div>),
+    }
+  ),
+  Grid: Object.assign(
+    jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
+    {
+      Item: jest
         .fn()
         .mockImplementation(({ children }) => <div>{children}</div>),
     }
