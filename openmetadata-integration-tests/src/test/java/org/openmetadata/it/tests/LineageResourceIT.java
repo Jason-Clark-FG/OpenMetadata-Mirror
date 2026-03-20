@@ -6,8 +6,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.StringReader;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -83,23 +90,23 @@ public class LineageResourceIT {
     Table targetTable = createTable(client, namespace, "target_table");
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(sourceTable.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference()));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference()));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     assertNotNull(lineage);
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())));
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
 
@@ -121,31 +128,31 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT * FROM source");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(sourceColumn)).withToColumn(targetColumn));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(sourceColumn)).withToColumn(targetColumn));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(sourceTable.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     assertNotNull(lineage);
 
     boolean foundEdgeWithDetails =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getSqlQuery() != null);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getSqlQuery() != null);
     assertTrue(foundEdgeWithDetails);
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
@@ -169,11 +176,11 @@ public class LineageResourceIT {
     EntityLineage lineage = getLineage(client, "table", table2.getId().toString(), "1", "0");
     assertNotNull(lineage);
     assertTrue(
-        lineage.getUpstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())));
+            lineage.getUpstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())));
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
     deleteLineage(client, table2.getEntityReference(), table3.getEntityReference());
@@ -198,11 +205,11 @@ public class LineageResourceIT {
     EntityLineage lineage = getLineage(client, "table", table2.getId().toString(), "0", "1");
     assertNotNull(lineage);
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table2.getId())
-                        && edge.getToEntity().equals(table3.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table2.getId())
+                                            && edge.getToEntity().equals(table3.getId())));
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
     deleteLineage(client, table2.getEntityReference(), table3.getEntityReference());
@@ -227,17 +234,17 @@ public class LineageResourceIT {
     EntityLineage lineage = getLineage(client, "table", table2.getId().toString(), "1", "1");
     assertNotNull(lineage);
     assertTrue(
-        lineage.getUpstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())));
+            lineage.getUpstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())));
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table2.getId())
-                        && edge.getToEntity().equals(table3.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table2.getId())
+                                            && edge.getToEntity().equals(table3.getId())));
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
     deleteLineage(client, table2.getEntityReference(), table3.getEntityReference());
@@ -259,19 +266,19 @@ public class LineageResourceIT {
     addLineage(client, sourceTable, targetTable);
 
     EntityLineage lineageBefore =
-        getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
+            getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     assertFalse(lineageBefore.getDownstreamEdges().isEmpty());
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
 
     EntityLineage lineageAfter =
-        getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
+            getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     assertTrue(
-        lineageAfter.getDownstreamEdges().stream()
-            .noneMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())));
+            lineageAfter.getDownstreamEdges().stream()
+                    .noneMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())));
 
     cleanupTable(client, sourceTable);
     cleanupTable(client, targetTable);
@@ -293,17 +300,17 @@ public class LineageResourceIT {
     assertNotNull(lineage);
     assertEquals(2, lineage.getUpstreamEdges().size());
     assertTrue(
-        lineage.getUpstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(source1.getId())
-                        && edge.getToEntity().equals(target.getId())));
+            lineage.getUpstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(source1.getId())
+                                            && edge.getToEntity().equals(target.getId())));
     assertTrue(
-        lineage.getUpstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(source2.getId())
-                        && edge.getToEntity().equals(target.getId())));
+            lineage.getUpstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(source2.getId())
+                                            && edge.getToEntity().equals(target.getId())));
 
     deleteLineage(client, source1.getEntityReference(), target.getEntityReference());
     deleteLineage(client, source2.getEntityReference(), target.getEntityReference());
@@ -329,17 +336,17 @@ public class LineageResourceIT {
     assertNotNull(lineage);
     assertEquals(2, lineage.getDownstreamEdges().size());
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(source.getId())
-                        && edge.getToEntity().equals(target1.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(source.getId())
+                                            && edge.getToEntity().equals(target1.getId())));
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(source.getId())
-                        && edge.getToEntity().equals(target2.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(source.getId())
+                                            && edge.getToEntity().equals(target2.getId())));
 
     deleteLineage(client, source.getEntityReference(), target1.getEntityReference());
     deleteLineage(client, source.getEntityReference(), target2.getEntityReference());
@@ -388,23 +395,23 @@ public class LineageResourceIT {
     Table targetTable = createTable(client, namespace, "pipeline_target");
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(pipeline.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference()));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(pipeline.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference()));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "pipeline", pipeline.getId().toString(), "0", "1");
     assertNotNull(lineage);
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(pipeline.getId())
-                        && edge.getToEntity().equals(targetTable.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(pipeline.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())));
 
     deleteLineage(client, pipeline.getEntityReference(), targetTable.getEntityReference());
 
@@ -414,7 +421,7 @@ public class LineageResourceIT {
 
   @Test
   @org.junit.jupiter.api.Disabled(
-      "Search lineage API needs proper SDK method - getLineage format incorrect")
+          "Search lineage API needs proper SDK method - getLineage format incorrect")
   void testSearchLineage() throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
     TestNamespace namespace = new TestNamespace("LineageResourceIT");
@@ -425,9 +432,9 @@ public class LineageResourceIT {
     addLineage(client, table1, table2);
 
     String response =
-        client
-            .lineage()
-            .getLineage("fqn=" + table1.getFullyQualifiedName() + "&type=table", "1", "1");
+            client
+                    .lineage()
+                    .getLineage("fqn=" + table1.getFullyQualifiedName() + "&type=table", "1", "1");
     assertNotNull(response);
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
@@ -449,25 +456,25 @@ public class LineageResourceIT {
     details.setSqlQuery("SELECT * FROM source");
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(sourceTable.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     boolean foundWithDescription =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getDescription() != null);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getDescription() != null);
     assertTrue(foundWithDescription);
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
@@ -495,35 +502,35 @@ public class LineageResourceIT {
     String targetCol3 = targetTable.getColumns().get(2).getFullyQualifiedName();
 
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(sourceCol1)).withToColumn(targetCol1));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(sourceCol1)).withToColumn(targetCol1));
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(sourceCol2)).withToColumn(targetCol2));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(sourceCol2)).withToColumn(targetCol2));
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(sourceCol3)).withToColumn(targetCol3));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(sourceCol3)).withToColumn(targetCol3));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(sourceTable.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     boolean foundEdge =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getColumnsLineage().size() == 3);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getColumnsLineage().size() == 3);
     assertTrue(foundEdge);
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
@@ -533,7 +540,7 @@ public class LineageResourceIT {
   }
 
   private Table createTable(OpenMetadataClient client, TestNamespace namespace, String tableName)
-      throws Exception {
+          throws Exception {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(namespace);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(namespace, service);
 
@@ -542,16 +549,16 @@ public class LineageResourceIT {
     createTable.setDatabaseSchema(schema.getFullyQualifiedName());
 
     List<Column> columns =
-        List.of(
-            ColumnBuilder.of("id", "BIGINT").primaryKey().notNull().build(),
-            ColumnBuilder.of("name", "VARCHAR").dataLength(255).build());
+            List.of(
+                    ColumnBuilder.of("id", "BIGINT").primaryKey().notNull().build(),
+                    ColumnBuilder.of("name", "VARCHAR").dataLength(255).build());
     createTable.setColumns(columns);
 
     return client.tables().create(createTable);
   }
 
   private Table createTableWithMultipleColumns(
-      OpenMetadataClient client, TestNamespace namespace, String tableName) throws Exception {
+          OpenMetadataClient client, TestNamespace namespace, String tableName) throws Exception {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(namespace);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(namespace, service);
 
@@ -560,17 +567,17 @@ public class LineageResourceIT {
     createTable.setDatabaseSchema(schema.getFullyQualifiedName());
 
     List<Column> columns =
-        List.of(
-            ColumnBuilder.of("col1", "VARCHAR").dataLength(100).build(),
-            ColumnBuilder.of("col2", "VARCHAR").dataLength(100).build(),
-            ColumnBuilder.of("col3", "VARCHAR").dataLength(100).build());
+            List.of(
+                    ColumnBuilder.of("col1", "VARCHAR").dataLength(100).build(),
+                    ColumnBuilder.of("col2", "VARCHAR").dataLength(100).build(),
+                    ColumnBuilder.of("col3", "VARCHAR").dataLength(100).build());
     createTable.setColumns(columns);
 
     return client.tables().create(createTable);
   }
 
   private Pipeline createPipeline(
-      OpenMetadataClient client, TestNamespace namespace, String pipelineName) throws Exception {
+          OpenMetadataClient client, TestNamespace namespace, String pipelineName) throws Exception {
     PipelineService pipelineService = PipelineServiceTestFactory.createAirflow(namespace);
 
     CreatePipeline createPipeline = new CreatePipeline();
@@ -580,11 +587,25 @@ public class LineageResourceIT {
     return client.pipelines().create(createPipeline);
   }
 
-  private void addLineage(OpenMetadataClient client, EntityReference from, EntityReference to)
-      throws Exception {
+  private String executeAddLineage(OpenMetadataClient client, AddLineage lineage) {
+    String[] holder = {null};
+    Awaitility.await("Add lineage edge")
+            .atMost(Duration.ofSeconds(30))
+            .pollDelay(Duration.ofMillis(100))
+            .pollInterval(Duration.ofSeconds(1))
+            .ignoreExceptions()
+            .until(
+                    () -> {
+                      holder[0] = client.lineage().addLineage(lineage);
+                      return true;
+                    });
+    return holder[0];
+  }
+
+  private void addLineage(OpenMetadataClient client, EntityReference from, EntityReference to) {
     AddLineage addLineage =
-        new AddLineage().withEdge(new EntitiesEdge().withFromEntity(from).withToEntity(to));
-    client.lineage().addLineage(addLineage);
+            new AddLineage().withEdge(new EntitiesEdge().withFromEntity(from).withToEntity(to));
+    executeAddLineage(client, addLineage);
   }
 
   private void addLineage(OpenMetadataClient client, Table from, Table to) throws Exception {
@@ -606,14 +627,14 @@ public class LineageResourceIT {
   }
 
   private EntityLineage getLineage(
-      OpenMetadataClient client,
-      String entityType,
-      String entityId,
-      String upstreamDepth,
-      String downstreamDepth)
-      throws Exception {
+          OpenMetadataClient client,
+          String entityType,
+          String entityId,
+          String upstreamDepth,
+          String downstreamDepth)
+          throws Exception {
     String response =
-        client.lineage().getEntityLineage(entityType, entityId, upstreamDepth, downstreamDepth);
+            client.lineage().getEntityLineage(entityType, entityId, upstreamDepth, downstreamDepth);
     return OBJECT_MAPPER.readValue(response, EntityLineage.class);
   }
 
@@ -652,35 +673,35 @@ public class LineageResourceIT {
     details.setSqlQuery("SELECT col1, col2, col3 FROM table1");
 
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c2FQN)).withToColumn(t2c2FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c2FQN)).withToColumn(t2c2FQN));
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c3FQN)).withToColumn(t2c3FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c3FQN)).withToColumn(t2c3FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table1.getEntityReference())
-                    .withToEntity(table2.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table1.getEntityReference())
+                                    .withToEntity(table2.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table1.getId().toString(), "0", "1");
     boolean foundEdge =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getColumnsLineage().size() == 3);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getColumnsLineage().size() == 3);
     assertTrue(foundEdge);
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
@@ -703,35 +724,35 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT col1 + col2 FROM source");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN, t1c2FQN)).withToColumn(t2c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN, t1c2FQN)).withToColumn(t2c1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(sourceTable.getEntityReference())
-                    .withToEntity(targetTable.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", sourceTable.getId().toString(), "0", "1");
     boolean foundEdge =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(sourceTable.getId())
-                        && edge.getToEntity().equals(targetTable.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getColumnsLineage().size() == 1
-                        && edge.getLineageDetails()
-                                .getColumnsLineage()
-                                .get(0)
-                                .getFromColumns()
-                                .size()
-                            == 2);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(sourceTable.getId())
+                                            && edge.getToEntity().equals(targetTable.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getColumnsLineage().size() == 1
+                                            && edge.getLineageDetails()
+                                            .getColumnsLineage()
+                                            .get(0)
+                                            .getFromColumns()
+                                            .size()
+                                            == 2);
     assertTrue(foundEdge);
 
     deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
@@ -750,16 +771,16 @@ public class LineageResourceIT {
     addLineage(client, table1, table2);
 
     String response =
-        client.lineage().getLineageByName("table", table1.getFullyQualifiedName(), "0", "1");
+            client.lineage().getLineageByName("table", table1.getFullyQualifiedName(), "0", "1");
     EntityLineage lineage = OBJECT_MAPPER.readValue(response, EntityLineage.class);
 
     assertNotNull(lineage);
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())));
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
     cleanupTable(client, table1);
@@ -824,27 +845,27 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("INSERT INTO table SELECT * FROM topic");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(f1FQN)).withToColumn(t1c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(f1FQN)).withToColumn(t1c1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(topic.getEntityReference())
-                    .withToEntity(table.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(topic.getEntityReference())
+                                    .withToEntity(table.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "topic", topic.getId().toString(), "0", "1");
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(topic.getId())
-                        && edge.getToEntity().equals(table.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(topic.getId())
+                                            && edge.getToEntity().equals(table.getId())));
 
     deleteLineage(client, topic.getEntityReference(), table.getEntityReference());
     cleanupTopic(client, topic);
@@ -865,27 +886,27 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT * FROM table");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(d1c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(d1c1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table.getEntityReference())
-                    .withToEntity(dataModel.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table.getEntityReference())
+                                    .withToEntity(dataModel.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table.getId().toString(), "0", "1");
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table.getId())
-                        && edge.getToEntity().equals(dataModel.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table.getId())
+                                            && edge.getToEntity().equals(dataModel.getId())));
 
     deleteLineage(client, table.getEntityReference(), dataModel.getEntityReference());
     cleanupTable(client, table);
@@ -906,27 +927,27 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT * FROM container");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(c1FQN)).withToColumn(t1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(c1FQN)).withToColumn(t1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(container.getEntityReference())
-                    .withToEntity(table.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(container.getEntityReference())
+                                    .withToEntity(table.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "container", container.getId().toString(), "0", "1");
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(container.getId())
-                        && edge.getToEntity().equals(table.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(container.getId())
+                                            && edge.getToEntity().equals(table.getId())));
 
     deleteLineage(client, container.getEntityReference(), table.getEntityReference());
     cleanupContainer(client, container);
@@ -947,27 +968,27 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT features FROM table");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(m1f1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(m1f1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table.getEntityReference())
-                    .withToEntity(mlModel.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table.getEntityReference())
+                                    .withToEntity(mlModel.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table.getId().toString(), "0", "1");
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table.getId())
-                        && edge.getToEntity().equals(mlModel.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table.getId())
+                                            && edge.getToEntity().equals(mlModel.getId())));
 
     deleteLineage(client, table.getEntityReference(), mlModel.getEntityReference());
     cleanupTable(client, table);
@@ -986,23 +1007,23 @@ public class LineageResourceIT {
     details.setSqlQuery("SELECT * FROM table FOR DASHBOARD");
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table.getEntityReference())
-                    .withToEntity(dashboard.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table.getEntityReference())
+                                    .withToEntity(dashboard.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table.getId().toString(), "0", "1");
     assertTrue(
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table.getId())
-                        && edge.getToEntity().equals(dashboard.getId())));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table.getId())
+                                            && edge.getToEntity().equals(dashboard.getId())));
 
     deleteLineage(client, table.getEntityReference(), dashboard.getEntityReference());
     cleanupTable(client, table);
@@ -1024,31 +1045,31 @@ public class LineageResourceIT {
     LineageDetails details = new LineageDetails();
     details.setSqlQuery("SELECT * FROM table");
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
     details
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of("invalid_column")).withToColumn(t2c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of("invalid_column")).withToColumn(t2c1FQN));
 
     AddLineage addLineage =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table1.getEntityReference())
-                    .withToEntity(table2.getEntityReference())
-                    .withLineageDetails(details));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table1.getEntityReference())
+                                    .withToEntity(table2.getEntityReference())
+                                    .withLineageDetails(details));
 
-    String result = client.lineage().addLineage(addLineage);
+    String result = executeAddLineage(client, addLineage);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table1.getId().toString(), "0", "1");
     boolean foundEdge =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())
-                        && edge.getLineageDetails() != null);
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())
+                                            && edge.getLineageDetails() != null);
     assertTrue(foundEdge);
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
@@ -1115,14 +1136,14 @@ public class LineageResourceIT {
     details1.setSqlQuery("SELECT * FROM source");
 
     AddLineage addLineage1 =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table1.getEntityReference())
-                    .withToEntity(table2.getEntityReference())
-                    .withLineageDetails(details1));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table1.getEntityReference())
+                                    .withToEntity(table2.getEntityReference())
+                                    .withLineageDetails(details1));
 
-    client.lineage().addLineage(addLineage1);
+    executeAddLineage(client, addLineage1);
 
     LineageDetails details2 = new LineageDetails();
     details2.setDescription("Updated lineage");
@@ -1130,29 +1151,29 @@ public class LineageResourceIT {
     String t1c1FQN = table1.getColumns().get(0).getFullyQualifiedName();
     String t2c1FQN = table2.getColumns().get(0).getFullyQualifiedName();
     details2
-        .getColumnsLineage()
-        .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(t1c1FQN)).withToColumn(t2c1FQN));
 
     AddLineage addLineage2 =
-        new AddLineage()
-            .withEdge(
-                new EntitiesEdge()
-                    .withFromEntity(table1.getEntityReference())
-                    .withToEntity(table2.getEntityReference())
-                    .withLineageDetails(details2));
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(table1.getEntityReference())
+                                    .withToEntity(table2.getEntityReference())
+                                    .withLineageDetails(details2));
 
-    String result = client.lineage().addLineage(addLineage2);
+    String result = executeAddLineage(client, addLineage2);
     assertNotNull(result);
 
     EntityLineage lineage = getLineage(client, "table", table1.getId().toString(), "0", "1");
     boolean foundUpdated =
-        lineage.getDownstreamEdges().stream()
-            .anyMatch(
-                edge ->
-                    edge.getFromEntity().equals(table1.getId())
-                        && edge.getToEntity().equals(table2.getId())
-                        && edge.getLineageDetails() != null
-                        && edge.getLineageDetails().getDescription().equals("Updated lineage"));
+            lineage.getDownstreamEdges().stream()
+                    .anyMatch(
+                            edge ->
+                                    edge.getFromEntity().equals(table1.getId())
+                                            && edge.getToEntity().equals(table2.getId())
+                                            && edge.getLineageDetails() != null
+                                            && edge.getLineageDetails().getDescription().equals("Updated lineage"));
     assertTrue(foundUpdated);
 
     deleteLineage(client, table1.getEntityReference(), table2.getEntityReference());
@@ -1161,7 +1182,7 @@ public class LineageResourceIT {
   }
 
   private Topic createTopic(OpenMetadataClient client, TestNamespace ns, String topicName)
-      throws Exception {
+          throws Exception {
     MessagingService messagingService = MessagingServiceTestFactory.createKafka(ns);
 
     CreateTopic createTopic = new CreateTopic();
@@ -1185,7 +1206,7 @@ public class LineageResourceIT {
   }
 
   private DashboardDataModel createDashboardDataModel(
-      OpenMetadataClient client, TestNamespace ns, String modelName) throws Exception {
+          OpenMetadataClient client, TestNamespace ns, String modelName) throws Exception {
     DashboardService dashboardService = DashboardServiceTestFactory.createMetabase(ns);
 
     CreateDashboardDataModel createModel = new CreateDashboardDataModel();
@@ -1206,7 +1227,7 @@ public class LineageResourceIT {
   }
 
   private Container createContainer(
-      OpenMetadataClient client, TestNamespace ns, String containerName) throws Exception {
+          OpenMetadataClient client, TestNamespace ns, String containerName) throws Exception {
     StorageService containerService = ContainerServiceTestFactory.createS3(ns);
 
     CreateContainer createContainer = new CreateContainer();
@@ -1228,7 +1249,7 @@ public class LineageResourceIT {
   }
 
   private MlModel createMlModel(OpenMetadataClient client, TestNamespace ns, String modelName)
-      throws Exception {
+          throws Exception {
     MlModelService mlModelService = MlModelServiceTestFactory.createMlflow(ns);
 
     CreateMlModel createMlModel = new CreateMlModel();
@@ -1248,7 +1269,7 @@ public class LineageResourceIT {
   }
 
   private Dashboard createDashboard(
-      OpenMetadataClient client, TestNamespace ns, String dashboardName) throws Exception {
+          OpenMetadataClient client, TestNamespace ns, String dashboardName) throws Exception {
     DashboardService dashboardService = DashboardServiceTestFactory.createMetabase(ns);
 
     CreateDashboard createDashboard = new CreateDashboard();
@@ -1267,7 +1288,7 @@ public class LineageResourceIT {
   }
 
   private void cleanupDashboardDataModel(OpenMetadataClient client, DashboardDataModel model)
-      throws Exception {
+          throws Exception {
     try {
       client.dashboardDataModels().delete(model.getId().toString());
     } catch (Exception e) {
@@ -1297,5 +1318,179 @@ public class LineageResourceIT {
     } catch (Exception e) {
       // Ignore cleanup errors
     }
+  }
+
+  @Test
+  void testExportLineageBasicChain() throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    TestNamespace namespace = new TestNamespace("LineageResourceIT");
+
+    Table t1 = createTable(client, namespace, "export_chain_t1");
+    Table t2 = createTable(client, namespace, "export_chain_t2");
+    Table t3 = createTable(client, namespace, "export_chain_t3");
+    Table t4 = createTable(client, namespace, "export_chain_t4");
+
+    addLineage(client, t1, t2);
+    addLineage(client, t2, t3);
+    addLineage(client, t3, t4);
+
+    String csvContent =
+            exportLineageWithRetry(client, t2.getFullyQualifiedName(), "table", "2", "2", 3);
+    List<CSVRecord> rows = parseCsvRows(csvContent);
+
+    assertEdgeInCsv(rows, t1.getFullyQualifiedName(), t2.getFullyQualifiedName());
+    assertEdgeInCsv(rows, t2.getFullyQualifiedName(), t3.getFullyQualifiedName());
+    assertEdgeInCsv(rows, t3.getFullyQualifiedName(), t4.getFullyQualifiedName());
+
+    deleteLineage(client, t1.getEntityReference(), t2.getEntityReference());
+    deleteLineage(client, t2.getEntityReference(), t3.getEntityReference());
+    deleteLineage(client, t3.getEntityReference(), t4.getEntityReference());
+
+    cleanupTable(client, t1);
+    cleanupTable(client, t2);
+    cleanupTable(client, t3);
+    cleanupTable(client, t4);
+  }
+
+  @Test
+  void testExportLineageWithColumnLineage() throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    TestNamespace namespace = new TestNamespace("LineageResourceIT");
+
+    Table sourceTable = createTableWithMultipleColumns(client, namespace, "export_col_src");
+    Table targetTable = createTableWithMultipleColumns(client, namespace, "export_col_tgt");
+
+    String srcCol1 = sourceTable.getColumns().get(0).getFullyQualifiedName();
+    String srcCol2 = sourceTable.getColumns().get(1).getFullyQualifiedName();
+    String tgtCol1 = targetTable.getColumns().get(0).getFullyQualifiedName();
+    String tgtCol2 = targetTable.getColumns().get(1).getFullyQualifiedName();
+
+    LineageDetails details = new LineageDetails();
+    details
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(srcCol1)).withToColumn(tgtCol1));
+    details
+            .getColumnsLineage()
+            .add(new ColumnLineage().withFromColumns(List.of(srcCol2)).withToColumn(tgtCol2));
+
+    AddLineage addLineage =
+            new AddLineage()
+                    .withEdge(
+                            new EntitiesEdge()
+                                    .withFromEntity(sourceTable.getEntityReference())
+                                    .withToEntity(targetTable.getEntityReference())
+                                    .withLineageDetails(details));
+    executeAddLineage(client, addLineage);
+
+    String csvContent =
+            exportLineageWithRetry(client, sourceTable.getFullyQualifiedName(), "table", "0", "1", 1);
+    List<CSVRecord> rows = parseCsvRows(csvContent);
+
+    assertEdgeInCsv(rows, sourceTable.getFullyQualifiedName(), targetTable.getFullyQualifiedName());
+
+    boolean columnLineagePresent =
+            rows.stream()
+                    .filter(
+                            r ->
+                                    sourceTable.getFullyQualifiedName().equals(r.get("fromFullyQualifiedName*"))
+                                            && targetTable
+                                            .getFullyQualifiedName()
+                                            .equals(r.get("toFullyQualifiedName*")))
+                    .anyMatch(r -> r.get("columnLineage") != null && !r.get("columnLineage").isEmpty());
+    assertTrue(columnLineagePresent);
+
+    deleteLineage(client, sourceTable.getEntityReference(), targetTable.getEntityReference());
+    cleanupTable(client, sourceTable);
+    cleanupTable(client, targetTable);
+  }
+
+  @Test
+  void testExportLineageVaryingDepths() throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    TestNamespace namespace = new TestNamespace("LineageResourceIT");
+
+    Table t1 = createTable(client, namespace, "export_depth_t1");
+    Table t2 = createTable(client, namespace, "export_depth_t2");
+    Table t3 = createTable(client, namespace, "export_depth_t3");
+    Table t4 = createTable(client, namespace, "export_depth_t4");
+    Table t5 = createTable(client, namespace, "export_depth_t5");
+
+    addLineage(client, t1, t2);
+    addLineage(client, t2, t3);
+    addLineage(client, t3, t4);
+    addLineage(client, t4, t5);
+
+    // Depth 1,1: direct neighbors of t3 are present
+    String csvDepth1 =
+            exportLineageWithRetry(client, t3.getFullyQualifiedName(), "table", "1", "1", 2);
+    List<CSVRecord> rowsDepth1 = parseCsvRows(csvDepth1);
+    assertEdgeInCsv(rowsDepth1, t2.getFullyQualifiedName(), t3.getFullyQualifiedName());
+    assertEdgeInCsv(rowsDepth1, t3.getFullyQualifiedName(), t4.getFullyQualifiedName());
+
+    // Depth 2,2: extended chain edges t1→t2 and t4→t5 are also present
+    String csvDepth2 =
+            exportLineageWithRetry(client, t3.getFullyQualifiedName(), "table", "2", "2", 4);
+    List<CSVRecord> rowsDepth2 = parseCsvRows(csvDepth2);
+    assertEdgeInCsv(rowsDepth2, t1.getFullyQualifiedName(), t2.getFullyQualifiedName());
+    assertEdgeInCsv(rowsDepth2, t4.getFullyQualifiedName(), t5.getFullyQualifiedName());
+    assertTrue(rowsDepth2.size() > rowsDepth1.size());
+
+    deleteLineage(client, t1.getEntityReference(), t2.getEntityReference());
+    deleteLineage(client, t2.getEntityReference(), t3.getEntityReference());
+    deleteLineage(client, t3.getEntityReference(), t4.getEntityReference());
+    deleteLineage(client, t4.getEntityReference(), t5.getEntityReference());
+
+    cleanupTable(client, t1);
+    cleanupTable(client, t2);
+    cleanupTable(client, t3);
+    cleanupTable(client, t4);
+    cleanupTable(client, t5);
+  }
+
+  private String exportLineageWithRetry(
+          OpenMetadataClient client,
+          String fqn,
+          String type,
+          String upstreamDepth,
+          String downstreamDepth,
+          int expectedMinRows) {
+    String[] holder = {null};
+    Awaitility.await("Export lineage CSV with at least " + expectedMinRows + " rows")
+            .atMost(Duration.ofSeconds(60))
+            .pollDelay(Duration.ofMillis(500))
+            .pollInterval(Duration.ofSeconds(2))
+            .ignoreExceptions()
+            .until(
+                    () -> {
+                      String csv =
+                              client.lineage().exportLineage(fqn, type, upstreamDepth, downstreamDepth);
+                      try (CSVParser parser =
+                                   CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csv))) {
+                        List<CSVRecord> rows = parser.getRecords();
+                        if (rows.size() >= expectedMinRows) {
+                          holder[0] = csv;
+                          return true;
+                        }
+                      }
+                      return false;
+                    });
+    return holder[0];
+  }
+
+  private List<CSVRecord> parseCsvRows(String csvContent) throws IOException {
+    try (CSVParser parser =
+                 CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new StringReader(csvContent))) {
+      return parser.getRecords();
+    }
+  }
+
+  private void assertEdgeInCsv(List<CSVRecord> rows, String fromFqn, String toFqn) {
+    boolean found =
+            rows.stream()
+                    .anyMatch(
+                            r ->
+                                    fromFqn.equals(r.get("fromFullyQualifiedName*"))
+                                            && toFqn.equals(r.get("toFullyQualifiedName*")));
+    assertTrue(found, String.format("Expected edge %s -> %s not found in CSV", fromFqn, toFqn));
   }
 }
