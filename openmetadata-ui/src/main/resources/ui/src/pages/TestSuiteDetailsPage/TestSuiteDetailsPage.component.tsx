@@ -75,7 +75,7 @@ import {
 } from '../../pages/DataQuality/DataQualityPage.interface';
 import { getIngestionPipelines } from '../../rest/ingestionPipelineAPI';
 import {
-  addTestCaseToLogicalTestSuite,
+  addTestCasesToLogicalTestSuiteBulk,
   getListTestCaseBySearch,
   getTestSuiteByName,
   ListTestCaseParamsBySearch,
@@ -260,17 +260,15 @@ const TestSuiteDetailsPage = () => {
     handlePageChange(INITIAL_PAGING_VALUE);
   };
 
-  const handleAddTestCaseSubmit = async (testCases: TestCase[]) => {
-    const testCaseIds = testCases.reduce((ids, curr) => {
-      return curr.id ? [...ids, curr.id] : ids;
-    }, [] as string[]);
+  const handleAddTestCaseSubmit = async (payload: {
+    selectAll: boolean;
+    includeIds: string[];
+    excludeIds: string[];
+  }) => {
     try {
-      await addTestCaseToLogicalTestSuite({
-        testCaseIds,
-        testSuiteId,
-      });
+      await addTestCasesToLogicalTestSuiteBulk(testSuiteId ?? '', payload);
       setIsTestCaseModalOpen(false);
-      fetchTestCases();
+      await fetchTestCases();
     } catch (error) {
       showErrorToast(error as AxiosError);
     }

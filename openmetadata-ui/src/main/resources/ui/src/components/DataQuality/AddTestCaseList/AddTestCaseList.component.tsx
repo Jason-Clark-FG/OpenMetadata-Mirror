@@ -10,7 +10,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Checkbox, Col, List, Row, Space, Typography } from 'antd';
+import {
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  List,
+  Row,
+  Space,
+  Typography,
+} from 'antd';
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { debounce } from 'lodash';
 import isEmpty from 'lodash/isEmpty';
 import VirtualList from 'rc-virtual-list';
@@ -77,7 +87,11 @@ export const AddTestCaseList = ({
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState<string>();
   const [items, setItems] = useState<TestCase[]>([]);
-  const [selectedItems, setSelectedItems] = useState<Map<string, TestCase>>();
+  const [selectedItems, setSelectedItems] = useState<Map<string, TestCase>>(
+    () => new Map()
+  );
+  const [selectAll, setSelectAll] = useState(false);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
   const [pageNumber, setPageNumber] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -309,10 +323,38 @@ export const AddTestCaseList = ({
     ]
   );
 
+  const buildSubmitPayload = useCallback((): {
+    selectAll: boolean;
+    includeIds: string[];
+    excludeIds: string[];
+    testCases: TestCase[];
+  } => {
+    if (selectAll) {
+      return {
+        selectAll: true,
+        includeIds: [],
+        excludeIds: [...excludedIds],
+        testCases: [],
+      };
+    }
+    const cases = [...(selectedItems?.values() ?? [])];
+
+    return {
+      selectAll: false,
+      includeIds: cases.map((c) => c.id ?? '').filter(Boolean),
+      excludeIds: [],
+      testCases: cases,
+    };
+  }, [selectAll, excludedIds, selectedItems]);
+
   const handleSubmit = async () => {
     setIsLoading(true);
-    const testCaseIds = [...(selectedItems?.values() ?? [])];
-    await onSubmit?.(testCaseIds);
+    const {
+      selectAll: sa,
+      includeIds,
+      excludeIds: excl,
+    } = buildSubmitPayload();
+    await onSubmit?.({ selectAll: sa, includeIds, excludeIds: excl });
     setIsLoading(false);
   };
 
@@ -332,62 +374,164 @@ export const AddTestCaseList = ({
     [searchTerm, totalCount, items, isLoading, fetchTestCases, pageNumber]
   );
 
-  const handleSelectAll = useCallback(() => {
-    if (items.length === 0) {
-      return;
-    }
-    const allCurrentlySelected = items.every((item) =>
-      selectedItems?.has(item.id ?? '')
-    );
-    // When selecting: merge current page into selection. When deselecting: clear all pages.
-    if (allCurrentlySelected) {
-      // Deselect all items across all pages.
-      setSelectedItems(new Map());
-      onChange?.([]);
-    } else {
-      // Add current page's items to selection; keep existing selections from other pages.
-      const next = new Map(selectedItems);
-      items.forEach((test) => next.set(test.id ?? '', test));
-      setSelectedItems(next);
-      onChange?.([...next.values()]);
-    }
-  }, [items, selectedItems, onChange]);
-
-  const handleCardClick = (details: TestCase) => {
-    const id = details.id;
-    if (!id) {
-      return;
-    }
-    if (selectedItems?.has(id ?? '')) {
-      setSelectedItems((prevItems) => {
-        const selectedItemMap = new Map();
-
-        prevItems?.forEach(
-          (item) => item.id !== id && selectedItemMap.set(item.id, item)
-        );
-
-        const testCases = [...(selectedItemMap?.values() ?? [])];
-        onChange?.(testCases);
-
-        return selectedItemMap;
+  const emitPartialSelection = useCallback(
+    (map: Map<string, TestCase>) => {
+      const testCases = [...map.values()];
+      onChange?.({
+        selectAll: false,
+        includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+        excludeIds: [],
+        testCases,
       });
-    } else {
-      setSelectedItems((prevItems) => {
-        const selectedItemMap = new Map();
+    },
+    [onChange]
+  );
 
-        prevItems?.forEach((item) => selectedItemMap.set(item.id, item));
-
-        selectedItemMap.set(
-          id,
-          items.find((test) => test.id === id)
-        );
-        const testCases = [...(selectedItemMap?.values() ?? [])];
-        onChange?.(testCases);
-
-        return selectedItemMap;
+  const emitFullSelection = useCallback(
+    (excluded: Set<string>) => {
+      onChange?.({
+        selectAll: true,
+        includeIds: [],
+        excludeIds: [...excluded],
+        testCases: [],
       });
-    }
-  };
+    },
+    [onChange]
+  );
+
+  const loadedItemIds = useMemo(
+    () => items.map((i) => i.id).filter(Boolean) as string[],
+    [items]
+  );
+
+  const isLoadedRowSelected = useCallback(
+    (id: string) => (selectAll ? !excludedIds.has(id) : selectedItems.has(id)),
+    [selectAll, excludedIds, selectedItems]
+  );
+
+  const loadedSelectedCount = useMemo(
+    () => items.filter((i) => i.id && isLoadedRowSelected(i.id)).length,
+    [items, isLoadedRowSelected]
+  );
+
+  const allLoadedSelected =
+    loadedItemIds.length > 0 &&
+    loadedItemIds.every((id) => isLoadedRowSelected(id));
+
+  const showSelectAllTotalLink =
+    !selectAll &&
+    totalCount > items.length &&
+    allLoadedSelected &&
+    items.length > 0;
+
+  const handlePageSelectAllCheckbox = useCallback(
+    (e: CheckboxChangeEvent) => {
+      const checked = e.target.checked;
+      if (items.length === 0) {
+        return;
+      }
+      if (checked) {
+        if (selectAll) {
+          const next = new Set(excludedIds);
+          loadedItemIds.forEach((id) => next.delete(id));
+          setExcludedIds(next);
+          emitFullSelection(next);
+        } else {
+          const next = new Map(selectedItems);
+          items.forEach((t) => {
+            if (t.id) {
+              next.set(t.id, t);
+            }
+          });
+          setSelectedItems(next);
+          emitPartialSelection(next);
+        }
+      } else if (selectAll) {
+        // Unchecking after global "select all N test cases" should reset
+        // back to local mode with no selected rows.
+        const empty = new Map<string, TestCase>();
+        setSelectAll(false);
+        setExcludedIds(new Set());
+        setSelectedItems(empty);
+        emitPartialSelection(empty);
+      } else {
+        const next = new Map(selectedItems);
+        loadedItemIds.forEach((id) => next.delete(id));
+        setSelectedItems(next);
+        emitPartialSelection(next);
+      }
+    },
+    [
+      items,
+      selectAll,
+      excludedIds,
+      selectedItems,
+      loadedItemIds,
+      emitPartialSelection,
+      emitFullSelection,
+    ]
+  );
+
+  const handleSelectAllMatchingTotal = useCallback(() => {
+    setSelectAll(true);
+    setExcludedIds(new Set());
+    setSelectedItems(new Map());
+    emitFullSelection(new Set());
+  }, [emitFullSelection]);
+
+  const handleCardClick = useCallback(
+    (details: TestCase) => {
+      const id = details.id;
+      if (!id) {
+        return;
+      }
+      if (selectAll) {
+        const nextExcluded = new Set(excludedIds);
+        if (nextExcluded.has(id)) {
+          nextExcluded.delete(id);
+        } else {
+          nextExcluded.add(id);
+        }
+        setExcludedIds(nextExcluded);
+        onChange?.({
+          selectAll: true,
+          includeIds: [],
+          excludeIds: [...nextExcluded],
+          testCases: [],
+        });
+      } else {
+        if (selectedItems?.has(id)) {
+          const selectedItemMap = new Map<string, TestCase>();
+          selectedItems.forEach(
+            (item) => item.id !== id && selectedItemMap.set(item.id ?? '', item)
+          );
+          setSelectedItems(selectedItemMap);
+          const testCases = [...selectedItemMap.values()];
+          onChange?.({
+            selectAll: false,
+            includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+            excludeIds: [],
+            testCases,
+          });
+        } else {
+          const test = items.find((t) => t.id === id);
+          if (test) {
+            const selectedItemMap = new Map(selectedItems);
+            selectedItemMap.set(id, test);
+            setSelectedItems(selectedItemMap);
+            const testCases = [...selectedItemMap.values()];
+            onChange?.({
+              selectAll: false,
+              includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+              excludeIds: [],
+              testCases,
+            });
+          }
+        }
+      }
+    },
+    [selectAll, selectedItems, items, excludedIds, onChange]
+  );
   useEffect(() => {
     fetchTestCases({ searchText: searchTerm });
   }, [
@@ -469,7 +613,11 @@ export const AddTestCaseList = ({
                       </Typography.Paragraph>
 
                       <Checkbox
-                        checked={selectedItems?.has(test.id ?? '')}
+                        checked={
+                          selectAll
+                            ? !excludedIds.has(test.id ?? '')
+                            : selectedItems?.has(test.id ?? '')
+                        }
                         data-testid={`checkbox-${test.name}`}
                       />
                     </Space>
@@ -510,7 +658,17 @@ export const AddTestCaseList = ({
         </Col>
       );
     }
-  }, [items, listSource, selectedItems, isLoading, onScroll]);
+  }, [
+    items,
+    listSource,
+    selectedItems,
+    selectAll,
+    excludedIds,
+    isLoading,
+    onScroll,
+    handleCardClick,
+    t,
+  ]);
 
   const handleFilterChange = useCallback(
     (values: SearchDropdownOption[], searchKey: AddTestCaseListFilterKey) => {
@@ -576,7 +734,7 @@ export const AddTestCaseList = ({
   );
 
   return (
-    <Row gutter={[0, 16]}>
+    <Row gutter={[0, 8]}>
       <Col span={24}>
         <Searchbar
           removeMargin
@@ -590,29 +748,53 @@ export const AddTestCaseList = ({
         />
       </Col>
       <Col span={24}>
-        <Row wrap align="middle" justify="space-between">
-          <AddTestCaseListFilters
-            filterLoading={filterLoading}
-            filterOptions={filterOptions}
-            filterSelectedKeys={filterSelectedKeys}
-            getPopupContainer={getPopupContainer}
-            hideTableFilter={hideTableFilter}
-            onChange={handleFilterChange}
-            onSearch={handleFilterSearch}
-          />
-          {items.length > 0 && (
-            <Button
-              className="p-0 h-auto font-normal"
-              data-testid="select-all-test-cases"
-              type="link"
-              onClick={handleSelectAll}>
-              {t('label.select-all')}
-              {(selectedItems?.size ?? 0) > 0 &&
-                ` (${selectedItems?.size ?? 0})`}
-            </Button>
-          )}
-        </Row>
+        <AddTestCaseListFilters
+          filterLoading={filterLoading}
+          filterOptions={filterOptions}
+          filterSelectedKeys={filterSelectedKeys}
+          getPopupContainer={getPopupContainer}
+          hideTableFilter={hideTableFilter}
+          onChange={handleFilterChange}
+          onSearch={handleFilterSearch}
+        />
       </Col>
+      {items.length > 0 && (
+        <Col className="m-b-xs" span={24}>
+          <Divider className="m-b-sm m-t-0" />
+          <Space wrap align="center" className="w-full">
+            <Checkbox
+              checked={allLoadedSelected}
+              data-testid="select-all-test-cases"
+              onChange={handlePageSelectAllCheckbox}
+            />
+            <Typography.Text>
+              {loadedSelectedCount > 0 || selectAll
+                ? t('label.n-selected', {
+                    count: selectAll
+                      ? Math.max(totalCount - excludedIds.size, 0)
+                      : loadedSelectedCount,
+                  })
+                : `${t('label.select-all')} (${items.length})`}
+            </Typography.Text>
+            {showSelectAllTotalLink && (
+              <>
+                <Typography.Text className="text-grey-muted" type="secondary">
+                  |
+                </Typography.Text>
+                <Button
+                  className="h-auto p-0 font-normal"
+                  data-testid="select-all-total-test-cases"
+                  type="link"
+                  onClick={handleSelectAllMatchingTotal}>
+                  {t('label.select-all-count-test-cases', {
+                    count: totalCount,
+                  })}
+                </Button>
+              </>
+            )}
+          </Space>
+        </Col>
+      )}
       {renderList}
       {showButton && (
         <Col className="d-flex justify-end items-center p-y-sm gap-4" span={24}>
