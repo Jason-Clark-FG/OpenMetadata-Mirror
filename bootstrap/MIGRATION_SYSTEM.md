@@ -139,6 +139,38 @@ The parsers split SQL files into individual statements via `SqlStatementIterator
    - Ensure correct SQL syntax for target database (MySQL vs PostgreSQL)
    - Validate database-specific features (JSON vs JSONB, AUTO_INCREMENT vs SERIAL)
 
+4. **Azure Database for PostgreSQL Flexible Server — `pg_trgm` extension not allowed** *(v1.11.0+)*:
+
+   Starting from migration `1.11.0`, OpenMetadata creates the `pg_trgm` extension to enable trigram-based GIN indexes for substring searches on `tag_usage`. On **Azure Database for PostgreSQL Flexible Server**, extensions must be explicitly allow-listed before they can be installed; attempting `CREATE EXTENSION IF NOT EXISTS pg_trgm` without this will fail with:
+
+   ```
+   ERROR: extension "pg_trgm" is not allow-listed for users in Azure Database for PostgreSQL
+   ```
+
+   **Fix**: Enable `pg_trgm` in Azure before running migrations.
+
+   **Option A — Azure Portal**:
+   1. Go to your Azure Database for PostgreSQL Flexible Server resource.
+   2. Navigate to **Server parameters**.
+   3. Search for `azure.extensions`.
+   4. Add `PG_TRGM` to the allowed extensions list and save.
+
+   **Option B — Azure CLI**:
+   ```bash
+   az postgres flexible-server parameter set \
+     --resource-group <resource-group> \
+     --server-name <server-name> \
+     --name azure.extensions \
+     --value PG_TRGM
+   ```
+
+   After enabling the extension, re-run the OpenMetadata migration:
+   ```bash
+   ./openmetadata-ops.sh migrate
+   ```
+
+   > **Note**: If you are running multiple Azure PostgreSQL extensions for OpenMetadata (e.g., `pgcrypto` for the base schema), you can comma-separate them: `--value PGCRYPTO,PG_TRGM`.
+
 ### Migration Recovery
 
 If migrations fail:

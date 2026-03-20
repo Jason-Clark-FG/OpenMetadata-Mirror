@@ -8,6 +8,34 @@ $$note
 Note that we only support officially supported Postgres versions. You can check the version list <a href="https://www.postgresql.org/support/versioning/" target="_blank">here</a>.
 $$
 
+### Azure Database for PostgreSQL — Required Extensions
+
+If you are deploying OpenMetadata with **Azure Database for PostgreSQL Flexible Server**, you must allow-list the required PostgreSQL extensions before running migrations. Azure restricts extension creation by default.
+
+Starting from OpenMetadata **v1.11.0**, the migration requires the `pg_trgm` extension (for trigram-based tag search). Without enabling it, the migration will fail with:
+
+```
+ERROR: extension "pg_trgm" is not allow-listed for users in Azure Database for PostgreSQL
+```
+
+**To enable the required extensions via Azure Portal**:
+1. Go to your Azure Database for PostgreSQL Flexible Server resource.
+2. Navigate to **Server parameters**.
+3. Search for `azure.extensions`.
+4. Add the following extensions to the allowed list: `PGCRYPTO,PG_TRGM`
+5. Save the configuration.
+
+**To enable them via Azure CLI**:
+```bash
+az postgres flexible-server parameter set \
+  --resource-group <resource-group> \
+  --server-name <server-name> \
+  --name azure.extensions \
+  --value PGCRYPTO,PG_TRGM
+```
+
+After enabling the extensions, proceed with the OpenMetadata migration normally.
+
 ### Metadata Extraction
 
 OpenMetadata extracts metadata from PostgreSQL using two main sources:
