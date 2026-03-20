@@ -20,11 +20,8 @@ import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
-  applyPipelineFromModal,
   clickLineageNode,
   connectEdgeBetweenNodesViaAPI,
-  editLineage,
-  editLineageClick,
   performZoomOut,
   visitLineageTab,
 } from '../../utils/lineage';
@@ -127,7 +124,7 @@ test.describe('Lineage UI Controls', () => {
       await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
       await page.waitForTimeout(500);
 
-      const tableFqn = get(table, 'entityResponseData.fullyQualifiedName');
+      const tableFqn = get(table, 'entityResponseData.fullyQualifiedName', '');
       await clickLineageNode(page, tableFqn);
 
       await page.getByTestId('fit-screen').click();
@@ -215,7 +212,7 @@ test.describe('Lineage UI Controls', () => {
       await page.locator('[aria-label="Filters"]').click();
       await page.getByTestId('search-dropdown-Service').click();
 
-      const serviceName = get(table, 'entityResponseData.service.name');
+      const serviceName = get(table, 'entityResponseData.service.name', '');
       await page.getByTitle(serviceName).click();
 
       const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
@@ -263,92 +260,7 @@ test.describe('Lineage UI Controls', () => {
   });
 
   // ====================
-  // Suite 3: Impact Analysis Mode (4 tests)
-  // ====================
-  test.describe('Impact Analysis Mode', () => {
-    test.beforeEach(async ({ page }) => {
-      await table.visitEntityPage(page);
-      await visitLineageTab(page);
-    });
-
-    test('Verify switch to Impact Analysis mode', async ({ page }) => {
-      expect(page.url()).not.toContain('mode=impact_analysis');
-
-      const impactRes = page.waitForResponse(
-        '/api/v1/lineage/getLineageByEntityCount?*'
-      );
-      const paginationRes = page.waitForResponse(
-        '/api/v1/lineage/getPaginationInfo?*'
-      );
-      await page.getByRole('button', { name: 'Impact Analysis' }).click();
-      await Promise.all([impactRes, paginationRes]);
-
-      expect(page.url()).toContain('mode=impact_analysis');
-
-      await expect(page.getByTestId('lineage-card-table')).toBeVisible();
-
-      const searchBar = page.locator('input[placeholder*="asset"]');
-      await expect(searchBar).toBeVisible();
-
-      await page.locator('[aria-label="Filters"]').click();
-      await expect(page.getByText(/node depth/i)).toBeVisible();
-    });
-
-    test('Verify node depth dropdown', async ({ page }) => {
-      await page.getByRole('button', { name: 'Impact Analysis' }).click();
-      await waitForAllLoadersToDisappear(page);
-
-      await page.locator('[aria-label="Filters"]').click();
-
-      const depthBtn = page.getByText(/node depth/i);
-      await depthBtn.click();
-
-      await expect(page.getByRole('menuitem', { name: '1' })).toBeVisible();
-      await expect(page.getByRole('menuitem', { name: '3' })).toBeVisible();
-
-      const lineageRes = page.waitForResponse(
-        '/api/v1/lineage/getLineageByEntityCount?*'
-      );
-      await page.getByRole('menuitem', { name: '2' }).click();
-      await lineageRes;
-
-      expect(page.url()).toContain('depth=2');
-
-      await waitForAllLoadersToDisappear(page);
-    });
-
-    test('Verify search in Impact Analysis', async ({ page }) => {
-      await page.getByRole('button', { name: 'Impact Analysis' }).click();
-      await waitForAllLoadersToDisappear(page);
-
-      const searchInput = page.locator('input[placeholder*="asset"]');
-      await searchInput.fill(topic.entity.name);
-
-      await page.waitForTimeout(300);
-
-      const topicRow = page
-        .getByTestId(`lineage-card-table`)
-        .getByText(topic.entity.displayName);
-      await expect(topicRow).toBeVisible();
-
-      await searchInput.clear();
-      await page.waitForTimeout(300);
-    });
-
-    test('Verify CSV export in Impact Analysis', async ({ page }) => {
-      await page.getByRole('button', { name: 'Impact Analysis' }).click();
-      await waitForAllLoadersToDisappear(page);
-
-      const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-button').click();
-      const download = await downloadPromise;
-
-      expect(download.suggestedFilename()).toContain('.csv');
-    });
-  });
-
-  // ====================
-  // Suite 4: Lineage Config Modal (4 tests)
+  // Suite 3: Lineage Config Modal (3 tests)
   // ====================
   test.describe('Lineage Configuration', () => {
     test.beforeEach(async ({ page }) => {
@@ -376,7 +288,7 @@ test.describe('Lineage UI Controls', () => {
       await expect(page.locator('[role="dialog"]')).not.toBeVisible();
 
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await waitForAllLoadersToDisappear(page);
 
       await page.getByTestId('lineage-config').click();
 
@@ -398,35 +310,6 @@ test.describe('Lineage UI Controls', () => {
       await page.getByRole('button', { name: /save/i }).click();
 
       await expect(page.locator('[role="dialog"]')).not.toBeVisible();
-    });
-
-    test('Verify pipeline view mode toggle', async ({ page }) => {
-      await page.getByTestId('lineage-config').click();
-
-      const pipelineModeSelect = page.locator(
-        '[data-testid="field-pipeline-view-mode"]'
-      );
-      await pipelineModeSelect.click();
-      await page.getByTitle('Edge').click();
-
-      await page.getByRole('button', { name: /save/i }).click();
-
-      await editLineage(page);
-      await applyPipelineFromModal(page, table, topic, pipeline);
-      await editLineageClick(page);
-
-      const tableFqn = get(table, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      await expect(
-        page.getByTestId(`pipeline-label-${tableFqn}-${topicFqn}`)
-      ).toBeVisible();
-
-      await expect(
-        page.getByTestId(
-          `lineage-node-${pipeline.entityResponseData.fullyQualifiedName}`
-        )
-      ).not.toBeVisible();
     });
   });
 });

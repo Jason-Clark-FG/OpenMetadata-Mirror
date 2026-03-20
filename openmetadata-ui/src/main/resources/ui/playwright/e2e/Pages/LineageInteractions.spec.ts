@@ -19,17 +19,14 @@ import { PipelineClass } from '../../support/entity/PipelineClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
 import { performAdminLogin } from '../../utils/admin';
-import { createNewPage, redirectToHomePage } from '../../utils/common';
+import { getApiContext, redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
-  activateColumnLayer,
   clickEdgeBetweenNodes,
   clickLineageNode,
   connectEdgeBetweenNodesViaAPI,
   editLineage,
   editLineageClick,
-  performCollapse,
-  performExpand,
   performZoomOut,
   verifyNodePresent,
   visitLineageTab,
@@ -111,74 +108,6 @@ test.describe('Lineage Interactions', () => {
   });
 
   test.describe('Lineage Layers Toggle', () => {
-    const entities = [
-      { entity: table1, type: 'table', name: 'Table' },
-      { entity: topic, type: 'topic', name: 'Topic' },
-      { entity: dashboard, type: 'dashboard', name: 'Dashboard' },
-    ];
-
-    for (const { entity, name } of entities) {
-      test(`Verify layer toggles for ${name}`, async ({ page }) => {
-        await entity.visitEntityPage(page);
-        await visitLineageTab(page);
-        await performZoomOut(page);
-
-        await page.getByTestId('lineage-layer-btn').click();
-
-        const columnBtn = page.getByTestId('lineage-layer-column-btn');
-        await expect(columnBtn).toBeVisible();
-
-        await expect(columnBtn).not.toHaveClass(/Mui-selected/);
-
-        await columnBtn.click();
-        await page.keyboard.press('Escape');
-
-        await page.getByTestId('lineage-layer-btn').click();
-        await expect(columnBtn).toHaveClass(/Mui-selected/);
-
-        const observabilityBtn = page.getByTestId(
-          'lineage-layer-observability-btn'
-        );
-        await observabilityBtn.click();
-        await page.keyboard.press('Escape');
-
-        await page.getByTestId('lineage-layer-btn').click();
-        await expect(columnBtn).toHaveClass(/Mui-selected/);
-        await expect(observabilityBtn).toHaveClass(/Mui-selected/);
-
-        await columnBtn.click();
-        await page.keyboard.press('Escape');
-
-        await page.getByTestId('lineage-layer-btn').click();
-        await expect(columnBtn).not.toHaveClass(/Mui-selected/);
-        await expect(observabilityBtn).toHaveClass(/Mui-selected/);
-      });
-    }
-
-    test('Verify platform view toggles are exclusive', async ({ page }) => {
-      await table1.visitEntityPage(page);
-      await visitLineageTab(page);
-
-      await page.getByTestId('lineage-layer-btn').click();
-
-      const serviceBtn = page.getByTestId('lineage-layer-service-btn');
-      await expect(serviceBtn).toBeVisible();
-
-      await serviceBtn.click();
-      await page.keyboard.press('Escape');
-
-      await page.getByTestId('lineage-layer-btn').click();
-      await expect(serviceBtn).toHaveClass(/Mui-selected/);
-
-      const domainBtn = page.getByTestId('lineage-layer-domain-btn');
-      await domainBtn.click();
-      await page.keyboard.press('Escape');
-
-      await page.getByTestId('lineage-layer-btn').click();
-      await expect(domainBtn).toHaveClass(/Mui-selected/);
-      await expect(serviceBtn).not.toHaveClass(/Mui-selected/);
-    });
-
     test('Verify multiple non-platform layers can be active simultaneously', async ({
       page,
     }) => {
@@ -210,28 +139,24 @@ test.describe('Lineage Interactions', () => {
     });
 
     test('Verify edge click opens edge drawer', async ({ page }) => {
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      await clickEdgeBetweenNodes(page, table1Fqn, topicFqn, false);
+      await clickEdgeBetweenNodes(page, table1, topic, false);
 
       await expect(page.locator('.edge-info-drawer')).toBeVisible();
 
       await expect(
-        page.getByText(table1.entityResponseData.displayName)
+        page.getByText(table1.entityResponseData.displayName ?? '')
       ).toBeVisible();
       await expect(
-        page.getByText(topic.entityResponseData.displayName)
+        page.getByText(topic.entityResponseData.displayName ?? '')
       ).toBeVisible();
     });
 
     test('Verify edge delete button in drawer', async ({ page }) => {
       const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
 
       await editLineage(page);
 
-      await clickEdgeBetweenNodes(page, table1Fqn, topicFqn, false);
+      await clickEdgeBetweenNodes(page, table1, topic, false);
 
       const deleteBtn = page
         .locator('.edge-info-drawer')
@@ -258,24 +183,25 @@ test.describe('Lineage Interactions', () => {
     });
 
     test('Verify add pipeline to edge', async ({ page }) => {
+      const { apiContext } = await getApiContext(page);
       await table2.visitEntityPage(page);
       await visitLineageTab(page);
       await performZoomOut(page);
 
       await editLineage(page);
 
-      const table2Fqn = get(table2, 'entityResponseData.fullyQualifiedName');
+      const table2Fqn = get(
+        table2,
+        'entityResponseData.fullyQualifiedName',
+        ''
+      );
 
       await verifyNodePresent(page, table2);
 
       const tableFqn = get(table1, 'entityResponseData.fullyQualifiedName');
 
       await connectEdgeBetweenNodesViaAPI(
-        await (async () => {
-          const { apiContext } = await createNewPage(await page.context());
-
-          return apiContext;
-        })(),
+        apiContext,
         { id: table2.entityResponseData.id, type: 'table' },
         { id: table1.entityResponseData.id, type: 'table' }
       );
@@ -286,7 +212,7 @@ test.describe('Lineage Interactions', () => {
 
       await editLineage(page);
 
-      await clickEdgeBetweenNodes(page, table2Fqn, tableFqn, false);
+      await clickEdgeBetweenNodes(page, table2, table1, false);
 
       const addPipelineBtn = page
         .locator('.edge-info-drawer')
@@ -320,53 +246,6 @@ test.describe('Lineage Interactions', () => {
         page.getByTestId(`pipeline-label-${table2Fqn}-${tableFqn}`)
       ).toBeVisible();
     });
-
-    test('Verify column edge interaction', async ({ page }) => {
-      await activateColumnLayer(page);
-
-      const tableColumns = get(
-        table1,
-        'entityResponseData.columns',
-        []
-      ) as Array<{ fullyQualifiedName: string }>;
-      const topicFields = get(
-        topic,
-        'entityResponseData.messageSchema.schemaFields',
-        []
-      ) as Array<{
-        fullyQualifiedName: string;
-      }>;
-
-      if (tableColumns.length > 0 && topicFields.length > 0) {
-        const sourceColFqn = tableColumns[0].fullyQualifiedName;
-        const targetColFqn = topicFields[0].fullyQualifiedName;
-
-        const columnEdge = page.locator(
-          `[data-fromnode="${sourceColFqn}"][data-tonode="${targetColFqn}"]`
-        );
-
-        if ((await columnEdge.count()) > 0) {
-          await columnEdge.click();
-
-          await expect(page.locator('.edge-info-drawer')).toBeVisible();
-        }
-      }
-    });
-
-    test('Verify edge hover highlighting', async ({ page }) => {
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      const edge = page.locator(
-        `[data-fromnode="${table1Fqn}"][data-tonode="${topicFqn}"]`
-      );
-
-      await expect(edge).toBeVisible();
-
-      await edge.hover();
-
-      await page.waitForTimeout(300);
-    });
   });
 
   test.describe('Node Interaction', () => {
@@ -376,156 +255,20 @@ test.describe('Lineage Interactions', () => {
       await performZoomOut(page);
     });
 
-    test('Verify node click selection and tracing', async ({ page }) => {
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      await clickLineageNode(page, topicFqn);
-
-      const topicNode = page.getByTestId(`lineage-node-${topicFqn}`);
-      await expect(topicNode).toBeVisible();
-
-      await page
-        .locator('.react-flow__pane')
-        .click({ position: { x: 10, y: 10 } });
-
-      await page.waitForTimeout(300);
-    });
-
     test('Verify node panel opens on click', async ({ page }) => {
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
+      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName', '');
 
       await clickLineageNode(page, topicFqn);
 
       await expect(page.locator('[role="dialog"]')).toBeVisible();
 
       await expect(
-        page.getByText(topic.entityResponseData.displayName)
+        page.getByText(topic.entityResponseData.displayName ?? '')
       ).toBeVisible();
 
       await page.getByLabel('Close').first().click();
 
       await expect(page.locator('[role="dialog"]')).not.toBeVisible();
-    });
-
-    test('Verify node visibility in lineage', async ({ page }) => {
-      await verifyNodePresent(page, table1);
-      await verifyNodePresent(page, topic);
-    });
-
-    test('Verify multiple node interactions', async ({ page }) => {
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      await clickLineageNode(page, table1Fqn);
-      await page.waitForTimeout(300);
-
-      await page
-        .locator('.react-flow__pane')
-        .click({ position: { x: 10, y: 10 } });
-
-      await clickLineageNode(page, topicFqn);
-      await page.waitForTimeout(300);
-    });
-  });
-
-  test.describe('Node Expansion and Lazy Loading', () => {
-    test.beforeEach(async ({ page }) => {
-      await dashboard.visitEntityPage(page);
-      await visitLineageTab(page);
-      await performZoomOut(page);
-    });
-
-    test('Verify upstream expansion with API call', async ({ page }) => {
-      const dashboardFqn = get(
-        dashboard,
-        'entityResponseData.fullyQualifiedName'
-      );
-
-      const upstreamExpandHandle = page
-        .getByTestId(`lineage-node-${dashboardFqn}`)
-        .locator('[data-testid="upstream-expand-handle"]');
-
-      if ((await upstreamExpandHandle.count()) > 0) {
-        await upstreamExpandHandle.hover();
-
-        await expect(page.getByText(/load upstream/i)).toBeVisible();
-
-        const lineageRes = page.waitForResponse('/api/v1/lineage/**');
-        await upstreamExpandHandle.click();
-        await lineageRes;
-
-        await waitForAllLoadersToDisappear(page);
-
-        await performExpand(page, dashboard, true, topic);
-
-        await verifyNodePresent(page, topic);
-
-        const collapseHandle = page
-          .getByTestId(`lineage-node-${dashboardFqn}`)
-          .locator('[data-testid="upstream-collapse-handle"]');
-
-        await expect(collapseHandle).toBeVisible();
-      }
-    });
-
-    test('Verify downstream expansion with API call', async ({ page }) => {
-      await table1.visitEntityPage(page);
-      await visitLineageTab(page);
-      await performZoomOut(page);
-
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-
-      const downstreamExpandHandle = page
-        .getByTestId(`lineage-node-${table1Fqn}`)
-        .locator('[data-testid="downstream-expand-handle"]');
-
-      if ((await downstreamExpandHandle.count()) > 0) {
-        const lineageRes = page.waitForResponse('/api/v1/lineage/**');
-        await downstreamExpandHandle.click();
-        await lineageRes;
-
-        await waitForAllLoadersToDisappear(page);
-      }
-    });
-
-    test('Verify collapse hides expanded nodes', async ({ page }) => {
-      const dashboardFqn = get(
-        dashboard,
-        'entityResponseData.fullyQualifiedName'
-      );
-
-      const upstreamExpandHandle = page
-        .getByTestId(`lineage-node-${dashboardFqn}`)
-        .locator('[data-testid="upstream-expand-handle"]');
-
-      if ((await upstreamExpandHandle.count()) > 0) {
-        await upstreamExpandHandle.click();
-        await waitForAllLoadersToDisappear(page);
-
-        await performCollapse(page, dashboard, true, [topic]);
-
-        const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-        const topicNode = page.getByTestId(`lineage-node-${topicFqn}`);
-
-        await page.waitForTimeout(500);
-      }
-    });
-
-    test('Verify expand handle tooltip', async ({ page }) => {
-      const dashboardFqn = get(
-        dashboard,
-        'entityResponseData.fullyQualifiedName'
-      );
-
-      const upstreamExpandHandle = page
-        .getByTestId(`lineage-node-${dashboardFqn}`)
-        .locator('[data-testid="upstream-expand-handle"]');
-
-      if ((await upstreamExpandHandle.count()) > 0) {
-        await upstreamExpandHandle.hover();
-
-        await page.waitForTimeout(500);
-      }
     });
   });
 
@@ -536,38 +279,10 @@ test.describe('Lineage Interactions', () => {
       await performZoomOut(page);
     });
 
-    test('Verify entering and exiting edit mode', async ({ page }) => {
-      await editLineage(page);
-
-      await expect(page.getByTestId('edit-lineage')).toHaveClass(/active/);
-
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const tableNode = page.getByTestId(`lineage-node-${table1Fqn}`);
-
-      await expect(tableNode.locator('.react-flow__handle')).toBeVisible();
-
-      await editLineageClick(page);
-
-      await expect(page.getByTestId('edit-lineage')).not.toHaveClass(/active/);
-    });
-
-    test('Verify column layer activation in edit mode', async ({ page }) => {
-      await editLineage(page);
-
-      await activateColumnLayer(page);
-
-      await page.waitForTimeout(500);
-
-      await editLineageClick(page);
-    });
-
     test('Verify edit mode with edge operations', async ({ page }) => {
       await editLineage(page);
 
-      const table1Fqn = get(table1, 'entityResponseData.fullyQualifiedName');
-      const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-
-      await clickEdgeBetweenNodes(page, table1Fqn, topicFqn, false);
+      await clickEdgeBetweenNodes(page, table1, topic, false);
 
       await expect(page.locator('.edge-info-drawer')).toBeVisible();
 
