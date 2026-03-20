@@ -4515,7 +4515,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (existing != null
         && existing.getTagLabel() != null
         && incoming.getTagLabel() != null
-        && existing.getTagLabel().getTagFQN().equals(incoming.getTagLabel().getTagFQN())) {
+        && existing.getTagLabel().getTagFQN().equals(incoming.getTagLabel().getTagFQN())
+        && Objects.equals(existing.getExpiryDate(), incoming.getExpiryDate())) {
       return;
     }
     deleteCertificationTag(entity.getFullyQualifiedName());
