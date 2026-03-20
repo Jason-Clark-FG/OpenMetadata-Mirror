@@ -17,7 +17,7 @@
  */
 export interface ManualTask {
     branches?: string[];
-    config?:   NodeConfiguration;
+    config:    NodeConfiguration;
     /**
      * Description of the Node.
      */
@@ -31,7 +31,7 @@ export interface ManualTask {
     /**
      * Name that identifies this Node.
      */
-    name?:    string;
+    name:     string;
     output?:  string[];
     subType?: string;
     type?:    string;
@@ -40,11 +40,33 @@ export interface ManualTask {
 
 export interface NodeConfiguration {
     /**
+     * Configuration for who gets assigned to the created task.
+     */
+    assignees?: Assignees;
+    /**
      * Name of the task template. Resolved at runtime to full configuration (statuses,
-     * terminalStatuses, taskCategory, taskType, assignees). Will become an entity reference
-     * when Task Templates are implemented.
+     * terminalStatuses, taskCategory, taskType). Will become an entity reference when Task
+     * Templates are implemented.
      */
     template: string;
+}
+
+/**
+ * Configuration for who gets assigned to the created task.
+ */
+export interface Assignees {
+    /**
+     * Add the entity Owners to the assignees list.
+     */
+    addOwners?: boolean;
+    /**
+     * Add the entity Reviewers to the assignees list.
+     */
+    addReviewers?: boolean;
+    /**
+     * Specific users to add to the assignees list (by fully qualified name).
+     */
+    specificUsers?: string[];
 }
 
 export interface InputNamespaceMap {
