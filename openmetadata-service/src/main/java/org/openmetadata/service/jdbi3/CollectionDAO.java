@@ -3101,9 +3101,19 @@ public interface CollectionDAO {
 
   interface TaskWorkflowOutboxDAO {
 
-    @SqlUpdate(
-        "INSERT INTO task_workflow_outbox (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
-            + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)")
+    @ConnectionAwareSqlUpdate(
+        value =
+            "INSERT IGNORE INTO task_workflow_outbox"
+                + " (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
+                + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "INSERT INTO task_workflow_outbox"
+                + " (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
+                + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)"
+                + " ON CONFLICT (id) DO NOTHING",
+        connectionType = POSTGRES)
     void insertEntry(
         @Bind("id") String id,
         @Bind("taskId") String taskId,
