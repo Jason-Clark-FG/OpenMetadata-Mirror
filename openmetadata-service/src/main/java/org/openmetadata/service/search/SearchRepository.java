@@ -1676,7 +1676,7 @@ public class SearchRepository {
 
     String oldFQN = tagEntity.getFullyQualifiedName();
     for (FieldChange field : changeDescription.getFieldsUpdated()) {
-      if (field.getName().contains(FIELD_NAME) && field.getOldValue() != null) {
+      if (FIELD_NAME.equals(field.getName()) && field.getOldValue() != null) {
         String parentFQN = FullyQualifiedName.getParentFQN(tagEntity.getFullyQualifiedName());
         if (!nullOrEmpty(parentFQN)) {
           oldFQN = FullyQualifiedName.add(parentFQN, field.getOldValue().toString());
@@ -1707,6 +1707,9 @@ public class SearchRepository {
           .getAssetCertificationSettingOrDefault()
           .getAllowedClassification();
     } catch (Exception e) {
+      LOG.warn(
+          "Failed to retrieve certification classification from settings; skipping certification search update",
+          e);
       return null;
     }
   }
@@ -1825,7 +1828,7 @@ public class SearchRepository {
           newFQN = FullyQualifiedName.quoteName(field.getNewValue().toString());
         }
 
-        if (field.getName().contains(FIELD_NAME)) {
+        if (FIELD_NAME.equals(field.getName())) {
           searchClient.updateByFqnPrefix(GLOBAL_SEARCH_ALIAS, oldFQN, newFQN, TAGS_FQN);
         }
 

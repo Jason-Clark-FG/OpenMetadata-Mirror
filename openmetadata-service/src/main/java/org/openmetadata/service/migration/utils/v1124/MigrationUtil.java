@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.statement.PreparedBatch;
@@ -313,12 +313,6 @@ public class MigrationUtil {
       return 0;
     }
 
-    // Pin the exact row IDs from the SELECT so the UPDATE targets the same rows — not an
-    // independently re-evaluated batch that may differ under concurrent load or non-deterministic
-    // ordering.
-    List<String> selectedIds =
-        rows.stream().map(r -> r.get("id").toString()).collect(Collectors.toList());
-
     String insertSql =
         isPostgres
             ? "INSERT INTO tag_usage "
@@ -336,15 +330,15 @@ public class MigrationUtil {
                 ? " SET json = (json::jsonb - 'certification')::json WHERE id IN (<ids>)"
                 : " SET json = JSON_REMOVE(json, '$.certification') WHERE id IN (<ids>)");
 
-    // INSERT first — if this succeeds but the UPDATE below fails, entities will have certification
-    // in both JSON and tag_usage. The app reads from tag_usage so certification remains visible.
-    // This is the safe failure mode: stale JSON is benign; missing tag_usage entry is not.
-    // We intentionally do NOT wrap in a transaction: this migration runs once in production (no
-    // --force re-run), so a rollback would permanently skip those rows rather than retry them.
+    // Build selectedIds and INSERT batch together — only include rows with a valid tagFQN.
+    // Rows with null tagFQN are skipped so the UPDATE won't strip their certification from JSON
+    // without a corresponding tag_usage entry (which would be silent data loss).
+    List<String> selectedIds = new ArrayList<>();
     PreparedBatch batch = handle.prepareBatch(insertSql);
     for (Map<String, Object> row : rows) {
       String tagFQN = (String) row.get("tagfqn");
       if (tagFQN == null) continue;
+      selectedIds.add(row.get("id").toString());
       batch
           .bind("source", CERT_SOURCE)
           .bind("tagFQN", tagFQN)
@@ -354,6 +348,9 @@ public class MigrationUtil {
           .bind("state", CERT_STATE)
           .bind("metadata", buildCertMetadata(row.get("expirydate")))
           .add();
+    }
+    if (selectedIds.isEmpty()) {
+      return rows.size();
     }
     batch.execute();
     handle.createUpdate(updateSql).bindList("ids", selectedIds).execute();
