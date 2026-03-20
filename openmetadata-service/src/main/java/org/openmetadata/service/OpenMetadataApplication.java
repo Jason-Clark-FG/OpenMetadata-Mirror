@@ -180,7 +180,7 @@ import org.quartz.SchedulerException;
     info =
         @Info(
             title = "OpenMetadata APIs",
-            version = "1.12.3",
+            version = "1.12.4",
             description = "Common types and API definition for OpenMetadata",
             contact =
                 @Contact(
