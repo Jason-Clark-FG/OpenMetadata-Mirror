@@ -10,6 +10,12 @@
       "type": "string",
       "enum": ["LineagePropagationAction"],
       "default": "LineagePropagationAction"
+    },
+    "propagationFilterModeType": {
+      "description": "Determines how the filter selects entities for lineage propagation. 'TARGET': filtered entities receive metadata from upstream lineage. 'SOURCE': filtered entities push their metadata downstream.",
+      "type": "string",
+      "enum": ["TARGET", "SOURCE"],
+      "default": "TARGET"
     }
   },
   "properties": {
@@ -18,6 +24,12 @@
       "description": "Application Type",
       "$ref": "#/definitions/lineagePropagationActionType",
       "default": "LineagePropagationAction"
+    },
+    "propagationFilterMode": {
+      "title": "Propagation Filter Mode",
+      "description": "Determines how the filter selects entities. 'TARGET' (default): filtered entities receive metadata from upstream lineage. 'SOURCE': filtered entities push their metadata downstream to all discovered entities via lineage.",
+      "$ref": "#/definitions/propagationFilterModeType",
+      "default": "TARGET"
     },
     "propagateDescription": {
       "title": "Propagate Description",
