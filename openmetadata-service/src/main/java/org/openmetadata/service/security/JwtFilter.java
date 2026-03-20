@@ -15,6 +15,7 @@ package org.openmetadata.service.security;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.security.SecurityUtil.findEmailFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.findUserNameFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.isBot;
@@ -60,7 +61,9 @@ import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.LogoutRequest;
 import org.openmetadata.schema.auth.ServiceTokenType;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
@@ -163,8 +166,6 @@ public class JwtFilter implements ContainerRequestFilter {
     ImpersonationContext.clear();
     try {
       String tokenFromHeader = extractToken(requestContext.getHeaders());
-      LOG.debug("Token from header:{}", tokenFromHeader);
-
       Map<String, Claim> claims = validateJwtAndGetClaims(tokenFromHeader);
       String userName =
           findUserNameFromClaims(jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims);
@@ -224,9 +225,12 @@ public class JwtFilter implements ContainerRequestFilter {
         enforcePrincipalDomain);
 
     // Validate Bot token matches what was created in OM
-    // Skip validation for impersonation tokens - they are generated dynamically and not stored in
-    // cache
-    if (impersonatedBy == null && isBot(claims)) {
+    // Skip validation for:
+    // - impersonation tokens: generated dynamically and not stored in cache
+    // - trusted bots (allowImpersonation=true): may use dynamically provisioned tokens
+    //   (e.g., from a secrets manager) that don't match the cached token. The JWT signature
+    //   is already verified at this point, so the cache check is redundant for trusted bots.
+    if (impersonatedBy == null && isBot(claims) && !isTrustedBot(userName)) {
       validateBotToken(tokenFromHeader, userName);
     }
 
@@ -286,7 +290,6 @@ public class JwtFilter implements ContainerRequestFilter {
   }
 
   public static String extractToken(String tokenFromHeader) {
-    LOG.debug("Request Token:{}", tokenFromHeader);
     return extractTokenFromString(tokenFromHeader);
   }
 
@@ -309,6 +312,22 @@ public class JwtFilter implements ContainerRequestFilter {
     }
     throw AuthenticationException.getInvalidTokenException(
         "The given token does not match the current bot's token!");
+  }
+
+  /**
+   * Checks if a bot is trusted (has allowImpersonation enabled). Trusted bots may use dynamically
+   * provisioned tokens that don't match the DB-cached token, so they skip the cache validation.
+   */
+  private boolean isTrustedBot(String userName) {
+    try {
+      User user =
+          Entity.getEntityByName(Entity.USER, userName, "isBot,allowImpersonation", NON_DELETED);
+      return Boolean.TRUE.equals(user.getIsBot())
+          && Boolean.TRUE.equals(user.getAllowImpersonation());
+    } catch (Exception e) {
+      LOG.debug("Failed to check trusted bot status for {}: {}", userName, e.getMessage());
+      return false;
+    }
   }
 
   private void validatePersonalAccessToken(
