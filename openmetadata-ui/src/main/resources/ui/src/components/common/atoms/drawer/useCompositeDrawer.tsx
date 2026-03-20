@@ -66,7 +66,7 @@ export const useCompositeDrawer = (config: CompositeDrawerConfig = {}) => {
     const DrawerComponent = baseDrawer.drawer;
     const Component = DrawerComponent.type;
 
-    return <Component {...DrawerComponent.props} children={drawerContent} />;
+    return <Component {...DrawerComponent.props}>{drawerContent}</Component>;
   }, [baseDrawer.drawer, drawerContent]);
 
   const closeDrawer = useCallback(() => {
