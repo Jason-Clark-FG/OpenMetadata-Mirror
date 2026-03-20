@@ -93,7 +93,8 @@ public final class ClassConverterFactory {
             Map.entry(IcebergConnection.class, new IcebergConnectionClassConverter()),
             Map.entry(IcebergFileSystem.class, new IcebergFileSystemClassConverter()),
             Map.entry(LookerConnection.class, new LookerConnectionClassConverter()),
-            Map.entry(MicrosoftAccessConnection.class, new MicrosoftAccessConnectionClassConverter()),
+            Map.entry(
+                MicrosoftAccessConnection.class, new MicrosoftAccessConnectionClassConverter()),
             Map.entry(MssqlConnection.class, new MssqlConnectionClassConverter()),
             Map.entry(MysqlConnection.class, new MysqlConnectionClassConverter()),
             Map.entry(RedshiftConnection.class, new RedshiftConnectionClassConverter()),

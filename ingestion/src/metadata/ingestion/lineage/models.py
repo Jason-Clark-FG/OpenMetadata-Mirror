@@ -55,11 +55,11 @@ from metadata.generated.schema.entity.services.connections.database.impalaConnec
 from metadata.generated.schema.entity.services.connections.database.informixConnection import (
     InformixType,
 )
-from metadata.generated.schema.entity.services.connections.database.microsoftAccessConnection import (
-    MicrosoftAccessType,
-)
 from metadata.generated.schema.entity.services.connections.database.mariaDBConnection import (
     MariaDBType,
+)
+from metadata.generated.schema.entity.services.connections.database.microsoftAccessConnection import (
+    MicrosoftAccessType,
 )
 from metadata.generated.schema.entity.services.connections.database.microsoftFabricConnection import (
     MicrosoftFabricType,
