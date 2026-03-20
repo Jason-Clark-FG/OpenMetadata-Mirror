@@ -76,7 +76,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("svc" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sch" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -170,7 +171,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("sv" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sc" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("tb" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("tb" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -212,7 +214,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("s" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("c" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("t" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("t" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -254,7 +257,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("a" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("b" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("c" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("c" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -309,7 +313,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("e" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("f" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("g" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("g" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -350,7 +355,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("i" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("j" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("k" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("k" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
@@ -394,7 +400,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("m" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("n" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("o" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("o" + id, ns, schema.getFullyQualifiedName());
 
     String id1 = ns.uniqueShortId();
     String id2 = ns.uniqueShortId();
@@ -461,7 +468,8 @@ public class IncidentTaskIntegrationIT {
     String id = ns.shortPrefix();
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("r" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("s" + id, ns, service);
-    Table table = TableTestFactory.createSimpleWithName("t" + id, ns, schema.getFullyQualifiedName());
+    Table table =
+        TableTestFactory.createSimpleWithName("t" + id, ns, schema.getFullyQualifiedName());
 
     TestCase testCase =
         TestCaseBuilder.create(client)
