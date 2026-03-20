@@ -225,13 +225,21 @@ public class JwtFilter implements ContainerRequestFilter {
         enforcePrincipalDomain);
 
     // Validate Bot token matches what was created in OM
-    // Skip validation for:
-    // - impersonation tokens: generated dynamically and not stored in cache
-    // - trusted bots (allowImpersonation=true): may use dynamically provisioned tokens
-    //   (e.g., from a secrets manager) that don't match the cached token. The JWT signature
-    //   is already verified at this point, so the cache check is redundant for trusted bots.
-    if (impersonatedBy == null && isBot(claims) && !isTrustedBot(userName)) {
-      validateBotToken(tokenFromHeader, userName);
+    // Skip validation for impersonation tokens - they are generated dynamically and not stored
+    // in cache. For direct bot calls, try the cache check first. If it fails, trusted bots
+    // (allowImpersonation=true) are allowed through since they may use dynamically provisioned
+    // tokens (e.g., from a secrets manager) that don't match the cached token. The JWT signature
+    // is already verified at this point, so the cache check is redundant for trusted bots.
+    if (impersonatedBy == null && isBot(claims)) {
+      try {
+        validateBotToken(tokenFromHeader, userName);
+      } catch (AuthenticationException e) {
+        if (!isTrustedBot(userName)) {
+          throw e;
+        }
+        LOG.debug(
+            "Trusted bot {} using externally provisioned token, skipping cache check", userName);
+      }
     }
 
     // validate personal access token
