@@ -84,3 +84,11 @@ SELECT ue.id, re.id, 'user', 'role', 10
 FROM user_entity ue, role_entity re
 WHERE ue.name = 'mcpapplicationbot'
   AND re.name = 'ApplicationBotImpersonationRole';
+
+-- Add composite index on change_event(entityType, offset) for efficient incremental
+-- change-event-driven workflow processing (filters by entityType + offset range).
+CREATE INDEX IF NOT EXISTS idx_change_event_entity_type_offset ON change_event (entityType, `offset`);
+
+-- Widen change_event_consumers.id from VARCHAR(36) to VARCHAR(768) to support workflow consumer IDs
+-- which follow the pattern {workflowFQN}Trigger-{entityType} and can exceed 36 characters.
+ALTER TABLE change_event_consumers MODIFY COLUMN id VARCHAR(768) NOT NULL;

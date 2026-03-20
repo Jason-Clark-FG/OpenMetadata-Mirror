@@ -21,6 +21,12 @@ import org.openmetadata.service.search.SearchRepository;
 import org.openmetadata.service.search.SearchResultListMapper;
 import org.openmetadata.service.search.SearchSortFilter;
 
+/**
+ * @deprecated All periodic batch workflows now use {@link FetchChangeEventsImpl} for incremental
+ *     change-event-driven processing. This class is no longer used by {@link
+ *     org.openmetadata.service.governance.workflows.elements.triggers.PeriodicBatchEntityTrigger}.
+ */
+@Deprecated
 @Slf4j
 public class FetchEntitiesImpl implements JavaDelegate {
   // Entity types whose fullyQualifiedName is mapped as "text" (not "keyword")

@@ -29,7 +29,8 @@ import org.openmetadata.schema.governance.workflows.elements.triggers.PeriodicBa
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.scheduler.AppScheduler;
 import org.openmetadata.service.governance.workflows.elements.TriggerInterface;
-import org.openmetadata.service.governance.workflows.elements.triggers.impl.FetchEntitiesImpl;
+import org.openmetadata.service.governance.workflows.elements.triggers.impl.CommitChangeEventOffsetImpl;
+import org.openmetadata.service.governance.workflows.elements.triggers.impl.FetchChangeEventsImpl;
 import org.openmetadata.service.governance.workflows.flowable.builders.CallActivityBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.EndEventBuilder;
 import org.openmetadata.service.governance.workflows.flowable.builders.FieldExtensionBuilder;
@@ -52,7 +53,8 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
       String mainWorkflowName,
       String triggerWorkflowId,
       PeriodicBatchEntityTriggerDefinition triggerDefinition,
-      boolean singleExecutionMode) {
+      boolean singleExecutionMode,
+      String workflowFqn) {
     this.triggerWorkflowId = triggerWorkflowId;
     this.singleExecutionMode = singleExecutionMode;
     List<String> entityTypes = getEntityTypesFromConfig(triggerDefinition.getConfig());
@@ -73,10 +75,6 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
       oTimerDefinition.ifPresent(startEvent::addEventDefinition);
       process.addFlowElement(startEvent);
 
-      ServiceTask fetchEntitiesTask =
-          getFetchEntitiesTask(processId, entityType, triggerDefinition);
-      process.addFlowElement(fetchEntitiesTask);
-
       CallActivity workflowTrigger =
           getWorkflowTriggerCallActivity(processId, mainWorkflowName, singleExecutionMode);
       process.addFlowElement(workflowTrigger);
@@ -85,21 +83,24 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
           new EndEventBuilder().id(getFlowableElementId(processId, "endEvent")).build();
       process.addFlowElement(endEvent);
 
-      SequenceFlow finished = new SequenceFlow(fetchEntitiesTask.getId(), endEvent.getId());
+      ServiceTask fetchTask =
+          getFetchChangeEventsTask(processId, entityType, triggerDefinition, workflowFqn);
+      process.addFlowElement(fetchTask);
+
+      ServiceTask commitTask = getCommitOffsetTask(processId, entityType, workflowFqn);
+      process.addFlowElement(commitTask);
+
+      SequenceFlow finished = new SequenceFlow(fetchTask.getId(), commitTask.getId());
       finished.setConditionExpression(String.format("${%s}", HAS_FINISHED_VARIABLE));
 
-      SequenceFlow notFinished =
-          new SequenceFlow(fetchEntitiesTask.getId(), workflowTrigger.getId());
+      SequenceFlow notFinished = new SequenceFlow(fetchTask.getId(), workflowTrigger.getId());
       notFinished.setConditionExpression(String.format("${!%s}", HAS_FINISHED_VARIABLE));
 
-      // Start -> Fetch Entities
-      process.addFlowElement(new SequenceFlow(startEvent.getId(), fetchEntitiesTask.getId()));
-      // Fetch Entities -> End
+      process.addFlowElement(new SequenceFlow(startEvent.getId(), fetchTask.getId()));
       process.addFlowElement(finished);
-      // Fetch Entities -> WorkflowTrigger
       process.addFlowElement(notFinished);
-      // WorkflowTrigger -> Fetch Entities (Loop Back to get next batch)
-      process.addFlowElement(new SequenceFlow(workflowTrigger.getId(), fetchEntitiesTask.getId()));
+      process.addFlowElement(new SequenceFlow(workflowTrigger.getId(), fetchTask.getId()));
+      process.addFlowElement(new SequenceFlow(commitTask.getId(), endEvent.getId()));
 
       processes.add(process);
     }
@@ -170,22 +171,13 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
     return workflowTrigger;
   }
 
-  private ServiceTask getFetchEntitiesTask(
+  private ServiceTask getFetchChangeEventsTask(
       String workflowTriggerId,
       String entityType,
-      PeriodicBatchEntityTriggerDefinition triggerDefinition) {
+      PeriodicBatchEntityTriggerDefinition triggerDefinition,
+      String workflowFqn) {
     FieldExtension entityTypesExpr =
         new FieldExtensionBuilder().fieldName("entityTypesExpr").fieldValue(entityType).build();
-
-    // Extract entity-specific filter based on the filter configuration
-    String entitySpecificFilter =
-        extractEntitySpecificFilter(triggerDefinition.getConfig().getFilters(), entityType);
-
-    FieldExtension searchFilterExpr =
-        new FieldExtensionBuilder(false)
-            .fieldName("searchFilterExpr")
-            .fieldValue(entitySpecificFilter)
-            .build();
 
     FieldExtension batchSizeExpr =
         new FieldExtensionBuilder()
@@ -193,48 +185,57 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
             .fieldValue(String.valueOf(triggerDefinition.getConfig().getBatchSize()))
             .build();
 
+    FieldExtension workflowFqnExpr =
+        new FieldExtensionBuilder()
+            .fieldName("workflowFqnExpr")
+            .fieldValue(workflowFqn != null ? workflowFqn : "")
+            .build();
+
     ServiceTask serviceTask =
         new ServiceTaskBuilder()
-            .id(getFlowableElementId(workflowTriggerId, "fetchEntityTask"))
-            .implementation(FetchEntitiesImpl.class.getName())
+            .id(getFlowableElementId(workflowTriggerId, "fetchChangeEventsTask"))
+            .implementation(FetchChangeEventsImpl.class.getName())
             .build();
 
     serviceTask.getFieldExtensions().add(entityTypesExpr);
-    serviceTask.getFieldExtensions().add(searchFilterExpr);
     serviceTask.getFieldExtensions().add(batchSizeExpr);
+    serviceTask.getFieldExtensions().add(workflowFqnExpr);
+
+    Object filters = triggerDefinition.getConfig().getFilters();
+    if (filters != null) {
+      String filtersJson =
+          filters instanceof String ? (String) filters : JsonUtils.pojoToJson(filters);
+      FieldExtension searchFilterExpr =
+          new FieldExtensionBuilder().fieldName("searchFilterExpr").fieldValue(filtersJson).build();
+      serviceTask.getFieldExtensions().add(searchFilterExpr);
+    }
 
     serviceTask.setAsynchronousLeave(true);
 
     return serviceTask;
   }
 
-  private String extractEntitySpecificFilter(Object filtersObj, String entityType) {
-    if (filtersObj == null) {
-      return null;
-    }
+  private ServiceTask getCommitOffsetTask(
+      String workflowTriggerId, String entityType, String workflowFqn) {
+    FieldExtension workflowFqnExpr =
+        new FieldExtensionBuilder()
+            .fieldName("workflowFqnExpr")
+            .fieldValue(workflowFqn != null ? workflowFqn : "")
+            .build();
 
-    // Handle map format with entity-specific filters (values are JSON strings)
-    if (filtersObj instanceof Map) {
-      @SuppressWarnings("unchecked")
-      Map<String, String> filterMap = (Map<String, String>) filtersObj;
+    FieldExtension entityTypeExpr =
+        new FieldExtensionBuilder().fieldName("entityTypeExpr").fieldValue(entityType).build();
 
-      // First check for entity-specific filter
-      String specificFilter = filterMap.get(entityType);
-      if (specificFilter != null && !specificFilter.isEmpty()) {
-        return specificFilter;
-      }
+    ServiceTask serviceTask =
+        new ServiceTaskBuilder()
+            .id(getFlowableElementId(workflowTriggerId, "commitOffsetTask"))
+            .implementation(CommitChangeEventOffsetImpl.class.getName())
+            .build();
 
-      // Fall back to default filter if no specific filter found
-      String defaultFilter = filterMap.get("default");
-      if (defaultFilter != null && !defaultFilter.isEmpty()) {
-        return defaultFilter;
-      }
+    serviceTask.getFieldExtensions().add(workflowFqnExpr);
+    serviceTask.getFieldExtensions().add(entityTypeExpr);
 
-      return null;
-    }
-
-    // If it's not a map, try to convert to string
-    return JsonUtils.pojoToJson(filtersObj);
+    return serviceTask;
   }
 
   private List<String> getEntityTypesFromConfig(Object configObj) {

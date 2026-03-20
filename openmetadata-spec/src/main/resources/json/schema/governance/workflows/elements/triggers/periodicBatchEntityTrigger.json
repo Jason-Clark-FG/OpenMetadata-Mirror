@@ -66,10 +66,10 @@
       },
       "anyOf": [
         {
-          "required": ["schedule", "entityType", "filters"]
+          "required": ["schedule", "entityType"]
         },
         {
-          "required": ["schedule", "entityTypes", "filters"]
+          "required": ["schedule", "entityTypes"]
         }
       ],
       "additionalProperties": false
