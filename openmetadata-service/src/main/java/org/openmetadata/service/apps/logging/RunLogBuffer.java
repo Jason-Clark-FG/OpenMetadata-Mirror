@@ -1,11 +1,8 @@
 package org.openmetadata.service.apps.logging;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -26,13 +23,13 @@ public class RunLogBuffer {
   @Getter private final String appName;
   @Getter private final String serverId;
   @Getter private final long runTimestamp;
-  @Getter private final Path logFile;
   private final int maxLines;
+  private final AppRunLogStorageProvider storageProvider;
   private final ConcurrentLinkedQueue<String> pending = new ConcurrentLinkedQueue<>();
   private final AtomicInteger totalLineCount = new AtomicInteger(0);
   private final List<Consumer<String>> streamListeners = new CopyOnWriteArrayList<>();
   private ScheduledExecutorService flusher;
-  private BufferedWriter writer;
+  private OutputStream outputStream;
 
   public RunLogBuffer(
       String appId,
@@ -40,13 +37,13 @@ public class RunLogBuffer {
       String serverId,
       long runTimestamp,
       int maxLines,
-      Path logFile) {
+      AppRunLogStorageProvider storageProvider) {
     this.appId = appId;
     this.appName = appName;
     this.serverId = serverId;
     this.runTimestamp = runTimestamp;
     this.maxLines = maxLines;
-    this.logFile = logFile;
+    this.storageProvider = storageProvider;
   }
 
   public void append(String line) {
@@ -62,15 +59,14 @@ public class RunLogBuffer {
 
   void startFlusher() {
     try {
-      Files.createDirectories(logFile.getParent());
-      writer =
-          Files.newBufferedWriter(
-              logFile,
-              StandardCharsets.UTF_8,
-              StandardOpenOption.CREATE,
-              StandardOpenOption.APPEND);
-    } catch (IOException e) {
-      LOG.error("Failed to open log file {}: {}", logFile, e.getMessage());
+      outputStream = storageProvider.getOutputStream(appName, runTimestamp, serverId);
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to open log output for {}/{}/{}: {}",
+          appName,
+          runTimestamp,
+          serverId,
+          e.getMessage());
       return;
     }
 
@@ -92,7 +88,7 @@ public class RunLogBuffer {
     }
 
     String batchText = String.join("\n", batch);
-    writeToFile(batchText);
+    writeToStorage(batchText);
     notifyListeners(batchText);
   }
 
@@ -106,7 +102,7 @@ public class RunLogBuffer {
       }
     }
     flush();
-    closeWriter();
+    closeOutputStream();
     streamListeners.clear();
   }
 
@@ -135,25 +131,24 @@ public class RunLogBuffer {
     return batch;
   }
 
-  private void writeToFile(String batchText) {
-    if (writer == null) {
+  private void writeToStorage(String batchText) {
+    if (outputStream == null) {
       return;
     }
     try {
-      writer.write(batchText);
-      writer.newLine();
-      writer.flush();
+      outputStream.write((batchText + "\n").getBytes(StandardCharsets.UTF_8));
+      outputStream.flush();
     } catch (IOException e) {
-      LOG.warn("Failed to write app run logs to {}: {}", logFile, e.getMessage());
+      LOG.warn("Failed to write app run logs for {}/{}: {}", appName, runTimestamp, e.getMessage());
     }
   }
 
-  private void closeWriter() {
-    if (writer != null) {
+  private void closeOutputStream() {
+    if (outputStream != null) {
       try {
-        writer.close();
+        outputStream.close();
       } catch (IOException e) {
-        LOG.warn("Failed to close log writer for {}: {}", logFile, e.getMessage());
+        LOG.warn("Failed to close log output for {}/{}: {}", appName, runTimestamp, e.getMessage());
       }
     }
   }

@@ -41,7 +41,6 @@ import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -74,6 +73,7 @@ import org.openmetadata.service.apps.AppException;
 import org.openmetadata.service.apps.ApplicationContext;
 import org.openmetadata.service.apps.ApplicationHandler;
 import org.openmetadata.service.apps.logging.AppRunLogAppender;
+import org.openmetadata.service.apps.logging.AppRunLogStorageProvider;
 import org.openmetadata.service.apps.logging.RunLogBuffer;
 import org.openmetadata.service.apps.scheduler.AppScheduler;
 import org.openmetadata.service.clients.pipeline.PipelineServiceClientFactory;
@@ -131,6 +131,9 @@ public class AppResource extends EntityResource<App, AppRepository> {
       this.pipelineServiceClient =
           PipelineServiceClientFactory.createPipelineServiceClient(
               config.getPipelineServiceClientConfiguration());
+
+      // Initialize app run log storage
+      AppRunLogAppender.initialize(config.getAppRunLogStorageConfig());
 
       // Create an On Demand DAO
       CollectionDAO dao = Entity.getCollectionDAO();
@@ -591,7 +594,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String serverId) {
     repository.getByName(uriInfo, name, repository.getFields("id"));
 
-    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    AppRunLogStorageProvider storage = AppRunLogAppender.getStorageProvider();
+    List<String> servers = storage.listServers(name, runTimestamp);
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
     }
@@ -601,14 +605,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
     StringBuilder logs = new StringBuilder();
     if (serverId != null) {
-      java.nio.file.Path logFile = AppRunLogAppender.getLogFilePath(name, runTimestamp, serverId);
-      if (Files.exists(logFile)) {
-        try {
-          logs.append(Files.readString(logFile));
-        } catch (IOException e) {
-          throw new InternalServerErrorException("Failed to read log file: " + e.getMessage());
-        }
-      }
+      logs.append(storage.readLogs(name, runTimestamp, serverId));
     }
 
     RunLogBuffer activeBuffer = AppRunLogAppender.getBuffer(name, String.valueOf(runTimestamp));
@@ -657,22 +654,28 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String serverId) {
     repository.getByName(uriInfo, name, repository.getFields("id"));
 
-    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    AppRunLogStorageProvider storage = AppRunLogAppender.getStorageProvider();
+    List<String> servers = storage.listServers(name, runTimestamp);
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
     }
     if (serverId == null || !servers.contains(serverId)) {
       throw new EntityNotFoundException("No log files found for this run");
     }
-
-    java.nio.file.Path logFile = AppRunLogAppender.getLogFilePath(name, runTimestamp, serverId);
-    if (!Files.exists(logFile)) {
+    if (!storage.exists(name, runTimestamp, serverId)) {
       throw new EntityNotFoundException("Log file not found");
     }
 
     String fileName = name + "-" + runTimestamp + "-" + serverId + ".log";
-    final java.nio.file.Path filePath = logFile;
-    return Response.ok((StreamingOutput) output -> Files.copy(filePath, output))
+    final String downloadServerId = serverId;
+    return Response.ok(
+            (StreamingOutput)
+                output -> {
+                  try (java.io.InputStream in =
+                      storage.readLogsStream(name, runTimestamp, downloadServerId)) {
+                    in.transferTo(output);
+                  }
+                })
         .header("Content-Disposition", "attachment; filename=\"" + fileName + "\"")
         .build();
   }
@@ -699,7 +702,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
           @PathParam("runTimestamp")
           Long runTimestamp) {
     repository.getByName(uriInfo, name, repository.getFields("id"));
-    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    List<String> servers = AppRunLogAppender.getStorageProvider().listServers(name, runTimestamp);
     return Response.ok(Map.of("servers", servers)).build();
   }
 
@@ -730,7 +733,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
           String serverId) {
     repository.getByName(uriInfo, name, repository.getFields("id"));
 
-    List<String> servers = AppRunLogAppender.listServersForRun(name, runTimestamp);
+    AppRunLogStorageProvider storage = AppRunLogAppender.getStorageProvider();
+    List<String> servers = storage.listServers(name, runTimestamp);
     if (serverId == null && !servers.isEmpty()) {
       serverId = servers.get(0);
     }
@@ -749,23 +753,16 @@ public class AppResource extends EntityResource<App, AppRepository> {
                     output.write("retry: 1000\n\n".getBytes());
                     output.flush();
 
-                    // Send existing file content line by line
-                    if (resolvedServerId != null) {
-                      java.nio.file.Path logFile =
-                          AppRunLogAppender.getLogFilePath(name, runTimestamp, resolvedServerId);
-                      if (Files.exists(logFile)) {
-                        try (java.io.BufferedReader reader =
-                            Files.newBufferedReader(
-                                logFile, java.nio.charset.StandardCharsets.UTF_8)) {
-                          String line;
-                          while ((line = reader.readLine()) != null) {
-                            output.write(
-                                ("data: " + line + "\n\n")
-                                    .getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                          }
-                          output.flush();
-                        }
+                    // Send existing log content line by line
+                    if (resolvedServerId != null
+                        && storage.exists(name, runTimestamp, resolvedServerId)) {
+                      String content = storage.readLogs(name, runTimestamp, resolvedServerId);
+                      for (String line : content.split("\n")) {
+                        output.write(
+                            ("data: " + line + "\n\n")
+                                .getBytes(java.nio.charset.StandardCharsets.UTF_8));
                       }
+                      output.flush();
                     }
 
                     // If there's an active buffer, stream live lines

@@ -37,6 +37,7 @@ import org.openmetadata.schema.security.scim.ScimConfiguration;
 import org.openmetadata.schema.security.secrets.SecretsManagerConfiguration;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.apps.logging.AppRunLogStorageConfig;
 import org.openmetadata.service.config.BulkOperationConfiguration;
 import org.openmetadata.service.config.OMWebConfiguration;
 import org.openmetadata.service.config.ObjectStorageConfiguration;
@@ -179,6 +180,16 @@ public class OpenMetadataApplicationConfig extends Configuration {
       bulkOperationConfiguration = new BulkOperationConfiguration();
     }
     return bulkOperationConfiguration;
+  }
+
+  @JsonProperty("appRunLogStorage")
+  private AppRunLogStorageConfig appRunLogStorageConfig;
+
+  public AppRunLogStorageConfig getAppRunLogStorageConfig() {
+    if (appRunLogStorageConfig == null) {
+      appRunLogStorageConfig = new AppRunLogStorageConfig();
+    }
+    return appRunLogStorageConfig;
   }
 
   @JsonProperty("qos")

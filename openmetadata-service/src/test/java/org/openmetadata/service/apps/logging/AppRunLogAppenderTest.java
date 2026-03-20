@@ -30,7 +30,7 @@ class AppRunLogAppenderTest {
 
   @BeforeEach
   void setUp() {
-    AppRunLogAppender.setLogDirectoryForTest(tempDir.toString());
+    AppRunLogAppender.setStorageProviderForTest(new LocalAppRunLogStorage(tempDir.toString()));
     loggerContext = new LoggerContext();
     appender = new AppRunLogAppender();
     appender.setContext(loggerContext);
@@ -82,7 +82,7 @@ class AppRunLogAppenderTest {
   }
 
   @Test
-  void logFileIsCreatedOnFlush() throws IOException {
+  void logFileIsCreatedOnFlush() {
     String runId = "3000";
     AppRunLogAppender.startCapture(runId, "app-id-3", "TestApp", "server1");
     RunLogBuffer buffer = AppRunLogAppender.getBuffer("TestApp", runId);
@@ -91,9 +91,7 @@ class AppRunLogAppenderTest {
     buffer.append("line two");
     buffer.flush();
 
-    Path logFile = AppRunLogAppender.getLogFilePath("TestApp", 3000L, "server1");
-    assertTrue(Files.exists(logFile));
-    String content = Files.readString(logFile);
+    String content = AppRunLogAppender.getStorageProvider().readLogs("TestApp", 3000L, "server1");
     assertTrue(content.contains("line one"));
     assertTrue(content.contains("line two"));
 
@@ -108,12 +106,13 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("5000-server2.log"));
     Files.createFile(appDir.resolve("6000-server1.log"));
 
-    List<String> servers = AppRunLogAppender.listServersForRun("MyApp", 5000L);
+    AppRunLogStorageProvider storage = AppRunLogAppender.getStorageProvider();
+    List<String> servers = storage.listServers("MyApp", 5000L);
     assertEquals(2, servers.size());
     assertTrue(servers.contains("server1"));
     assertTrue(servers.contains("server2"));
 
-    List<String> servers2 = AppRunLogAppender.listServersForRun("MyApp", 6000L);
+    List<String> servers2 = storage.listServers("MyApp", 6000L);
     assertEquals(1, servers2.size());
     assertTrue(servers2.contains("server1"));
   }
@@ -126,44 +125,46 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("3000-s1.log"));
     Files.createFile(appDir.resolve("2000-s1.log"));
 
-    List<Long> timestamps = AppRunLogAppender.listRunTimestamps("SortApp");
+    List<Long> timestamps = AppRunLogAppender.getStorageProvider().listRunTimestamps("SortApp");
     assertEquals(List.of(3000L, 2000L, 1000L), timestamps);
   }
 
   @Test
   void cleanupOldRunsDeletesExcessFiles() throws IOException {
-    AppRunLogAppender.setMaxRunsPerAppForTest(2);
-
     Path appDir = tempDir.resolve("CleanApp");
     Files.createDirectories(appDir);
     Files.createFile(appDir.resolve("1000-s1.log"));
     Files.createFile(appDir.resolve("2000-s1.log"));
     Files.createFile(appDir.resolve("3000-s1.log"));
 
+    AppRunLogStorageConfig config = new AppRunLogStorageConfig();
+    config.setMaxRunsPerApp(2);
+    config.setLocalDirectory(tempDir.toString());
+    AppRunLogAppender.initialize(config);
+
     AppRunLogAppender.cleanupOldRuns("CleanApp");
 
     assertTrue(Files.exists(appDir.resolve("3000-s1.log")), "newest run should be kept");
     assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "2nd newest run should be kept");
     assertFalse(Files.exists(appDir.resolve("1000-s1.log")), "oldest run should be deleted");
-
-    AppRunLogAppender.setMaxRunsPerAppForTest(5);
   }
 
   @Test
   void cleanupOldRunsKeepsExactlyMaxRuns() throws IOException {
-    AppRunLogAppender.setMaxRunsPerAppForTest(2);
-
     Path appDir = tempDir.resolve("ExactApp");
     Files.createDirectories(appDir);
     Files.createFile(appDir.resolve("1000-s1.log"));
     Files.createFile(appDir.resolve("2000-s1.log"));
 
+    AppRunLogStorageConfig config = new AppRunLogStorageConfig();
+    config.setMaxRunsPerApp(2);
+    config.setLocalDirectory(tempDir.toString());
+    AppRunLogAppender.initialize(config);
+
     AppRunLogAppender.cleanupOldRuns("ExactApp");
 
     assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "should not delete when at limit");
     assertTrue(Files.exists(appDir.resolve("1000-s1.log")), "should not delete when at limit");
-
-    AppRunLogAppender.setMaxRunsPerAppForTest(5);
   }
 
   @Test
