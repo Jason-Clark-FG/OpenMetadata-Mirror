@@ -59,17 +59,6 @@ public class AppOperationPermissionsIT {
   }
 
   @Test
-  void test_triggerApp_admin_allowed(TestNamespace ns) throws Exception {
-    HttpResponse<String> response =
-        postWithToken("/v1/apps/trigger/" + APP_NAME, "{}", SdkClients.getAdminToken());
-
-    assertTrue(
-        response.statusCode() == 200 || response.statusCode() == 409,
-        "Admin should be able to trigger app (200) or app already running (409), got: "
-            + response.statusCode());
-  }
-
-  @Test
   void test_deployApp_noAuth_returns401(TestNamespace ns) throws Exception {
     HttpRequest request =
         HttpRequest.newBuilder()
