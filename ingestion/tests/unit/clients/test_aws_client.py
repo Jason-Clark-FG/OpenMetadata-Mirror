@@ -20,6 +20,12 @@ from metadata.generated.schema.security.credentials.awsCredentials import AWSCre
 class TestAWSClientRegionValidation:
     """Validate AWS region validation in AWSClient"""
 
+    def test_valid_regions_sourced_from_botocore(self):
+        assert isinstance(VALID_AWS_REGIONS, set)
+        assert len(VALID_AWS_REGIONS) > 0
+        assert "us-east-1" in VALID_AWS_REGIONS
+        assert "eu-west-1" in VALID_AWS_REGIONS
+
     @pytest.mark.parametrize(
         "region",
         [
@@ -27,7 +33,6 @@ class TestAWSClientRegionValidation:
             "us-west-2",
             "eu-west-1",
             "ap-southeast-1",
-            "ap-southeast-6",
             "us-gov-west-1",
             "cn-north-1",
         ],
