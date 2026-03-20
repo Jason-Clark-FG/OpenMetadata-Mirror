@@ -11,7 +11,8 @@
  *  limitations under the License.
  */
 
-import type { ElementType, HTMLAttributes, ReactNode, Ref } from "react";
+import type { CSSProperties, ElementType, HTMLAttributes, ReactNode, Ref } from "react";
+import { Tooltip } from "@/components/base/tooltip/tooltip";
 import { cx } from "@/utils/cx";
 
 type TypographyQuoteVariant = "default" | "centered-quote" | "minimal-quote";
@@ -31,6 +32,13 @@ type TypographySize =
 
 type TypographyWeight = "regular" | "medium" | "semibold" | "bold";
 
+type TypographyEllipsis =
+    | boolean
+    | {
+          rows?: number;
+          tooltip?: ReactNode;
+      };
+
 interface TypographyProps extends HTMLAttributes<HTMLElement> {
     ref?: Ref<HTMLElement>;
     children?: ReactNode;
@@ -39,6 +47,7 @@ interface TypographyProps extends HTMLAttributes<HTMLElement> {
     className?: string;
     size?: TypographySize;
     weight?: TypographyWeight;
+    ellipsis?: TypographyEllipsis;
 }
 
 const quoteStyles: Record<TypographyQuoteVariant, string> = {
@@ -76,21 +85,51 @@ export const Typography = (props: TypographyProps) => {
         children,
         size = "text-sm",
         weight = "regular",
+        ellipsis,
+        style,
         ...otherProps
     } = props;
 
     const sizeClass = sizeClasses[size];
     const weightClass = weightClasses[weight];
 
-    const innerClassName = cx(sizeClass, weightClass, className);
+    const ellipsisConfig = typeof ellipsis === "object" ? ellipsis : undefined;
+    const isEllipsis = !!ellipsis;
+    const ellipsisRows = ellipsisConfig?.rows ?? 1;
+    const ellipsisTooltip = ellipsisConfig?.tooltip;
 
-    return (
+    const ellipsisClassName =
+        isEllipsis && ellipsisRows <= 1 ? "tw:truncate" : undefined;
+
+    const ellipsisStyle: CSSProperties | undefined =
+        isEllipsis && ellipsisRows > 1
+            ? {
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: ellipsisRows,
+                  WebkitBoxOrient: "vertical",
+              }
+            : undefined;
+
+    const innerClassName = cx(sizeClass, weightClass, className, ellipsisClassName);
+
+    const content = (
         <div className={cx("prose", quoteStyles[quoteVariant])}>
-            <Component {...otherProps} className={innerClassName}>
+            <Component
+                {...otherProps}
+                className={innerClassName}
+                style={{ ...style, ...ellipsisStyle }}
+            >
                 {children}
             </Component>
         </div>
     );
+
+    if (ellipsisTooltip) {
+        return <Tooltip title={ellipsisTooltip}>{content}</Tooltip>;
+    }
+
+    return content;
 };
 
-export type { TypographyProps, TypographyQuoteVariant, TypographySize, TypographyWeight };
+export type { TypographyEllipsis, TypographyProps, TypographyQuoteVariant, TypographySize, TypographyWeight };
