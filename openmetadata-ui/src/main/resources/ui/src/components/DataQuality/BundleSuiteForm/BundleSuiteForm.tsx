@@ -208,9 +208,7 @@ const BundleSuiteForm: React.FC<BundleSuiteFormProps> = ({
         description: initialValues.description || '',
         testCaseSelection: payload,
       } as Record<string, unknown>);
-      setTestCaseSelectionPayload(
-        payload as unknown as Parameters<typeof setTestCaseSelectionPayload>[0]
-      );
+      setTestCaseSelectionPayload(payload);
     }
   }, [initialValues, form]);
 
@@ -219,9 +217,7 @@ const BundleSuiteForm: React.FC<BundleSuiteFormProps> = ({
   // =============================================
   const handleTestCaseSelection = useCallback(
     (payload: AddTestCaseListChangePayload) => {
-      setTestCaseSelectionPayload(
-        payload as unknown as Parameters<typeof setTestCaseSelectionPayload>[0]
-      );
+      setTestCaseSelectionPayload(payload);
       form.setFieldValue('testCaseSelection', payload);
     },
     [form]

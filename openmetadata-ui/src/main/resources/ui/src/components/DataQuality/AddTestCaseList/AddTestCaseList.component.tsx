@@ -499,35 +499,34 @@ export const AddTestCaseList = ({
           excludeIds: [...nextExcluded],
           testCases: [],
         });
+      } else if (selectedItems.has(id)) {
+        const selectedItemMap = new Map<string, TestCase>();
+        selectedItems.forEach(
+          (item) => item.id !== id && selectedItemMap.set(item.id ?? '', item)
+        );
+        setSelectedItems(selectedItemMap);
+        const testCases = [...selectedItemMap.values()];
+        onChange?.({
+          selectAll: false,
+          includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+          excludeIds: [],
+          testCases,
+        });
       } else {
-        if (selectedItems?.has(id)) {
-          const selectedItemMap = new Map<string, TestCase>();
-          selectedItems.forEach(
-            (item) => item.id !== id && selectedItemMap.set(item.id ?? '', item)
-          );
-          setSelectedItems(selectedItemMap);
-          const testCases = [...selectedItemMap.values()];
-          onChange?.({
-            selectAll: false,
-            includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
-            excludeIds: [],
-            testCases,
-          });
-        } else {
-          const test = items.find((t) => t.id === id);
-          if (test) {
-            const selectedItemMap = new Map(selectedItems);
-            selectedItemMap.set(id, test);
-            setSelectedItems(selectedItemMap);
-            const testCases = [...selectedItemMap.values()];
-            onChange?.({
-              selectAll: false,
-              includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
-              excludeIds: [],
-              testCases,
-            });
-          }
+        const test = items.find((t) => t.id === id);
+        if (!test) {
+          return;
         }
+        const selectedItemMap = new Map(selectedItems);
+        selectedItemMap.set(id, test);
+        setSelectedItems(selectedItemMap);
+        const testCases = [...selectedItemMap.values()];
+        onChange?.({
+          selectAll: false,
+          includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+          excludeIds: [],
+          testCases,
+        });
       }
     },
     [selectAll, selectedItems, items, excludedIds, onChange]

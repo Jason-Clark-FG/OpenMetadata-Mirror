@@ -328,19 +328,23 @@ const TestSuiteDetailsPage = () => {
 
   const handleDomainUpdate = useCallback(
     async (updateDomain?: EntityReference | EntityReference[]) => {
+      if (!testSuite) {
+        return;
+      }
+
       let domains: EntityReference[];
       if (isArray(updateDomain)) {
         domains = updateDomain;
       } else if (isEmpty(updateDomain)) {
         domains = [];
       } else {
-        domains = [updateDomain as EntityReference];
+        domains = [updateDomain];
       }
 
       const updatedTestSuite: TestSuite = {
         ...testSuite,
         domains,
-      } as TestSuite;
+      };
 
       await updateTestSuiteData(updatedTestSuite);
     },

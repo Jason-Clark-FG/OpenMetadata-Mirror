@@ -47,8 +47,10 @@ test.beforeEach(async ({ page }) => {
   await redirectToHomePage(page);
 });
 
-test('Add test case modal on Test Suite details page - filters and select', // PLAYWRIGHT_INGESTION_TAG_OBJ,
-async ({ page }) => {
+test(
+  'Add test case modal on Test Suite details page - filters and select',
+  PLAYWRIGHT_INGESTION_TAG_OBJ,
+  async ({ page }) => {
   test.slow();
 
   const NEW_TEST_SUITE = {
