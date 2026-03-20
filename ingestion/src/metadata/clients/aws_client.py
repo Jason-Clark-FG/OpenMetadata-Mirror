@@ -50,7 +50,7 @@ def _get_valid_aws_regions() -> set:
     """Derive the valid AWS region set from botocore endpoint data."""
     session = botocore.session.get_session()
     regions = set()
-    for partition in ("aws", "aws-cn", "aws-us-gov"):
+    for partition in session.get_available_partitions():
         regions.update(session.get_available_regions("ec2", partition_name=partition))
     return regions
 
