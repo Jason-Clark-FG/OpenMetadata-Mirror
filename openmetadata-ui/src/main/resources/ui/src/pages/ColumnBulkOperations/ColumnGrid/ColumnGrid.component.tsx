@@ -124,6 +124,12 @@ const COLUMN_GRID_TAG_BADGES_MAX_VISIBLE = 2;
 
 const COLUMN_GRID_GLOSSARY_TERMS_BADGES_MAX_VISIBLE = 1;
 
+const COLUMN_NAME_CELL_GRID =
+  'tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2.25rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden';
+
+const COLUMN_NAME_CELL_CHEVRON =
+  'tw:flex tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden';
+
 interface ColumnGridTruncatingTagBadgesProps {
   maxVisible?: number;
   renderBadge: (tag: TagLabel, index: number) => React.ReactNode;
@@ -146,7 +152,7 @@ const ColumnGridTruncatingTagBadges: React.FC<
   const remaining = tags.length - visibleTags.length;
 
   return (
-    <div className="tw:flex tw:min-w-0 tw:w-full tw:items-center tw:gap-1.5 tw:overflow-hidden">
+    <div className="tw:flex tw:items-center tw:gap-1.5">
       {visibleTags.map((tag: TagLabel, index: number) => {
         const fullLabel = tag.name || tag.tagFQN.split('.').pop() || '';
 
@@ -159,13 +165,7 @@ const ColumnGridTruncatingTagBadges: React.FC<
           </div>
         );
       })}
-      {remaining > 0 && (
-        <Typography
-          as="span"
-          className="tw:shrink-0 tw:text-tertiary tw:text-xs tw:font-medium">
-          +{remaining}
-        </Typography>
-      )}
+      {remaining > 0 && <Typography as="span">+{remaining}</Typography>}
     </div>
   );
 };
@@ -939,13 +939,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const renderColumnNameCellFinal = useCallback(
     (entity: ColumnGridRowData) => {
       const columnNameButtonClass = classNames(
-        'tw:flex tw:flex-1 tw:min-w-0 tw:items-center tw:justify-start',
-        'tw:overflow-hidden',
-        'tw:[&>span[data-text]]:block',
-        'tw:[&>span[data-text]]:min-w-0',
-        'tw:[&>span[data-text]]:w-full',
-        'tw:[&>span[data-text]]:overflow-hidden',
-        'tw:[&>span[data-text]]:truncate'
+        'tw:flex tw:flex-1 tw:min-w-0 tw:items-center tw:justify-start tw:overflow-hidden',
+        'tw:*:data-text:block tw:*:data-text:min-w-0 tw:*:data-text:w-full tw:*:data-text:truncate'
       );
 
       if (entity.isGroup && entity.occurrenceCount > 1) {
@@ -974,20 +969,22 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         const isGroupExpanded = columnGridListing.expandedRows.has(entity.id);
 
         return (
-          <div className="tw:grid tw:grid-cols-[2rem_minmax(0,1fr)]">
-            <ButtonUtility
-              color="tertiary"
-              icon={
-                <ChevronRight
-                  className={classNames(
-                    'tw:size-4 tw:transition-transform',
-                    isGroupExpanded && 'tw:rotate-90'
-                  )}
-                />
-              }
-              size="sm"
-              onClick={expandHandler}
-            />
+          <div className={COLUMN_NAME_CELL_GRID}>
+            <div className={COLUMN_NAME_CELL_CHEVRON}>
+              <ButtonUtility
+                color="tertiary"
+                icon={
+                  <ChevronRight
+                    className={classNames(
+                      'tw:size-4 tw:transition-transform',
+                      isGroupExpanded && 'tw:rotate-90'
+                    )}
+                  />
+                }
+                size="sm"
+                onClick={expandHandler}
+              />
+            </div>
             <Button
               className={columnNameButtonClass}
               color="tertiary"
@@ -1036,8 +1033,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         );
 
         return (
-          <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
-            <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
+          <div className={COLUMN_NAME_CELL_GRID}>
+            <div className={COLUMN_NAME_CELL_CHEVRON}>
               {hasChildren ? (
                 <ButtonUtility
                   color="tertiary"
@@ -1054,9 +1051,15 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
                 />
               ) : null}
             </div>
-            <Typography as="span" className="tw:min-w-0 tw:truncate">
+            <Button
+              className={columnNameButtonClass}
+              color="tertiary"
+              onPress={() => {
+                handleSelectRef.current(entity.id, true);
+                openDrawerRef.current();
+              }}>
               {nameWithCount}
-            </Typography>
+            </Button>
           </div>
         );
       }
@@ -1093,8 +1096,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
       );
 
       return (
-        <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
-          <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
+        <div className={COLUMN_NAME_CELL_GRID}>
+          <div className={COLUMN_NAME_CELL_CHEVRON}>
             {hasStructChildren ? (
               <ButtonUtility
                 color="tertiary"
