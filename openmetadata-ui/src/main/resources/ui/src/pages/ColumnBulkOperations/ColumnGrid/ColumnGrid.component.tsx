@@ -122,6 +122,8 @@ const EmptyCellContent = () => (
 
 const COLUMN_GRID_TAG_BADGES_MAX_VISIBLE = 2;
 
+const COLUMN_GRID_GLOSSARY_TERMS_BADGES_MAX_VISIBLE = 1;
+
 interface ColumnGridTruncatingTagBadgesProps {
   maxVisible?: number;
   renderBadge: (tag: TagLabel, index: number) => React.ReactNode;
@@ -881,6 +883,7 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
       return (
         <ColumnGridTruncatingTagBadges
+          maxVisible={COLUMN_GRID_GLOSSARY_TERMS_BADGES_MAX_VISIBLE}
           renderBadge={(tag: TagLabel) => {
             const labelText = tag.name || tag.tagFQN.split('.').pop() || '';
 
@@ -971,22 +974,20 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         const isGroupExpanded = columnGridListing.expandedRows.has(entity.id);
 
         return (
-          <div className="tw:grid tw:w-full tw:min-w-0 tw:grid-cols-[2rem_minmax(0,1fr)] tw:items-center tw:gap-1 tw:overflow-hidden">
-            <div className="tw:flex tw:min-h-8 tw:min-w-0 tw:items-center tw:justify-center tw:overflow-hidden">
-              <ButtonUtility
-                color="tertiary"
-                icon={
-                  <ChevronRight
-                    className={classNames(
-                      'tw:size-4 tw:transition-transform',
-                      isGroupExpanded && 'tw:rotate-90'
-                    )}
-                  />
-                }
-                size="sm"
-                onClick={expandHandler}
-              />
-            </div>
+          <div className="tw:grid tw:grid-cols-[2rem_minmax(0,1fr)]">
+            <ButtonUtility
+              color="tertiary"
+              icon={
+                <ChevronRight
+                  className={classNames(
+                    'tw:size-4 tw:transition-transform',
+                    isGroupExpanded && 'tw:rotate-90'
+                  )}
+                />
+              }
+              size="sm"
+              onClick={expandHandler}
+            />
             <Button
               className={columnNameButtonClass}
               color="tertiary"
