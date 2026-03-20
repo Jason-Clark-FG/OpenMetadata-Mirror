@@ -279,49 +279,54 @@ class TestBuildObservabilityFromDagRun:
 
 
 class TestTaskDetailAccess:
-    """Test test_task_detail_access behaviour across Airflow versions."""
+    """Test _test_task_detail_access across Airflow versions."""
 
     def _make_session(self, first_return_value):
         mock_session = MagicMock()
         mock_session.query.return_value.first.return_value = first_return_value
         return mock_session
 
-    @patch(
-        "metadata.ingestion.source.pipeline.airflow.connection.IS_AIRFLOW_3",
-        True,
-    )
-    @patch(
-        "metadata.ingestion.source.pipeline.airflow.connection.SerializedDagModel",
-    )
-    def test_airflow3_queries_dag_id_only(self, mock_sdm):
-        """For Airflow 3.x, task detail access falls back to a dag_id query (data column is NULL)."""
+    @patch("metadata.ingestion.source.pipeline.airflow.connection.IS_AIRFLOW_3", True)
+    def test_airflow3_queries_dag_id_only(self):
+        """Airflow 3.x: data column is NULL; must fall back to dag_id query without error."""
+        from metadata.ingestion.source.pipeline.airflow.connection import (
+            _test_task_detail_access,
+        )
 
         dag_id_row = ("my_dag",)
         session = self._make_session(first_return_value=dag_id_row)
 
-        if True:  # IS_AIRFLOW_3
-            result = session.query(mock_sdm.dag_id).first()
+        result = _test_task_detail_access(session)
 
         assert result == dag_id_row
 
-    @patch(
-        "metadata.ingestion.source.pipeline.airflow.connection.IS_AIRFLOW_3",
-        False,
-    )
+    @patch("metadata.ingestion.source.pipeline.airflow.connection.IS_AIRFLOW_3", False)
     def test_airflow2_returns_tasks_when_data_is_valid(self):
-        """For Airflow 2.x, task detail access extracts the task list from serialized data."""
-        tasks_payload = [{"task_id": "task_1"}, {"task_id": "task_2"}]
-        dag_data = {"dag": {"tasks": tasks_payload}}
-        row = (dag_data,)
+        """Airflow 2.x: extracts and returns the task list from serialized DAG data."""
+        from metadata.ingestion.source.pipeline.airflow.connection import (
+            _test_task_detail_access,
+        )
 
+        tasks_payload = [{"task_id": "task_1"}, {"task_id": "task_2"}]
+        row = ({"dag": {"tasks": tasks_payload}},)
         session = self._make_session(first_return_value=row)
 
-        mock_col = MagicMock()
-        result = session.query(mock_col).first()
+        result = _test_task_detail_access(session)
 
-        assert result is not None
-        retrieved_tasks = result[0]["dag"]["tasks"]
-        assert retrieved_tasks == tasks_payload
+        assert result == tasks_payload
+
+    @patch("metadata.ingestion.source.pipeline.airflow.connection.IS_AIRFLOW_3", False)
+    def test_airflow2_returns_none_when_table_empty(self):
+        """Airflow 2.x: empty serialized_dag table returns None without raising."""
+        from metadata.ingestion.source.pipeline.airflow.connection import (
+            _test_task_detail_access,
+        )
+
+        session = self._make_session(first_return_value=None)
+
+        result = _test_task_detail_access(session)
+
+        assert result is None
 
 
 class TestColumnFunctionUsage:

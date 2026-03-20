@@ -211,6 +211,42 @@ class AirflowTaskDetailsAccessError(Exception):
     """
 
 
+def _test_task_detail_access(session) -> None:
+    """
+    Verify task-level access to serialized_dag.
+    Extracted to module level so it can be unit-tested directly.
+    """
+    try:
+        if IS_AIRFLOW_3:
+            # Airflow 3.x changed DAG storage: the `data` column in
+            # `serialized_dag` is NULL (data moved to bundles/compressed
+            # format). Querying it causes 'NoneType' subscript errors.
+            # Fall back to a dag_id-only query to confirm table access.
+            logger.warning(
+                "Airflow 3.x detected: skipping `data` column validation as it may be NULL. "
+                "Falling back to dag_id query to confirm `serialized_dag` table access."
+            )
+            return session.query(SerializedDagModel.dag_id).first()
+
+        json_data_column = (
+            SerializedDagModel._data  # For 2.3.0 onwards # pylint: disable=protected-access
+            if hasattr(SerializedDagModel, "_data")
+            else SerializedDagModel.data  # For 2.2.5 and 2.1.4
+        )
+        result = session.query(json_data_column).first()
+
+        if result is None:
+            logger.warning(
+                "No serialized DAGs found in the `serialized_dag` table. "
+                "The table is accessible but empty — task detail access cannot be validated."
+            )
+            return None
+
+        return result[0]["dag"]["tasks"]
+    except Exception as e:
+        raise AirflowTaskDetailsAccessError(f"Task details access error : {e}")
+
+
 def test_connection(
     metadata: OpenMetadata,
     engine: Engine,
@@ -237,30 +273,10 @@ def test_connection(
                 f"Pipeline details access error: {e}"
             )
 
-    def test_task_detail_access(session):
-        try:
-            if IS_AIRFLOW_3:
-                # Airflow 3.x changed DAG storage: the `data` column in
-                # `serialized_dag` is NULL (data moved to bundles/compressed
-                # format). Querying it causes 'NoneType' subscript errors.
-                # Fall back to a dag_id-only query to confirm table access.
-                return session.query(SerializedDagModel.dag_id).first()
-
-            json_data_column = (
-                SerializedDagModel._data  # For 2.3.0 onwards # pylint: disable=protected-access
-                if hasattr(SerializedDagModel, "_data")
-                else SerializedDagModel.data  # For 2.2.5 and 2.1.4
-            )
-            result = session.query(json_data_column).first()
-            retrieved_tasks = result[0]["dag"]["tasks"]
-            return retrieved_tasks
-        except Exception as e:
-            raise AirflowTaskDetailsAccessError(f"Task details access error : {e}")
-
     test_fn = {
         "CheckAccess": partial(test_connection_engine_step, engine),
         "PipelineDetailsAccess": partial(test_pipeline_details_access, session),
-        "TaskDetailAccess": partial(test_task_detail_access, session),
+        "TaskDetailAccess": partial(_test_task_detail_access, session),
     }
     return test_connection_steps(
         metadata=metadata,
