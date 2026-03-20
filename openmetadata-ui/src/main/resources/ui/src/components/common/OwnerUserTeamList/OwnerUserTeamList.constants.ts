@@ -13,8 +13,32 @@
 
 export const AVATAR_SIZE_CLASS_MAP: Record<number, string> = {
   16: 'tw:w-4 tw:h-4',
+  18: 'tw:w-4.5 tw:h-4.5',
   20: 'tw:w-5 tw:h-5',
   24: 'tw:w-6 tw:h-6',
   32: 'tw:w-8 tw:h-8',
   40: 'tw:w-10 tw:h-10',
+};
+
+export const AVATAR_SIZE_NAME_MAP: Record<
+  number,
+  'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
+> = {
+  16: 'xxs',
+  24: 'xs',
+  32: 'sm',
+  40: 'md',
+  48: 'lg',
+  56: 'xl',
+  64: '2xl',
+};
+
+export const AVATAR_FONT_SIZE_MAP: Record<number, string> = {
+  16: 'tw:text-[8px]',
+  24: 'tw:text-[10px]',
+  32: 'tw:text-xs',
+  40: 'tw:text-base',
+  48: 'tw:text-[20px]',
+  56: 'tw:text-[22px]',
+  64: 'tw:text-[26px]',
 };

@@ -10,11 +10,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
+import {
+  Avatar,
+  Button,
+  Dropdown,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
+import {
+  AVATAR_FONT_SIZE_MAP,
+  AVATAR_SIZE_NAME_MAP,
+} from '../OwnerUserTeamList/OwnerUserTeamList.constants';
 import UserPopOverCard from '../PopOverCard/UserPopOverCard';
 import ProfilePicture from '../ProfilePicture/ProfilePicture';
 import { OwnerRevealProps } from './OwnerReveal.interface';
@@ -29,40 +37,38 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
 }) => {
   const { t } = useTranslation();
   const remainingCountLabel = `+${remainingCount}`;
-  const fontSize = Math.max(8, Math.floor(avatarSize * 0.4));
-
-  const dynamicButtonStyle = {
-    width: `${avatarSize}px`,
-    height: `${avatarSize}px`,
-    fontSize: `${fontSize}px`,
-  };
+  const fontSizeClass = AVATAR_FONT_SIZE_MAP[avatarSize] ?? 'tw:text-xs';
 
   if (isCompactView) {
     return (
-      <div className="tw:relative">
-        <Button
-          className={`${
-            showAllOwners ? '' : 'more-owners-button'
-          } tw:text-sm tw:flex tw:items-center tw:justify-center tw:min-w-fit`}
-          color="link-color"
-          style={dynamicButtonStyle}
-          onPress={() => setShowAllOwners((prev) => !prev)}>
-          {showAllOwners ? t('label.less') : remainingCountLabel}
-        </Button>
-      </div>
+      <Button
+        className={`${showAllOwners ? '' : 'tw:-ml-1'} ${fontSizeClass}`}
+        color="link-color"
+        onPress={() => setShowAllOwners((prev) => !prev)}>
+        {showAllOwners ? (
+          t('label.less')
+        ) : (
+          <Avatar
+            className="tw:bg-brand-50 tw:ring-1 tw:ring-brand-600"
+            placeholder={remainingCountLabel}
+            size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
+          />
+        )}
+      </Button>
     );
   }
 
   return (
     <div className="tw:relative">
       <Dropdown.Root>
-        <Button
-          className="more-owners-button tw:text-sm tw:flex tw:items-center tw:justify-center tw:min-w-fit"
-          color="link-color"
-          style={dynamicButtonStyle}>
-          {remainingCountLabel}
+        <Button className="tw:outline-none tw:-ml-1" color="link-color">
+          <Avatar
+            className={`tw:bg-brand-50 tw:ring-1 tw:ring-brand-600 ${fontSizeClass}`}
+            placeholder={remainingCountLabel}
+            size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
+          />
         </Button>
-        <Dropdown.Popover>
+        <Dropdown.Popover isOpen>
           <Dropdown.Menu aria-label="remaining owners">
             {owners.map((owner) => {
               const name = getEntityName(owner);
@@ -72,24 +78,27 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                   <UserPopOverCard
                     popoverZIndex={200000}
                     userName={owner.name ?? ''}>
-                    <Link
-                      className="tw:flex tw:no-underline tw:items-center tw:gap-2 tw:min-w-0"
+                    <Button
+                      color="link-gray"
                       data-testid="owner-link"
-                      to={getOwnerPath(owner)}>
-                      <ProfilePicture
-                        displayName={name}
-                        name={owner.name ?? ''}
-                        type="circle"
-                        width={avatarSize.toString()}
-                      />
-                      <div className="tw:min-w-0 tw:overflow-hidden">
-                        <Typography
-                          as="span"
-                          className="tw:text-sm tw:truncate tw:block">
-                          {name}
-                        </Typography>
+                      href={getOwnerPath(owner)}>
+                      <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0">
+                        <ProfilePicture
+                          displayName={name}
+                          name={owner.name ?? ''}
+                          type="circle"
+                          width={avatarSize.toString()}
+                        />
+                        <div className="tw:min-w-0 tw:overflow-hidden">
+                          <Typography
+                            as="span"
+                            className="tw:truncate tw:block"
+                            size="text-sm">
+                            {name}
+                          </Typography>
+                        </div>
                       </div>
-                    </Link>
+                    </Button>
                   </UserPopOverCard>
                 </Dropdown.Item>
               );
