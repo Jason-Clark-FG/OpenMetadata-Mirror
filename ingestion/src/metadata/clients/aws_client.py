@@ -135,9 +135,7 @@ class AWSClient:
                     region.startswith(r) and len(region) == len(r) + 1
                     for r in VALID_AWS_REGIONS
                 ):
-                    msg += (
-                        " This looks like an availability zone rather than a region."
-                    )
+                    msg += " This looks like an availability zone rather than a region."
                 msg += f" Expected one of:" f" {', '.join(sorted(VALID_AWS_REGIONS))}"
                 raise ValueError(msg)
 
