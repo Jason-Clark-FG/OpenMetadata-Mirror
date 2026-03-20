@@ -103,6 +103,7 @@ class Tester:
             return
         else:
             for project_id, client in self.client.storage_client.clients.items():
+                matched = False
                 for bucket in client.list_buckets():
                     if not filter_by_container(
                         self.connection.containerFilterPattern,
@@ -111,7 +112,22 @@ class Tester:
                         self.bucket_tests.append(
                             BucketTestState(project_id, bucket.name)
                         )
+                        matched = True
                         break
+                if not matched and self.connection.containerFilterPattern:
+                    logger.warning(
+                        f"No buckets in project {project_id} matched the "
+                        f"containerFilterPattern. Check your include/exclude patterns."
+                    )
+            if not self.bucket_tests:
+                if self.connection.containerFilterPattern:
+                    raise SourceConnectionException(
+                        "Buckets were found but none matched the containerFilterPattern. "
+                        "Review your include/exclude filter settings."
+                    )
+                raise SourceConnectionException(
+                    "No buckets found in provided projects."
+                )
 
     def get_bucket(self):
         if not self.bucket_tests:
