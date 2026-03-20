@@ -1131,7 +1131,8 @@ public class ESLineageGraphBuilder
       // Add upstream edges - current entity depends on these upstream entities
       for (EsLineageData data : upstreamEntities) {
         // Only add edge if the upstream entity is in our collected set
-        if (allCollectedFqns.contains(data.getFromEntity().getFullyQualifiedName())) {
+        if (data.getFromEntity() != null
+            && allCollectedFqns.contains(data.getFromEntity().getFullyQualifiedName())) {
           result.getUpstreamEdges().putIfAbsent(data.getDocId(), data.withToEntity(currentEntity));
         }
       }
@@ -1139,7 +1140,8 @@ public class ESLineageGraphBuilder
       // Add downstream edges - include edges from any collected entity, not just root
       for (EsLineageData upstreamData : upstreamEntities) {
         // Add edge if the fromEntity is in our collected set (root or intermediate nodes)
-        if (allCollectedFqns.contains(upstreamData.getFromEntity().getFullyQualifiedName())) {
+        if (upstreamData.getFromEntity() != null
+            && allCollectedFqns.contains(upstreamData.getFromEntity().getFullyQualifiedName())) {
           result
               .getDownstreamEdges()
               .putIfAbsent(upstreamData.getDocId(), upstreamData.withToEntity(currentEntity));
@@ -1297,7 +1299,8 @@ public class ESLineageGraphBuilder
         || queryFilter.contains("tier.tagFQN")
         || queryFilter.contains("tags.tagFQN")
         || queryFilter.contains("owner")
-        || queryFilter.contains("domain");
+        || queryFilter.contains("domain")
+        || queryFilter.contains("service");
   }
 
   /**

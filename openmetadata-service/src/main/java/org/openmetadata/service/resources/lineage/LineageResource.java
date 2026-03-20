@@ -237,7 +237,7 @@ public class LineageResource {
       @Parameter(
               description =
                   "When true, preserves all nodes in the path to filtered results. When false, only returns nodes matching the filter. Default is true.")
-          @QueryParam("preservePaths")
+          @QueryParam("preserve_paths")
           @DefaultValue("true")
           Boolean preservePaths)
       throws IOException {
@@ -345,7 +345,7 @@ public class LineageResource {
       @Parameter(
               description =
                   "When true, preserves all nodes in the path to filtered results. When false, only returns nodes matching the filter. Default is true.")
-          @QueryParam("preservePaths")
+          @QueryParam("preserve_paths")
           @DefaultValue("true")
           Boolean preservePaths)
       throws IOException {
@@ -672,7 +672,7 @@ public class LineageResource {
       @Parameter(
               description =
                   "When true, preserves all nodes in the path to filtered results. When false, only returns nodes matching the filter. Default is false.")
-          @QueryParam("preservePaths")
+          @QueryParam("preserve_paths")
           @DefaultValue("false")
           Boolean preservePaths)
       throws IOException {

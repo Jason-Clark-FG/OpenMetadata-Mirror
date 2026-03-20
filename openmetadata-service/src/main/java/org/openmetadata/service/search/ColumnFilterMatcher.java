@@ -173,8 +173,7 @@ public class ColumnFilterMatcher {
    * Filters the columns list of an edge to only include column lineages matching the filter.
    * Returns a new list with only matching ColumnLineage entries, or empty if none match.
    */
-  public static List<ColumnLineage> filterMatchingColumns(
-      EsLineageData edge, String columnFilter) {
+  public static List<ColumnLineage> filterMatchingColumns(EsLineageData edge, String columnFilter) {
     if (edge == null || nullOrEmpty(columnFilter)) {
       return edge != null ? edge.getColumns() : new ArrayList<>();
     }
@@ -184,14 +183,14 @@ public class ColumnFilterMatcher {
       return new ArrayList<>();
     }
 
-    List<FilterCriteria> criteriaList = buildCriteriaList(columnFilter);
-    if (criteriaList.isEmpty()) {
+    Map<String, List<String>> groupedFilters = getGroupedFilters(columnFilter);
+    if (groupedFilters.isEmpty()) {
       return columns;
     }
 
     List<ColumnLineage> matching = new ArrayList<>();
     for (ColumnLineage colLineage : columns) {
-      if (matchesAllCriteria(colLineage, criteriaList)) {
+      if (matchesGroupedCriteria(colLineage, groupedFilters)) {
         matching.add(colLineage);
       }
     }
@@ -213,18 +212,102 @@ public class ColumnFilterMatcher {
       return new ArrayList<>();
     }
 
-    List<FilterCriteria> criteriaList = buildCriteriaList(columnFilter);
-    if (criteriaList.isEmpty()) {
+    Map<String, List<String>> groupedFilters = getGroupedFilters(columnFilter);
+    if (groupedFilters.isEmpty()) {
       return columns;
     }
 
     List<ColumnLineage> matching = new ArrayList<>();
     for (ColumnLineage colLineage : columns) {
-      if (matchesAllCriteriaWithMetadata(colLineage, criteriaList, metadataCache)) {
+      if (matchesGroupedCriteriaWithMetadata(colLineage, groupedFilters, metadataCache)) {
         matching.add(colLineage);
       }
     }
     return matching;
+  }
+
+  /**
+   * Parses filter into a grouped map (type → values) preserving OR-within-type, AND-across-types semantics.
+   */
+  private static Map<String, List<String>> getGroupedFilters(String columnFilter) {
+    Map<String, List<String>> grouped = new HashMap<>();
+    if (isEsQueryFormat(columnFilter)) {
+      for (FilterCriteria c : parseEsQueryFilter(columnFilter)) {
+        grouped.computeIfAbsent(c.type, k -> new ArrayList<>()).add(c.value);
+      }
+    } else if (columnFilter.contains(",")) {
+      grouped = parseMultipleFiltersGrouped(columnFilter);
+    } else {
+      FilterCriteria criteria = parseColumnFilter(columnFilter);
+      if (criteria != null) {
+        grouped.computeIfAbsent(criteria.type, k -> new ArrayList<>()).add(criteria.value);
+      }
+    }
+    return grouped;
+  }
+
+  /**
+   * Checks if a single ColumnLineage matches grouped filters: OR within same type, AND across types.
+   */
+  private static boolean matchesGroupedCriteria(
+      ColumnLineage colLineage, Map<String, List<String>> groupedFilters) {
+    for (Map.Entry<String, List<String>> entry : groupedFilters.entrySet()) {
+      boolean anyMatch = false;
+      for (String value : entry.getValue()) {
+        if (matchesColumnLineage(colLineage, new FilterCriteria(entry.getKey(), value))) {
+          anyMatch = true;
+          break;
+        }
+      }
+      if (!anyMatch) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Checks if a single ColumnLineage matches grouped filters with metadata: OR within same type, AND across types.
+   */
+  private static boolean matchesGroupedCriteriaWithMetadata(
+      ColumnLineage colLineage,
+      Map<String, List<String>> groupedFilters,
+      ColumnMetadataCache metadataCache) {
+    for (Map.Entry<String, List<String>> entry : groupedFilters.entrySet()) {
+      String filterType = entry.getKey();
+      boolean anyMatch = false;
+      for (String value : entry.getValue()) {
+        FilterCriteria criteria = new FilterCriteria(filterType, value);
+        if (requiresMetadata(criteria) && metadataCache != null) {
+          ColumnMetadataCache.ColumnFilterCriteria metadataCriteria = toMetadataCriteria(criteria);
+          if (metadataCriteria != null) {
+            if (colLineage.getToColumn() != null
+                && metadataCache.matchesFilter(colLineage.getToColumn(), metadataCriteria)) {
+              anyMatch = true;
+            }
+            if (!anyMatch && colLineage.getFromColumns() != null) {
+              for (String fromCol : colLineage.getFromColumns()) {
+                if (metadataCache.matchesFilter(fromCol, metadataCriteria)) {
+                  anyMatch = true;
+                  break;
+                }
+              }
+            }
+          }
+        } else {
+          if (matchesColumnLineage(colLineage, criteria)) {
+            anyMatch = true;
+          }
+        }
+        if (anyMatch) {
+          break;
+        }
+      }
+      if (!anyMatch) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
