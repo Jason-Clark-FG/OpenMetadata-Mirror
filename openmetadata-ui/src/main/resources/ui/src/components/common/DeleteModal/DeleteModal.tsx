@@ -15,13 +15,13 @@ import {
   Button,
   Dialog,
   FeaturedIcon,
+  Grid,
   Modal,
   ModalOverlay,
   Typography,
 } from '@openmetadata/ui-core-components';
 import { Trash01 } from '@untitledui/icons';
 import { useTranslation } from 'react-i18next';
-import Loader from '../Loader/Loader';
 import { DeleteModalProps } from './DeleteModal.interface';
 
 export const DeleteModal = ({
@@ -48,37 +48,45 @@ export const DeleteModal = ({
               size="lg"
               theme="light"
             />
-            <div className="tw:z-10 tw:flex tw:flex-col tw:gap-0.5 tw:mt-4">
-              <Typography as="span" className="tw:text-md tw:font-semibold">
+            <div
+              className="tw:flex tw:flex-col tw:gap-0.5 tw:mt-4"
+              data-testid="modal-header">
+              <Typography size="text-md" weight="semibold">
                 {t('label.delete')} {entityTitle}
               </Typography>
-              <Typography as="p" className="tw:text-sm tw:text-tertiary">
+              <Typography as="p" className="tw:text-tertiary">
                 {message}
               </Typography>
             </div>
           </Dialog.Header>
-          <div className="tw:z-10 tw:flex tw:flex-1 tw:flex-col-reverse tw:gap-3 tw:p-4 tw:pt-6 tw:*:grow tw:sm:grid tw:sm:grid-cols-2 tw:sm:px-6 tw:sm:pt-8 tw:sm:pb-6">
-            <Button
-              color="secondary"
-              data-testid="cancel-button"
-              isDisabled={isDeleting}
-              size="lg"
-              onPress={onCancel}>
-              {t('label.cancel')}
-            </Button>
-            <Button
-              color="primary-destructive"
-              data-testid="confirm-button"
-              isDisabled={isDeleting}
-              size="lg"
-              onPress={onDelete}>
-              {isDeleting ? (
-                <Loader size="small" type="white" />
-              ) : (
-                t('label.delete')
-              )}
-            </Button>
-          </div>
+          <Grid
+            className="tw:p-4 tw:pt-6 tw:sm:px-6 tw:sm:pt-8 tw:sm:pb-6"
+            colGap="3"
+            data-testid="modal-footer">
+            <Grid.Item span={12}>
+              <Button
+                className="tw:w-full"
+                color="secondary"
+                data-testid="cancel-button"
+                isDisabled={isDeleting}
+                size="lg"
+                onPress={onCancel}>
+                {t('label.cancel')}
+              </Button>
+            </Grid.Item>
+            <Grid.Item span={12}>
+              <Button
+                className="tw:w-full"
+                color="primary-destructive"
+                data-testid="confirm-button"
+                isDisabled={isDeleting}
+                isLoading={isDeleting}
+                size="lg"
+                onPress={onDelete}>
+                {t('label.delete')}
+              </Button>
+            </Grid.Item>
+          </Grid>
         </Dialog>
       </Modal>
     </ModalOverlay>
