@@ -4493,17 +4493,19 @@ public abstract class EntityRepository<T extends EntityInterface> {
     if (!supportsCertification) return null;
     String certClassification = getCertificationClassification();
     if (certClassification == null) return null;
-    List<TagLabel> tags = daoCollection.tagUsageDAO().getTags(entity.getFullyQualifiedName());
-    for (TagLabel tag : tags) {
-      String parentFqn = FullyQualifiedName.getParentFQN(tag.getTagFQN());
-      if (certClassification.equals(parentFqn)) {
-        return new AssetCertification()
-            .withTagLabel(tag)
-            .withAppliedDate(tag.getAppliedAt() != null ? tag.getAppliedAt().getTime() : null)
-            .withExpiryDate(tag.getMetadata() != null ? tag.getMetadata().getExpiryDate() : null);
-      }
-    }
-    return null;
+    List<CollectionDAO.TagUsageDAO.TagLabelWithFQNHash> certTags =
+        daoCollection
+            .tagUsageDAO()
+            .getCertTagsInternalBatch(
+                List.of(entity.getFullyQualifiedName()), certClassification + ".%");
+    if (nullOrEmpty(certTags)) return null;
+    TagLabel tagLabel = certTags.get(0).toTagLabel();
+    TagLabelUtil.applyTagCommonFieldsGracefully(tagLabel);
+    return new AssetCertification()
+        .withTagLabel(tagLabel)
+        .withAppliedDate(tagLabel.getAppliedAt() != null ? tagLabel.getAppliedAt().getTime() : null)
+        .withExpiryDate(
+            tagLabel.getMetadata() != null ? tagLabel.getMetadata().getExpiryDate() : null);
   }
 
   protected void applyCertification(T entity) {

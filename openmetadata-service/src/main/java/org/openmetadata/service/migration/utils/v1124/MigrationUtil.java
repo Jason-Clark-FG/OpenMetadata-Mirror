@@ -256,7 +256,13 @@ public class MigrationUtil {
       "data_product_entity",
       "domain_entity",
       "chart_entity",
-      "metric_entity"
+      "metric_entity",
+      "file_entity",
+      "directory_entity",
+      "spreadsheet_entity",
+      "worksheet_entity",
+      "llm_model_entity",
+      "ai_application_entity"
     };
 
     int totalMigrated = 0;
