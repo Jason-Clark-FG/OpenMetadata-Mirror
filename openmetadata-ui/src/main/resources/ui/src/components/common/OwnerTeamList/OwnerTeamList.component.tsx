@@ -14,6 +14,7 @@
 import { Button, Dropdown, Typography } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import React, { ReactNode, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { ReactComponent as IconTeamsGrey } from '../../../assets/svg/teams-grey.svg';
 import { EntityReference } from '../../../generated/entity/type';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -56,13 +57,14 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
         }>
         <div className="tw:flex tw:items-center tw:gap-2 tw:max-w-full">
           <div
-            className={classNames('tw:overflow-hidden', {
+            className={classNames({
               'tw:max-w-30': placement === 'vertical' || owners.length < 2,
               'tw:max-w-12.5': placement !== 'vertical' && owners.length >= 2,
             })}>
             <Typography
+              ellipsis
               as="p"
-              className="tw:leading-none tw:truncate tw:m-0"
+              className="tw:leading-none"
               data-testid={getEntityName(visibleTeam)}
               size="text-xs"
               weight="medium">
@@ -81,24 +83,23 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
             size="sm">
             {`+${owners.length - 1}`}
           </Button>
-          <Dropdown.Popover>
+          <Dropdown.Popover placement="bottom start">
             <Dropdown.Menu aria-label="remaining team owners">
               {remainingTeam.map((owner) => {
+                const entityName = getEntityName(owner);
                 const name =
-                  ownerDisplayName?.get(owner.name ?? '') ??
-                  getEntityName(owner);
+                  ownerDisplayName?.get(owner.name ?? '') ?? entityName;
 
                 return (
-                  <Dropdown.Item
-                    key={owner.id}
-                    textValue={getEntityName(owner)}>
-                    <Button
-                      color="link-gray"
-                      data-test={getEntityName(owner)}
+                  <Dropdown.Item key={owner.id} textValue={entityName}>
+                    <Link
+                      className="tw:max-w-46"
                       data-testid="owner-link"
-                      href={getOwnerPath(owner)}>
-                      {name}
-                    </Button>
+                      to={getOwnerPath(owner)}>
+                      <Typography ellipsis as="p" data-test={entityName}>
+                        {name}
+                      </Typography>
+                    </Link>
                   </Dropdown.Item>
                 );
               })}

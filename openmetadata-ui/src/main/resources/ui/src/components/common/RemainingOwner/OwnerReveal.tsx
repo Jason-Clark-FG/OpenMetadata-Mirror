@@ -68,7 +68,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
             size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
           />
         </Button>
-        <Dropdown.Popover>
+        <Dropdown.Popover placement="bottom start">
           <Dropdown.Menu aria-label="remaining owners">
             {owners.map((owner) => {
               const name = getEntityName(owner);
@@ -82,19 +82,15 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                       color="link-gray"
                       data-testid="owner-link"
                       href={getOwnerPath(owner)}>
-                      <div className="tw:flex tw:items-center tw:gap-2 tw:min-w-0">
+                      <div className="tw:flex tw:items-center tw:gap-2">
                         <ProfilePicture
                           displayName={name}
                           name={owner.name ?? ''}
                           type="circle"
                           width={avatarSize.toString()}
                         />
-                        <div className="tw:min-w-0 tw:overflow-hidden">
-                          <Typography
-                            as="span"
-                            className="tw:truncate tw:block"
-                            data-testid={name}
-                            size="text-sm">
+                        <div className="tw:max-w-46">
+                          <Typography ellipsis as="p" data-testid={name}>
                             {name}
                           </Typography>
                         </div>
