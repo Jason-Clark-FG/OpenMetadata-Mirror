@@ -32,7 +32,24 @@ const mockTeamOwner = [
 jest.mock('@openmetadata/ui-core-components', () => ({
   Typography: jest
     .fn()
-    .mockImplementation(({ children }) => <span>{children}</span>),
+    .mockImplementation(({ children, 'data-testid': testId }) => (
+      <span data-testid={testId}>{children}</span>
+    )),
+  Button: jest
+    .fn()
+    .mockImplementation(({ children }) => <button>{children}</button>),
+  Dropdown: {
+    Root: jest.fn().mockImplementation(({ children }) => <div>{children}</div>),
+    Popover: jest
+      .fn()
+      .mockImplementation(({ children }) => <div>{children}</div>),
+    Menu: jest
+      .fn()
+      .mockImplementation(({ children }) => <div>{children}</div>),
+    Item: jest
+      .fn()
+      .mockImplementation(({ children }) => <div>{children}</div>),
+  },
 }));
 
 jest.mock('../ProfilePicture/ProfilePicture', () => {
