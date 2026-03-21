@@ -12,7 +12,7 @@
 Test flink using the topology
 """
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from metadata.generated.schema.api.data.createPipeline import CreatePipelineRequest
 from metadata.generated.schema.entity.services.pipelineService import (
@@ -90,6 +90,33 @@ MOCK_JOB = {
         "failed": 0,
     },
 }
+# Pipeline whose task names contain Flink's "A -> B" operator-chain separator,
+# which is the character sequence that triggered the validateTask() mismatch bug.
+MOCK_PIPELINE_WITH_SPECIAL_CHARS = FlinkPipeline.model_validate(
+    {
+        "jid": "2aaa012e-099a-11ed-861d-0242ac120003",
+        "name": "test-job-with-arrows",
+        "state": "FINISHED",
+        "start-time": 1718948457617,
+        "end-time": 1718948457663,
+        "vertices": [
+            {
+                "id": "cbc123",
+                "name": "Source: dev-env -> deserialized -> sink",
+                "status": "FINISHED",
+                "start-time": 1718948457617,
+                "end-time": 1718948457663,
+            }
+        ],
+    }
+)
+# replace_separators converts ">" → "__reserved__arrow__", so "->" becomes
+# "-__reserved__arrow__".  The task id is appended with "_" as the separator.
+EXPECTED_SANITIZED_TASK_NAME = (
+    "Source: dev-env -__reserved__arrow__ deserialized"
+    " -__reserved__arrow__ sink_cbc123"
+)
+
 EXPECTED_PIPELINE_NAME = "alphabet"
 EXPECTED_PIPELINE = [
     CreatePipelineRequest(
@@ -137,3 +164,67 @@ class FlinkUnitTest(TestCase):
         ):
             expected.sourceUrl = original.sourceUrl
             self.assertEqual(expected, original)
+
+
+class TestFlinkTaskNameSanitization:
+    """
+    Regression tests for the task-name mismatch bug where Flink task names
+    containing ">" (e.g. "Source: A -> B -> C") were stored with
+    "__reserved__arrow__" encoding during topology ingestion but sent raw
+    during pipeline-status ingestion, causing Java's validateTask() to throw
+    "Invalid task name".
+    """
+
+    def setup_method(self):
+        with patch(
+            "metadata.ingestion.source.pipeline.pipeline_service.PipelineServiceSource.test_connection"
+        ), patch("metadata.ingestion.source.pipeline.flink.connection.get_connection"):
+            config = OpenMetadataWorkflowConfig.model_validate(mock_flink_config)
+            self.flink = FlinkSource.create(
+                mock_flink_config["source"],
+                config.workflowConfig.openMetadataServerConfig,
+            )
+        self.flink.context.get().__dict__["pipeline"] = MOCK_PIPELINE.name
+        self.flink.context.get().__dict__[
+            "pipeline_service"
+        ] = MOCK_PIPELINE_SERVICE.name.root
+        self.flink.client = MagicMock()
+        self.flink.client.get_pipeline_info.return_value = (
+            MOCK_PIPELINE_WITH_SPECIAL_CHARS
+        )
+
+    def test_get_connections_jobs_encodes_arrow_in_task_name(self):
+        tasks = self.flink.get_connections_jobs(MOCK_PIPELINE_WITH_SPECIAL_CHARS)
+
+        assert len(tasks) == 1
+        assert tasks[0].name == EXPECTED_SANITIZED_TASK_NAME
+
+    def test_yield_pipeline_status_encodes_arrow_in_task_name(self):
+        results = list(
+            self.flink.yield_pipeline_status(MOCK_PIPELINE_WITH_SPECIAL_CHARS)
+        )
+
+        assert len(results) == 1
+        assert results[0].right is not None
+        task_statuses = results[0].right.pipeline_status.taskStatus
+        assert len(task_statuses) == 1
+        assert task_statuses[0].name == EXPECTED_SANITIZED_TASK_NAME
+
+    def test_task_names_consistent_between_topology_and_status(self):
+        """
+        The name stored by get_connections_jobs must exactly equal the name
+        sent by yield_pipeline_status.  Java's validateTask() uses
+        String.equals() so any divergence causes "Invalid task name".
+        """
+        topology_tasks = self.flink.get_connections_jobs(
+            MOCK_PIPELINE_WITH_SPECIAL_CHARS
+        )
+        status_results = list(
+            self.flink.yield_pipeline_status(MOCK_PIPELINE_WITH_SPECIAL_CHARS)
+        )
+
+        topology_names = {task.name for task in topology_tasks}
+        status_names = {
+            ts.name for ts in status_results[0].right.pipeline_status.taskStatus
+        }
+        assert topology_names == status_names
