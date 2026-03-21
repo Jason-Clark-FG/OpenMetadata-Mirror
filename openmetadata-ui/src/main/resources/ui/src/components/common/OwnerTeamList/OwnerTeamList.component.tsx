@@ -63,6 +63,7 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
             <Typography
               as="p"
               className="tw:leading-none tw:truncate tw:m-0"
+              data-testid={getEntityName(visibleTeam)}
               size="text-xs"
               weight="medium">
               {ownerDisplayName?.get(visibleTeam.name ?? '') ??
@@ -93,9 +94,9 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
                     textValue={getEntityName(owner)}>
                     <Button
                       color="link-gray"
+                      data-test={getEntityName(owner)}
                       data-testid="owner-link"
                       href={getOwnerPath(owner)}>
-                      {' '}
                       {name}
                     </Button>
                   </Dropdown.Item>

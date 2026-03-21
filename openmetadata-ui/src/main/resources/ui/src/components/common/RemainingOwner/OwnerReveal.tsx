@@ -68,7 +68,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
             size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
           />
         </Button>
-        <Dropdown.Popover isOpen>
+        <Dropdown.Popover>
           <Dropdown.Menu aria-label="remaining owners">
             {owners.map((owner) => {
               const name = getEntityName(owner);
@@ -93,6 +93,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                           <Typography
                             as="span"
                             className="tw:truncate tw:block"
+                            data-testid={name}
                             size="text-sm">
                             {name}
                           </Typography>

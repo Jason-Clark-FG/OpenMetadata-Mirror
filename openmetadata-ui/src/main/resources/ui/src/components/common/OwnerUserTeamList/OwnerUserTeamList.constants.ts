@@ -25,6 +25,7 @@ export const AVATAR_SIZE_NAME_MAP: Record<
   'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
 > = {
   16: 'xxs',
+  18: 'xxs',
   24: 'xs',
   32: 'sm',
   40: 'md',
@@ -35,6 +36,7 @@ export const AVATAR_SIZE_NAME_MAP: Record<
 
 export const AVATAR_FONT_SIZE_MAP: Record<number, string> = {
   16: 'tw:text-[8px]',
+  18: 'tw:text-[8px]',
   24: 'tw:text-[10px]',
   32: 'tw:text-xs',
   40: 'tw:text-base',
