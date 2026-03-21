@@ -65,7 +65,7 @@ const CoreCreateErrorPlaceHolder = ({
               color="primary"
               data-testid={buttonId}
               iconLeading={<PlusOutlined />}
-              onClick={onClick}>
+              onPress={onClick}>
               {buttonTitle}
             </Button>
           )}
