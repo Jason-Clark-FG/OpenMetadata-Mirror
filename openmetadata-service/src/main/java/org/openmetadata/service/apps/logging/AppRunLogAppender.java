@@ -4,23 +4,29 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
+import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.slf4j.LoggerFactory;
 
 /**
- * Logback appender that captures log events for app runs. Uses two-tier matching:
+ * Logback appender that captures log events for internal app runs into per-run log files under
+ * {@code ./logs/app-runs/{appName}/{runTimestamp}-{serverId}.log}.
  *
- * <ol>
- *   <li>MDC {@code appRunId} — matches the main scheduler thread
- *   <li>Thread name prefix — matches worker threads (reindex-*, om-field-fetch-*, etc.)
- * </ol>
- *
- * <p>Storage is delegated to an {@link AppRunLogStorageProvider} (local filesystem or S3).
+ * <p>Configured via the {@code logging:} section in {@code openmetadata.yaml}. Uses two-tier
+ * matching: MDC for the scheduler thread, thread name prefixes for worker threads.
  */
 public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   public static final String MDC_APP_RUN_ID = "appRunId";
@@ -37,30 +43,10 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   private static final DateTimeFormatter FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
 
+  private static String logDirectory = "./logs/app-runs";
+  private static int maxLinesPerRun = 100_000;
+  private static int maxRunsPerApp = 5;
   private static volatile boolean registered = false;
-  private static volatile AppRunLogStorageProvider storageProvider;
-  private static volatile AppRunLogStorageConfig config;
-
-  /** Initialize the appender with configuration. Call once during server startup. */
-  public static void initialize(AppRunLogStorageConfig storageConfig) {
-    config = storageConfig;
-    storageProvider = storageConfig.createProvider();
-  }
-
-  public static AppRunLogStorageProvider getStorageProvider() {
-    if (storageProvider == null) {
-      storageProvider = new LocalAppRunLogStorage("./logs/app-runs");
-    }
-    return storageProvider;
-  }
-
-  static int getMaxRunsPerApp() {
-    return config != null ? config.getMaxRunsPerApp() : 5;
-  }
-
-  static int getMaxLinesPerRun() {
-    return config != null ? config.getMaxLinesPerRun() : 100_000;
-  }
 
   @Override
   protected void append(ILoggingEvent event) {
@@ -136,10 +122,10 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
       String appRunId, String appId, String appName, String serverId, String... threadPrefixes) {
     ensureRegistered();
     cleanupOldRuns(appName);
-    AppRunLogStorageProvider provider = getStorageProvider();
+    Path logFile = resolveLogFile(appName, Long.parseLong(appRunId), serverId);
     RunLogBuffer buffer =
         new RunLogBuffer(
-            appId, appName, serverId, Long.parseLong(appRunId), getMaxLinesPerRun(), provider);
+            appId, appName, serverId, Long.parseLong(appRunId), maxLinesPerRun, logFile);
     activeBuffers.put(bufferKey(appName, appRunId), buffer);
 
     for (String prefix : threadPrefixes) {
@@ -147,6 +133,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     }
 
     buffer.startFlusher();
+    AppRunLogMetrics.recordRunStarted(appName, serverId);
     return buffer;
   }
 
@@ -154,6 +141,9 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     RunLogBuffer buffer = activeBuffers.remove(bufferKey(appName, appRunId));
     if (buffer != null) {
       threadPrefixBindings.removeIf(b -> b.buffer == buffer);
+      long durationMs = System.currentTimeMillis() - buffer.getRunTimestamp();
+      AppRunLogMetrics.recordRunCompleted(appName, buffer.getServerId(), durationMs);
+      AppRunLogMetrics.recordLinesCapture(appName, buffer.getTotalLineCount());
       buffer.close();
     }
   }
@@ -163,30 +153,82 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   }
 
   static void cleanupOldRuns(String appName) {
-    AppRunLogStorageProvider provider = getStorageProvider();
-    List<Long> timestamps = provider.listRunTimestamps(appName);
-    int maxRuns = getMaxRunsPerApp();
-    if (timestamps.size() <= maxRuns) {
+    List<Long> timestamps = listRunTimestamps(appName);
+    if (timestamps.size() <= maxRunsPerApp) {
       return;
     }
-    for (Long ts : timestamps.subList(maxRuns, timestamps.size())) {
-      provider.deleteRun(appName, ts);
+    List<Long> toDelete = timestamps.subList(maxRunsPerApp, timestamps.size());
+    Path appDir = resolveAppDir(appName);
+    for (long ts : toDelete) {
+      try (DirectoryStream<Path> stream = Files.newDirectoryStream(appDir, ts + "-*.log")) {
+        for (Path entry : stream) {
+          Files.deleteIfExists(entry);
+        }
+      } catch (IOException e) {
+        // best-effort cleanup
+      }
     }
+    AppRunLogMetrics.recordCleanup(appName, toDelete.size());
+  }
+
+  static List<Long> listRunTimestamps(String appName) {
+    Set<Long> timestamps = new TreeSet<>(Comparator.reverseOrder());
+    Path appDir = resolveAppDir(appName);
+    if (!Files.isDirectory(appDir)) {
+      return new ArrayList<>();
+    }
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(appDir, "*.log")) {
+      for (Path entry : stream) {
+        String fileName = entry.getFileName().toString();
+        int dashIdx = fileName.indexOf('-');
+        if (dashIdx > 0) {
+          try {
+            timestamps.add(Long.parseLong(fileName.substring(0, dashIdx)));
+          } catch (NumberFormatException ignored) {
+            // skip malformed
+          }
+        }
+      }
+    } catch (IOException e) {
+      // directory may not exist yet
+    }
+    return new ArrayList<>(timestamps);
+  }
+
+  private static Path resolveLogFile(String appName, long runTimestamp, String serverId) {
+    Path base = Paths.get(logDirectory).toAbsolutePath().normalize();
+    Path resolved =
+        base.resolve(appName).resolve(runTimestamp + "-" + serverId + ".log").normalize();
+    if (!resolved.startsWith(base)) {
+      throw new IllegalArgumentException("Invalid path components");
+    }
+    return resolved;
+  }
+
+  private static Path resolveAppDir(String appName) {
+    Path base = Paths.get(logDirectory).toAbsolutePath().normalize();
+    Path resolved = base.resolve(appName).normalize();
+    if (!resolved.startsWith(base)) {
+      throw new IllegalArgumentException("Invalid path components");
+    }
+    return resolved;
   }
 
   static ConcurrentHashMap<String, RunLogBuffer> getActiveBuffers() {
     return activeBuffers;
   }
 
-  static void setStorageProviderForTest(AppRunLogStorageProvider provider) {
-    storageProvider = provider;
+  static void setLogDirectoryForTest(String dir) {
+    logDirectory = dir;
+  }
+
+  static void setMaxRunsPerAppForTest(int max) {
+    maxRunsPerApp = max;
   }
 
   static void resetForTest() {
     registered = false;
     threadPrefixBindings.clear();
-    config = null;
-    storageProvider = null;
   }
 
   private static class ThreadPrefixBinding {

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -13,21 +14,18 @@ class RunLogBufferTest {
 
   @TempDir Path tempDir;
 
-  private LocalAppRunLogStorage createStorage() {
-    return new LocalAppRunLogStorage(tempDir.toString());
-  }
-
   @Test
-  void appendAndFlushWritesToStorage() throws IOException {
-    LocalAppRunLogStorage storage = createStorage();
-    RunLogBuffer buffer = new RunLogBuffer("app-1", "TestApp", "server1", 1000L, 100_000, storage);
+  void appendAndFlushWritesToFile() throws IOException {
+    Path logFile = tempDir.resolve("TestApp").resolve("1000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-1", "TestApp", "server1", 1000L, 100_000, logFile);
     buffer.startFlusher();
 
     buffer.append("first line");
     buffer.append("second line");
     buffer.flush();
 
-    String content = storage.readLogs("TestApp", 1000L, "server1");
+    assertTrue(Files.exists(logFile));
+    String content = Files.readString(logFile);
     assertTrue(content.contains("first line"));
     assertTrue(content.contains("second line"));
 
@@ -36,8 +34,8 @@ class RunLogBufferTest {
 
   @Test
   void lineCountTrackingIsAccurate() {
-    RunLogBuffer buffer =
-        new RunLogBuffer("app-2", "CountApp", "server1", 2000L, 100_000, createStorage());
+    Path logFile = tempDir.resolve("CountApp").resolve("2000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-2", "CountApp", "server1", 2000L, 100_000, logFile);
 
     buffer.append("line 1");
     buffer.append("line 2");
@@ -48,7 +46,8 @@ class RunLogBufferTest {
 
   @Test
   void maxLinesCapDropsNewLines() {
-    RunLogBuffer buffer = new RunLogBuffer("app-3", "MaxApp", "server1", 3000L, 5, createStorage());
+    Path logFile = tempDir.resolve("MaxApp").resolve("3000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-3", "MaxApp", "server1", 3000L, 5, logFile);
 
     for (int i = 0; i < 10; i++) {
       buffer.append("line " + i);
@@ -62,23 +61,23 @@ class RunLogBufferTest {
   }
 
   @Test
-  void closeFlushesRemainingLines() {
-    LocalAppRunLogStorage storage = createStorage();
-    RunLogBuffer buffer = new RunLogBuffer("app-4", "CloseApp", "server1", 4000L, 100_000, storage);
+  void closeFlushesRemainingLines() throws IOException {
+    Path logFile = tempDir.resolve("CloseApp").resolve("4000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-4", "CloseApp", "server1", 4000L, 100_000, logFile);
     buffer.startFlusher();
 
     buffer.append("before close");
     buffer.close();
 
-    String content = storage.readLogs("CloseApp", 4000L, "server1");
+    String content = Files.readString(logFile);
     assertTrue(content.contains("before close"));
     assertTrue(buffer.getPendingLines().isEmpty());
   }
 
   @Test
   void getPendingLinesReturnsUnflushedLines() {
-    RunLogBuffer buffer =
-        new RunLogBuffer("app-5", "PendApp", "server1", 5000L, 100_000, createStorage());
+    Path logFile = tempDir.resolve("PendApp").resolve("5000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-5", "PendApp", "server1", 5000L, 100_000, logFile);
 
     buffer.append("pending 1");
     buffer.append("pending 2");
@@ -90,9 +89,9 @@ class RunLogBufferTest {
   }
 
   @Test
-  void multipleFlushesAppendToSameStorage() {
-    LocalAppRunLogStorage storage = createStorage();
-    RunLogBuffer buffer = new RunLogBuffer("app-6", "MultiApp", "server1", 6000L, 100_000, storage);
+  void multipleFlushesAppendToSameFile() throws IOException {
+    Path logFile = tempDir.resolve("MultiApp").resolve("6000-server1.log");
+    RunLogBuffer buffer = new RunLogBuffer("app-6", "MultiApp", "server1", 6000L, 100_000, logFile);
     buffer.startFlusher();
 
     buffer.append("batch 1 line");
@@ -101,7 +100,7 @@ class RunLogBufferTest {
     buffer.append("batch 2 line");
     buffer.flush();
 
-    String content = storage.readLogs("MultiApp", 6000L, "server1");
+    String content = Files.readString(logFile);
     assertTrue(content.contains("batch 1 line"));
     assertTrue(content.contains("batch 2 line"));
 

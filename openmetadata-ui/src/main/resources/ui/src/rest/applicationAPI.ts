@@ -167,40 +167,6 @@ export const getApplicationLogs = (appName: string, after?: string) => {
   });
 };
 
-export const getAppRunTextLogs = async (
-  appName: string,
-  runTimestamp: number,
-  serverId?: string
-) => {
-  const response = await APIClient.get<{
-    logs: string;
-    servers: string[];
-    totalLines: number;
-  }>(`${BASE_URL}/name/${getEncodedFqn(appName)}/runs/${runTimestamp}/logs`, {
-    params: { ...(serverId ? { serverId } : {}) },
-  });
-
-  return response.data;
-};
-
-export const downloadAppRunTextLogs = async (
-  appName: string,
-  runTimestamp: number,
-  serverId?: string
-) => {
-  const response = await APIClient.get(
-    `${BASE_URL}/name/${getEncodedFqn(
-      appName
-    )}/runs/${runTimestamp}/logs/download`,
-    {
-      params: { ...(serverId ? { serverId } : {}) },
-      responseType: 'blob',
-    }
-  );
-
-  return response.data as Blob;
-};
-
 export const getAgentRuns = async (
   applicationName: string,
   params?: GetAgentRunsParams

@@ -17,5 +17,4 @@ export enum ApplicationTabs {
   SCHEDULE = 'schedule',
   RECENT_RUNS = 'recent-runs',
   CONFIGURATION = 'configuration',
-  LOGS = 'logs',
 }

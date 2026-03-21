@@ -1,17 +1,18 @@
 package org.openmetadata.service.apps.logging;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,13 +24,12 @@ public class RunLogBuffer {
   @Getter private final String appName;
   @Getter private final String serverId;
   @Getter private final long runTimestamp;
+  @Getter private final Path logFile;
   private final int maxLines;
-  private final AppRunLogStorageProvider storageProvider;
   private final ConcurrentLinkedQueue<String> pending = new ConcurrentLinkedQueue<>();
   private final AtomicInteger totalLineCount = new AtomicInteger(0);
-  private final List<Consumer<String>> streamListeners = new CopyOnWriteArrayList<>();
   private ScheduledExecutorService flusher;
-  private OutputStream outputStream;
+  private BufferedWriter writer;
 
   public RunLogBuffer(
       String appId,
@@ -37,13 +37,13 @@ public class RunLogBuffer {
       String serverId,
       long runTimestamp,
       int maxLines,
-      AppRunLogStorageProvider storageProvider) {
+      Path logFile) {
     this.appId = appId;
     this.appName = appName;
     this.serverId = serverId;
     this.runTimestamp = runTimestamp;
     this.maxLines = maxLines;
-    this.storageProvider = storageProvider;
+    this.logFile = logFile;
   }
 
   public void append(String line) {
@@ -59,14 +59,15 @@ public class RunLogBuffer {
 
   void startFlusher() {
     try {
-      outputStream = storageProvider.getOutputStream(appName, runTimestamp, serverId);
-    } catch (Exception e) {
-      LOG.error(
-          "Failed to open log output for {}/{}/{}: {}",
-          appName,
-          runTimestamp,
-          serverId,
-          e.getMessage());
+      Files.createDirectories(logFile.getParent());
+      writer =
+          Files.newBufferedWriter(
+              logFile,
+              StandardCharsets.UTF_8,
+              StandardOpenOption.CREATE,
+              StandardOpenOption.APPEND);
+    } catch (IOException e) {
+      LOG.error("Failed to open log file {}: {}", logFile, e.getMessage());
       return;
     }
 
@@ -86,10 +87,9 @@ public class RunLogBuffer {
     if (batch.isEmpty()) {
       return;
     }
-
     String batchText = String.join("\n", batch);
-    writeToStorage(batchText);
-    notifyListeners(batchText);
+    writeToFile(batchText);
+    AppRunLogMetrics.recordFlush(appName, batch.size());
   }
 
   public void close() {
@@ -102,16 +102,7 @@ public class RunLogBuffer {
       }
     }
     flush();
-    closeOutputStream();
-    streamListeners.clear();
-  }
-
-  public void addStreamListener(Consumer<String> listener) {
-    streamListeners.add(listener);
-  }
-
-  public void removeStreamListener(Consumer<String> listener) {
-    streamListeners.remove(listener);
+    closeWriter();
   }
 
   public List<String> getPendingLines() {
@@ -131,35 +122,25 @@ public class RunLogBuffer {
     return batch;
   }
 
-  private void writeToStorage(String batchText) {
-    if (outputStream == null) {
+  private void writeToFile(String batchText) {
+    if (writer == null) {
       return;
     }
     try {
-      outputStream.write((batchText + "\n").getBytes(StandardCharsets.UTF_8));
-      outputStream.flush();
+      writer.write(batchText);
+      writer.newLine();
+      writer.flush();
     } catch (IOException e) {
-      LOG.warn("Failed to write app run logs for {}/{}: {}", appName, runTimestamp, e.getMessage());
+      LOG.warn("Failed to write app run logs to {}: {}", logFile, e.getMessage());
     }
   }
 
-  private void closeOutputStream() {
-    if (outputStream != null) {
+  private void closeWriter() {
+    if (writer != null) {
       try {
-        outputStream.close();
+        writer.close();
       } catch (IOException e) {
-        LOG.warn("Failed to close log output for {}/{}: {}", appName, runTimestamp, e.getMessage());
-      }
-    }
-  }
-
-  private void notifyListeners(String batchText) {
-    for (Consumer<String> listener : streamListeners) {
-      try {
-        listener.accept(batchText);
-      } catch (Exception e) {
-        LOG.debug("Stream listener error, removing: {}", e.getMessage());
-        streamListeners.remove(listener);
+        LOG.warn("Failed to close log writer for {}: {}", logFile, e.getMessage());
       }
     }
   }

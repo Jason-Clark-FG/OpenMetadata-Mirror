@@ -30,7 +30,7 @@ class AppRunLogAppenderTest {
 
   @BeforeEach
   void setUp() {
-    AppRunLogAppender.setStorageProviderForTest(new LocalAppRunLogStorage(tempDir.toString()));
+    AppRunLogAppender.setLogDirectoryForTest(tempDir.toString());
     loggerContext = new LoggerContext();
     appender = new AppRunLogAppender();
     appender.setContext(loggerContext);
@@ -82,7 +82,7 @@ class AppRunLogAppenderTest {
   }
 
   @Test
-  void logFileIsCreatedOnFlush() {
+  void logFileIsCreatedOnFlush() throws IOException {
     String runId = "3000";
     AppRunLogAppender.startCapture(runId, "app-id-3", "TestApp", "server1");
     RunLogBuffer buffer = AppRunLogAppender.getBuffer("TestApp", runId);
@@ -91,7 +91,9 @@ class AppRunLogAppenderTest {
     buffer.append("line two");
     buffer.flush();
 
-    String content = AppRunLogAppender.getStorageProvider().readLogs("TestApp", 3000L, "server1");
+    Path logFile = buffer.getLogFile();
+    assertTrue(Files.exists(logFile));
+    String content = Files.readString(logFile);
     assertTrue(content.contains("line one"));
     assertTrue(content.contains("line two"));
 
@@ -106,15 +108,9 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("5000-server2.log"));
     Files.createFile(appDir.resolve("6000-server1.log"));
 
-    AppRunLogStorageProvider storage = AppRunLogAppender.getStorageProvider();
-    List<String> servers = storage.listServers("MyApp", 5000L);
-    assertEquals(2, servers.size());
-    assertTrue(servers.contains("server1"));
-    assertTrue(servers.contains("server2"));
-
-    List<String> servers2 = storage.listServers("MyApp", 6000L);
-    assertEquals(1, servers2.size());
-    assertTrue(servers2.contains("server1"));
+    List<Long> timestamps5000 = AppRunLogAppender.listRunTimestamps("MyApp");
+    assertTrue(timestamps5000.contains(5000L));
+    assertTrue(timestamps5000.contains(6000L));
   }
 
   @Test
@@ -125,7 +121,7 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("3000-s1.log"));
     Files.createFile(appDir.resolve("2000-s1.log"));
 
-    List<Long> timestamps = AppRunLogAppender.getStorageProvider().listRunTimestamps("SortApp");
+    List<Long> timestamps = AppRunLogAppender.listRunTimestamps("SortApp");
     assertEquals(List.of(3000L, 2000L, 1000L), timestamps);
   }
 
@@ -137,16 +133,15 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("2000-s1.log"));
     Files.createFile(appDir.resolve("3000-s1.log"));
 
-    AppRunLogStorageConfig config = new AppRunLogStorageConfig();
-    config.setMaxRunsPerApp(2);
-    config.setLocalDirectory(tempDir.toString());
-    AppRunLogAppender.initialize(config);
+    AppRunLogAppender.setMaxRunsPerAppForTest(2);
 
     AppRunLogAppender.cleanupOldRuns("CleanApp");
 
     assertTrue(Files.exists(appDir.resolve("3000-s1.log")), "newest run should be kept");
     assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "2nd newest run should be kept");
     assertFalse(Files.exists(appDir.resolve("1000-s1.log")), "oldest run should be deleted");
+
+    AppRunLogAppender.setMaxRunsPerAppForTest(5);
   }
 
   @Test
@@ -156,15 +151,14 @@ class AppRunLogAppenderTest {
     Files.createFile(appDir.resolve("1000-s1.log"));
     Files.createFile(appDir.resolve("2000-s1.log"));
 
-    AppRunLogStorageConfig config = new AppRunLogStorageConfig();
-    config.setMaxRunsPerApp(2);
-    config.setLocalDirectory(tempDir.toString());
-    AppRunLogAppender.initialize(config);
+    AppRunLogAppender.setMaxRunsPerAppForTest(2);
 
     AppRunLogAppender.cleanupOldRuns("ExactApp");
 
     assertTrue(Files.exists(appDir.resolve("2000-s1.log")), "should not delete when at limit");
     assertTrue(Files.exists(appDir.resolve("1000-s1.log")), "should not delete when at limit");
+
+    AppRunLogAppender.setMaxRunsPerAppForTest(5);
   }
 
   @Test

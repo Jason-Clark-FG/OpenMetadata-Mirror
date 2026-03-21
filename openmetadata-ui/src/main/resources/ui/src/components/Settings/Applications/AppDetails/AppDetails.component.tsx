@@ -46,7 +46,6 @@ import { useLimitStore } from '../../../../context/LimitsProvider/useLimitsStore
 import { TabSpecificField } from '../../../../enums/entity.enum';
 import {
   App,
-  AppType,
   ScheduleTimeline,
   ScheduleType,
 } from '../../../../generated/entity/applications/app';
@@ -76,7 +75,6 @@ import PageLayoutV1 from '../../../PageLayoutV1/PageLayoutV1';
 import { useApplicationsProvider } from '../ApplicationsProvider/ApplicationsProvider';
 import AppLogo from '../AppLogo/AppLogo.component';
 import AppRunsHistory from '../AppRunsHistory/AppRunsHistory.component';
-import AppRunTextLogs from '../AppRunTextLogs/AppRunTextLogs.component';
 import AppSchedule from '../AppSchedule/AppSchedule.component';
 import { ApplicationTabs } from '../MarketPlaceAppDetails/MarketPlaceAppDetails.interface';
 import './app-details.less';
@@ -423,22 +421,6 @@ const AppDetails = () => {
                   jsonSchema={jsonSchema as RJSFSchema}
                 />
               ),
-            },
-          ]
-        : []),
-      ...(!appData?.deleted &&
-      appData?.appType === AppType.Internal &&
-      showScheduleTab
-        ? [
-            {
-              label: (
-                <TabsLabel
-                  id={ApplicationTabs.LOGS}
-                  name={t('label.log-plural')}
-                />
-              ),
-              key: ApplicationTabs.LOGS,
-              children: appData && <AppRunTextLogs appData={appData} />,
             },
           ]
         : []),
