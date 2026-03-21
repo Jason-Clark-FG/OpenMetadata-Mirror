@@ -99,7 +99,14 @@ public class MigrationTestRunner {
       for (MigrationProcess process : migrations) {
         String version = process.getVersion();
         String versionPkg = versionToPackage(version);
-        MigrationTestCase testCase = loadTestCase(versionPkg);
+        MigrationTestCase testCase = null;
+        try {
+          testCase = loadTestCase(versionPkg);
+        } catch (RuntimeException e) {
+          entries.add(
+              new MigrationTestEntry(
+                  version, "test class instantiation", "LOAD", false, e.getMessage()));
+        }
 
         if (testCase != null) {
           entries.addAll(runValidation(testCase::validateBefore, handle, version, "BEFORE"));
@@ -173,8 +180,8 @@ public class MigrationTestRunner {
     } catch (ClassNotFoundException e) {
       return null;
     } catch (Exception e) {
-      LOG.warn("Failed to instantiate test class {}", className, e);
-      return null;
+      throw new RuntimeException(
+          String.format("Failed to instantiate migration test class %s", className), e);
     }
   }
 

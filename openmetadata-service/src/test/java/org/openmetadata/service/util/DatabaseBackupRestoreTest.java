@@ -143,6 +143,34 @@ class DatabaseBackupRestoreTest {
   }
 
   @Test
+  void testReadBackupMetadataMissingRequiredFieldThrows(@TempDir Path tempDir) throws IOException {
+    Path archivePath = tempDir.resolve("incomplete-metadata.tar.gz");
+
+    ObjectNode metadata = MAPPER.createObjectNode();
+    metadata.put("version", "1.6.0");
+    metadata.put("databaseType", "MYSQL");
+
+    byte[] metadataBytes = MAPPER.writeValueAsBytes(metadata);
+
+    try (FileOutputStream fos = new FileOutputStream(archivePath.toFile());
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+        GzipCompressorOutputStream gzos = new GzipCompressorOutputStream(bos);
+        TarArchiveOutputStream taos = new TarArchiveOutputStream(gzos)) {
+      TarArchiveEntry entry = new TarArchiveEntry("metadata.json");
+      entry.setSize(metadataBytes.length);
+      taos.putArchiveEntry(entry);
+      taos.write(metadataBytes);
+      taos.closeArchiveEntry();
+    }
+
+    IOException ex =
+        assertThrows(
+            IOException.class,
+            () -> DatabaseBackupRestore.readBackupMetadata(archivePath.toString()));
+    assertTrue(ex.getMessage().contains("missing required field: tables"));
+  }
+
+  @Test
   void testReadBackupMetadataSuccess(@TempDir Path tempDir) throws IOException {
     Path archivePath = tempDir.resolve("with-metadata.tar.gz");
 
@@ -151,6 +179,7 @@ class DatabaseBackupRestoreTest {
     metadata.put("version", "1.6.0");
     metadata.put("databaseType", "MYSQL");
     metadata.put("databaseName", "openmetadata_db");
+    metadata.set("tables", MAPPER.createObjectNode());
 
     byte[] metadataBytes = MAPPER.writeValueAsBytes(metadata);
 

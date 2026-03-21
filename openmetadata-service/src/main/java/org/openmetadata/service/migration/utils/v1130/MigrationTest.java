@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.jdbi.v3.core.Handle;
 import org.openmetadata.service.migration.api.MigrationTestCase;
 import org.openmetadata.service.migration.api.TestResult;
@@ -13,7 +14,16 @@ import org.openmetadata.service.migration.api.TestResult;
 public class MigrationTest implements MigrationTestCase {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final Pattern SAFE_IDENTIFIER = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
   private static final String[] APP_TABLES = {"installed_apps", "apps_marketplace"};
+
+  static {
+    for (String table : APP_TABLES) {
+      if (!SAFE_IDENTIFIER.matcher(table).matches()) {
+        throw new IllegalArgumentException("Invalid table name in APP_TABLES: " + table);
+      }
+    }
+  }
 
   private final Map<String, Map<String, Boolean>> previewValues = new HashMap<>();
 

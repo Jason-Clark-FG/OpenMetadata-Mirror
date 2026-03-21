@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -113,7 +114,6 @@ public class DatabaseBackupRestore {
           "SELECT column_name FROM information_schema.columns "
               + "WHERE table_schema = current_schema() AND table_name = :table "
               + "AND (is_generated = 'NEVER' OR is_generated IS NULL) "
-              + "AND (column_default NOT LIKE 'nextval%' OR column_default IS NULL) "
               + "ORDER BY ordinal_position";
       return handle.createQuery(sql).bind("table", tableName).mapTo(String.class).list();
     }
@@ -310,8 +310,10 @@ public class DatabaseBackupRestore {
               for (String tableName : tables) {
                 backupTable(handle, tableName, taos, tablesMetadata);
               }
-            } finally {
               commitTransaction(handle);
+            } catch (Exception e) {
+              rollbackTransaction(handle);
+              throw e;
             }
           });
 
@@ -339,6 +341,14 @@ public class DatabaseBackupRestore {
 
   private void commitTransaction(Handle handle) {
     handle.execute("COMMIT");
+  }
+
+  private void rollbackTransaction(Handle handle) {
+    try {
+      handle.execute("ROLLBACK");
+    } catch (Exception e) {
+      LOG.warn("Failed to rollback transaction", e);
+    }
   }
 
   private void backupTable(
@@ -428,55 +438,48 @@ public class DatabaseBackupRestore {
       Path tempFile)
       throws IOException {
     int rowCount = 0;
+    String sql = String.format("SELECT %s FROM %s%s", quotedColumns, quotedTable, orderByClause);
+    int fetchSize = connectionType == ConnectionType.MYSQL ? Integer.MIN_VALUE : batchSize;
+
     try (OutputStream os = new BufferedOutputStream(new FileOutputStream(tempFile.toFile()));
-        JsonGenerator gen = new JsonFactory().createGenerator(os)) {
+        JsonGenerator gen = new JsonFactory().createGenerator(os);
+        Stream<Map<String, Object>> rows =
+            handle.createQuery(sql).setFetchSize(fetchSize).mapToMap().stream()) {
       gen.setCodec(MAPPER);
       gen.writeStartArray();
 
-      int offset = 0;
-      while (true) {
-        String sql =
-            String.format(
-                "SELECT %s FROM %s%s LIMIT %d OFFSET %d",
-                quotedColumns, quotedTable, orderByClause, batchSize, offset);
-        List<Map<String, Object>> rows = handle.createQuery(sql).mapToMap().list();
-
-        for (Map<String, Object> row : rows) {
-          gen.writeStartObject();
-          for (String col : columns) {
-            Object val = row.get(col);
-            if (val == null) {
-              gen.writeNullField(col);
-            } else if (val instanceof Number number) {
-              if (number instanceof Long l) {
-                gen.writeNumberField(col, l);
-              } else if (number instanceof Integer i) {
-                gen.writeNumberField(col, i);
-              } else if (number instanceof Double d) {
-                gen.writeNumberField(col, d);
-              } else if (number instanceof Float f) {
-                gen.writeNumberField(col, f);
-              } else if (number instanceof BigDecimal bd) {
-                gen.writeNumberField(col, bd);
-              } else {
-                gen.writeNumberField(col, number.longValue());
-              }
-            } else if (val instanceof Boolean b) {
-              gen.writeBooleanField(col, b);
-            } else if (val instanceof byte[] bytes) {
-              gen.writeBinaryField(col, bytes);
+      var iter = rows.iterator();
+      while (iter.hasNext()) {
+        Map<String, Object> row = iter.next();
+        gen.writeStartObject();
+        for (String col : columns) {
+          Object val = row.get(col);
+          if (val == null) {
+            gen.writeNullField(col);
+          } else if (val instanceof Number number) {
+            if (number instanceof Long l) {
+              gen.writeNumberField(col, l);
+            } else if (number instanceof Integer i) {
+              gen.writeNumberField(col, i);
+            } else if (number instanceof Double d) {
+              gen.writeNumberField(col, d);
+            } else if (number instanceof Float f) {
+              gen.writeNumberField(col, f);
+            } else if (number instanceof BigDecimal bd) {
+              gen.writeNumberField(col, bd);
             } else {
-              gen.writeStringField(col, val.toString());
+              gen.writeNumberField(col, number.longValue());
             }
+          } else if (val instanceof Boolean b) {
+            gen.writeBooleanField(col, b);
+          } else if (val instanceof byte[] bytes) {
+            gen.writeBinaryField(col, bytes);
+          } else {
+            gen.writeStringField(col, val.toString());
           }
-          gen.writeEndObject();
-          rowCount++;
         }
-
-        if (rows.size() < batchSize) {
-          break;
-        }
-        offset += batchSize;
+        gen.writeEndObject();
+        rowCount++;
       }
 
       gen.writeEndArray();
@@ -530,6 +533,7 @@ public class DatabaseBackupRestore {
     Path tempDir = Files.createTempDirectory("om_restore_");
     try {
       extractArchive(backupPath, tempDir, validTables);
+      validateArchiveCompleteness(tempDir, validTables);
       jdbi.useHandle(
           handle -> {
             Set<String> existingTables = new HashSet<>(discoverTables(handle));
@@ -552,6 +556,7 @@ public class DatabaseBackupRestore {
             restorableTables.forEach(t -> restorableMetadata.set(t, tablesMetadata.get(t)));
 
             restoreTablesInOrder(handle, insertOrder, restorableMetadata, tempDir);
+            resetSequences(handle);
             validateRestore(handle, restorableMetadata);
             LOG.info("Restore completed successfully");
           });
@@ -574,7 +579,13 @@ public class DatabaseBackupRestore {
                 "metadata.json exceeds maximum allowed size of " + MAX_METADATA_SIZE + " bytes");
           }
           byte[] content = tais.readNBytes((int) entry.getSize());
-          return (ObjectNode) MAPPER.readTree(content);
+          ObjectNode node = (ObjectNode) MAPPER.readTree(content);
+          for (String field : List.of("version", "databaseType", "tables")) {
+            if (!node.has(field)) {
+              throw new IOException("Backup metadata missing required field: " + field);
+            }
+          }
+          return node;
         }
       }
     }
@@ -608,6 +619,49 @@ public class DatabaseBackupRestore {
           tais.transferTo(os);
         }
       }
+    }
+  }
+
+  private void validateArchiveCompleteness(Path tempDir, Set<String> expectedTables)
+      throws IOException {
+    Set<String> missing = new HashSet<>();
+    for (String table : expectedTables) {
+      if (!Files.exists(tempDir.resolve(table + ".json"))) {
+        missing.add(table);
+      }
+    }
+    if (!missing.isEmpty()) {
+      throw new IOException(
+          String.format(
+              "Backup archive is incomplete: %d table(s) listed in metadata but missing from "
+                  + "archive: %s",
+              missing.size(), missing));
+    }
+  }
+
+  private void resetSequences(Handle handle) {
+    if (connectionType != ConnectionType.POSTGRES) {
+      return;
+    }
+    List<Map<String, Object>> seqColumns =
+        handle
+            .createQuery(
+                "SELECT table_name, column_name FROM information_schema.columns "
+                    + "WHERE table_schema = current_schema() "
+                    + "AND column_default LIKE 'nextval%'")
+            .mapToMap()
+            .list();
+
+    for (Map<String, Object> row : seqColumns) {
+      String tableName = (String) row.get("table_name");
+      String columnName = (String) row.get("column_name");
+      String sql =
+          String.format(
+              "SELECT setval(pg_get_serial_sequence(?, ?), "
+                  + "COALESCE((SELECT MAX(%s) FROM %s), 1))",
+              quoteIdentifier(columnName), quoteIdentifier(tableName));
+      handle.createQuery(sql).bind(0, tableName).bind(1, columnName).mapTo(Long.class).findOne();
+      LOG.info("Reset sequence for {}.{}", tableName, columnName);
     }
   }
 
