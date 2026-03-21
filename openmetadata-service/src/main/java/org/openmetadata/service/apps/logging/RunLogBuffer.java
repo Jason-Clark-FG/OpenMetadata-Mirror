@@ -89,7 +89,6 @@ public class RunLogBuffer {
     }
     String batchText = String.join("\n", batch);
     writeToFile(batchText);
-    AppRunLogMetrics.recordFlush(appName, batch.size());
   }
 
   public void close() {
