@@ -24,6 +24,11 @@ import { showErrorToast } from '../../utils/ToastUtils';
 import AuditLogsPage from './AuditLogsPage';
 
 jest.mock('@openmetadata/ui-core-components', () => ({
+  Badge: jest
+    .fn()
+    .mockImplementation(({ children, 'data-testid': testId }) => (
+      <span data-testid={testId}>{children}</span>
+    )),
   Button: jest
     .fn()
     .mockImplementation(

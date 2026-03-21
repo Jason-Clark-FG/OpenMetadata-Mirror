@@ -12,6 +12,7 @@
  */
 
 import {
+  Badge,
   Button,
   ButtonUtility,
   Card,
@@ -371,23 +372,28 @@ const AuditLogsPage = () => {
             </div>
             {hasActiveFilters && (
               <div
-                className="filter-selection-container tw:mt-2 tw:pr-3.5"
+                className="tw:flex tw:items-center tw:w-full tw:mt-2 tw:pr-3.5"
                 data-testid="filter-selection-container">
-                <div className="filter-selection-chips-wrapper">
+                <div className="tw:flex tw:gap-2 tw:flex-wrap tw:flex-1">
                   {activeFilters.map((filter) => (
-                    <div
-                      className="filter-selection-chip"
+                    <Badge
+                      className="tw:ring-0 tw:gap-1"
+                      color="brand"
                       data-testid={`filter-chip-${filter.category}`}
-                      key={filter.category}>
-                      <div className="filter-selection-chip-content tw:overflow-hidden">
+                      key={filter.category}
+                      size="lg"
+                      type="color">
+                      <div className="tw:flex tw:items-center tw:gap-1">
                         <Typography
                           className="tw:text-gray-600"
                           weight="medium">
                           {filter.categoryLabel}:{' '}
                         </Typography>
-                        <div className="tw:max-w-87 tw:overflow-hidden">
+                        <div className="tw:max-w-80">
                           <Typography
-                            className="tw:text-brand-600 tw:truncate tw:block"
+                            ellipsis
+                            as="p"
+                            className="tw:text-brand-600"
                             title={filter.value.label}
                             weight="medium">
                             {filter.category === 'time' &&
@@ -399,18 +405,16 @@ const AuditLogsPage = () => {
                       </div>
                       <ButtonUtility
                         aria-label="Remove filter"
-                        className="filter-selection-remove-btn"
                         color="tertiary"
                         data-testid={`remove-filter-${filter.category}`}
                         icon={<XClose size={14} />}
                         onClick={() => handleRemoveFilter(filter.category)}
                       />
-                    </div>
+                    </Badge>
                   ))}
                 </div>
                 <Button
-                  className="filter-selection-clear-all"
-                  color="link-gray"
+                  color="link-color"
                   data-testid="clear-filters"
                   onPress={handleClearFilters}>
                   {t('label.clear-entity', {
