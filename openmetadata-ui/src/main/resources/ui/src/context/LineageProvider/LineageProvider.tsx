@@ -543,7 +543,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         setLoading(false);
       }
     },
-    [entityFqn]
+    [entityFqn, queryFilter, columnFilter]
   );
 
   const fetchLineageData = useCallback(
@@ -660,6 +660,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       queryFilter,
       nodes,
       isPlatformLineage,
+      exportLineageData,
     ]
   );
 
@@ -786,6 +787,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       entityLineage,
       setEntityLineage,
       queryFilter,
+      columnFilter,
       entityFqn,
     ]
   );

@@ -2,38 +2,43 @@ package org.openmetadata.service.search;
 
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.lineage.EsLineageData;
 import org.openmetadata.schema.type.ColumnLineage;
-import org.openmetadata.schema.utils.JsonUtils;
 
 /**
- * Utility class to match column filters against lineage edges.
- * Supports filtering by column names, tags, glossary terms, fromColumns, and toColumn.
+ * Utility class to match column filters against lineage edges. Supports filtering by column names,
+ * tags, glossary terms, fromColumns, and toColumn.
+ *
+ * <p>Filter format: comma-separated "type:value" pairs. Examples:
+ *
+ * <ul>
+ *   <li>"columnName:customer_id" — matches edges with this column
+ *   <li>"tag:PII.Sensitive" — matches edges with columns tagged PII.Sensitive
+ *   <li>"glossary:BusinessGlossary.Term" — matches edges with this glossary term
+ *   <li>"columnName:email,tag:PII" — AND across types, OR within same type
+ * </ul>
  */
-@Slf4j
 public class ColumnFilterMatcher {
 
   private ColumnFilterMatcher() {}
 
   /**
-   * Checks if an edge matches the column filter criteria.
-   * Supports ES query JSON format, comma-separated multiple filters, and single filter format.
+   * Checks if an edge matches the column filter criteria. Supports comma-separated multiple filters
+   * and single filter format.
    *
-   * Comma-separated format: "columnName:val1,columnName:val2,tag:PII"
-   * - OR logic within same filter type (multiple column names)
-   * - AND logic across different filter types (column name AND tag)
+   * <p>Comma-separated format: "columnName:val1,columnName:val2,tag:PII" - OR logic within same
+   * filter type (multiple column names) - AND logic across different filter types (column name AND
+   * tag)
    *
    * @param edge The lineage edge to check
-   * @param columnFilter Filter expression - can be ES query JSON, comma-separated, or single filter
-   *     (e.g., "columnName:customer_id", "tag:PII", "glossary:BusinessTerm")
+   * @param columnFilter Filter expression (e.g., "columnName:customer_id", "tag:PII",
+   *     "glossary:BusinessTerm")
    * @return true if the edge matches the filter
    */
   public static boolean matchesColumnFilter(EsLineageData edge, String columnFilter) {
@@ -44,28 +49,6 @@ public class ColumnFilterMatcher {
     List<ColumnLineage> columns = edge.getColumns();
     if (nullOrEmpty(columns)) {
       return false;
-    }
-
-    // Check if filter is ES query JSON format
-    if (isEsQueryFormat(columnFilter)) {
-      List<FilterCriteria> criteriaList = parseEsQueryFilter(columnFilter);
-      if (criteriaList.isEmpty()) {
-        return true;
-      }
-      // All criteria must match (AND logic between different filter types)
-      for (FilterCriteria criteria : criteriaList) {
-        boolean anyColumnMatches = false;
-        for (ColumnLineage colLineage : columns) {
-          if (matchesColumnLineage(colLineage, criteria)) {
-            anyColumnMatches = true;
-            break;
-          }
-        }
-        if (!anyColumnMatches) {
-          return false;
-        }
-      }
-      return true;
     }
 
     // Check for comma-separated multiple filters
@@ -90,11 +73,11 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Checks if an edge matches the column filter criteria with metadata cache.
-   * Supports ES query JSON format, comma-separated multiple filters, and single filter format.
+   * Checks if an edge matches the column filter criteria with metadata cache. Supports
+   * comma-separated multiple filters and single filter format.
    *
    * @param edge The lineage edge to check
-   * @param columnFilter Filter expression - can be ES query JSON, comma-separated, or single filter
+   * @param columnFilter Filter expression
    * @param metadataCache Cache containing column metadata (tags, glossary terms)
    * @return true if the edge matches the filter
    */
@@ -107,37 +90,6 @@ public class ColumnFilterMatcher {
     List<ColumnLineage> columns = edge.getColumns();
     if (nullOrEmpty(columns)) {
       return false;
-    }
-
-    // Check if filter is ES query JSON format
-    if (isEsQueryFormat(columnFilter)) {
-      List<FilterCriteria> criteriaList = parseEsQueryFilter(columnFilter);
-      if (criteriaList.isEmpty()) {
-        return true;
-      }
-      // All criteria must match (AND logic between different filter types)
-      for (FilterCriteria criteria : criteriaList) {
-        boolean anyColumnMatches = false;
-        // Check if filter requires metadata (tags, glossary)
-        if (requiresMetadata(criteria) && metadataCache != null) {
-          ColumnMetadataCache.ColumnFilterCriteria metadataCriteria = toMetadataCriteria(criteria);
-          if (metadataCriteria != null) {
-            anyColumnMatches =
-                matchesColumnLineageWithMetadata(columns, metadataCriteria, metadataCache);
-          }
-        } else {
-          for (ColumnLineage colLineage : columns) {
-            if (matchesColumnLineage(colLineage, criteria)) {
-              anyColumnMatches = true;
-              break;
-            }
-          }
-        }
-        if (!anyColumnMatches) {
-          return false;
-        }
-      }
-      return true;
     }
 
     // Check for comma-separated multiple filters
@@ -198,8 +150,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Filters the columns list of an edge using metadata cache for tag/glossary matching.
-   * Returns a new list with only matching ColumnLineage entries.
+   * Filters the columns list of an edge using metadata cache for tag/glossary matching. Returns a
+   * new list with only matching ColumnLineage entries.
    */
   public static List<ColumnLineage> filterMatchingColumnsWithMetadata(
       EsLineageData edge, String columnFilter, ColumnMetadataCache metadataCache) {
@@ -227,17 +179,15 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Parses filter into a grouped map (type → values) preserving OR-within-type, AND-across-types semantics.
+   * Parses filter into a grouped map (type → values) preserving OR-within-type, AND-across-types
+   * semantics.
    */
   private static Map<String, List<String>> getGroupedFilters(String columnFilter) {
-    Map<String, List<String>> grouped = new HashMap<>();
-    if (isEsQueryFormat(columnFilter)) {
-      for (FilterCriteria c : parseEsQueryFilter(columnFilter)) {
-        grouped.computeIfAbsent(c.type, k -> new ArrayList<>()).add(c.value);
-      }
-    } else if (columnFilter.contains(",")) {
+    Map<String, List<String>> grouped;
+    if (columnFilter.contains(",")) {
       grouped = parseMultipleFiltersGrouped(columnFilter);
     } else {
+      grouped = new HashMap<>();
       FilterCriteria criteria = parseColumnFilter(columnFilter);
       if (criteria != null) {
         grouped.computeIfAbsent(criteria.type, k -> new ArrayList<>()).add(criteria.value);
@@ -247,7 +197,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Checks if a single ColumnLineage matches grouped filters: OR within same type, AND across types.
+   * Checks if a single ColumnLineage matches grouped filters: OR within same type, AND across
+   * types.
    */
   private static boolean matchesGroupedCriteria(
       ColumnLineage colLineage, Map<String, List<String>> groupedFilters) {
@@ -267,7 +218,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Checks if a single ColumnLineage matches grouped filters with metadata: OR within same type, AND across types.
+   * Checks if a single ColumnLineage matches grouped filters with metadata: OR within same type,
+   * AND across types.
    */
   private static boolean matchesGroupedCriteriaWithMetadata(
       ColumnLineage colLineage,
@@ -310,84 +262,7 @@ public class ColumnFilterMatcher {
     return true;
   }
 
-  /**
-   * Builds a unified list of FilterCriteria from any supported filter format.
-   */
-  private static List<FilterCriteria> buildCriteriaList(String columnFilter) {
-    List<FilterCriteria> criteriaList = new ArrayList<>();
-
-    if (isEsQueryFormat(columnFilter)) {
-      criteriaList.addAll(parseEsQueryFilter(columnFilter));
-    } else if (columnFilter.contains(",")) {
-      Map<String, List<String>> grouped = parseMultipleFiltersGrouped(columnFilter);
-      for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
-        for (String value : entry.getValue()) {
-          criteriaList.add(new FilterCriteria(entry.getKey(), value));
-        }
-      }
-    } else {
-      FilterCriteria criteria = parseColumnFilter(columnFilter);
-      if (criteria != null) {
-        criteriaList.add(criteria);
-      }
-    }
-
-    return criteriaList;
-  }
-
-  /**
-   * Checks if a single ColumnLineage matches all filter criteria (name-based).
-   */
-  private static boolean matchesAllCriteria(
-      ColumnLineage colLineage, List<FilterCriteria> criteriaList) {
-    for (FilterCriteria criteria : criteriaList) {
-      if (!matchesColumnLineage(colLineage, criteria)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Checks if a single ColumnLineage matches all filter criteria with metadata support.
-   */
-  private static boolean matchesAllCriteriaWithMetadata(
-      ColumnLineage colLineage,
-      List<FilterCriteria> criteriaList,
-      ColumnMetadataCache metadataCache) {
-    for (FilterCriteria criteria : criteriaList) {
-      if (requiresMetadata(criteria) && metadataCache != null) {
-        ColumnMetadataCache.ColumnFilterCriteria metadataCriteria = toMetadataCriteria(criteria);
-        if (metadataCriteria != null) {
-          boolean matches = false;
-          if (colLineage.getToColumn() != null
-              && metadataCache.matchesFilter(colLineage.getToColumn(), metadataCriteria)) {
-            matches = true;
-          }
-          if (!matches && colLineage.getFromColumns() != null) {
-            for (String fromCol : colLineage.getFromColumns()) {
-              if (metadataCache.matchesFilter(fromCol, metadataCriteria)) {
-                matches = true;
-                break;
-              }
-            }
-          }
-          if (!matches) {
-            return false;
-          }
-        }
-      } else {
-        if (!matchesColumnLineage(colLineage, criteria)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Extracts all column FQNs from an edge for metadata loading.
-   */
+  /** Extracts all column FQNs from an edge for metadata loading. */
   public static Set<String> extractColumnFqns(EsLineageData edge) {
     Set<String> columnFqns = new HashSet<>();
 
@@ -408,14 +283,16 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Parses column filter string into structured criteria.
-   * Supports formats:
-   * - "columnName:value" - matches any column with this name
-   * - "fromColumn:value" - matches source columns
-   * - "toColumn:value" - matches target columns
-   * - "tag:value" - matches columns with this tag
-   * - "glossary:value" - matches columns with this glossary term
-   * - "value" - matches any column containing this value
+   * Parses column filter string into structured criteria. Supports formats:
+   *
+   * <ul>
+   *   <li>"columnName:value" - matches any column with this name
+   *   <li>"fromColumn:value" - matches source columns
+   *   <li>"toColumn:value" - matches target columns
+   *   <li>"tag:value" - matches columns with this tag
+   *   <li>"glossary:value" - matches columns with this glossary term
+   *   <li>"value" - matches any column containing this value
+   * </ul>
    */
   private static FilterCriteria parseColumnFilter(String columnFilter) {
     if (nullOrEmpty(columnFilter)) {
@@ -439,8 +316,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Parses comma-separated filters and groups them by type.
-   * Returns a map where key is filter type and value is list of filter values.
+   * Parses comma-separated filters and groups them by type. Returns a map where key is filter type
+   * and value is list of filter values.
    */
   private static Map<String, List<String>> parseMultipleFiltersGrouped(String columnFilter) {
     Map<String, List<String>> grouped = new HashMap<>();
@@ -461,9 +338,7 @@ public class ColumnFilterMatcher {
     return grouped;
   }
 
-  /**
-   * Normalizes filter type to a canonical form.
-   */
+  /** Normalizes filter type to a canonical form. */
   private static String normalizeFilterType(String type) {
     if (type == null) {
       return "any";
@@ -488,8 +363,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Matches columns against multiple comma-separated filters.
-   * Logic: OR within same type, AND across different types.
+   * Matches columns against multiple comma-separated filters. Logic: OR within same type, AND
+   * across different types.
    */
   private static boolean matchesMultipleFilters(List<ColumnLineage> columns, String columnFilter) {
     Map<String, List<String>> groupedFilters = parseMultipleFiltersGrouped(columnFilter);
@@ -529,8 +404,8 @@ public class ColumnFilterMatcher {
   }
 
   /**
-   * Matches columns against multiple comma-separated filters with metadata cache.
-   * Logic: OR within same type, AND across different types.
+   * Matches columns against multiple comma-separated filters with metadata cache. Logic: OR within
+   * same type, AND across different types.
    */
   private static boolean matchesMultipleFiltersWithMetadata(
       List<ColumnLineage> columns, String columnFilter, ColumnMetadataCache metadataCache) {
@@ -581,131 +456,9 @@ public class ColumnFilterMatcher {
     return true;
   }
 
-  /**
-   * Checks if the column filter is in ES query JSON format.
-   */
-  private static boolean isEsQueryFormat(String columnFilter) {
-    if (nullOrEmpty(columnFilter)) {
-      return false;
-    }
-    String trimmed = columnFilter.trim();
-    return trimmed.startsWith("{") && trimmed.endsWith("}");
-  }
-
-  /**
-   * Parses ES query JSON format column filter into a list of filter criteria.
-   * Supports ES query structure with wildcard, term queries for columns.
-   *
-   * Expected format:
-   * {
-   *   "query": {
-   *     "bool": {
-   *       "must": [
-   *         { "bool": { "should": [ { "wildcard": { "columns.fromColumns": "*value*" } } ] } },
-   *         { "term": { "columns.tags.tagFQN": "tagValue" } },
-   *         { "term": { "columns.glossaryTerms.tagFQN": "glossaryValue" } }
-   *       ]
-   *     }
-   *   }
-   * }
-   */
-  private static List<FilterCriteria> parseEsQueryFilter(String columnFilter) {
-    List<FilterCriteria> criteriaList = new ArrayList<>();
-
-    if (nullOrEmpty(columnFilter)) {
-      return criteriaList;
-    }
-
-    try {
-      JsonNode rootNode = JsonUtils.readTree(columnFilter);
-      JsonNode queryNode = rootNode.path("query");
-      JsonNode boolNode = queryNode.path("bool");
-      JsonNode mustNode = boolNode.path("must");
-
-      if (mustNode.isArray()) {
-        for (JsonNode mustClause : mustNode) {
-          extractCriteriaFromClause(mustClause, criteriaList);
-        }
-      }
-    } catch (Exception e) {
-      LOG.warn("Failed to parse ES query column filter: {}", columnFilter, e);
-    }
-
-    return criteriaList;
-  }
-
-  /**
-   * Extracts filter criteria from an ES query clause (bool, wildcard, term).
-   */
-  private static void extractCriteriaFromClause(
-      JsonNode clause, List<FilterCriteria> criteriaList) {
-    if (clause == null) {
-      return;
-    }
-
-    // Handle nested bool with should
-    JsonNode boolNode = clause.path("bool");
-    if (!boolNode.isMissingNode()) {
-      JsonNode shouldNode = boolNode.path("should");
-      if (shouldNode.isArray()) {
-        for (JsonNode shouldClause : shouldNode) {
-          extractCriteriaFromClause(shouldClause, criteriaList);
-        }
-      }
-      return;
-    }
-
-    // Handle wildcard queries (for column names)
-    JsonNode wildcardNode = clause.path("wildcard");
-    if (!wildcardNode.isMissingNode()) {
-      wildcardNode
-          .fields()
-          .forEachRemaining(
-              entry -> {
-                String field = entry.getKey();
-                String value = entry.getValue().asText();
-                // Remove wildcards from value for matching
-                String cleanValue = value.replace("*", "");
-                if (field.contains("fromColumns") || field.contains("toColumn")) {
-                  criteriaList.add(new FilterCriteria("column", cleanValue));
-                }
-              });
-      return;
-    }
-
-    // Handle term queries (for tags and glossary)
-    JsonNode termNode = clause.path("term");
-    if (!termNode.isMissingNode()) {
-      termNode
-          .fields()
-          .forEachRemaining(
-              entry -> {
-                String field = entry.getKey();
-                String value = entry.getValue().asText();
-                if (field.contains("tags.tagFQN")) {
-                  criteriaList.add(new FilterCriteria("tag", value));
-                } else if (field.contains("glossaryTerms.tagFQN")) {
-                  criteriaList.add(new FilterCriteria("glossary", value));
-                }
-              });
-    }
-  }
-
-  /**
-   * Checks if the column filter (either ES query or legacy format) requires metadata.
-   */
+  /** Checks if the column filter requires metadata (tags, glossary terms) for matching. */
   public static boolean requiresMetadataForFilter(String columnFilter) {
     if (nullOrEmpty(columnFilter)) {
-      return false;
-    }
-
-    if (isEsQueryFormat(columnFilter)) {
-      List<FilterCriteria> criteriaList = parseEsQueryFilter(columnFilter);
-      for (FilterCriteria criteria : criteriaList) {
-        if (requiresMetadata(criteria)) {
-          return true;
-        }
-      }
       return false;
     }
 
@@ -725,9 +478,7 @@ public class ColumnFilterMatcher {
     return criteria != null && requiresMetadata(criteria);
   }
 
-  /**
-   * Checks if filter requires metadata (tags, glossary terms).
-   */
+  /** Checks if filter requires metadata (tags, glossary terms). */
   private static boolean requiresMetadata(FilterCriteria criteria) {
     if (criteria == null) {
       return false;
@@ -738,9 +489,7 @@ public class ColumnFilterMatcher {
         || criteria.type.equals("tags");
   }
 
-  /**
-   * Converts FilterCriteria to ColumnMetadataCache.ColumnFilterCriteria.
-   */
+  /** Converts FilterCriteria to ColumnMetadataCache.ColumnFilterCriteria. */
   private static ColumnMetadataCache.ColumnFilterCriteria toMetadataCriteria(
       FilterCriteria criteria) {
     if (criteria == null) {
@@ -759,9 +508,7 @@ public class ColumnFilterMatcher {
     }
   }
 
-  /**
-   * Matches column lineage with metadata cache.
-   */
+  /** Matches column lineage with metadata cache. */
   private static boolean matchesColumnLineageWithMetadata(
       List<ColumnLineage> columns,
       ColumnMetadataCache.ColumnFilterCriteria criteria,
@@ -787,9 +534,7 @@ public class ColumnFilterMatcher {
     return false;
   }
 
-  /**
-   * Checks if a column lineage matches the filter criteria.
-   */
+  /** Checks if a column lineage matches the filter criteria. */
   private static boolean matchesColumnLineage(ColumnLineage colLineage, FilterCriteria criteria) {
     if (colLineage == null || criteria == null) {
       return false;
@@ -800,31 +545,25 @@ public class ColumnFilterMatcher {
     switch (criteria.type) {
       case "columnname":
       case "column":
-        // Match column name in fromColumns or toColumn
         return matchesFromColumns(colLineage, filterValue)
             || matchesToColumn(colLineage, filterValue);
 
       case "fromcolumn":
       case "from":
-        // Match only fromColumns
         return matchesFromColumns(colLineage, filterValue);
 
       case "tocolumn":
       case "to":
-        // Match only toColumn
         return matchesToColumn(colLineage, filterValue);
 
       case "any":
       default:
-        // Match any column containing the value
         return matchesFromColumns(colLineage, filterValue)
             || matchesToColumn(colLineage, filterValue);
     }
   }
 
-  /**
-   * Checks if any fromColumn matches the filter value.
-   */
+  /** Checks if any fromColumn matches the filter value. */
   private static boolean matchesFromColumns(ColumnLineage colLineage, String filterValue) {
     if (nullOrEmpty(colLineage.getFromColumns())) {
       return false;
@@ -839,20 +578,15 @@ public class ColumnFilterMatcher {
     return false;
   }
 
-  /**
-   * Checks if toColumn matches the filter value.
-   */
+  /** Checks if toColumn matches the filter value. */
   private static boolean matchesToColumn(ColumnLineage colLineage, String filterValue) {
     String toCol = colLineage.getToColumn();
     return toCol != null && matchesColumnName(toCol, filterValue);
   }
 
   /**
-   * Checks if a column name matches the filter value.
-   * Supports:
-   * - Exact match: "customer_id" matches "customer_id"
-   * - FQN match: "customer_id" matches "schema.table.customer_id"
-   * - Partial match: "customer" matches "customer_id"
+   * Checks if a column name matches the filter value. Supports exact match, FQN match (last part),
+   * and partial match (contains).
    */
   private static boolean matchesColumnName(String columnFqn, String filterValue) {
     if (columnFqn == null || filterValue == null) {
@@ -878,9 +612,7 @@ public class ColumnFilterMatcher {
     return colLower.contains(filterLower);
   }
 
-  /**
-   * Internal class to hold parsed filter criteria.
-   */
+  /** Internal class to hold parsed filter criteria. */
   private static class FilterCriteria {
     final String type;
     final String value;

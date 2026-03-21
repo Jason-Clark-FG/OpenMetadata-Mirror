@@ -118,11 +118,27 @@ public class LineageAPI {
       String queryFilter,
       String columnFilter)
       throws OpenMetadataException {
+    return getLineageByEntityCount(
+        fqn, direction, from, size, null, maxDepth, includeDeleted, queryFilter, columnFilter);
+  }
+
+  public String getLineageByEntityCount(
+      String fqn,
+      String direction,
+      int from,
+      int size,
+      Integer nodeDepth,
+      int maxDepth,
+      boolean includeDeleted,
+      String queryFilter,
+      String columnFilter)
+      throws OpenMetadataException {
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     optionsBuilder.queryParam("fqn", fqn);
     optionsBuilder.queryParam("direction", direction);
     optionsBuilder.queryParam("from", String.valueOf(from));
     optionsBuilder.queryParam("size", String.valueOf(size));
+    if (nodeDepth != null) optionsBuilder.queryParam("nodeDepth", String.valueOf(nodeDepth));
     optionsBuilder.queryParam("maxDepth", String.valueOf(maxDepth));
     optionsBuilder.queryParam("includeDeleted", String.valueOf(includeDeleted));
     if (queryFilter != null) optionsBuilder.queryParam("query_filter", queryFilter);
