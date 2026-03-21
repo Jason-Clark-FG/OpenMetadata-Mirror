@@ -15,7 +15,6 @@ import {
   CloseOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import { useTheme } from '@mui/material';
 import { Button, Divider, Form, Input, Space, Tooltip, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, last } from 'lodash';
@@ -61,7 +60,6 @@ const TeamsInfo = ({
   isTeamDeleted,
 }: TeamsInfoProps) => {
   const { t } = useTranslation();
-  const theme = useTheme();
   const [isEmailEdit, setIsEmailEdit] = useState<boolean>(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -372,9 +370,7 @@ const TeamsInfo = ({
                 {getEntityName(currentTeam.defaultPersona)}
               </Link>
             ) : (
-              <Typography.Text
-                className="text-sm font-medium"
-                color={theme.palette.grey['700']}>
+              <Typography.Text className="tw:text-sm tw:font-medium tw:text-gray-700">
                 {t('message.no-persona-assigned')}
               </Typography.Text>
             )}
