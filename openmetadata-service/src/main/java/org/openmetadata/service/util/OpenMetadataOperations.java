@@ -16,6 +16,7 @@ import ch.qos.logback.classic.LoggerContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.FileConfigurationSourceProvider;
@@ -2615,7 +2616,9 @@ public class OpenMetadataOperations implements Callable<Integer> {
       @Option(
               names = {"--backup-path"},
               required = true,
-              description = "Path where the backup .tar.gz file will be created")
+              description =
+                  "Directory where the backup file will be created. "
+                      + "The file is named automatically as openmetadata_<version>_<timestamp>.tar.gz")
           String backupPath,
       @Option(
               names = {"--batch-size"},
@@ -2632,7 +2635,8 @@ public class OpenMetadataOperations implements Callable<Integer> {
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
       DatabaseBackupRestore backupRestore =
           new DatabaseBackupRestore(jdbi, connType, databaseName, batchSize);
-      backupRestore.backup(backupPath);
+      String outputPath = backupRestore.backup(backupPath);
+      LOG.info("Backup saved to: {}", outputPath);
       return 0;
     } catch (Exception e) {
       LOG.error("Backup failed", e);
@@ -2648,12 +2652,6 @@ public class OpenMetadataOperations implements Callable<Integer> {
               description = "Path to the backup .tar.gz file to restore from")
           String backupPath,
       @Option(
-              names = {"--force"},
-              defaultValue = "false",
-              description =
-                  "Force restore by truncating existing tables. Without this flag, restore fails if tables have data.")
-          boolean force,
-      @Option(
               names = {"--batch-size"},
               defaultValue = "1000",
               description =
@@ -2664,16 +2662,63 @@ public class OpenMetadataOperations implements Callable<Integer> {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
       DatasourceConfig.initialize(connType.label);
+
       String databaseName =
           DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl());
       DatabaseBackupRestore backupRestore =
           new DatabaseBackupRestore(jdbi, connType, databaseName, batchSize);
-      backupRestore.restore(backupPath, force);
+
+      ObjectNode metadata = DatabaseBackupRestore.readBackupMetadata(backupPath);
+      String backupVersion = metadata.get("version").asText();
+      String targetVersion = resolveTargetVersion(metadata, backupVersion);
+
+      LOG.info("Dropping all tables before restore");
+      dropAllTables();
+
+      LOG.info("Running migrations up to version {}", targetVersion);
+      MigrationWorkflow workflow =
+          new MigrationWorkflow(
+              jdbi,
+              nativeSQLScriptRootPath,
+              connType,
+              extensionSQLScriptRootPath,
+              config.getMigrationConfiguration().getFlywayPath(),
+              config,
+              false);
+      workflow.setTargetVersion(targetVersion);
+      workflow.loadMigrations();
+      workflow.runMigrationWorkflows(true);
+
+      backupRestore.restore(backupPath);
       return 0;
     } catch (Exception e) {
       LOG.error("Restore failed", e);
       return 1;
     }
+  }
+
+  static String resolveTargetVersion(ObjectNode metadata, String fallbackVersion) {
+    JsonNode versionsNode = metadata.get("migrationVersions");
+    if (versionsNode != null && versionsNode.isArray() && !versionsNode.isEmpty()) {
+      String maxVersion = null;
+      for (JsonNode v : versionsNode) {
+        String ver = v.asText();
+        if (maxVersion == null || MigrationWorkflow.compareVersions(ver, maxVersion) > 0) {
+          maxVersion = ver;
+        }
+      }
+      if (maxVersion != null) {
+        LOG.info(
+            "Using max migration version {} from backup metadata (pom version: {})",
+            maxVersion,
+            fallbackVersion);
+        return maxVersion;
+      }
+    }
+    LOG.info(
+        "No migrationVersions in backup metadata, falling back to pom version: {}",
+        fallbackVersion);
+    return fallbackVersion;
   }
 
   @Command(
@@ -2688,28 +2733,18 @@ public class OpenMetadataOperations implements Callable<Integer> {
                   "Path to the backup .tar.gz file to restore and test migrations against")
           String backupPath,
       @Option(
-              names = {"--force"},
-              defaultValue = "false",
-              description =
-                  "Force execution. This command restores a backup (truncating all tables) before running migrations. Pass --force to confirm.")
-          boolean force,
-      @Option(
               names = {"--batch-size"},
               defaultValue = "1000",
               description =
                   "Number of rows per batch during restore. Default: "
                       + DatabaseBackupRestore.DEFAULT_BATCH_SIZE)
           int batchSize) {
-    if (!force) {
-      LOG.error(
-          "test-migration restores a backup which truncates all existing tables. "
-              + "Pass --force to confirm you want to proceed.");
-      return 1;
-    }
     try {
       parseConfig();
       ConnectionType connType = ConnectionType.from(config.getDataSourceFactory().getDriverClass());
       DatasourceConfig.initialize(connType.label);
+      LOG.info("Dropping all tables before test-migration");
+      dropAllTables();
       MigrationTestRunner runner =
           new MigrationTestRunner(
               jdbi, connType, config, nativeSQLScriptRootPath, extensionSQLScriptRootPath);

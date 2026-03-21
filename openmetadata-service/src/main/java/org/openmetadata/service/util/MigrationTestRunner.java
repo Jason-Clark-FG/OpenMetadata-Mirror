@@ -3,13 +3,11 @@ package org.openmetadata.service.util;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
-import org.openmetadata.service.jdbi3.MigrationDAO;
 import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.migration.api.MigrationProcess;
 import org.openmetadata.service.migration.api.MigrationTestCase;
@@ -47,28 +45,35 @@ public class MigrationTestRunner {
   }
 
   public int run(String backupPath, int batchSize) throws IOException {
+    ObjectNode metadata = DatabaseBackupRestore.readBackupMetadata(backupPath);
+    String backupVersion = metadata.get("version").asText();
+    String backupTimestamp = metadata.has("timestamp") ? metadata.get("timestamp").asText() : "N/A";
+    String backupDbType =
+        metadata.has("databaseType") ? metadata.get("databaseType").asText() : "N/A";
+    String sourceVersion = OpenMetadataOperations.resolveTargetVersion(metadata, backupVersion);
+
     DatabaseBackupRestore backupRestore =
         new DatabaseBackupRestore(
             jdbi,
             connectionType,
             DatabaseBackupRestore.extractDatabaseName(config.getDataSourceFactory().getUrl()),
             batchSize);
-    backupRestore.restore(backupPath, true);
 
-    ObjectNode metadata = DatabaseBackupRestore.readBackupMetadata(backupPath);
-    String backupTimestamp = metadata.has("timestamp") ? metadata.get("timestamp").asText() : "N/A";
-    String backupDbType =
-        metadata.has("databaseType") ? metadata.get("databaseType").asText() : "N/A";
+    LOG.info("Running migrations up to version {}", sourceVersion);
+    MigrationWorkflow setupWorkflow =
+        new MigrationWorkflow(
+            jdbi,
+            nativeSQLScriptRootPath,
+            connectionType,
+            extensionSQLScriptRootPath,
+            config.getMigrationConfiguration().getFlywayPath(),
+            config,
+            false);
+    setupWorkflow.setTargetVersion(sourceVersion);
+    setupWorkflow.loadMigrations();
+    setupWorkflow.runMigrationWorkflows(true);
 
-    MigrationDAO migrationDAO = jdbi.onDemand(MigrationDAO.class);
-    List<String> executedVersions;
-    try {
-      executedVersions = migrationDAO.getMigrationVersions();
-    } catch (Exception e) {
-      executedVersions = Collections.emptyList();
-    }
-    String sourceVersion =
-        executedVersions.stream().max(MigrationTestRunner::compareVersions).orElse("unknown");
+    backupRestore.restore(backupPath);
 
     MigrationWorkflow workflow =
         new MigrationWorkflow(
@@ -78,7 +83,7 @@ public class MigrationTestRunner {
             extensionSQLScriptRootPath,
             config.getMigrationConfiguration().getFlywayPath(),
             config,
-            true);
+            false);
     workflow.loadMigrations();
 
     List<MigrationProcess> migrations = workflow.getMigrations();
@@ -161,7 +166,7 @@ public class MigrationTestRunner {
 
   private MigrationTestCase loadTestCase(String versionPkg) {
     String className =
-        String.format("org.openmetadata.service.migration.tests.%s.MigrationTest", versionPkg);
+        String.format("org.openmetadata.service.migration.utils.%s.MigrationTest", versionPkg);
     try {
       Class<?> clazz = Class.forName(className);
       return (MigrationTestCase) clazz.getDeclaredConstructor().newInstance();
@@ -175,13 +180,7 @@ public class MigrationTestRunner {
 
   static String versionToPackage(String version) {
     String base = version.contains("-") ? version.split("-")[0] : version;
-    String[] parts = base.split("\\.");
-    StringBuilder sb = new StringBuilder("v");
-    for (int i = 0; i < parts.length; i++) {
-      if (i > 0) sb.append("_");
-      sb.append(Integer.parseInt(parts[i]));
-    }
-    return sb.toString();
+    return "v" + base.replace(".", "");
   }
 
   private void printSummary(

@@ -19,6 +19,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.flywaydb.core.api.configuration.ClassicConfiguration;
 import org.flywaydb.core.api.configuration.Configuration;
@@ -55,6 +56,7 @@ public class MigrationWorkflow {
   private final MigrationDAO migrationDAO;
   private final Jdbi jdbi;
   private final boolean forceMigrations;
+  @Setter private String targetVersion;
   List<String> executedMigrations;
   private Optional<String> currentMaxMigrationVersion;
 
@@ -98,6 +100,13 @@ public class MigrationWorkflow {
             flywayPath);
     // Filter Migrations to Be Run
     this.migrations = filterAndGetMigrationsToRun(availableMigrations);
+
+    if (targetVersion != null) {
+      this.migrations =
+          this.migrations.stream()
+              .filter(m -> compareVersions(m.getVersion(), targetVersion) <= 0)
+              .toList();
+    }
   }
 
   public void validateMigrationsForServer() {
@@ -204,7 +213,7 @@ public class MigrationWorkflow {
     return processes;
   }
 
-  private static int compareVersions(String version1, String version2) {
+  public static int compareVersions(String version1, String version2) {
     int[] v1Parts = parseVersion(version1);
     int[] v2Parts = parseVersion(version2);
 
