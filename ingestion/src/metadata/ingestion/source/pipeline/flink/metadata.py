@@ -40,6 +40,7 @@ from metadata.generated.schema.type.basic import (
 )
 from metadata.ingestion.api.models import Either
 from metadata.ingestion.api.steps import InvalidSourceException
+from metadata.ingestion.models.custom_basemodel_validation import replace_separators
 from metadata.ingestion.models.pipeline_status import OMetaPipelineStatus
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.pipeline.flink.models import FlinkPipeline
@@ -50,6 +51,7 @@ from metadata.utils.logger import ingestion_logger
 logger = ingestion_logger()
 
 TASK_STATUS_MAP = {
+    "FINISHED": StatusType.Successful,
     "RUNNING": StatusType.Pending,
     "FAILED": StatusType.Failed,
     "CANCELED": StatusType.Failed,
@@ -79,9 +81,15 @@ class FlinkSource(PipelineServiceSource):
     ) -> Optional[List[Task]]:
         """Returns the list of tasks linked to connection"""
         pipeline_info = self.client.get_pipeline_info(pipeline_details.id)
+        # Flink task names can contain ">" (e.g. "Source: A -> B -> C").
+        # replace_separators encodes ">" to "__reserved__arrow__" so the stored
+        # name is consistent with what yield_pipeline_status sends to the API.
+        # The Java validateTask() does an exact string match, so both phases
+        # must produce the same sanitized name or status ingestion will fail.
         return [
             Task(
-                name=f"{task.name}_{task.id}",
+                name=replace_separators(f"{task.name}_{task.id}"),
+                displayName=f"{task.name}_{task.id}",
             )
             for task in pipeline_info.tasks
         ]
@@ -134,9 +142,11 @@ class FlinkSource(PipelineServiceSource):
         try:
             task_status = []
             for task in self.client.get_pipeline_info(pipeline_details.id).tasks:
+                # Must match the sanitized name stored during yield_pipeline.
+                # See get_connections_jobs() for the full explanation.
                 task_status.append(
                     TaskStatus(
-                        name=f"{task.name}_{task.id}",
+                        name=replace_separators(f"{task.name}_{task.id}"),
                         executionStatus=TASK_STATUS_MAP.get(task.status),
                         startTime=Timestamp(task.start_time),
                         endTime=Timestamp(task.end_time),
