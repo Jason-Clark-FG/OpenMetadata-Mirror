@@ -36,10 +36,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.ChangeSummaryMap;
+import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.change.ChangeSummary;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.security.Authorizer;
+import org.openmetadata.service.security.policyevaluator.OperationContext;
+import org.openmetadata.service.security.policyevaluator.ResourceContext;
 
 @Slf4j
 @Path("/v1/changeSummary")
@@ -92,12 +95,17 @@ public class ChangeSummaryResource {
               description = "Limit the number of entries returned",
               schema = @Schema(type = "integer"))
           @QueryParam("limit")
-          @DefaultValue("0")
+          @DefaultValue("10")
           int limit,
       @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
           int offset) {
+
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.VIEW_BASIC);
+    ResourceContext<?> resourceContext = new ResourceContext<>(entityType, id, null);
+    authorizer.authorize(securityContext, operationContext, resourceContext);
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
     EntityInterface entity = (EntityInterface) repository.get(null, id, repository.getFields("*"));
@@ -141,12 +149,17 @@ public class ChangeSummaryResource {
               description = "Limit the number of entries returned",
               schema = @Schema(type = "integer"))
           @QueryParam("limit")
-          @DefaultValue("0")
+          @DefaultValue("10")
           int limit,
       @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
           int offset) {
+
+    OperationContext operationContext =
+        new OperationContext(entityType, MetadataOperation.VIEW_BASIC);
+    ResourceContext<?> resourceContext = new ResourceContext<>(entityType, null, fqn);
+    authorizer.authorize(securityContext, operationContext, resourceContext);
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
     EntityInterface entity =
@@ -181,29 +194,25 @@ public class ChangeSummaryResource {
     }
 
     // Apply pagination
-    if (limit > 0 || offset > 0) {
-      Map<String, ChangeSummary> paginated = new LinkedHashMap<>();
-      int count = 0;
-      int added = 0;
-      for (Map.Entry<String, ChangeSummary> entry : filtered.entrySet()) {
-        if (count >= offset) {
-          if (limit > 0 && added >= limit) {
-            break;
-          }
-          paginated.put(entry.getKey(), entry.getValue());
-          added++;
+    Map<String, ChangeSummary> paginated = new LinkedHashMap<>();
+    int count = 0;
+    int added = 0;
+    for (Map.Entry<String, ChangeSummary> entry : filtered.entrySet()) {
+      if (count >= offset) {
+        if (added >= limit) {
+          break;
         }
-        count++;
+        paginated.put(entry.getKey(), entry.getValue());
+        added++;
       }
-      return Response.ok(
-              Map.of(
-                  "changeSummary", paginated,
-                  "totalEntries", filtered.size(),
-                  "offset", offset,
-                  "limit", limit))
-          .build();
+      count++;
     }
-
-    return Response.ok(Map.of("changeSummary", filtered, "totalEntries", filtered.size())).build();
+    return Response.ok(
+            Map.of(
+                "changeSummary", paginated,
+                "totalEntries", filtered.size(),
+                "offset", offset,
+                "limit", limit))
+        .build();
   }
 }

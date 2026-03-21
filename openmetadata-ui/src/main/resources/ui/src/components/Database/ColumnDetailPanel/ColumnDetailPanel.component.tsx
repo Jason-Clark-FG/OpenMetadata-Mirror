@@ -101,7 +101,7 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
   onColumnsUpdate,
 }: ColumnDetailPanelProps<T>) => {
   const { t } = useTranslation();
-  const { permissions } = useGenericContext();
+  const { permissions, changeSummary } = useGenericContext();
 
   const previousFqnRef = useRef<string | undefined>();
   const fetchedColumnFqnRef = useRef<string | undefined>();
@@ -690,6 +690,13 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
           </div>
         ) : (
           <DescriptionSection
+            changeSummaryEntry={
+              changeSummary?.[
+                `columns.${activeColumn?.fullyQualifiedName?.substring(
+                  (tableFqn?.length ?? 0) + 1
+                )}.description`
+              ]
+            }
             description={activeColumn?.description}
             entityFqn={activeColumn?.fullyQualifiedName}
             entityType={entityType}

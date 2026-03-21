@@ -6204,68 +6204,49 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
    * the source of the change, and when it was changed.
    */
   @Test
-  void get_changeSummaryById_200(TestNamespace ns) {
-    // Create and update entity to populate changeSummary
+  void get_changeSummaryById_200(TestNamespace ns) throws Exception {
     K createRequest = createMinimalRequest(ns);
     T created = createEntity(createRequest);
 
-    // Update description to produce a changeSummary entry
     created.setDescription("Updated description for changeSummary test");
     T updated = patchEntity(created.getId().toString(), created);
 
-    // GET changeSummary by ID
     OpenMetadataClient client = SdkClients.adminClient();
-    try {
-      String response =
-          client
-              .getHttpClient()
-              .executeForString(
-                  HttpMethod.GET,
-                  "/v1/changeSummary/" + getEntityType() + "/" + updated.getId(),
-                  null);
-      assertNotNull(response, "ChangeSummary response should not be null");
-      JsonNode result = MAPPER.readTree(response);
-      assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
-      assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
-    } catch (Exception e) {
-      log.warn(
-          "ChangeSummary endpoint not available for entity type {}: {}",
-          getEntityType(),
-          e.getMessage());
-    }
+    String response =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                "/v1/changeSummary/" + getEntityType() + "/" + updated.getId(),
+                null);
+    assertNotNull(response, "ChangeSummary response should not be null");
+    JsonNode result = MAPPER.readTree(response);
+    assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
+    assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
   }
 
   /**
    * Test: Retrieve changeSummary by entity FQN after updating the entity.
    */
   @Test
-  void get_changeSummaryByFqn_200(TestNamespace ns) {
-    // Create and update entity to populate changeSummary
+  void get_changeSummaryByFqn_200(TestNamespace ns) throws Exception {
     K createRequest = createMinimalRequest(ns);
     T created = createEntity(createRequest);
 
     created.setDescription("Updated description for changeSummary FQN test");
     T updated = patchEntity(created.getId().toString(), created);
 
-    // GET changeSummary by FQN
     OpenMetadataClient client = SdkClients.adminClient();
-    try {
-      String fqn = updated.getFullyQualifiedName();
-      String response =
-          client
-              .getHttpClient()
-              .executeForString(
-                  HttpMethod.GET, "/v1/changeSummary/" + getEntityType() + "/name/" + fqn, null);
-      assertNotNull(response, "ChangeSummary response should not be null");
-      JsonNode result = MAPPER.readTree(response);
-      assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
-      assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
-    } catch (Exception e) {
-      log.warn(
-          "ChangeSummary FQN endpoint not available for entity type {}: {}",
-          getEntityType(),
-          e.getMessage());
-    }
+    String fqn = updated.getFullyQualifiedName();
+    String response =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET, "/v1/changeSummary/" + getEntityType() + "/name/" + fqn, null);
+    assertNotNull(response, "ChangeSummary response should not be null");
+    JsonNode result = MAPPER.readTree(response);
+    assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
+    assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
   }
 
   /**
@@ -6273,7 +6254,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
    * Verifies that the filtering parameter works correctly.
    */
   @Test
-  void get_changeSummaryWithFieldPrefix_200(TestNamespace ns) {
+  void get_changeSummaryWithFieldPrefix_200(TestNamespace ns) throws Exception {
     K createRequest = createMinimalRequest(ns);
     T created = createEntity(createRequest);
 
@@ -6281,39 +6262,31 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     T updated = patchEntity(created.getId().toString(), created);
 
     OpenMetadataClient client = SdkClients.adminClient();
-    try {
-      String response =
-          client
-              .getHttpClient()
-              .executeForString(
-                  HttpMethod.GET,
-                  "/v1/changeSummary/"
-                      + getEntityType()
-                      + "/"
-                      + updated.getId()
-                      + "?fieldPrefix=description",
-                  null);
-      assertNotNull(response, "ChangeSummary filtered response should not be null");
-      JsonNode result = MAPPER.readTree(response);
-      assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
-      assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
+    String response =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                "/v1/changeSummary/"
+                    + getEntityType()
+                    + "/"
+                    + updated.getId()
+                    + "?fieldPrefix=description",
+                null);
+    assertNotNull(response, "ChangeSummary filtered response should not be null");
+    JsonNode result = MAPPER.readTree(response);
+    assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
+    assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
 
-      // Verify all returned keys start with the prefix
-      JsonNode changeSummary = result.get("changeSummary");
-      if (changeSummary.isObject()) {
-        changeSummary
-            .fieldNames()
-            .forEachRemaining(
-                key ->
-                    assertTrue(
-                        key.startsWith("description"),
-                        "All keys should start with 'description', but found: " + key));
-      }
-    } catch (Exception e) {
-      log.warn(
-          "ChangeSummary fieldPrefix endpoint not available for entity type {}: {}",
-          getEntityType(),
-          e.getMessage());
+    JsonNode changeSummary = result.get("changeSummary");
+    if (changeSummary.isObject()) {
+      changeSummary
+          .fieldNames()
+          .forEachRemaining(
+              key ->
+                  assertTrue(
+                      key.startsWith("description"),
+                      "All keys should start with 'description', but found: " + key));
     }
   }
 
@@ -6321,7 +6294,7 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
    * Test: Retrieve changeSummary with pagination parameters.
    */
   @Test
-  void get_changeSummaryWithPagination_200(TestNamespace ns) {
+  void get_changeSummaryWithPagination_200(TestNamespace ns) throws Exception {
     K createRequest = createMinimalRequest(ns);
     T created = createEntity(createRequest);
 
@@ -6329,30 +6302,23 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     patchEntity(created.getId().toString(), created);
 
     OpenMetadataClient client = SdkClients.adminClient();
-    try {
-      String response =
-          client
-              .getHttpClient()
-              .executeForString(
-                  HttpMethod.GET,
-                  "/v1/changeSummary/"
-                      + getEntityType()
-                      + "/"
-                      + created.getId()
-                      + "?limit=1&offset=0",
-                  null);
-      assertNotNull(response, "ChangeSummary paginated response should not be null");
-      JsonNode result = MAPPER.readTree(response);
-      assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
-      assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
-      assertTrue(result.has("offset"), "Paginated response must contain offset field");
-      assertTrue(result.has("limit"), "Paginated response must contain limit field");
-    } catch (Exception e) {
-      log.warn(
-          "ChangeSummary pagination endpoint not available for entity type {}: {}",
-          getEntityType(),
-          e.getMessage());
-    }
+    String response =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.GET,
+                "/v1/changeSummary/"
+                    + getEntityType()
+                    + "/"
+                    + created.getId()
+                    + "?limit=1&offset=0",
+                null);
+    assertNotNull(response, "ChangeSummary paginated response should not be null");
+    JsonNode result = MAPPER.readTree(response);
+    assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
+    assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
+    assertTrue(result.has("offset"), "Paginated response must contain offset field");
+    assertTrue(result.has("limit"), "Paginated response must contain limit field");
   }
 
   /**
@@ -6362,17 +6328,18 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
   void get_changeSummaryNotFound_404(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
     UUID randomId = UUID.randomUUID();
-    try {
-      client
-          .getHttpClient()
-          .executeForString(
-              HttpMethod.GET, "/v1/changeSummary/" + getEntityType() + "/" + randomId, null);
-      fail("Expected 404 for non-existent entity changeSummary");
-    } catch (Exception e) {
-      // Expected - entity not found
-      assertTrue(
-          e.getMessage().contains("404") || e.getMessage().contains("not found"),
-          "Should get 404 for non-existent entity, got: " + e.getMessage());
-    }
+    Exception thrown =
+        assertThrows(
+            Exception.class,
+            () ->
+                client
+                    .getHttpClient()
+                    .executeForString(
+                        HttpMethod.GET,
+                        "/v1/changeSummary/" + getEntityType() + "/" + randomId,
+                        null));
+    assertTrue(
+        thrown.getMessage().contains("404") || thrown.getMessage().contains("not found"),
+        "Should get 404 for non-existent entity, got: " + thrown.getMessage());
   }
 }

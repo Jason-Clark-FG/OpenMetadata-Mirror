@@ -31,6 +31,7 @@ import { ModalWithMarkdownEditor } from '../../Modals/ModalWithMarkdownEditor/Mo
 import SuggestionsAlert from '../../Suggestions/SuggestionsAlert/SuggestionsAlert';
 import { useSuggestionsContext } from '../../Suggestions/SuggestionsProvider/SuggestionsProvider';
 import SuggestionsSlider from '../../Suggestions/SuggestionsSlider/SuggestionsSlider';
+import DescriptionSourceBadge from '../DescriptionSourceBadge/DescriptionSourceBadge';
 import ExpandableCard from '../ExpandableCard/ExpandableCard';
 import {
   CommentIconButton,
@@ -62,7 +63,7 @@ const DescriptionV1 = ({
   entityFullyQualifiedName,
 }: DescriptionProps) => {
   const navigate = useNavigate();
-  const { isVersionView } = useGenericContext<Domain>();
+  const { isVersionView, changeSummary } = useGenericContext<Domain>();
   const { suggestions, selectedUserSuggestions } = useSuggestionsContext();
   const [isEditDescription, setIsEditDescription] = useState(false);
   const { fqn } = useFqn();
@@ -229,12 +230,15 @@ const DescriptionV1 = ({
           <Text className={classNames('text-sm font-medium')}>
             {t('label.description')}
           </Text>
+          <DescriptionSourceBadge
+            changeSummaryEntry={changeSummary?.['description']}
+          />
           {showActions && actionButtons}
         </div>
         {showSuggestions && suggestions?.length > 0 && <SuggestionsSlider />}
       </div>
     );
-  }, [showActions, actionButtons, suggestions, showSuggestions]);
+  }, [showActions, actionButtons, suggestions, showSuggestions, changeSummary]);
 
   const content = (
     <EntityAttachmentProvider entityFqn={entityFqn} entityType={entityType}>
