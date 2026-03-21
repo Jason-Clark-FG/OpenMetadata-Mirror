@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { PlusOutlined } from '@ant-design/icons';
 import { Button, Typography } from '@openmetadata/ui-core-components';
+import { Plus } from '@untitledui/icons';
 import classNames from 'classnames';
 import { ReactNode } from 'react';
 
@@ -64,7 +64,7 @@ const CoreCreateErrorPlaceHolder = ({
               className="tw:mt-3 tw:min-w-40"
               color="primary"
               data-testid={buttonId}
-              iconLeading={<PlusOutlined />}
+              iconLeading={Plus}
               onPress={onClick}>
               {buttonTitle}
             </Button>
