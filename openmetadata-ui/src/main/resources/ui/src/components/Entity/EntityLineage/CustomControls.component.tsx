@@ -291,9 +291,8 @@ const CustomControls: FC<{
         direction: lineageDirection,
         nodeDepth: nodeDepth,
         query_filter: quickFilters,
-        column_filter: columnFilter,
       }),
-    [fqn, entityType, lineageDirection, nodeDepth, quickFilters, columnFilter]
+    [fqn, entityType, lineageDirection, nodeDepth, quickFilters]
   );
 
   const handleExportClick = useCallback(() => {

@@ -347,8 +347,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       const dqLineageResp = await getDataQualityLineage(
         fqn,
         config,
-        queryFilter,
-        columnFilter
+        queryFilter
       );
       setDataQualityLineage(dqLineageResp);
     } catch {
@@ -512,7 +511,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         const res = await getPlatformLineage({
           config,
           queryFilter,
-          columnFilter,
           view,
         });
 
@@ -543,7 +541,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         setLoading(false);
       }
     },
-    [entityFqn, queryFilter, columnFilter]
+    [entityFqn, queryFilter]
   );
 
   const fetchLineageData = useCallback(
@@ -623,10 +621,9 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       entityFqn,
       entityType ?? '',
       lineageConfig,
-      queryFilter,
-      columnFilter
+      queryFilter
     );
-  }, [entityType, entityFqn, lineageConfig, queryFilter, columnFilter]);
+  }, [entityType, entityFqn, lineageConfig, queryFilter]);
 
   const onExportClick = useCallback(
     (
