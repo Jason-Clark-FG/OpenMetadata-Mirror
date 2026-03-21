@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
 import {
@@ -78,10 +79,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                   <UserPopOverCard
                     popoverZIndex={200000}
                     userName={owner.name ?? ''}>
-                    <Button
-                      color="link-gray"
-                      data-testid="owner-link"
-                      href={getOwnerPath(owner)}>
+                    <Link data-testid="owner-link" to={getOwnerPath(owner)}>
                       <div className="tw:flex tw:items-center tw:gap-2">
                         <ProfilePicture
                           displayName={name}
@@ -95,7 +93,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
                           </Typography>
                         </div>
                       </div>
-                    </Button>
+                    </Link>
                   </UserPopOverCard>
                 </Dropdown.Item>
               );
