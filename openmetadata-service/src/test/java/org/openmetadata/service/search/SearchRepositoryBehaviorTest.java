@@ -138,6 +138,7 @@ class SearchRepositoryBehaviorTest {
   @BeforeEach
   void setUp() {
     searchClient = mock(SearchClient.class);
+    when(searchClient.isClientAvailable()).thenReturn(true);
     searchIndexFactory = mock(SearchIndexFactory.class);
     repository =
         newRepository(

@@ -376,7 +376,6 @@ class AuthenticationCodeFlowHandlerTest {
   @Test
   void validateStateIfRequiredWritesErrorWhenSessionStateMissing() throws Exception {
     AuthenticationCodeFlowHandler handler = newHandler();
-    when(response.getOutputStream()).thenReturn(outputStream);
     OidcConfiguration configuration =
         configuredOidcConfiguration(
             "client-id", null, List.of(ClientAuthenticationMethod.CLIENT_SECRET_BASIC));
@@ -393,17 +392,21 @@ class AuthenticationCodeFlowHandlerTest {
             null,
             ResponseMode.QUERY);
 
-    invokePrivate(
-        handler,
-        "validateStateIfRequired",
-        new Class<?>[] {
-          HttpSession.class, HttpServletResponse.class, AuthenticationSuccessResponse.class
-        },
-        session,
-        response,
-        successResponse);
+    TechnicalException exception =
+        assertThrows(
+            TechnicalException.class,
+            () ->
+                invokePrivate(
+                    handler,
+                    "validateStateIfRequired",
+                    new Class<?>[] {
+                      HttpSession.class, HttpServletResponse.class, AuthenticationSuccessResponse.class
+                    },
+                    session,
+                    response,
+                    successResponse));
 
-    verify(response).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    assertEquals("Missing state parameter", exception.getMessage());
   }
 
   @Test
@@ -658,6 +661,8 @@ class AuthenticationCodeFlowHandlerTest {
       when(session.getAttribute(client.getNonceSessionAttributeName())).thenReturn(nonce);
       when(session.getAttribute(client.getCodeVerifierSessionAttributeName()))
           .thenReturn(new CodeVerifier("0123456789abcdef0123456789abcdef0123456789a"));
+      when(session.getAttribute(AuthenticationCodeFlowHandler.SESSION_SSO_CALLBACK_URL))
+          .thenReturn(client.getCallbackUrl());
       when(session.getAttribute(AuthenticationCodeFlowHandler.SESSION_REDIRECT_URI))
           .thenReturn("https://app.example.com/post-login");
       when(session.getId()).thenReturn("session-id");
@@ -696,7 +701,7 @@ class AuthenticationCodeFlowHandlerTest {
       verify(response).sendRedirect(redirectCaptor.capture());
       String redirect = redirectCaptor.getValue();
       assertTrue(redirect.startsWith("https://app.example.com/post-login?id_token="));
-      assertTrue(redirect.contains("email=oidc-user@example.com"));
+      assertTrue(redirect.contains("email=oidc-user%40example.com"));
       assertTrue(redirect.contains("name=oidc-user"));
     }
   }
@@ -1113,7 +1118,9 @@ class AuthenticationCodeFlowHandlerTest {
     AuthenticationConfiguration authConfig = new AuthenticationConfiguration();
     authConfig.setEnableSelfSignup(true);
     setField(handler, "authenticationConfiguration", authConfig);
-    setField(handler, "authorizerConfiguration", authorizerConfiguration(Set.of("new-user")));
+    AuthorizerConfiguration authorizer = authorizerConfiguration(Set.of("new-user"));
+    authorizer.setAllowedEmailRegistrationDomains(Set.of("all"));
+    setField(handler, "authorizerConfiguration", authorizer);
 
     try (MockedStatic<Entity> entity = mockStatic(Entity.class);
         MockedStatic<UserUtil> userUtil = mockStatic(UserUtil.class)) {
@@ -1139,16 +1146,14 @@ class AuthenticationCodeFlowHandlerTest {
           invokePrivate(
               handler,
               "getOrCreateOidcUser",
-              new Class<?>[] {String.class, String.class, String.class, Map.class},
+              new Class<?>[] {String.class, String.class, Map.class},
               "new-user",
               "new-user@example.com",
-              "New User",
               Map.of());
 
       assertEquals(persistedUser, user);
       assertTrue(Boolean.TRUE.equals(draftUser.getIsAdmin()));
       assertTrue(Boolean.TRUE.equals(draftUser.getIsEmailVerified()));
-      assertEquals("New User", draftUser.getDisplayName());
     }
   }
 
@@ -1175,10 +1180,9 @@ class AuthenticationCodeFlowHandlerTest {
                   invokePrivate(
                       handler,
                       "getOrCreateOidcUser",
-                      new Class<?>[] {String.class, String.class, String.class, Map.class},
+                      new Class<?>[] {String.class, String.class, Map.class},
                       "missing-user",
                       "missing-user@example.com",
-                      null,
                       Map.of()));
 
       assertTrue(exception.getMessage().contains("self-signup is disabled"));
@@ -1216,15 +1220,13 @@ class AuthenticationCodeFlowHandlerTest {
           invokePrivate(
               handler,
               "getOrCreateOidcUser",
-              new Class<?>[] {String.class, String.class, String.class, Map.class},
+              new Class<?>[] {String.class, String.class, Map.class},
               "existing-user",
               "existing-user@example.com",
-              "Existing User",
               Map.of("groups", List.of("analytics", "platform")));
 
       assertEquals(existingUser, user);
       assertTrue(Boolean.TRUE.equals(existingUser.getIsAdmin()));
-      assertEquals("Existing User", existingUser.getDisplayName());
       userUtil.verify(() -> UserUtil.addOrUpdateUser(existingUser));
     }
   }
@@ -1247,7 +1249,7 @@ class AuthenticationCodeFlowHandlerTest {
 
     verify(response).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
     verify(outputStream)
-        .println(org.mockito.ArgumentMatchers.contains("Bad authentication response"));
+        .println(org.mockito.ArgumentMatchers.contains("Authentication failed. Please try again."));
   }
 
   @Test
