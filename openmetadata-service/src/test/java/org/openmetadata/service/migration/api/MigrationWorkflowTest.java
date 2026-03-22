@@ -253,9 +253,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.2", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
     assertEquals(List.of("1.11.11", "1.11.12", "1.12.2"), versions);
@@ -274,9 +276,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.2", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
     assertEquals(List.of("1.11.11", "1.12.1-collate", "1.12.2"), versions);
@@ -294,9 +298,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.2", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
     assertEquals(List.of("1.12.2"), versions);
@@ -314,9 +320,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.2", true));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> nativeVersions =
         result.stream().filter(m -> !m.isExtension).map(m -> m.version).toList();
@@ -337,9 +345,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.0-collate", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     assertEquals(3, result.size());
   }
@@ -354,9 +364,11 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.1-collate", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     assertTrue(result.isEmpty());
   }
@@ -376,16 +388,19 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.2", false));
 
     MigrationWorkflow workflow =
-        new MigrationWorkflow(jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
 
-    List<MigrationFile> result = workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> result =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
     assertEquals(List.of("1.10.6", "1.11.1", "1.11.1-collate", "1.12.2"), versions);
   }
 
   private MigrationFile createMigrationFile(String version, boolean isExtension) throws Exception {
-    Path parentDir = isExtension ? tempDir.resolve("extensions") : tempDir.resolve("nativeVersions");
+    Path parentDir =
+        isExtension ? tempDir.resolve("extensions") : tempDir.resolve("nativeVersions");
     Path versionDir = Files.createDirectories(parentDir.resolve(version));
     return new MigrationFile(
         versionDir.toFile(), migrationDAO, ConnectionType.MYSQL, config, isExtension);

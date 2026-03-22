@@ -225,7 +225,7 @@ class SearchIndexStatsTest {
     }
 
     @Test
-    @DisplayName("Should NOT detect normal errors as backpressure")
+    @DisplayName("Should detect only known backpressure errors while treating null messages as retryable")
     void testNormalErrorsNotBackpressure() throws Exception {
       ElasticSearchBulkSink.CustomBulkProcessor processor =
           getCustomBulkProcessor(new ElasticSearchBulkSink(searchRepository, 10, 2, 1000000L));

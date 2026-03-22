@@ -29,6 +29,8 @@ import org.springframework.expression.spel.support.SimpleEvaluationContext;
 
 @Slf4j
 public class PermissionDebugService {
+  private static final String ALLOW_EFFECT = Rule.Effect.ALLOW.value();
+  private static final String DENY_EFFECT = Rule.Effect.DENY.value();
 
   private final UserRepository userRepository;
   private final TeamRepository teamRepository;
@@ -217,9 +219,8 @@ public class PermissionDebugService {
       }
 
       // Determine overall policy effect
-      boolean hasAllow =
-          policyInfo.getRules().stream().anyMatch(r -> "ALLOW".equals(r.getEffect()));
-      boolean hasDeny = policyInfo.getRules().stream().anyMatch(r -> "DENY".equals(r.getEffect()));
+      boolean hasAllow = policyInfo.getRules().stream().anyMatch(r -> isAllowEffect(r.getEffect()));
+      boolean hasDeny = policyInfo.getRules().stream().anyMatch(r -> isDenyEffect(r.getEffect()));
 
       if (hasDeny && hasAllow) {
         policyInfo.setEffect("MIXED");
@@ -298,9 +299,9 @@ public class PermissionDebugService {
 
   private void collectOperations(PolicyInfo policy, Set<String> allowedOps, Set<String> deniedOps) {
     for (RuleInfo rule : policy.getRules()) {
-      if ("ALLOW".equals(rule.getEffect())) {
+      if (isAllowEffect(rule.getEffect())) {
         allowedOps.addAll(rule.getOperations());
-      } else if ("DENY".equals(rule.getEffect())) {
+      } else if (isDenyEffect(rule.getEffect())) {
         deniedOps.addAll(rule.getOperations());
       }
     }
@@ -376,12 +377,12 @@ public class PermissionDebugService {
     summary.setDenyRules(
         (int)
             evaluationSteps.stream()
-                .filter(s -> s.isMatched() && "DENY".equals(s.getEffect()))
+                .filter(s -> s.isMatched() && isDenyEffect(s.getEffect()))
                 .count());
     summary.setAllowRules(
         (int)
             evaluationSteps.stream()
-                .filter(s -> s.isMatched() && "ALLOW".equals(s.getEffect()))
+                .filter(s -> s.isMatched() && isAllowEffect(s.getEffect()))
                 .count());
 
     if (!finalDecision) {
@@ -578,6 +579,14 @@ public class PermissionDebugService {
   }
 
   private String normalizeEffect(Rule.Effect effect) {
-    return effect == null ? null : effect.name();
+    return effect == null ? null : effect.value();
+  }
+
+  private boolean isAllowEffect(String effect) {
+    return ALLOW_EFFECT.equals(effect);
+  }
+
+  private boolean isDenyEffect(String effect) {
+    return DENY_EFFECT.equals(effect);
   }
 }

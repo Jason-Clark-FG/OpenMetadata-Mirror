@@ -882,12 +882,10 @@ public class SearchRepository {
             docs.add(Collections.singletonMap(entity.getId().toString(), doc));
           } catch (Exception ie) {
             LOG.error(
-                "Issue in building search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+                "Issue in building search document for entity [{}] and entityType [{}]",
                 entity.getId(),
                 entityType,
-                ie.getMessage(),
-                ie.getCause(),
-                ExceptionUtils.getStackTrace(ie));
+                ie);
           }
         }
 

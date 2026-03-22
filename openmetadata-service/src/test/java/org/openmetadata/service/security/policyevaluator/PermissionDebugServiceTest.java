@@ -155,6 +155,11 @@ class PermissionDebugServiceTest {
       assertEquals(1, debugInfo.getDirectRoles().size());
       assertEquals("analyst", debugInfo.getDirectRoles().get(0).getRole().getName());
       assertEquals("MIXED", debugInfo.getDirectRoles().get(0).getPolicies().get(0).getEffect());
+      assertIterableEquals(
+          List.of("allow", "deny"),
+          debugInfo.getDirectRoles().get(0).getPolicies().get(0).getRules().stream()
+              .map(PermissionDebugInfo.RuleInfo::getEffect)
+              .toList());
 
       assertEquals(2, debugInfo.getTeamPermissions().size());
       TeamPermission directTeam = debugInfo.getTeamPermissions().get(0);
@@ -288,9 +293,11 @@ class PermissionDebugServiceTest {
       PolicyEvaluationStep denyStep = debugInfo.getEvaluationSteps().get(1);
       assertEquals("DIRECT_ROLE", allowStep.getSource());
       assertEquals("analyst", allowStep.getSourceEntity().getName());
+      assertEquals("allow", allowStep.getEffect());
       assertTrue(allowStep.isMatched());
       assertEquals("TEAM_POLICY", denyStep.getSource());
       assertEquals("governance", denyStep.getSourceEntity().getName());
+      assertEquals("deny", denyStep.getEffect());
       assertTrue(denyStep.isMatched());
     }
   }
@@ -372,6 +379,7 @@ class PermissionDebugServiceTest {
       PolicyEvaluationStep step = debugInfo.getEvaluationSteps().get(0);
       assertEquals("USER_POLICY", step.getSource());
       assertEquals("alice", step.getSourceEntity().getName());
+      assertEquals("allow", step.getEffect());
       assertTrue(step.isMatched());
       assertEquals(1, step.getConditionEvaluations().size());
       assertTrue(step.getConditionEvaluations().get(0).isResult());

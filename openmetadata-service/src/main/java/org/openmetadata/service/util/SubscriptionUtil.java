@@ -357,7 +357,7 @@ public class SubscriptionUtil {
     if (category.equals(SubscriptionDestination.SubscriptionCategory.USERS)) {
       if (action.getReceivers() == null || action.getReceivers().isEmpty()) {
         throw new IllegalArgumentException(
-            "Email Alert Invoked with Illegal Type and Settings. Emtpy or Null Users Recipients List");
+            "Email Alert Invoked with Illegal Type and Settings. Empty or Null Users Recipients List");
       }
       List<User> users =
           action.getReceivers().stream()
@@ -367,7 +367,7 @@ public class SubscriptionUtil {
     } else if (category.equals(SubscriptionDestination.SubscriptionCategory.TEAMS)) {
       if (action.getReceivers() == null || action.getReceivers().isEmpty()) {
         throw new IllegalArgumentException(
-            "Email Alert Invoked with Illegal Type and Settings. Emtpy or Null Teams Recipients List");
+            "Email Alert Invoked with Illegal Type and Settings. Empty or Null Teams Recipients List");
       }
       List<Team> teams =
           action.getReceivers().stream()

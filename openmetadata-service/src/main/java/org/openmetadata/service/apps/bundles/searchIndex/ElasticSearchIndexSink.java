@@ -132,6 +132,7 @@ public class ElasticSearchIndexSink implements BulkSink, Closeable {
     int successfulEntities = totalEntities - failedEntities;
 
     if (!entityErrorList.isEmpty()) {
+      // Async callbacks already update sink stats; these counts are for the surfaced failure payload.
       throw new SearchIndexException(
           new IndexingError()
               .withErrorSource(SINK)

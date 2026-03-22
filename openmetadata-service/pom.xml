@@ -31,7 +31,6 @@
     <logback-classic.version>1.5.25</logback-classic.version>
     <resilience4j-ratelimiter.version>2.3.0</resilience4j-ratelimiter.version>
     <kubernetes-client.version>24.0.0</kubernetes-client.version>
-    <junit.jupiter.service.version>5.11.2</junit.jupiter.service.version>
   </properties>
 
   <dependencyManagement>
@@ -572,13 +571,11 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <version>${junit.jupiter.service.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <version>${junit.jupiter.service.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
