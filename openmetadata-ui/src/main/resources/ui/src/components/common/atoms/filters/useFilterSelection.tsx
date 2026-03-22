@@ -11,7 +11,12 @@
  *  limitations under the License.
  */
 
-import { Box, Button } from '@mui/material';
+import {
+  Badge,
+  Button,
+  ButtonUtility,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { XClose } from '@untitledui/icons';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -111,38 +116,44 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
     }
 
     return (
-      <Box className="filter-selection-container">
-        <Box className="filter-selection-chips-wrapper">
+      <div className="tw:flex tw:items-center tw:w-full">
+        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:flex-1">
           {selectedFilters.map((filter) => (
-            <Box className="filter-selection-chip" key={filter.key}>
-              <Box className="filter-selection-chip-content" component="span">
-                <span className="filter-selection-label">
+            <Badge
+              className="tw:ring-0 tw:gap-1"
+              color="brand"
+              key={filter.key}
+              size="lg"
+              type="color">
+              <div className="tw:flex tw:items-center tw:gap-1">
+                <Typography className="tw:text-gray-600" weight="medium">
                   {t(filter.label)}
                   {': '}
-                </span>
-                <span
-                  className="filter-selection-value"
-                  title={filter.values.join(', ')}>
-                  {filter.values.join(', ')}
-                </span>
-              </Box>
-              <Box
+                </Typography>
+                <div className="tw:max-w-80">
+                  <Typography
+                    ellipsis
+                    as="p"
+                    className="tw:text-brand-600"
+                    title={filter.values.join(', ')}
+                    weight="medium">
+                    {filter.values.join(', ')}
+                  </Typography>
+                </div>
+              </div>
+              <ButtonUtility
                 aria-label="Remove filter"
-                className="filter-selection-remove-btn"
-                component="button"
-                onClick={() => handleRemoveFilter(filter.key)}>
-                <XClose size={14} />
-              </Box>
-            </Box>
+                color="tertiary"
+                icon={<XClose size={14} />}
+                onClick={() => handleRemoveFilter(filter.key)}
+              />
+            </Badge>
           ))}
-        </Box>
-        <Button
-          className="filter-selection-clear-all"
-          variant="text"
-          onClick={handleClearAll}>
+        </div>
+        <Button color="link-color" onClick={handleClearAll}>
           {t('label.clear-entity', { entity: t('label.all-lowercase') })}
         </Button>
-      </Box>
+      </div>
     );
   }, [selectedFilters, handleRemoveFilter, handleClearAll, t]);
 

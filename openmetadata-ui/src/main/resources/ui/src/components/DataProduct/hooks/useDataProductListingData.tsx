@@ -11,8 +11,7 @@
  *  limitations under the License.
  */
 
-import { Box, Typography } from '@mui/material';
-import { Avatar } from '@openmetadata/ui-core-components';
+import { Avatar, Typography } from '@openmetadata/ui-core-components';
 import { useCallback, useMemo } from 'react';
 import { TABLE_CARD_PAGE_SIZE } from '../../../constants/constants';
 import {
@@ -97,30 +96,21 @@ export const useDataProductListingData = (): ListingData<DataProduct> => {
           entity.displayName !== entity.name;
 
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <div className="tw:flex tw:items-center tw:gap-1.5">
             <Avatar size="lg" {...getEntityAvatarProps(entity)} />
-            <Box>
-              <Typography
-                sx={{
-                  fontWeight: 500,
-                  color: 'text.primary',
-                  fontSize: '1rem',
-                  lineHeight: '24px',
-                }}>
+            <div>
+              <Typography className="tw:leading-5" weight="medium">
                 {entityName}
               </Typography>
               {showName && (
                 <Typography
-                  sx={{
-                    fontSize: '0.75rem',
-                    color: 'text.secondary',
-                    lineHeight: '16px',
-                  }}>
+                  className="tw:leading-4 tw:text-gray-700"
+                  size="text-xs">
                   {entity.name}
                 </Typography>
               )}
-            </Box>
-          </Box>
+            </div>
+          </div>
         );
       },
     }),
