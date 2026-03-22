@@ -142,3 +142,60 @@ class TeradataUnitTest(TestCase):
 
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0].procedure_name, "sp_include")
+
+
+class TestTeradataColumnComments:
+    def test_get_columns_injects_comments(self, monkeypatch):
+        import metadata.ingestion.source.database.teradata.utils as teradata_utils
+        from metadata.ingestion.source.database.teradata.utils import get_columns
+
+        base_columns = [
+            {"name": "id", "type": MagicMock()},
+            {"name": "name", "type": MagicMock()},
+        ]
+        monkeypatch.setattr(
+            teradata_utils,
+            "_original_get_columns",
+            MagicMock(return_value=base_columns),
+        )
+
+        dialect_instance = MagicMock()
+        dialect_instance.all_column_comments = {
+            ("my_schema", "my_table", "id"): "Primary key",
+            ("my_schema", "my_table", "name"): None,
+        }
+        dialect_instance.current_db = "test_db"
+
+        mock_conn = MagicMock()
+        mock_conn.engine.url.database = "test_db"
+
+        result = get_columns(
+            dialect_instance, mock_conn, "my_table", schema="my_schema"
+        )
+
+        assert result[0]["comment"] == "Primary key"
+        assert result[1]["comment"] is None
+
+    def test_get_columns_handles_comment_query_failure(self, monkeypatch):
+        import metadata.ingestion.source.database.teradata.utils as teradata_utils
+        from metadata.ingestion.source.database.teradata.utils import get_columns
+
+        base_columns = [{"name": "col1", "type": MagicMock()}]
+        monkeypatch.setattr(
+            teradata_utils,
+            "_original_get_columns",
+            MagicMock(return_value=base_columns),
+        )
+
+        dialect_instance = MagicMock(spec=[])  # no attributes → hasattr checks fail
+        dialect_instance.get_all_column_comments = MagicMock(
+            side_effect=Exception("DB error")
+        )
+
+        mock_conn = MagicMock()
+        result = get_columns(
+            dialect_instance, mock_conn, "my_table", schema="my_schema"
+        )
+
+        assert len(result) == 1
+        assert result[0].get("comment") is None

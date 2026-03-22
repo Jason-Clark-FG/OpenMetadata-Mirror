@@ -14,11 +14,19 @@ Teradata SQLAlchemy Helper Methods
 
 from sqlalchemy.engine import reflection
 
-from metadata.ingestion.source.database.teradata.queries import TERADATA_TABLE_COMMENTS
+from metadata.ingestion.source.database.teradata.queries import (
+    TERADATA_ALL_COLUMN_COMMENTS,
+    TERADATA_TABLE_COMMENTS,
+)
 from metadata.utils.logger import ingestion_logger
-from metadata.utils.sqlalchemy_utils import get_table_comment_wrapper
+from metadata.utils.sqlalchemy_utils import (
+    get_column_comment_wrapper,
+    get_table_comment_wrapper,
+)
 
 logger = ingestion_logger()
+
+_original_get_columns = None
 
 
 @reflection.cache
@@ -32,3 +40,22 @@ def get_table_comment(
         schema=schema,
         query=TERADATA_TABLE_COMMENTS,
     )
+
+
+def get_columns(self, connection, table_name, schema=None, **kw):
+    columns = _original_get_columns(self, connection, table_name, schema, **kw)
+    try:
+        for col in columns:
+            col["comment"] = get_column_comment_wrapper(
+                self,
+                connection,
+                query=TERADATA_ALL_COLUMN_COMMENTS,
+                table_name=table_name,
+                column_name=col["name"],
+                schema=schema,
+            )
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.warning(
+            f"Failed to fetch column comments for {schema}.{table_name}: {exc}"
+        )
+    return columns
