@@ -160,36 +160,7 @@ public class MigrationWorkflow {
 
   private List<MigrationProcess> filterAndGetMigrationsToRun(
       List<MigrationFile> availableMigrations) {
-    LOG.debug("Filtering Server Migrations");
-    try {
-      executedMigrations = migrationDAO.getMigrationVersions();
-    } catch (Exception e) {
-      // SERVER_CHANGE_LOG table doesn't exist yet, run all migrations including Flyway
-      LOG.info(
-          "SERVER_CHANGE_LOG table doesn't exist yet, will run all migrations including Flyway");
-      executedMigrations = new ArrayList<>();
-    }
-    currentMaxMigrationVersion =
-        executedMigrations.stream().max(MigrationWorkflow::compareVersions);
-    List<MigrationFile> applyMigrations;
-    if (!nullOrEmpty(executedMigrations) && !forceMigrations) {
-      applyMigrations = getMigrationsToApply(executedMigrations, availableMigrations);
-      if (currentMaxMigrationVersion.isPresent()) {
-        String maxVersion = currentMaxMigrationVersion.get();
-        Optional<MigrationFile> currentVersionFile =
-            availableMigrations.stream()
-                .filter(f -> !f.isExtension && f.version.equals(maxVersion))
-                .findFirst();
-        if (currentVersionFile.isPresent()) {
-          MigrationFile reprocessFile = currentVersionFile.get();
-          reprocessFile.setReprocessing(true);
-          applyMigrations = new ArrayList<>(applyMigrations);
-          applyMigrations.addFirst(reprocessFile);
-        }
-      }
-    } else {
-      applyMigrations = availableMigrations;
-    }
+    List<MigrationFile> applyMigrations = resolveApplyMigrations(availableMigrations);
     List<MigrationProcess> processes = new ArrayList<>();
     try {
       for (MigrationFile file : applyMigrations) {
@@ -266,6 +237,27 @@ public class MigrationWorkflow {
     int[] max = parseVersion(maxVersion);
     if (v[0] != max[0]) return v[0] > max[0];
     return v[1] >= max[1];
+  }
+
+  // Package-private for testing
+  List<MigrationFile> resolveApplyMigrations(List<MigrationFile> availableMigrations) {
+    LOG.debug("Filtering Server Migrations");
+    try {
+      executedMigrations = migrationDAO.getMigrationVersions();
+    } catch (Exception e) {
+      LOG.info(
+          "SERVER_CHANGE_LOG table doesn't exist yet, will run all migrations including Flyway");
+      executedMigrations = new ArrayList<>();
+    }
+    currentMaxMigrationVersion =
+        executedMigrations.stream().max(MigrationWorkflow::compareVersions);
+    List<MigrationFile> applyMigrations;
+    if (!nullOrEmpty(executedMigrations) && !forceMigrations) {
+      applyMigrations = getMigrationsToApply(executedMigrations, availableMigrations);
+    } else {
+      applyMigrations = availableMigrations;
+    }
+    return applyMigrations;
   }
 
   /**

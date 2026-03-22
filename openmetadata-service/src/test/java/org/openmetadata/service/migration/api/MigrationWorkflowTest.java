@@ -216,6 +216,48 @@ class MigrationWorkflowTest {
   }
 
   @Test
+  void resolveApplyMigrations_reprocessingVersionNotDuplicated() throws IOException {
+    List<String> executed = List.of("1.12.0", "1.12.1");
+    when(migrationDAO.getMigrationVersions()).thenReturn(new ArrayList<>(executed));
+
+    List<MigrationFile> available =
+        List.of(
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.2", false));
+
+    List<MigrationFile> result = workflow.resolveApplyMigrations(available);
+
+    // The reprocessing version (1.12.1) must appear exactly once
+    long reprocessCount =
+        result.stream().filter(m -> m.version.equals("1.12.1") && m.isReprocessing()).count();
+    assertEquals(
+        1, reprocessCount, "Reprocessing version should appear exactly once, not duplicated");
+
+    List<String> versions = result.stream().map(m -> m.version).toList();
+    assertEquals(List.of("1.12.1", "1.12.2"), versions);
+  }
+
+  @Test
+  void resolveApplyMigrations_allExecutedNoDuplicates() throws IOException {
+    List<String> executed = List.of("1.12.0", "1.12.1", "1.12.2");
+    when(migrationDAO.getMigrationVersions()).thenReturn(new ArrayList<>(executed));
+
+    List<MigrationFile> available =
+        List.of(
+            createMigrationFile("1.12.0", false),
+            createMigrationFile("1.12.1", false),
+            createMigrationFile("1.12.2", false));
+
+    List<MigrationFile> result = workflow.resolveApplyMigrations(available);
+
+    // Only the max version (1.12.2) should appear, once, as reprocessing
+    assertEquals(1, result.size(), "Only the reprocessing candidate should be returned");
+    assertEquals("1.12.2", result.get(0).version);
+    assertTrue(result.get(0).isReprocessing());
+  }
+
+  @Test
   void sameOrHigherMajorMinor_comparisons() {
     assertTrue(MigrationWorkflow.sameOrHigherMajorMinor("1.12.0", "1.12.1"));
     assertTrue(MigrationWorkflow.sameOrHigherMajorMinor("1.12.5", "1.12.1"));
