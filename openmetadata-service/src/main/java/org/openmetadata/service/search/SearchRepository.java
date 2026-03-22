@@ -86,7 +86,6 @@ import java.util.stream.Stream;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openmetadata.schema.EntityInterface;
@@ -649,12 +648,10 @@ public class SearchRepository {
           entity.getFullyQualifiedName(),
           SearchIndexRetryQueue.failureReason("createEntityIndex", ie));
       LOG.error(
-          "Issue in Creating new search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+          "Issue creating new search document for entity [{}] and entityType [{}]",
           entityId,
           entityType,
-          ie.getMessage(),
-          ie.getCause(),
-          ExceptionUtils.getStackTrace(ie));
+          ie);
     } finally {
       RequestLatencyContext.endSearchOperation(searchSample);
     }
@@ -987,12 +984,10 @@ public class SearchRepository {
             entityType,
             SearchIndexRetryQueue.failureReason("createTimeSeriesEntity", ie));
         LOG.error(
-            "Issue in Creating new search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+            "Issue creating new search document for entity [{}] and entityType [{}]",
             entityId,
             entityType,
-            ie.getMessage(),
-            ie.getCause(),
-            ExceptionUtils.getStackTrace(ie));
+            ie);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
@@ -1020,12 +1015,10 @@ public class SearchRepository {
             entityType,
             SearchIndexRetryQueue.failureReason("updateTimeSeriesEntity", e));
         LOG.error(
-            "Issue in Updating the search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+            "Issue updating the search document for entity [{}] and entityType [{}]",
             entityId,
             entityType,
-            e.getMessage(),
-            e.getCause(),
-            ExceptionUtils.getStackTrace(e));
+            e);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
@@ -1154,12 +1147,10 @@ public class SearchRepository {
           entity.getFullyQualifiedName(),
           SearchIndexRetryQueue.failureReason("updateEntityIndex", ie));
       LOG.error(
-          "Issue in Updating the search document for entity [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+          "Issue updating the search document for entity [{}] and entityType [{}]",
           entityId,
           entityType,
-          ie.getMessage(),
-          ie.getCause(),
-          ExceptionUtils.getStackTrace(ie));
+          ie);
     } finally {
       // End search timing
       if (searchSample != null) {
@@ -1995,11 +1986,9 @@ public class SearchRepository {
       searchClient.deleteByScript(indexMapping.getIndexName(clusterAlias), scriptTxt, params);
     } catch (Exception ie) {
       LOG.error(
-          "Issue in deleting  search document for entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+          "Issue deleting search document for entityType [{}]",
           entityType,
-          ie.getMessage(),
-          ie.getCause(),
-          ExceptionUtils.getStackTrace(ie));
+          ie);
     } finally {
       RequestLatencyContext.endSearchOperation(searchSample);
     }
@@ -2041,12 +2030,10 @@ public class SearchRepository {
           entity.getFullyQualifiedName(),
           SearchIndexRetryQueue.failureReason("deleteEntityIndex", ie));
       LOG.error(
-          "Issue in Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+          "Issue deleting the search document for entityID [{}] and entityType [{}]",
           entityId,
           entityType,
-          ie.getMessage(),
-          ie.getCause(),
-          ExceptionUtils.getStackTrace(ie));
+          ie);
     } finally {
       RequestLatencyContext.endSearchOperation(searchSample);
     }
@@ -2080,12 +2067,10 @@ public class SearchRepository {
             fqn,
             SearchIndexRetryQueue.failureReason("deleteEntityByFQNPrefix", ie));
         LOG.error(
-            "Issue in Deleting the search document for entityFQN [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+            "Issue deleting the search document for entityFQN [{}] and entityType [{}]",
             fqn,
             entityType,
-            ie.getMessage(),
-            ie.getCause(),
-            ExceptionUtils.getStackTrace(ie));
+            ie);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
@@ -2109,12 +2094,10 @@ public class SearchRepository {
             entityType,
             SearchIndexRetryQueue.failureReason("deleteTimeSeriesEntityById", ie));
         LOG.error(
-            "Issue in Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+            "Issue deleting the search document for entityID [{}] and entityType [{}]",
             entityId,
             entityType,
-            ie.getMessage(),
-            ie.getCause(),
-            ExceptionUtils.getStackTrace(ie));
+            ie);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
@@ -2160,12 +2143,10 @@ public class SearchRepository {
           entity.getFullyQualifiedName(),
           SearchIndexRetryQueue.failureReason("softDeleteOrRestoreEntityIndex", ie));
       LOG.error(
-          "Issue in Soft Deleting the search document for entityID [{}] and entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+          "Issue soft deleting the search document for entityID [{}] and entityType [{}]",
           entityId,
           entityType,
-          ie.getMessage(),
-          ie.getCause(),
-          ExceptionUtils.getStackTrace(ie));
+          ie);
     } finally {
       RequestLatencyContext.endSearchOperation(searchSample);
     }
