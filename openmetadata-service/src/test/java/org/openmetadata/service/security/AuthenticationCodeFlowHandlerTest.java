@@ -400,7 +400,9 @@ class AuthenticationCodeFlowHandlerTest {
                     handler,
                     "validateStateIfRequired",
                     new Class<?>[] {
-                      HttpSession.class, HttpServletResponse.class, AuthenticationSuccessResponse.class
+                      HttpSession.class,
+                      HttpServletResponse.class,
+                      AuthenticationSuccessResponse.class
                     },
                     session,
                     response,
