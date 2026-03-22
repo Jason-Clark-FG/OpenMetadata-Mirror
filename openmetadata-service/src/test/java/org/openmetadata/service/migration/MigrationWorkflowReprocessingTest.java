@@ -219,6 +219,24 @@ class MigrationWorkflowReprocessingTest {
   }
 
   @Test
+  void testGetMigrationsToApplyWithExtensionVersionExecuted() throws IOException {
+    // When extension versions like 1.12.3-collate are in executedMigrations,
+    // the max should still resolve to the native version 1.12.3 for reprocessing
+    MigrationFile v1123 = createMigrationDir("1.12.3", "ALTER TABLE test ADD COLUMN a INT;");
+
+    List<MigrationFile> available = List.of(v1123);
+    List<String> executed = List.of("1.12.3", "1.12.3-collate");
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(jdbi, "", ConnectionType.MYSQL, "", "", config, false);
+    List<MigrationFile> toApply = workflow.getMigrationsToApply(executed, available);
+
+    assertEquals(1, toApply.size());
+    assertEquals("1.12.3", toApply.get(0).version);
+    assertTrue(toApply.get(0).isReprocessing());
+  }
+
+  @Test
   void testGetMigrationsToApplyNoExecutedMigrations() throws IOException {
     MigrationFile v1121 = createMigrationDir("1.12.1", "");
     MigrationFile v1122 = createMigrationDir("1.12.2", "");

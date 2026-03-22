@@ -1,5 +1,6 @@
 package org.openmetadata.service.migration.api;
 
+import static java.util.stream.Collectors.toSet;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.util.EntityUtil.hash;
 import static org.openmetadata.service.util.OpenMetadataOperations.printToAsciiTable;
@@ -277,13 +278,11 @@ public class MigrationWorkflow {
       Set<String> executedMigrations, List<MigrationFile> availableMigrations) {
     List<MigrationFile> nativeMigrations =
         availableMigrations.stream().filter(m -> !m.isExtension).toList();
+    Set<String> nativeVersions = nativeMigrations.stream().map(m -> m.version).collect(toSet());
     Optional<String> maxExecuted =
         executedMigrations.stream()
-            .max(
-                (a, b) -> {
-                  int cmp = compareVersions(a, b);
-                  return cmp != 0 ? cmp : a.compareTo(b);
-                });
+            .filter(nativeVersions::contains)
+            .max(MigrationWorkflow::compareVersions);
     if (maxExecuted.isEmpty()) {
       return nativeMigrations;
     }
