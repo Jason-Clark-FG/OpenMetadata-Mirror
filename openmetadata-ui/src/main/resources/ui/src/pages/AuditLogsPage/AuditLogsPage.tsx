@@ -379,11 +379,12 @@ const AuditLogsPage = () => {
                     <Badge
                       className="tw:ring-0 tw:gap-1"
                       color="brand"
-                      data-testid={`filter-chip-${filter.category}`}
                       key={filter.category}
                       size="lg"
                       type="color">
-                      <div className="tw:flex tw:items-center tw:gap-1">
+                      <div
+                        className="tw:flex tw:items-center tw:gap-1"
+                        data-testid={`filter-chip-${filter.category}`}>
                         <Typography
                           className="tw:text-gray-600"
                           weight="medium">
