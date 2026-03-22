@@ -18,9 +18,9 @@ export interface MicrosoftAccessConnection {
      * Choose between local file system path (object) or S3 bucket location (object) for Access
      * database files.
      */
-    connection:                  AccessDatabaseLocationLocalPathOrS3;
-    supportsLineageExtraction?:  boolean;
-    supportsMetadataExtraction?: boolean;
+    connection:                     AccessDatabaseLocationLocalPathOrS3;
+    supportsMetadataExtraction?:    boolean;
+    supportsViewLineageExtraction?: boolean;
     /**
      * Regex to only include/exclude tables that matches the pattern.
      */
@@ -67,7 +67,6 @@ export interface AccessDatabaseLocationLocalPathOrS3 {
      * Service Type
      */
     type?: S3Type;
-    [property: string]: any;
 }
 
 /**

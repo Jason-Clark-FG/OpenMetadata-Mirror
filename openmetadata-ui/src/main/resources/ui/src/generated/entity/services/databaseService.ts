@@ -2028,7 +2028,6 @@ export interface AccessDatabaseLocationLocalPathOrS3 {
      * <USERNAME> <PASSWORD>`
      */
     userKey?: string;
-    [property: string]: any;
 }
 
 /**
