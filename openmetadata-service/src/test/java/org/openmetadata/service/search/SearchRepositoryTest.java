@@ -164,12 +164,14 @@ class SearchRepositoryTest {
     when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
         .thenReturn(mockBulkSink);
     when(realSearchRepository.getSearchClient()).thenReturn(elasticSearchClient);
+    when(realSearchRepository.checkIfIndexingIsSupported(any())).thenReturn(true);
     doNothing().when(mockBulkSink).write(any(), any());
     when(mockBulkSink.flushAndAwait(anyInt())).thenReturn(true);
     doNothing().when(mockBulkSink).close();
 
     // Use doCallRealMethod for void method
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Create mixed entity types
     List<EntityInterface> mixedEntities = new ArrayList<>();
@@ -242,10 +244,12 @@ class SearchRepositoryTest {
     when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
         .thenReturn(mockBulkSink);
     when(realSearchRepository.getSearchClient()).thenReturn(elasticSearchClient);
+    when(realSearchRepository.checkIfIndexingIsSupported(any())).thenReturn(true);
     doNothing().when(mockBulkSink).write(any(), any());
     when(mockBulkSink.flushAndAwait(anyInt())).thenReturn(true);
     doNothing().when(mockBulkSink).close();
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Create entities of single type
     List<EntityInterface> entities = new ArrayList<>();
@@ -279,6 +283,7 @@ class SearchRepositoryTest {
         .thenReturn(mockBulkSink);
     when(realSearchRepository.getSearchClient()).thenReturn(elasticSearchClient);
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Call with empty list
     realSearchRepository.updateEntitiesBulk(new ArrayList<>());
@@ -298,6 +303,7 @@ class SearchRepositoryTest {
         .thenReturn(mockBulkSink);
     when(realSearchRepository.getSearchClient()).thenReturn(elasticSearchClient);
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Call with null
     realSearchRepository.updateEntitiesBulk(null);
@@ -311,9 +317,11 @@ class SearchRepositoryTest {
     SearchRepository realSearchRepository = mock(SearchRepository.class);
     BulkSink mockBulkSink = mock(BulkSink.class);
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
     when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
         .thenReturn(mockBulkSink);
     when(realSearchRepository.getSearchClient()).thenReturn(elasticSearchClient);
+    when(realSearchRepository.checkIfIndexingIsSupported(any())).thenReturn(true);
     doThrow(new IOException("bulk failure")).when(mockBulkSink).write(any(), any());
     doNothing().when(realSearchRepository).updateEntityIndex(any());
     doNothing().when(mockBulkSink).close();
