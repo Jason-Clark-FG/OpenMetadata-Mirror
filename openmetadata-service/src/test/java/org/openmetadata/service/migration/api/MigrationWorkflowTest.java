@@ -75,7 +75,9 @@ class MigrationWorkflowTest {
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
-    assertEquals(List.of("1.12.2"), versions);
+    assertEquals(List.of("1.12.1", "1.12.2"), versions);
+    assertTrue(result.get(0).isReprocessing());
+    assertFalse(result.get(1).isReprocessing());
   }
 
   @Test
@@ -94,7 +96,9 @@ class MigrationWorkflowTest {
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
-    assertEquals(List.of("1.12.1-collate", "1.12.2"), versions);
+    assertEquals(List.of("1.12.1", "1.12.1-collate", "1.12.2"), versions);
+    assertTrue(result.get(0).isReprocessing());
+    assertFalse(result.get(1).isReprocessing());
   }
 
   @Test
@@ -112,7 +116,8 @@ class MigrationWorkflowTest {
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
-    assertEquals(List.of("1.12.2"), versions);
+    assertEquals(List.of("1.12.1-collate", "1.12.2"), versions);
+    assertTrue(result.get(0).isReprocessing());
   }
 
   @Test
@@ -134,7 +139,7 @@ class MigrationWorkflowTest {
     List<String> extensionVersions =
         result.stream().filter(m -> m.isExtension).map(m -> m.version).toList();
 
-    assertEquals(List.of("1.12.2"), nativeVersions);
+    assertEquals(List.of("1.12.1", "1.12.2"), nativeVersions);
     assertEquals(List.of("1.12.2"), extensionVersions);
   }
 
@@ -165,7 +170,9 @@ class MigrationWorkflowTest {
     List<MigrationFile> result =
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
-    assertTrue(result.isEmpty());
+    assertEquals(1, result.size());
+    assertEquals("1.12.1-collate", result.get(0).version);
+    assertTrue(result.get(0).isReprocessing());
   }
 
   @Test
@@ -186,7 +193,8 @@ class MigrationWorkflowTest {
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
-    assertEquals(List.of("1.12.2"), versions);
+    assertEquals(List.of("1.12.1", "1.12.2"), versions);
+    assertTrue(result.get(0).isReprocessing());
   }
 
   @Test
@@ -203,7 +211,8 @@ class MigrationWorkflowTest {
         workflow.getMigrationsToApply(executedMigrations, availableMigrations);
 
     List<String> versions = result.stream().map(m -> m.version).toList();
-    assertEquals(List.of("1.11.11", "1.11.12", "1.12.0"), versions);
+    assertEquals(List.of("1.11.10", "1.11.11", "1.11.12", "1.12.0"), versions);
+    assertTrue(result.get(0).isReprocessing());
   }
 
   @Test

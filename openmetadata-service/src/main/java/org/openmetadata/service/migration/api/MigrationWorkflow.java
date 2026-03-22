@@ -283,16 +283,30 @@ public class MigrationWorkflow {
 
   private List<MigrationFile> processNativeMigrations(
       Set<String> executedMigrations, List<MigrationFile> availableMigrations) {
-    Optional<String> maxMigration =
-        executedMigrations.stream().max(MigrationWorkflow::compareVersions);
-    return availableMigrations.stream()
-        .filter(migration -> !migration.isExtension)
-        .filter(migration -> !executedMigrations.contains(migration.version))
-        .filter(
-            migration ->
-                maxMigration.isEmpty()
-                    || sameOrHigherMajorMinor(migration.version, maxMigration.get()))
-        .toList();
+    List<MigrationFile> nativeMigrations =
+        availableMigrations.stream().filter(m -> !m.isExtension).toList();
+    Optional<String> maxExecuted =
+        executedMigrations.stream()
+            .max(
+                (a, b) -> {
+                  int cmp = compareVersions(a, b);
+                  return cmp != 0 ? cmp : a.compareTo(b);
+                });
+    if (maxExecuted.isEmpty()) {
+      return nativeMigrations;
+    }
+    String maxVer = maxExecuted.get();
+    List<MigrationFile> result = new ArrayList<>();
+    for (MigrationFile migration : nativeMigrations) {
+      if (migration.version.equals(maxVer)) {
+        migration.setReprocessing(true);
+        result.add(migration);
+      } else if (!executedMigrations.contains(migration.version)
+          && sameOrHigherMajorMinor(migration.version, maxVer)) {
+        result.add(migration);
+      }
+    }
+    return result;
   }
 
   private List<MigrationFile> processExtensionMigrations(
