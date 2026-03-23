@@ -8,7 +8,7 @@ DELETE ipe FROM ingestion_pipeline_entity ipe
 JOIN dbservice_entity dse
   ON JSON_UNQUOTE(JSON_EXTRACT(ipe.json, '$.service.id')) = dse.id
 WHERE dse.serviceType = 'Iceberg'
-  AND JSON_EXTRACT(ipe.json, '$.service.type') = 'databaseService';
+  AND JSON_UNQUOTE(JSON_EXTRACT(ipe.json, '$.service.type')) = 'databaseService';
 
 -- Migrate Iceberg database services to CustomDatabase (connector removed)
 -- serviceType is a GENERATED column derived from json, so only update json
