@@ -146,6 +146,9 @@ const AddTestSuitePipeline = ({
     { forms }
   ) => {
     const form = forms['schedular-form'];
+    if (!form) {
+      return;
+    }
     const value = form.getFieldValue('selectAllTestCases');
     setSelectAllTestCases(value);
     if (value) {
