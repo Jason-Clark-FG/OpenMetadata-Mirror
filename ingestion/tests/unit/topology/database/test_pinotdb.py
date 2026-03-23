@@ -11,8 +11,11 @@
 """
 Unit tests for PinotDB column type mapping.
 
-Verifies that each Pinot-native type resolves to the correct
+Verifies that Pinot scalar types resolve to the correct
 OpenMetadata DataType string via get_type_custom + ColumnTypeParser.
+Complex types (struct, map, array) are excluded: ARRAY requires a
+constructor argument and their BLOB/ARRAY mappings are covered by
+the generic column_type_parser tests.
 """
 import pytest
 
