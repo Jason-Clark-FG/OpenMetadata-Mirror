@@ -12,7 +12,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import { ChangeSource } from '../../../generated/entity/classification/tag';
+import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import DescriptionSourceBadge from './DescriptionSourceBadge';
 
 jest.mock('react-i18next', () => ({
@@ -59,7 +59,7 @@ describe('DescriptionSourceBadge', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render AI badge for Suggested changeSource', () => {
+  it('should render badge for Suggested changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -72,9 +72,10 @@ describe('DescriptionSourceBadge', () => {
 
     expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
     expect(screen.getByTestId('automated-tag-icon')).toBeInTheDocument();
+    expect(screen.getByText('label.ai')).toBeInTheDocument();
   });
 
-  it('should render AI badge for Automated changeSource', () => {
+  it('should render badge for Automated changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -85,9 +86,24 @@ describe('DescriptionSourceBadge', () => {
     );
 
     expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
+    expect(screen.getByText('label.automated')).toBeInTheDocument();
   });
 
-  it('should not render AI badge for Ingested changeSource', () => {
+  it('should render badge for Propagated changeSource', () => {
+    render(
+      <DescriptionSourceBadge
+        changeSummaryEntry={{
+          changeSource: ChangeSource.Propagated,
+          changedBy: 'lineage',
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
+    expect(screen.getByText('label.propagated')).toBeInTheDocument();
+  });
+
+  it('should not render badge for Ingested changeSource', () => {
     const { container } = render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -100,23 +116,11 @@ describe('DescriptionSourceBadge', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('should not render AI badge for Derived changeSource', () => {
+  it('should not render badge for Derived changeSource', () => {
     const { container } = render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
           changeSource: ChangeSource.Derived,
-        }}
-      />
-    );
-
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('should not render AI badge for Propagated changeSource', () => {
-    const { container } = render(
-      <DescriptionSourceBadge
-        changeSummaryEntry={{
-          changeSource: ChangeSource.Propagated,
         }}
       />
     );

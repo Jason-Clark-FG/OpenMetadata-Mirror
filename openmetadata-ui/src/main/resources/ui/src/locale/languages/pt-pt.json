@@ -88,6 +88,7 @@
     "agent-activity": "Atividade do Agente",
     "agent-plural": "Agentes",
     "aggregate": "Agregado",
+    "ai": "AI",
     "ai-queries": "Consultas IA",
     "airflow-config-plural": "configs do airflow",
     "alert": "Alerta",

@@ -12,39 +12,51 @@
  */
 
 import { Tag, Tooltip } from 'antd';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as AutomatedTagIcon } from '../../../assets/svg/automated-tag.svg';
-import { ChangeSource } from '../../../generated/entity/classification/tag';
+import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import { formatDateTime } from '../../../utils/date-time/DateTimeUtils';
 import './description-source-badge.less';
 import { DescriptionSourceBadgeProps } from './DescriptionSourceBadge.interface';
 
-const AI_CHANGE_SOURCES: ChangeSource[] = [
+const NON_MANUAL_SOURCES: ChangeSource[] = [
   ChangeSource.Suggested,
   ChangeSource.Automated,
+  ChangeSource.Propagated,
 ];
+
+const SOURCE_LABEL_MAP: Partial<Record<ChangeSource, string>> = {
+  [ChangeSource.Suggested]: 'label.ai',
+  [ChangeSource.Automated]: 'label.automated',
+  [ChangeSource.Propagated]: 'label.propagated',
+};
 
 const DescriptionSourceBadge = ({
   changeSummaryEntry,
 }: DescriptionSourceBadgeProps) => {
   const { t } = useTranslation();
 
-  if (!changeSummaryEntry?.changeSource) {
-    return null;
-  }
+  const sourceLabel = useMemo(() => {
+    if (!changeSummaryEntry?.changeSource) {
+      return null;
+    }
+    const labelKey = SOURCE_LABEL_MAP[changeSummaryEntry.changeSource];
 
-  const isAIGenerated = AI_CHANGE_SOURCES.includes(
-    changeSummaryEntry.changeSource
-  );
+    return labelKey ? t(labelKey) : null;
+  }, [changeSummaryEntry?.changeSource, t]);
 
-  if (!isAIGenerated) {
+  if (
+    !changeSummaryEntry?.changeSource ||
+    !NON_MANUAL_SOURCES.includes(changeSummaryEntry.changeSource)
+  ) {
     return null;
   }
 
   const tooltipContent = (
     <div className="description-source-tooltip">
       <div>
-        {t('label.generated-by')} {t('label.automated')}
+        {t('label.generated-by')} {sourceLabel}
       </div>
       {changeSummaryEntry.changedBy && (
         <div>
@@ -61,9 +73,11 @@ const DescriptionSourceBadge = ({
     <Tooltip title={tooltipContent}>
       <Tag
         className="description-source-badge"
-        data-testid="ai-generated-badge">
+        data-testid="ai-generated-badge"
+        role="status"
+        tabIndex={0}>
         <AutomatedTagIcon height={12} width={12} />
-        <span>{t('label.automated')}</span>
+        <span>{sourceLabel}</span>
       </Tag>
     </Tooltip>
   );

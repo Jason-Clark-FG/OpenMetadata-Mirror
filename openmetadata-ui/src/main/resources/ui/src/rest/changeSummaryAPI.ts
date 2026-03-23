@@ -12,7 +12,7 @@
  */
 
 import axiosClient from '.';
-import { ChangeSource } from '../generated/entity/classification/tag';
+import { ChangeSource } from '../generated/type/changeSummaryMap';
 
 export interface ChangeSummaryEntry {
   changedAt?: number;
@@ -42,6 +42,19 @@ export const getChangeSummary = async (
 ): Promise<ChangeSummaryResponse> => {
   const response = await axiosClient.get<ChangeSummaryResponse>(
     `${BASE_URL}/${entityType}/${entityId}`,
+    { params }
+  );
+
+  return response.data;
+};
+
+export const getChangeSummaryByFqn = async (
+  entityType: string,
+  fqn: string,
+  params?: ChangeSummaryParams
+): Promise<ChangeSummaryResponse> => {
+  const response = await axiosClient.get<ChangeSummaryResponse>(
+    `${BASE_URL}/${entityType}/name/${fqn}`,
     { params }
   );
 

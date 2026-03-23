@@ -12,7 +12,8 @@
  */
 
 import axiosClient from '.';
-import { getChangeSummary } from './changeSummaryAPI';
+import { ChangeSource } from '../generated/type/changeSummaryMap';
+import { getChangeSummary, getChangeSummaryByFqn } from './changeSummaryAPI';
 
 jest.mock('.');
 
@@ -32,7 +33,7 @@ describe('changeSummaryAPI', () => {
           changeSummary: {
             description: {
               changedBy: 'admin',
-              changeSource: 'Suggested',
+              changeSource: ChangeSource.Suggested,
               changedAt: 1700000000000,
             },
           },
@@ -88,6 +89,36 @@ describe('changeSummaryAPI', () => {
       expect(mockedGet).toHaveBeenCalledWith('/changeSummary/table/test-id', {
         params: { limit: 50, offset: 10 },
       });
+    });
+  });
+
+  describe('getChangeSummaryByFqn', () => {
+    it('should call the correct URL with entity type and FQN', async () => {
+      const mockResponse = {
+        data: {
+          changeSummary: {
+            description: {
+              changedBy: 'admin',
+              changeSource: ChangeSource.Automated,
+              changedAt: 1700000000000,
+            },
+          },
+          totalEntries: 1,
+        },
+      };
+      mockedGet.mockResolvedValueOnce(mockResponse as never);
+
+      const result = await getChangeSummaryByFqn(
+        'table',
+        'service.database.schema.my_table'
+      );
+
+      expect(mockedGet).toHaveBeenCalledWith(
+        '/changeSummary/table/name/service.database.schema.my_table',
+        { params: undefined }
+      );
+      expect(result.changeSummary).toHaveProperty('description');
+      expect(result.totalEntries).toBe(1);
     });
   });
 });

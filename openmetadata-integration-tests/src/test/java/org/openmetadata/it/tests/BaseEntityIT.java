@@ -6223,6 +6223,13 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     JsonNode result = MAPPER.readTree(response);
     assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
     assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
+    assertTrue(
+        result.get("totalEntries").asInt() > 0,
+        "totalEntries should be > 0 after patching description");
+    JsonNode changeSummaryNode = result.get("changeSummary");
+    assertTrue(
+        changeSummaryNode.isObject() && changeSummaryNode.size() > 0,
+        "changeSummary should contain at least one entry after patching description");
   }
 
   /**
@@ -6247,6 +6254,13 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     JsonNode result = MAPPER.readTree(response);
     assertTrue(result.has("changeSummary"), "Response must contain changeSummary field");
     assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
+    assertTrue(
+        result.get("totalEntries").asInt() > 0,
+        "totalEntries should be > 0 after patching description");
+    JsonNode changeSummaryNode = result.get("changeSummary");
+    assertTrue(
+        changeSummaryNode.isObject() && changeSummaryNode.size() > 0,
+        "changeSummary should contain at least one entry after patching description");
   }
 
   /**
@@ -6279,15 +6293,16 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     assertTrue(result.has("totalEntries"), "Response must contain totalEntries field");
 
     JsonNode changeSummary = result.get("changeSummary");
-    if (changeSummary.isObject()) {
-      changeSummary
-          .fieldNames()
-          .forEachRemaining(
-              key ->
-                  assertTrue(
-                      key.startsWith("description"),
-                      "All keys should start with 'description', but found: " + key));
-    }
+    assertTrue(
+        changeSummary.isObject() && changeSummary.size() > 0,
+        "Filtered changeSummary should contain at least one entry matching 'description' prefix");
+    changeSummary
+        .fieldNames()
+        .forEachRemaining(
+            key ->
+                assertTrue(
+                    key.startsWith("description"),
+                    "All keys should start with 'description', but found: " + key));
   }
 
   /**

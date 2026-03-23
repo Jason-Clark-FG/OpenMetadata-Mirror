@@ -43,6 +43,7 @@ import {
 } from '../../../rest/tableAPI';
 import { listTestCases } from '../../../rest/testAPI';
 import { calculateTestCaseStatusCounts } from '../../../utils/DataQuality/DataQualityUtils';
+import EntityLink from '../../../utils/EntityLink';
 import { toEntityData } from '../../../utils/EntitySummaryPanelUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getErrorText, stringToHTML } from '../../../utils/StringsUtils';
@@ -692,8 +693,9 @@ export const ColumnDetailPanel = <T extends ColumnOrTask = Column>({
           <DescriptionSection
             changeSummaryEntry={
               changeSummary?.[
-                `columns.${activeColumn?.fullyQualifiedName?.substring(
-                  (tableFqn?.length ?? 0) + 1
+                `columns.${EntityLink.getTableColumnNameFromColumnFqn(
+                  activeColumn?.fullyQualifiedName ?? '',
+                  false
                 )}.description`
               ]
             }

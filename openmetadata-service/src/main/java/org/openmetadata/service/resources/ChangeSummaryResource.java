@@ -18,6 +18,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -92,14 +94,17 @@ public class ChangeSummaryResource {
           @QueryParam("fieldPrefix")
           String fieldPrefix,
       @Parameter(
-              description = "Limit the number of entries returned",
+              description = "Limit the number of entries returned (1-1000)",
               schema = @Schema(type = "integer"))
           @QueryParam("limit")
           @DefaultValue("10")
+          @Min(1)
+          @Max(1000)
           int limit,
       @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
+          @Min(0)
           int offset) {
 
     OperationContext operationContext =
@@ -108,7 +113,8 @@ public class ChangeSummaryResource {
     authorizer.authorize(securityContext, operationContext, resourceContext);
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
-    EntityInterface entity = (EntityInterface) repository.get(null, id, repository.getFields("*"));
+    EntityInterface entity =
+        (EntityInterface) repository.get(uriInfo, id, repository.getFields("changeDescription"));
 
     return buildResponse(entity, fieldPrefix, limit, offset);
   }
@@ -146,14 +152,17 @@ public class ChangeSummaryResource {
           @QueryParam("fieldPrefix")
           String fieldPrefix,
       @Parameter(
-              description = "Limit the number of entries returned",
+              description = "Limit the number of entries returned (1-1000)",
               schema = @Schema(type = "integer"))
           @QueryParam("limit")
           @DefaultValue("10")
+          @Min(1)
+          @Max(1000)
           int limit,
       @Parameter(description = "Offset for pagination", schema = @Schema(type = "integer"))
           @QueryParam("offset")
           @DefaultValue("0")
+          @Min(0)
           int offset) {
 
     OperationContext operationContext =
@@ -163,7 +172,8 @@ public class ChangeSummaryResource {
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
     EntityInterface entity =
-        (EntityInterface) repository.getByName(null, fqn, repository.getFields("*"));
+        (EntityInterface)
+            repository.getByName(uriInfo, fqn, repository.getFields("changeDescription"));
 
     return buildResponse(entity, fieldPrefix, limit, offset);
   }

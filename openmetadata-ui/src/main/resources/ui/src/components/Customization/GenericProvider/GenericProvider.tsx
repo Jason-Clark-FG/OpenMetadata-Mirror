@@ -116,7 +116,8 @@ export const GenericProvider = <T extends Omit<EntityReference, 'type'>>({
 
   const { changeSummary } = useChangeSummary(
     isVersionView ? '' : type,
-    isVersionView ? '' : data.id ?? ''
+    isVersionView ? '' : data.id ?? '',
+    { limit: 1000 }
   );
 
   // Extract columns from data
