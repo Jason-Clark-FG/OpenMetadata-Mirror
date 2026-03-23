@@ -151,7 +151,6 @@ test.describe('User with different Roles', () => {
 
     await adminPage.getByText(team.responseData.displayName).first().click();
 
-
     const domainResponse = adminPage.waitForResponse((response) =>
       response.url().includes('/api/v1/domains/hierarchy')
     );
@@ -192,7 +191,6 @@ test.describe('User with different Roles', () => {
     await teamsResponse;
 
     await visitUserProfilePage(adminPage, user3.getUserName());
-
 
     // Wait for the team to be visible in the teams section
     await adminPage

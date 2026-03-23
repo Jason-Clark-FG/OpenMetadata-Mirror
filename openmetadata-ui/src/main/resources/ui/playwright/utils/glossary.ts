@@ -47,7 +47,7 @@ import {
 } from './common';
 import { addMultiOwner, waitForAllLoadersToDisappear } from './entity';
 import { sidebarClick } from './sidebar';
-import { TASK_OPEN_FETCH_LINK, TaskDetails } from './task';
+import { TaskDetails, TASK_OPEN_FETCH_LINK } from './task';
 
 type TaskEntity = {
   entityRef: {
@@ -148,10 +148,14 @@ export const setupGlossaryAndTerms = async (page: Page) => {
     op: 'add',
     path: '/relatedTerms/0',
     value: {
-      id: term1.responseData.id,
-      type: 'glossaryTerm',
-      displayName: term1.responseData.displayName,
-      name: term1.responseData.name,
+      relationType: 'relatedTo',
+      term: {
+        id: term1.responseData.id,
+        type: 'glossaryTerm',
+        displayName: term1.responseData.displayName,
+        name: term1.responseData.name,
+        fullyQualifiedName: term1.responseData.fullyQualifiedName,
+      },
     },
   };
 
@@ -684,7 +688,9 @@ export const validateGlossaryTerm = async (
   status: 'Draft' | 'In Review' | 'Approved',
   isGlossaryTermPage = false
 ) => {
-  const escapedFqn = term.fullyQualifiedName.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const escapedFqn = term.fullyQualifiedName
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"');
   const termSelector = `[data-row-key="${escapedFqn}"]`;
   const statusSelector = `[data-testid="${escapedFqn}-status"]`;
 

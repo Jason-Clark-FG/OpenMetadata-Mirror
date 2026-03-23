@@ -71,7 +71,6 @@ import {
   removeOwner,
   removeOwnersFromList,
   waitForAllLoadersToDisappear,
-
 } from '../../utils/entity';
 import { clickDataQualityStatCard } from '../../utils/entityPanel';
 import { visitServiceDetailsPage } from '../../utils/service';
