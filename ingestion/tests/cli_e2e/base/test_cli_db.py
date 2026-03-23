@@ -224,6 +224,63 @@ class CliDBBase(TestCase):
                 service_type = self.get_service_type()
 
             self.run_command()
+
+            # Diagnostic: check view state in REST API and ES after metadata ingestion
+            import json
+            from urllib.parse import quote_plus
+            from metadata.generated.schema.entity.data.table import Table
+
+            view_fqn = self.expected_lineage_node()
+            view_entity = self.openmetadata.get_by_name(
+                Table, view_fqn, fields=["schemaDefinition"], nullable=True
+            )
+            print(
+                f"\n[DIAG] View '{view_fqn}' in REST API: "
+                f"exists={view_entity is not None}, "
+                f"schemaDefinition={'SET' if (view_entity and view_entity.schemaDefinition) else 'MISSING'}"
+            )
+
+            svc_name = self.get_connector_name()
+            es_query = json.dumps(
+                {
+                    "query": {
+                        "bool": {
+                            "must": [
+                                {"term": {"service.name.keyword": svc_name}},
+                                {
+                                    "bool": {
+                                        "should": [
+                                            {"term": {"tableType": "View"}},
+                                            {"term": {"tableType": "MaterializedView"}},
+                                        ]
+                                    }
+                                },
+                                {"exists": {"field": "schemaDefinition"}},
+                            ]
+                        }
+                    }
+                }
+            )
+            es_url = (
+                f"/search/query?q=&size=10&deleted=false"
+                f"&query_filter={quote_plus(es_query)}"
+                f"&index=table_search_index"
+                f"&include_source_fields=fullyQualifiedName"
+                f"&include_source_fields=schemaDefinition"
+                f"&sort_field=fullyQualifiedName&sort_order=desc"
+            )
+            es_resp = self.openmetadata.client.get(es_url)
+            es_total = es_resp.get("hits", {}).get("total", {}).get("value", 0)
+            print(
+                f"[DIAG] ES views with schemaDefinition for '{svc_name}': {es_total}"
+            )
+            for hit in es_resp.get("hits", {}).get("hits", []):
+                src = hit.get("_source", {})
+                print(
+                    f"  [DIAG] {src.get('fullyQualifiedName')} "
+                    f"schemaDef={'present' if src.get('schemaDefinition') else 'MISSING'}"
+                )
+
             self.build_config_file(
                 E2EType.LINEAGE,
                 {"source": f"{service_type}-lineage"},
