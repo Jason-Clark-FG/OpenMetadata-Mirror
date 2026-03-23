@@ -3525,8 +3525,6 @@ export interface ServiceConnection {
  *
  * Airflow Metadata Database Connection Config
  *
- * Airflow REST API Connection Config
- *
  * Wherescape Metadata Database Connection Config
  *
  * SSIS Metadata Database Connection Config
@@ -3636,8 +3634,6 @@ export interface ConfigObject {
      * token to connect to Qlik Cloud.
      *
      * Hex API token for authentication. Can be personal or workspace token.
-     *
-     * Bearer token for API authentication.
      *
      * To Connect to Dagster Cloud
      *
@@ -3838,8 +3834,6 @@ export interface ConfigObject {
      *
      * Pipeline Service Management/UI URI.
      *
-     * URL to the Airflow REST API. E.g., http://localhost:8080
-     *
      * Pipeline Service Management/UI URL.
      *
      * Spline REST Server Host & Port.
@@ -3952,8 +3946,6 @@ export interface ConfigObject {
      * password to connect  to the Atlas.
      *
      * Password to connect to the Collibra.
-     *
-     * Password for basic authentication to the Airflow API.
      */
     password?: string;
     /**
@@ -4079,8 +4071,6 @@ export interface ConfigObject {
      *
      * Username to connect to the Collibra. This user should have privileges to read all the
      * metadata in Collibra.
-     *
-     * Username for basic authentication to the Airflow API.
      */
     username?: string;
     /**
@@ -4137,9 +4127,8 @@ export interface ConfigObject {
      *
      * Choose between mysql and postgres connection for alation database
      *
-     * Underlying database connection. See
-     * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
-     * supported backends.
+     * Choose between database connection or REST API connection to fetch metadata from
+     * Airflow.
      *
      * Matillion Auth Configuration
      */
@@ -4152,8 +4141,6 @@ export interface ConfigObject {
      * ThoughtSpot API version to use
      *
      * OpenMetadata server API version to use.
-     *
-     * Airflow REST API version.
      *
      * Airbyte API version.
      */
@@ -4216,8 +4203,6 @@ export interface ConfigObject {
      * Client SSL verification.
      *
      * Flag to verify SSL Certificate for OpenMetadata Server.
-     *
-     * Whether to verify SSL certificates when connecting to the Airflow API.
      *
      * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
      * default.
@@ -5219,8 +5204,6 @@ export interface ConfigObject {
     glossaryFilterPattern?: FilterPattern;
     /**
      * Pipeline Service Number Of Status
-     *
-     * Number of past DAG runs to fetch for status history.
      */
     numberOfStatus?: number;
     /**
@@ -6444,9 +6427,11 @@ export interface ConfigSourceConnection {
  *
  * Choose between mysql and postgres connection for alation database
  *
- * Underlying database connection. See
- * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
- * supported backends.
+ * Choose between database connection or REST API connection to fetch metadata from
+ * Airflow.
+ *
+ * Airflow REST API Connection Config for connecting via REST API with token or basic
+ * authentication.
  *
  * Lineage Backend Connection Config
  *
@@ -6461,6 +6446,8 @@ export interface ConfigConnection {
      * Password for Superset.
      *
      * Password to connect to Hana.
+     *
+     * Password for basic authentication to the Airflow API.
      *
      * Password to connect to SQLite. Blank for in-memory database.
      *
@@ -6488,13 +6475,18 @@ export interface ConfigConnection {
      *
      * Username to connect to Hana. This user should have privileges to read all the metadata.
      *
+     * Username for basic authentication to the Airflow API.
+     *
      * Username to connect to SQLite. Blank for in-memory database.
      *
      * Username to connect to the Matillion. This user should have privileges to read all the
      * metadata in Matillion.
      */
-    username?:  string;
-    verifySSL?: VerifySSL;
+    username?: string;
+    /**
+     * Whether to verify SSL certificates when connecting to the Airflow API.
+     */
+    verifySSL?: boolean | VerifySSL;
     /**
      * Choose Auth Config Type.
      */
@@ -6596,6 +6588,14 @@ export interface ConfigConnection {
      */
     userKey?: string;
     /**
+     * Airflow REST API version.
+     */
+    apiVersion?: APIVersion;
+    /**
+     * Bearer token for API authentication.
+     */
+    token?: string;
+    /**
      * Regex exclude pipelines.
      */
     pipelineFilterPattern?: FilterPattern;
@@ -6604,6 +6604,18 @@ export interface ConfigConnection {
      */
     databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
+}
+
+/**
+ * Airflow REST API version.
+ *
+ * Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect
+ * the version automatically.
+ */
+export enum APIVersion {
+    Auto = "auto",
+    V1 = "v1",
+    V2 = "v2",
 }
 
 /**
@@ -7644,7 +7656,6 @@ export enum PurpleType {
     Adls = "ADLS",
     Airbyte = "Airbyte",
     Airflow = "Airflow",
-    AirflowAPI = "AirflowApi",
     Alation = "Alation",
     AlationSink = "AlationSink",
     Amundsen = "Amundsen",

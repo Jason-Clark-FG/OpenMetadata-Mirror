@@ -15,11 +15,9 @@
  */
 export interface AirflowConnection {
     /**
-     * Underlying database connection. See
-     * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
-     * supported backends.
+     * Choose between database connection or REST API connection to fetch metadata from Airflow.
      */
-    connection: MetadataDatabaseConnection;
+    connection: AirflowConnectionClass;
     /**
      * Pipeline Service Management/UI URI.
      */
@@ -40,9 +38,11 @@ export interface AirflowConnection {
 }
 
 /**
- * Underlying database connection. See
- * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
- * supported backends.
+ * Choose between database connection or REST API connection to fetch metadata from
+ * Airflow.
+ *
+ * Airflow REST API Connection Config for connecting via REST API with token or basic
+ * authentication.
  *
  * Lineage Backend Connection Config
  *
@@ -52,7 +52,37 @@ export interface AirflowConnection {
  *
  * SQLite Database Connection Config
  */
-export interface MetadataDatabaseConnection {
+export interface AirflowConnectionClass {
+    /**
+     * Airflow REST API version.
+     */
+    apiVersion?: APIVersion;
+    /**
+     * Password for basic authentication to the Airflow API.
+     *
+     * Password to connect to SQLite. Blank for in-memory database.
+     */
+    password?: string;
+    /**
+     * Bearer token for API authentication.
+     */
+    token?: string;
+    /**
+     * Username for basic authentication to the Airflow API.
+     *
+     * Username to connect to MySQL. This user should have privileges to read all the metadata
+     * in Mysql.
+     *
+     * Username to connect to Postgres. This user should have privileges to read all the
+     * metadata in Postgres.
+     *
+     * Username to connect to SQLite. Blank for in-memory database.
+     */
+    username?: string;
+    /**
+     * Whether to verify SSL certificates when connecting to the Airflow API.
+     */
+    verifySSL?: boolean;
     /**
      * Regex exclude pipelines.
      */
@@ -119,16 +149,6 @@ export interface MetadataDatabaseConnection {
      */
     tableFilterPattern?: FilterPattern;
     /**
-     * Username to connect to MySQL. This user should have privileges to read all the metadata
-     * in Mysql.
-     *
-     * Username to connect to Postgres. This user should have privileges to read all the
-     * metadata in Postgres.
-     *
-     * Username to connect to SQLite. Blank for in-memory database.
-     */
-    username?: string;
-    /**
      * Use slow logs to extract lineage.
      */
     useSlowLogs?: boolean;
@@ -159,12 +179,20 @@ export interface MetadataDatabaseConnection {
     /**
      * How to run the SQLite database. :memory: by default.
      */
-    databaseMode?: string;
-    /**
-     * Password to connect to SQLite. Blank for in-memory database.
-     */
-    password?:                      string;
+    databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
+}
+
+/**
+ * Airflow REST API version.
+ *
+ * Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect
+ * the version automatically.
+ */
+export enum APIVersion {
+    Auto = "auto",
+    V1 = "v1",
+    V2 = "v2",
 }
 
 /**

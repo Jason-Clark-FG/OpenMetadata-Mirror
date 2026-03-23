@@ -1248,7 +1248,6 @@ export enum LastRunStatus {
 export enum PipelineServiceType {
     Airbyte = "Airbyte",
     Airflow = "Airflow",
-    AirflowAPI = "AirflowApi",
     CustomPipeline = "CustomPipeline",
     DBTCloud = "DBTCloud",
     Dagster = "Dagster",

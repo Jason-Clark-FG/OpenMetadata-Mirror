@@ -186,8 +186,6 @@ export interface PipelineConnection {
 /**
  * Airflow Metadata Database Connection Config
  *
- * Airflow REST API Connection Config
- *
  * Wherescape Metadata Database Connection Config
  *
  * SSIS Metadata Database Connection Config
@@ -237,17 +235,14 @@ export interface PipelineConnection {
  */
 export interface ConfigObject {
     /**
-     * Underlying database connection. See
-     * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
-     * supported backends.
+     * Choose between database connection or REST API connection to fetch metadata from
+     * Airflow.
      *
      * Matillion Auth Configuration
      */
-    connection?: MetadataDatabaseConnection;
+    connection?: AirflowConnection;
     /**
      * Pipeline Service Management/UI URI.
-     *
-     * URL to the Airflow REST API. E.g., http://localhost:8080
      *
      * Pipeline Service Management/UI URL.
      *
@@ -265,8 +260,6 @@ export interface ConfigObject {
     hostPort?: string;
     /**
      * Pipeline Service Number Of Status
-     *
-     * Number of past DAG runs to fetch for status history.
      */
     numberOfStatus?: number;
     /**
@@ -285,39 +278,6 @@ export interface ConfigObject {
      */
     type?: PipelineServiceType;
     /**
-     * Airflow REST API version.
-     *
-     * Airbyte API version.
-     */
-    apiVersion?: string;
-    /**
-     * Password for basic authentication to the Airflow API.
-     */
-    password?: string;
-    /**
-     * Bearer token for API authentication.
-     *
-     * To Connect to Dagster Cloud
-     *
-     * Generated Token to connect to Databricks.
-     *
-     * Generated Token to connect to DBTCloud.
-     *
-     * Token to connect to Stitch api doc
-     */
-    token?: string;
-    /**
-     * Username for basic authentication to the Airflow API.
-     */
-    username?: string;
-    /**
-     * Whether to verify SSL certificates when connecting to the Airflow API.
-     *
-     * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
-     * default.
-     */
-    verifySSL?: boolean | VerifySSL;
-    /**
      * Underlying database connection
      */
     databaseConnection?: DatabaseConnectionClass;
@@ -334,6 +294,10 @@ export interface ConfigObject {
      * e.g. local_kafka
      */
     messagingServiceName?: string;
+    /**
+     * Airbyte API version.
+     */
+    apiVersion?: string;
     /**
      * Choose between Basic authentication (for self-hosted) or OAuth 2.0 client credentials
      * (for Airbyte Cloud)
@@ -355,6 +319,11 @@ export interface ConfigObject {
     limit?:     number;
     sslConfig?: Config;
     /**
+     * Boolean marking if we need to verify the SSL certs for KafkaConnect REST API. True by
+     * default.
+     */
+    verifySSL?: boolean | VerifySSL;
+    /**
      * URL to the Dagster instance
      *
      * DBT cloud Access URL.
@@ -370,6 +339,16 @@ export interface ConfigObject {
      * Connection Time Limit Between OM and Dagster Graphql API in second
      */
     timeout?: number;
+    /**
+     * To Connect to Dagster Cloud
+     *
+     * Generated Token to connect to Databricks.
+     *
+     * Generated Token to connect to DBTCloud.
+     *
+     * Token to connect to Stitch api doc
+     */
+    token?: string;
     /**
      * We support username/password or client certificate authentication
      */
@@ -827,9 +806,11 @@ export interface AzureCredentials {
 }
 
 /**
- * Underlying database connection. See
- * https://airflow.apache.org/docs/apache-airflow/stable/howto/set-up-database.html for
- * supported backends.
+ * Choose between database connection or REST API connection to fetch metadata from
+ * Airflow.
+ *
+ * Airflow REST API Connection Config for connecting via REST API with token or basic
+ * authentication.
  *
  * Lineage Backend Connection Config
  *
@@ -843,7 +824,42 @@ export interface AzureCredentials {
  *
  * Matillion ETL Auth Config.
  */
-export interface MetadataDatabaseConnection {
+export interface AirflowConnection {
+    /**
+     * Airflow REST API version.
+     */
+    apiVersion?: APIVersion;
+    /**
+     * Password for basic authentication to the Airflow API.
+     *
+     * Password to connect to SQLite. Blank for in-memory database.
+     *
+     * Password to connect to the Matillion.
+     */
+    password?: string;
+    /**
+     * Bearer token for API authentication.
+     */
+    token?: string;
+    /**
+     * Username for basic authentication to the Airflow API.
+     *
+     * Username to connect to MySQL. This user should have privileges to read all the metadata
+     * in Mysql.
+     *
+     * Username to connect to Postgres. This user should have privileges to read all the
+     * metadata in Postgres.
+     *
+     * Username to connect to SQLite. Blank for in-memory database.
+     *
+     * Username to connect to the Matillion. This user should have privileges to read all the
+     * metadata in Matillion.
+     */
+    username?: string;
+    /**
+     * Whether to verify SSL certificates when connecting to the Airflow API.
+     */
+    verifySSL?: boolean;
     /**
      * Regex exclude pipelines.
      */
@@ -912,19 +928,6 @@ export interface MetadataDatabaseConnection {
      */
     tableFilterPattern?: FilterPattern;
     /**
-     * Username to connect to MySQL. This user should have privileges to read all the metadata
-     * in Mysql.
-     *
-     * Username to connect to Postgres. This user should have privileges to read all the
-     * metadata in Postgres.
-     *
-     * Username to connect to SQLite. Blank for in-memory database.
-     *
-     * Username to connect to the Matillion. This user should have privileges to read all the
-     * metadata in Matillion.
-     */
-    username?: string;
-    /**
      * Use slow logs to extract lineage.
      */
     useSlowLogs?: boolean;
@@ -955,14 +958,20 @@ export interface MetadataDatabaseConnection {
     /**
      * How to run the SQLite database. :memory: by default.
      */
-    databaseMode?: string;
-    /**
-     * Password to connect to SQLite. Blank for in-memory database.
-     *
-     * Password to connect to the Matillion.
-     */
-    password?:                      string;
+    databaseMode?:                  string;
     supportsViewLineageExtraction?: boolean;
+}
+
+/**
+ * Airflow REST API version.
+ *
+ * Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect
+ * the version automatically.
+ */
+export enum APIVersion {
+    Auto = "auto",
+    V1 = "v1",
+    V2 = "v2",
 }
 
 /**
@@ -1330,7 +1339,6 @@ export enum S3Type {
 export enum PipelineServiceType {
     Airbyte = "Airbyte",
     Airflow = "Airflow",
-    AirflowAPI = "AirflowApi",
     CustomPipeline = "CustomPipeline",
     DBTCloud = "DBTCloud",
     Dagster = "Dagster",

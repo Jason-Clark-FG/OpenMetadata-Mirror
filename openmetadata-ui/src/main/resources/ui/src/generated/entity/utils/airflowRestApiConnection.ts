@@ -11,38 +11,22 @@
  *  limitations under the License.
  */
 /**
- * Airflow REST API Connection Config
+ * Airflow REST API Connection Config for connecting via REST API with token or basic
+ * authentication.
  */
-export interface AirflowAPIConnection {
+export interface AirflowRESTAPIConnection {
     /**
      * Airflow REST API version.
      */
     apiVersion?: APIVersion;
     /**
-     * URL to the Airflow REST API. E.g., http://localhost:8080
-     */
-    hostPort: string;
-    /**
-     * Number of past DAG runs to fetch for status history.
-     */
-    numberOfStatus?: number;
-    /**
      * Password for basic authentication to the Airflow API.
      */
     password?: string;
     /**
-     * Regex exclude pipelines.
-     */
-    pipelineFilterPattern?:      FilterPattern;
-    supportsMetadataExtraction?: boolean;
-    /**
      * Bearer token for API authentication.
      */
     token?: string;
-    /**
-     * Service Type
-     */
-    type?: AirflowAPIType;
     /**
      * Username for basic authentication to the Airflow API.
      */
@@ -63,29 +47,4 @@ export enum APIVersion {
     Auto = "auto",
     V1 = "v1",
     V2 = "v2",
-}
-
-/**
- * Regex exclude pipelines.
- *
- * Regex to only fetch entities that matches the pattern.
- */
-export interface FilterPattern {
-    /**
-     * List of strings/regex patterns to match and exclude only database entities that match.
-     */
-    excludes?: string[];
-    /**
-     * List of strings/regex patterns to match and include only database entities that match.
-     */
-    includes?: string[];
-}
-
-/**
- * Service Type
- *
- * Service type.
- */
-export enum AirflowAPIType {
-    AirflowAPI = "AirflowApi",
 }
