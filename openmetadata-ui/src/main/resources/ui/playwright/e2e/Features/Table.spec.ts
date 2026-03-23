@@ -732,7 +732,6 @@ test.describe(
         ),
         page.goto(clipboardText),
       ]);
-      await waitForAllLoadersToDisappear(page);
 
       // 6. Verify Side Panel is open
       const sidePanel = page.locator('.column-detail-panel');
