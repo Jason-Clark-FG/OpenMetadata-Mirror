@@ -1985,10 +1985,7 @@ public class SearchRepository {
       IndexMapping indexMapping = getIndexMapping(entityType);
       searchClient.deleteByScript(indexMapping.getIndexName(clusterAlias), scriptTxt, params);
     } catch (Exception ie) {
-      LOG.error(
-          "Issue deleting search document for entityType [{}]",
-          entityType,
-          ie);
+      LOG.error("Issue deleting search document for entityType [{}]", entityType, ie);
     } finally {
       RequestLatencyContext.endSearchOperation(searchSample);
     }
