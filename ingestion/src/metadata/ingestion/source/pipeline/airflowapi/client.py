@@ -49,7 +49,9 @@ def _try_exchange_jwt(host: str, username: str, password: str, verify) -> Option
         resp.raise_for_status()
         return resp.json().get("access_token")
     except Exception:
-        logger.debug("JWT token exchange failed (likely Airflow 2.x): %s", traceback.format_exc())
+        logger.debug(
+            "JWT token exchange failed (likely Airflow 2.x): %s", traceback.format_exc()
+        )
         return None
 
 
