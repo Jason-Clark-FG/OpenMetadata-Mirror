@@ -9,7 +9,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-AirflowApi source to extract metadata via Airflow REST API
+Airflow REST API source to extract metadata via Airflow REST API
 """
 import traceback
 from typing import Iterable, List, Optional
@@ -25,8 +25,8 @@ from metadata.generated.schema.entity.data.pipeline import (
     Task,
     TaskStatus,
 )
-from metadata.generated.schema.entity.services.connections.pipeline.airflowApiConnection import (
-    AirflowApiConnection,
+from metadata.generated.schema.entity.services.connections.pipeline.airflowConnection import (
+    AirflowConnection,
 )
 from metadata.generated.schema.entity.services.ingestionPipelines.status import (
     StackTraceError,
@@ -46,7 +46,7 @@ from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.models.ometa_classification import OMetaTagAndClassification
 from metadata.ingestion.models.pipeline_status import OMetaPipelineStatus
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
-from metadata.ingestion.source.pipeline.airflowapi.models import AirflowApiDagDetails
+from metadata.ingestion.source.pipeline.airflow.api.models import AirflowApiDagDetails
 from metadata.ingestion.source.pipeline.pipeline_service import PipelineServiceSource
 from metadata.utils import fqn
 from metadata.utils.helpers import clean_uri, datetime_to_ts
@@ -78,10 +78,10 @@ class AirflowApiSource(PipelineServiceSource):
         cls, config_dict, metadata: OpenMetadata, pipeline_name: Optional[str] = None
     ) -> "AirflowApiSource":
         config: WorkflowSource = WorkflowSource.model_validate(config_dict)
-        connection: AirflowApiConnection = config.serviceConnection.root.config
-        if not isinstance(connection, AirflowApiConnection):
+        connection: AirflowConnection = config.serviceConnection.root.config
+        if not isinstance(connection, AirflowConnection):
             raise InvalidSourceException(
-                f"Expected AirflowApiConnection, but got {connection}"
+                f"Expected AirflowConnection, but got {connection}"
             )
         return cls(config, metadata)
 

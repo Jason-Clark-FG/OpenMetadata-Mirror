@@ -126,18 +126,21 @@ def service_name():
 
 @pytest.fixture(scope="module")
 def ingested_pipelines(metadata, service_name, airflow_token):
-    """Step 1: Run AirflowApi connector to ingest DAGs as pipelines."""
+    """Step 1: Run Airflow REST API connector to ingest DAGs as pipelines."""
     workflow_config = {
         "source": {
-            "type": "airflowapi",
+            "type": "Airflow",
             "serviceName": service_name,
             "serviceConnection": {
                 "config": {
-                    "type": "AirflowApi",
+                    "type": "Airflow",
                     "hostPort": AIRFLOW_HOST,
-                    "token": airflow_token,
-                    "apiVersion": "v2",
                     "numberOfStatus": 5,
+                    "connection": {
+                        "token": airflow_token,
+                        "apiVersion": "v2",
+                        "verifySSL": True,
+                    },
                 }
             },
             "sourceConfig": {"config": {"type": "PipelineMetadata"}},
@@ -153,7 +156,7 @@ def ingested_pipelines(metadata, service_name, airflow_token):
         },
     }
 
-    # Patch test_connection: requires AirflowApi.testConnectionDefinition in the server.
+    # Patch test_connection: requires Airflow.testConnectionDefinition in the server.
     # Works in full Docker builds; needs patch for dev/hot-deployed jars.
     with patch(
         "metadata.ingestion.source.pipeline.pipeline_service.PipelineServiceSource.test_connection"
@@ -163,7 +166,7 @@ def ingested_pipelines(metadata, service_name, airflow_token):
     workflow.stop()
 
     service = metadata.get_by_name(entity=PipelineService, fqn=service_name)
-    assert service is not None, "AirflowApi service should be created"
+    assert service is not None, "Airflow service should be created"
 
     pipelines = metadata.list_entities(
         entity=Pipeline,

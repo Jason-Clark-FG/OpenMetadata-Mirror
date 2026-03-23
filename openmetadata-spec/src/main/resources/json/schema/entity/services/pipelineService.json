@@ -18,7 +18,6 @@
       ],
       "enum": [
         "Airflow",
-        "AirflowApi",
         "GluePipeline",
         "KinesisFirehose",
         "Airbyte",
@@ -46,9 +45,6 @@
       "javaEnums": [
         {
           "name": "Airflow"
-        },
-        {
-          "name": "AirflowApi"
         },
         {
           "name": "GluePipeline"
@@ -134,9 +130,6 @@
           "oneOf": [
             {
               "$ref": "./connections/pipeline/airflowConnection.json"
-            },
-            {
-              "$ref": "./connections/pipeline/airflowApiConnection.json"
             },
             {
               "$ref": "./connections/pipeline/wherescapeConnection.json"

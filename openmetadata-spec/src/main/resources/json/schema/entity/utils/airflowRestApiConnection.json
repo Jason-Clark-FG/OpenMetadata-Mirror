@@ -1,0 +1,48 @@
+{
+  "$id": "https://open-metadata.org/schema/entity/utils/airflowRestApiConnection.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AirflowRestApiConnection",
+  "description": "Airflow REST API Connection Config for connecting via REST API with token or basic authentication.",
+  "type": "object",
+  "javaType": "org.openmetadata.schema.services.connections.pipeline.AirflowRestAPiConnection",
+  "definitions": {
+    "ApiVersion": {
+      "description": "Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect the version automatically.",
+      "type": "string",
+      "enum": ["v1", "v2", "auto"],
+      "default": "auto"
+    }
+  },
+  "properties": {
+    "username": {
+      "title": "Username",
+      "description": "Username for basic authentication to the Airflow API.",
+      "type": "string"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Password for basic authentication to the Airflow API.",
+      "type": "string",
+      "format": "password"
+    },
+    "token": {
+      "title": "Token",
+      "description": "Bearer token for API authentication.",
+      "type": "string",
+      "format": "password"
+    },
+    "apiVersion": {
+      "title": "API Version",
+      "description": "Airflow REST API version.",
+      "$ref": "#/definitions/ApiVersion",
+      "default": "auto"
+    },
+    "verifySSL": {
+      "title": "Verify SSL",
+      "description": "Whether to verify SSL certificates when connecting to the Airflow API.",
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "additionalProperties": false
+}

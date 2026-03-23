@@ -177,18 +177,21 @@ def trigger_sample_dag(airflow_token):
 
 @pytest.fixture(scope="module")
 def ingested_service(metadata, service_name, airflow_token, trigger_sample_dag):
-    """Run the AirflowApi ingestion workflow and return the created service."""
+    """Run the Airflow REST API ingestion workflow and return the created service."""
     workflow_config = {
         "source": {
-            "type": "airflowapi",
+            "type": "Airflow",
             "serviceName": service_name,
             "serviceConnection": {
                 "config": {
-                    "type": "AirflowApi",
+                    "type": "Airflow",
                     "hostPort": AIRFLOW_HOST,
-                    "token": airflow_token,
-                    "apiVersion": "v2",
                     "numberOfStatus": 5,
+                    "connection": {
+                        "token": airflow_token,
+                        "apiVersion": "v2",
+                        "verifySSL": True,
+                    },
                 }
             },
             "sourceConfig": {"config": {"type": "PipelineMetadata"}},
@@ -204,7 +207,7 @@ def ingested_service(metadata, service_name, airflow_token, trigger_sample_dag):
         },
     }
 
-    # Patch test_connection because it requires AirflowApi.testConnectionDefinition
+    # Patch test_connection because it requires Airflow.testConnectionDefinition
     # to be loaded in the OM server. In a full Docker build this works automatically,
     # but for dev/hot-deployed jars the definition may not be present.
     with patch(
@@ -231,7 +234,7 @@ def ingested_service(metadata, service_name, airflow_token, trigger_sample_dag):
 class TestAirflowApiE2E:
     def test_service_created(self, ingested_service):
         assert ingested_service is not None
-        assert ingested_service.serviceType == PipelineServiceType.AirflowApi
+        assert ingested_service.serviceType == PipelineServiceType.Airflow
 
     def test_pipelines_ingested(self, metadata, ingested_service):
         pipelines = metadata.list_entities(

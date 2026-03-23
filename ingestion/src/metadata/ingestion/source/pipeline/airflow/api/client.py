@@ -20,12 +20,12 @@ import requests
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 
-from metadata.generated.schema.entity.services.connections.pipeline.airflowApiConnection import (
-    AirflowApiConnection,
+from metadata.generated.schema.entity.services.connections.pipeline.airflowConnection import (
+    AirflowConnection,
 )
 from metadata.ingestion.connections.source_api_client import TrackedREST
 from metadata.ingestion.ometa.client import ClientConfig
-from metadata.ingestion.source.pipeline.airflowapi.models import (
+from metadata.ingestion.source.pipeline.airflow.api.models import (
     AirflowApiDagDetails,
     AirflowApiDagRun,
     AirflowApiTask,
@@ -60,27 +60,31 @@ class AirflowApiClient:
     Client to interact with the Airflow REST API (v1 for Airflow 2.x, v2 for Airflow 3.x)
     """
 
-    def __init__(self, config: AirflowApiConnection):
+    def __init__(self, config: AirflowConnection):
         self.config = config
         self._detected_version: Optional[str] = None
+
+        rest_config = config.connection
 
         auth_token_mode = "Bearer"
         auth_token_value: Optional[str] = None
 
-        if config.token:
-            auth_token_value = config.token.get_secret_value()
-        elif config.username and config.password:
+        if rest_config.token:
+            auth_token_value = rest_config.token.get_secret_value()
+        elif rest_config.username and rest_config.password:
             jwt = _try_exchange_jwt(
                 clean_uri(str(config.hostPort)),
-                config.username,
-                config.password.get_secret_value(),
-                config.verifySSL,
+                rest_config.username,
+                rest_config.password.get_secret_value(),
+                rest_config.verifySSL,
             )
             if jwt:
                 auth_token_value = jwt
             else:
                 auth_token_mode = "Basic"
-                credentials = f"{config.username}:{config.password.get_secret_value()}"
+                credentials = (
+                    f"{rest_config.username}:{rest_config.password.get_secret_value()}"
+                )
                 auth_token_value = base64.b64encode(credentials.encode("utf-8")).decode(
                     "utf-8"
                 )
@@ -91,7 +95,7 @@ class AirflowApiClient:
             auth_header="Authorization" if auth_token_value else None,
             auth_token=(lambda: (auth_token_value, 0)) if auth_token_value else None,
             auth_token_mode=auth_token_mode,
-            verify=config.verifySSL,
+            verify=rest_config.verifySSL,
         )
         self.client = TrackedREST(client_config, source_name="airflow_api")
 
@@ -100,8 +104,9 @@ class AirflowApiClient:
         if self._detected_version:
             return self._detected_version
 
+        rest_config = self.config.connection
         configured = (
-            str(self.config.apiVersion.value) if self.config.apiVersion else "auto"
+            str(rest_config.apiVersion.value) if rest_config.apiVersion else "auto"
         )
         if configured != "auto":
             self._detected_version = configured
@@ -158,7 +163,7 @@ class AirflowApiClient:
     def _paginate(self, path: str, key: str, limit: int = 100) -> List[dict]:
         result: List[dict] = []
         offset = 0
-        total = limit  # ensure first iteration runs
+        total = limit
         while offset < total:
             separator = "&" if "?" in path else "?"
             response = self.client.get(
@@ -192,7 +197,6 @@ class AirflowApiClient:
 
         owners = dag_data.get("owners") or []
 
-        # API v2 (Airflow 3) uses timetable_summary; v1 (Airflow 2) uses schedule_interval
         if self.api_version == "v2":
             schedule = dag_data.get("timetable_summary")
         else:

@@ -157,6 +157,22 @@ public class OpenLineageEntityResolver {
       LOG.debug("Pipeline not found: {}", pipelineFqn);
     }
 
+    // Fallback: try namespace as service name, e.g. fasfas.stackoverflow_etl_lineage
+    if (!nullOrEmpty(namespace)) {
+      String fallbackFqn = namespace + "." + name;
+      try {
+        EntityReference ref =
+            Entity.getEntityReferenceByName(Entity.PIPELINE, fallbackFqn, NON_DELETED);
+        if (ref != null) {
+          LOG.info("Resolved pipeline via namespace fallback: {}", fallbackFqn);
+          pipelineCache.put(cacheKey, ref);
+          return ref;
+        }
+      } catch (EntityNotFoundException e) {
+        LOG.debug("Pipeline not found by namespace fallback: {}", fallbackFqn);
+      }
+    }
+
     if (!autoCreateEntities) {
       LOG.debug("Auto-create disabled, skipping pipeline creation for: {}", pipelineName);
       return null;

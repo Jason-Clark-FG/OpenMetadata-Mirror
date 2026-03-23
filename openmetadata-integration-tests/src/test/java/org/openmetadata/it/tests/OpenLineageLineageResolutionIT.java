@@ -31,10 +31,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
-import org.openmetadata.schema.entity.data.Table;
-import org.openmetadata.sdk.fluent.Lineage;
+import org.openmetadata.sdk.fluent.LineageAPI;
 import org.openmetadata.sdk.fluent.OpenLineage;
 import org.openmetadata.sdk.fluent.Tables;
+import org.openmetadata.sdk.fluent.wrappers.FluentTable;
 
 /**
  * Integration tests for OpenLineage → lineage resolution.
@@ -56,16 +56,16 @@ public class OpenLineageLineageResolutionIT {
   static void setup() {
     OpenLineage.setDefaultClient(SdkClients.adminClient());
     Tables.setDefaultClient(SdkClients.adminClient());
-    Lineage.setDefaultClient(SdkClients.adminClient());
+    LineageAPI.setDefaultClient(SdkClients.adminClient());
   }
 
   @Test
   @Order(1)
   void testSampleDataTablesExist() {
-    Table src = Tables.findByName(SRC_FQN).fetch();
+    FluentTable src = Tables.findByName(SRC_FQN).fetch();
     assertNotNull(src, "Source table " + SRC_FQN + " must exist in sample data");
 
-    Table tgt = Tables.findByName(TGT_FQN).fetch();
+    FluentTable tgt = Tables.findByName(TGT_FQN).fetch();
     assertNotNull(tgt, "Target table " + TGT_FQN + " must exist in sample data");
   }
 
@@ -92,11 +92,13 @@ public class OpenLineageLineageResolutionIT {
 
   @Test
   @Order(3)
+  @SuppressWarnings("unchecked")
   void testLineageEdgeHasOpenLineageSource() throws Exception {
-    Map<String, Object> lineage =
-        Lineage.forEntity("table", SRC_FQN).upstream(0).downstream(3).fetch();
+    LineageAPI.LineageGraph lineageGraph =
+        LineageAPI.for$("table", SRC_FQN).upstream(0).downstream(3).fetch();
 
-    assertNotNull(lineage);
+    assertNotNull(lineageGraph);
+    Map<String, Object> lineage = MAPPER.readValue(lineageGraph.getRaw(), Map.class);
     var downstreamEdges = (java.util.List<?>) lineage.get("downstreamEdges");
     assertNotNull(downstreamEdges, "Expected downstream edges from " + SRC_FQN);
 
@@ -125,9 +127,7 @@ public class OpenLineageLineageResolutionIT {
 
     JsonNode json = MAPPER.readTree(response);
     assertEquals(
-        0,
-        json.get("lineageEdgesCreated").asInt(),
-        "START events should not create lineage edges");
+        0, json.get("lineageEdgesCreated").asInt(), "START events should not create lineage edges");
   }
 
   @Test
@@ -145,9 +145,7 @@ public class OpenLineageLineageResolutionIT {
 
     JsonNode json = MAPPER.readTree(response);
     assertEquals(
-        0,
-        json.get("lineageEdgesCreated").asInt(),
-        "Unresolvable datasets should create 0 edges");
+        0, json.get("lineageEdgesCreated").asInt(), "Unresolvable datasets should create 0 edges");
   }
 
   @Test
@@ -183,8 +181,6 @@ public class OpenLineageLineageResolutionIT {
 
     JsonNode json = MAPPER.readTree(response);
     assertEquals(
-        0,
-        json.get("lineageEdgesCreated").asInt(),
-        "Empty inputs/outputs should create 0 edges");
+        0, json.get("lineageEdgesCreated").asInt(), "Empty inputs/outputs should create 0 edges");
   }
 }
