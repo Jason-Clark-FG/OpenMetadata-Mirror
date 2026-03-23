@@ -83,15 +83,15 @@ export const Typography = (props: TypographyProps) => {
         quoteVariant = "default",
         className,
         children,
-        size = "text-sm",
-        weight = "regular",
+        size,
+        weight,
         ellipsis,
         style,
         ...otherProps
     } = props;
 
-    const sizeClass = sizeClasses[size];
-    const weightClass = weightClasses[weight];
+    const sizeClass = size ? sizeClasses[size] : undefined;
+    const weightClass = weight ? weightClasses[weight] : undefined;
 
     const ellipsisConfig = typeof ellipsis === "object" ? ellipsis : undefined;
     const isEllipsis = !!ellipsis;
