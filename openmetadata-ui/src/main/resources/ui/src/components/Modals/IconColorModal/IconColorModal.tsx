@@ -64,7 +64,7 @@ const IconColorModal: FC<StyleModalProps> = ({
               }}
               layout="vertical"
               onFinish={handleSubmit}>
-              <div style={{ marginBottom: '24px' }}>
+              <div className="tw:mb-6">
                 <Form.Item
                   name="iconURL"
                   trigger="onChange"
@@ -81,7 +81,7 @@ const IconColorModal: FC<StyleModalProps> = ({
                 </Form.Item>
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
+              <div className="tw:mb-6">
                 <Form.Item
                   name="color"
                   trigger="onChange"

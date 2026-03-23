@@ -42,10 +42,9 @@ const CoreCreateErrorPlaceHolder = ({
     <div
       className={classNames(
         className,
-        'h-full flex-center border-default border-radius-sm bg-white w-full p-8'
+        'tw:h-full tw:flex-center tw:border-default tw:border-radius-sm tw:bg-white tw:w-full tw:p-8 tw:pt-0'
       )}
-      data-testid="no-data-placeholder"
-      style={{ paddingTop: 0 }}>
+      data-testid="no-data-placeholder">
       <div className="tw:text-center">
         {icon && <div className="m-b-xs">{icon}</div>}
         <div

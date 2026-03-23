@@ -16,6 +16,7 @@ import {
   Dropdown,
   Typography,
 } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -43,7 +44,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
   if (isCompactView) {
     return (
       <Button
-        className={`${showAllOwners ? '' : 'tw:-ml-1'} ${fontSizeClass}`}
+        className={classNames(fontSizeClass, { 'tw:-ml-1': !showAllOwners })}
         color="link-color"
         onPress={() => setShowAllOwners((prev) => !prev)}>
         {showAllOwners ? (
@@ -64,7 +65,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
       <Dropdown.Root>
         <Button className="tw:outline-none tw:-ml-1" color="link-color">
           <Avatar
-            className={`tw:bg-brand-50 tw:ring-1 tw:ring-brand-600 ${fontSizeClass}`}
+            className={classNames('tw:bg-brand-50 tw:ring-1 tw:ring-brand-600', fontSizeClass)}
             placeholder={remainingCountLabel}
             size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
           />
