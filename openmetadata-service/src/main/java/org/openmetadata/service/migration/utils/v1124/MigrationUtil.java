@@ -275,7 +275,7 @@ public class MigrationUtil {
           LOG.info("Migrated {} certification records from {}", migrated, table);
         }
       } catch (Exception e) {
-        LOG.warn("Could not migrate certification for table '{}': {}", table, e.getMessage());
+        LOG.warn("Could not migrate certification for table '{}': {}", table, e.getMessage(), e);
       }
     }
     LOG.info("Total certification records migrated to tag_usage: {}", totalMigrated);
