@@ -57,7 +57,6 @@ public class MetricResourceIT extends BaseEntityIT<Metric, CreateMetric> {
   {
     supportsListHistoryByTimestamp = true;
     supportsBulkAPI = true;
-    supportsDataContract = true;
   }
 
   // ===================================================================

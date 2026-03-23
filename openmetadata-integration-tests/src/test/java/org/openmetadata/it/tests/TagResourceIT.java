@@ -56,7 +56,6 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
     supportsFollowers = false; // Tags don't support followers
     supportsTags = false; // Tags don't support tags on themselves
     supportsListHistoryByTimestamp = true;
-    supportsDataContract = true;
   }
 
   // ===================================================================

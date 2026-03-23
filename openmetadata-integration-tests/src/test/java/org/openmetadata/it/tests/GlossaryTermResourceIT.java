@@ -59,7 +59,6 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
     // The Glossary export (/v1/glossaries/name/{name}/export) exports all terms in that glossary
     supportsImportExport = false;
     supportsListHistoryByTimestamp = true;
-    supportsDataContract = true;
   }
 
   private Glossary lastCreatedGlossary;

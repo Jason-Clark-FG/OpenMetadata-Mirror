@@ -2549,7 +2549,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
             ? getDataProducts(entity, relationIncludes.getIncludeFor(FIELD_DATA_PRODUCTS))
             : entity.getDataProducts());
     entity.setDataContract(
-        fields.contains(FIELD_DATA_CONTRACT) ? getDataContract(entity) : entity.getDataContract());
+        fields.contains(FIELD_DATA_CONTRACT)
+            ? getDataContract(entity, relationIncludes.getIncludeFor(FIELD_DATA_CONTRACT))
+            : entity.getDataContract());
     entity.setFollowers(
         fields.contains(FIELD_FOLLOWERS)
             ? getFollowers(entity, relationIncludes.getIncludeFor(FIELD_FOLLOWERS))
@@ -5302,9 +5304,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected EntityReference getDataContract(T entity) {
-    if (!supportsDataContract) return null;
+    return getDataContract(entity, NON_DELETED);
+  }
+
+  protected EntityReference getDataContract(T entity, Include include) {
+    if (!supportsDataContract) {
+      return null;
+    }
+
+    Optional<List<EntityReference>> bundleDataContract =
+        getRelationsFromReadBundle(entity, FIELD_DATA_CONTRACT, include);
+    if (bundleDataContract.isPresent()) {
+      List<EntityReference> refs = bundleDataContract.get();
+      return (refs == null || refs.isEmpty()) ? null : refs.get(0);
+    }
+
     List<EntityReference> refs =
-        findTo(entity.getId(), entityType, Relationship.CONTAINS, DATA_CONTRACT);
+        findTo(entity.getId(), entityType, Relationship.CONTAINS, DATA_CONTRACT, include);
     return refs.isEmpty() ? null : refs.get(0);
   }
 
@@ -8918,12 +8934,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
         daoCollection
             .relationshipDAO()
             .findToBatch(
-                entityListToStrings(entities), Relationship.CONTAINS.ordinal(), DATA_CONTRACT);
+                entityListToStrings(entities),
+                entityType,
+                DATA_CONTRACT,
+                Relationship.CONTAINS.ordinal(),
+                ALL);
 
     var contractIds =
         records.stream().map(rec -> UUID.fromString(rec.getToId())).distinct().toList();
 
-    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, ALL);
+    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, NON_DELETED);
     var contractRefMap =
         contractRefs.stream().collect(Collectors.toMap(EntityReference::getId, ref -> ref));
 
