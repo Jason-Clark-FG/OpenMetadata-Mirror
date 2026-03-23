@@ -527,9 +527,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     }
 
-    changeSummarizer = new ChangeSummarizer<>(entityClass, changeSummaryFields);
+    changeSummarizer =
+        new ChangeSummarizer<>(entityClass, getEffectiveChangeSummaryFields(changeSummaryFields));
 
     Entity.registerEntity(entityClass, entityType, this);
+  }
+
+  private Set<String> getEffectiveChangeSummaryFields(Set<String> configuredFields) {
+    Set<String> effectiveFields = new HashSet<>(configuredFields);
+
+    if (allowedFields.contains(FIELD_DESCRIPTION)) {
+      effectiveFields.add(FIELD_DESCRIPTION);
+    }
+    if (allowedFields.contains(FIELD_OWNERS)) {
+      effectiveFields.add(FIELD_OWNERS);
+    }
+
+    return effectiveFields;
   }
 
   /**
