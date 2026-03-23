@@ -45,7 +45,7 @@ export const getPipelineConfig = (type: PipelineServiceType) => {
 
       break;
     }
-    case PipelineServiceType.AirflowApi: {
+    case PipelineServiceType.AirflowAPI: {
       schema = airflowApiConnection;
 
       break;

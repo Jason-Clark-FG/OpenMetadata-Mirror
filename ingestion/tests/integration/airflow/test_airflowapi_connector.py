@@ -204,6 +204,9 @@ def ingested_service(metadata, service_name, airflow_token, trigger_sample_dag):
         },
     }
 
+    # Patch test_connection because it requires AirflowApi.testConnectionDefinition
+    # to be loaded in the OM server. In a full Docker build this works automatically,
+    # but for dev/hot-deployed jars the definition may not be present.
     with patch(
         "metadata.ingestion.source.pipeline.pipeline_service.PipelineServiceSource.test_connection"
     ):

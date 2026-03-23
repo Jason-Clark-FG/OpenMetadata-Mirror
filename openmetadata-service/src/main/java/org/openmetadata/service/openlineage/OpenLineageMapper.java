@@ -57,7 +57,9 @@ public class OpenLineageMapper {
   public OpenLineageMapper(OpenLineageEntityResolver entityResolver, OpenLineageSettings settings) {
     this.entityResolver = entityResolver;
 
-    if (settings != null && settings.getEventTypeFilter() != null) {
+    if (settings != null
+        && settings.getEventTypeFilter() != null
+        && !settings.getEventTypeFilter().isEmpty()) {
       this.allowedEventTypes =
           settings.getEventTypeFilter().stream()
               .map(OpenLineageEventType::value)

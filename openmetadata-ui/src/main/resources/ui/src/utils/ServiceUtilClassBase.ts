@@ -608,7 +608,7 @@ class ServiceUtilClassBase {
       case this.PipelineServiceTypeSmallCase.Airflow:
         return AIRFLOW;
 
-      case this.PipelineServiceTypeSmallCase.AirflowApi:
+      case this.PipelineServiceTypeSmallCase.AirflowAPI:
         return AIRFLOW;
 
       case this.PipelineServiceTypeSmallCase.Airbyte:

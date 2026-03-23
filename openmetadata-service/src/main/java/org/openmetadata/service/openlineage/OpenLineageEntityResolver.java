@@ -377,6 +377,7 @@ public class OpenLineageEntityResolver {
       List<EntityReference> owners = extractOwners(facets);
 
       Table newTable = new Table();
+      newTable.setId(java.util.UUID.randomUUID());
       newTable.setName(table);
       newTable.setFullyQualifiedName(schemaFqn + "." + table);
       newTable.setDatabaseSchema(
@@ -561,6 +562,7 @@ public class OpenLineageEntityResolver {
               Entity.PIPELINE_SERVICE, defaultPipelineService, NON_DELETED);
 
       Pipeline newPipeline = new Pipeline();
+      newPipeline.setId(java.util.UUID.randomUUID());
       newPipeline.setName(pipelineName);
       newPipeline.setFullyQualifiedName(buildPipelineFqn(pipelineName));
       newPipeline.setService(serviceRef);
@@ -598,24 +600,10 @@ public class OpenLineageEntityResolver {
     }
 
     @Override
-    public String getCondition() {
-      return getFqnCondition(null, "fqnSuffix");
-    }
-
-    @Override
-    public String getCondition(String alias) {
-      return getFqnCondition(alias, "fqnSuffix");
-    }
-
-    private String getFqnCondition(String alias, String paramName) {
-      String column = alias == null ? "json" : alias + ".json";
-      if (Boolean.TRUE.equals(
-          org.openmetadata.service.resources.databases.DatasourceConfig.getInstance().isMySQL())) {
-        return String.format(
-            "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :%s", column, paramName);
-      } else {
-        return String.format("%s->>'fullyQualifiedName' LIKE :%s", column, paramName);
-      }
+    public String getCondition(String tableName) {
+      String baseCondition = super.getCondition(tableName);
+      String fqnClause = buildFqnLikeClause(tableName, "fqnSuffix");
+      return baseCondition + " AND " + fqnClause;
     }
   }
 
@@ -626,24 +614,21 @@ public class OpenLineageEntityResolver {
     }
 
     @Override
-    public String getCondition() {
-      return getFqnCondition(null);
+    public String getCondition(String tableName) {
+      String baseCondition = super.getCondition(tableName);
+      String fqnClause = buildFqnLikeClause(tableName, "fqnPattern");
+      return baseCondition + " AND " + fqnClause;
     }
+  }
 
-    @Override
-    public String getCondition(String alias) {
-      return getFqnCondition(alias);
-    }
-
-    private String getFqnCondition(String alias) {
-      String column = alias == null ? "json" : alias + ".json";
-      if (Boolean.TRUE.equals(
-          org.openmetadata.service.resources.databases.DatasourceConfig.getInstance().isMySQL())) {
-        return String.format(
-            "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :fqnPattern", column);
-      } else {
-        return String.format("%s->>'fullyQualifiedName' LIKE :fqnPattern", column);
-      }
+  private static String buildFqnLikeClause(String tableName, String paramName) {
+    String column = tableName == null ? "json" : tableName + ".json";
+    if (Boolean.TRUE.equals(
+        org.openmetadata.service.resources.databases.DatasourceConfig.getInstance().isMySQL())) {
+      return String.format(
+          "JSON_UNQUOTE(JSON_EXTRACT(%s, '$.fullyQualifiedName')) LIKE :%s", column, paramName);
+    } else {
+      return String.format("%s->>'fullyQualifiedName' LIKE :%s", column, paramName);
     }
   }
 }
