@@ -63,7 +63,10 @@ import {
 } from '../../constants/Services.constant';
 import { useAirflowStatus } from '../../context/AirflowStatusProvider/AirflowStatusProvider';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
-import { OperationPermission } from '../../context/PermissionProvider/PermissionProvider.interface';
+import {
+  OperationPermission,
+  ResourceEntity,
+} from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ClientErrors } from '../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import {
@@ -1665,13 +1668,15 @@ const ServiceDetailsPage: FunctionComponent = () => {
                       entity: t('label.connection'),
                     })
                   : t('message.no-permission-for-action')
-              }>
+              }
+            >
               <Button
                 ghost
                 data-testid="edit-connection-button"
                 disabled={!servicePermission.EditAll}
                 type="primary"
-                onClick={goToEditConnection}>
+                onClick={goToEditConnection}
+              >
                 {t('label.edit-entity', {
                   entity: t('label.connection'),
                 })}
@@ -1926,6 +1931,13 @@ const ServiceDetailsPage: FunctionComponent = () => {
     decodedServiceFQN,
     isOpenMetadataService,
   ]);
+  const servicePermissionWithTrigger = useMemo(
+    () => ({
+      ...servicePermission,
+      Trigger: permissions[ResourceEntity.APPLICATION]?.Trigger || false,
+    }),
+    [servicePermission, permissions[ResourceEntity.APPLICATION]]
+  );
 
   const afterAutoPilotAppTrigger = useCallback(() => {
     fetchWorkflowInstanceStates();
@@ -1954,7 +1966,8 @@ const ServiceDetailsPage: FunctionComponent = () => {
   return (
     <PageLayoutV1
       className="service-details-page"
-      pageTitle={getEntityName(serviceDetails)}>
+      pageTitle={getEntityName(serviceDetails)}
+    >
       {isEmpty(serviceDetails) ? (
         <ErrorPlaceHolder className="m-0 h-min-80">
           {getEntityMissingError(serviceCategory as string, decodedServiceFQN)}
@@ -1973,7 +1986,7 @@ const ServiceDetailsPage: FunctionComponent = () => {
               entityType={entityType}
               extraDropdownContent={extraDropdownContent}
               isAutoPilotWorkflowStatusLoading={isWorkflowStatusLoading}
-              permissions={servicePermission}
+              permissions={servicePermissionWithTrigger}
               showDomain={!isMetadataService}
               onDisplayNameUpdate={handleUpdateDisplayName}
               onFollowClick={handleFollowClick}
