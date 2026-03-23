@@ -250,21 +250,26 @@ public class QueryFilterParser {
       return false;
     }
 
-    // Check if this is a name/displayName search (should use OR logic)
-    // When both name and displayName have the same search value, use OR
-    if (isNameSearch(parsedFilter)) {
-      return matchesNameSearch(entityMap, parsedFilter);
+    // If filter contains name/displayName search, evaluate those with OR logic
+    // and all other filters with AND logic
+    if (hasNameSearch(parsedFilter)) {
+      if (!matchesNameSearch(entityMap, parsedFilter)) {
+        return false;
+      }
     }
 
-    // Check each filter field (AND logic for other filters)
+    // Check each non-name filter field (AND logic)
     for (Map.Entry<String, List<String>> entry : parsedFilter.entrySet()) {
       String fieldPath = entry.getKey();
-      List<String> requiredValues = entry.getValue();
 
-      // Get the field value from entity map using field path
+      // Skip name/displayName — already handled above with OR logic
+      if (fieldPath.equals("name") || fieldPath.equals("displayName")) {
+        continue;
+      }
+
+      List<String> requiredValues = entry.getValue();
       Object fieldValue = getNestedFieldValue(entityMap, fieldPath);
 
-      // Check if field value matches any of the required values
       if (!matchesAnyValue(fieldValue, requiredValues)) {
         return false;
       }
@@ -380,14 +385,10 @@ public class QueryFilterParser {
   }
 
   /**
-   * Checks if the filter is a name/displayName search.
-   * Name searches have both name and displayName with the same value (from wildcard query).
+   * Checks if the filter contains a name/displayName search. Name searches have both name and
+   * displayName with the same value (from wildcard query). Other filter keys may also be present.
    */
-  private static boolean isNameSearch(Map<String, List<String>> parsedFilter) {
-    if (parsedFilter.size() != 2) {
-      return false;
-    }
-
+  private static boolean hasNameSearch(Map<String, List<String>> parsedFilter) {
     List<String> nameValues = parsedFilter.get("name");
     List<String> displayNameValues = parsedFilter.get("displayName");
 

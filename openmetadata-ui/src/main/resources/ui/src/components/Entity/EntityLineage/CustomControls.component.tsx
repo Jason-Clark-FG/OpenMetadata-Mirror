@@ -93,8 +93,6 @@ const CustomControls: FC<{
     nodes,
     selectedQuickFilters,
     onExportClick,
-    columnFilter,
-    setColumnFilter,
   } = useLineageProvider();
   const {
     lineageConfig,
@@ -282,8 +280,7 @@ const CustomControls: FC<{
     setSelectedQuickFilters((prev) =>
       (prev ?? []).map((filter) => ({ ...filter, value: [] }))
     );
-    setColumnFilter('');
-  }, [setSelectedQuickFilters, setColumnFilter]);
+  }, [setSelectedQuickFilters]);
 
   // Function to handle export click
   const handleImpactAnalysisExport = useCallback(
@@ -329,11 +326,8 @@ const CustomControls: FC<{
   }, [selectedQuickFilters, impactLevel]);
 
   const filterApplied = useMemo(() => {
-    return (
-      selectedQuickFilters.some((filter) => (filter.value ?? []).length > 0) ||
-      columnFilter.length > 0
-    );
-  }, [selectedQuickFilters, columnFilter]);
+    return selectedQuickFilters.some((filter) => (filter.value ?? []).length > 0);
+  }, [selectedQuickFilters]);
 
   const searchBarComponent = useMemo(() => {
     return activeTab === 'impact_analysis' ? (

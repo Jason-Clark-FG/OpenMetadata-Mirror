@@ -401,6 +401,19 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
               selected={option.key === impactLevel}
               onClick={() => {
                 setSelectedImpactLevel(option.key);
+                // Clear column-level filter values when switching to Table mode
+                // to prevent hidden filters from affecting API requests
+                if (option.key === EImpactLevel.TableLevel) {
+                  setSelectedQuickFilters((prev) =>
+                    (prev ?? []).map((filter) =>
+                      [EntityFields.COLUMN, EntityFields.TAG, EntityFields.GLOSSARY_TERMS].includes(
+                        filter.key as EntityFields
+                      )
+                        ? { ...filter, value: [] }
+                        : filter
+                    )
+                  );
+                }
                 handlePageChange(currentPage);
                 setImpactOnEl(null);
               }}>

@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openmetadata.schema.api.lineage.EsLineageData;
@@ -29,6 +30,7 @@ import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 
+@Slf4j
 public class LineageUtil {
 
   private LineageUtil() {}
@@ -309,7 +311,7 @@ public class LineageUtil {
         }
       }
     } catch (Exception e) {
-      // If tag fetch fails, keep original mixed tags rather than breaking the response
+      LOG.warn("Failed to fetch entity-level tags for Impact Analysis, falling back to ES tags", e);
     }
   }
 }

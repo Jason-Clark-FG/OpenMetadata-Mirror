@@ -1,6 +1,7 @@
 package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,7 +14,6 @@ import java.util.Set;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.parallel.Execution;
@@ -358,7 +358,6 @@ public class LineageImpactAnalysisIT {
   }
 
   @Test
-  @Disabled("CreateTable.withDomains() does not reliably set domain in ES index")
   void testDownstream_domainFilter() throws Exception {
     String qf = domainFilter(domainA.getName());
     Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
@@ -366,7 +365,6 @@ public class LineageImpactAnalysisIT {
   }
 
   @Test
-  @Disabled("CreateTable.withDomains() does not reliably set domain in ES index")
   void testDownstream_domainFilter_other() throws Exception {
     String qf = domainFilter(domainB.getName());
     Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
@@ -382,7 +380,6 @@ public class LineageImpactAnalysisIT {
   }
 
   @Test
-  @Disabled("CreateTable.withDomains() does not reliably set domain in ES index")
   void testDownstream_comboFilter_goldPlusDomainA() throws Exception {
     String qf = comboFilter(tagClause("Certification.Gold"), domainClause(domainA.getName()));
     Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
@@ -404,6 +401,68 @@ public class LineageImpactAnalysisIT {
     assertContainsExactly(nodes, rptA, rptB);
   }
 
+  // ── TABLE VIEW: Search + filter combos (OR name/displayName AND other filters) ──
+
+  @Test
+  void testDownstream_searchPlusTag() throws Exception {
+    // Search "rpt" + Tag=Certification.Gold → only rpt tables with Gold tag
+    String qf = comboFilter(searchClause("rpt"), tagClause("Certification.Gold"));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertContainsExactly(nodes, rptA, rptB);
+  }
+
+  @Test
+  void testDownstream_searchPlusTag_noOverlap() throws Exception {
+    // Search "int" + Tag=Certification.Gold → int_a has no Gold tag
+    String qf = comboFilter(searchClause("int"), tagClause("Certification.Gold"));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertTrue(nodes.isEmpty());
+  }
+
+  @Test
+  void testDownstream_searchPlusTier() throws Exception {
+    // Search "rpt" + Tier=Tier1 → rpt tables with Tier1
+    String qf = comboFilter(searchClause("rpt"), tierClause("Tier.Tier1"));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertContainsExactly(nodes, rptA, rptB);
+  }
+
+  @Test
+  void testDownstream_searchPlusGlossary() throws Exception {
+    SharedEntities shared = SharedEntities.get();
+    // Search "rpt" + Glossary=ChurnRisk → only rpt_b has ChurnRisk
+    String qf =
+        comboFilter(searchClause("rpt"), tagClause(shared.GLOSSARY1_TERM1.getFullyQualifiedName()));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    // rpt tables that have the glossary term
+    assertFalse(nodes.isEmpty());
+  }
+
+  @Test
+  void testDownstream_searchPlusDomain() throws Exception {
+    // Search "rpt" + Domain=domainA → only rpt_a is in domainA
+    String qf = comboFilter(searchClause("rpt"), domainClause(domainA.getName()));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertContainsExactly(nodes, rptA);
+  }
+
+  @Test
+  void testDownstream_searchPlusOwner() throws Exception {
+    SharedEntities shared = SharedEntities.get();
+    // Search "rpt" + Owner → rpt tables owned by USER1
+    String qf = comboFilter(searchClause("rpt"), ownerClause(shared.USER1.getName()));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertContainsExactly(nodes, rptA, rptB);
+  }
+
+  @Test
+  void testDownstream_searchNoMatch() throws Exception {
+    // Search for nonexistent name → 0 results regardless of other filters
+    String qf = comboFilter(searchClause("nonexistent_xyz"), tagClause("Certification.Gold"));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    assertTrue(nodes.isEmpty());
+  }
+
   // ── TABLE VIEW: Upstream filters ──────────────────────────────────────
 
   @Test
@@ -420,7 +479,6 @@ public class LineageImpactAnalysisIT {
   }
 
   @Test
-  @Disabled("CreateTable.withDomains() does not reliably set domain in ES index")
   void testUpstream_domainFilter() throws Exception {
     String qf = domainFilter(domainA.getName());
     Set<String> nodes = getTableViewNodes(stgA, "Upstream", qf);
@@ -696,7 +754,7 @@ public class LineageImpactAnalysisIT {
 
   private String domainFilter(String domainName) {
     return String.format(
-        "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"domain.name.keyword\":\"%s\"}}]}}}",
+        "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"domains.name.keyword\":\"%s\"}}]}}}",
         domainName);
   }
 
@@ -719,7 +777,13 @@ public class LineageImpactAnalysisIT {
   }
 
   private String domainClause(String domainName) {
-    return String.format("{\"term\":{\"domain.name.keyword\":\"%s\"}}", domainName);
+    return String.format("{\"term\":{\"domains.name.keyword\":\"%s\"}}", domainName);
+  }
+
+  private String searchClause(String searchValue) {
+    return String.format(
+        "{\"bool\":{\"should\":[{\"wildcard\":{\"displayName.keyword\":{\"value\":\"*%s*\"}}},{\"wildcard\":{\"name.keyword\":{\"value\":\"*%s*\"}}}]}}",
+        searchValue, searchValue);
   }
 
   private String comboFilter(String... clauses) {
