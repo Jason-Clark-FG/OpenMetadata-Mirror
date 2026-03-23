@@ -16,19 +16,77 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background-color: @primary-50;
-  color: @primary-color;
   border-radius: 14px;
-  border: none;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
-  padding: 2px 8px;
-  cursor: pointer;
+  padding: 2px 8px 2px 6px;
+  cursor: default;
+  white-space: nowrap;
+  transition: filter 0.15s ease;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    filter: brightness(0.96);
+  }
+
+  &.badge-suggested {
+    background-color: @purple-1;
+    color: @purple-5;
+    border: 1px solid @purple-7;
+  }
+
+  &.badge-automated {
+    background-color: @green-9;
+    color: @green-10;
+    border: 1px solid @green-12;
+  }
+
+  &.badge-propagated {
+    background-color: @blue-1;
+    color: @blue-21;
+    border: 1px solid @blue-13;
+  }
 }
 
-.description-source-tooltip {
-  display: flex;
-  flex-direction: column;
+.description-source-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.description-source-metadata {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.description-source-text {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
   font-size: 12px;
+  color: @grey-600;
+  font-weight: 500;
+
+  &.description-source-text-success {
+    color: @green-10;
+  }
+}
+
+.description-source-separator {
+  color: @grey-400;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.description-source-time {
+  color: @grey-500;
+  font-size: 12px;
+  font-weight: 500;
 }

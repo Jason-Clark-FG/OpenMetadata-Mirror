@@ -116,8 +116,7 @@ test.describe(
 
         await expect(descriptionContainer).toBeVisible();
 
-        const badge =
-          descriptionContainer.getByTestId('ai-generated-badge');
+        const badge = descriptionContainer.getByTestId('ai-suggested-badge');
 
         await expect(badge).toBeVisible();
       });
@@ -125,14 +124,13 @@ test.describe(
       await test.step('Verify badge tooltip shows metadata', async () => {
         const badge = page
           .getByTestId('asset-description-container')
-          .getByTestId('ai-generated-badge');
+          .getByTestId('ai-suggested-badge');
 
         await badge.hover();
 
         const tooltip = page.locator('.ant-tooltip:visible');
 
         await expect(tooltip).toBeVisible();
-        await expect(tooltip).toContainText('Automated');
       });
     });
 
@@ -154,7 +152,7 @@ test.describe(
 
         const descriptionCells = page
           .getByTestId('description')
-          .getByTestId('ai-generated-badge');
+          .getByTestId('ai-suggested-badge');
 
         await expect(descriptionCells.first()).toBeVisible();
       });
@@ -210,8 +208,7 @@ test.describe(
 
         await expect(descriptionContainer).toBeVisible();
 
-        const badge =
-          descriptionContainer.getByTestId('ai-generated-badge');
+        const badge = descriptionContainer.getByTestId('ai-suggested-badge');
 
         await expect(badge).not.toBeVisible();
       });

@@ -17,6 +17,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { Domain } from '../../../generated/entity/domains/domain';
+import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import { useFqn } from '../../../hooks/useFqn';
 import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
 import { getEntityFeedLink } from '../../../utils/EntityUtils';
@@ -220,18 +221,33 @@ const DescriptionV1 = ({
     }
   }, [description, suggestionData, isDescriptionExpanded]);
 
+  const shouldShowDescriptionMetadata = useMemo(
+    () =>
+      changeSummary?.['description']?.changeSource === ChangeSource.Manual ||
+      changeSummary?.['description']?.changeSource === ChangeSource.Suggested ||
+      changeSummary?.['description']?.changeSource === ChangeSource.Automated ||
+      changeSummary?.['description']?.changeSource === ChangeSource.Propagated,
+    [changeSummary]
+  );
+
   const header = useMemo(() => {
     return (
       <div
-        className={classNames('d-flex justify-between flex-wrap', {
-          'm-t-sm': suggestions?.length > 0,
-        })}>
-        <div className="d-flex items-center gap-2">
-          <Text className={classNames('text-sm font-medium')}>
+        className={classNames(
+          'description-v1-header d-flex justify-between flex-wrap',
+          {
+            'm-t-sm': suggestions?.length > 0,
+          }
+        )}>
+        <div className="description-v1-title-row d-flex items-center gap-2">
+          <Text
+            className={classNames('description-v1-title text-sm font-medium')}>
             {t('label.description')}
           </Text>
           <DescriptionSourceBadge
             changeSummaryEntry={changeSummary?.['description']}
+            showAcceptedBy={false}
+            showTimestamp={false}
           />
           {showActions && actionButtons}
         </div>
@@ -254,6 +270,13 @@ const DescriptionV1 = ({
         {!wrapInCard ? header : null}
         <div>
           {descriptionContent}
+          {!suggestionData && shouldShowDescriptionMetadata && (
+            <div className="description-v1-metadata">
+              <DescriptionSourceBadge
+                changeSummaryEntry={changeSummary?.['description']}
+              />
+            </div>
+          )}
           <ModalWithMarkdownEditor
             header={t('label.edit-description-for', { entityName })}
             placeholder={t('label.enter-entity', {

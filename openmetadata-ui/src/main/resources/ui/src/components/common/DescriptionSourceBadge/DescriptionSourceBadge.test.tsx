@@ -22,11 +22,25 @@ jest.mock('react-i18next', () => ({
 }));
 
 jest.mock('../../../utils/date-time/DateTimeUtils', () => ({
+  formatDate: jest.fn((ts: number) => `date-${ts}`),
   formatDateTime: jest.fn((ts: number) => `formatted-${ts}`),
+  getShortRelativeTime: jest.fn((ts: number) => `relative-${ts}`),
+}));
+
+jest.mock('../../../assets/svg/ic-suggestions.svg', () => ({
+  ReactComponent: () => <div data-testid="badge-icon" />,
+}));
+
+jest.mock('../../../assets/svg/automator-bot.svg', () => ({
+  ReactComponent: () => <div data-testid="badge-icon" />,
 }));
 
 jest.mock('../../../assets/svg/automated-tag.svg', () => ({
-  ReactComponent: () => <div data-testid="automated-tag-icon" />,
+  ReactComponent: () => <div data-testid="badge-icon" />,
+}));
+
+jest.mock('../../../assets/svg/ic-check-circle-colored.svg', () => ({
+  ReactComponent: () => <div data-testid="check-circle-icon" />,
 }));
 
 describe('DescriptionSourceBadge', () => {
@@ -46,20 +60,26 @@ describe('DescriptionSourceBadge', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render nothing for Manual changeSource', () => {
-    const { container } = render(
+  it('should render authored-by metadata for Manual changeSource', () => {
+    render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
           changeSource: ChangeSource.Manual,
           changedBy: 'admin',
+          changedAt: 1700000000000,
         }}
       />
     );
 
-    expect(container.firstChild).toBeNull();
+    expect(screen.getByTestId('source-actor')).toHaveTextContent(
+      'label.authored-by admin'
+    );
+    expect(screen.getByTestId('source-timestamp')).toHaveTextContent(
+      'relative-1700000000000'
+    );
   });
 
-  it('should render badge for Suggested changeSource', () => {
+  it('should render purple AI badge for Suggested changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -70,12 +90,14 @@ describe('DescriptionSourceBadge', () => {
       />
     );
 
-    expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
-    expect(screen.getByTestId('automated-tag-icon')).toBeInTheDocument();
+    const badge = screen.getByTestId('ai-suggested-badge');
+
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('badge-suggested');
     expect(screen.getByText('label.ai')).toBeInTheDocument();
   });
 
-  it('should render badge for Automated changeSource', () => {
+  it('should render green Automated badge for Automated changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -85,11 +107,14 @@ describe('DescriptionSourceBadge', () => {
       />
     );
 
-    expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
+    const badge = screen.getByTestId('automated-badge');
+
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('badge-automated');
     expect(screen.getByText('label.automated')).toBeInTheDocument();
   });
 
-  it('should render badge for Propagated changeSource', () => {
+  it('should render blue Propagated badge for Propagated changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -99,8 +124,58 @@ describe('DescriptionSourceBadge', () => {
       />
     );
 
-    expect(screen.getByTestId('ai-generated-badge')).toBeInTheDocument();
+    const badge = screen.getByTestId('propagated-badge');
+
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('badge-propagated');
     expect(screen.getByText('label.propagated')).toBeInTheDocument();
+  });
+
+  it('should render accepted-by metadata when changedBy is present', () => {
+    render(
+      <DescriptionSourceBadge
+        changeSummaryEntry={{
+          changeSource: ChangeSource.Suggested,
+          changedBy: 'John Doe',
+          changedAt: 1700000000000,
+        }}
+      />
+    );
+
+    const actor = screen.getByTestId('source-actor');
+
+    expect(actor).toBeInTheDocument();
+    expect(actor).toHaveTextContent('John Doe');
+  });
+
+  it('should not render accepted-by metadata when changedBy is absent', () => {
+    render(
+      <DescriptionSourceBadge
+        changeSummaryEntry={{
+          changeSource: ChangeSource.Automated,
+        }}
+      />
+    );
+
+    expect(screen.queryByTestId('source-actor')).not.toBeInTheDocument();
+  });
+
+  it('should render badge only when metadata is disabled', () => {
+    render(
+      <DescriptionSourceBadge
+        changeSummaryEntry={{
+          changeSource: ChangeSource.Suggested,
+          changedBy: 'admin',
+          changedAt: 1700000000000,
+        }}
+        showAcceptedBy={false}
+        showTimestamp={false}
+      />
+    );
+
+    expect(screen.getByTestId('ai-suggested-badge')).toBeInTheDocument();
+    expect(screen.queryByTestId('source-actor')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('source-timestamp')).not.toBeInTheDocument();
   });
 
   it('should not render badge for Ingested changeSource', () => {

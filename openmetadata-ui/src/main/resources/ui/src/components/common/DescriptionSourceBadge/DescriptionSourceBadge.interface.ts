@@ -15,4 +15,7 @@ import { ChangeSummaryEntry } from '../../../rest/changeSummaryAPI';
 
 export interface DescriptionSourceBadgeProps {
   changeSummaryEntry?: ChangeSummaryEntry;
+  showAcceptedBy?: boolean;
+  showBadge?: boolean;
+  showTimestamp?: boolean;
 }
