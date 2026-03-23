@@ -306,7 +306,15 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
 
     List<String> sortedFqns = new ArrayList<>(result.getNodes().keySet());
     sortedFqns.remove(request.getFqn());
-    sortedFqns.sort(Comparator.naturalOrder());
+    Map<String, NodeInformation> nodes = result.getNodes();
+    sortedFqns.sort(
+        Comparator.<String, Integer>comparing(
+                fqn -> {
+                  NodeInformation node = nodes.get(fqn);
+                  int depth = node != null && node.getNodeDepth() != null ? node.getNodeDepth() : 0;
+                  return Math.abs(depth);
+                })
+            .thenComparing(Comparator.naturalOrder()));
 
     int from = request.getFrom() != null ? request.getFrom() : 0;
     int size = request.getSize() != null ? request.getSize() : 50;
