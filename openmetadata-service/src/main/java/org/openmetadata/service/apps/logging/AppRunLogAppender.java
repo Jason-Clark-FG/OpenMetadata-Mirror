@@ -41,7 +41,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
       new CopyOnWriteArrayList<>();
 
   private static final DateTimeFormatter FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS").withZone(ZoneId.systemDefault());
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneId.of("UTC"));
 
   private static String logDirectory = "./logs/app-runs";
   private static int maxLinesPerRun = 100_000;
@@ -76,12 +76,28 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   static String formatLine(ILoggingEvent event) {
     String timestamp = FORMATTER.format(Instant.ofEpochMilli(event.getTimeStamp()));
     return String.format(
-        "%s [%s] %-5s %s - %s",
+        "%-5s [%s] [%s] %s - %s",
+        event.getLevel(),
         timestamp,
         event.getThreadName(),
-        event.getLevel(),
-        event.getLoggerName(),
+        abbreviateLoggerName(event.getLoggerName(), 5),
         event.getFormattedMessage());
+  }
+
+  static String abbreviateLoggerName(String loggerName, int targetLength) {
+    if (loggerName == null || loggerName.length() <= targetLength) {
+      return loggerName;
+    }
+    String[] parts = loggerName.split("\\.");
+    if (parts.length <= 1) {
+      return loggerName;
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < parts.length - 1; i++) {
+      sb.append(parts[i].charAt(0)).append('.');
+    }
+    sb.append(parts[parts.length - 1]);
+    return sb.toString();
   }
 
   private static final String APPENDER_NAME = "APP_RUN_LOG";

@@ -189,6 +189,27 @@ class AppRunLogAppenderTest {
     AppRunLogAppender.stopCapture("ConcurrentApp", runId);
   }
 
+  @Test
+  void formatLineMatchesExpectedPattern() {
+    LoggingEvent event = createEvent("reindex started", Map.of());
+    event.setLoggerName("org.openmetadata.service.apps.bundles.searchIndex.SearchIndexExecutor");
+    String line = AppRunLogAppender.formatLine(event);
+    // Format: LEVEL [ISO8601-UTC] [thread] abbreviated.logger - message
+    assertTrue(line.startsWith("INFO "), "should start with level");
+    assertTrue(line.contains("[test-thread]"), "should contain thread name in brackets");
+    assertTrue(line.contains("o.o.s.a.b.s.SearchIndexExecutor"), "logger should be abbreviated");
+    assertTrue(line.endsWith("- reindex started"), "should end with message");
+  }
+
+  @Test
+  void abbreviateLoggerNameShortensPackages() {
+    assertEquals(
+        "o.o.s.a.ClassName",
+        AppRunLogAppender.abbreviateLoggerName("org.openmetadata.service.apps.ClassName", 5));
+    assertEquals("Simple", AppRunLogAppender.abbreviateLoggerName("Simple", 5));
+    assertEquals(null, AppRunLogAppender.abbreviateLoggerName(null, 5));
+  }
+
   private LoggingEvent createEvent(String message, Map<String, String> mdc) {
     Logger logger = loggerContext.getLogger("test.logger");
     LoggingEvent event = new LoggingEvent();
