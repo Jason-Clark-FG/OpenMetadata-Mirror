@@ -32,4 +32,15 @@ describe('normalizeSelectedTestProp', () => {
       })
     ).toEqual(['tc_one']);
   });
+
+  it('returns [] for payload-shaped non-array when testCases is empty', () => {
+    expect(
+      normalizeSelectedTestProp({
+        selectAll: false,
+        includeIds: [],
+        excludeIds: [],
+        testCases: [],
+      })
+    ).toEqual([]);
+  });
 });

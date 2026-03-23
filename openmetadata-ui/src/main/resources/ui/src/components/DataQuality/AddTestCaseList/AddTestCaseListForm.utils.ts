@@ -15,8 +15,10 @@ import { getEntityName } from '../../../utils/EntityUtils';
 import { AddTestCaseListChangePayload } from './AddTestCaseList.interface';
 
 /**
- * Normalizes the value Ant Design Form may pass as `selectedTest` (string[] or,
- * incorrectly, an AddTestCaseListChangePayload after onChange) into test case names.
+ * Resolves test case names from the `testCases` form field. Call this when reading
+ * values on submit (or elsewhere): `AddTestCaseList` stores either `string[]` or an
+ * {@link AddTestCaseListChangePayload} object depending on how Ant Design forwards
+ * `onChange` from `valuePropName="selectedTest"`.
  */
 export function normalizeSelectedTestProp(selectedTest: unknown): string[] {
   if (selectedTest == null) {

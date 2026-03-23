@@ -295,19 +295,17 @@ export const AddTestCaseList = ({
         const testCaseResponse = await getListTestCaseBySearch(mergedParams);
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
-        if (selectedTestNames.length > 0) {
-          setSelectedItems((pre) => {
-            const selectedItemsMap = new Map();
-            pre?.forEach((item) => selectedItemsMap.set(item.id, item));
-            testCaseResponse.data.forEach((hit) => {
-              if (selectedTestNames.includes(hit.name)) {
-                selectedItemsMap.set(hit.id ?? '', hit);
-              }
-            });
-
-            return selectedItemsMap;
+        setSelectedItems((pre) => {
+          const selectedItemsMap = new Map();
+          pre?.forEach((item) => selectedItemsMap.set(item.id, item));
+          testCaseResponse.data.forEach((hit) => {
+            if (selectedTestNames.includes(hit.name)) {
+              selectedItemsMap.set(hit.id ?? '', hit);
+            }
           });
-        }
+
+          return selectedItemsMap;
+        });
         setItems(
           page === 1
             ? testCaseResponse.data
@@ -538,6 +536,15 @@ export const AddTestCaseList = ({
     [selectAll, selectedItems, items, excludedIds, onChange]
   );
   useEffect(() => {
+    setSelectAll(false);
+    setExcludedIds(new Set());
+    setSelectedItems(new Map());
+    onChange?.({
+      selectAll: false,
+      includeIds: [],
+      excludeIds: [],
+      testCases: [],
+    });
     fetchTestCases({ searchText: searchTerm });
   }, [
     searchTerm,
@@ -546,6 +553,7 @@ export const AddTestCaseList = ({
     filterTables,
     filterColumns,
     fetchTestCases,
+    onChange,
   ]);
 
   useEffect(() => {

@@ -1373,9 +1373,6 @@ const TestCaseFormV1: FC<TestCaseFormV1Props> = ({
                     {!selectAllTestCases && (
                       <Col span={24}>
                         <Form.Item
-                          getValueFromEvent={(value) =>
-                            normalizeSelectedTestProp(value)
-                          }
                           label={t('label.test-case')}
                           name="testCases"
                           rules={[
