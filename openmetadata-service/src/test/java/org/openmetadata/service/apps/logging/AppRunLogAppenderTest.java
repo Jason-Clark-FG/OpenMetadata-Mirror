@@ -208,6 +208,10 @@ class AppRunLogAppenderTest {
         AppRunLogAppender.abbreviateLoggerName("org.openmetadata.service.apps.ClassName", 5));
     assertEquals("Simple", AppRunLogAppender.abbreviateLoggerName("Simple", 5));
     assertEquals(null, AppRunLogAppender.abbreviateLoggerName(null, 5));
+    assertEquals(
+        "o.s.Foo",
+        AppRunLogAppender.abbreviateLoggerName("org..service.Foo", 5),
+        "consecutive dots should not crash");
   }
 
   private LoggingEvent createEvent(String message, Map<String, String> mdc) {

@@ -94,6 +94,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     }
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < parts.length - 1; i++) {
+      if (parts[i].isEmpty()) continue;
       sb.append(parts[i].charAt(0)).append('.');
     }
     sb.append(parts[parts.length - 1]);
@@ -145,6 +146,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     activeBuffers.put(bufferKey(appName, appRunId), buffer);
 
     for (String prefix : threadPrefixes) {
+      threadPrefixBindings.removeIf(b -> b.prefix.equals(prefix));
       threadPrefixBindings.add(new ThreadPrefixBinding(prefix, buffer));
     }
 

@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -133,7 +134,7 @@ public class SearchIndexExecutor implements AutoCloseable {
   private final Set<String> promotedEntities = ConcurrentHashMap.newKeySet();
   private final Map<String, StageStatsTracker> sinkTrackers = new ConcurrentHashMap<>();
   private static final long SINK_SYNC_INTERVAL_MS = 2000;
-  private volatile long lastSinkSyncTime = 0;
+  private final AtomicLong lastSinkSyncTime = new AtomicLong(0);
 
   record IndexingTask<T>(String entityType, ResultList<T> entities, int offset, int retryCount) {
     IndexingTask(String entityType, ResultList<T> entities, int offset) {
@@ -233,7 +234,7 @@ public class SearchIndexExecutor implements AutoCloseable {
     entityBatchFailures.clear();
     promotedEntities.clear();
     sinkTrackers.clear();
-    lastSinkSyncTime = 0;
+    lastSinkSyncTime.set(0);
     initStatsManager();
   }
 
@@ -1521,8 +1522,8 @@ public class SearchIndexExecutor implements AutoCloseable {
 
   private void periodicSyncSinkStats() {
     long now = System.currentTimeMillis();
-    if (now - lastSinkSyncTime >= SINK_SYNC_INTERVAL_MS) {
-      lastSinkSyncTime = now;
+    long last = lastSinkSyncTime.get();
+    if (now - last >= SINK_SYNC_INTERVAL_MS && lastSinkSyncTime.compareAndSet(last, now)) {
       syncSinkStatsFromBulkSink();
     }
   }
