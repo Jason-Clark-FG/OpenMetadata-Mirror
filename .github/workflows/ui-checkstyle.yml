@@ -773,9 +773,14 @@ jobs:
         id: lint
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.added_modified_files }}
         run: |
-          yarn lint:fix
-          yarn pretty
+          if [ -z "$CHANGED_FILES" ]; then
+            exit 0
+          fi
+          yarn lint:base --fix $CHANGED_FILES
+          yarn pretty:base --write $CHANGED_FILES
           if [ -n "$(git status --porcelain)" ]; then
             FILES=$(git status --porcelain | awk '{print "  - `" $2 "`"}' | head -30)
             echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
