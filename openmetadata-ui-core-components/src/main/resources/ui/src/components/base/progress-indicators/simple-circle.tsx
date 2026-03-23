@@ -16,11 +16,12 @@ export const CircleProgressBar = (props: {
   const percentage = Math.min(100, Math.max(0, rawPercentage));
 
   return (
-    <progress
+    <div
       aria-valuemax={max}
       aria-valuemin={min}
       aria-valuenow={value}
-      className="tw:relative tw:flex tw:w-max tw:items-center tw:justify-center">
+      className="tw:relative tw:flex tw:w-max tw:items-center tw:justify-center"
+      role="progressbar">
       <span className="tw:absolute tw:text-sm tw:font-medium tw:text-primary">
         {percentage}%
       </span>
@@ -48,6 +49,6 @@ export const CircleProgressBar = (props: {
           }}
         />
       </svg>
-    </progress>
+    </div>
   );
 };

@@ -62,6 +62,12 @@ export const Slider = ({
                 }}
               />
               {values.map((_, index) => {
+                const thumbRange = maxValue - minValue;
+                const normalizedThumb =
+                  thumbRange === 0
+                    ? 0
+                    : (getThumbValue(index) - minValue) / thumbRange;
+
                 return (
                   <AriaSliderThumb
                     className={({ isFocusVisible, isDragging }) =>
@@ -81,7 +87,7 @@ export const Slider = ({
                       )}>
                       {labelFormatter
                         ? labelFormatter(getThumbValue(index))
-                        : getFormattedValue(getThumbValue(index) / 100)}
+                        : getFormattedValue(normalizedThumb)}
                     </AriaSliderOutput>
                   </AriaSliderThumb>
                 );
