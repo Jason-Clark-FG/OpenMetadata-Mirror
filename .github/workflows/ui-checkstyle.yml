@@ -26,7 +26,6 @@ on:
       - openmetadata-ui/src/main/resources/ui/playwright/**
       - openmetadata-ui/src/main/resources/ui/eslint.config.mjs
       - "openmetadata-ui-core-components/src/main/resources/ui/**"
-      - openmetadata-ui-core-components/src/main/resources/ui/eslint.config.mjs
 
 permissions:
   contents: read

@@ -46,7 +46,10 @@ export const ProgressBarBase = ({
   const range = max - min;
   const percentage = Math.min(
     100,
-    Math.max(0, range <= 0 ? 0 : ((value - min) * 100) / range)
+    Math.max(
+      0,
+      range <= 0 ? (value >= max ? 100 : 0) : ((value - min) * 100) / range
+    )
   );
 
   return (
@@ -103,7 +106,10 @@ export const ProgressBar = ({
   const range = max - min;
   const percentage = Math.min(
     100,
-    Math.max(0, range <= 0 ? 0 : ((value - min) * 100) / range)
+    Math.max(
+      0,
+      range <= 0 ? (value >= max ? 100 : 0) : ((value - min) * 100) / range
+    )
   );
   const formattedValue = valueFormatter
     ? valueFormatter(value, percentage)

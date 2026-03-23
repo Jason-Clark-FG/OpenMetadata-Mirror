@@ -35,7 +35,7 @@ export const NativeSelect = ({
       <div className="tw:relative tw:grid tw:w-full tw:items-center">
         <select
           {...props}
-          aria-describedby={hintId}
+          aria-describedby={hint ? hintId : undefined}
           aria-labelledby={label ? labelId : undefined}
           className={cx(
             'tw:appearance-none tw:rounded-lg tw:bg-primary tw:px-3.5 tw:py-2.5 tw:text-md tw:font-medium tw:text-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset tw:placeholder:text-fg-quaternary tw:focus-visible:ring-2 tw:focus-visible:ring-brand tw:disabled:cursor-not-allowed tw:disabled:bg-disabled_subtle tw:disabled:text-disabled',
