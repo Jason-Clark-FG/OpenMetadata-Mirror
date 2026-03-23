@@ -1876,7 +1876,8 @@ public abstract class BaseEntityIT<T extends EntityInterface, K> {
     T entity = createEntity(createRequest);
 
     T fetched = getEntityWithFields(entity.getId().toString(), "dataContract");
-    assertNull(fetched.getDataContract(), "Entity without a contract should have null dataContract");
+    assertNull(
+        fetched.getDataContract(), "Entity without a contract should have null dataContract");
   }
 
   // ===================================================================
