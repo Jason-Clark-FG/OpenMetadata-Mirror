@@ -307,6 +307,10 @@ public class ColumnFilterMatcher {
         String filterType = parts[0].trim().toLowerCase();
         String filterValue = parts[1].trim();
 
+        if (filterValue.isEmpty()) {
+          return null;
+        }
+
         return new FilterCriteria(filterType, filterValue);
       }
     }
@@ -372,7 +376,7 @@ public class ColumnFilterMatcher {
     Map<String, List<String>> groupedFilters = parseMultipleFiltersGrouped(columnFilter);
 
     if (groupedFilters.isEmpty()) {
-      return true;
+      return false;
     }
 
     // Each filter type must have at least one match (AND between types)
@@ -414,7 +418,7 @@ public class ColumnFilterMatcher {
     Map<String, List<String>> groupedFilters = parseMultipleFiltersGrouped(columnFilter);
 
     if (groupedFilters.isEmpty()) {
-      return true;
+      return false;
     }
 
     // Each filter type must have at least one match (AND between types)

@@ -577,6 +577,49 @@ public class LineageImpactAnalysisIT {
     assertTrue(getColumnCount(result) > 0);
   }
 
+  // ── COLUMN VIEW: Malformed filter handling ─────────────────────────────
+
+  @Test
+  void testColumnView_malformedSingleFilter_noMatch() throws Exception {
+    // Single malformed filter like "bad" should match nothing
+    JsonNode result = getColumnViewResult(stgA, "Downstream", 3, null, "bad");
+    assertNotNull(result);
+    assertEquals(0, getColumnCount(result));
+  }
+
+  @Test
+  void testColumnView_malformedMultiFilter_noMatch() throws Exception {
+    // Multiple malformed filters like "bad,worse" should also match nothing
+    // (consistent with single malformed filter)
+    JsonNode result = getColumnViewResult(stgA, "Downstream", 3, null, "bad,worse");
+    assertNotNull(result);
+    assertEquals(0, getColumnCount(result));
+  }
+
+  @Test
+  void testColumnView_emptyValueFilter_noMatch() throws Exception {
+    // Filter with empty value like "tag:" should match nothing
+    JsonNode result = getColumnViewResult(stgA, "Downstream", 3, null, "tag:");
+    assertNotNull(result);
+    assertEquals(0, getColumnCount(result));
+  }
+
+  @Test
+  void testColumnView_commaOnlyFilter_noMatch() throws Exception {
+    // Just commas should match nothing
+    JsonNode result = getColumnViewResult(stgA, "Downstream", 3, null, ",,,");
+    assertNotNull(result);
+    assertEquals(0, getColumnCount(result));
+  }
+
+  @Test
+  void testColumnView_validPlusMalformedFilter() throws Exception {
+    // Valid filter combined with malformed — malformed part is ignored, valid part applies
+    JsonNode result = getColumnViewResult(stgA, "Downstream", 3, null, "columnName:email,bad:");
+    assertNotNull(result);
+    assertTrue(getColumnCount(result) > 0);
+  }
+
   // ── Helper methods ────────────────────────────────────────────────────
 
   private Set<String> getTableViewNodes(Table entity, String direction, String queryFilter)
