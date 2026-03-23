@@ -43,14 +43,7 @@ export const ProgressBarBase = ({
   className,
   progressClassName,
 }: ProgressBarProps) => {
-  const range = max - min;
-  const percentage = Math.min(
-    100,
-    Math.max(
-      0,
-      range <= 0 ? (value >= max ? 100 : 0) : ((value - min) * 100) / range
-    )
-  );
+  const percentage = ((value - min) * 100) / (max - min);
 
   return (
     <div
@@ -103,14 +96,7 @@ export const ProgressBar = ({
   className,
   progressClassName,
 }: ProgressIndicatorWithTextProps) => {
-  const range = max - min;
-  const percentage = Math.min(
-    100,
-    Math.max(
-      0,
-      range <= 0 ? (value >= max ? 100 : 0) : ((value - min) * 100) / range
-    )
-  );
+  const percentage = ((value - min) * 100) / (max - min);
   const formattedValue = valueFormatter
     ? valueFormatter(value, percentage)
     : `${percentage.toFixed(0)}%`; // Default to rounded percentage
