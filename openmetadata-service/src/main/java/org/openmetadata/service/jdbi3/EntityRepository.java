@@ -2548,6 +2548,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
         fields.contains(FIELD_DATA_PRODUCTS)
             ? getDataProducts(entity, relationIncludes.getIncludeFor(FIELD_DATA_PRODUCTS))
             : entity.getDataProducts());
+    entity.setDataContract(
+        fields.contains(FIELD_DATA_CONTRACT) ? getDataContract(entity) : entity.getDataContract());
     entity.setFollowers(
         fields.contains(FIELD_FOLLOWERS)
             ? getFollowers(entity, relationIncludes.getIncludeFor(FIELD_FOLLOWERS))
@@ -5297,6 +5299,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected List<EntityReference> getDataProducts(
       UUID entityId, String entityType, Include include) {
     return findFrom(entityId, entityType, Relationship.HAS, DATA_PRODUCT, include);
+  }
+
+  protected EntityReference getDataContract(T entity) {
+    if (!supportsDataContract) return null;
+    List<EntityReference> refs =
+        findTo(entity.getId(), entityType, Relationship.CONTAINS, DATA_CONTRACT);
+    return refs.isEmpty() ? null : refs.get(0);
   }
 
   public EntityInterface getParentEntity(T entity, String fields) {
