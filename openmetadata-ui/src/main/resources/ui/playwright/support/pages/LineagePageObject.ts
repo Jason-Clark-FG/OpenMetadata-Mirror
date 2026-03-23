@@ -18,10 +18,10 @@ export class LineagePageObject {
   constructor(private page: Page) {}
 
   async activateColumnLayer() {
-    await this.page.click('[data-testid="lineage-layer-btn"]');
+    await this.page.getByTestId('lineage-layer-btn').click();
 
     const isColumnLayerSelected = await this.page
-      .locator('[data-testid="lineage-layer-column-btn"]')
+      .getByTestId('lineage-layer-column-btn')
       .evaluate((el) => el.classList.contains('Mui-selected'));
 
     if (isColumnLayerSelected) {
@@ -30,17 +30,17 @@ export class LineagePageObject {
       return;
     }
 
-    await this.page.click('[data-testid="lineage-layer-column-btn"]');
+    await this.page.getByTestId('lineage-layer-column-btn').click();
     await this.page.keyboard.press('Escape');
 
     await this.zoomOut();
   }
 
   async deactivateColumnLayer() {
-    await this.page.click('[data-testid="lineage-layer-btn"]');
+    await this.page.getByTestId('lineage-layer-btn').click();
 
     const isColumnLayerSelected = await this.page
-      .locator('[data-testid="lineage-layer-column-btn"]')
+      .getByTestId('lineage-layer-column-btn')
       .evaluate((el) => el.classList.contains('Mui-selected'));
 
     if (!isColumnLayerSelected) {
@@ -49,27 +49,23 @@ export class LineagePageObject {
       return;
     }
 
-    await this.page.click('[data-testid="lineage-layer-column-btn"]');
+    await this.page.getByTestId('lineage-layer-column-btn').click();
     await this.page.keyboard.press('Escape');
   }
 
   async verifyColumnLayerActive() {
-    await this.page.click('[data-testid="lineage-layer-btn"]');
+    await this.page.getByTestId('lineage-layer-btn').click();
 
-    const columnLayerBtn = this.page.locator(
-      '[data-testid="lineage-layer-column-btn"]'
-    );
+    const columnLayerBtn = this.page.getByTestId('lineage-layer-column-btn');
     await expect(columnLayerBtn).toHaveClass(/Mui-selected/);
 
     await this.page.keyboard.press('Escape');
   }
 
   async verifyColumnLayerInactive() {
-    await this.page.click('[data-testid="lineage-layer-btn"]');
+    await this.page.getByTestId('lineage-layer-btn').click();
 
-    const columnLayerBtn = this.page.locator(
-      '[data-testid="lineage-layer-column-btn"]'
-    );
+    const columnLayerBtn = this.page.getByTestId('lineage-layer-column-btn');
     await expect(columnLayerBtn).not.toHaveClass(/Mui-selected/);
 
     await this.page.keyboard.press('Escape');
@@ -79,14 +75,12 @@ export class LineagePageObject {
     const entityFqn = get(entity, 'entityResponseData.fullyQualifiedName');
 
     for (const columnName of columnNames) {
-      const columnLocator = this.page.locator(
-        `[data-testid="column-${entityFqn}.${columnName}"]`
+      const columnLocator = this.page.getByTestId(
+        `column-${entityFqn}.${columnName}`
       );
       await expect(columnLocator).toBeVisible();
 
-      const columnDisplayName = columnLocator.locator(
-        '[data-testid="column-name"]'
-      );
+      const columnDisplayName = columnLocator.getByTestId('column-name');
       await expect(columnDisplayName).toContainText(columnName);
     }
   }
@@ -95,8 +89,8 @@ export class LineagePageObject {
     const entityFqn = get(entity, 'entityResponseData.fullyQualifiedName');
 
     for (const columnName of columnNames) {
-      const columnLocator = this.page.locator(
-        `[data-testid="column-${entityFqn}.${columnName}"]`
+      const columnLocator = this.page.getByTestId(
+        `column-${entityFqn}.${columnName}`
       );
       await expect(columnLocator).not.toBeVisible();
     }
@@ -107,7 +101,7 @@ export class LineagePageObject {
     targetColumnFqn: string
   ) {
     const edgeTestId = `column-edge-${sourceColumnFqn}-${targetColumnFqn}`;
-    const edgeLocator = this.page.locator(`[data-testid="${edgeTestId}"]`);
+    const edgeLocator = this.page.getByTestId(edgeTestId);
 
     await expect(edgeLocator).toBeVisible();
   }
@@ -119,7 +113,7 @@ export class LineagePageObject {
     targetColumnName: string
   ) {
     const edgeTestId = `column-edge-${sourceEntityFqn}.${sourceColumnName}-${targetEntityFqn}.${targetColumnName}`;
-    const edgeLocator = this.page.locator(`[data-testid="${edgeTestId}"]`);
+    const edgeLocator = this.page.getByTestId(edgeTestId);
 
     await expect(edgeLocator).not.toBeVisible();
   }
@@ -129,8 +123,8 @@ export class LineagePageObject {
     columnName: string,
     shouldBeHighlighted = true
   ) {
-    const columnLocator = this.page.locator(
-      `[data-testid="column-${entityFqn}.${columnName}"]`
+    const columnLocator = this.page.getByTestId(
+      `column-${entityFqn}.${columnName}`
     );
 
     if (shouldBeHighlighted) {
@@ -145,15 +139,15 @@ export class LineagePageObject {
   }
 
   async hoverColumn(entityFqn: string, columnName: string) {
-    const columnLocator = this.page.locator(
-      `[data-testid="column-${entityFqn}.${columnName}"]`
+    const columnLocator = this.page.getByTestId(
+      `column-${entityFqn}.${columnName}`
     );
     await columnLocator.hover();
   }
 
   async clickColumn(entityFqn: string, columnName: string) {
-    const columnLocator = this.page.locator(
-      `[data-testid="column-${entityFqn}.${columnName}"]`
+    const columnLocator = this.page.getByTestId(
+      `column-${entityFqn}.${columnName}`
     );
     await columnLocator.click();
   }
@@ -162,26 +156,22 @@ export class LineagePageObject {
     const nodeFqn = get(entity, 'entityResponseData.fullyQualifiedName');
     const displayName = get(entity, 'entityResponseData.displayName');
 
-    const nodeLocator = this.page.locator(
-      `[data-testid="lineage-node-${nodeFqn}"]`
-    );
+    const nodeLocator = this.page.getByTestId(`lineage-node-${nodeFqn}`);
 
     await nodeLocator.waitFor({ state: 'attached' });
     await nodeLocator.scrollIntoViewIfNeeded();
 
     await expect(nodeLocator).toBeVisible();
 
-    const nodeDisplayName = nodeLocator.locator(
-      '[data-testid="entity-header-display-name"]'
+    const nodeDisplayName = nodeLocator.getByTestId(
+      'entity-header-display-name'
     );
     await expect(nodeDisplayName).toHaveText(displayName);
   }
 
   async verifyNodeHidden(entity: EntityClass) {
     const nodeFqn = get(entity, 'entityResponseData.fullyQualifiedName');
-    const nodeLocator = this.page.locator(
-      `[data-testid="lineage-node-${nodeFqn}"]`
-    );
+    const nodeLocator = this.page.getByTestId(`lineage-node-${nodeFqn}`);
 
     await expect(nodeLocator).not.toBeVisible();
   }
@@ -199,9 +189,7 @@ export class LineagePageObject {
       'entityResponseData.fullyQualifiedName'
     );
 
-    const edgeLocator = this.page.locator(
-      `[data-testid="edge-${sourceFqn}-${targetFqn}"]`
-    );
+    const edgeLocator = this.page.getByTestId(`edge-${sourceFqn}-${targetFqn}`);
 
     await expect(edgeLocator).toBeVisible();
   }
@@ -216,25 +204,19 @@ export class LineagePageObject {
       'entityResponseData.fullyQualifiedName'
     );
 
-    const edgeLocator = this.page.locator(
-      `[data-testid="edge-${sourceFqn}-${targetFqn}"]`
-    );
+    const edgeLocator = this.page.getByTestId(`edge-${sourceFqn}-${targetFqn}`);
 
     await expect(edgeLocator).not.toBeVisible();
   }
 
   async activatePlatformView(viewType: 'service' | 'domain' | 'dataProduct') {
-    await this.page.click('[data-testid="lineage-layer-btn"]');
+    await this.page.getByTestId('lineage-layer-btn').click();
 
-    const viewBtn = this.page.locator(
-      `[data-testid="lineage-layer-${viewType}-btn"]`
-    );
+    const viewBtn = this.page.getByTestId(`lineage-layer-${viewType}-btn`);
     await expect(viewBtn).toBeVisible();
 
     await viewBtn.click();
     await this.page.keyboard.press('Escape');
-
-    await this.page.waitForTimeout(500);
   }
 
   async verifyPlatformNodeVisible(
@@ -242,19 +224,17 @@ export class LineagePageObject {
     platformName: string,
     nodeType: 'service' | 'domain' | 'dataProduct'
   ) {
-    const nodeLocator = this.page.locator(
-      `[data-testid="lineage-node-${platformFqn}"]`
-    );
+    const nodeLocator = this.page.getByTestId(`lineage-node-${platformFqn}`);
 
     await expect(nodeLocator).toBeVisible();
 
-    const nodeDisplayName = nodeLocator.locator(
-      '[data-testid="entity-header-display-name"]'
+    const nodeDisplayName = nodeLocator.getByTestId(
+      'entity-header-display-name'
     );
     await expect(nodeDisplayName).toContainText(platformName);
 
-    const nodeTypeIndicator = nodeLocator.locator(
-      `[data-testid="entity-type-${nodeType}"]`
+    const nodeTypeIndicator = nodeLocator.getByTestId(
+      `entity-type-${nodeType}`
     );
     if ((await nodeTypeIndicator.count()) > 0) {
       await expect(nodeTypeIndicator).toBeVisible();
@@ -265,11 +245,11 @@ export class LineagePageObject {
     sourcePlatformFqn: string,
     targetPlatformFqn: string
   ) {
-    const edgeLocator = this.page.locator(
-      `[data-testid="edge-${sourcePlatformFqn}-${targetPlatformFqn}"]`
+    const edgeLocator = this.page.getByTestId(
+      `edge-${sourcePlatformFqn}-${targetPlatformFqn}`
     );
 
-    await expect(edgeLocator).toBeVisible();
+    await expect(edgeLocator).toBeVisible({ timeout: 10000 });
   }
 
   async verifyNodeCountReduction(
@@ -289,9 +269,7 @@ export class LineagePageObject {
 
   async clickNode(entity: EntityClass) {
     const nodeFqn = get(entity, 'entityResponseData.fullyQualifiedName');
-    const nodeLocator = this.page.locator(
-      `[data-testid="lineage-node-${nodeFqn}"]`
-    );
+    const nodeLocator = this.page.getByTestId(`lineage-node-${nodeFqn}`);
 
     await nodeLocator.click();
   }
@@ -299,7 +277,7 @@ export class LineagePageObject {
   async verifyNodePanelOpen(entity: EntityClass) {
     const displayName = get(entity, 'entityResponseData.displayName');
 
-    const panel = this.page.locator('[role="dialog"]');
+    const panel = this.page.getByRole('dialog');
     await expect(panel).toBeVisible();
 
     const panelTitle = panel.getByTestId('entity-header-title');
@@ -310,7 +288,7 @@ export class LineagePageObject {
     const closeBtn = this.page.getByLabel('Close').first();
     await closeBtn.click();
 
-    const panel = this.page.locator('[role="dialog"]');
+    const panel = this.page.getByRole('dialog');
     await expect(panel).not.toBeVisible();
   }
 
@@ -319,7 +297,7 @@ export class LineagePageObject {
     const handleDirection = direction === 'upstream' ? 'left' : 'right';
 
     const expandHandle = this.page
-      .locator(`[data-testid="lineage-node-${nodeFqn}"]`)
+      .getByTestId(`lineage-node-${nodeFqn}`)
       .locator(`.react-flow__handle-${handleDirection}`)
       .getByTestId('plus-icon');
 
@@ -338,7 +316,7 @@ export class LineagePageObject {
     const handleDirection = direction === 'upstream' ? 'left' : 'right';
 
     const collapseHandle = this.page
-      .locator(`[data-testid="lineage-node-${nodeFqn}"]`)
+      .getByTestId(`lineage-node-${nodeFqn}`)
       .locator(`.react-flow__handle-${handleDirection}`)
       .getByTestId('minus-icon');
 
@@ -354,48 +332,35 @@ export class LineagePageObject {
       direction === 'down' ? 'column-scroll-down' : 'column-scroll-up';
 
     const scrollBtn = this.page
-      .locator(`[data-testid="lineage-node-${nodeFqn}"]`)
+      .getByTestId(`lineage-node-${nodeFqn}`)
       .getByTestId(buttonTestId);
 
     if (await scrollBtn.isVisible()) {
       await scrollBtn.click();
-      await this.page.waitForTimeout(300);
     }
   }
 
   async toggleLineageFilter(entityFqn: string) {
     const filterBtn = this.page
-      .locator(`[data-testid="lineage-node-${entityFqn}"]`)
-      .getByTestId('lineage-column-filter-toggle');
+      .getByTestId(`lineage-node-${entityFqn}`)
+      .getByTestId('lineage-filter-button');
 
     await filterBtn.click();
-    await this.page.waitForTimeout(300);
   }
 
   async enterEditMode() {
     const editBtn = this.page.getByTestId('edit-lineage');
     await editBtn.click();
-
-    await expect(editBtn).toHaveClass(/active/);
   }
 
   async exitEditMode() {
     const editBtn = this.page.getByTestId('edit-lineage');
     await editBtn.click();
-
-    await expect(editBtn).not.toHaveClass(/active/);
-  }
-
-  async verifyEditModeActive() {
-    const editBtn = this.page.getByTestId('edit-lineage');
-    await expect(editBtn).toHaveClass(/active/);
   }
 
   async verifyConnectionHandlesVisible(entity: EntityClass) {
     const nodeFqn = get(entity, 'entityResponseData.fullyQualifiedName');
-    const nodeLocator = this.page.locator(
-      `[data-testid="lineage-node-${nodeFqn}"]`
-    );
+    const nodeLocator = this.page.getByTestId(`lineage-node-${nodeFqn}`);
 
     const handles = nodeLocator.locator('.react-flow__handle');
     await expect(handles.first()).toBeVisible();

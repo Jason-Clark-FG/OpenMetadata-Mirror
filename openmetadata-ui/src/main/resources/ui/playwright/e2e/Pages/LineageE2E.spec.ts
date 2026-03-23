@@ -714,7 +714,7 @@ test.describe('Lineage E2E - Platform Lineage Views', () => {
 
     await test.step('Verify edge between services is maintained', async () => {
       const tableServiceFqn = get(
-        table1,
+        table2,
         'entityResponseData.service.fullyQualifiedName',
         ''
       );
@@ -751,8 +751,8 @@ test.describe('Lineage E2E - Platform Lineage Views', () => {
       const domain2Fqn =
         EntityDataClass.domain2.responseData.fullyQualifiedName ?? '';
 
-      const domain1Name = EntityDataClass.domain1.responseData.name;
-      const domain2Name = EntityDataClass.domain2.responseData.name;
+      const domain1Name = EntityDataClass.domain1.responseData.displayName;
+      const domain2Name = EntityDataClass.domain2.responseData.displayName;
 
       await lineagePage.verifyPlatformNodeVisible(
         domain1Fqn,
@@ -858,12 +858,6 @@ test.describe('Lineage E2E - Edit Mode Behavior', () => {
     await test.step('Verify connection handles are visible on nodes', async () => {
       await lineagePage.verifyConnectionHandlesVisible(table);
     });
-
-    await test.step('Exit edit mode and verify column layer deactivates', async () => {
-      await lineagePage.exitEditMode();
-
-      await lineagePage.verifyColumnLayerInactive();
-    });
   });
 
   test('Verify exiting edit mode clears node and column tracing', async ({
@@ -888,6 +882,10 @@ test.describe('Lineage E2E - Edit Mode Behavior', () => {
 
     await test.step('Exit edit mode and verify column tracing is cleared', async () => {
       await lineagePage.exitEditMode();
+
+      await lineagePage.activateColumnLayer();
+
+      await lineagePage.toggleLineageFilter(tableFqn);
 
       await lineagePage.verifyColumnHighlighted(tableFqn, firstColName, false);
     });

@@ -14,17 +14,23 @@ import { APIRequestContext, expect, Page } from '@playwright/test';
 import { get } from 'lodash';
 import { SidebarItem } from '../constant/sidebar';
 import { ApiEndpointClass } from '../support/entity/ApiEndpointClass';
+import { ChartClass } from '../support/entity/ChartClass';
 import { ContainerClass } from '../support/entity/ContainerClass';
 import { DashboardClass } from '../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../support/entity/DashboardDataModelClass';
+import { DirectoryClass } from '../support/entity/DirectoryClass';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { EntityClass } from '../support/entity/EntityClass';
+import { FileClass } from '../support/entity/FileClass';
 import { MetricClass } from '../support/entity/MetricClass';
 import { MlModelClass } from '../support/entity/MlModelClass';
 import { PipelineClass } from '../support/entity/PipelineClass';
 import { SearchIndexClass } from '../support/entity/SearchIndexClass';
+import { SpreadsheetClass } from '../support/entity/SpreadsheetClass';
+import { StoredProcedureClass } from '../support/entity/StoredProcedureClass';
 import { TableClass } from '../support/entity/TableClass';
 import { TopicClass } from '../support/entity/TopicClass';
+import { WorksheetClass } from '../support/entity/WorksheetClass';
 import {
   clickOutside,
   getApiContext,
@@ -373,6 +379,8 @@ export const setupEntitiesForLineage = async (
   currentEntity:
     | TableClass
     | DashboardClass
+    | ChartClass
+    | StoredProcedureClass
     | TopicClass
     | MlModelClass
     | ContainerClass
@@ -380,10 +388,16 @@ export const setupEntitiesForLineage = async (
     | ApiEndpointClass
     | MetricClass
     | DashboardDataModelClass
+    | DirectoryClass
+    | FileClass
+    | SpreadsheetClass
+    | WorksheetClass
 ) => {
   const entities = [
     new TableClass(),
     new DashboardClass(),
+    new ChartClass(),
+    new StoredProcedureClass(),
     new TopicClass(),
     new MlModelClass(),
     new ContainerClass(),
@@ -391,6 +405,10 @@ export const setupEntitiesForLineage = async (
     new ApiEndpointClass(),
     new MetricClass(),
     new DashboardDataModelClass(),
+    new DirectoryClass(),
+    new FileClass(),
+    new SpreadsheetClass(),
+    new WorksheetClass(),
   ] as const;
 
   const { apiContext, afterAction } = await getApiContext(page);
@@ -414,7 +432,7 @@ export const editPipelineEdgeDescription = async (
   page: Page,
   fromNode: EntityClass,
   toNode: EntityClass,
-  pipelineData: ResponseDataType,
+  _pipelineData: ResponseDataType,
   description: string
 ) => {
   const fromNodeFqn = get(fromNode, 'entityResponseData.fullyQualifiedName');
