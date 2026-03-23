@@ -78,6 +78,23 @@ public class SearchIndexApp extends AbstractNativeApplication {
   }
 
   @Override
+  public void uninstall() {
+    stop();
+    purgeSearchIndexTables();
+    super.uninstall();
+  }
+
+  private void purgeSearchIndexTables() {
+    String appId = getApp().getId().toString();
+    collectionDAO.searchIndexPartitionDAO().deleteAll();
+    collectionDAO.searchIndexServerStatsDAO().deleteAll();
+    collectionDAO.searchIndexFailureDAO().deleteAll();
+    collectionDAO.searchReindexLockDAO().delete("SEARCH_REINDEX_LOCK");
+    collectionDAO.searchIndexJobDAO().deleteAll();
+    collectionDAO.appExtensionTimeSeriesDao().deleteAllByAppId(appId);
+  }
+
+  @Override
   protected void validateConfig(Map<String, Object> appConfig) {
     try {
       JsonUtils.convertValue(appConfig, EventPublisherJob.class);

@@ -998,6 +998,11 @@ public class DistributedSearchIndexExecutor {
     if (stopped.compareAndSet(false, true)) {
       LOG.info("Stop requested for distributed executor");
 
+      // Interrupt lock-refresh and heartbeat threads first so they cannot flip
+      // the job back to RUNNING or extend the lock TTL after requestStop() is called.
+      interruptAndJoin(lockRefreshThread, "lock-refresh");
+      interruptAndJoin(partitionHeartbeatThread, "partition-heartbeat");
+
       // Stop all active workers
       synchronized (activeWorkers) {
         for (PartitionWorker worker : activeWorkers) {
