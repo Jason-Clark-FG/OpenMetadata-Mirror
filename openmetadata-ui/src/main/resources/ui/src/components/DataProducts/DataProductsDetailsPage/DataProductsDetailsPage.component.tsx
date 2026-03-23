@@ -17,7 +17,7 @@ import ButtonGroup from 'antd/lib/button/button-group';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
-import { cloneDeep, isEmpty, toLower, toString } from 'lodash';
+import { isEmpty, toLower, toString } from 'lodash';
 import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -485,9 +485,8 @@ const DataProductsDetailsPage = ({
   const onNameSave = async (obj: { name: string; displayName?: string }) => {
     if (dataProduct) {
       const { name, displayName } = obj;
-      let updatedDetails = cloneDeep(dataProduct);
 
-      updatedDetails = {
+      const updatedDetails = {
         ...dataProduct,
         displayName: displayName?.trim(),
         name: name?.trim(),
@@ -507,7 +506,7 @@ const DataProductsDetailsPage = ({
             { replace: true }
           );
         }
-      } catch (error) {
+      } catch {
         // Error is already handled by the parent component
       } finally {
         setIsNameEditing(false);
