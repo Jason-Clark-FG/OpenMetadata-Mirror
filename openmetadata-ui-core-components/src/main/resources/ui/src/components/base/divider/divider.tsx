@@ -16,7 +16,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 export type DividerOrientation = "horizontal" | "vertical";
 export type DividerLabelAlignment = "start" | "center" | "end";
 
-export interface DividerProps extends HTMLAttributes<HTMLDivElement> {
+export interface DividerProps extends HTMLAttributes<HTMLHRElement> {
   orientation?: DividerOrientation;
   label?: ReactNode;
   labelAlign?: DividerLabelAlignment;
