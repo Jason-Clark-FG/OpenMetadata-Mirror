@@ -125,7 +125,9 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
               key={filter.key}
               size="lg"
               type="color">
-              <div className="tw:flex tw:items-center tw:gap-1">
+              <div
+                className="tw:flex tw:items-center tw:gap-1"
+                data-testid={`filter-chip-${filter.key}`}>
                 <Typography className="tw:text-gray-600" weight="medium">
                   {t(filter.label)}
                   {': '}

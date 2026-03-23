@@ -43,9 +43,7 @@ export const usePageHeader = (config: PageHeaderConfig) => {
         <div className="tw:flex tw:items-center tw:justify-between">
           <div>
             <div className="tw:mb-0.5 tw:flex tw:items-center tw:gap-2">
-              <Typography size="text-xl" weight="bold">
-                {displayTitle}
-              </Typography>
+              <Typography as="h3">{displayTitle}</Typography>
               {config.learningPageId && (
                 <LearningIcon pageId={config.learningPageId} />
               )}
