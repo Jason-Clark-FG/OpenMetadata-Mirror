@@ -145,57 +145,64 @@ class TeradataUnitTest(TestCase):
 
 
 class TestTeradataColumnComments:
-    def test_get_columns_injects_comments(self, monkeypatch):
-        import metadata.ingestion.source.database.teradata.utils as teradata_utils
+    def test_get_columns_strips_whitespace_from_comments(self, monkeypatch):
         from metadata.ingestion.source.database.teradata.utils import get_columns
 
-        base_columns = [
-            {"name": "id", "type": MagicMock()},
-            {"name": "name", "type": MagicMock()},
+        mock_upstream_columns = [
+            {
+                "name": "id",
+                "type": MagicMock(),
+                "nullable": False,
+                "CommentString": "  Primary key  ",
+            },
+            {
+                "name": "name",
+                "type": MagicMock(),
+                "nullable": True,
+                "CommentString": "User name",
+            },
         ]
-        monkeypatch.setattr(
-            teradata_utils,
-            "_original_get_columns",
-            MagicMock(return_value=base_columns),
-        )
-
-        dialect_instance = MagicMock()
-        dialect_instance.all_column_comments = {
-            ("my_schema", "my_table", "id"): "Primary key",
-            ("my_schema", "my_table", "name"): None,
-        }
-        dialect_instance.current_db = "test_db"
-
-        mock_conn = MagicMock()
-        mock_conn.engine.url.database = "test_db"
+        mock_original = MagicMock(return_value=mock_upstream_columns)
+        monkeypatch.setattr(get_columns, "_original", mock_original)
 
         result = get_columns(
-            dialect_instance, mock_conn, "my_table", schema="my_schema"
+            MagicMock(), MagicMock(), "test_table", schema="test_schema"
         )
 
         assert result[0]["comment"] == "Primary key"
-        assert result[1]["comment"] is None
+        assert result[1]["comment"] == "User name"
 
-    def test_get_columns_handles_comment_query_failure(self, monkeypatch):
-        import metadata.ingestion.source.database.teradata.utils as teradata_utils
+    def test_get_columns_handles_null_and_empty_comments(self, monkeypatch):
         from metadata.ingestion.source.database.teradata.utils import get_columns
 
-        base_columns = [{"name": "col1", "type": MagicMock()}]
-        monkeypatch.setattr(
-            teradata_utils,
-            "_original_get_columns",
-            MagicMock(return_value=base_columns),
-        )
+        mock_upstream_columns = [
+            {"name": "col1", "type": MagicMock(), "CommentString": None},
+            {"name": "col2", "type": MagicMock(), "CommentString": "   "},
+            {"name": "col3", "type": MagicMock()},  # No CommentString key
+        ]
+        mock_original = MagicMock(return_value=mock_upstream_columns)
+        monkeypatch.setattr(get_columns, "_original", mock_original)
 
-        dialect_instance = MagicMock(spec=[])  # no attributes → hasattr checks fail
-        dialect_instance.get_all_column_comments = MagicMock(
-            side_effect=Exception("DB error")
-        )
-
-        mock_conn = MagicMock()
         result = get_columns(
-            dialect_instance, mock_conn, "my_table", schema="my_schema"
+            MagicMock(), MagicMock(), "test_table", schema="test_schema"
         )
 
-        assert len(result) == 1
-        assert result[0].get("comment") is None
+        assert result[0]["comment"] is None
+        assert result[1]["comment"] is None
+        assert result[2]["comment"] is None
+
+    def test_get_columns_handles_normalized_commentstring(self, monkeypatch):
+        from metadata.ingestion.source.database.teradata.utils import get_columns
+
+        # Test with normalized lowercase key (as upstream might normalize it)
+        mock_upstream_columns = [
+            {"name": "col1", "type": MagicMock(), "commentstring": "Lowercase comment"},
+        ]
+        mock_original = MagicMock(return_value=mock_upstream_columns)
+        monkeypatch.setattr(get_columns, "_original", mock_original)
+
+        result = get_columns(
+            MagicMock(), MagicMock(), "test_table", schema="test_schema"
+        )
+
+        assert result[0]["comment"] == "Lowercase comment"

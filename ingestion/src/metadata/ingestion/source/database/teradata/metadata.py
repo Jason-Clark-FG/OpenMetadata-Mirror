@@ -18,7 +18,6 @@ from typing import Iterable, Optional
 from sqlalchemy import text
 from teradatasqlalchemy.dialect import TeradataDialect
 
-import metadata.ingestion.source.database.teradata.utils as teradata_utils
 from metadata.generated.schema.api.data.createStoredProcedure import (
     CreateStoredProcedureRequest,
 )
@@ -52,18 +51,14 @@ from metadata.ingestion.source.database.teradata.utils import (
 )
 from metadata.utils import fqn
 from metadata.utils.logger import ingestion_logger
-from metadata.utils.sqlalchemy_utils import (
-    get_all_column_comments,
-    get_all_table_comments,
-)
+from metadata.utils.sqlalchemy_utils import get_all_table_comments
 
 logger = ingestion_logger()
 
+get_columns._original = TeradataDialect.get_columns  # pylint: disable=protected-access
+TeradataDialect.get_columns = get_columns
 TeradataDialect.get_table_comment = get_table_comment
 TeradataDialect.get_all_table_comments = get_all_table_comments
-TeradataDialect.get_all_column_comments = get_all_column_comments
-teradata_utils._original_get_columns = TeradataDialect.get_columns
-TeradataDialect.get_columns = get_columns
 
 
 class TeradataSource(CommonDbSourceService):

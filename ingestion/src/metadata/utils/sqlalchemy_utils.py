@@ -51,36 +51,6 @@ def get_table_comment_wrapper(self, connection, query, table_name, schema=None):
 
 
 @reflection.cache
-def get_all_column_comments(self, connection, query):
-    """
-    Method to fetch comments of all available columns
-    """
-    self.all_column_comments: Dict[Tuple[str, str, str], Optional[str]] = {}
-    self.current_db: str = connection.engine.url.database
-    result = connection.execute(text(query) if isinstance(query, str) else query)
-    for col in result:
-        col_dict = {k.lower(): v for k, v in dict(col._mapping).items()}
-        self.all_column_comments[
-            (
-                col_dict["schema"],
-                col_dict["table_name"],
-                col_dict["column_name"].strip(),
-            )
-        ] = col_dict["column_comment"]
-
-
-def get_column_comment_wrapper(
-    self, connection, query, table_name, column_name, schema=None
-):
-    if (
-        not hasattr(self, "all_column_comments")
-        or self.current_db != connection.engine.url.database
-    ):
-        self.get_all_column_comments(connection, query)
-    return self.all_column_comments.get((schema, table_name, column_name))
-
-
-@reflection.cache
 def get_all_table_owners(
     self, connection, query, schema_name, **kw
 ):  # pylint: disable=unused-argument

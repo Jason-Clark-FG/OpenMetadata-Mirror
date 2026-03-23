@@ -26,16 +26,6 @@ TERADATA_TABLE_COMMENTS = """
     ORDER BY "schema", "table_name"
 """
 
-TERADATA_ALL_COLUMN_COMMENTS = """
-    SELECT DatabaseName as schema,
-           TableName as table_name,
-           ColumnName as column_name,
-           CommentString as column_comment
-    FROM DBC.ColumnsV
-    WHERE CommentString IS NOT NULL
-      AND TRIM(CommentString) <> ''
-"""
-
 TERADATA_GET_STORED_PROCEDURES = """
 SELECT  T.DatabaseName AS database_schema,
         T.TableName AS procedure_name,
