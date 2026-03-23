@@ -64,6 +64,7 @@ export { Popover as SelectPopover } from "./base/select/popover";
 export * from "./base/select/select-item";
 export * from "./base/select/select-native";
 export * from "./base/form/form";
+export * from "./base/box/box";
 export * from "./base/card/card";
 export * from "./base/divider/divider";
 export * from "./base/grid/grid";

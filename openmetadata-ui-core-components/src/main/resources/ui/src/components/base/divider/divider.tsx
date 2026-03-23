@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import type { HTMLAttributes, ReactNode } from "react";
-import { cx } from "@/utils/cx";
+import { cx } from '@/utils/cx';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 export type DividerOrientation = "horizontal" | "vertical";
 export type DividerLabelAlignment = "start" | "center" | "end";
@@ -31,12 +31,11 @@ export const Divider = ({
 }: DividerProps) => {
   if (orientation === "vertical") {
     return (
-      <div
+      <hr
         {...props}
-        role="separator"
         aria-orientation="vertical"
         className={cx(
-          "tw:self-stretch tw:w-px tw:shrink-0 tw:bg-border-secondary",
+          'tw:self-stretch tw:w-px tw:shrink-0 tw:bg-border-secondary',
           className,
         )}
       />
@@ -45,12 +44,11 @@ export const Divider = ({
 
   if (!label) {
     return (
-      <div
+      <hr
         {...props}
-        role="separator"
         aria-orientation="horizontal"
         className={cx(
-          "tw:w-full tw:h-px tw:shrink-0 tw:bg-border-secondary",
+          'tw:w-full tw:h-px tw:shrink-0 tw:bg-border-secondary',
           className,
         )}
       />
