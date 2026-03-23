@@ -1,8 +1,10 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.manualTask.impl;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
@@ -83,32 +85,45 @@ public class SetupImpl {
   @SuppressWarnings("unchecked")
   private static List<EntityReference> resolveAssignees(
       EntityInterface entity, Map<String, Object> assigneesConfig) {
-    List<EntityReference> assignees = new ArrayList<>();
-
     boolean addOwners = true;
     boolean addReviewers = false;
     List<String> specificUsers = List.of();
 
     if (assigneesConfig != null) {
-      addOwners = (boolean) assigneesConfig.getOrDefault("addOwners", true);
-      addReviewers = (boolean) assigneesConfig.getOrDefault("addReviewers", false);
+      addOwners = Boolean.TRUE.equals(assigneesConfig.getOrDefault("addOwners", true));
+      addReviewers = Boolean.TRUE.equals(assigneesConfig.getOrDefault("addReviewers", false));
       Object specific = assigneesConfig.get("specificUsers");
       if (specific instanceof List<?> list) {
         specificUsers = (List<String>) list;
       }
     }
 
+    Set<UUID> seen = new LinkedHashSet<>();
+    List<EntityReference> assignees = new ArrayList<>();
+
     if (addOwners && entity.getOwners() != null) {
-      assignees.addAll(entity.getOwners());
+      for (EntityReference ref : entity.getOwners()) {
+        if (seen.add(ref.getId())) {
+          assignees.add(ref);
+        }
+      }
     }
 
     if (addReviewers && entity.getReviewers() != null) {
-      assignees.addAll(entity.getReviewers());
+      for (EntityReference ref : entity.getReviewers()) {
+        if (seen.add(ref.getId())) {
+          assignees.add(ref);
+        }
+      }
     }
 
     for (String userFqn : specificUsers) {
       try {
-        assignees.add(Entity.getEntityReferenceByName(Entity.USER, userFqn, Include.NON_DELETED));
+        EntityReference ref =
+            Entity.getEntityReferenceByName(Entity.USER, userFqn, Include.NON_DELETED);
+        if (seen.add(ref.getId())) {
+          assignees.add(ref);
+        }
       } catch (Exception e) {
         LOG.warn(
             "[ManualTask.SetupImpl] Could not resolve specific user '{}': {}",
