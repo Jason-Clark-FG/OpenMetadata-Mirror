@@ -116,7 +116,7 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       }
     });
 
-    test.describe('Trigger permissions', () => {
+    test.describe('Allow Trigger permissions', () => {
       test.beforeAll(
         'Initialize Allow Trigger permissions',
         async ({ browser }) => {
@@ -130,9 +130,12 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       test('AutoPilot trigger button is visible with Trigger permission', async ({
         testUserPage,
       }) => {
-        test.slow();
         await entity.visitEntityPage(testUserPage);
         await waitForAllLoadersToDisappear(testUserPage);
+        await expect(
+          testUserPage.getByTestId('entity-header-name')
+        ).toBeVisible();
+        await expect(testUserPage.getByTestId('insights')).toBeVisible();
 
         await expect(
           testUserPage.getByTestId('trigger-auto-pilot-application-button')
@@ -154,9 +157,12 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       test('AutoPilot trigger button is hidden with view-only permission', async ({
         testUserPage,
       }) => {
-        test.slow();
         await entity.visitEntityPage(testUserPage);
         await waitForAllLoadersToDisappear(testUserPage);
+        await expect(
+          testUserPage.getByTestId('entity-header-name')
+        ).toBeVisible();
+        await expect(testUserPage.getByTestId('insights')).toBeVisible();
 
         await expect(
           testUserPage.getByTestId('trigger-auto-pilot-application-button')
@@ -181,6 +187,10 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
         test.slow();
         await entity.visitEntityPage(testUserPage);
         await waitForAllLoadersToDisappear(testUserPage);
+        await expect(
+          testUserPage.getByTestId('entity-header-name')
+        ).toBeVisible();
+        await expect(testUserPage.getByTestId('insights')).toBeVisible();
 
         await expect(
           testUserPage.getByTestId('trigger-auto-pilot-application-button')
