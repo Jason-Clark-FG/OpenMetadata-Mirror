@@ -1,7 +1,7 @@
 export const CircleProgressBar = (props: {
   value: number;
-  min?: 0;
-  max?: 100;
+  min?: number;
+  max?: number;
 }) => {
   const { value, min = 0, max = 100 } = props;
   const percentage = ((value - min) * 100) / (max - min);

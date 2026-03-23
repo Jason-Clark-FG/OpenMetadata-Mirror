@@ -21,12 +21,13 @@ export const NativeSelect = ({
 }: NativeSelectProps) => {
   const id = useId();
   const selectId = `select-native-${id}`;
+  const labelId = `select-native-label-${id}`;
   const hintId = `select-native-hint-${id}`;
 
   return (
     <div className={cx('tw:w-full tw:in-data-input-wrapper:w-max', className)}>
       {label && (
-        <Label className="tw:mb-1.5" htmlFor={selectId} id={selectId}>
+        <Label className="tw:mb-1.5" htmlFor={selectId} id={labelId}>
           {label}
         </Label>
       )}
@@ -35,7 +36,7 @@ export const NativeSelect = ({
         <select
           {...props}
           aria-describedby={hintId}
-          aria-labelledby={selectId}
+          aria-labelledby={labelId}
           className={cx(
             'tw:appearance-none tw:rounded-lg tw:bg-primary tw:px-3.5 tw:py-2.5 tw:text-md tw:font-medium tw:text-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset tw:placeholder:text-fg-quaternary tw:focus-visible:ring-2 tw:focus-visible:ring-brand tw:disabled:cursor-not-allowed tw:disabled:bg-disabled_subtle tw:disabled:text-disabled',
             // Styles when the select is within an `InputGroup`

@@ -36,20 +36,21 @@ interface FormFieldContextValues<
   control?: UseControllerReturn<TFieldValues, TName>;
 }
 
-const FormFieldContext = createContext<FormFieldContextValues>(
-  {} as FormFieldContextValues
+const FormFieldContext = createContext<FormFieldContextValues | undefined>(
+  undefined
 );
 
 export const useFormFieldContext = () => {
   const context = useContext(FormFieldContext);
-  const { getFieldState, formState } = useFormContext();
-  const fieldState = getFieldState(context.name, formState);
 
   if (!context) {
     throw new Error(
-      "The 'useFormContext' hook must be used within a '<FormField />'"
+      "The 'useFormFieldContext' hook must be used within a '<FormField />'"
     );
   }
+
+  const { getFieldState, formState } = useFormContext();
+  const fieldState = getFieldState(context.name, formState);
 
   return { ...context, ...fieldState };
 };
