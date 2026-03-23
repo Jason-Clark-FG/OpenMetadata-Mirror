@@ -7392,7 +7392,7 @@ public interface CollectionDAO {
 
     @ConnectionAwareSqlUpdate(
         value =
-            "UPDATE test_case SET json = JSON_REMOVE(json, '$.dataContract') WHERE id = :id AND JSON_EXTRACT(json, '$.dataContract.id') = :dataContractId",
+            "UPDATE test_case SET json = JSON_REMOVE(json, '$.dataContract') WHERE id = :id AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.dataContract.id')) = :dataContractId",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =

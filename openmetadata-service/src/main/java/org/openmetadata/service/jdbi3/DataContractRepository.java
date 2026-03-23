@@ -1366,9 +1366,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
         .withPassed(existingValidation.getPassed() + (testSummary.size() - failedTests.size()));
 
     existingValidation.withQualityScore(
-        (((existingValidation.getPassed() - existingValidation.getFailed())
-                / (double) existingValidation.getTotal()))
-            * 100);
+        (existingValidation.getPassed() / (double) existingValidation.getTotal()) * 100);
 
     return existingValidation;
   }
