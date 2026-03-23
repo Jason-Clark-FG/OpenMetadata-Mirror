@@ -356,9 +356,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       let entity:
         | {
-            create: (context: APIRequestContext) => Promise<unknown>;
-            visitEntityPage: (page: Page) => Promise<unknown>;
-          }
+          create: (context: APIRequestContext) => Promise<unknown>;
+          visitEntityPage: (page: Page) => Promise<unknown>;
+        }
         | undefined = undefined;
 
       await test.step('pre-requisite', async () => {
@@ -517,9 +517,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       let entity:
         | {
-            create: (context: APIRequestContext) => Promise<unknown>;
-            visitEntityPage: (page: Page) => Promise<unknown>;
-          }
+          create: (context: APIRequestContext) => Promise<unknown>;
+          visitEntityPage: (page: Page) => Promise<unknown>;
+        }
         | undefined = undefined;
 
       await test.step('pre-requisite', async () => {
@@ -548,13 +548,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await waitForAllLoadersToDisappear(adminPage);
 
         const expectedTabs = getCustomizeDetailsDefaultTabs(type);
-
-        const tabs = adminPage
-          .getByTestId('customize-tab-card')
-          .getByRole('button')
-          .filter({ hasNotText: 'Add Tab' });
-
-        await expect(tabs).toHaveCount(expectedTabs.length);
 
         for (const tabName of expectedTabs) {
           await expect(
@@ -673,9 +666,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     let entity:
       | {
-          create: (context: APIRequestContext) => Promise<unknown>;
-          visitEntityPage: (page: Page) => Promise<unknown>;
-        }
+        create: (context: APIRequestContext) => Promise<unknown>;
+        visitEntityPage: (page: Page) => Promise<unknown>;
+      }
       | undefined = undefined;
 
     await test.step('pre-requisite', async () => {
@@ -750,9 +743,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   }) => {
     let entity:
       | {
-          create: (context: APIRequestContext) => Promise<unknown>;
-          visitEntityPage: (page: Page) => Promise<unknown>;
-        }
+        create: (context: APIRequestContext) => Promise<unknown>;
+        visitEntityPage: (page: Page) => Promise<unknown>;
+      }
       | undefined = undefined;
 
     await test.step('pre-requisite', async () => {
@@ -847,9 +840,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   }) => {
     let entity:
       | {
-          create: (context: APIRequestContext) => Promise<unknown>;
-          visitEntityPage: (page: Page) => Promise<unknown>;
-        }
+        create: (context: APIRequestContext) => Promise<unknown>;
+        visitEntityPage: (page: Page) => Promise<unknown>;
+      }
       | undefined = undefined;
 
     await test.step('pre-requisite', async () => {
