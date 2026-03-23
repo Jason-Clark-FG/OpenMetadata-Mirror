@@ -502,10 +502,14 @@ public class FeedRepository {
     Thread thread = threadContext.getThread();
     if (thread.getType() == ThreadType.Task) {
       validateAssignee(thread);
+      validateTaskDetails(thread);
       thread.getTask().withId(getNextTaskId());
     } else if (thread.getType() == ThreadType.Announcement) {
       // Validate start and end time for announcement
       validateAnnouncement(thread);
+    } else if (thread.getTask() != null) {
+      throw new IllegalArgumentException(
+          "taskDetails can only be provided for threads of type Task");
     }
     store(threadContext);
     storeRelationships(threadContext);
@@ -1186,6 +1190,26 @@ public class FeedRepository {
     return LocalDateTime.ofEpochSecond(seconds, 0, ZoneOffset.UTC)
         .toInstant(ZoneOffset.UTC)
         .toEpochMilli();
+  }
+
+  private void validateTaskDetails(Thread thread) {
+    TaskDetails task = thread.getTask();
+    if (task == null) {
+      throw new IllegalArgumentException("taskDetails is required for threads of type Task");
+    }
+    TaskType taskType = task.getType();
+    if (TaskType.RequestTag.equals(taskType) || TaskType.UpdateTag.equals(taskType)) {
+      String suggestion = task.getSuggestion();
+      String oldValue = task.getOldValue();
+      if (suggestion != null && !JsonUtils.isValidJson(suggestion)) {
+        throw new IllegalArgumentException(
+            "taskDetails.suggestion must be a valid JSON for task type " + taskType);
+      }
+      if (oldValue != null && !JsonUtils.isValidJson(oldValue)) {
+        throw new IllegalArgumentException(
+            "taskDetails.oldValue must be a valid JSON for task type " + taskType);
+      }
+    }
   }
 
   private void validateAssignee(Thread thread) {

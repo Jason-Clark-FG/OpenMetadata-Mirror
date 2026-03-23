@@ -50,6 +50,30 @@ const TagsTask: FC<TagsTaskProps> = ({
 
   const isTaskClosed = task?.status === ThreadTaskStatus.Closed;
 
+  const parsedOldValue = useMemo<TagLabel[]>(() => {
+    try {
+      return JSON.parse(oldValue ?? '[]');
+    } catch {
+      return [];
+    }
+  }, [oldValue]);
+
+  const parsedNewValue = useMemo<TagLabel[]>(() => {
+    try {
+      return JSON.parse(newValue ?? '[]');
+    } catch {
+      return [];
+    }
+  }, [newValue]);
+
+  const parsedSuggestion = useMemo<TagLabel[]>(() => {
+    try {
+      return JSON.parse(suggestion ?? '[]');
+    } catch {
+      return [];
+    }
+  }, [suggestion]);
+
   const diffView = useMemo(() => {
     if (!oldValue && !newValue) {
       return (
@@ -61,15 +85,10 @@ const TagsTask: FC<TagsTaskProps> = ({
       );
     } else {
       return (
-        <TagsDiffView
-          diffArr={diffArrays(
-            JSON.parse(oldValue ?? '[]'),
-            JSON.parse(newValue ?? '[]')
-          )}
-        />
+        <TagsDiffView diffArr={diffArrays(parsedOldValue, parsedNewValue)} />
       );
     }
-  }, [oldValue, newValue]);
+  }, [oldValue, newValue, parsedOldValue, parsedNewValue]);
 
   /**
    *
@@ -87,14 +106,11 @@ const TagsTask: FC<TagsTaskProps> = ({
     } else {
       return (
         <TagsDiffView
-          diffArr={diffArrays(
-            JSON.parse(oldValue ?? '[]'),
-            JSON.parse(suggestion ?? '[]')
-          )}
+          diffArr={diffArrays(parsedOldValue, parsedSuggestion)}
         />
       );
     }
-  }, [suggestion, oldValue]);
+  }, [suggestion, oldValue, parsedOldValue, parsedSuggestion]);
 
   return (
     <div data-testid="task-tags-tabs">
@@ -116,7 +132,7 @@ const TagsTask: FC<TagsTaskProps> = ({
               <div data-testid="update-tags">
                 {isTaskActionEdit && hasEditAccess ? (
                   <TagsTabs
-                    tags={JSON.parse(oldValue ?? '[]')}
+                    tags={parsedOldValue}
                     value={value ?? []}
                     onChange={onChange}
                   />
