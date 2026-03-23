@@ -94,9 +94,7 @@ from metadata.ingestion.source.database.redshift.utils import (
     get_view_definition,
 )
 from metadata.utils import fqn
-from metadata.utils.execution_time_tracker import (
-    calculate_execution_time_generator,
-)
+from metadata.utils.execution_time_tracker import calculate_execution_time_generator
 from metadata.utils.filters import filter_by_database
 from metadata.utils.helpers import clean_up_starting_ending_double_quotes_in_string
 from metadata.utils.logger import ingestion_logger
