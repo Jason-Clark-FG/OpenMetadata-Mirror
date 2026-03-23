@@ -9,9 +9,6 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -39,9 +36,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   private static final CopyOnWriteArrayList<ThreadPrefixBinding> threadPrefixBindings =
       new CopyOnWriteArrayList<>();
-
-  private static final DateTimeFormatter FORMATTER =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").withZone(ZoneId.of("UTC"));
 
   private static String logDirectory = "./logs/app-runs";
   private static int maxLinesPerRun = 100_000;
@@ -74,31 +68,25 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   }
 
   static String formatLine(ILoggingEvent event) {
-    String timestamp = FORMATTER.format(Instant.ofEpochMilli(event.getTimeStamp()));
     return String.format(
-        "%-5s [%s] [%s] %s - %s",
+        "{\"timestamp\":%d,\"level\":\"%s\",\"thread\":\"%s\",\"logger\":\"%s\",\"message\":\"%s\"}",
+        event.getTimeStamp(),
         event.getLevel(),
-        timestamp,
-        event.getThreadName(),
-        abbreviateLoggerName(event.getLoggerName(), 5),
-        event.getFormattedMessage());
+        escapeJson(event.getThreadName()),
+        escapeJson(event.getLoggerName()),
+        escapeJson(event.getFormattedMessage()));
   }
 
-  static String abbreviateLoggerName(String loggerName, int targetLength) {
-    if (loggerName == null || loggerName.length() <= targetLength) {
-      return loggerName;
+  private static String escapeJson(String value) {
+    if (value == null) {
+      return "";
     }
-    String[] parts = loggerName.split("\\.");
-    if (parts.length <= 1) {
-      return loggerName;
-    }
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < parts.length - 1; i++) {
-      if (parts[i].isEmpty()) continue;
-      sb.append(parts[i].charAt(0)).append('.');
-    }
-    sb.append(parts[parts.length - 1]);
-    return sb.toString();
+    return value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t");
   }
 
   private static final String APPENDER_NAME = "APP_RUN_LOG";

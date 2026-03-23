@@ -190,28 +190,29 @@ class AppRunLogAppenderTest {
   }
 
   @Test
-  void formatLineMatchesExpectedPattern() {
+  void formatLineProducesJsonMatchingDropwizardLayout() {
     LoggingEvent event = createEvent("reindex started", Map.of());
     event.setLoggerName("org.openmetadata.service.apps.bundles.searchIndex.SearchIndexExecutor");
+    event.setTimeStamp(1774260643332L);
     String line = AppRunLogAppender.formatLine(event);
-    // Format: LEVEL [ISO8601-UTC] [thread] abbreviated.logger - message
-    assertTrue(line.startsWith("INFO "), "should start with level");
-    assertTrue(line.contains("[test-thread]"), "should contain thread name in brackets");
-    assertTrue(line.contains("o.o.s.a.b.s.SearchIndexExecutor"), "logger should be abbreviated");
-    assertTrue(line.endsWith("- reindex started"), "should end with message");
+    assertTrue(line.startsWith("{\"timestamp\":1774260643332,"), "should start with timestamp");
+    assertTrue(line.contains("\"level\":\"INFO\""), "should contain level");
+    assertTrue(line.contains("\"thread\":\"test-thread\""), "should contain thread");
+    assertTrue(
+        line.contains(
+            "\"logger\":\"org.openmetadata.service.apps.bundles.searchIndex.SearchIndexExecutor\""),
+        "should contain full logger name");
+    assertTrue(line.contains("\"message\":\"reindex started\""), "should contain message");
+    assertTrue(line.endsWith("}"), "should be valid JSON object");
   }
 
   @Test
-  void abbreviateLoggerNameShortensPackages() {
-    assertEquals(
-        "o.o.s.a.ClassName",
-        AppRunLogAppender.abbreviateLoggerName("org.openmetadata.service.apps.ClassName", 5));
-    assertEquals("Simple", AppRunLogAppender.abbreviateLoggerName("Simple", 5));
-    assertEquals(null, AppRunLogAppender.abbreviateLoggerName(null, 5));
-    assertEquals(
-        "o.s.Foo",
-        AppRunLogAppender.abbreviateLoggerName("org..service.Foo", 5),
-        "consecutive dots should not crash");
+  void formatLineEscapesSpecialCharacters() {
+    LoggingEvent event = createEvent("line1\nline2\ttab \"quoted\"", Map.of());
+    String line = AppRunLogAppender.formatLine(event);
+    assertTrue(line.contains("\\n"), "newlines should be escaped");
+    assertTrue(line.contains("\\t"), "tabs should be escaped");
+    assertTrue(line.contains("\\\"quoted\\\""), "quotes should be escaped");
   }
 
   private LoggingEvent createEvent(String message, Map<String, String> mdc) {
