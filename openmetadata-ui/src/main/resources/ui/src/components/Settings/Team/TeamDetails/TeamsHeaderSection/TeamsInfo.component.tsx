@@ -15,6 +15,7 @@ import {
   CloseOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
+import { Typography as CoreTypography } from '@openmetadata/ui-core-components';
 import { Button, Divider, Form, Input, Space, Tooltip, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, last } from 'lodash';
@@ -370,9 +371,9 @@ const TeamsInfo = ({
                 {getEntityName(currentTeam.defaultPersona)}
               </Link>
             ) : (
-              <Typography.Text className="tw:text-sm tw:font-medium tw:text-gray-700">
+              <CoreTypography className="tw:text-gray-700" weight="medium">
                 {t('message.no-persona-assigned')}
-              </Typography.Text>
+              </CoreTypography>
             )}
           </div>
         </Space>
