@@ -766,8 +766,9 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323
         with:
+          path: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
           files: |
-            openmetadata-ui-core-components/src/main/resources/ui/src/**/*.{ts,tsx}
+            src/**/*.{ts,tsx}
 
       - name: ESLint + Prettier (core-components)
         id: lint
@@ -777,6 +778,7 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.added_modified_files }}
         run: |
           if [ -z "$CHANGED_FILES" ]; then
+            echo "No added or modified files to process."
             exit 0
           fi
           yarn lint:base --fix $CHANGED_FILES
