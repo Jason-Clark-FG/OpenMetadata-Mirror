@@ -20,6 +20,22 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
+  argTypes: {
+    variant: {
+      control: false,
+      table: { type: { summary: '"default" | "elevated" | "outlined" | "ghost"' } },
+    },
+    color: {
+      control: false,
+      table: { type: { summary: '"default" | "brand" | "error" | "warning" | "success"' } },
+    },
+    size: {
+      control: false,
+      table: { type: { summary: '"sm" | "md" | "lg"' } },
+    },
+    isClickable: { control: false, table: { type: { summary: "boolean" } } },
+    isSelected: { control: false, table: { type: { summary: "boolean" } } },
+  },
 } satisfies Meta<typeof Card>;
 
 export default meta;
@@ -78,5 +94,184 @@ export const CustomWidth: Story = {
         </p>
       </div>
     </Card>
+  ),
+};
+
+export const WithSubComponents: StoryObj = {
+  render: () => (
+    <div style={{ width: 360 }}>
+      <Card>
+        <Card.Header
+          title="Dataset: orders"
+          subtitle="Last updated 2 hours ago"
+          extra={
+            <button
+              className="tw:rounded-md tw:bg-secondary tw:px-2 tw:py-1 tw:text-xs tw:font-medium tw:text-secondary tw:cursor-pointer"
+              type="button"
+            >
+              Edit
+            </button>
+          }
+        />
+        <Card.Content>
+          <p className="tw:text-sm tw:text-secondary">
+            This card uses the composed sub-component API — Card.Header,
+            Card.Content, and Card.Footer — each receiving padding from the
+            shared size context.
+          </p>
+        </Card.Content>
+        <Card.Footer>
+          <p className="tw:text-xs tw:text-tertiary">3 columns · 1.2M rows</p>
+        </Card.Footer>
+      </Card>
+    </div>
+  ),
+};
+
+export const Variants: StoryObj = {
+  render: () => (
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      {(["default", "elevated", "outlined", "ghost"] as const).map((variant) => (
+        <div key={variant} style={{ width: 200 }}>
+          <Card variant={variant}>
+            <Card.Header title={variant} subtitle="variant" />
+            <Card.Content>
+              <p className="tw:text-sm tw:text-secondary">
+                Card with variant="{variant}"
+              </p>
+            </Card.Content>
+          </Card>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const Colors: StoryObj = {
+  render: () => (
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      {(["default", "brand", "error", "warning", "success"] as const).map((color) => (
+        <div key={color} style={{ width: 180 }}>
+          <Card color={color}>
+            <Card.Header title={color} subtitle="color" />
+            <Card.Content>
+              <p className="tw:text-sm tw:text-secondary">color="{color}"</p>
+            </Card.Content>
+          </Card>
+        </div>
+      ))}
+    </div>
+  ),
+};
+
+export const Sizes: StoryObj = {
+  render: () => (
+    <div style={{ width: 360, display: "flex", flexDirection: "column", gap: 16 }}>
+      {(["sm", "md", "lg"] as const).map((size) => (
+        <Card key={size} size={size}>
+          <Card.Header title={`size="${size}"`} subtitle="Padding scales with size" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">
+              Body content with size="{size}" padding.
+            </p>
+          </Card.Content>
+          <Card.Footer>
+            <p className="tw:text-xs tw:text-tertiary">Footer · size="{size}"</p>
+          </Card.Footer>
+        </Card>
+      ))}
+    </div>
+  ),
+};
+
+export const Clickable: StoryObj = {
+  render: () => (
+    <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ width: 240 }}>
+        <Card>
+          <Card.Header title="Not clickable" subtitle="isClickable=false (default)" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">
+              No cursor change or hover effect.
+            </p>
+          </Card.Content>
+        </Card>
+      </div>
+      <div style={{ width: 240 }}>
+        <Card isClickable>
+          <Card.Header title="Clickable" subtitle="isClickable=true" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">
+              Cursor pointer and hover background applied.
+            </p>
+          </Card.Content>
+        </Card>
+      </div>
+    </div>
+  ),
+};
+
+export const Selected: StoryObj = {
+  render: () => (
+    <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+      <div style={{ width: 200 }}>
+        <Card>
+          <Card.Header title="Not selected" subtitle="isSelected=false" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">Default ring.</p>
+          </Card.Content>
+        </Card>
+      </div>
+      <div style={{ width: 200 }}>
+        <Card isSelected>
+          <Card.Header title="Selected" subtitle="isSelected=true" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">Brand ring applied.</p>
+          </Card.Content>
+        </Card>
+      </div>
+      <div style={{ width: 200 }}>
+        <Card isSelected isClickable variant="elevated">
+          <Card.Header title="Selected + Clickable" subtitle="elevated" />
+          <Card.Content>
+            <p className="tw:text-sm tw:text-secondary">Brand ring + hover shadow.</p>
+          </Card.Content>
+        </Card>
+      </div>
+    </div>
+  ),
+};
+
+export const CardWithAllProps: StoryObj = {
+  render: () => (
+    <div style={{ width: 360 }}>
+      <Card
+        variant="elevated"
+        color="brand"
+        size="lg"
+        isClickable
+        isSelected
+      >
+        <Card.Header
+          title="All props combined"
+          subtitle="variant=elevated · color=brand · size=lg"
+          extra={
+            <span className="tw:rounded-full tw:bg-utility-brand-100 tw:px-2 tw:py-0.5 tw:text-xs tw:font-medium tw:text-utility-brand-700">
+              Active
+            </span>
+          }
+        />
+        <Card.Content>
+          <p className="tw:text-sm tw:text-secondary">
+            This card combines isClickable, isSelected, elevated variant, brand
+            color, and lg size — a comprehensive visual test of all props
+            coexisting.
+          </p>
+        </Card.Content>
+        <Card.Footer>
+          <p className="tw:text-xs tw:text-tertiary">Footer content</p>
+        </Card.Footer>
+      </Card>
+    </div>
   ),
 };

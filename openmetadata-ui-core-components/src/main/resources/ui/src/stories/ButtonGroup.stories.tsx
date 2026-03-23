@@ -21,6 +21,12 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
+  argTypes: {
+    size: {
+      control: false,
+      table: { type: { summary: '"sm" | "md" | "lg"' } },
+    },
+  },
 } satisfies Meta<typeof ButtonGroup>;
 
 export default meta;
@@ -84,6 +90,16 @@ export const WithDisabled: StoryObj = {
       <ButtonGroupItem id="opt1">Option 1</ButtonGroupItem>
       <ButtonGroupItem id="opt2" isDisabled>Disabled</ButtonGroupItem>
       <ButtonGroupItem id="opt3">Option 3</ButtonGroupItem>
+    </ButtonGroup>
+  ),
+};
+
+export const WithTrailingIcon: StoryObj = {
+  render: () => (
+    <ButtonGroup>
+      <ButtonGroupItem id="edit" iconTrailing={Edit01}>Edit</ButtonGroupItem>
+      <ButtonGroupItem id="settings" iconTrailing={Settings01}>Settings</ButtonGroupItem>
+      <ButtonGroupItem id="delete" iconTrailing={Trash01}>Delete</ButtonGroupItem>
     </ButtonGroup>
   ),
 };
