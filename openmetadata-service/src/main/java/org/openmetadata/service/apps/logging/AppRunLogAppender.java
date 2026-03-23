@@ -133,7 +133,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     }
 
     buffer.startFlusher();
-    AppRunLogMetrics.recordRunStarted(appName, serverId);
     return buffer;
   }
 
@@ -141,9 +140,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
     RunLogBuffer buffer = activeBuffers.remove(bufferKey(appName, appRunId));
     if (buffer != null) {
       threadPrefixBindings.removeIf(b -> b.buffer == buffer);
-      long durationMs = System.currentTimeMillis() - buffer.getRunTimestamp();
-      AppRunLogMetrics.recordRunCompleted(appName, buffer.getServerId(), durationMs);
-      AppRunLogMetrics.recordLinesCapture(appName, buffer.getTotalLineCount());
       buffer.close();
     }
   }
@@ -168,7 +164,6 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
         // best-effort cleanup
       }
     }
-    AppRunLogMetrics.recordCleanup(appName, toDelete.size());
   }
 
   static List<Long> listRunTimestamps(String appName) {
