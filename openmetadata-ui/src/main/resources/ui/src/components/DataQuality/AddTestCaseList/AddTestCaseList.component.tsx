@@ -29,6 +29,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -112,6 +113,7 @@ export const AddTestCaseList = ({
     SearchDropdownOption[]
   >([]);
   const [isColumnOptionsLoading, setIsColumnOptionsLoading] = useState(false);
+  const isInitialSearchFilterLoad = useRef(true);
 
   const statusOptions = useMemo<SearchDropdownOption[]>(
     () =>
@@ -256,9 +258,11 @@ export const AddTestCaseList = ({
     async ({
       searchText,
       page = 1,
+      hydrateSelectedFromProp = true,
     }: {
       searchText?: string;
       page?: number;
+      hydrateSelectedFromProp?: boolean;
     }) => {
       try {
         setIsLoading(true);
@@ -295,17 +299,19 @@ export const AddTestCaseList = ({
         const testCaseResponse = await getListTestCaseBySearch(mergedParams);
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
-        setSelectedItems((pre) => {
-          const selectedItemsMap = new Map();
-          pre?.forEach((item) => selectedItemsMap.set(item.id, item));
-          testCaseResponse.data.forEach((hit) => {
-            if (selectedTestNames.includes(hit.name)) {
-              selectedItemsMap.set(hit.id ?? '', hit);
-            }
-          });
+        if (selectedTestNames.length > 0 && hydrateSelectedFromProp) {
+          setSelectedItems((pre) => {
+            const selectedItemsMap = new Map();
+            pre?.forEach((item) => selectedItemsMap.set(item.id, item));
+            testCaseResponse.data.forEach((hit) => {
+              if (selectedTestNames.includes(hit.name)) {
+                selectedItemsMap.set(hit.id ?? '', hit);
+              }
+            });
 
-          return selectedItemsMap;
-        });
+            return selectedItemsMap;
+          });
+        }
         setItems(
           page === 1
             ? testCaseResponse.data
@@ -535,25 +541,45 @@ export const AddTestCaseList = ({
     },
     [selectAll, selectedItems, items, excludedIds, onChange]
   );
+
+  // Search/filter changes: reset effect runs first, then fetch. Both depend only on
+  // testCaseListFetchCriteriaKey so fetchTestCases/onChange identity changes do not retrigger.
   useEffect(() => {
-    setSelectAll(false);
-    setExcludedIds(new Set());
-    setSelectedItems(new Map());
-    onChange?.({
-      selectAll: false,
-      includeIds: [],
-      excludeIds: [],
-      testCases: [],
-    });
-    fetchTestCases({ searchText: searchTerm });
+    if (!isInitialSearchFilterLoad.current) {
+      setSelectAll(false);
+      setExcludedIds(new Set());
+      setSelectedItems(new Map());
+      onChange?.({
+        selectAll: false,
+        includeIds: [],
+        excludeIds: [],
+        testCases: [],
+      });
+    }
   }, [
     searchTerm,
     filterStatus,
     filterTestType,
     filterTables,
     filterColumns,
-    fetchTestCases,
-    onChange,
+    testCaseFilters,
+    testCaseParams,
+  ]);
+
+  useEffect(() => {
+    fetchTestCases({
+      searchText: searchTerm,
+      hydrateSelectedFromProp: isInitialSearchFilterLoad.current,
+    });
+    isInitialSearchFilterLoad.current = false;
+  }, [
+    searchTerm,
+    filterStatus,
+    filterTestType,
+    filterTables,
+    filterColumns,
+    testCaseFilters,
+    testCaseParams,
   ]);
 
   useEffect(() => {
