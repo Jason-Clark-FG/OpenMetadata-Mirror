@@ -184,7 +184,6 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       test('AutoPilot trigger button is hidden with denied trigger permission', async ({
         testUserPage,
       }) => {
-        test.slow();
         await entity.visitEntityPage(testUserPage);
         await waitForAllLoadersToDisappear(testUserPage);
         await expect(
