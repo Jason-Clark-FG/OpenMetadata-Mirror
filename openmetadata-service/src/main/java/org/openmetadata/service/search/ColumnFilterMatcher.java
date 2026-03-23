@@ -338,7 +338,7 @@ public class ColumnFilterMatcher {
     return grouped;
   }
 
-  /** Normalizes filter type to a canonical form. */
+  /** Normalizes filter type to a canonical form, preserving directional semantics. */
   private static String normalizeFilterType(String type) {
     if (type == null) {
       return "any";
@@ -346,12 +346,14 @@ public class ColumnFilterMatcher {
     switch (type.toLowerCase()) {
       case "columnname":
       case "column":
-      case "fromcolumn":
-      case "from":
-      case "tocolumn":
-      case "to":
       case "any":
         return "column";
+      case "fromcolumn":
+      case "from":
+        return "fromcolumn";
+      case "tocolumn":
+      case "to":
+        return "tocolumn";
       case "tag":
       case "tags":
         return "tag";

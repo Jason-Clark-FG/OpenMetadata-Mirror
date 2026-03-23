@@ -82,38 +82,38 @@ export const prepareColumnLevelNodesFromEdges = (
 
   return edges.reduce((acc: ColumnLevelLineageNode[], node: EdgeDetails) => {
     if ((node.columns?.length ?? 0) > 0) {
+      const entityData = get(
+        nodes[node[entityKey].fullyQualifiedName ?? ''],
+        'entity'
+      );
+      const nodeDepth = get(
+        nodes[node[entityKey].fullyQualifiedName ?? ''],
+        'nodeDepth',
+        0
+      );
+
+      if (!entityData) {
+        return acc;
+      }
+
+      const picked = pick<NodeData['entity']>(
+        entityData,
+        'owners',
+        'tier',
+        'tags',
+        'domains',
+        'description'
+      ) as Pick<
+        TableSearchSource,
+        'tags' | 'tier' | 'domains' | 'description' | 'owners' | 'id'
+      >;
+
+      // Build column FQN → tags lookup map once per entity (O(C)), O(1) per lookup
+      const columnTagMap = buildColumnTagMap(
+        entityData as Record<string, unknown>
+      );
+
       for (const col of node.columns ?? []) {
-        const entityData = get(
-          nodes[node[entityKey].fullyQualifiedName ?? ''],
-          'entity'
-        );
-        const nodeDepth = get(
-          nodes[node[entityKey].fullyQualifiedName ?? ''],
-          'nodeDepth',
-          0
-        );
-
-        if (!entityData) {
-          continue;
-        }
-
-        const picked = pick<NodeData['entity']>(
-          entityData,
-          'owners',
-          'tier',
-          'tags',
-          'domains',
-          'description'
-        ) as Pick<
-          TableSearchSource,
-          'tags' | 'tier' | 'domains' | 'description' | 'owners' | 'id'
-        >;
-
-        // Build column FQN → tags lookup map (O(C) once per entity, O(1) per lookup)
-        const columnTagMap = buildColumnTagMap(
-          entityData as Record<string, unknown>
-        );
-
         // flatten the fromColumns to create separate nodes for each
         for (const fromCol of col.fromColumns || []) {
           // Use column-specific tags instead of table tags
