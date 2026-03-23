@@ -25,6 +25,8 @@ on:
       - ".github/workflows/ui-checkstyle.yml"
       - openmetadata-ui/src/main/resources/ui/playwright/**
       - openmetadata-ui/src/main/resources/ui/eslint.config.mjs
+      - "openmetadata-ui-core-components/src/main/resources/ui/**"
+      - openmetadata-ui-core-components/src/main/resources/ui/eslint.config.mjs
 
 permissions:
   contents: read
@@ -35,6 +37,7 @@ concurrency:
 
 env:
   UI_WORKING_DIRECTORY: openmetadata-ui/src/main/resources/ui
+  CORE_COMPONENTS_WORKING_DIRECTORY: openmetadata-ui-core-components/src/main/resources/ui
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
@@ -719,6 +722,104 @@ jobs:
             ```bash
             cd openmetadata-ui/src/main/resources/ui
             yarn tsc:playwright
+            ```
+          edit-mode: replace
+
+      - name: Delete comment on success
+        if: success() && steps.fc.outputs.comment-id != ''
+        uses: actions/github-script@v7
+        env:
+          COMMENT_ID: ${{ steps.fc.outputs.comment-id }}
+        with:
+          script: |
+            github.rest.issues.deleteComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: process.env.COMMENT_ID
+            })
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Job 8: Core Components — ESLint + Prettier
+  # ──────────────────────────────────────────────────────────────────────────
+  lint-core-components:
+    needs: authorize
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: "${{ env.UI_WORKING_DIRECTORY }}/.nvmrc"
+          cache: yarn
+          cache-dependency-path: "${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}/yarn.lock"
+
+      - name: Install Yarn Packages
+        working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
+        run: yarn install --frozen-lockfile
+
+      - name: Get changed core-components files
+        id: changed-files
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323
+        with:
+          path: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
+          files: |
+            src/**/*.{ts,tsx}
+
+      - name: ESLint + Prettier (core-components)
+        id: lint
+        if: steps.changed-files.outputs.any_changed == 'true'
+        working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.added_modified_files }}
+        run: |
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No added or modified files to process."
+            exit 0
+          fi
+          yarn lint:base --fix $CHANGED_FILES
+          yarn pretty:base --write $CHANGED_FILES
+          if [ -n "$(git status --porcelain)" ]; then
+            FILES=$(git status --porcelain | awk '{print "  - `" $2 "`"}' | head -30)
+            echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$FILES" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            git checkout -- .
+            git clean -fd
+            exit 1
+          fi
+
+      - name: Find existing lint comment
+        if: always()
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: '<!-- check:lint-core-components -->'
+
+      - name: Post failure comment
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            <!-- check:lint-core-components -->
+            ### ❌ Lint Check Failed — ESLint + Prettier (core-components)
+
+            The following files have style issues that need to be fixed:
+            ${{ steps.lint.outputs.changed_files }}
+
+            **Fix locally:**
+            ```bash
+            cd openmetadata-ui-core-components/src/main/resources/ui
+            yarn lint:fix && yarn pretty
             ```
           edit-mode: replace
 

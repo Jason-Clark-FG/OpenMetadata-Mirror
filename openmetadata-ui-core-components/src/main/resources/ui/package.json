@@ -65,8 +65,10 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "lint": "eslint src/",
+    "lint:base": "eslint --no-error-on-unmatched-pattern",
     "lint:fix": "eslint src/ --fix",
     "pretty": "prettier --write src/",
+    "pretty:base": "prettier --config './.prettierrc.yaml' --ignore-path './.prettierignore'",
     "pretty:check": "prettier --check src/"
   },
   "author": "OpenMetadata",
