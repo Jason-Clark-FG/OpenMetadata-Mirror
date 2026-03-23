@@ -76,7 +76,7 @@ export const useDomainCardTemplates = () => {
             </div>
 
             <Grid className="tw:mb-3" gap="4">
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              <Grid.Item span={12}>
                 <Typography
                   className="tw:mb-0.5 tw:text-gray-700"
                   size="text-xs">
@@ -88,7 +88,7 @@ export const useDomainCardTemplates = () => {
                   render: 'owners',
                 })}
               </Grid.Item>
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              <Grid.Item span={12}>
                 <Typography
                   className="tw:mb-0.5 tw:text-gray-700"
                   size="text-xs">
@@ -104,7 +104,7 @@ export const useDomainCardTemplates = () => {
             </Grid>
 
             <Grid gap="4">
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              <Grid.Item span={12}>
                 <Typography
                   className="tw:mb-0.5 tw:text-gray-700"
                   size="text-xs">
@@ -117,7 +117,7 @@ export const useDomainCardTemplates = () => {
                   getValue: getGlossaryTags,
                 })}
               </Grid.Item>
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              <Grid.Item span={12}>
                 <Typography
                   className="tw:mb-0.5 tw:text-gray-700"
                   size="text-xs">
