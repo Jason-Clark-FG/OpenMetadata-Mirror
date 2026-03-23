@@ -171,7 +171,9 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
             yaml.dump(config, file, default_flow_style=False)
 
     @pytest.mark.order(2)
-    @pytest.mark.skip(reason="System profile assertions fail due to ACCOUNT_USAGE latency")
+    @pytest.mark.skip(
+        reason="System profile assertions fail due to ACCOUNT_USAGE latency"
+    )
     def test_create_table_with_profiler(self) -> None:
         # delete table in case it exists
         self.delete_table_and_view()
@@ -535,9 +537,7 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
         )
         result = self.run_command("profile")
         sink_status, source_status = self.retrieve_statuses(result)
-        self.assert_for_table_with_profiler_time_partition(
-            source_status, sink_status
-        )
+        self.assert_for_table_with_profiler_time_partition(source_status, sink_status)
 
     # ==========================================================================
     # Stored Procedures (DB-15)
@@ -602,13 +602,11 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
     def test_dynamic_table_ingestion(self) -> None:
         """Test that dynamic tables are ingested with correct table type"""
         with self.engine.begin() as connection:
-            warehouse = connection.execute(
-                text("SELECT CURRENT_WAREHOUSE()")
-            ).scalar()
+            warehouse = connection.execute(text("SELECT CURRENT_WAREHOUSE()")).scalar()
             connection.execute(
                 text(
                     f"CREATE OR REPLACE DYNAMIC TABLE E2E_DB.e2e_test.e2e_dynamic_table "
-                    f'TARGET_LAG = \'1 hour\' WAREHOUSE = "{warehouse}" '
+                    f"TARGET_LAG = '1 hour' WAREHOUSE = \"{warehouse}\" "
                     f"AS SELECT region_id, region_name FROM E2E_DB.e2e_test.regions"
                 )
             )
@@ -621,9 +619,7 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
         dynamic_table = self.retrieve_table(
             "e2e_snowflake.E2E_DB.E2E_TEST.E2E_DYNAMIC_TABLE"
         )
-        self.assertIsNotNone(
-            dynamic_table, "Dynamic table should be ingested"
-        )
+        self.assertIsNotNone(dynamic_table, "Dynamic table should be ingested")
         self.assertEqual(
             str(dynamic_table.tableType.value),
             "Dynamic",
@@ -651,9 +647,7 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
         sink_status, source_status = self.retrieve_statuses(result)
         self.assertEqual(len(source_status.failures), 0)
 
-        stream = self.retrieve_table(
-            "e2e_snowflake.E2E_DB.E2E_TEST.E2E_STREAM"
-        )
+        stream = self.retrieve_table("e2e_snowflake.E2E_DB.E2E_TEST.E2E_STREAM")
         self.assertIsNotNone(
             stream, "Stream should be ingested when includeStreams=true"
         )
@@ -678,23 +672,15 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
         sink_status, source_status = self.retrieve_statuses(result)
         self.assertEqual(len(source_status.failures), 0)
 
-        countries_table = self.retrieve_table(
-            "e2e_snowflake.E2E_DB.E2E_TEST.COUNTRIES"
-        )
+        countries_table = self.retrieve_table("e2e_snowflake.E2E_DB.E2E_TEST.COUNTRIES")
         self.assertIsNotNone(countries_table)
 
-        regions_table = self.retrieve_table(
-            "e2e_snowflake.E2E_DB.E2E_TEST.REGIONS"
-        )
+        regions_table = self.retrieve_table("e2e_snowflake.E2E_DB.E2E_TEST.REGIONS")
         self.assertIsNotNone(regions_table)
         pk_columns = [
-            col
-            for col in regions_table.columns
-            if col.name.root == "REGION_ID"
+            col for col in regions_table.columns if col.name.root == "REGION_ID"
         ]
-        self.assertGreater(
-            len(pk_columns), 0, "REGION_ID column should exist"
-        )
+        self.assertGreater(len(pk_columns), 0, "REGION_ID column should exist")
 
     # ==========================================================================
     # Partition Detection / Clustering Keys (DB-26)
@@ -723,12 +709,8 @@ class SnowflakeCliTest(CliCommonDB.TestSuite, SQACommonMethods):
         sink_status, source_status = self.retrieve_statuses(result)
         self.assertEqual(len(source_status.failures), 0)
 
-        table = self.retrieve_table(
-            "e2e_snowflake.E2E_DB.E2E_TEST.E2E_CLUSTERED_TABLE"
-        )
-        self.assertIsNotNone(
-            table, "Clustered table should be ingested"
-        )
+        table = self.retrieve_table("e2e_snowflake.E2E_DB.E2E_TEST.E2E_CLUSTERED_TABLE")
+        self.assertIsNotNone(table, "Clustered table should be ingested")
         self.assertIsNotNone(
             table.tablePartition,
             "Table should have partition details from clustering key",
