@@ -215,7 +215,7 @@ class RedshiftWithDBTIngestionClass extends ServiceBaseClass {
       // Verify DBT tag category is added
       await waitForAllLoadersToDisappear(page);
 
-      await page.locator('.ant-table-row').waitFor();
+      await page.getByTestId('table').waitFor();
 
       await expect(page.getByRole('cell', { name: DBT.tagName })).toBeVisible();
 
