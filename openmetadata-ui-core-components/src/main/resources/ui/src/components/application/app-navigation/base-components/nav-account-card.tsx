@@ -1,5 +1,8 @@
-import type { FC, HTMLAttributes } from 'react';
-import { useCallback, useEffect, useRef } from 'react';
+import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
+import { Button } from '@/components/base/buttons/button';
+import { RadioButtonBase } from '@/components/base/radio-buttons/radio-buttons';
+import { useBreakpoint } from '@/hooks/use-breakpoint';
+import { cx } from '@/utils/cx';
 import type { Placement } from '@react-types/overlays';
 import {
   BookOpen01,
@@ -9,6 +12,8 @@ import {
   Settings01,
   User01,
 } from '@untitledui/icons';
+import type { FC, HTMLAttributes } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFocusManager } from 'react-aria';
 import type { DialogProps as AriaDialogProps } from 'react-aria-components';
 import {
@@ -17,11 +22,6 @@ import {
   DialogTrigger as AriaDialogTrigger,
   Popover as AriaPopover,
 } from 'react-aria-components';
-import { AvatarLabelGroup } from '@/components/base/avatar/avatar-label-group';
-import { Button } from '@/components/base/buttons/button';
-import { RadioButtonBase } from '@/components/base/radio-buttons/radio-buttons';
-import { useBreakpoint } from '@/hooks/use-breakpoint';
-import { cx } from '@/utils/cx';
 
 type NavAccountType = {
   /** Unique identifier for the nav item. */
@@ -54,6 +54,42 @@ const placeholderAccounts: NavAccountType[] = [
     status: 'online',
   },
 ];
+
+const NavAccountCardMenuItem = ({
+  icon: Icon,
+  label,
+  shortcut,
+  ...buttonProps
+}: {
+  icon?: FC<{ className?: string }>;
+  label: string;
+  shortcut?: string;
+} & HTMLAttributes<HTMLButtonElement>) => {
+  return (
+    <button
+      {...buttonProps}
+      className={cx(
+        'tw:group/item tw:w-full tw:cursor-pointer tw:px-1.5 tw:focus:outline-hidden',
+        buttonProps.className
+      )}>
+      <div
+        className={cx(
+          'tw:flex tw:w-full tw:items-center tw:justify-between tw:gap-3 tw:rounded-md tw:p-2 tw:group-hover/item:bg-primary_hover',
+          'tw:outline-focus-ring tw:group-focus-visible/item:outline-2 tw:group-focus-visible/item:outline-offset-2'
+        )}>
+        <div className="tw:flex tw:gap-2 tw:text-sm tw:font-semibold tw:text-secondary tw:group-hover/item:text-secondary_hover">
+          {Icon && <Icon className="tw:size-5 tw:text-fg-quaternary" />} {label}
+        </div>
+
+        {shortcut && (
+          <kbd className="tw:flex tw:rounded tw:px-1 tw:py-px tw:font-body tw:text-xs tw:font-medium tw:text-tertiary tw:ring-1 tw:ring-secondary tw:ring-inset">
+            {shortcut}
+          </kbd>
+        )}
+      </div>
+    </button>
+  );
+};
 
 export const NavAccountMenu = ({
   className,
@@ -166,42 +202,6 @@ export const NavAccountMenu = ({
   );
 };
 
-const NavAccountCardMenuItem = ({
-  icon: Icon,
-  label,
-  shortcut,
-  ...buttonProps
-}: {
-  icon?: FC<{ className?: string }>;
-  label: string;
-  shortcut?: string;
-} & HTMLAttributes<HTMLButtonElement>) => {
-  return (
-    <button
-      {...buttonProps}
-      className={cx(
-        'tw:group/item tw:w-full tw:cursor-pointer tw:px-1.5 tw:focus:outline-hidden',
-        buttonProps.className
-      )}>
-      <div
-        className={cx(
-          'tw:flex tw:w-full tw:items-center tw:justify-between tw:gap-3 tw:rounded-md tw:p-2 tw:group-hover/item:bg-primary_hover',
-          'tw:outline-focus-ring tw:group-focus-visible/item:outline-2 tw:group-focus-visible/item:outline-offset-2'
-        )}>
-        <div className="tw:flex tw:gap-2 tw:text-sm tw:font-semibold tw:text-secondary tw:group-hover/item:text-secondary_hover">
-          {Icon && <Icon className="tw:size-5 tw:text-fg-quaternary" />} {label}
-        </div>
-
-        {shortcut && (
-          <kbd className="tw:flex tw:rounded tw:px-1 tw:py-px tw:font-body tw:text-xs tw:font-medium tw:text-tertiary tw:ring-1 tw:ring-secondary tw:ring-inset">
-            {shortcut}
-          </kbd>
-        )}
-      </div>
-    </button>
-  );
-};
-
 export const NavAccountCard = ({
   popoverPlacement,
   selectedAccountId,
@@ -220,6 +220,7 @@ export const NavAccountCard = ({
   );
 
   if (!selectedAccount) {
+    // eslint-disable-next-line no-console
     console.warn(
       `Account with ID ${resolvedSelectedId} not found in <NavAccountCard />`
     );

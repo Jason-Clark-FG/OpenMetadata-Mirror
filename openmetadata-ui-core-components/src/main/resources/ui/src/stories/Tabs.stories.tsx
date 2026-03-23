@@ -13,7 +13,7 @@
 import { Box, Tab, Tabs, ThemeProvider, Typography } from '@mui/material';
 import type { TabsProps } from '@mui/material';
 import type { Meta } from '@storybook/react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   CUSTOM_TABS_ARG_TYPES,
   CUSTOM_TABS_DEFAULT_ARGS,
@@ -47,7 +47,10 @@ function CommonTabPanel(props: CommonTabPanelPropsType) {
 const CustomTabsComponent: React.FC<CustomTabsArgs> = (args) => {
   const theme = createMuiTheme();
   const { tabs: tabsProp, ...tabsProps } = args;
-  const tabs = tabsProp || CUSTOM_TABS_DEFAULT_ARGS.tabs || [];
+  const tabs = useMemo(
+    () => tabsProp || CUSTOM_TABS_DEFAULT_ARGS.tabs || [],
+    [tabsProp]
+  );
   const [value, setValue] = useState<string>(
     (args.value as string) || tabs[0]?.value || 'tab1'
   );
@@ -56,7 +59,7 @@ const CustomTabsComponent: React.FC<CustomTabsArgs> = (args) => {
     if (args.value && args.value !== value) {
       setValue(args.value as string);
     }
-  }, [args.value]);
+  }, [args.value, value]);
 
   useEffect(() => {
     if (tabs.length > 0) {

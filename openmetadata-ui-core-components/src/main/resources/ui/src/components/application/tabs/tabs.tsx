@@ -1,5 +1,8 @@
+import type { BadgeColors } from '@/components/base/badges/badge-types';
+import { Badge } from '@/components/base/badges/badges';
+import { cx } from '@/utils/cx';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
-import { Fragment, createContext, useContext } from 'react';
+import { Fragment, createContext, useContext, useMemo } from 'react';
 import type {
   TabListProps as AriaTabListProps,
   TabProps as AriaTabProps,
@@ -13,9 +16,6 @@ import {
   TabsContext,
   useSlottedContext,
 } from 'react-aria-components';
-import type { BadgeColors } from '@/components/base/badges/badge-types';
-import { Badge } from '@/components/base/badges/badges';
-import { cx } from '@/utils/cx';
 
 type Orientation = 'horizontal' | 'vertical';
 
@@ -168,64 +168,6 @@ const TabListContext = createContext<
   type: 'button-brand',
 });
 
-export const TabList = <K extends Orientation>({
-  size = 'sm',
-  type = 'button-brand',
-  orientation: orientationProp,
-  fullWidth,
-  className,
-  children,
-  ...otherProps
-}: TabListComponentProps<K>) => {
-  const context = useSlottedContext(TabsContext);
-
-  const orientation = orientationProp ?? context?.orientation ?? 'horizontal';
-
-  return (
-    <TabListContext.Provider value={{ size, type, orientation, fullWidth }}>
-      <AriaTabList
-        {...(otherProps as AriaTabListProps<TabComponentProps>)}
-        className={(state) =>
-          cx(
-            'tw:group tw:flex',
-
-            getHorizontalStyles({
-              size,
-              fullWidth,
-            })[type as HorizontalTypes],
-
-            orientation === 'vertical' && 'tw:w-max tw:flex-col',
-
-            // Only horizontal tabs with underline type have bottom border
-            orientation === 'horizontal' &&
-              type === 'underline' &&
-              'tw:relative tw:before:absolute tw:before:inset-x-0 tw:before:bottom-0 tw:before:h-px tw:before:bg-border-secondary',
-
-            typeof className === 'function' ? className(state) : className
-          )
-        }>
-        {children ?? ((item) => <Tab {...item}>{item.children}</Tab>)}
-      </AriaTabList>
-    </TabListContext.Provider>
-  );
-};
-
-export const TabPanel = (props: ComponentPropsWithRef<typeof AriaTabPanel>) => {
-  return (
-    <AriaTabPanel
-      {...props}
-      className={(state) =>
-        cx(
-          'tw:outline-focus-ring tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2',
-          typeof props.className === 'function'
-            ? props.className(state)
-            : props.className
-        )
-      }
-    />
-  );
-};
-
 interface TabComponentProps extends AriaTabProps {
   /** The label of the tab. */
   label?: ReactNode;
@@ -276,6 +218,69 @@ export const Tab = (props: TabComponentProps) => {
         </Fragment>
       )}
     </AriaTab>
+  );
+};
+
+export const TabList = <K extends Orientation>({
+  size = 'sm',
+  type = 'button-brand',
+  orientation: orientationProp,
+  fullWidth,
+  className,
+  children,
+  ...otherProps
+}: TabListComponentProps<K>) => {
+  const context = useSlottedContext(TabsContext);
+
+  const orientation = orientationProp ?? context?.orientation ?? 'horizontal';
+
+  const contextValues = useMemo(
+    () => ({ size, type, orientation, fullWidth }),
+    [size, type, orientation, fullWidth]
+  );
+
+  return (
+    <TabListContext.Provider value={contextValues}>
+      <AriaTabList
+        {...(otherProps as AriaTabListProps<TabComponentProps>)}
+        className={(state) =>
+          cx(
+            'tw:group tw:flex',
+
+            getHorizontalStyles({
+              size,
+              fullWidth,
+            })[type as HorizontalTypes],
+
+            orientation === 'vertical' && 'tw:w-max tw:flex-col',
+
+            // Only horizontal tabs with underline type have bottom border
+            orientation === 'horizontal' &&
+              type === 'underline' &&
+              'tw:relative tw:before:absolute tw:before:inset-x-0 tw:before:bottom-0 tw:before:h-px tw:before:bg-border-secondary',
+
+            typeof className === 'function' ? className(state) : className
+          )
+        }>
+        {children ?? ((item) => <Tab {...item}>{item.children}</Tab>)}
+      </AriaTabList>
+    </TabListContext.Provider>
+  );
+};
+
+export const TabPanel = (props: ComponentPropsWithRef<typeof AriaTabPanel>) => {
+  return (
+    <AriaTabPanel
+      {...props}
+      className={(state) =>
+        cx(
+          'tw:outline-focus-ring tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2',
+          typeof props.className === 'function'
+            ? props.className(state)
+            : props.className
+        )
+      }
+    />
   );
 };
 

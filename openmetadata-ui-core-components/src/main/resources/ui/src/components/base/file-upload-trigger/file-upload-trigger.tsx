@@ -34,7 +34,8 @@ interface FileTriggerProps {
 }
 
 /**
- * A FileTrigger allows a user to access the file system with any pressable React Aria or React Spectrum component, or custom components built with usePress.
+ * A FileTrigger allows a user to access the file system with any pressable React Aria or
+ * React Spectrum component, or custom components built with usePress.
  */
 export const FileTrigger = (props: FileTriggerProps) => {
   const {
@@ -76,13 +77,13 @@ export const FileTrigger = (props: FileTriggerProps) => {
         {...domProps}
         accept={acceptedFileTypes?.toString()}
         capture={defaultCamera}
+        multiple={allowsMultiple}
         ref={inputRef}
         style={{ display: 'none' }}
         type="file"
-        onChange={(e) => onSelect?.(e.target.files)}
-        multiple={allowsMultiple}
-        // @ts-expect-error
+        // @ts-expect-error - webkitdirectory is a non-standard HTML attribute not in React's type definitions
         webkitdirectory={acceptDirectory ? '' : undefined}
+        onChange={(e) => onSelect?.(e.target.files)}
       />
     </>
   );

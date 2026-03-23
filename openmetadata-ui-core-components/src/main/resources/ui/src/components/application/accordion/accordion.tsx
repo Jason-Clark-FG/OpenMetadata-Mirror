@@ -36,7 +36,7 @@ export interface AccordionProps extends AriaDisclosureGroupProps {
   className?: string;
 }
 
-export interface AccordionItemProps extends AriaDisclosureProps {}
+export type AccordionItemProps = AriaDisclosureProps;
 
 export interface AccordionHeaderProps extends AriaButtonProps {
   /**

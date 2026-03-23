@@ -5,7 +5,7 @@ import {
 } from 'react-aria-components';
 import { cx } from '@/utils/cx';
 
-interface DateInputProps extends Omit<AriaDateInputProps, 'children'> {}
+type DateInputProps = Omit<AriaDateInputProps, 'children'>;
 
 export const DateInput = (props: DateInputProps) => {
   return (

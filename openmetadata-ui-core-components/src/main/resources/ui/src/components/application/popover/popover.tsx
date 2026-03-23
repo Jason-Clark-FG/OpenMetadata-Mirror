@@ -39,7 +39,7 @@ export interface PopoverProps extends Omit<AriaPopoverProps, 'children'> {
   containerClassName?: string;
 }
 
-export interface PopoverTriggerProps extends AriaDialogTriggerProps {}
+export type PopoverTriggerProps = AriaDialogTriggerProps;
 
 /**
  * PopoverTrigger manages the open/close state of a Popover.

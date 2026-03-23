@@ -355,10 +355,13 @@ export const AutocompleteBase = ({
     setFilterText('');
   };
 
-  const onInputChange = (value: string) => {
-    setFilterText(value);
-    onSearchChange?.(value);
-  };
+  const onInputChange = useCallback(
+    (value: string) => {
+      setFilterText(value);
+      onSearchChange?.(value);
+    },
+    [onSearchChange]
+  );
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const [popoverWidth, setPopoverWidth] = useState('');

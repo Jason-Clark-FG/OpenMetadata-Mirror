@@ -1,3 +1,9 @@
+import { HintText } from '@/components/base/input/hint-text';
+import { Label } from '@/components/base/input/label';
+import { Tooltip, TooltipTrigger } from '@/components/base/tooltip/tooltip';
+import { cx, sortCx } from '@/utils/cx';
+import { fontSizeClass } from '@/utils/tailwindClasses';
+import { HelpCircle, InfoCircle } from '@untitledui/icons';
 import {
   type ComponentType,
   type HTMLAttributes,
@@ -6,7 +12,6 @@ import {
   createContext,
   useContext,
 } from 'react';
-import { HelpCircle, InfoCircle } from '@untitledui/icons';
 import type {
   InputProps as AriaInputProps,
   TextFieldProps as AriaTextFieldProps,
@@ -16,11 +21,6 @@ import {
   Input as AriaInput,
   TextField as AriaTextField,
 } from 'react-aria-components';
-import { HintText } from '@/components/base/input/hint-text';
-import { Label } from '@/components/base/input/label';
-import { Tooltip, TooltipTrigger } from '@/components/base/tooltip/tooltip';
-import { cx, sortCx } from '@/utils/cx';
-import { fontSizeClass } from '@/utils/tailwindClasses';
 
 export interface InputBaseProps extends TextFieldProps {
   /** Tooltip message on hover. */
@@ -52,6 +52,8 @@ export interface InputBaseProps extends TextFieldProps {
   /** Icon component to display on the left side of the input. */
   icon?: ComponentType<HTMLAttributes<HTMLOrSVGElement>>;
 }
+
+const TextFieldContext = createContext<TextFieldProps>({});
 
 export const InputBase = ({
   ref,
@@ -233,8 +235,6 @@ interface TextFieldProps
   ref?: Ref<HTMLDivElement>;
 }
 
-const TextFieldContext = createContext<TextFieldProps>({});
-
 export const TextField = ({ className, ...props }: TextFieldProps) => {
   return (
     <TextFieldContext.Provider value={props}>
@@ -280,7 +280,7 @@ export const Input = ({
 }: InputProps) => {
   return (
     <TextField
-      aria-label={!label ? placeholder : undefined}
+      aria-label={label ? undefined : placeholder}
       {...props}
       className={className}>
       {({ isRequired, isInvalid }) => (

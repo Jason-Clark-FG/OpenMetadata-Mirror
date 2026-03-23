@@ -65,6 +65,7 @@ export default [
           code: 200,
           ignoreTrailingComments: true,
           ignoreUrls: true,
+          ignoreStrings: true,
         },
       ],
       curly: ['error', 'all'],
@@ -132,6 +133,7 @@ export default [
   {
     files: ['src/**/*.stories.{ts,tsx,js,jsx}'],
     rules: {
+      'no-console': 'off',
       'react-hooks/rules-of-hooks': 'off',
     },
   },

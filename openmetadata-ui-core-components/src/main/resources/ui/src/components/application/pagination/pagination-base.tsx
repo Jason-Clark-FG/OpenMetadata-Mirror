@@ -1,11 +1,12 @@
 import type { CSSProperties, FC, HTMLAttributes, ReactNode } from 'react';
-import React, {
+import {
   cloneElement,
   createContext,
   isValidElement,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -55,6 +56,18 @@ export interface PaginationRootProps {
   /** Callback function that's called when the page changes with the new page number. */
   onPageChange?: (page: number) => void;
 }
+
+/**
+ * Creates an array of numbers from start to end.
+ * @param start - The start number.
+ * @param end - The end number.
+ * @returns An array of numbers from start to end.
+ */
+const range = (start: number, end: number): number[] => {
+  const length = end - start + 1;
+
+  return Array.from({ length }, (_, index) => index + start);
+};
 
 const PaginationRoot = ({
   total,
@@ -106,12 +119,14 @@ const PaginationRoot = ({
         );
 
         // Insert ellipsis after the left range and add the last page
-        items.push({ type: 'ellipsis', key: leftItemCount + 1 });
-        items.push({
-          type: 'page',
-          value: total,
-          isCurrent: total === page,
-        });
+        items.push(
+          { type: 'ellipsis', key: leftItemCount + 1 },
+          {
+            type: 'page',
+            value: total,
+            isCurrent: total === page,
+          }
+        );
       }
       // Case 2: Left ellipsis needed, but right ellipsis is not needed
       else if (showLeftEllipsis && !showRightEllipsis) {
@@ -120,12 +135,14 @@ const PaginationRoot = ({
         const rightRange = range(total - rightItemCount + 1, total);
 
         // Always show the first page, then add an ellipsis to indicate skipped pages
-        items.push({
-          type: 'page',
-          value: 1,
-          isCurrent: page === 1,
-        });
-        items.push({ type: 'ellipsis', key: total - rightItemCount });
+        items.push(
+          {
+            type: 'page',
+            value: 1,
+            isCurrent: page === 1,
+          },
+          { type: 'ellipsis', key: total - rightItemCount }
+        );
         rightRange.forEach((pageNum) =>
           items.push({
             type: 'page',
@@ -137,13 +154,14 @@ const PaginationRoot = ({
       // Case 3: Both left and right ellipsis are needed
       else if (showLeftEllipsis && showRightEllipsis) {
         // Always show the first page
-        items.push({
-          type: 'page',
-          value: 1,
-          isCurrent: page === 1,
-        });
-        // Insert left ellipsis after the first page
-        items.push({ type: 'ellipsis', key: leftSiblingIndex - 1 });
+        items.push(
+          {
+            type: 'page',
+            value: 1,
+            isCurrent: page === 1,
+          },
+          { type: 'ellipsis', key: leftSiblingIndex - 1 }
+        );
 
         // Show a range of pages around the current page
         const middleRange = range(leftSiblingIndex, rightSiblingIndex);
@@ -156,12 +174,14 @@ const PaginationRoot = ({
         );
 
         // Insert right ellipsis and finally the last page
-        items.push({ type: 'ellipsis', key: rightSiblingIndex + 1 });
-        items.push({
-          type: 'page',
-          value: total,
-          isCurrent: total === page,
-        });
+        items.push(
+          { type: 'ellipsis', key: rightSiblingIndex + 1 },
+          {
+            type: 'page',
+            value: total,
+            isCurrent: total === page,
+          }
+        );
       }
     }
 
@@ -173,16 +193,22 @@ const PaginationRoot = ({
     setPages(paginationItems);
   }, [createPaginationItems]);
 
-  const onPageChangeHandler = (newPage: number) => {
-    onPageChange?.(newPage);
-  };
+  const onPageChangeHandler = useCallback(
+    (newPage: number) => {
+      onPageChange?.(newPage);
+    },
+    [onPageChange]
+  );
 
-  const paginationContextValue: PaginationContextType = {
-    pages,
-    currentPage: page,
-    total,
-    onPageChange: onPageChangeHandler,
-  };
+  const paginationContextValue: PaginationContextType = useMemo(
+    () => ({
+      pages,
+      currentPage: page,
+      total,
+      onPageChange: onPageChangeHandler,
+    }),
+    [pages, page, total, onPageChangeHandler]
+  );
 
   return (
     <PaginationContext.Provider value={paginationContextValue}>
@@ -194,18 +220,6 @@ const PaginationRoot = ({
       </nav>
     </PaginationContext.Provider>
   );
-};
-
-/**
- * Creates an array of numbers from start to end.
- * @param start - The start number.
- * @param end - The end number.
- * @returns An array of numbers from start to end.
- */
-const range = (start: number, end: number): number[] => {
-  const length = end - start + 1;
-
-  return Array.from({ length }, (_, index) => index + start);
 };
 
 interface TriggerRenderProps {
@@ -408,7 +422,6 @@ const PaginationItem = ({
   );
 };
 interface PaginationEllipsisProps {
-  key: number;
   children?: ReactNode;
   style?: CSSProperties;
   className?: string | (() => string);

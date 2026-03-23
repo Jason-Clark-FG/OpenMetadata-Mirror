@@ -1,3 +1,13 @@
+import { Avatar } from '@/components/base/avatar/avatar';
+import type { IconComponentType } from '@/components/base/badges/badge-types';
+import { HintText } from '@/components/base/input/hint-text';
+import { Label } from '@/components/base/input/label';
+import { Popover } from '@/components/base/select/popover';
+import { type SelectItemType, sizes } from '@/components/base/select/select';
+import { TagCloseX } from '@/components/base/tags/base-components/tag-close-x';
+import { useResizeObserver } from '@/hooks/use-resize-observer';
+import { cx } from '@/utils/cx';
+import { SearchLg } from '@untitledui/icons';
 import type {
   FocusEventHandler,
   KeyboardEvent,
@@ -8,10 +18,10 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
 } from 'react';
-import { SearchLg } from '@untitledui/icons';
 import { FocusScope, useFilter, useFocusManager } from 'react-aria';
 import type {
   ComboBoxProps as AriaComboBoxProps,
@@ -28,15 +38,6 @@ import {
 } from 'react-aria-components';
 import type { ListData } from 'react-stately';
 import { useListData } from 'react-stately';
-import { Avatar } from '@/components/base/avatar/avatar';
-import type { IconComponentType } from '@/components/base/badges/badge-types';
-import { HintText } from '@/components/base/input/hint-text';
-import { Label } from '@/components/base/input/label';
-import { Popover } from '@/components/base/select/popover';
-import { type SelectItemType, sizes } from '@/components/base/select/select';
-import { TagCloseX } from '@/components/base/tags/base-components/tag-close-x';
-import { useResizeObserver } from '@/hooks/use-resize-observer';
-import { cx } from '@/utils/cx';
 import { SelectItem } from './select-item';
 
 interface ComboBoxValueProps
@@ -84,153 +85,6 @@ interface MultiSelectProps
   onItemCleared?: (key: Key) => void;
   onItemInserted?: (key: Key) => void;
 }
-
-export const MultiSelectBase = ({
-  items,
-  children,
-  size = 'sm',
-  selectedItems,
-  onItemCleared,
-  onItemInserted,
-  shortcut,
-  placeholder = 'Search',
-  // Omit these props to avoid conflicts with the `Select` component
-  name: _name,
-  className: _className,
-  ...props
-}: MultiSelectProps) => {
-  const { contains } = useFilter({ sensitivity: 'base' });
-  const selectedKeys = selectedItems.items.map((item) => item.id);
-
-  const filter = useCallback(
-    (item: SelectItemType, filterText: string) => {
-      return (
-        !selectedKeys.includes(item.id) &&
-        contains(item.label || item.supportingText || '', filterText)
-      );
-    },
-    [contains, selectedKeys]
-  );
-
-  const accessibleList = useListData({
-    initialItems: items,
-    filter,
-  });
-
-  const onRemove = useCallback(
-    (keys: Set<Key>) => {
-      const key = keys.values().next().value;
-
-      if (!key) {
-        return;
-      }
-
-      selectedItems.remove(key);
-      onItemCleared?.(key);
-    },
-    [selectedItems, onItemCleared]
-  );
-
-  const onSelectionChange = (id: Key | null) => {
-    if (!id) {
-      return;
-    }
-
-    const item = accessibleList.getItem(id);
-
-    if (!item) {
-      return;
-    }
-
-    if (!selectedKeys.includes(id as string)) {
-      selectedItems.append(item);
-      onItemInserted?.(id);
-    }
-
-    accessibleList.setFilterText('');
-  };
-
-  const onInputChange = (value: string) => {
-    accessibleList.setFilterText(value);
-  };
-
-  const placeholderRef = useRef<HTMLDivElement>(null);
-  const [popoverWidth, setPopoverWidth] = useState('');
-
-  // Resize observer for popover width
-  const onResize = useCallback(() => {
-    if (!placeholderRef.current) {
-      return;
-    }
-    const divRect = placeholderRef.current?.getBoundingClientRect();
-    setPopoverWidth(divRect.width + 'px');
-  }, [placeholderRef, setPopoverWidth]);
-
-  useResizeObserver({
-    ref: placeholderRef,
-    onResize: onResize,
-    box: 'border-box',
-  });
-
-  return (
-    <ComboboxContext.Provider
-      value={{
-        size,
-        selectedKeys,
-        selectedItems,
-        onInputChange,
-        onRemove,
-      }}>
-      <AriaComboBox
-        allowsEmptyCollection
-        items={accessibleList.items}
-        menuTrigger="focus"
-        onInputChange={onInputChange}
-        onSelectionChange={onSelectionChange}
-        inputValue={accessibleList.filterText}
-        // This keeps the combobox popover open and the input value unchanged when an item is selected.
-        selectedKey={null}
-        {...props}>
-        {(state) => (
-          <div className="tw:flex tw:flex-col tw:gap-1.5">
-            {props.label && (
-              <Label isRequired={state.isRequired} tooltip={props.tooltip}>
-                {props.label}
-              </Label>
-            )}
-
-            <MultiSelectTagsValue
-              ref={placeholderRef}
-              shortcut={shortcut}
-              size={size}
-              placeholder={placeholder}
-              // This is a workaround to correctly calculating the trigger width
-              // while using ResizeObserver wasn't 100% reliable.
-              onFocus={onResize}
-              onPointerEnter={onResize}
-            />
-
-            <Popover
-              className={props?.popoverClassName}
-              size="md"
-              style={{ width: popoverWidth }}
-              triggerRef={placeholderRef}>
-              <AriaListBox
-                className="tw:size-full tw:outline-hidden"
-                selectionMode="multiple">
-                {children}
-              </AriaListBox>
-            </Popover>
-
-            {props.hint && (
-              <HintText isInvalid={state.isInvalid}>{props.hint}</HintText>
-            )}
-          </div>
-        )}
-      </AriaComboBox>
-    </ComboboxContext.Provider>
-  );
-};
 
 const InnerMultiSelect = ({
   isDisabled,
@@ -329,12 +183,12 @@ const InnerMultiSelect = ({
             </p>
 
             <TagCloseX
+              className="tw:ml-0.75"
               isDisabled={isDisabled}
               size="md"
-              onPress={() => comboBoxContext.onRemove(new Set([value.id]))}
-              className="tw:ml-0.75"
               // For workaround, onKeyDown is added to the button
               onKeyDown={(event) => handleTagKeyDown(event, value.id)}
+              onPress={() => comboBoxContext.onRemove(new Set([value.id]))}
             />
           </span>
         ))}
@@ -414,10 +268,158 @@ export const MultiSelectTagsValue = ({
   );
 };
 
+export const MultiSelectBase = ({
+  items,
+  children,
+  size = 'sm',
+  selectedItems,
+  onItemCleared,
+  onItemInserted,
+  shortcut,
+  placeholder = 'Search',
+  // Omit these props to avoid conflicts with the `Select` component
+  name: _name,
+  className: _className,
+  ...props
+}: MultiSelectProps) => {
+  const { contains } = useFilter({ sensitivity: 'base' });
+  const selectedKeys = selectedItems.items.map((item) => item.id);
+
+  const filter = useCallback(
+    (item: SelectItemType, filterText: string) => {
+      return (
+        !selectedKeys.includes(item.id) &&
+        contains(item.label || item.supportingText || '', filterText)
+      );
+    },
+    [contains, selectedKeys]
+  );
+
+  const accessibleList = useListData({
+    initialItems: items,
+    filter,
+  });
+
+  const onRemove = useCallback(
+    (keys: Set<Key>) => {
+      const key = keys.values().next().value;
+
+      if (!key) {
+        return;
+      }
+
+      selectedItems.remove(key);
+      onItemCleared?.(key);
+    },
+    [selectedItems, onItemCleared]
+  );
+
+  const onSelectionChange = (id: Key | null) => {
+    if (!id) {
+      return;
+    }
+
+    const item = accessibleList.getItem(id);
+
+    if (!item) {
+      return;
+    }
+
+    if (!selectedKeys.includes(id as string)) {
+      selectedItems.append(item);
+      onItemInserted?.(id);
+    }
+
+    accessibleList.setFilterText('');
+  };
+
+  const onInputChange = useCallback(
+    (value: string) => {
+      accessibleList.setFilterText(value);
+    },
+    [accessibleList]
+  );
+
+  const placeholderRef = useRef<HTMLDivElement>(null);
+  const [popoverWidth, setPopoverWidth] = useState('');
+
+  // Resize observer for popover width
+  const onResize = useCallback(() => {
+    if (!placeholderRef.current) {
+      return;
+    }
+    const divRect = placeholderRef.current?.getBoundingClientRect();
+    setPopoverWidth(divRect.width + 'px');
+  }, [placeholderRef, setPopoverWidth]);
+
+  useResizeObserver({
+    ref: placeholderRef,
+    onResize: onResize,
+    box: 'border-box',
+  });
+
+  const contextValues = useMemo(
+    () => ({ size, selectedKeys, selectedItems, onInputChange, onRemove }),
+    [size, selectedKeys, selectedItems, onInputChange, onRemove]
+  );
+
+  return (
+    <ComboboxContext.Provider value={contextValues}>
+      <AriaComboBox
+        allowsEmptyCollection
+        inputValue={accessibleList.filterText}
+        items={accessibleList.items}
+        menuTrigger="focus"
+        // This keeps the combobox popover open and the input value unchanged when an item is selected.
+        selectedKey={null}
+        {...props}
+        onInputChange={onInputChange}
+        onSelectionChange={onSelectionChange}>
+        {(state) => (
+          <div className="tw:flex tw:flex-col tw:gap-1.5">
+            {props.label && (
+              <Label isRequired={state.isRequired} tooltip={props.tooltip}>
+                {props.label}
+              </Label>
+            )}
+
+            <MultiSelectTagsValue
+              placeholder={placeholder}
+              ref={placeholderRef}
+              shortcut={shortcut}
+              size={size}
+              // This is a workaround to correctly calculating the trigger width
+              // while using ResizeObserver wasn't 100% reliable.
+              onFocus={onResize}
+              onPointerEnter={onResize}
+            />
+
+            <Popover
+              className={props?.popoverClassName}
+              size="md"
+              style={{ width: popoverWidth }}
+              triggerRef={placeholderRef}>
+              <AriaListBox
+                className="tw:size-full tw:outline-hidden"
+                selectionMode="multiple">
+                {children}
+              </AriaListBox>
+            </Popover>
+
+            {props.hint && (
+              <HintText isInvalid={state.isInvalid}>{props.hint}</HintText>
+            )}
+          </div>
+        )}
+      </AriaComboBox>
+    </ComboboxContext.Provider>
+  );
+};
+
 const MultiSelect = MultiSelectBase as typeof MultiSelectBase & {
   Item: typeof SelectItem;
 };
 
 MultiSelect.Item = SelectItem;
 
-export { MultiSelect as MultiSelect };
+export { MultiSelect };

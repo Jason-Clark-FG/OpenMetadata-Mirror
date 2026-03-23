@@ -116,7 +116,8 @@ export const InputGroup = ({
         hasTrailing && 'tw:rounded-r-none',
         // When select element is passed as a child
         'tw:group-has-[&>select]:bg-transparent tw:group-has-[&>select]:shadow-none tw:group-has-[&>select]:ring-0 tw:group-has-[&>select]:focus-within:ring-0',
-        // In `Input` component, there is "group-disabled" class so here we need to use "group-disabled:group-has-[&>select]" to avoid conflict
+        // In `Input` component, there is "group-disabled" class so here we need to use
+        // "group-disabled:group-has-[&>select]" to avoid conflict
         'tw:group-disabled:group-has-[&>select]:bg-transparent'
       )}
       {...props}>
