@@ -2,7 +2,7 @@ import type { BadgeColors } from '@/components/base/badges/badge-types';
 import { Badge } from '@/components/base/badges/badges';
 import { cx } from '@/utils/cx';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
-import { Fragment, createContext, useContext } from 'react';
+import { Fragment, createContext, useContext, useMemo } from 'react';
 import type {
   TabListProps as AriaTabListProps,
   TabProps as AriaTabProps,
@@ -181,8 +181,13 @@ export const TabList = <K extends Orientation>({
 
   const orientation = orientationProp ?? context?.orientation ?? 'horizontal';
 
+  const tabListContextValue = useMemo(
+    () => ({ size, type, orientation, fullWidth }),
+    [size, type, orientation, fullWidth],
+  );
+
   return (
-    <TabListContext.Provider value={{ size, type, orientation, fullWidth }}>
+    <TabListContext.Provider value={tabListContextValue}>
       <AriaTabList
         {...(otherProps as AriaTabListProps<TabComponentProps>)}
         className={(state) =>
@@ -261,7 +266,7 @@ export const Tab = (props: TabComponentProps) => {
       {(state) => (
         <Fragment>
           {typeof children === 'function' ? children(state) : children || label}
-          {badge && (
+          {badge != null && (
             <Badge
               size={size}
               type="pill-color"

@@ -58,9 +58,9 @@ export interface BoxProps extends HTMLAttributes<HTMLDivElement> {
   align?: Align;
   justify?: Justify;
   wrap?: Wrap;
-  gap?: number | string;
-  rowGap?: number | string;
-  colGap?: number | string;
+  gap?: number;
+  rowGap?: number;
+  colGap?: number;
   inline?: boolean;
   children?: ReactNode;
 }
@@ -78,27 +78,9 @@ export const Box = ({
   children,
   ...props
 }: BoxProps) => {
-  let gapValue;
-  let rowGapValue;
-  let colGapValue;
-
-  if (typeof gap === 'number') {
-    gapValue = gapClassMapping[gap];
-  } else if (typeof gap === 'string') {
-    gapValue = `tw:gap-[${gap}]`;
-  }
-
-  if (typeof rowGap === 'number') {
-    rowGapValue = rowGapClassMapping[rowGap];
-  } else if (typeof rowGap === 'string') {
-    rowGapValue = `tw:gap-y-[${rowGap}]`;
-  }
-
-  if (typeof colGap === 'number') {
-    colGapValue = colGapClassMapping[colGap];
-  } else if (typeof colGap === 'string') {
-    colGapValue = `tw:gap-x-[${colGap}]`;
-  }
+  const gapValue = gap ? gapClassMapping[gap] : undefined;
+  const rowGapValue = rowGap ? rowGapClassMapping[rowGap] : undefined;
+  const colGapValue = colGap ? colGapClassMapping[colGap] : undefined;
 
   return (
     <div

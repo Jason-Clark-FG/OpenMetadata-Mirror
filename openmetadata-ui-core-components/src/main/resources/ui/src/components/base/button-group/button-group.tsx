@@ -8,6 +8,7 @@ import {
   createContext,
   isValidElement,
   useContext,
+  useMemo,
 } from 'react';
 import {
   ToggleButton as AriaToggleButton,
@@ -48,7 +49,7 @@ export const styles = sortCx({
 
 type ButtonSize = keyof typeof styles.sizes;
 
-const ButtonGroupContext = createContext<{ size: ButtonSize }>({ size: 'md' });
+const ButtonGroupContext = createContext<{ size: ButtonSize } | null>(null);
 
 interface ButtonGroupItemProps
   extends ToggleButtonProps, RefAttributes<HTMLButtonElement> {
@@ -116,8 +117,10 @@ export const ButtonGroup = ({
   className,
   ...otherProps
 }: ButtonGroupProps) => {
+  const contextValue = useMemo(() => ({ size }), [size]);
+
   return (
-    <ButtonGroupContext.Provider value={{ size }}>
+    <ButtonGroupContext.Provider value={contextValue}>
       <AriaToggleButtonGroup
         selectionMode="single"
         className={cx(
