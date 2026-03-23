@@ -164,7 +164,7 @@ Object.entries(SERVICE_ENTITIES).forEach(([entityType, EntityClass]) => {
       });
     });
 
-    test.describe('Deny permissions', () => {
+    test.describe('Deny Trigger permissions', () => {
       test.beforeAll(
         'Initialize Deny Trigger permissions',
         async ({ browser }) => {
