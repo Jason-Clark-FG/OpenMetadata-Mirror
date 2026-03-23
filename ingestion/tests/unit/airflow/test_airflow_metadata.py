@@ -329,6 +329,86 @@ class TestTaskDetailAccess:
         assert result is None
 
 
+class TestYieldPipelineStatus:
+    """Test yield_pipeline_status fallback logic for missing dates."""
+
+    def _make_source(self):
+        from metadata.ingestion.source.pipeline.airflow.metadata import AirflowSource
+
+        return AirflowSource.__new__(AirflowSource)
+
+    def _make_dag_run(self, logical_date, start_date):
+        dag_run = MagicMock(spec=DagRun)
+        dag_run.run_id = "manual__2024-01-01"
+        dag_run.dag_id = "test_dag"
+        dag_run.state = "success"
+        dag_run.logical_date = logical_date
+        dag_run.start_date = start_date
+        return dag_run
+
+    @patch(
+        "metadata.ingestion.source.pipeline.airflow.metadata.AirflowSource.__init__",
+        return_value=None,
+    )
+    def test_uses_start_date_when_logical_date_is_none(self, mock_init):
+        """When logical_date is None but start_date is present, a status is yielded."""
+        source = self._make_source()
+
+        start_date = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        dag_run = self._make_dag_run(logical_date=None, start_date=start_date)
+
+        mock_context = MagicMock()
+        mock_context.task_names = ["task1"]
+        mock_context.pipeline_service = "test_service"
+        mock_context.pipeline = "test_pipeline"
+        source.context = MagicMock()
+        source.context.get.return_value = mock_context
+
+        source.get_pipeline_status = MagicMock(return_value=[dag_run])
+        source.get_task_instances = MagicMock(return_value=[])
+        source.metadata = MagicMock()
+
+        mock_pipeline_details = MagicMock()
+        mock_pipeline_details.dag_id = "test_dag"
+        mock_pipeline_details.tasks = []
+
+        with patch(
+            "metadata.ingestion.source.pipeline.airflow.metadata.fqn.build",
+            return_value="test_service.test_pipeline",
+        ):
+            results = list(source.yield_pipeline_status(mock_pipeline_details))
+
+        assert len(results) == 1
+        assert results[0].right is not None
+        assert results[0].right.pipeline_status.timestamp is not None
+
+    @patch(
+        "metadata.ingestion.source.pipeline.airflow.metadata.AirflowSource.__init__",
+        return_value=None,
+    )
+    def test_skips_run_when_both_dates_are_none(self, mock_init):
+        """When both logical_date and start_date are None, the run is skipped without raising."""
+        source = self._make_source()
+        dag_run = self._make_dag_run(logical_date=None, start_date=None)
+
+        mock_context = MagicMock()
+        mock_context.task_names = ["task1"]
+        source.context = MagicMock()
+        source.context.get.return_value = mock_context
+
+        source.get_pipeline_status = MagicMock(return_value=[dag_run])
+        source.get_task_instances = MagicMock(return_value=[])
+        source.metadata = MagicMock()
+
+        mock_pipeline_details = MagicMock()
+        mock_pipeline_details.dag_id = "test_dag"
+        mock_pipeline_details.tasks = []
+
+        results = list(source.yield_pipeline_status(mock_pipeline_details))
+
+        assert results == []
+
+
 class TestColumnFunctionUsage:
     """Test that the code uses sqlalchemy column() for database queries."""
 

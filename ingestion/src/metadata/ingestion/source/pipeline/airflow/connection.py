@@ -14,7 +14,7 @@ Source connection handler
 """
 import os
 from functools import partial, singledispatch
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import quote
 
 from airflow import __version__ as airflow_version
@@ -211,7 +211,7 @@ class AirflowTaskDetailsAccessError(Exception):
     """
 
 
-def _test_task_detail_access(session) -> None:
+def _test_task_detail_access(session) -> Optional[Any]:
     """
     Verify task-level access to serialized_dag.
     Extracted to module level so it can be unit-tested directly.
@@ -244,7 +244,7 @@ def _test_task_detail_access(session) -> None:
 
         return result[0]["dag"]["tasks"]
     except Exception as e:
-        raise AirflowTaskDetailsAccessError(f"Task details access error : {e}")
+        raise AirflowTaskDetailsAccessError(f"Task details access error : {e}") from e
 
 
 def test_connection(

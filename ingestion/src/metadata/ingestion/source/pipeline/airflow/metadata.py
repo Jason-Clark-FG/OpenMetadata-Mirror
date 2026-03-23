@@ -397,7 +397,7 @@ class AirflowSource(PipelineServiceSource):
                     # Fall back to start_date if logical_date is None (e.g. manually triggered runs)
                     execution_date = dag_run.logical_date or dag_run.start_date
                     timestamp = datetime_to_ts(execution_date)
-                    if not timestamp:
+                    if timestamp is None:
                         logger.warning(
                             f"Skipping pipeline status for run {dag_run.run_id}: "
                             "both logical_date and start_date are None"
