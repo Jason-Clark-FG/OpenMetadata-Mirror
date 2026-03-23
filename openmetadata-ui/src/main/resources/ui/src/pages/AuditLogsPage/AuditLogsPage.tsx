@@ -217,7 +217,7 @@ const AuditLogsPage = () => {
     element.click();
 
     URL.revokeObjectURL(element.href);
-    document.body.removeChild(element);
+    element.remove();
   }, []);
 
   const handleExportWebSocketMessage = useCallback(
