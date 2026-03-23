@@ -18,7 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
-import { EntityType } from '../../../enums/entity.enum';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -26,10 +26,7 @@ import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecen
 import { searchQuery } from '../../../rest/searchAPI';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
 import { getDomainIcon } from '../../../utils/DomainUtils';
-import {
-  getDomainDetailsPath,
-  getEntityDetailsPath,
-} from '../../../utils/RouterUtils';
+import { getEncodedFqn } from '../../../utils/StringsUtils';
 import './marketplace-search-bar.less';
 
 const PAGE_SIZE = 5;
@@ -37,6 +34,7 @@ const PAGE_SIZE = 5;
 const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const navCtx = useNavigationContext();
   const [searchValue, setSearchValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
@@ -123,10 +121,9 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     (dp: DataProduct) => {
       setIsOpen(false);
       navigate(
-        getEntityDetailsPath(
-          EntityType.DATA_PRODUCT,
+        `${navCtx.dataProductBasePath}/${getEncodedFqn(
           dp.fullyQualifiedName ?? ''
-        )
+        )}`
       );
     },
     [navigate]
@@ -135,7 +132,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const handleDomainClick = useCallback(
     (domain: Domain) => {
       setIsOpen(false);
-      navigate(getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
+      navigate(navCtx.getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
     [navigate]
   );

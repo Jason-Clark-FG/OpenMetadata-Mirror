@@ -156,6 +156,24 @@ const UserPage = withSuspenseFallback(
   React.lazy(() => import('../../pages/UserPage/UserPage.component'))
 );
 
+const DomainDetailPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "DomainDetailPage" */ '../../components/Domain/DomainDetailPage/DomainDetailPage.component'
+      )
+  )
+);
+
+const DataProductsPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "DataProductsPage" */ '../../components/DataProducts/DataProductsPage/DataProductsPage.component'
+      )
+  )
+);
+
 const DomainVersionPage = withSuspenseFallback(
   React.lazy(
     () =>
@@ -469,6 +487,21 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
         <Route element={<MarketplaceSubPageLayout />}>
           <Route element={<PureDataProductListPage />} path="data-products" />
           <Route element={<PureDomainListPage />} path="domains" />
+          <Route element={<DomainDetailPage />} path="domains/:fqn" />
+          <Route element={<DomainDetailPage />} path="domains/:fqn/:tab" />
+          <Route
+            element={<DomainDetailPage />}
+            path="domains/:fqn/:tab/:subTab"
+          />
+          <Route element={<DataProductsPage />} path="data-products/:fqn" />
+          <Route
+            element={<DataProductsPage />}
+            path="data-products/:fqn/:tab"
+          />
+          <Route
+            element={<DataProductsPage />}
+            path="data-products/:fqn/:tab/:subTab"
+          />
         </Route>
       </Route>
       <Route element={<SwaggerPage />} path={ROUTES.SWAGGER} />

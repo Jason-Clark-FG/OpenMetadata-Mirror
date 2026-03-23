@@ -16,7 +16,7 @@ import { compare } from 'fast-json-patch';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '../../../constants/constants';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
@@ -34,7 +34,6 @@ import {
 } from '../../../rest/domainAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { checkPermission } from '../../../utils/PermissionsUtils';
-import { getDomainPath } from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../common/Loader/Loader';
@@ -47,6 +46,7 @@ const DomainDetailPage = () => {
   const { fqn: domainFqn } = useFqn();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const navCtx = useNavigationContext();
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';
   const { permissions } = usePermissionProvider();
@@ -78,7 +78,7 @@ const DomainDetailPage = () => {
         setActiveDomain(response);
 
         if (activeDomain?.name !== updatedData.name) {
-          navigate(getDomainPath(response.fullyQualifiedName));
+          navigate(navCtx.getDomainPath(response.fullyQualifiedName));
         }
       } catch (error) {
         showErrorToast(error as AxiosError);
@@ -89,8 +89,7 @@ const DomainDetailPage = () => {
   };
 
   const handleDomainDelete = () => {
-    // Navigate back to domains listing page after deletion
-    navigate(ROUTES.DOMAIN);
+    navigate(navCtx.domainBasePath);
   };
 
   const fetchDomainByName = async (domainFqn: string) => {
@@ -212,12 +211,11 @@ const DomainDetailPage = () => {
     }
   }, [domainFqn]);
 
-  // If no domain FQN is provided, redirect to domains listing
   useEffect(() => {
     if (!domainFqn) {
-      navigate(ROUTES.DOMAIN);
+      navigate(navCtx.domainBasePath);
     }
-  }, [domainFqn, navigate]);
+  }, [domainFqn, navigate, navCtx.domainBasePath]);
 
   if (!(viewBasicDomainPermission || viewAllDomainPermission)) {
     return (

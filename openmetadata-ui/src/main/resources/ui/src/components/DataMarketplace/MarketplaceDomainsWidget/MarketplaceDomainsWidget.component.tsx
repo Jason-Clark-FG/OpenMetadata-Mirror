@@ -18,8 +18,9 @@ import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { INITIAL_PAGING_VALUE, ROUTES } from '../../../constants/constants';
+import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
 import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
@@ -32,7 +33,6 @@ import { searchQuery } from '../../../rest/searchAPI';
 import { createEntityWithCoverImage } from '../../../utils/CoverImageUploadUtils';
 import dataMarketplaceClassBase from '../../../utils/DataMarketplace/DataMarketplaceClassBase';
 import { getDomainIcon } from '../../../utils/DomainUtils';
-import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { useFormDrawerWithRef } from '../../common/atoms/drawer';
 import Loader from '../../common/Loader/Loader';
 import AddDomainForm from '../../Domain/AddDomainForm/AddDomainForm.component';
@@ -48,6 +48,7 @@ const MarketplaceDomainsWidget = ({
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const navCtx = useNavigationContext();
   const { permissions } = usePermissionProvider();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [form] = useForm();
@@ -142,7 +143,7 @@ const MarketplaceDomainsWidget = ({
       if (isEditView) {
         return;
       }
-      navigate(getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
+      navigate(navCtx.getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
     [navigate, isEditView]
   );
@@ -212,7 +213,7 @@ const MarketplaceDomainsWidget = ({
               <Link
                 className="view-all-link"
                 data-testid="view-all-domains"
-                to={ROUTES.DOMAIN}>
+                to={navCtx.domainBasePath}>
                 {t('label.view-all')} &rarr;
               </Link>
             )}

@@ -39,6 +39,7 @@ import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
 import { ERROR_MESSAGE } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -89,11 +90,7 @@ import {
   DEFAULT_ENTITY_PERMISSION,
   getPrioritizedEditPermission,
 } from '../../../utils/PermissionsUtils';
-import {
-  getDomainDetailsPath,
-  getDomainPath,
-  getDomainVersionsPath,
-} from '../../../utils/RouterUtils';
+import { getDomainVersionsPath } from '../../../utils/RouterUtils';
 import { getTermQuery } from '../../../utils/SearchUtils';
 import {
   escapeESReservedCharacters,
@@ -146,6 +143,7 @@ const DomainDetails = ({
   const { t } = useTranslation();
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+  const navCtx = useNavigationContext();
   const { getEntityPermission, permissions } = usePermissionProvider();
   const routeParams = useParams<{
     fqn?: string;
@@ -316,7 +314,7 @@ const DomainDetails = ({
       if (onActiveTabChange) {
         onActiveTabChange(activeKey as EntityTabs);
       } else if (domainFqn) {
-        navigate(getDomainDetailsPath(domainFqn, activeKey));
+        navigate(navCtx.getDomainDetailsPath(domainFqn, activeKey));
       }
     }
   };
@@ -403,28 +401,36 @@ const DomainDetails = ({
   });
 
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(() => {
+    const marketplaceRoot: BreadcrumbItem[] = navCtx.isMarketplace
+      ? [{ name: t('label.data-marketplace'), url: '/data-marketplace' }]
+      : [];
+
     if (!domainFqn) {
-      return [{ name: t('label.domain-plural'), url: getDomainPath() }];
+      return [
+        ...marketplaceRoot,
+        { name: t('label.domain-plural'), url: navCtx.getDomainPath() },
+      ];
     }
 
     const arr = Fqn.split(domainFqn);
     const dataFQN: Array<string> = [];
 
     return [
+      ...marketplaceRoot,
       {
         name: t('label.domain-plural'),
-        url: getDomainPath(),
+        url: navCtx.getDomainPath(),
       },
       ...arr.map((d) => {
         dataFQN.push(d);
 
         return {
           name: d,
-          url: getDomainPath(dataFQN.join(FQN_SEPARATOR_CHAR)),
+          url: navCtx.getDomainPath(dataFQN.join(FQN_SEPARATOR_CHAR)),
         };
       }),
     ];
-  }, [domainFqn, t]);
+  }, [domainFqn, navCtx, t]);
 
   const { breadcrumbs } = useBreadcrumbs({ items: breadcrumbItems });
 
@@ -633,7 +639,7 @@ const DomainDetails = ({
       return;
     }
     const path = isVersionsView
-      ? getDomainPath(domainFqn)
+      ? navCtx.getDomainPath(domainFqn)
       : getDomainVersionsPath(domainFqn, toString(domain.version));
 
     navigate(path);
@@ -677,7 +683,7 @@ const DomainDetails = ({
         const newFqn = domain.parent
           ? `${domain.parent.fullyQualifiedName}.${newName.trim()}`
           : newName.trim();
-        navigate(getDomainDetailsPath(newFqn, activeTab));
+        navigate(navCtx.getDomainDetailsPath(newFqn, activeTab));
       }
     } catch (error) {
       setIsNameEditing(false);

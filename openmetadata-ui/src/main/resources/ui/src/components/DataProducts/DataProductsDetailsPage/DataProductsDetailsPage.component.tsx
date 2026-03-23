@@ -29,10 +29,10 @@ import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-delete.svg'
 import { ReactComponent as VersionIcon } from '../../../assets/svg/ic-version.svg';
 import { ReactComponent as IconDropdown } from '../../../assets/svg/menu.svg';
 import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
-import { ROUTES } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -90,11 +90,7 @@ import {
   DEFAULT_ENTITY_PERMISSION,
   getPrioritizedEditPermission,
 } from '../../../utils/PermissionsUtils';
-import {
-  getDomainPath,
-  getEntityDetailsPath,
-  getVersionPath,
-} from '../../../utils/RouterUtils';
+import { getVersionPath } from '../../../utils/RouterUtils';
 import { getTermQuery } from '../../../utils/SearchUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
@@ -137,6 +133,7 @@ const DataProductsDetailsPage = ({
   const theme = useTheme();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const navCtx = useNavigationContext();
   const { getEntityPermission } = usePermissionProvider();
   const { tab: activeTab, version } = useRequiredParams<{
     tab: string;
@@ -234,22 +231,27 @@ const DataProductsDetailsPage = ({
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(() => {
     const items: BreadcrumbItem[] = [];
 
-    // Add Data Products listing page FIRST
+    if (navCtx.isMarketplace) {
+      items.push({
+        name: t('label.data-marketplace'),
+        url: '/data-marketplace',
+      });
+    }
+
     items.push({
       name: t('label.data-product-plural'),
-      url: ROUTES.DATA_PRODUCT,
+      url: navCtx.dataProductBasePath,
     });
 
-    // Add parent domain SECOND (if exists)
     if (dataProduct.domains && dataProduct.domains.length > 0) {
       items.push({
         name: getEntityName(dataProduct.domains[0]),
-        url: getDomainPath(dataProduct.domains[0].fullyQualifiedName),
+        url: navCtx.getDomainPath(dataProduct.domains[0].fullyQualifiedName),
       });
     }
 
     return items;
-  }, [dataProduct.domains, t]);
+  }, [dataProduct.domains, navCtx, t]);
 
   const { breadcrumbs } = useBreadcrumbs({ items: breadcrumbItems });
 
@@ -501,14 +503,9 @@ const DataProductsDetailsPage = ({
 
         // If name changed, navigate to the new URL
         if (name && name.trim() !== dataProduct.name) {
-          navigate(
-            getEntityDetailsPath(
-              EntityType.DATA_PRODUCT,
-              name.trim(),
-              activeTab
-            ),
-            { replace: true }
-          );
+          navigate(navCtx.getDataProductDetailsPath(name.trim(), activeTab), {
+            replace: true,
+          });
         }
       } catch (error) {
         // Error is already handled by the parent component
@@ -546,11 +543,7 @@ const DataProductsDetailsPage = ({
             toString(dataProduct.version),
             activeKey
           )
-        : getEntityDetailsPath(
-            EntityType.DATA_PRODUCT,
-            dataProductFqn,
-            activeKey
-          );
+        : navCtx.getDataProductDetailsPath(dataProductFqn, activeKey);
 
       navigate(path, {
         replace: true,
@@ -560,7 +553,7 @@ const DataProductsDetailsPage = ({
 
   const handleVersionClick = async () => {
     const path = isVersionsView
-      ? getEntityDetailsPath(EntityType.DATA_PRODUCT, dataProductFqn)
+      ? navCtx.getDataProductDetailsPath(dataProductFqn)
       : getVersionPath(
           EntityType.DATA_PRODUCT,
           dataProductFqn,

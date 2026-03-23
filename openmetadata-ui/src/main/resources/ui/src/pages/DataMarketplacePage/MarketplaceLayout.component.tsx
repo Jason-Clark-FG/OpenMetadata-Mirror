@@ -15,15 +15,21 @@ import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
 import MarketplaceNavBar from '../../components/DataMarketplace/MarketplaceNavBar/MarketplaceNavBar.component';
 import PageLayoutV2 from '../../components/PageLayoutV2/PageLayoutV2';
+import { NavigationContextProvider } from '../../context/NavigationContext/NavigationContext';
 
 const MarketplaceLayout = () => {
   const { t } = useTranslation();
 
   return (
-    <PageLayoutV2 pageTitle={t('label.data-marketplace')}>
-      <MarketplaceNavBar />
-      <Outlet />
-    </PageLayoutV2>
+    <NavigationContextProvider
+      isMarketplace
+      dataProductBasePath="/data-marketplace/data-products"
+      domainBasePath="/data-marketplace/domains">
+      <PageLayoutV2 pageTitle={t('label.data-marketplace')}>
+        <MarketplaceNavBar />
+        <Outlet />
+      </PageLayoutV2>
+    </NavigationContextProvider>
   );
 };
 

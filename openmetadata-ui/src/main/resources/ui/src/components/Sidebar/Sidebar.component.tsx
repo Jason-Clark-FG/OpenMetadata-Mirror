@@ -11,14 +11,35 @@
  *  limitations under the License.
  */
 
-import { NavList } from '@openmetadata/ui-core-components';
+import {
+  NavItemDividerType,
+  NavItemType,
+  NavList,
+} from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { MARKETPLACE_SIDEBAR_CONFIG } from '../../constants/CustomSidebar.constants';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import BrandImage from '../common/BrandImage/BrandImage';
 import './app-sidebar.less';
+
+const getActiveUrl = (
+  pathname: string,
+  items: (NavItemType | NavItemDividerType)[]
+): string => {
+  const hrefs = items
+    .filter((item): item is NavItemType => !('divider' in item && item.divider))
+    .map((item) => item.href)
+    .filter(Boolean) as string[];
+
+  return (
+    hrefs
+      .filter((href) => pathname.startsWith(href))
+      .sort((a, b) => b.length - a.length)[0] ?? pathname
+  );
+};
 
 export interface SidebarProps {
   className?: string;
@@ -33,11 +54,20 @@ const Sidebar = ({ className }: SidebarProps) => {
     preferences: { isSidebarCollapsed: collapsed },
   } = useCurrentUserPreferences();
 
+  const config = MARKETPLACE_SIDEBAR_CONFIG;
+
+  const allItems = useMemo(
+    () => [...config.items, ...(config.bottomItems ?? [])],
+    [config]
+  );
+  const activeUrl = useMemo(
+    () => getActiveUrl(pathname, allItems),
+    [pathname, allItems]
+  );
+
   if (!isNewLayoutRoute(pathname)) {
     return null;
   }
-
-  const config = MARKETPLACE_SIDEBAR_CONFIG;
 
   return (
     <aside
@@ -77,13 +107,13 @@ const Sidebar = ({ className }: SidebarProps) => {
       </div>
 
       <div className="app-sidebar-link tw:flex tw:flex-col tw:flex-1 tw:overflow-y-auto">
-        <NavList activeUrl={pathname} items={config.items} />
+        <NavList activeUrl={activeUrl} items={config.items} />
 
         {config.bottomItems && (
           <>
             <div className="tw:flex-1" />
             <NavList
-              activeUrl={pathname}
+              activeUrl={activeUrl}
               className="tw:pb-4"
               items={config.bottomItems}
             />

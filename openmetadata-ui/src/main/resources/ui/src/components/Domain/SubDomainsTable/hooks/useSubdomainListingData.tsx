@@ -13,6 +13,7 @@
 
 import { useDomainListing } from '../../../../components/common/atoms/domain/compositions/useDomainListing';
 import { ListingData } from '../../../../components/common/atoms/shared/types';
+import { useNavigationContext } from '../../../../context/NavigationContext/NavigationContext';
 import { Domain } from '../../../../generated/entity/domains/domain';
 
 interface UseSubdomainListingDataProps {
@@ -22,6 +23,8 @@ interface UseSubdomainListingDataProps {
 export const useSubdomainListingData = ({
   parentDomainFqn,
 }: UseSubdomainListingDataProps): ListingData<Domain> => {
+  const { domainBasePath } = useNavigationContext();
+
   const baseFilter = {
     query: {
       bool: {
@@ -39,6 +42,7 @@ export const useSubdomainListingData = ({
   return useDomainListing({
     baseFilter: JSON.stringify(baseFilter),
     nameLabelKey: 'label.sub-domain',
+    basePath: domainBasePath,
     isSubDomain: true,
     searchKey: 'sub-domain',
   });

@@ -13,9 +13,12 @@
 
 import { useDomainListing } from '../../../components/common/atoms/domain/compositions/useDomainListing';
 import { ListingData } from '../../../components/common/atoms/shared/types';
+import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { Domain } from '../../../generated/entity/domains/domain';
 
 export const useDomainListingData = (): ListingData<Domain> => {
+  const { domainBasePath } = useNavigationContext();
+
   const baseFilter = {
     query: {
       bool: {
@@ -34,5 +37,6 @@ export const useDomainListingData = (): ListingData<Domain> => {
   return useDomainListing({
     baseFilter: JSON.stringify(baseFilter),
     nameLabelKey: 'label.domain',
+    basePath: domainBasePath,
   });
 };
