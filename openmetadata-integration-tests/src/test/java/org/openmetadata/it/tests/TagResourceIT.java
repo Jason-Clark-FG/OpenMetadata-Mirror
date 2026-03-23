@@ -1545,38 +1545,40 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
         schemaWithCert.getCertification().getTagLabel().getTagFQN(),
         "Schema certification tagFQN must match the applied certification tag");
 
-    // Wait for search indexing
-    TimeUnit.SECONDS.sleep(2);
-
     // Step 5: Verify search finds the schema by the original tag FQN
     // Certification tags are indexed under certification.tagLabel.tagFQN, not tags.tagFQN
     String tagFilterBefore =
         String.format(
             "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"certification.tagLabel.tagFQN\":\"%s\"}}]}}}",
             originalTagFqn);
-    String searchResponseBefore =
-        client
-            .search()
-            .query("*")
-            .index("database_schema_search_index")
-            .queryFilter(tagFilterBefore)
-            .size(10)
-            .execute();
-
-    JsonNode hitsBefore = mapper.readTree(searchResponseBefore).path("hits").path("hits");
-    assertTrue(
-        hitsBefore.isArray() && !hitsBefore.isEmpty(),
-        "Schema should be findable by original tag FQN before rename");
-    boolean foundBeforeRename = false;
-    for (JsonNode hit : hitsBefore) {
-      if (schema
-          .getFullyQualifiedName()
-          .equals(hit.path("_source").path("fullyQualifiedName").asText())) {
-        foundBeforeRename = true;
-        break;
-      }
-    }
-    assertTrue(foundBeforeRename, "Schema should appear in search results under original tag FQN");
+    Awaitility.await("Schema should be searchable by original tag FQN")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              String resp =
+                  client
+                      .search()
+                      .query("*")
+                      .index("database_schema_search_index")
+                      .queryFilter(tagFilterBefore)
+                      .size(10)
+                      .execute();
+              JsonNode hits = mapper.readTree(resp).path("hits").path("hits");
+              assertTrue(
+                  hits.isArray() && !hits.isEmpty(),
+                  "Schema should be findable by original tag FQN before rename");
+              boolean found = false;
+              for (JsonNode hit : hits) {
+                if (schema
+                    .getFullyQualifiedName()
+                    .equals(hit.path("_source").path("fullyQualifiedName").asText())) {
+                  found = true;
+                  break;
+                }
+              }
+              assertTrue(found, "Schema should appear in search results under original tag FQN");
+            });
 
     // Step 6: Rename the certification tag (change its name — this changes the FQN)
     String renamedTagName = ns.shortPrefix("cert_tag_renamed");
@@ -1586,53 +1588,64 @@ public class TagResourceIT extends BaseEntityIT<Tag, CreateTag> {
     String newTagFqn = renamedTag.getFullyQualifiedName();
     assertEquals("Certification." + renamedTagName, newTagFqn);
 
-    // Wait for re-indexing after rename
-    TimeUnit.SECONDS.sleep(2);
-
-    // Step 7: Fetch DatabaseSchema by name — certification tagFQN must be updated to new FQN
+    // Step 7: Wait until certification tagFQN propagates to the entity
     // (name/FQN change must propagate to all referencing entities' certification field)
-    DatabaseSchema fetchedByName =
-        client.databaseSchemas().getByName(schema.getFullyQualifiedName(), "certification");
-    assertNotNull(fetchedByName, "Schema must be fetchable by name after tag rename");
-    assertNotNull(
-        fetchedByName.getCertification(), "Schema must still have certification after tag rename");
-    AssetCertification cert = fetchedByName.getCertification();
-    assertNotNull(cert.getTagLabel(), "Certification must have a tagLabel");
-    assertEquals(
-        newTagFqn,
-        cert.getTagLabel().getTagFQN(),
-        "Tag FQN on schema certification must be updated to new FQN after name rename");
+    Awaitility.await("Schema certification tagFQN should update after tag rename")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              DatabaseSchema fetched =
+                  client
+                      .databaseSchemas()
+                      .getByName(schema.getFullyQualifiedName(), "certification");
+              assertNotNull(fetched, "Schema must be fetchable by name after tag rename");
+              assertNotNull(
+                  fetched.getCertification(),
+                  "Schema must still have certification after tag rename");
+              assertNotNull(
+                  fetched.getCertification().getTagLabel(), "Certification must have a tagLabel");
+              assertEquals(
+                  newTagFqn,
+                  fetched.getCertification().getTagLabel().getTagFQN(),
+                  "Tag FQN on schema certification must be updated to new FQN after name rename");
+            });
 
     // Step 8: Search must find the schema under the new tag FQN
     String tagFilterAfter =
         String.format(
             "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"certification.tagLabel.tagFQN\":\"%s\"}}]}}}",
             newTagFqn);
-    String searchResponseAfter =
-        client
-            .search()
-            .query("*")
-            .index("database_schema_search_index")
-            .queryFilter(tagFilterAfter)
-            .size(10)
-            .execute();
-
-    JsonNode hitsAfter = mapper.readTree(searchResponseAfter).path("hits").path("hits");
-    assertTrue(
-        hitsAfter.isArray() && !hitsAfter.isEmpty(),
-        "Schema should be findable by new tag FQN after name rename");
-    boolean foundAfterRename = false;
-    for (JsonNode hit : hitsAfter) {
-      if (schema
-          .getFullyQualifiedName()
-          .equals(hit.path("_source").path("fullyQualifiedName").asText())) {
-        foundAfterRename = true;
-        break;
-      }
-    }
-    assertTrue(
-        foundAfterRename,
-        "Schema should appear in search results under new tag FQN after name rename");
+    Awaitility.await("Schema should be searchable by new tag FQN after rename")
+        .atMost(30, TimeUnit.SECONDS)
+        .pollInterval(1, TimeUnit.SECONDS)
+        .untilAsserted(
+            () -> {
+              String resp =
+                  client
+                      .search()
+                      .query("*")
+                      .index("database_schema_search_index")
+                      .queryFilter(tagFilterAfter)
+                      .size(10)
+                      .execute();
+              JsonNode hits = mapper.readTree(resp).path("hits").path("hits");
+              assertTrue(
+                  hits.isArray() && !hits.isEmpty(),
+                  "Schema should be findable by new tag FQN after name rename");
+              boolean found = false;
+              for (JsonNode hit : hits) {
+                if (schema
+                    .getFullyQualifiedName()
+                    .equals(hit.path("_source").path("fullyQualifiedName").asText())) {
+                  found = true;
+                  break;
+                }
+              }
+              assertTrue(
+                  found,
+                  "Schema should appear in search results under new tag FQN after name rename");
+            });
 
     // Step 9: Delete the certification tag and verify the schema no longer has a certification
     SdkClients.adminClient().tags().delete(certTag.getId().toString());
