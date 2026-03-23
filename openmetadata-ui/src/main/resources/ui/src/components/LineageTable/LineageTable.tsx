@@ -331,8 +331,8 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   }, [selectedQuickFilters, searchValue, impactLevel, columnLevelFilterKeys]);
 
   // Column filter for column-level filtering (filters edges by column)
-  // For Table-level: only column dropdown selections (Column, Tag, Glossary)
-  // For Column-level: search value + column filters
+  // For Table-level: only Column dropdown goes to column_filter
+  // For Column-level: search value + column filters (Column, Tag, Glossary)
   // Format: "columnName:val1,columnName:val2,tag:PII,glossary:Term"
   const columnFilterValue = useMemo(() => {
     const filters: string[] = [];
@@ -591,7 +591,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         onSearchValueChange={setSearchValue}
       />
     );
-  }, [searchValue, lineagePagingInfo, nodeDepthOptions, filterNodeIds]);
+  }, [searchValue, lineagePagingInfo, nodeDepthOptions, filterNodeIds, impactLevel]);
 
   // Render function for column names with search highlighting and popover
   const renderName = useCallback(

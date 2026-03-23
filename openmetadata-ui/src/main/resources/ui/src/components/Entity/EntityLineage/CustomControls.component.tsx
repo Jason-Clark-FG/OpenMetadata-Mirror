@@ -228,10 +228,13 @@ const CustomControls: FC<{
 
   const handleTabChange = useCallback(
     (key: string) => {
-      queryParams['mode'] = key;
-      navigate({ search: QueryString.stringify(queryParams) });
+      const params = QueryString.parse(location.search, {
+        ignoreQueryPrefix: true,
+      });
+      params['mode'] = key;
+      navigate({ search: QueryString.stringify(params) });
     },
-    [navigate, queryParams]
+    [navigate, location.search]
   );
 
   const updateURLParams = useCallback(
@@ -509,6 +512,7 @@ const CustomControls: FC<{
                     {(nodeDepthOptions ?? []).map((depth) => (
                       <Dropdown.Item
                         className={depth === nodeDepth ? 'tw:text-primary' : ''}
+                        id={String(depth)}
                         key={depth}>
                         {depth}
                       </Dropdown.Item>

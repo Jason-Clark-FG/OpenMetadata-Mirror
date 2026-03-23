@@ -137,7 +137,7 @@ public class ColumnFilterMatcher {
 
     Map<String, List<String>> groupedFilters = getGroupedFilters(columnFilter);
     if (groupedFilters.isEmpty()) {
-      return columns;
+      return new ArrayList<>();
     }
 
     List<ColumnLineage> matching = new ArrayList<>();
@@ -166,7 +166,7 @@ public class ColumnFilterMatcher {
 
     Map<String, List<String>> groupedFilters = getGroupedFilters(columnFilter);
     if (groupedFilters.isEmpty()) {
-      return columns;
+      return new ArrayList<>();
     }
 
     List<ColumnLineage> matching = new ArrayList<>();

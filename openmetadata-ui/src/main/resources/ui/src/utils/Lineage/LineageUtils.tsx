@@ -23,6 +23,7 @@ import {
 } from '../../components/Lineage/Lineage.interface';
 import { EImpactLevel } from '../../components/LineageTable/LineageTable.interface';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
+import { TagLabel } from '../../generated/type/tagLabel';
 import { TableSearchSource } from '../../interface/search.interface';
 import { QueryFieldInterface } from '../../pages/ExplorePage/ExplorePage.interface';
 import i18n from '../i18next/LocalUtil';
@@ -52,6 +53,24 @@ export const LINEAGE_DEPENDENCY_OPTIONS = [
     icon: <ArrowLeftOutlined />,
   },
 ];
+
+const buildColumnTagMap = (
+  entityData: Record<string, unknown>
+): Map<string, TagLabel[]> => {
+  const map = new Map<string, TagLabel[]>();
+  const columns = entityData.columns as
+    | Array<{ fullyQualifiedName?: string; tags?: TagLabel[] }>
+    | undefined;
+  if (columns) {
+    for (const col of columns) {
+      if (col.fullyQualifiedName && col.tags) {
+        map.set(col.fullyQualifiedName, col.tags);
+      }
+    }
+  }
+
+  return map;
+};
 
 export const prepareColumnLevelNodesFromEdges = (
   edges: EdgeDetails[],
@@ -88,10 +107,22 @@ export const prepareColumnLevelNodesFromEdges = (
         ) as Pick<
           TableSearchSource,
           'tags' | 'tier' | 'domains' | 'description' | 'owners' | 'id'
-        >; // Type assertion to Include type to ensure only these fields are
+        >;
+
+        // Build column FQN → tags lookup map (O(C) once per entity, O(1) per lookup)
+        const columnTagMap = buildColumnTagMap(
+          entityData as Record<string, unknown>
+        );
 
         // flatten the fromColumns to create separate nodes for each
         for (const fromCol of col.fromColumns || []) {
+          // Use column-specific tags instead of table tags
+          const columnFqn =
+            direction === LineageDirection.Downstream
+              ? col.toColumn
+              : fromCol;
+          const columnTags = columnTagMap.get(columnFqn);
+
           acc.push({
             ...omit(node, 'columns'),
             fromColumn: fromCol,
@@ -99,6 +130,7 @@ export const prepareColumnLevelNodesFromEdges = (
             docId: fromCol + '->' + col.toColumn,
             nodeDepth,
             ...picked,
+            ...(columnTags !== undefined ? { tags: columnTags } : {}),
           });
         }
       }

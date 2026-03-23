@@ -41,6 +41,7 @@ import org.openmetadata.service.search.ColumnFilterMatcher;
 import org.openmetadata.service.search.ColumnMetadataCache;
 import org.openmetadata.service.search.LineagePathPreserver;
 import org.openmetadata.service.util.FullyQualifiedName;
+import org.openmetadata.service.util.LineageUtil;
 import os.org.opensearch.client.json.JsonData;
 import os.org.opensearch.client.opensearch.OpenSearchClient;
 import os.org.opensearch.client.opensearch._types.aggregations.StringTermsAggregate;
@@ -759,7 +760,21 @@ public class OSLineageGraphBuilder
       addEntitiesAcrossDepths(result, paginatedEntities, entitiesByDepth, request);
     }
 
+    // Replace mixed ES tags with entity-level-only tags for Impact Analysis table view
+    replaceTagsWithEntityLevelTags(result);
+
     return result;
+  }
+
+  @SuppressWarnings("unchecked")
+  private void replaceTagsWithEntityLevelTags(SearchLineageResult result) {
+    List<Map<String, Object>> entityDocs = new ArrayList<>();
+    for (NodeInformation node : result.getNodes().values()) {
+      if (node.getEntity() instanceof Map) {
+        entityDocs.add((Map<String, Object>) node.getEntity());
+      }
+    }
+    LineageUtil.replaceWithEntityLevelTagsBatch(entityDocs);
   }
 
   private SearchLineageRequest convertToSearchLineageRequest(EntityCountLineageRequest request) {
