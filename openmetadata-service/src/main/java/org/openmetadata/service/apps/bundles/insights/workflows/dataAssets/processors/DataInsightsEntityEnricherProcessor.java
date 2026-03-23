@@ -116,6 +116,20 @@ public class DataInsightsEntityEnricherProcessor
     String entityType = (String) contextData.get(ENTITY_TYPE_KEY);
     Long endTimestamp = (Long) contextData.get(END_TIMESTAMP_KEY);
     Long startTimestamp = (Long) contextData.get(START_TIMESTAMP_KEY);
+
+    // Skip version history queries for entities unchanged during the window (N+1 optimization).
+    Long updatedAt = entity.getUpdatedAt();
+    if (updatedAt != null) {
+      Long entityUpdatedDay = TimestampUtils.getStartOfDayTimestamp(updatedAt);
+      if (entityUpdatedDay < startTimestamp) {
+        Map<String, Object> versionMap = new HashMap<>();
+        versionMap.put("endTimestamp", endTimestamp);
+        versionMap.put("startTimestamp", startTimestamp);
+        versionMap.put("versionEntity", entity);
+        return List.of(versionMap);
+      }
+    }
+
     EntityRepository<?> entityRepository = Entity.getEntityRepository(entityType);
 
     Long pointerTimestamp = endTimestamp;
@@ -212,12 +226,15 @@ public class DataInsightsEntityEnricherProcessor
 
     if (SearchIndexUtils.hasColumns(entity)) {
       entityMap.put("numberOfColumns", ((ColumnsEntityInterface) entity).getColumns().size());
-      entityMap.put(
-          "numberOfColumnsWithDescription",
+      int columnsWithDescription =
           ((ColumnsEntityInterface) entity)
               .getColumns().stream()
                   .map(column -> CommonUtil.nullOrEmpty(column.getDescription()) ? 0 : 1)
-                  .reduce(0, Integer::sum));
+                  .reduce(0, Integer::sum);
+      entityMap.put("numberOfColumnsWithDescription", columnsWithDescription);
+      entityMap.put(
+          "hasColumnDescription",
+          columnsWithDescription == ((ColumnsEntityInterface) entity).getColumns().size() ? 1 : 0);
     }
 
     // Modify Custom Property key
