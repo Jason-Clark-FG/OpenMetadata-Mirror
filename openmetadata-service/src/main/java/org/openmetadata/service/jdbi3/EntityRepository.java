@@ -2611,26 +2611,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  /**
-   * Count how many relationship fields are requested to determine if batch fetching is beneficial
-   */
-  private int countRelationshipFields(Fields fields) {
-    int count = 0;
-    if (fields.contains(FIELD_OWNERS)) count++;
-    if (fields.contains(FIELD_TAGS)) count++;
-    if (fields.contains(FIELD_CERTIFICATION)) count++;
-    if (fields.contains(FIELD_EXTENSION)) count++;
-    if (fields.contains(FIELD_DOMAINS)) count++;
-    if (fields.contains(FIELD_DATA_PRODUCTS)) count++;
-    if (fields.contains(FIELD_DATA_CONTRACT)) count++;
-    if (fields.contains(FIELD_FOLLOWERS)) count++;
-    if (fields.contains(FIELD_CHILDREN)) count++;
-    if (fields.contains(FIELD_EXPERTS)) count++;
-    if (fields.contains(FIELD_REVIEWERS)) count++;
-    if (fields.contains(FIELD_VOTES)) count++;
-    return count;
-  }
-
   public final void clearFieldsInternal(T entity, Fields fields) {
     entity.setOwners(fields.contains(FIELD_OWNERS) ? entity.getOwners() : null);
     entity.setTags(fields.contains(FIELD_TAGS) ? entity.getTags() : null);
@@ -8952,7 +8932,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       UUID toId = UUID.fromString(rec.getToId());
       EntityReference contractRef = contractRefMap.get(toId);
       if (contractRef != null) {
-        dataContractMap.put(fromId, contractRef);
+        dataContractMap.putIfAbsent(fromId, contractRef);
       }
     }
 
