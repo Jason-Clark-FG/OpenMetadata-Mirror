@@ -13,7 +13,10 @@
 
 import { useReducer } from 'react';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
-import { LineageNode } from '../Lineage/Lineage.interface';
+import {
+  ColumnLevelLineageNode,
+  LineageNode,
+} from '../Lineage/Lineage.interface';
 import {
   EImpactLevel,
   LineagePagingInfo,
@@ -133,17 +136,17 @@ export function useLineageTableState() {
     }, 0);
   };
 
-  const setUpstreamColumnLineageNodes = (nodes: LineageNode[]) => {
+  const setUpstreamColumnLineageNodes = (nodes: ColumnLevelLineageNode[]) => {
     dispatch({ type: 'SET_UPSTREAM_COLUMN_LINEAGE_NODES', payload: nodes });
   };
 
-  const setDownstreamColumnLineageNodes = (nodes: LineageNode[]) => {
+  const setDownstreamColumnLineageNodes = (nodes: ColumnLevelLineageNode[]) => {
     dispatch({ type: 'SET_DOWNSTREAM_COLUMN_LINEAGE_NODES', payload: nodes });
   };
 
   const setColumnLineageNodes = (
-    upstream: LineageNode[],
-    downstream: LineageNode[]
+    upstream: ColumnLevelLineageNode[],
+    downstream: ColumnLevelLineageNode[]
   ) => {
     dispatch({
       type: 'SET_COLUMN_LINEAGE_NODES',

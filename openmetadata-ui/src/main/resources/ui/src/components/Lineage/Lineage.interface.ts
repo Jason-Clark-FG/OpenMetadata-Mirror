@@ -135,7 +135,7 @@ export type LineageNode = SearchSourceAlias & {
 };
 
 export interface DirectionalLineageResponse {
-  nodes: Record<string, LineageNode>;
+  nodes: Record<string, LineageNodeType>;
   upstreamEdges: Record<string, EdgeDetails>;
   downstreamEdges: Record<string, EdgeDetails>;
 }

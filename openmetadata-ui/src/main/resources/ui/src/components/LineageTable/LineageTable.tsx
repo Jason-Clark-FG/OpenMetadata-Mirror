@@ -341,7 +341,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
 
     // Skip column specific filter when in Table mode
     if (impactLevel === EImpactLevel.TableLevel) {
-      return '';
+      return;
     }
 
     selectedQuickFilters.forEach((filter) => {
@@ -457,13 +457,13 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
             prepareUpstreamColumnLevelNodesFromUpstreamEdges(
               upstreamEdges,
               res.nodes
-            ) as unknown as LineageNode[];
+            );
 
           const downstreamNodes =
             prepareDownstreamColumnLevelNodesFromDownstreamEdges(
               downstreamEdges,
               res.nodes
-            ) as unknown as LineageNode[];
+            );
 
           setColumnLineageNodes(upstreamNodes, downstreamNodes);
           handlePagingChange({

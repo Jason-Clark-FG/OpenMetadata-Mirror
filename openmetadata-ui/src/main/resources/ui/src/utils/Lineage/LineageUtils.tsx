@@ -125,7 +125,7 @@ export const prepareColumnLevelNodesFromEdges = (
           // Use column-specific tags instead of table tags
           const columnFqn =
             direction === LineageDirection.Downstream ? col.toColumn : fromCol;
-          const columnTags = columnFqn ? columnTagMap.get(columnFqn) : [];
+          const columnTags = columnFqn ? columnTagMap.get(columnFqn) ?? [] : [];
 
           acc.push({
             ...omit(node, 'columns'),
