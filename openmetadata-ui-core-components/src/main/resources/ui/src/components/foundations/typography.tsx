@@ -11,9 +11,22 @@
  *  limitations under the License.
  */
 
-import type { CSSProperties, ElementType, HTMLAttributes, ReactNode, Ref } from "react";
-import { Tooltip } from "@/components/base/tooltip/tooltip";
+import { Tooltip, TooltipTrigger } from "@/components/base/tooltip/tooltip";
 import { cx } from "@/utils/cx";
+import type { ElementType, HTMLAttributes, ReactNode, Ref } from "react";
+
+const lineClampClasses: Record<number, string> = {
+    1: "tw:line-clamp-1",
+    2: "tw:line-clamp-2",
+    3: "tw:line-clamp-3",
+    4: "tw:line-clamp-4",
+    5: "tw:line-clamp-5",
+    6: "tw:line-clamp-6",
+    7: "tw:line-clamp-7",
+    8: "tw:line-clamp-8",
+    9: "tw:line-clamp-9",
+    10: "tw:line-clamp-10",
+};
 
 type TypographyQuoteVariant = "default" | "centered-quote" | "minimal-quote";
 
@@ -98,38 +111,36 @@ export const Typography = (props: TypographyProps) => {
     const ellipsisRows = ellipsisConfig?.rows ?? 1;
     const ellipsisTooltip = ellipsisConfig?.tooltip;
 
-    const ellipsisClassName =
-        isEllipsis && ellipsisRows <= 1 ? "tw:truncate" : undefined;
+    const getEllipsisClassName = () => {
+        if (ellipsisRows <= 1) return "tw:truncate";
+        return lineClampClasses[ellipsisRows];
+    };
 
-    const ellipsisStyle: CSSProperties | undefined =
-        isEllipsis && ellipsisRows > 1
-            ? {
-                  overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: ellipsisRows,
-                  WebkitBoxOrient: "vertical",
-              }
-            : undefined;
+    const ellipsisClassName = isEllipsis ? getEllipsisClassName() : undefined;
 
     const innerClassName = cx(sizeClass, weightClass, className, ellipsisClassName);
 
-    const content = (
+    if (ellipsisTooltip) {
+        return (
+            <Tooltip title={ellipsisTooltip}>
+                <TooltipTrigger className="tw:block tw:w-full tw:min-w-0">
+                    <div className={cx("prose", quoteStyles[quoteVariant])}>
+                        <Component {...otherProps} className={innerClassName} style={style}>
+                            {children}
+                        </Component>
+                    </div>
+                </TooltipTrigger>
+            </Tooltip>
+        );
+    }
+
+    return (
         <div className={cx("prose", quoteStyles[quoteVariant])}>
-            <Component
-                {...otherProps}
-                className={innerClassName}
-                style={{ ...style, ...ellipsisStyle }}
-            >
+            <Component {...otherProps} className={innerClassName} style={style}>
                 {children}
             </Component>
         </div>
     );
-
-    if (ellipsisTooltip) {
-        return <Tooltip title={ellipsisTooltip}>{content}</Tooltip>;
-    }
-
-    return content;
 };
 
 export type { TypographyEllipsis, TypographyProps, TypographyQuoteVariant, TypographySize, TypographyWeight };
