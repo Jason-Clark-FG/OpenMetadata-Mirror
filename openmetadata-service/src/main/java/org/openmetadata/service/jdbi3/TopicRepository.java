@@ -662,13 +662,23 @@ public class TopicRepository extends EntityRepository<Topic> {
                       ? null
                       : original.getMessageSchema().getSchemaType(),
                   updated.getMessageSchema().getSchemaType());
-              updateSchemaFields(
-                  "messageSchema.schemaFields",
-                  original.getMessageSchema() == null
-                      ? new ArrayList<>()
-                      : listOrEmpty(original.getMessageSchema().getSchemaFields()),
-                  listOrEmpty(updated.getMessageSchema().getSchemaFields()),
-                  EntityUtil.schemaFieldMatch);
+              // Temporarily disable shouldCompare for nested schema field updates.
+              // The field names from getSchemaField() start with "schemaFields." which
+              // doesn't match the patchedField "messageSchema", causing recordChange
+              // to silently skip the update.
+              Set<String> saved = getPatchedFields();
+              setPatchedFields(null);
+              try {
+                updateSchemaFields(
+                    "messageSchema.schemaFields",
+                    original.getMessageSchema() == null
+                        ? new ArrayList<>()
+                        : listOrEmpty(original.getMessageSchema().getSchemaFields()),
+                    listOrEmpty(updated.getMessageSchema().getSchemaFields()),
+                    EntityUtil.schemaFieldMatch);
+              } finally {
+                setPatchedFields(saved);
+              }
             }
           });
       compareAndUpdate(

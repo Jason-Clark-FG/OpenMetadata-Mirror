@@ -6033,7 +6033,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     @Getter protected ChangeDescription incrementalChangeDescription = null;
     private ChangeSource changeSource;
     private final boolean useOptimisticLocking;
-    @Setter private Set<String> patchedFields;
+    @Getter @Setter private Set<String> patchedFields;
     private final List<Runnable> deferredReactOperations = new ArrayList<>();
     private boolean deferredReactExecuted;
 
