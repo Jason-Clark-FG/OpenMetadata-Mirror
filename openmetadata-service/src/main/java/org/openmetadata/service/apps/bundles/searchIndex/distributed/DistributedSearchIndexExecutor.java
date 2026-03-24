@@ -109,8 +109,8 @@ public class DistributedSearchIndexExecutor {
   private ExecutorService workerExecutor;
   private final Set<UUID> activePartitions = ConcurrentHashMap.newKeySet();
   private final List<PartitionWorker> activeWorkers = new ArrayList<>();
-  private Thread lockRefreshThread;
-  private Thread partitionHeartbeatThread;
+  private volatile Thread lockRefreshThread;
+  private volatile Thread partitionHeartbeatThread;
   private Thread staleReclaimerThread;
 
   // App context for WebSocket broadcasts
