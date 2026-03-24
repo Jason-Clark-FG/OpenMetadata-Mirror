@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.lenient;
@@ -162,8 +163,15 @@ class SearchRepositoryTest {
     when(mockBulkSink.flushAndAwait(anyInt())).thenReturn(true);
     doNothing().when(mockBulkSink).close();
 
-    // Use doCallRealMethod for void method
+    // Use doCallRealMethod for both updateEntitiesBulk and updateEntitiesIndex
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
+
+    // Stub dependencies needed by updateEntitiesIndex
+    SearchClient mockSearchClient = mock(SearchClient.class);
+    when(mockSearchClient.isClientAvailable()).thenReturn(true);
+    when(realSearchRepository.getSearchClient()).thenReturn(mockSearchClient);
+    when(realSearchRepository.checkIfIndexingIsSupported(anyString())).thenReturn(true);
 
     // Create mixed entity types
     List<EntityInterface> mixedEntities = new ArrayList<>();
@@ -239,6 +247,13 @@ class SearchRepositoryTest {
     when(mockBulkSink.flushAndAwait(anyInt())).thenReturn(true);
     doNothing().when(mockBulkSink).close();
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
+
+    // Stub dependencies needed by updateEntitiesIndex
+    SearchClient mockSearchClient = mock(SearchClient.class);
+    when(mockSearchClient.isClientAvailable()).thenReturn(true);
+    when(realSearchRepository.getSearchClient()).thenReturn(mockSearchClient);
+    when(realSearchRepository.checkIfIndexingIsSupported(anyString())).thenReturn(true);
 
     // Create entities of single type
     List<EntityInterface> entities = new ArrayList<>();
@@ -271,6 +286,7 @@ class SearchRepositoryTest {
     when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
         .thenReturn(mockBulkSink);
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Call with empty list
     realSearchRepository.updateEntitiesBulk(new ArrayList<>());
@@ -289,6 +305,7 @@ class SearchRepositoryTest {
     when(realSearchRepository.createBulkSink(anyInt(), anyInt(), anyLong()))
         .thenReturn(mockBulkSink);
     doCallRealMethod().when(realSearchRepository).updateEntitiesBulk(any());
+    doCallRealMethod().when(realSearchRepository).updateEntitiesIndex(any());
 
     // Call with null
     realSearchRepository.updateEntitiesBulk(null);

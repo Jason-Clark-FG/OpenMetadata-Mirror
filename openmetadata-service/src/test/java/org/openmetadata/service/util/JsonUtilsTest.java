@@ -140,7 +140,7 @@ class JsonUtilsTest {
   @Test
   void testPojoToMaskedJson() {
     String expectedJson =
-        "{\"name\":\"test\",\"connection\":{},\"tags\":[],\"version\":0.1,\"deleted\":false}";
+        "{\"name\":\"test\",\"connection\":{},\"tags\":[],\"version\":0.1,\"deleted\":false,\"entityStatus\":\"Unprocessed\"}";
     DatabaseService databaseService =
         new DatabaseService()
             .withName("test")
