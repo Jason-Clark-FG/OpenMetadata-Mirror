@@ -119,9 +119,7 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
     allowedStatuses: string[],
     maxRows?: number
   ) => {
-    const rows = page.locator(
-      'tbody.react-aria-TableBody > tr[role="row"]'
-    );
+    const rows = page.locator('tbody.react-aria-TableBody > tr[role="row"]');
     const rowCount = await rows.count();
     const checkCount = maxRows ? Math.min(rowCount, maxRows) : rowCount;
 
@@ -176,9 +174,7 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
 
   // Reusable helper to get row count
   const getRowCount = async (page: Page) => {
-    const rows = page.locator(
-      'tbody.react-aria-TableBody > tr[role="row"]'
-    );
+    const rows = page.locator('tbody.react-aria-TableBody > tr[role="row"]');
 
     return rows.count();
   };
@@ -341,9 +337,7 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
     test('should return matching terms for search query', async ({ page }) => {
       await performSearch(page, 'Term_');
 
-      const rows = page.locator(
-        'tbody.react-aria-TableBody > tr[role="row"]'
-      );
+      const rows = page.locator('tbody.react-aria-TableBody > tr[role="row"]');
       const rowCount = await rows.count();
 
       expect(rowCount).toBeGreaterThan(0);
@@ -559,10 +553,10 @@ test.describe('Glossary Status Filter - Large Dataset', () => {
 
       await page.locator('.ant-btn-primary', { hasText: 'Save' }).click();
 
-      await page.waitForSelector(
-        'tbody.react-aria-TableBody > tr[role="row"]',
-        { timeout: 10000 }
-      );
+      await page
+        .locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])')
+        .first()
+        .waitFor({ timeout: 10000 });
 
       const endTime = Date.now();
       const elapsed = endTime - startTime;

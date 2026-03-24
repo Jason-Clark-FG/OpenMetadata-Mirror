@@ -176,7 +176,11 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
       .locator('.glossary-terms-scroll-container [data-testid="loader"]')
       .waitFor({ state: 'detached', timeout: 30000 })
       .catch(() => {});
-    await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' }).catch(() => {});
+    await page
+      .locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])')
+      .first()
+      .waitFor({ state: 'visible' })
+      .catch(() => {});
   };
 
   // Helper to clear search
@@ -188,7 +192,11 @@ test.describe('Glossary Status Filter - Nested Terms', () => {
       .locator('.glossary-terms-scroll-container [data-testid="loader"]')
       .waitFor({ state: 'detached', timeout: 30000 })
       .catch(() => {});
-    await page.locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])').first().waitFor({ state: 'visible' }).catch(() => {});
+    await page
+      .locator('tbody.ant-table-tbody > tr:not([aria-hidden="true"])')
+      .first()
+      .waitFor({ state: 'visible' })
+      .catch(() => {});
   };
 
   // Helper to get row count

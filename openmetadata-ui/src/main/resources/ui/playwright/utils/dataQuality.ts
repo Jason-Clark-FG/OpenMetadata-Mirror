@@ -125,7 +125,7 @@ export const addTestCaseToLogicalTestSuite = async (
 
   await page.click(`[data-testid="${testCaseName}"]`);
   const updateTestCase = page.waitForResponse(
-    '/api/v1/dataQuality/testCases/logicalTestCases'
+    '/api/v1/dataQuality/testCases/logicalTestCases/bulk'
   );
   await page.click('[data-testid="submit"]');
   await updateTestCase;
@@ -145,6 +145,32 @@ export const removeTestCasesFromLogicalTestSuite = async (
       '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
     );
     await page.click('[data-testid="save-button"]');
+    await removeResponse;
+  }
+};
+
+const ACTION_DROPDOWN_PREFIX = 'action-dropdown-';
+
+export const removeFirstNTestCasesFromLogicalTestSuite = async (
+  page: Page,
+  count: number
+) => {
+  const rowActionDropdown = page
+    .locator('.ant-table-tbody')
+    .locator(`[data-testid^="${ACTION_DROPDOWN_PREFIX}"]`);
+
+  for (let i = 0; i < count; i++) {
+    const trigger = rowActionDropdown.first();
+    await trigger.waitFor({ state: 'visible' });
+    const fullTestId = await trigger.getAttribute('data-testid');
+    const name = fullTestId?.slice(ACTION_DROPDOWN_PREFIX.length) ?? '';
+
+    await trigger.click();
+    await page.getByTestId(`remove-${name}`).click();
+    const removeResponse = page.waitForResponse(
+      '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
+    );
+    await page.getByTestId('save-button').click();
     await removeResponse;
   }
 };
