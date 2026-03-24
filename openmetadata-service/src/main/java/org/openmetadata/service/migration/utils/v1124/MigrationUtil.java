@@ -1,45 +1,105 @@
-package org.openmetadata.service.migration.utils.v1123;
+package org.openmetadata.service.migration.utils.v1124;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.jdbi.v3.core.Handle;
+import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
+import org.openmetadata.service.resources.databases.DatasourceConfig;
 import org.openmetadata.service.util.EntityUtil;
 
-/**
- * Migrates workflow definitions for v1.12.3 changes:
- *
- * <p>Updates the "include" field in existing workflow trigger configurations from map format
- * to array format for Tag and Domain change approval workflows.
- *
- * <p>For each workflow definition with an eventBasedEntity trigger that doesn't have
- * an "include" field in its config, the migration adds an empty include array:
- * {@code "include": []}.
- * For existing include fields in map format, converts them to array format by extracting field names.
- *
- * <p>This ensures backward compatibility - existing workflows continue to work as before,
- * and new workflows can use the include fields feature for fine-grained control over
- * which metadata changes trigger approval workflows.
- *
- * Uses {@link WorkflowDefinitionRepository#createOrUpdate} so that Flowable also receives the
- * updated workflow definition. The migration is idempotent – running it more than once is safe.
- */
 @Slf4j
 public class MigrationUtil {
 
+  private MigrationUtil() {}
+
+  private static final String UPDATE_EVENT_SUB_MYSQL =
+      "UPDATE event_subscription_entity SET json = :json WHERE id = :id";
+  private static final String UPDATE_EVENT_SUB_POSTGRESQL =
+      "UPDATE event_subscription_entity SET json = :json::jsonb WHERE id = :id";
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final String ADMIN_USER_NAME = "admin";
 
+  public static void migrateWebhookSecretKeyToAuthType(Handle handle) {
+    LOG.info("Starting migration of webhook secretKey to authType");
+
+    List<Map<String, Object>> rows =
+        handle.createQuery("SELECT id, json FROM event_subscription_entity").mapToMap().list();
+
+    int migratedCount = 0;
+    for (Map<String, Object> row : rows) {
+      String id = row.get("id").toString();
+      String jsonStr = row.get("json").toString();
+
+      try {
+        ObjectNode root = (ObjectNode) JsonUtils.readTree(jsonStr);
+        JsonNode destinations = root.get("destinations");
+        if (destinations == null || !destinations.isArray()) {
+          continue;
+        }
+
+        boolean modified = false;
+        for (JsonNode destination : destinations) {
+          String destinationType =
+              destination.get("type") != null
+                  ? destination.get("type").asText().toLowerCase()
+                  : null;
+          if (destinationType == null
+              || !destinationType.equals(
+                  SubscriptionDestination.SubscriptionType.WEBHOOK.value().toLowerCase())) {
+            continue;
+          }
+          JsonNode config = destination.get("config");
+          if (config == null || !config.isObject()) {
+            continue;
+          }
+
+          JsonNode secretKeyNode = config.get("secretKey");
+          if (secretKeyNode == null
+              || secretKeyNode.isNull()
+              || secretKeyNode.asText().trim().isEmpty()) {
+            continue;
+          }
+
+          ObjectNode configObj = (ObjectNode) config;
+          ObjectNode bearerAuth =
+              JsonUtils.getObjectMapper()
+                  .createObjectNode()
+                  .put("type", "bearer")
+                  .put("secretKey", secretKeyNode.asText());
+          configObj.set("authType", bearerAuth);
+          configObj.remove("secretKey");
+          modified = true;
+        }
+
+        if (modified) {
+          String updateSql =
+              Boolean.TRUE.equals(DatasourceConfig.getInstance().isMySQL())
+                  ? UPDATE_EVENT_SUB_MYSQL
+                  : UPDATE_EVENT_SUB_POSTGRESQL;
+          handle.createUpdate(updateSql).bind("json", root.toString()).bind("id", id).execute();
+          migratedCount++;
+        }
+      } catch (Exception e) {
+        LOG.warn("Error migrating event subscription {}: {}", id, e.getMessage());
+      }
+    }
+
+    LOG.info("Migrated {} event subscriptions with secretKey to authType", migratedCount);
+  }
+
   public static void migrateWorkflowDefinitions() {
     LOG.info(
-        "Starting v1123 migration: converting include fields from map to array format in workflow trigger configurations");
+        "Starting v1124 migration: converting include fields from map to array format in workflow trigger configurations");
 
     WorkflowDefinitionRepository repository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
@@ -74,14 +134,13 @@ public class MigrationUtil {
     }
 
     LOG.info(
-        "Completed v1123 migration: {} of {} workflow definitions updated with array-based include fields",
+        "Completed v1124 migration: {} of {} workflow definitions updated with array-based include fields",
         totalUpdated,
         allWorkflows.size());
 
-    // Only throw exception if workflows needed migration but failed to update
     if (needsMigration > 0 && totalUpdated == 0) {
       throw new RuntimeException(
-          "v1123 migration: failed to update any workflow definitions out of "
+          "v1124 migration: failed to update any workflow definitions out of "
               + needsMigration
               + " that needed migration");
     }
@@ -99,7 +158,6 @@ public class MigrationUtil {
     if (node.isObject()) {
       ObjectNode obj = (ObjectNode) node;
 
-      // Check if this is a trigger config that needs migration
       if (needsIncludeFieldMigration(obj)) {
         return addIncludeField(obj);
       }
@@ -136,18 +194,15 @@ public class MigrationUtil {
   }
 
   private static boolean needsIncludeFieldMigration(ObjectNode obj) {
-    // Check if this object represents a trigger config for eventBasedEntity
     JsonNode typeNode = obj.get("type");
     JsonNode configNode = obj.get("config");
 
     if (typeNode != null && "eventBasedEntity".equals(typeNode.asText()) && configNode != null) {
-      // This is an eventBasedEntity trigger, check if config already has include field
       JsonNode includeNode = configNode.get("include");
       if (includeNode == null) {
-        return true; // Needs migration if include field is missing
+        return true;
       }
-      // Check if include field is in old map format and needs conversion to array
-      return includeNode.isObject(); // Needs migration if include is still an object
+      return includeNode.isObject();
     }
 
     return false;
@@ -162,10 +217,8 @@ public class MigrationUtil {
       JsonNode includeNode = configObj.get("include");
 
       if (includeNode == null) {
-        // Add empty include array if missing
         configObj.set("include", MAPPER.createArrayNode());
       } else if (includeNode.isObject()) {
-        // Convert old map format to array format
         ArrayNode includeArray = MAPPER.createArrayNode();
         includeNode.fieldNames().forEachRemaining(includeArray::add);
         configObj.set("include", includeArray);

@@ -1,10 +1,10 @@
-package org.openmetadata.service.migration.mysql.v1123;
+package org.openmetadata.service.migration.mysql.v1124;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.migration.api.MigrationProcessImpl;
 import org.openmetadata.service.migration.utils.MigrationFile;
-import org.openmetadata.service.migration.utils.v1123.MigrationUtil;
+import org.openmetadata.service.migration.utils.v1124.MigrationUtil;
 
 @Slf4j
 public class Migration extends MigrationProcessImpl {
@@ -16,12 +16,19 @@ public class Migration extends MigrationProcessImpl {
   @Override
   @SneakyThrows
   public void runDataMigration() {
-    // Workflow definition migration - wrap in try-catch to prevent blocking other migrations
+    try {
+      MigrationUtil.migrateWebhookSecretKeyToAuthType(handle);
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to migrate webhook secretKey to authType in v1124 migration. "
+              + "Webhook authentication may not work correctly until re-saved.",
+          e);
+    }
     try {
       MigrationUtil.migrateWorkflowDefinitions();
     } catch (Exception e) {
       LOG.error(
-          "Failed to migrate workflow definitions in v1123 migration. "
+          "Failed to migrate workflow definitions in v1124 migration. "
               + "Include fields feature may not work correctly until server restart.",
           e);
     }
