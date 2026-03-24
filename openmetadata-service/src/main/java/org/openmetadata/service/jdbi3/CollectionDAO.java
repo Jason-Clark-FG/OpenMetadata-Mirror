@@ -10970,6 +10970,16 @@ public interface CollectionDAO {
       return claimed;
     }
 
+    @SqlQuery(
+        "SELECT entityId, entityFqn, failureReason, status, entityType, retryCount, claimedAt "
+            + "FROM search_index_retry_queue ORDER BY retryCount DESC, claimedAt DESC "
+            + "LIMIT :limit OFFSET :offset")
+    @RegisterRowMapper(SearchIndexRetryRecordMapper.class)
+    List<SearchIndexRetryRecord> listAll(@Bind("limit") int limit, @Bind("offset") int offset);
+
+    @SqlQuery("SELECT COUNT(*) FROM search_index_retry_queue")
+    int countAll();
+
     class SearchIndexRetryRecordMapper implements RowMapper<SearchIndexRetryRecord> {
       @Override
       public SearchIndexRetryRecord map(ResultSet rs, StatementContext ctx) throws SQLException {

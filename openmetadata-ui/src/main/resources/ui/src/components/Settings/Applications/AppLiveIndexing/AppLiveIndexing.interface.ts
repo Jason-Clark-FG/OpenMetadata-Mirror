@@ -1,5 +1,5 @@
 /*
- *  Copyright 2023 Collate.
+ *  Copyright 2024 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -10,12 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-export enum ApplicationTabs {
-  DESCRIPTION = 'description',
-  FEATURES = 'features',
-  PERMISSIONS = 'permissions',
-  SCHEDULE = 'schedule',
-  RECENT_RUNS = 'recent-runs',
-  CONFIGURATION = 'configuration',
-  LIVE_INDEXING = 'live-indexing',
+import { App } from '../../../../generated/entity/applications/app';
+
+export interface AppLiveIndexingProps {
+  appData: App;
 }
