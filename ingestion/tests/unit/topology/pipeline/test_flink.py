@@ -90,8 +90,6 @@ MOCK_JOB = {
         "failed": 0,
     },
 }
-# Pipeline whose task names contain Flink's "A -> B" operator-chain separator,
-# which is the character sequence that triggered the validateTask() mismatch bug.
 MOCK_PIPELINE_WITH_SPECIAL_CHARS = FlinkPipeline.model_validate(
     {
         "jid": "2aaa012e-099a-11ed-861d-0242ac120003",
@@ -110,12 +108,8 @@ MOCK_PIPELINE_WITH_SPECIAL_CHARS = FlinkPipeline.model_validate(
         ],
     }
 )
-# replace_separators converts ">" → "__reserved__arrow__", so "->" becomes
-# "-__reserved__arrow__".  The task id is appended with "_" as the separator.
-EXPECTED_SANITIZED_TASK_NAME = (
-    "Source: dev-env -__reserved__arrow__ deserialized"
-    " -__reserved__arrow__ sink_cbc123"
-)
+EXPECTED_TASK_ID = "cbc123"
+EXPECTED_TASK_DISPLAY_NAME = "Source: dev-env -> deserialized -> sink"
 
 EXPECTED_PIPELINE_NAME = "alphabet"
 EXPECTED_PIPELINE = [
@@ -166,15 +160,7 @@ class FlinkUnitTest(TestCase):
             self.assertEqual(expected, original)
 
 
-class TestFlinkTaskNameSanitization:
-    """
-    Regression tests for the task-name mismatch bug where Flink task names
-    containing ">" (e.g. "Source: A -> B -> C") were stored with
-    "__reserved__arrow__" encoding during topology ingestion but sent raw
-    during pipeline-status ingestion, causing Java's validateTask() to throw
-    "Invalid task name".
-    """
-
+class TestFlinkTaskNames:
     def setup_method(self):
         with patch(
             "metadata.ingestion.source.pipeline.pipeline_service.PipelineServiceSource.test_connection"
@@ -193,13 +179,14 @@ class TestFlinkTaskNameSanitization:
             MOCK_PIPELINE_WITH_SPECIAL_CHARS
         )
 
-    def test_get_connections_jobs_encodes_arrow_in_task_name(self):
+    def test_get_connections_jobs_uses_task_id_as_name(self):
         tasks = self.flink.get_connections_jobs(MOCK_PIPELINE_WITH_SPECIAL_CHARS)
 
         assert len(tasks) == 1
-        assert tasks[0].name == EXPECTED_SANITIZED_TASK_NAME
+        assert tasks[0].name == EXPECTED_TASK_ID
+        assert tasks[0].displayName == EXPECTED_TASK_DISPLAY_NAME
 
-    def test_yield_pipeline_status_encodes_arrow_in_task_name(self):
+    def test_yield_pipeline_status_uses_task_id_as_name(self):
         results = list(
             self.flink.yield_pipeline_status(MOCK_PIPELINE_WITH_SPECIAL_CHARS)
         )
@@ -208,14 +195,9 @@ class TestFlinkTaskNameSanitization:
         assert results[0].right is not None
         task_statuses = results[0].right.pipeline_status.taskStatus
         assert len(task_statuses) == 1
-        assert task_statuses[0].name == EXPECTED_SANITIZED_TASK_NAME
+        assert task_statuses[0].name == EXPECTED_TASK_ID
 
     def test_task_names_consistent_between_topology_and_status(self):
-        """
-        The name stored by get_connections_jobs must exactly equal the name
-        sent by yield_pipeline_status.  Java's validateTask() uses
-        String.equals() so any divergence causes "Invalid task name".
-        """
         topology_tasks = self.flink.get_connections_jobs(
             MOCK_PIPELINE_WITH_SPECIAL_CHARS
         )
