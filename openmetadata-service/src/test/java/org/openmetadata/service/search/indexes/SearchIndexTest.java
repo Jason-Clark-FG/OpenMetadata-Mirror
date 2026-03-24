@@ -2,12 +2,29 @@ package org.openmetadata.service.search.indexes;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.openmetadata.service.search.SearchIndexUtils;
 import org.openmetadata.service.util.FullyQualifiedName;
 
+// Mirror of EXCLUDED_FIELDS — can't reference it directly
+// because SearchIndex has a static initializer that requires Entity to be bootstrapped.
+
 class SearchIndexTest {
+
+  private static final Set<String> EXCLUDED_FIELDS =
+      Set.of(
+          "changeDescription",
+          "incrementalChangeDescription",
+          "upstreamLineage.pipeline.changeDescription",
+          "upstreamLineage.pipeline.incrementalChangeDescription",
+          "connection",
+          "changeSummary");
 
   // Test the getFQNParts logic directly without instantiating SearchIndex
   private Set<String> getFQNParts(String fqn) {
@@ -87,5 +104,106 @@ class SearchIndexTest {
 
     // Should return empty set since we exclude the entity name
     assertTrue(parts.isEmpty(), "Single part FQN should return empty set");
+  }
+
+  @Test
+  void testChangeDescriptionWithStringNewValueIsRemoved() {
+    Map<String, Object> doc = buildDocWithChangeDescription("some text value");
+
+    SearchIndexUtils.removeNonIndexableFields(doc, EXCLUDED_FIELDS);
+
+    assertFalse(
+        doc.containsKey("changeDescription"),
+        "changeDescription should be removed from top-level doc");
+    assertEquals("test-query", doc.get("name"));
+  }
+
+  @Test
+  void testChangeDescriptionWithBooleanNewValueIsRemoved() {
+    Map<String, Object> doc = buildDocWithChangeDescription(true);
+
+    SearchIndexUtils.removeNonIndexableFields(doc, EXCLUDED_FIELDS);
+
+    assertFalse(
+        doc.containsKey("changeDescription"),
+        "changeDescription with boolean newValue should be removed");
+  }
+
+  @Test
+  void testChangeDescriptionWithMixedTypesInFieldsUpdated() {
+    // Simulates the exact scenario from the ES/OS error: first doc has string newValue,
+    // second doc has boolean newValue. Both should be stripped.
+    Map<String, Object> doc1 = buildDocWithChangeDescription("text value");
+    Map<String, Object> doc2 = buildDocWithChangeDescription(false);
+
+    SearchIndexUtils.removeNonIndexableFields(doc1, EXCLUDED_FIELDS);
+    SearchIndexUtils.removeNonIndexableFields(doc2, EXCLUDED_FIELDS);
+
+    assertFalse(doc1.containsKey("changeDescription"));
+    assertFalse(doc2.containsKey("changeDescription"));
+  }
+
+  @Test
+  void testIncrementalChangeDescriptionIsAlsoRemoved() {
+    Map<String, Object> doc = new HashMap<>();
+    doc.put("name", "test-query");
+    doc.put(
+        "incrementalChangeDescription",
+        Map.of("fieldsUpdated", List.of(Map.of("name", "deleted", "newValue", true))));
+
+    SearchIndexUtils.removeNonIndexableFields(doc, EXCLUDED_FIELDS);
+
+    assertFalse(
+        doc.containsKey("incrementalChangeDescription"),
+        "incrementalChangeDescription should be removed");
+  }
+
+  @Test
+  void testNestedChangeDescriptionSurvivesTopLevelRemoval() {
+    // Top-level removal only strips top-level keys. Nested changeDescription
+    // inside referenced entities is NOT removed by the Java code.
+    // Defense-in-depth: index mappings must declare changeDescription as
+    // "enabled: false" so ES/OS ignores it even if it leaks through.
+    Map<String, Object> nestedEntity = new HashMap<>();
+    nestedEntity.put("id", "ref-1");
+    nestedEntity.put(
+        "changeDescription",
+        Map.of("fieldsUpdated", List.of(Map.of("name", "field", "newValue", true))));
+
+    Map<String, Object> doc = new HashMap<>();
+    doc.put("name", "test-query");
+    doc.put("someNestedRef", nestedEntity);
+
+    SearchIndexUtils.removeNonIndexableFields(doc, EXCLUDED_FIELDS);
+
+    assertFalse(
+        doc.containsKey("changeDescription"), "Top-level changeDescription should be removed");
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> nested = (Map<String, Object>) doc.get("someNestedRef");
+    assertTrue(
+        nested.containsKey("changeDescription"),
+        "Nested changeDescription survives top-level removal — "
+            + "mapping 'enabled: false' is the safety net");
+  }
+
+  private Map<String, Object> buildDocWithChangeDescription(Object newValue) {
+    Map<String, Object> fieldChange = new HashMap<>();
+    fieldChange.put("name", "deleted");
+    fieldChange.put("oldValue", "oldVal");
+    fieldChange.put("newValue", newValue);
+
+    List<Object> fieldsUpdated = new ArrayList<>();
+    fieldsUpdated.add(fieldChange);
+
+    Map<String, Object> changeDesc = new HashMap<>();
+    changeDesc.put("fieldsUpdated", fieldsUpdated);
+    changeDesc.put("previousVersion", 0.1);
+
+    Map<String, Object> doc = new HashMap<>();
+    doc.put("name", "test-query");
+    doc.put("fullyQualifiedName", "service.test-query");
+    doc.put("changeDescription", changeDesc);
+    return doc;
   }
 }
