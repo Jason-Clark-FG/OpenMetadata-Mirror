@@ -287,16 +287,13 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       return result;
     }
 
-    // Skip depth filtering when there's a query filter (search mode)
-    // In search mode, we want to show ALL matching nodes regardless of depth
-    boolean hasQueryFilter = !nullOrEmpty(request.getQueryFilter());
-
-    if (request.getNodeDepth() != null && !hasQueryFilter) {
+    if (request.getNodeDepth() != null) {
+      int maxDepth = Math.abs(request.getNodeDepth());
       Map<String, NodeInformation> depthFilteredNodes = new HashMap<>();
       for (Map.Entry<String, NodeInformation> entry : result.getNodes().entrySet()) {
         NodeInformation node = entry.getValue();
-        int nodeDepth = node.getNodeDepth() != null ? node.getNodeDepth() : 0;
-        if (nodeDepth == request.getNodeDepth() || entry.getKey().equals(request.getFqn())) {
+        int nodeDepth = node.getNodeDepth() != null ? Math.abs(node.getNodeDepth()) : 0;
+        if (nodeDepth <= maxDepth || entry.getKey().equals(request.getFqn())) {
           depthFilteredNodes.put(entry.getKey(), node);
         }
       }

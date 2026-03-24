@@ -295,13 +295,17 @@ public class LineageUtil {
 
       // Group by FQN hash and convert to TagLabel, filtering out Tier
       Map<String, List<TagLabel>> tagsByFqnHash = new HashMap<>();
+      List<TagLabel> allTags = new ArrayList<>();
       for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash result : batchResults) {
         TagLabel tag = result.toTagLabel();
         if (tag.getTagFQN() != null && !tag.getTagFQN().startsWith("Tier.")) {
-          TagLabelUtil.applyTagCommonFieldsGracefully(tag);
+          allTags.add(tag);
           tagsByFqnHash.computeIfAbsent(result.getTargetFQNHash(), k -> new ArrayList<>()).add(tag);
         }
       }
+
+      // Batch-enrich all tags with name, displayName, description, style
+      TagLabelUtil.applyTagCommonFieldsBatch(allTags);
 
       // Replace tags in each entity doc
       for (Map<String, Object> doc : entityDocs) {

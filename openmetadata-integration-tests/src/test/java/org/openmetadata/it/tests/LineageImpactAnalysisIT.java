@@ -633,6 +633,24 @@ public class LineageImpactAnalysisIT {
   }
 
   @Test
+  void testTableView_nodeDepthWithFilter_respectsDepth() throws Exception {
+    // Node Depth=1 + Tier=Tier1 filter: should only show depth 1 entities with Tier1
+    String qf = tierFilter("Tier.Tier1");
+    Map<String, Integer> nodes = getTableViewNodesWithDepth(rawA, "Downstream", 1, qf);
+    // All returned nodes should be at depth 1 (not deeper)
+    assertTrue(nodes.values().stream().allMatch(depth -> depth == 1));
+  }
+
+  @Test
+  void testTableView_nodeDepthWithFilter_includesAllDepthsUpToSelected() throws Exception {
+    // Node Depth=2 + Tag=Certification.Gold: should show matching entities at depth 1 AND 2
+    String qf = tagFilter("Certification.Gold");
+    Map<String, Integer> nodes = getTableViewNodesWithDepth(rawA, "Downstream", 2, qf);
+    // All returned nodes should be at depth <= 2
+    assertTrue(nodes.values().stream().allMatch(depth -> Math.abs(depth) <= 2));
+  }
+
+  @Test
   void testTableView_searchPlusFilter_paginationConsistent() throws Exception {
     // Search + filter should return consistent paginated results
     String qf = comboFilter(searchClause("rpt"), tagClause("Certification.Gold"));

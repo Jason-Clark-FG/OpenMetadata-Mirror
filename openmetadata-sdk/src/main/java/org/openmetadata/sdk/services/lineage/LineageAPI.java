@@ -119,7 +119,16 @@ public class LineageAPI {
       String columnFilter)
       throws OpenMetadataException {
     return getLineageByEntityCount(
-        fqn, direction, from, size, null, maxDepth, includeDeleted, queryFilter, columnFilter);
+        fqn,
+        direction,
+        from,
+        size,
+        null,
+        maxDepth,
+        includeDeleted,
+        queryFilter,
+        columnFilter,
+        null);
   }
 
   public String getLineageByEntityCount(
@@ -133,6 +142,31 @@ public class LineageAPI {
       String queryFilter,
       String columnFilter)
       throws OpenMetadataException {
+    return getLineageByEntityCount(
+        fqn,
+        direction,
+        from,
+        size,
+        nodeDepth,
+        maxDepth,
+        includeDeleted,
+        queryFilter,
+        columnFilter,
+        null);
+  }
+
+  public String getLineageByEntityCount(
+      String fqn,
+      String direction,
+      int from,
+      int size,
+      Integer nodeDepth,
+      int maxDepth,
+      boolean includeDeleted,
+      String queryFilter,
+      String columnFilter,
+      String entityType)
+      throws OpenMetadataException {
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     optionsBuilder.queryParam("fqn", fqn);
     optionsBuilder.queryParam("direction", direction);
@@ -143,6 +177,7 @@ public class LineageAPI {
     optionsBuilder.queryParam("includeDeleted", String.valueOf(includeDeleted));
     if (queryFilter != null) optionsBuilder.queryParam("query_filter", queryFilter);
     if (columnFilter != null) optionsBuilder.queryParam("column_filter", columnFilter);
+    if (entityType != null) optionsBuilder.queryParam("entityType", entityType);
     return httpClient.executeForString(
         HttpMethod.GET, "/v1/lineage/getLineageByEntityCount", null, optionsBuilder.build());
   }
