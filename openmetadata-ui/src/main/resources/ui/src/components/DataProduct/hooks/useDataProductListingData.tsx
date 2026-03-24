@@ -13,6 +13,10 @@
 
 import { Avatar, Typography } from '@openmetadata/ui-core-components';
 import { useCallback, useMemo } from 'react';
+import {
+  getClassificationTags,
+  getGlossaryTags,
+} from '../../../utils/TagsUtils';
 import { TABLE_CARD_PAGE_SIZE } from '../../../constants/constants';
 import {
   DATAPRODUCT_DEFAULT_QUICK_FILTERS,
@@ -20,7 +24,6 @@ import {
 } from '../../../constants/DataProduct.constants';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
-import { TagSource } from '../../../generated/type/tagLabel';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { useListingData } from '../../common/atoms/compositions/useListingData';
@@ -33,21 +36,6 @@ import {
 export const useDataProductListingData = (): ListingData<DataProduct> => {
   const filterKeys = useMemo(() => DATAPRODUCT_DEFAULT_QUICK_FILTERS, []);
   const filterConfigs = useMemo(() => DATAPRODUCT_FILTERS, []);
-
-  const getGlossaryTags = useCallback(
-    (dataProduct: DataProduct) =>
-      dataProduct.tags?.filter((tag) => tag.source === TagSource.Glossary) ||
-      [],
-    []
-  );
-
-  const getClassificationTags = useCallback(
-    (dataProduct: DataProduct) =>
-      dataProduct.tags?.filter(
-        (tag) => tag.source === TagSource.Classification
-      ) || [],
-    []
-  );
 
   const getDomains = useCallback(
     (dataProduct: DataProduct) => dataProduct.domains || [],
@@ -67,7 +55,7 @@ export const useDataProductListingData = (): ListingData<DataProduct> => {
         key: 'glossaryTerms',
         labelKey: 'label.glossary-term-plural',
         render: 'tags',
-        getValue: getGlossaryTags,
+        getValue: (dp: DataProduct) => getGlossaryTags(dp.tags),
       },
       {
         key: 'domains',
@@ -79,11 +67,11 @@ export const useDataProductListingData = (): ListingData<DataProduct> => {
         key: 'classificationTags',
         labelKey: 'label.tag-plural',
         render: 'tags',
-        getValue: getClassificationTags,
+        getValue: (dp: DataProduct) => getClassificationTags(dp.tags),
       },
       { key: 'experts', labelKey: 'label.expert-plural', render: 'owners' },
     ],
-    [getGlossaryTags, getClassificationTags, getDomains]
+    [getDomains]
   );
 
   const renderers: CellRenderer<DataProduct> = useMemo(

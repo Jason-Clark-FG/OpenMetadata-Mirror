@@ -118,39 +118,43 @@ export const useFilterSelection = (config: FilterSelectionConfig) => {
     return (
       <div className="tw:flex tw:items-center tw:w-full">
         <div className="tw:flex tw:gap-2 tw:flex-wrap tw:flex-1">
-          {selectedFilters.map((filter) => (
-            <Badge
-              className="tw:ring-0 tw:gap-1"
-              color="brand"
-              key={filter.key}
-              size="lg"
-              type="color">
-              <div
-                className="tw:flex tw:items-center tw:gap-1"
-                data-testid={`filter-chip-${filter.key}`}>
-                <Typography className="tw:text-gray-600" weight="medium">
-                  {t(filter.label)}
-                  {': '}
-                </Typography>
-                <div className="tw:max-w-80">
-                  <Typography
-                    ellipsis
-                    as="p"
-                    className="tw:text-brand-600"
-                    title={filter.values.join(', ')}
-                    weight="medium">
-                    {filter.values.join(', ')}
+          {selectedFilters.map((filter) => {
+            const filterValues = filter.values.join(', ');
+
+            return (
+              <Badge
+                className="tw:ring-0 tw:gap-1"
+                color="brand"
+                key={filter.key}
+                size="lg"
+                type="color">
+                <div
+                  className="tw:flex tw:items-center tw:gap-1"
+                  data-testid={`filter-chip-${filter.key}`}>
+                  <Typography className="tw:text-gray-600" weight="medium">
+                    {t(filter.label)}
+                    {': '}
                   </Typography>
+                  <div className="tw:max-w-80">
+                    <Typography
+                      ellipsis
+                      as="p"
+                      className="tw:text-brand-600"
+                      title={filterValues}
+                      weight="medium">
+                      {filterValues}
+                    </Typography>
+                  </div>
                 </div>
-              </div>
-              <ButtonUtility
-                aria-label="Remove filter"
-                color="tertiary"
-                icon={<XClose size={14} />}
-                onClick={() => handleRemoveFilter(filter.key)}
-              />
-            </Badge>
-          ))}
+                <ButtonUtility
+                  aria-label="Remove filter"
+                  color="tertiary"
+                  icon={<XClose size={14} />}
+                  onClick={() => handleRemoveFilter(filter.key)}
+                />
+              </Badge>
+            );
+          })}
         </div>
         <Button color="link-color" onClick={handleClearAll}>
           {t('label.clear-entity', { entity: t('label.all-lowercase') })}

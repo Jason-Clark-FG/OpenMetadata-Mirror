@@ -16,14 +16,11 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataProduct } from '../../../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import { TagLabel } from '../../../../../generated/type/tagLabel';
+import {
+  getClassificationTags,
+  getGlossaryTags,
+} from '../../../../../utils/TagsUtils';
 import { ColumnConfig } from '../../shared/types';
-
-const getGlossaryTags = (entity: Domain | DataProduct): TagLabel[] =>
-  entity.tags?.filter((tag) => tag.source === 'Glossary') ?? [];
-
-const getClassificationTags = (entity: Domain | DataProduct): TagLabel[] =>
-  entity.tags?.filter((tag) => tag.source === 'Classification') ?? [];
 
 /**
  * Provides card layout templates for different entity types
@@ -114,7 +111,7 @@ export const useDomainCardTemplates = () => {
                   key: 'glossaryTerms',
                   labelKey: 'label.glossary-term-plural',
                   render: 'tags',
-                  getValue: getGlossaryTags,
+                  getValue: (entity) => getGlossaryTags(entity.tags),
                 })}
               </Grid.Item>
               <Grid.Item span={12}>
@@ -127,7 +124,7 @@ export const useDomainCardTemplates = () => {
                   key: 'classificationTags',
                   labelKey: 'label.tag-plural',
                   render: 'tags',
-                  getValue: getClassificationTags,
+                  getValue: (entity) => getClassificationTags(entity.tags),
                 })}
               </Grid.Item>
             </Grid>
@@ -194,7 +191,7 @@ export const useDomainCardTemplates = () => {
                   key: 'glossaryTerms',
                   labelKey: 'label.glossary-term-plural',
                   render: 'tags',
-                  getValue: getGlossaryTags,
+                  getValue: (entity) => getGlossaryTags(entity.tags),
                 })}
               </Grid.Item>
               <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
@@ -207,7 +204,7 @@ export const useDomainCardTemplates = () => {
                   key: 'classificationTags',
                   labelKey: 'label.tag-plural',
                   render: 'tags',
-                  getValue: getClassificationTags,
+                  getValue: (entity) => getClassificationTags(entity.tags),
                 })}
               </Grid.Item>
             </Grid>
