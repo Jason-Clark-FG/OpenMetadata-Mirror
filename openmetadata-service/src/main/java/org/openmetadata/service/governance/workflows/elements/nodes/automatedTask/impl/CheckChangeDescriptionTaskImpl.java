@@ -1,7 +1,7 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
@@ -37,12 +37,23 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
     try {
       Map<String, String> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
-      String entityLinkStr =
-          (String)
-              varHandler.getNamespacedVariable(
-                  inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE);
 
-      boolean result = checkChangeDescription(execution, entityLinkStr);
+      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> trueEntityList = new ArrayList<>();
+      List<String> falseEntityList = new ArrayList<>();
+
+      for (String entityLinkStr : entityList) {
+        if (checkChangeDescription(execution, entityLinkStr)) {
+          trueEntityList.add(entityLinkStr);
+        } else {
+          falseEntityList.add(entityLinkStr);
+        }
+      }
+
+      boolean result = !trueEntityList.isEmpty();
+      varHandler.setNodeVariable("true_" + ENTITY_LIST_VARIABLE, trueEntityList);
+      varHandler.setNodeVariable("false_" + ENTITY_LIST_VARIABLE, falseEntityList);
+      varHandler.setNodeVariable(ENTITY_LIST_VARIABLE, result ? trueEntityList : falseEntityList);
       varHandler.setNodeVariable(RESULT_VARIABLE, result);
     } catch (Exception exc) {
       LOG.error(
@@ -50,6 +61,20 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> getEntityList(
+      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object entityListObj =
+          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (entityListObj instanceof List) {
+        return (List<String>) entityListObj;
+      }
+    }
+    return List.of();
   }
 
   private boolean checkChangeDescription(DelegateExecution execution, String entityLinkStr) {

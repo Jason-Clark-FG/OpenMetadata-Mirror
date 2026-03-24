@@ -1,11 +1,13 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -33,12 +35,25 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
       Map<String, String> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
       String rules = (String) rulesExpr.getValue(execution);
-      MessageParser.EntityLink entityLink =
-          MessageParser.EntityLink.parse(
-              (String)
-                  varHandler.getNamespacedVariable(
-                      inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
-      varHandler.setNodeVariable(RESULT_VARIABLE, checkAttributes(entityLink, rules));
+
+      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> trueEntityList = new ArrayList<>();
+      List<String> falseEntityList = new ArrayList<>();
+
+      for (String entityLinkStr : entityList) {
+        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
+        if (checkAttributes(entityLink, rules)) {
+          trueEntityList.add(entityLinkStr);
+        } else {
+          falseEntityList.add(entityLinkStr);
+        }
+      }
+
+      boolean result = !trueEntityList.isEmpty();
+      varHandler.setNodeVariable("true_" + ENTITY_LIST_VARIABLE, trueEntityList);
+      varHandler.setNodeVariable("false_" + ENTITY_LIST_VARIABLE, falseEntityList);
+      varHandler.setNodeVariable(ENTITY_LIST_VARIABLE, result ? trueEntityList : falseEntityList);
+      varHandler.setNodeVariable(RESULT_VARIABLE, result);
     } catch (Exception exc) {
       LOG.error(
           String.format(
@@ -51,13 +66,24 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
 
   private Boolean checkAttributes(MessageParser.EntityLink entityLink, String rules) {
     EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-
-    boolean result;
     try {
-      result = (boolean) RuleEngine.getInstance().apply(rules, JsonUtils.getMap(entity));
+      return (boolean) RuleEngine.getInstance().apply(rules, JsonUtils.getMap(entity));
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    return result;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> getEntityList(
+      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object entityListObj =
+          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (entityListObj instanceof List) {
+        return (List<String>) entityListObj;
+      }
+    }
+    return List.of();
   }
 }

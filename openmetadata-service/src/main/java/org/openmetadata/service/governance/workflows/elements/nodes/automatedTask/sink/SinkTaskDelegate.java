@@ -15,7 +15,6 @@ package org.openmetadata.service.governance.workflows.elements.nodes.automatedTa
 
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
@@ -40,16 +39,9 @@ import org.openmetadata.service.resources.feeds.MessageParser;
 /**
  * Flowable delegate that executes sink operations within a workflow.
  *
- * <p>This delegate supports two modes:
- *
- * <ul>
- *   <li><b>Single entity mode:</b> Processes one entity at a time (event-based workflows)
- *   <li><b>Batch mode:</b> Processes all entities in the batch at once (periodic batch workflows
- *       with batchMode=true in sink config)
- * </ul>
- *
- * <p>When batchMode is enabled in the sink config, the trigger automatically configures single
- * execution mode (cardinality=1), ensuring only one workflow instance processes the entire batch.
+ * <p>Always reads from {@code ENTITY_LIST_VARIABLE}. When {@code batchMode=true} and the sink
+ * provider supports batching, all entities are written in a single batch call. Otherwise each
+ * entity is written individually.
  */
 @Slf4j
 public class SinkTaskDelegate implements JavaDelegate {
@@ -94,16 +86,7 @@ public class SinkTaskDelegate implements JavaDelegate {
       Map<String, String> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
 
-      // Check if we have an entity list for batch processing
-      String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-      List<String> entityList = null;
-      if (entityListNamespace != null) {
-        Object entityListObj =
-            varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-        if (entityListObj instanceof List) {
-          entityList = (List<String>) entityListObj;
-        }
-      }
+      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
 
       // Get the sink provider from registry
       sinkProvider =
@@ -133,16 +116,10 @@ public class SinkTaskDelegate implements JavaDelegate {
 
       SinkResult result;
 
-      // Determine execution mode: batch or single entity
-      if (batchMode
-          && entityList != null
-          && !entityList.isEmpty()
-          && sinkProvider.supportsBatch()) {
-        // Batch mode: process all entities at once (single workflow instance)
+      if (batchMode && !entityList.isEmpty() && sinkProvider.supportsBatch()) {
         result = executeBatchMode(context, sinkProvider, entityList);
       } else {
-        // Single entity mode: process one entity
-        result = executeSingleEntityMode(context, sinkProvider, inputNamespaceMap, varHandler);
+        result = executeListMode(context, sinkProvider, entityList);
       }
 
       // Set output variables
@@ -275,27 +252,58 @@ public class SinkTaskDelegate implements JavaDelegate {
         .build();
   }
 
-  /** Execute sink in single entity mode - process one entity at a time. */
-  private SinkResult executeSingleEntityMode(
-      SinkContext context,
-      SinkProvider sinkProvider,
-      Map<String, String> inputNamespaceMap,
-      WorkflowVariableHandler varHandler) {
+  private SinkResult executeListMode(
+      SinkContext context, SinkProvider sinkProvider, List<String> entityList) {
+    int syncedCount = 0;
+    int failedCount = 0;
+    List<String> syncedEntities = new ArrayList<>();
+    List<SinkResult.SinkError> errors = new ArrayList<>();
 
-    // Get entity from workflow context
-    String relatedEntityNamespace = inputNamespaceMap.get(RELATED_ENTITY_VARIABLE);
-    String relatedEntityValue =
-        (String) varHandler.getNamespacedVariable(relatedEntityNamespace, RELATED_ENTITY_VARIABLE);
+    for (String entityLinkStr : entityList) {
+      try {
+        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
+        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+        SinkResult entityResult = sinkProvider.write(context, entity);
+        syncedCount += entityResult.getSyncedCount();
+        failedCount += entityResult.getFailedCount();
+        if (entityResult.getSyncedEntities() != null) {
+          syncedEntities.addAll(entityResult.getSyncedEntities());
+        }
+        if (entityResult.getErrors() != null) {
+          errors.addAll(entityResult.getErrors());
+        }
+      } catch (Exception e) {
+        LOG.error("[{}] Failed to process entity: {}", context.getWorkflowName(), entityLinkStr, e);
+        failedCount++;
+        errors.add(
+            SinkResult.SinkError.builder()
+                .entityFqn(entityLinkStr)
+                .errorMessage("Failed to process entity: " + e.getMessage())
+                .cause(e)
+                .build());
+      }
+    }
 
-    MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(relatedEntityValue);
-    EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+    return SinkResult.builder()
+        .success(failedCount == 0)
+        .syncedCount(syncedCount)
+        .failedCount(failedCount)
+        .syncedEntities(syncedEntities.isEmpty() ? null : syncedEntities)
+        .errors(errors.isEmpty() ? null : errors)
+        .build();
+  }
 
-    LOG.info(
-        "[{}] Executing single entity sink for: {}",
-        context.getWorkflowName(),
-        entity.getFullyQualifiedName());
-
-    // Execute single entity write
-    return sinkProvider.write(context, entity);
+  @SuppressWarnings("unchecked")
+  private List<String> getEntityList(
+      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object entityListObj =
+          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (entityListObj instanceof List) {
+        return (List<String>) entityListObj;
+      }
+    }
+    return List.of();
   }
 }

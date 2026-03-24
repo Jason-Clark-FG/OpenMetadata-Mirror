@@ -89,15 +89,18 @@
     "input": {
       "type": "array",
       "items": { "type": "string" },
-      "default": ["relatedEntity"],
+      "default": ["relatedEntity", "entityList"],
       "additionalItems": false,
-      "minItems": 1,
-      "maxItems": 1
+      "minItems": 1
     },
     "inputNamespaceMap": {
       "type": "object",
       "properties": {
         "relatedEntity": {
+          "type": "string",
+          "default": "global"
+        },
+        "entityList": {
           "type": "string",
           "default": "global"
         }

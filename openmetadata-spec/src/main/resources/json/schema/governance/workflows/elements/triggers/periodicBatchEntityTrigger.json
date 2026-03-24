@@ -89,11 +89,12 @@
         "type": "string"
       },
       "default": [
+        "entityList",
         "relatedEntity"
       ],
       "additionalItems": false,
       "minItems": 1,
-      "maxItems": 1,
+      "maxItems": 2,
       "uniqueItems": true
     }
   },

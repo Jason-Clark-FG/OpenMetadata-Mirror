@@ -1,5 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.triggers;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
@@ -171,7 +172,11 @@ public class EventBasedEntityTrigger implements TriggerInterface {
 
     List<IOParameter> inputParameters = new ArrayList<>();
 
-    // ALWAYS pass relatedEntity for backward compatibility
+    IOParameter entityListParam = new IOParameter();
+    entityListParam.setSource(getNamespacedVariableName(GLOBAL_NAMESPACE, ENTITY_LIST_VARIABLE));
+    entityListParam.setTarget(getNamespacedVariableName(GLOBAL_NAMESPACE, ENTITY_LIST_VARIABLE));
+    inputParameters.add(entityListParam);
+
     IOParameter relatedEntityParam = new IOParameter();
     relatedEntityParam.setSource(
         getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE));
@@ -179,11 +184,9 @@ public class EventBasedEntityTrigger implements TriggerInterface {
         getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE));
     inputParameters.add(relatedEntityParam);
 
-    // Dynamically add any additional outputs declared in trigger - Eg updatedBy in
-    // GlossaryTermApprovalWorkflow
     for (String triggerOutput : triggerOutputs) {
-      if (!RELATED_ENTITY_VARIABLE.equals(
-          triggerOutput)) { // Skip relatedEntity (already added above)
+      if (!RELATED_ENTITY_VARIABLE.equals(triggerOutput)
+          && !ENTITY_LIST_VARIABLE.equals(triggerOutput)) {
         IOParameter inputParameter = new IOParameter();
         inputParameter.setSource(getNamespacedVariableName(GLOBAL_NAMESPACE, triggerOutput));
         inputParameter.setTarget(getNamespacedVariableName(GLOBAL_NAMESPACE, triggerOutput));

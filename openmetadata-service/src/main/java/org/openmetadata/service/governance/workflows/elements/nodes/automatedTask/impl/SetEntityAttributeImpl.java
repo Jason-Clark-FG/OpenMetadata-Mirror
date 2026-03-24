@@ -1,11 +1,12 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -32,21 +33,11 @@ public class SetEntityAttributeImpl implements JavaDelegate {
   public void execute(DelegateExecution execution) {
     WorkflowVariableHandler varHandler = new WorkflowVariableHandler(execution);
     try {
-      // Extract entity from workflow context
       Map<String, Object> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
-      String relatedEntityNamespace = (String) inputNamespaceMap.get(RELATED_ENTITY_VARIABLE);
-      String relatedEntityValue =
-          (String)
-              varHandler.getNamespacedVariable(relatedEntityNamespace, RELATED_ENTITY_VARIABLE);
-      MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(relatedEntityValue);
-
-      String entityType = entityLink.getEntityType();
-      EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
 
       String fieldName = fieldNameExpr != null ? (String) fieldNameExpr.getValue(execution) : "";
 
-      // Simple null check - if fieldValueExpr is null, treat as empty/null value
       String fieldValue = null;
       if (fieldValueExpr != null) {
         Object value = fieldValueExpr.getValue(execution);
@@ -61,18 +52,19 @@ public class SetEntityAttributeImpl implements JavaDelegate {
               .map(ns -> (String) varHandler.getNamespacedVariable(ns, UPDATED_BY_VARIABLE))
               .orElse(null);
 
-      // Apply the field change using shared utility with bot impersonation
-      // Note: fieldValue can be null to clear/remove a field value
-      // When actualUser is available, use it as the user and mark 'governance-bot' as impersonator
-      // Otherwise, use 'governance-bot' directly (for system-initiated workflows)
-      if (actualUser != null && !actualUser.isEmpty()) {
-        // User-initiated workflow: preserve actual user, mark bot as impersonator
-        EntityFieldUtils.setEntityField(
-            entity, entityType, actualUser, fieldName, fieldValue, true, "governance-bot");
-      } else {
-        // System-initiated workflow: use governance-bot directly
-        EntityFieldUtils.setEntityField(
-            entity, entityType, "governance-bot", fieldName, fieldValue, true, null);
+      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      for (String entityLinkStr : entityList) {
+        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
+        String entityType = entityLink.getEntityType();
+        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+
+        if (actualUser != null && !actualUser.isEmpty()) {
+          EntityFieldUtils.setEntityField(
+              entity, entityType, actualUser, fieldName, fieldValue, true, "governance-bot");
+        } else {
+          EntityFieldUtils.setEntityField(
+              entity, entityType, "governance-bot", fieldName, fieldValue, true, null);
+        }
       }
 
     } catch (Exception exc) {
@@ -81,5 +73,19 @@ public class SetEntityAttributeImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> getEntityList(
+      Map<String, Object> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    String entityListNamespace = (String) inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object entityListObj =
+          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (entityListObj instanceof List) {
+        return (List<String>) entityListObj;
+      }
+    }
+    return List.of();
   }
 }
