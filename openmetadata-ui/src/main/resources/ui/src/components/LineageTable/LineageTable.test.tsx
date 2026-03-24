@@ -268,7 +268,7 @@ describe('LineageTable', () => {
     mockGetLineagePagingData.mockResolvedValue(mockLineagePagingInfo);
 
     // Mock location object
-    Object.defineProperty(window, 'location', {
+    Object.defineProperty(globalThis, 'location', {
       value: {
         search: '?dir=Downstream&depth=1',
         pathname: '/test',
@@ -603,7 +603,7 @@ describe('LineageTable', () => {
           fqn: 'test.table',
           entityType: EntityType.TABLE,
           config: {
-            downstreamDepth: 2,
+            downstreamDepth: 1,
             upstreamDepth: 2,
           },
           queryFilter: undefined,
@@ -765,7 +765,7 @@ describe('LineageTable', () => {
       });
     });
 
-    it('should not pass onSearchValueChange for column-level lineage', () => {
+    it('should pass onSearchValueChange for column-level lineage', () => {
       const mockState = {
         ...defaultMockState,
         searchValue: 'test search',
@@ -778,7 +778,7 @@ describe('LineageTable', () => {
 
       expect(CustomControlsComponent).toHaveBeenCalledWith(
         expect.objectContaining({
-          onSearchValueChange: undefined,
+          onSearchValueChange: expect.any(Function),
         }),
         {}
       );

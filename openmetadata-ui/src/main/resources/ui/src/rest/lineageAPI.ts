@@ -14,6 +14,7 @@
 import { CSVExportResponse } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import { LineageConfig } from '../components/Entity/EntityLineage/EntityLineage.interface';
 import {
+  DirectionalLineageResponse,
   EdgeDetails,
   EntityLineageResponse,
   LineageData,
@@ -78,7 +79,7 @@ export const getLineageDataByFQN = async ({
   const API_PATH = direction
     ? `lineage/getLineage/${direction}`
     : 'lineage/getLineage';
-  const response = await APIClient.get<LineageData>(API_PATH, {
+  const response = await APIClient.get<DirectionalLineageResponse>(API_PATH, {
     params: {
       fqn,
       type: entityType,

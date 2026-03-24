@@ -58,8 +58,6 @@ export interface LineageContextType {
   onColumnMouseEnter: (columnName: string) => void;
   selectedQuickFilters: ExploreQuickFilterField[];
   setSelectedQuickFilters: Dispatch<SetStateAction<ExploreQuickFilterField[]>>;
-  columnFilter: string;
-  setColumnFilter: Dispatch<SetStateAction<string>>;
   onNodeDrop: (event: DragEvent, reactFlowBounds: DOMRect) => void;
   onNodeCollapse: (node: Node | NodeProps, direction: LineageDirection) => void;
   onNodesChange: (changes: NodeChange[]) => void;
