@@ -15,6 +15,7 @@ import org.openmetadata.schema.entity.app.App;
 import org.openmetadata.schema.system.EventPublisherJob;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.AbstractNativeApplication;
+import org.openmetadata.service.apps.bundles.searchIndex.distributed.DistributedSearchIndexCoordinator;
 import org.openmetadata.service.exception.AppException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.search.SearchRepository;
@@ -76,6 +77,21 @@ public class SearchIndexApp extends AbstractNativeApplication {
       orch.stop();
       this.jobData = orch.getJobData();
     }
+  }
+
+  @Override
+  public boolean tryStopOutsideQuartz() {
+    List<String> runningJobIds = collectionDAO.searchIndexJobDAO().getRunningJobIds();
+    if (runningJobIds.isEmpty()) {
+      return false;
+    }
+    DistributedSearchIndexCoordinator coordinator =
+        new DistributedSearchIndexCoordinator(collectionDAO);
+    for (String jobIdStr : runningJobIds) {
+      LOG.info("Stopping distributed job {} via coordinator fallback", jobIdStr);
+      coordinator.requestStop(java.util.UUID.fromString(jobIdStr));
+    }
+    return true;
   }
 
   @Override
