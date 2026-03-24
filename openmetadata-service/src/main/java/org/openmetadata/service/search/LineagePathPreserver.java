@@ -122,12 +122,26 @@ public class LineagePathPreserver {
       SearchLineageResult result,
       Map<String, NodeInformation> allNodes,
       Set<String> requiredNodes) {
+    tracePathToRoot(nodeFqn, rootFqn, result, allNodes, requiredNodes, new HashSet<>());
+  }
 
-    if (nodeFqn.equals(rootFqn) || requiredNodes.contains(nodeFqn)) {
+  private static void tracePathToRoot(
+      String nodeFqn,
+      String rootFqn,
+      SearchLineageResult result,
+      Map<String, NodeInformation> allNodes,
+      Set<String> requiredNodes,
+      Set<String> visitedNodes) {
+
+    if (!visitedNodes.add(nodeFqn)) {
       return;
     }
 
     requiredNodes.add(nodeFqn);
+
+    if (nodeFqn.equals(rootFqn)) {
+      return;
+    }
 
     // Trace through upstream edges
     if (result.getUpstreamEdges() != null) {
@@ -140,7 +154,8 @@ public class LineagePathPreserver {
               edge -> {
                 if (edge.getFromEntity() != null) {
                   String parentFqn = edge.getFromEntity().getFullyQualifiedName();
-                  tracePathToRoot(parentFqn, rootFqn, result, allNodes, requiredNodes);
+                  tracePathToRoot(
+                      parentFqn, rootFqn, result, allNodes, requiredNodes, visitedNodes);
                 }
               });
     }
@@ -156,7 +171,8 @@ public class LineagePathPreserver {
               edge -> {
                 if (edge.getFromEntity() != null) {
                   String parentFqn = edge.getFromEntity().getFullyQualifiedName();
-                  tracePathToRoot(parentFqn, rootFqn, result, allNodes, requiredNodes);
+                  tracePathToRoot(
+                      parentFqn, rootFqn, result, allNodes, requiredNodes, visitedNodes);
                 }
               });
     }
@@ -226,7 +242,14 @@ public class LineagePathPreserver {
       result.setDownstreamEdges(filteredDownstream);
     }
 
-    // Create filtered result preserving only matching nodes
+    // Preserve intermediate nodes between the root and directly matching nodes.
+    for (String nodeFqn : new HashSet<>(matchingNodes)) {
+      if (!nodeFqn.equals(rootFqn)) {
+        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
+      }
+    }
+
+    // Create filtered result preserving only matching nodes and their paths
     Map<String, NodeInformation> filteredNodes = new HashMap<>();
     for (String fqn : matchingNodes) {
       if (result.getNodes().containsKey(fqn)) {
@@ -361,7 +384,14 @@ public class LineagePathPreserver {
       result.setDownstreamEdges(filteredDownstream);
     }
 
-    // Create filtered result preserving only matching nodes
+    // Preserve intermediate nodes between the root and directly matching nodes.
+    for (String nodeFqn : new HashSet<>(matchingNodes)) {
+      if (!nodeFqn.equals(rootFqn)) {
+        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
+      }
+    }
+
+    // Create filtered result preserving only matching nodes and their paths
     Map<String, NodeInformation> filteredNodes = new HashMap<>();
     for (String fqn : matchingNodes) {
       if (result.getNodes().containsKey(fqn)) {
