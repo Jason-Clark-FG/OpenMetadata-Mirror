@@ -304,10 +304,10 @@ class EntityUtilTest {
     assertEquals("owners.tags", EntityUtil.getFieldName("owners", "tags"));
     assertEquals("columns.amount.description", EntityUtil.getColumnField(column, "description"));
     assertEquals(
-        "schemaFields.\"user.id\".description",
+        "messageSchema.schemaFields.\"user.id\".description",
         EntityUtil.getSchemaField(topic, schemaField, "description"));
     assertEquals(
-        "schemaFields.\"request.body\".description",
+        "request.schemaFields.body.description",
         EntityUtil.getSchemaField(apiEndpoint, apiField, "description"));
     assertEquals(
         "fields.\"keyword.raw\".alias",
@@ -808,9 +808,11 @@ class EntityUtilTest {
     SecurityContext securityContext = mock(SecurityContext.class);
 
     assertEquals("columns.amount", EntityUtil.getColumnField(column, null));
-    assertEquals("schemaFields.\"user.id\"", EntityUtil.getSchemaField(topic, schemaField, null));
     assertEquals(
-        "schemaFields.\"request.body\"", EntityUtil.getSchemaField(apiEndpoint, apiField, null));
+        "messageSchema.schemaFields.\"user.id\"",
+        EntityUtil.getSchemaField(topic, schemaField, null));
+    assertEquals(
+        "request.schemaFields.body", EntityUtil.getSchemaField(apiEndpoint, apiField, null));
     assertEquals(
         "fields.\"keyword.raw\"", EntityUtil.getSearchIndexField(searchIndex, searchField, null));
     assertEquals("rules.maskPII", EntityUtil.getRuleField(rule, null));
