@@ -155,7 +155,7 @@ const MarketplaceDataProductsWidget = ({
         `${dataProductBasePath}/${getEncodedFqn(dp.fullyQualifiedName ?? '')}`
       );
     },
-    [navigate, isEditView]
+    [navigate, isEditView, dataProductBasePath]
   );
 
   const cardList = useMemo(
