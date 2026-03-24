@@ -19,7 +19,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
-import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
 import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
@@ -98,12 +97,8 @@ const MarketplaceDataProductsWidget = ({
 
   const { formDrawer, openDrawer, closeDrawer } = useFormDrawerWithRef({
     title: t('label.add-entity', { entity: t('label.data-product') }),
-    anchor: 'right',
     width: 670,
     closeOnEscape: false,
-    header: {
-      sx: DRAWER_HEADER_STYLING,
-    },
     onCancel: () => {
       form.resetFields();
     },
