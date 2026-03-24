@@ -27,6 +27,7 @@ export const TASK_TYPES = {
 
 export const TASK_ENTITY_TYPES: Record<TaskEntityType, string> = {
   [TaskEntityType.GlossaryApproval]: 'message.request-approval-message',
+  [TaskEntityType.RequestApproval]: 'message.request-approval-message',
   [TaskEntityType.DataAccessRequest]: 'message.data-access-request-message',
   [TaskEntityType.DescriptionUpdate]: 'message.update-description-message',
   [TaskEntityType.TagUpdate]: 'message.update-tag-message',

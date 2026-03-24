@@ -2,12 +2,22 @@ package org.openmetadata.service.migration.utils.v200;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.openmetadata.schema.api.search.SearchSettings;
+import org.openmetadata.schema.entity.activity.ActivityEvent;
 import org.openmetadata.schema.settings.Settings;
+import org.openmetadata.schema.type.ActivityEventType;
+import org.openmetadata.schema.type.ChangeDescription;
+import org.openmetadata.schema.type.ChangeEvent;
+import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.EventType;
+import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.migration.utils.SearchSettingsMergeUtil;
@@ -360,6 +370,65 @@ public class MigrationUtil {
     LOG.info("Thread task migration complete: migrated={}, skipped={}", migrated, skipped);
   }
 
+  /**
+   * Backfill the new activity_stream table from legacy change_event rows so user dashboards and
+   * entity activity tabs can read from the new activity APIs immediately after migration.
+   */
+  public static void migrateChangeEventsToActivityStream(Handle handle) {
+    LOG.info("Starting migration of change events to activity_stream");
+
+    boolean tableExists;
+    try {
+      handle.createQuery("SELECT 1 FROM change_event LIMIT 1").mapTo(Integer.class).list();
+      tableExists = true;
+    } catch (Exception e) {
+      tableExists = false;
+    }
+
+    if (!tableExists) {
+      LOG.info("change_event table does not exist, skipping activity stream migration");
+      return;
+    }
+
+    List<Map<String, Object>> rows =
+        handle.createQuery("SELECT json FROM change_event ORDER BY eventTime ASC").mapToMap().list();
+
+    if (rows.isEmpty()) {
+      LOG.info("No change events found to migrate into activity_stream");
+      return;
+    }
+
+    int migrated = 0;
+    int skipped = 0;
+
+    for (Map<String, Object> row : rows) {
+      try {
+        ChangeEvent changeEvent = JsonUtils.readValue(row.get("json").toString(), ChangeEvent.class);
+        List<ActivityEvent> events = buildActivityEvents(handle, changeEvent);
+
+        if (events.isEmpty()) {
+          skipped++;
+          continue;
+        }
+
+        for (ActivityEvent event : events) {
+          if (activityEventExists(handle, event.getId(), event.getTimestamp())) {
+            continue;
+          }
+
+          insertActivityEvent(handle, event);
+          migrated++;
+        }
+      } catch (Exception e) {
+        LOG.warn("Error migrating change event to activity_stream: {}", e.getMessage());
+        skipped++;
+      }
+    }
+
+    LOG.info(
+        "Activity stream migration complete: migrated={}, skippedSourceEvents={}", migrated, skipped);
+  }
+
   private static void setAboutFromEntityLink(
       ObjectNode taskJson, String entityLinkStr, JsonNode sourceJson) {
     try {
@@ -526,6 +595,328 @@ public class MigrationUtil {
       }
       default -> null;
     };
+  }
+
+  private static List<ActivityEvent> buildActivityEvents(Handle handle, ChangeEvent changeEvent) {
+    List<ActivityEvent> events = new ArrayList<>();
+
+    if (changeEvent == null
+        || changeEvent.getId() == null
+        || changeEvent.getEntityId() == null
+        || changeEvent.getEntityType() == null) {
+      return events;
+    }
+
+    EntityReference entityRef =
+        new EntityReference()
+            .withId(changeEvent.getEntityId())
+            .withType(changeEvent.getEntityType())
+            .withFullyQualifiedName(changeEvent.getEntityFullyQualifiedName());
+    EntityReference actorRef = buildActivityActorReference(handle, changeEvent.getUserName());
+    List<EntityReference> domains = buildActivityDomains(changeEvent.getDomains());
+    ChangeDescription changeDescription = changeEvent.getChangeDescription();
+
+    int fieldChangeIndex = 0;
+    if (changeDescription != null) {
+      fieldChangeIndex =
+          appendFieldActivityEvents(
+              events,
+              changeEvent,
+              entityRef,
+              actorRef,
+              domains,
+              changeDescription.getFieldsAdded(),
+              fieldChangeIndex);
+      fieldChangeIndex =
+          appendFieldActivityEvents(
+              events,
+              changeEvent,
+              entityRef,
+              actorRef,
+              domains,
+              changeDescription.getFieldsUpdated(),
+              fieldChangeIndex);
+      appendFieldActivityEvents(
+          events,
+          changeEvent,
+          entityRef,
+          actorRef,
+          domains,
+          changeDescription.getFieldsDeleted(),
+          fieldChangeIndex);
+    }
+
+    if (events.isEmpty()) {
+      ActivityEventType eventType = mapChangeEventToActivityEventType(changeEvent.getEventType());
+      if (eventType != null) {
+        events.add(
+            buildActivityEvent(
+                changeEvent, entityRef, actorRef, domains, eventType, null, 0));
+      }
+    }
+
+    return events;
+  }
+
+  private static int appendFieldActivityEvents(
+      List<ActivityEvent> events,
+      ChangeEvent changeEvent,
+      EntityReference entityRef,
+      EntityReference actorRef,
+      List<EntityReference> domains,
+      List<FieldChange> fieldChanges,
+      int startIndex) {
+    if (fieldChanges == null) {
+      return startIndex;
+    }
+
+    int currentIndex = startIndex;
+    for (FieldChange fieldChange : fieldChanges) {
+      ActivityEventType eventType =
+          mapFieldChangeToActivityEventType(fieldChange != null ? fieldChange.getName() : null);
+      if (eventType == null) {
+        continue;
+      }
+
+      events.add(
+          buildActivityEvent(
+              changeEvent,
+              entityRef,
+              actorRef,
+              domains,
+              eventType,
+              fieldChange,
+              currentIndex));
+      currentIndex++;
+    }
+
+    return currentIndex;
+  }
+
+  private static ActivityEvent buildActivityEvent(
+      ChangeEvent changeEvent,
+      EntityReference entityRef,
+      EntityReference actorRef,
+      List<EntityReference> domains,
+      ActivityEventType eventType,
+      FieldChange fieldChange,
+      int eventIndex) {
+    String seed =
+        changeEvent.getId()
+            + ":"
+            + eventType.value()
+            + ":"
+            + (fieldChange != null ? fieldChange.getName() : "")
+            + ":"
+            + eventIndex;
+
+    return new ActivityEvent()
+        .withId(UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)))
+        .withEventType(eventType)
+        .withEntity(entityRef)
+        .withAbout(
+            buildActivityEntityLink(
+                changeEvent.getEntityType(), changeEvent.getEntityFullyQualifiedName(), fieldChange))
+        .withDomains(domains)
+        .withActor(actorRef)
+        .withTimestamp(changeEvent.getTimestamp())
+        .withSummary(buildActivitySummary(changeEvent, eventType, fieldChange))
+        .withFieldName(fieldChange != null ? fieldChange.getName() : null)
+        .withOldValue(fieldChange != null ? truncateActivityValue(fieldChange.getOldValue()) : null)
+        .withNewValue(fieldChange != null ? truncateActivityValue(fieldChange.getNewValue()) : null);
+  }
+
+  private static EntityReference buildActivityActorReference(Handle handle, String userName) {
+    String actorName =
+        userName == null || userName.isBlank() ? "system" : userName;
+    String actorId = lookupUserId(handle, actorName);
+    UUID actorUuid =
+        actorId != null
+            ? UUID.fromString(actorId)
+            : UUID.nameUUIDFromBytes(("activity-actor:" + actorName).getBytes(StandardCharsets.UTF_8));
+
+    return new EntityReference()
+        .withId(actorUuid)
+        .withType(Entity.USER)
+        .withName(actorName)
+        .withFullyQualifiedName(actorName);
+  }
+
+  private static List<EntityReference> buildActivityDomains(List<UUID> domainIds) {
+    if (domainIds == null || domainIds.isEmpty()) {
+      return null;
+    }
+
+    return domainIds.stream()
+        .map(domainId -> new EntityReference().withId(domainId).withType(Entity.DOMAIN))
+        .toList();
+  }
+
+  private static ActivityEventType mapChangeEventToActivityEventType(EventType eventType) {
+    if (eventType == null) {
+      return null;
+    }
+
+    return switch (eventType) {
+      case ENTITY_CREATED -> ActivityEventType.ENTITY_CREATED;
+      case ENTITY_UPDATED -> ActivityEventType.ENTITY_UPDATED;
+      case ENTITY_DELETED -> ActivityEventType.ENTITY_DELETED;
+      case ENTITY_SOFT_DELETED -> ActivityEventType.ENTITY_SOFT_DELETED;
+      case ENTITY_RESTORED -> ActivityEventType.ENTITY_RESTORED;
+      default -> null;
+    };
+  }
+
+  private static ActivityEventType mapFieldChangeToActivityEventType(String fieldName) {
+    if (fieldName == null || fieldName.isBlank()) {
+      return null;
+    }
+
+    if (fieldName.equals("description")
+        || fieldName.startsWith("columns.")
+        || fieldName.startsWith("schemaFields.")
+        || fieldName.startsWith("children.")) {
+      if (fieldName.contains("description")) {
+        return ActivityEventType.DESCRIPTION_UPDATED;
+      }
+    }
+
+    if (fieldName.equals("tags")
+        || fieldName.startsWith("columns.")
+        || fieldName.startsWith("schemaFields.")
+        || fieldName.startsWith("children.")) {
+      if (fieldName.contains("tags")) {
+        return ActivityEventType.TAGS_UPDATED;
+      }
+    }
+
+    if (fieldName.equals("owners") || fieldName.equals("owner")) {
+      return ActivityEventType.OWNER_UPDATED;
+    }
+    if (fieldName.equals("domain") || fieldName.equals("domains")) {
+      return ActivityEventType.DOMAIN_UPDATED;
+    }
+    if (fieldName.equals("tier")) {
+      return ActivityEventType.TIER_UPDATED;
+    }
+    if (fieldName.startsWith("extension")) {
+      return ActivityEventType.CUSTOM_PROPERTY_UPDATED;
+    }
+
+    return null;
+  }
+
+  private static String buildActivitySummary(
+      ChangeEvent changeEvent, ActivityEventType eventType, FieldChange fieldChange) {
+    String entityType = changeEvent.getEntityType();
+    String entityName = changeEvent.getEntityFullyQualifiedName();
+
+    return switch (eventType) {
+      case ENTITY_CREATED -> String.format("Created %s: %s", entityType, entityName);
+      case ENTITY_DELETED -> String.format("Deleted %s: %s", entityType, entityName);
+      case ENTITY_SOFT_DELETED -> String.format("Soft deleted %s: %s", entityType, entityName);
+      case ENTITY_RESTORED -> String.format("Restored %s: %s", entityType, entityName);
+      case DESCRIPTION_UPDATED -> fieldChange != null
+          ? String.format("Updated description of %s", entityName)
+          : String.format("Description updated on %s", entityName);
+      case TAGS_UPDATED -> String.format("Tags updated on %s", entityName);
+      case OWNER_UPDATED -> String.format("Owner changed on %s", entityName);
+      case DOMAIN_UPDATED -> String.format("Domain changed on %s", entityName);
+      case TIER_UPDATED -> String.format("Tier changed on %s", entityName);
+      case CUSTOM_PROPERTY_UPDATED -> fieldChange != null
+          ? String.format("Custom property '%s' updated on %s", fieldChange.getName(), entityName)
+          : String.format("Custom property updated on %s", entityName);
+      default -> String.format("Updated %s: %s", entityType, entityName);
+    };
+  }
+
+  private static String buildActivityEntityLink(
+      String entityType, String entityFqn, FieldChange fieldChange) {
+    if (entityType == null || entityFqn == null || entityFqn.isBlank()) {
+      return null;
+    }
+
+    StringBuilder link = new StringBuilder("<#E::");
+    link.append(entityType).append("::").append(entityFqn);
+
+    if (fieldChange != null && fieldChange.getName() != null && !fieldChange.getName().isBlank()) {
+      String[] parts = fieldChange.getName().split("\\.", 3);
+      if (parts.length >= 2) {
+        link.append("::").append(parts[0]).append("::").append(parts[1]);
+        if (parts.length == 3) {
+          link.append("::").append(parts[2]);
+        }
+      } else {
+        link.append("::").append(fieldChange.getName());
+      }
+    }
+
+    link.append(">");
+
+    return link.toString();
+  }
+
+  private static String truncateActivityValue(Object value) {
+    if (value == null) {
+      return null;
+    }
+
+    String stringValue = value.toString();
+    if (stringValue.length() <= 1000) {
+      return stringValue;
+    }
+
+    return stringValue.substring(0, 997) + "...";
+  }
+
+  private static boolean activityEventExists(Handle handle, UUID activityId, long timestamp) {
+    return handle
+            .createQuery("SELECT COUNT(*) FROM activity_stream WHERE id = :id AND timestamp = :timestamp")
+            .bind("id", activityId.toString())
+            .bind("timestamp", timestamp)
+            .mapTo(Long.class)
+            .one()
+        > 0;
+  }
+
+  private static void insertActivityEvent(Handle handle, ActivityEvent event) {
+    String entityFqnHash =
+        event.getEntity().getFullyQualifiedName() != null
+            ? FullyQualifiedName.buildHash(event.getEntity().getFullyQualifiedName())
+            : null;
+    String aboutFqnHash =
+        event.getAbout() != null ? FullyQualifiedName.buildHash(event.getAbout()) : null;
+    String domains =
+        event.getDomains() == null || event.getDomains().isEmpty()
+            ? null
+            : JsonUtils.pojoToJson(
+                event.getDomains().stream().map(domain -> domain.getId().toString()).toList());
+
+    handle
+        .createUpdate(
+            "INSERT INTO activity_stream "
+                + "(id, eventType, entityType, entityId, entityFqnHash, about, aboutFqnHash, "
+                + "actorId, actorName, timestamp, summary, fieldName, oldValue, newValue, domains, json) "
+                + "VALUES (:id, :eventType, :entityType, :entityId, :entityFqnHash, :about, "
+                + ":aboutFqnHash, :actorId, :actorName, :timestamp, :summary, :fieldName, "
+                + ":oldValue, :newValue, :domains, :json)")
+        .bind("id", event.getId().toString())
+        .bind("eventType", event.getEventType().value())
+        .bind("entityType", event.getEntity().getType())
+        .bind("entityId", event.getEntity().getId().toString())
+        .bind("entityFqnHash", entityFqnHash)
+        .bind("about", event.getAbout())
+        .bind("aboutFqnHash", aboutFqnHash)
+        .bind("actorId", event.getActor().getId().toString())
+        .bind("actorName", event.getActor().getName())
+        .bind("timestamp", event.getTimestamp())
+        .bind("summary", event.getSummary())
+        .bind("fieldName", event.getFieldName())
+        .bind("oldValue", event.getOldValue())
+        .bind("newValue", event.getNewValue())
+        .bind("domains", domains)
+        .bind("json", JsonUtils.pojoToJson(event))
+        .execute();
   }
 
   private static long getSequenceValue(Handle handle) {

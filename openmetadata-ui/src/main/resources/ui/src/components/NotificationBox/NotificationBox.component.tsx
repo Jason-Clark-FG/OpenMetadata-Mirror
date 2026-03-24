@@ -28,11 +28,10 @@ import { EntityTabs } from '../../enums/entity.enum';
 import { FeedFilter } from '../../enums/mydata.enum';
 import { NotificationTabsKey } from '../../enums/notification.enum';
 import { ThreadType } from '../../generated/api/feed/createThread';
-import { Post, TaskType, Thread } from '../../generated/entity/feed/thread';
+import { Post, Thread } from '../../generated/entity/feed/thread';
 import {
   Task as TaskEntity,
   TaskStatus as TaskEntityStatus,
-  TaskType as TaskEntityType,
 } from '../../generated/entity/tasks/task';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useDomainStore } from '../../hooks/useDomainStore';
@@ -47,42 +46,11 @@ import { NotificationBoxProp } from './NotificationBox.interface';
 import { tabsInfo } from './NotificationBox.utils';
 import NotificationFeedCard from './NotificationFeedCard.component';
 
-const TASK_TYPE_MAP: Partial<Record<TaskEntityType, TaskType>> = {
-  [TaskEntityType.GlossaryApproval]: TaskType.RequestApproval,
-  [TaskEntityType.DescriptionUpdate]: TaskType.UpdateDescription,
-  [TaskEntityType.TagUpdate]: TaskType.UpdateTag,
-};
+type NotificationItem = Thread | TaskEntity;
 
-const taskEntityToThread = (taskEntity: TaskEntity): Thread => {
-  const aboutEntityLink = taskEntity.about
-    ? `<#E::${taskEntity.about.type}::${taskEntity.about.fullyQualifiedName}>`
-    : '';
-
-  return {
-    id: taskEntity.id ?? '',
-    type: ThreadType.Task,
-    message: taskEntity.description ?? '',
-    createdBy: taskEntity.createdBy?.name ?? '',
-    about: aboutEntityLink,
-    threadTs: taskEntity.createdAt,
-    updatedAt: taskEntity.updatedAt,
-    updatedBy: taskEntity.updatedBy ?? '',
-    href: taskEntity.href ?? '',
-    postsCount: 0,
-    posts: [],
-    entityRef: taskEntity.about,
-    task: {
-      id: Number(taskEntity.taskId?.replace('TASK-', '')) || 0,
-      type: TASK_TYPE_MAP[taskEntity.type] ?? TaskType.RequestApproval,
-      assignees:
-        taskEntity.assignees?.map((a) => ({
-          id: a.id ?? '',
-          type: a.type ?? 'user',
-        })) ?? [],
-      status: taskEntity.status as unknown as undefined,
-    },
-  } as Thread;
-};
+const isTaskNotification = (
+  notification: NotificationItem
+): notification is TaskEntity => 'taskId' in notification;
 
 const NotificationBox = ({
   activeTab,
@@ -95,7 +63,7 @@ const NotificationBox = ({
   const { t } = useTranslation();
   const activeDomain = useDomainStore((state) => state.activeDomain);
   const { currentUser } = useApplicationStore();
-  const [notifications, setNotifications] = useState<Thread[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [viewAllPath, setViewAllPath] = useState<string>(
     getUserPath(
@@ -107,6 +75,20 @@ const NotificationBox = ({
 
   const notificationDropDownList = useMemo(() => {
     return notifications.slice(0, 5).map((feed) => {
+      if (isTaskNotification(feed)) {
+        return (
+          <NotificationFeedCard
+            createdBy={feed.createdBy?.name ?? ''}
+            entityFQN={feed.about?.fullyQualifiedName ?? ''}
+            entityType={feed.about?.type ?? ''}
+            feedType={ThreadType.Task}
+            key={`${feed.createdBy?.name ?? ''} ${feed.id}`}
+            taskEntity={feed}
+            timestamp={feed.createdAt}
+          />
+        );
+      }
+
       const mainFeed = {
         message: feed.message,
         postTs: feed.threadTs,
@@ -168,8 +150,7 @@ const NotificationBox = ({
       domain,
     })
       .then((res) => {
-        const threads = res.data.map(taskEntityToThread);
-        setNotifications(threads);
+        setNotifications(res.data);
       })
       .catch((err: AxiosError) => {
         showErrorToast(

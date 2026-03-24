@@ -34,7 +34,10 @@ export const isTagsTask = (type?: TaskEntityType): boolean => {
  * Check if a task is a glossary approval task
  */
 export const isGlossaryApprovalTask = (type?: TaskEntityType): boolean => {
-  return type === TaskEntityType.GlossaryApproval;
+  return (
+    type === TaskEntityType.GlossaryApproval ||
+    type === TaskEntityType.RequestApproval
+  );
 };
 
 /**
@@ -157,6 +160,7 @@ export const formatTaskType = (type?: TaskEntityType): string => {
 
   const typeLabels: Record<TaskEntityType, string> = {
     [TaskEntityType.GlossaryApproval]: 'Glossary Approval',
+    [TaskEntityType.RequestApproval]: 'Request Approval',
     [TaskEntityType.DataAccessRequest]: 'Data Access Request',
     [TaskEntityType.DescriptionUpdate]: 'Update Description',
     [TaskEntityType.TagUpdate]: 'Update Tags',
@@ -220,4 +224,4 @@ export const TASK_ACTION_MODES = {
 } as const;
 
 export type TaskActionMode =
-  typeof TASK_ACTION_MODES[keyof typeof TASK_ACTION_MODES];
+  (typeof TASK_ACTION_MODES)[keyof typeof TASK_ACTION_MODES];

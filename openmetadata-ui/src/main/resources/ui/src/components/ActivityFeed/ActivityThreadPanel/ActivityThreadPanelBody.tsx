@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { confirmStateInitialValue } from '../../../constants/Feeds.constants';
 import { observerOptions } from '../../../constants/Mydata.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
 import {
   Thread,
@@ -28,19 +29,20 @@ import {
   ThreadType,
 } from '../../../generated/entity/feed/thread';
 import { Paging } from '../../../generated/type/paging';
+import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useElementInView } from '../../../hooks/useElementInView';
 import { getAllFeeds } from '../../../rest/feedsAPI';
-import { listTasks, TaskStatusGroup } from '../../../rest/tasksAPI';
-import { getEntityFQN } from '../../../utils/FeedUtils';
+import { getEntityFQN, getEntityType } from '../../../utils/FeedUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
-
-import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../common/Loader/Loader';
+import { TaskTabNew } from '../../Entity/Task/TaskTab/TaskTabNew.component';
 import ConfirmationModal from '../../Modals/ConfirmationModal/ConfirmationModal';
 import { ConfirmState } from '../ActivityFeedCard/ActivityFeedCard.interface';
 import ActivityFeedEditor from '../ActivityFeedEditor/ActivityFeedEditor';
 import FeedPanelHeader from '../ActivityFeedPanel/FeedPanelHeader';
+import { useActivityFeedProvider } from '../ActivityFeedProvider/ActivityFeedProvider';
+import TaskFeedCardFromTask from '../TaskFeedCard/TaskFeedCardFromTask.component';
 import ActivityThread from './ActivityThread';
 import ActivityThreadList from './ActivityThreadList';
 import { ActivityThreadPanelBodyProp } from './ActivityThreadPanel.interface';
@@ -58,6 +60,14 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 }) => {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
+  const {
+    tasks,
+    selectedTask,
+    setActiveTask,
+    getFeedData,
+    loading,
+    entityPaging,
+  } = useActivityFeedProvider();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThread, setSelectedThread] = useState<Thread>();
   const [selectedThreadId, setSelectedThreadId] = useState<string>('');
@@ -85,22 +95,28 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   const isTaskClosed = isEqual(taskStatus, ThreadTaskStatus.Closed);
 
   const getThreads = (after?: string) => {
+    if (isTaskType) {
+      getFeedData(
+        FeedFilter.ALL,
+        after,
+        ThreadType.Task,
+        (threadLink ? getEntityType(threadLink) : undefined) as EntityType,
+        threadLink ? getEntityFQN(threadLink) : undefined,
+        taskStatus === ThreadTaskStatus.Closed ? 'closed' : 'open'
+      );
+
+      return;
+    }
+
     setIsThreadLoading(true);
 
-    const fetchPromise = isTaskType
-      ? listTasks({
-          aboutEntity: threadLink ? getEntityFQN(threadLink) : undefined,
-          statusGroup:
-            taskStatus === ThreadTaskStatus.Closed
-              ? ('closed' as TaskStatusGroup)
-              : ('open' as TaskStatusGroup),
-          after,
-          fields: 'assignees,createdBy,about,comments,payload',
-        }).then(({ data, paging: pagingObj }) => ({
-          data: data as unknown as Thread[],
-          paging: pagingObj,
-        }))
-      : getAllFeeds(threadLink, after, threadType, FeedFilter.ALL, undefined);
+    const fetchPromise = getAllFeeds(
+      threadLink,
+      after,
+      threadType,
+      FeedFilter.ALL,
+      undefined
+    );
 
     fetchPromise
       .then((res) => {
@@ -175,6 +191,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 
   const onBack = () => {
     setSelectedThread(undefined);
+    setActiveTask(undefined);
   };
 
   const onPostThread = async (value: string) => {
@@ -233,7 +250,9 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   }, []);
 
   useEffect(() => {
-    onThreadSelect(selectedThread?.id as string);
+    if (isConversationType) {
+      onThreadSelect(selectedThread?.id as string);
+    }
   }, [threads]);
 
   useEffect(() => {
@@ -241,8 +260,12 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   }, [threadLink, threadType, taskStatus]);
 
   useEffect(() => {
-    fetchMoreThread(isInView, paging, isThreadLoading);
-  }, [paging, isThreadLoading, isInView]);
+    fetchMoreThread(
+      isInView,
+      isTaskType ? entityPaging : paging,
+      isTaskType ? loading : isThreadLoading
+    );
+  }, [entityPaging, isInView, isTaskType, isThreadLoading, loading, paging]);
 
   return (
     <Fragment>
@@ -274,7 +297,25 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
         )}
 
         {/* When user selects a thread will show that particular thread from here */}
-        {!isUndefined(selectedThread) ? (
+        {isTaskType && !isUndefined(selectedTask) ? (
+          <Fragment>
+            <Button
+              className="m-b-sm p-0"
+              size="small"
+              type="link"
+              onClick={onBack}>
+              {t('label.back')}
+            </Button>
+            <TaskTabNew
+              entityType={
+                (selectedTask.about?.type as EntityType) ?? EntityType.TABLE
+              }
+              hasGlossaryReviewer={false}
+              owners={[]}
+              task={selectedTask}
+            />
+          </Fragment>
+        ) : !isUndefined(selectedThread) ? (
           <Fragment>
             <Button
               className="m-b-sm p-0"
@@ -308,7 +349,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
                     />
                   </Space>
                 )}
-                {isTaskType && !isThreadLoading && (
+                {isTaskType && !loading && (
                   <ErrorPlaceHolder
                     className="mt-24"
                     type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
@@ -321,21 +362,36 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
                 )}
               </>
             ) : null}
-            <ActivityThreadList
-              className={classNames(className)}
-              postFeed={postFeed}
-              selectedThreadId={selectedThreadId}
-              threads={threads}
-              updateThreadHandler={onUpdateThread}
-              onConfirmation={onConfirmation}
-              onThreadIdSelect={onThreadIdSelect}
-              onThreadSelect={onThreadSelect}
-            />
+            {isTaskType ? (
+              <div className={classNames(className, 'd-flex flex-col gap-3')}>
+                {tasks.map((task) => (
+                  <TaskFeedCardFromTask
+                    isOpenInDrawer
+                    isActive={selectedTask?.id === task.id}
+                    key={task.id}
+                    task={task}
+                    onAfterClose={loadNewThreads}
+                    onTaskClick={setActiveTask}
+                  />
+                ))}
+              </div>
+            ) : (
+              <ActivityThreadList
+                className={classNames(className)}
+                postFeed={postFeed}
+                selectedThreadId={selectedThreadId}
+                threads={threads}
+                updateThreadHandler={onUpdateThread}
+                onConfirmation={onConfirmation}
+                onThreadIdSelect={onThreadIdSelect}
+                onThreadSelect={onThreadSelect}
+              />
+            )}
             <div
               data-testid="observer-element"
               id="observer-element"
               ref={elementRef as RefObject<HTMLDivElement>}>
-              {getLoader()}
+              {isTaskType ? loading ? <Loader /> : null : getLoader()}
             </div>
           </Fragment>
         )}

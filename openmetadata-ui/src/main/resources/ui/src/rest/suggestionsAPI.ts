@@ -13,13 +13,13 @@
 import { AxiosResponse } from 'axios';
 import { PagingResponse } from 'Models';
 import { SuggestionAction } from '../components/Suggestions/SuggestionsProvider/SuggestionsProvider.interface';
+import { TagLabel } from '../generated/type/tagLabel';
+import { ListParams } from '../interface/API.interface';
 import {
   Suggestion,
   SuggestionStatus,
   SuggestionType,
-} from '../generated/entity/feed/suggestion';
-import { TagLabel } from '../generated/type/tagLabel';
-import { ListParams } from '../interface/API.interface';
+} from '../types/taskSuggestion';
 import EntityLink from '../utils/EntityLink';
 import APIClient from './index';
 import {

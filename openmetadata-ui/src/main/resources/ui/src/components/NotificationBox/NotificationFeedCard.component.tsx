@@ -12,11 +12,13 @@
  */
 
 import { List, Space, Typography } from 'antd';
+import { startCase } from 'lodash';
 import { FC, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { EntityType } from '../../enums/entity.enum';
 import { TaskType, ThreadType } from '../../generated/entity/feed/thread';
+import { Task as TaskEntity } from '../../generated/entity/tasks/task';
 import {
   formatDateTime,
   getRelativeTime,
@@ -24,7 +26,11 @@ import {
 import { getEntityLinkFromType, getEntityName } from '../../utils/EntityUtils';
 import { entityDisplayName, prepareFeedLink } from '../../utils/FeedUtils';
 import Fqn from '../../utils/Fqn';
-import { getTaskDetailPath } from '../../utils/TasksUtils';
+import {
+  getTaskDetailPath,
+  getTaskDetailPathFromTask,
+  getTaskDisplayId,
+} from '../../utils/TasksUtils';
 import { ActivityFeedTabs } from '../ActivityFeed/ActivityFeedTab/ActivityFeedTab.interface';
 import ProfilePicture from '../common/ProfilePicture/ProfilePicture';
 import { SourceType } from '../SearchedData/SearchedData.interface';
@@ -37,19 +43,42 @@ const NotificationFeedCard: FC<NotificationFeedProp> = ({
   timestamp,
   feedType,
   task,
+  taskEntity,
   isConversationFeed = false,
 }) => {
   const { t } = useTranslation();
   const { task: taskDetails } = task ?? {};
+  const taskLink = useMemo(() => {
+    if (taskEntity) {
+      return getTaskDetailPathFromTask(taskEntity);
+    }
+
+    return task ? getTaskDetailPath(task) : '';
+  }, [task, taskEntity]);
 
   const taskContent = useMemo(() => {
+    if (taskEntity) {
+      return (
+        <>
+          <span className="p-x-xss">
+            {t('message.assigned-you-a-new-task-lowercase')}
+          </span>
+          <Link to={taskLink}>
+            {`#${getTaskDisplayId(taskEntity.taskId)} ${startCase(
+              taskEntity.type
+            )}`}
+          </Link>
+        </>
+      );
+    }
+
     if (
       entityType === 'glossaryTerm' &&
-      task.task?.type === TaskType.RequestApproval
+      task?.task?.type === TaskType.RequestApproval
     ) {
       return (
         <>
-          <span className="p-x-xss">{task.message}</span>
+          <span className="p-x-xss">{task?.message}</span>
           <Link
             className='className="p-r-xss"'
             to={getEntityLinkFromType(
@@ -79,18 +108,23 @@ const NotificationFeedCard: FC<NotificationFeedProp> = ({
         <span className="p-x-xss">
           {t('message.assigned-you-a-new-task-lowercase')}
         </span>
-        <Link to={getTaskDetailPath(task)}>
+        <Link to={taskLink}>
           {`#${taskDetails?.id}`} {taskDetails?.type}
         </Link>
       </>
     );
-  }, [entityType, task, taskDetails, t]);
+  }, [entityType, task, taskDetails, taskEntity, taskLink, t]);
 
   const entityName = useMemo(() => {
-    return task?.entityRef
-      ? getEntityName(task?.entityRef)
+    const entityRef = (taskEntity?.about ?? task?.entityRef) as
+      | SourceType
+      | TaskEntity['about']
+      | undefined;
+
+    return entityRef
+      ? getEntityName(entityRef as SourceType)
       : entityDisplayName(entityType, entityFQN);
-  }, [task, entityType, entityFQN]);
+  }, [entityFQN, entityType, task, taskEntity]);
 
   return (
     <Link
@@ -98,7 +132,7 @@ const NotificationFeedCard: FC<NotificationFeedProp> = ({
       to={
         isConversationFeed
           ? prepareFeedLink(entityType, entityFQN, ActivityFeedTabs.ALL)
-          : getTaskDetailPath(task)
+          : taskLink
       }>
       <List.Item.Meta
         avatar={<ProfilePicture name={createdBy} width="32" />}

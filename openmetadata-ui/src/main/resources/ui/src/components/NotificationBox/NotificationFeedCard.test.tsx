@@ -41,9 +41,9 @@ jest.mock('react-router-dom', () => ({
     .fn()
     .mockImplementation(
       ({ children, to }: { children: React.ReactNode; to: string }) => (
-        <p data-testid="link" data-to={to}>
+        <span data-testid="link" data-to={to}>
           {children}
-        </p>
+        </span>
       )
     ),
 }));
@@ -244,7 +244,7 @@ describe('Test NotificationFeedCard Component', () => {
       expect(linkElement).toHaveAttribute('data-to', conversationUrl);
     });
 
-    it('should call getTaskDetailPath for task feed entity links in mention notifications tab', async () => {
+    it('should call getTaskDetailPath once for task-backed mention notifications', async () => {
       const entityLinkUrl = '/database/test.entity/activity_feed/all';
       mockPrepareFeedLink.mockReturnValue(entityLinkUrl);
 
@@ -258,9 +258,9 @@ describe('Test NotificationFeedCard Component', () => {
         render(<NotificationFeedCard {...conversationProps} />);
       });
 
-      // Should be called twice - once for main link, once for entity name link
-      expect(mockGetTaskDetailPath).toHaveBeenCalledTimes(2);
+      expect(mockGetTaskDetailPath).toHaveBeenCalledTimes(1);
       expect(mockGetTaskDetailPath).toHaveBeenCalledWith(mockThread);
+      expect(mockPrepareFeedLink).toHaveBeenCalledTimes(1);
     });
 
     it('should call prepareFeedLink with ALL subtab for entity links in conversation notifications', async () => {

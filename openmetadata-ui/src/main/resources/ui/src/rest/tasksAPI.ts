@@ -43,6 +43,7 @@ export enum TaskCategory {
 // Task type enum - matches backend TaskEntityType
 export enum TaskEntityType {
   GlossaryApproval = 'GlossaryApproval',
+  RequestApproval = 'RequestApproval',
   DataAccessRequest = 'DataAccessRequest',
   DescriptionUpdate = 'DescriptionUpdate',
   TagUpdate = 'TagUpdate',

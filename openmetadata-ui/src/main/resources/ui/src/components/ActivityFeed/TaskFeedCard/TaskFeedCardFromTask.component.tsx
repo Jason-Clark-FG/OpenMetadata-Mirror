@@ -180,10 +180,13 @@ const TaskFeedCardFromTask = ({
   );
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
-  const isTaskGlossaryApproval = task.type === TaskEntityType.GlossaryApproval;
+  const isTaskApprovalRequest = [
+    TaskEntityType.GlossaryApproval,
+    TaskEntityType.RequestApproval,
+  ].includes(task.type);
   const isTaskRecognizerFeedbackApproval = isRecognizerFeedbackTask(task);
   const isApprovalWorkflowTask =
-    isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval;
+    isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
 
   const updateTaskData = async (
     newValue: string,
@@ -270,7 +273,7 @@ const TaskFeedCardFromTask = ({
     assignee.type === 'team' ? checkIfUserPartOfTeam(assignee.id ?? '') : false
   );
   const hasEditAccess =
-    (isAdminUser && !isTaskGlossaryApproval) ||
+    (isAdminUser && !isTaskApprovalRequest) ||
     isAssignee ||
     (Boolean(isPartOfAssigneeTeam) && !isCreator);
 
@@ -293,7 +296,7 @@ const TaskFeedCardFromTask = ({
         data-testid="task-feed-card">
         <Row
           gutter={
-            isTaskTestCaseResult || isTaskGlossaryApproval
+            isTaskTestCaseResult || isTaskApprovalRequest
               ? [0, 6]
               : isTaskDescription
               ? undefined

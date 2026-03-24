@@ -1,0 +1,473 @@
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+import { readFileSync } from 'fs';
+import { APIRequestContext, expect, Page, request } from '@playwright/test';
+import { test } from '../../fixtures/pages';
+import { DEFAULT_ADMIN_USER } from '../../../constant/user';
+import { ClassificationClass } from '../../../support/tag/ClassificationClass';
+import { TagClass } from '../../../support/tag/TagClass';
+import { UserClass } from '../../../support/user/UserClass';
+import { getAuthContext, toastNotification } from '../../../utils/common';
+import {
+  CreatedTask,
+  openTaskDetails,
+} from '../../../utils/taskWorkflow';
+
+type ReviewerReference = {
+  id: string;
+  type: 'user';
+  displayName: string;
+  fullyQualifiedName: string;
+  name: string;
+};
+
+type TaskState = {
+  id: string;
+  status: string;
+  assignees?: Array<{ name: string }>;
+};
+
+type LoginResponse = {
+  accessToken: string;
+};
+
+const REVIEWER_PASSWORD = 'User@OMD123';
+
+const logWorkflowDebug = (...messages: Array<string | number | boolean>) => {
+  if (process.env.PW_TASK_DEBUG) {
+    console.log('[PW_TASK_WORKFLOW]', ...messages);
+  }
+};
+
+const buildWorkflowDefinition = (
+  workflowName: string,
+  tagName: string,
+  reviewer1: ReviewerReference,
+  reviewer2: ReviewerReference
+) => ({
+  name: workflowName,
+  displayName: 'Playwright Multi Reviewer Approval Workflow',
+  description: 'Create a threshold-2 approval task for a single test tag.',
+  trigger: {
+    type: 'eventBasedEntity',
+    config: {
+      entityTypes: ['tag'],
+      events: ['Created'],
+      exclude: ['reviewers'],
+      filter: {
+        tag: JSON.stringify({
+          '==': [{ var: 'name' }, tagName],
+        }),
+      },
+    },
+    output: ['relatedEntity', 'updatedBy'],
+  },
+  nodes: [
+    {
+      type: 'startEvent',
+      subType: 'startEvent',
+      name: 'StartNode',
+      displayName: 'Start',
+    },
+    {
+      type: 'endEvent',
+      subType: 'endEvent',
+      name: 'ApprovedEnd',
+      displayName: 'Approved',
+    },
+    {
+      type: 'endEvent',
+      subType: 'endEvent',
+      name: 'RejectedEnd',
+      displayName: 'Rejected',
+    },
+    {
+      type: 'userTask',
+      subType: 'userApprovalTask',
+      name: 'ReviewTag',
+      displayName: 'Review Tag',
+      config: {
+        assignees: {
+          addReviewers: false,
+          addOwners: false,
+          candidates: [reviewer1, reviewer2],
+        },
+        approvalThreshold: 2,
+        rejectionThreshold: 1,
+      },
+      input: ['relatedEntity'],
+      inputNamespaceMap: {
+        relatedEntity: 'global',
+      },
+      output: ['result'],
+      branches: ['true', 'false'],
+    },
+  ],
+  edges: [
+    { from: 'StartNode', to: 'ReviewTag' },
+    { from: 'ReviewTag', to: 'ApprovedEnd', condition: 'true' },
+    { from: 'ReviewTag', to: 'RejectedEnd', condition: 'false' },
+  ],
+  config: {
+    storeStageStatus: true,
+  },
+});
+
+const readStoredUserName = (storageStatePath: string) => {
+  const storageState = JSON.parse(readFileSync(storageStatePath, 'utf8')) as {
+    origins?: Array<{
+      localStorage?: Array<{ name: string; value: string }>;
+    }>;
+  };
+  const userName = storageState.origins
+    ?.flatMap((origin) => origin.localStorage ?? [])
+    .find((entry) => entry.name === 'loggedInUsers')?.value;
+
+  expect(userName).toBeTruthy();
+
+  return userName as string;
+};
+
+const buildStoredUserEmail = (userName: string) => `${userName}@gmail.com`;
+
+const fetchReviewerReference = async (
+  apiContext: APIRequestContext,
+  userName: string
+): Promise<ReviewerReference> => {
+  const response = await apiContext.get(
+    `/api/v1/users/name/${encodeURIComponent(userName)}`
+  );
+
+  expect(response.ok()).toBeTruthy();
+
+  const reviewer = await response.json();
+
+  return {
+    id: reviewer.id,
+    type: 'user',
+    displayName: reviewer.displayName ?? reviewer.name,
+    fullyQualifiedName: reviewer.fullyQualifiedName ?? reviewer.name,
+    name: reviewer.name,
+  };
+};
+
+const loginReviewerPage = async (page: Page, userName: string) => {
+  const reviewer = new UserClass({
+    firstName: 'PW',
+    lastName: userName,
+    email: buildStoredUserEmail(userName),
+    password: REVIEWER_PASSWORD,
+  });
+
+  await reviewer.login(page, reviewer.data.email, reviewer.data.password);
+};
+
+const fetchOpenApprovalTask = async (
+  apiContext: APIRequestContext,
+  aboutEntity: string
+): Promise<
+  | (CreatedTask & {
+      about?: { type?: string; fullyQualifiedName?: string };
+      assignees?: Array<{ name: string }>;
+    })
+  | null
+> => {
+  const response = await apiContext.get(
+    `/api/v1/tasks?aboutEntity=${encodeURIComponent(
+      aboutEntity
+    )}&status=Open&category=Approval&limit=10&fields=about,assignees`
+  );
+  const payload = await response.json();
+
+  return payload.data?.[0] ?? null;
+};
+
+const fetchTaskById = async (
+  apiContext: APIRequestContext,
+  taskId: string
+): Promise<TaskState | null> => {
+  const response = await apiContext.get(`/api/v1/tasks/${taskId}?fields=assignees`);
+
+  if (!response.ok()) {
+    return null;
+  }
+
+  return response.json();
+};
+
+const createAdminApiContext = async () => {
+  const loginContext = await request.newContext({
+    baseURL: 'http://localhost:8585',
+    timeout: 90000,
+  });
+
+  try {
+    const loginResponse = await loginContext.post('/api/v1/auth/login', {
+      data: {
+        email: DEFAULT_ADMIN_USER.userName,
+        password: Buffer.from(DEFAULT_ADMIN_USER.password).toString('base64'),
+      },
+    });
+
+    expect(loginResponse.ok()).toBeTruthy();
+
+    const loginPayload = (await loginResponse.json()) as LoginResponse;
+    const apiContext = await getAuthContext(loginPayload.accessToken);
+    const afterAction = async () => {
+      await apiContext.dispose();
+      await loginContext.dispose();
+    };
+
+    return { apiContext, afterAction };
+  } catch (error) {
+    await loginContext.dispose();
+
+    throw error;
+  }
+};
+
+const waitForWorkflowDeployment = async (
+  apiContext: APIRequestContext,
+  workflowName: string
+) => {
+  await expect
+    .poll(
+      async () => {
+        const response = await apiContext.get(
+          `/api/v1/governance/workflowDefinitions/name/${encodeURIComponent(
+            workflowName
+          )}?fields=deployed`
+        );
+
+        if (!response.ok()) {
+          return false;
+        }
+
+        const workflow = await response.json();
+
+        return workflow.deployed === true;
+      },
+      {
+        timeout: 120000,
+        intervals: [1000, 2000, 5000],
+        message: `Timed out waiting for workflow ${workflowName} to be deployed`,
+      }
+    )
+    .toBe(true);
+};
+
+const approveTaskFromEntityPage = async (
+  page: Page,
+  task: CreatedTask & {
+    about?: { type?: string; fullyQualifiedName?: string };
+  }
+) => {
+  expect(task.about?.fullyQualifiedName).toBeTruthy();
+
+  await page.goto(
+    `/tag/${encodeURIComponent(
+      task.about?.fullyQualifiedName ?? ''
+    )}/activity_feed/tasks`
+  );
+  await openTaskDetails(page, task);
+
+  const resolveResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().includes(`/api/v1/tasks/${task.id}/resolve`)
+  );
+  const approvalDropdown = page.getByTestId(
+    'glossary-accept-reject-task-dropdown'
+  );
+  const primaryActionButton = approvalDropdown.locator('button').first();
+
+  await expect(primaryActionButton).toBeVisible();
+  await primaryActionButton.click();
+  await resolveResponse;
+};
+
+test.describe.serial('Task Workflow Approval', () => {
+  test('keeps a workflow-opened approval task open until the approval threshold is reached', async ({
+    dataConsumerPage,
+    ownerPage,
+  }) => {
+    test.setTimeout(240000);
+
+    logWorkflowDebug('admin-login:start');
+    const { apiContext, afterAction } = await createAdminApiContext();
+    logWorkflowDebug('admin-login:done');
+    const uniqueSuffix = Date.now();
+    const workflowName = `pw_tag_request_approval_${uniqueSuffix}`;
+    const classification = new ClassificationClass({
+      name: `pw-classification-${uniqueSuffix}`,
+      displayName: `PW Classification ${uniqueSuffix}`,
+    });
+    const tag = new TagClass({
+      name: `pw_tag_threshold_${uniqueSuffix}`,
+      classification: classification.data.name,
+    });
+    const reviewer1 = await fetchReviewerReference(
+      apiContext,
+      readStoredUserName('playwright/.auth/dataConsumer.json')
+    );
+    const reviewer2 = await fetchReviewerReference(
+      apiContext,
+      readStoredUserName('playwright/.auth/owner.json')
+    );
+    logWorkflowDebug('reviewers:resolved', reviewer1.name, reviewer2.name);
+    logWorkflowDebug('reviewer-pages:login:start');
+    await loginReviewerPage(dataConsumerPage, reviewer1.name);
+    await loginReviewerPage(ownerPage, reviewer2.name);
+    logWorkflowDebug('reviewer-pages:login:done');
+
+    try {
+      logWorkflowDebug('classification:create:start', classification.data.name);
+      await classification.create(apiContext);
+      logWorkflowDebug('classification:create:done', classification.responseData.id);
+
+      logWorkflowDebug('workflow:create:start', workflowName);
+      const workflowResponse = await apiContext.post(
+        '/api/v1/governance/workflowDefinitions',
+        {
+          data: buildWorkflowDefinition(
+            workflowName,
+            tag.data.name,
+            reviewer1,
+            reviewer2
+          ),
+        }
+      );
+
+      expect(workflowResponse.ok()).toBeTruthy();
+      logWorkflowDebug('workflow:create:done', workflowName);
+      logWorkflowDebug('workflow:deploy:wait:start', workflowName);
+      await waitForWorkflowDeployment(apiContext, workflowName);
+      logWorkflowDebug('workflow:deploy:wait:done', workflowName);
+
+      logWorkflowDebug('tag:create:start', tag.data.name);
+      const tagResponse = await apiContext.post('/api/v1/tags', {
+        data: {
+          ...tag.data,
+        },
+      });
+
+      expect(tagResponse.ok()).toBeTruthy();
+      tag.responseData = await tagResponse.json();
+      logWorkflowDebug('tag:create:done', tag.responseData.fullyQualifiedName);
+
+      logWorkflowDebug('task:create:wait:start', tag.responseData.fullyQualifiedName);
+      await expect
+        .poll(
+          async () => {
+            const task = await fetchOpenApprovalTask(
+              apiContext,
+              tag.responseData.fullyQualifiedName
+            );
+
+            return task?.taskId ?? '';
+          },
+          {
+            timeout: 120000,
+            intervals: [1000, 2000, 5000],
+            message: 'Timed out waiting for the tag approval task to be created',
+          }
+        )
+        .not.toBe('');
+      logWorkflowDebug('task:create:wait:done');
+
+      const createdTask = (await fetchOpenApprovalTask(
+        apiContext,
+        tag.responseData.fullyQualifiedName
+      )) as CreatedTask & {
+        about?: { type?: string; fullyQualifiedName?: string };
+        assignees?: Array<{ name: string }>;
+      };
+      logWorkflowDebug('task:fetched', createdTask.taskId, createdTask.id);
+
+      expect(createdTask.assignees?.map((assignee) => assignee.name).sort()).toEqual(
+        [reviewer1.name, reviewer2.name].sort()
+      );
+
+      logWorkflowDebug('reviewer1:approve:start', createdTask.taskId);
+      await approveTaskFromEntityPage(dataConsumerPage, createdTask);
+      await toastNotification(dataConsumerPage, /Vote recorded/i, 10000);
+      logWorkflowDebug('reviewer1:approve:done', createdTask.taskId);
+
+      logWorkflowDebug('reviewer1:state:wait:start');
+      await expect
+        .poll(
+          async () => {
+            const task = await fetchTaskById(apiContext, createdTask.id);
+
+            return task?.status ?? '';
+          },
+          {
+            timeout: 120000,
+            intervals: [1000, 2000, 5000],
+            message:
+              'Timed out waiting for the first approval vote to leave the task open',
+          }
+        )
+        .toBe('Open');
+      logWorkflowDebug('reviewer1:state:wait:done');
+
+      logWorkflowDebug('reviewer2:approve:start', createdTask.taskId);
+      await approveTaskFromEntityPage(ownerPage, createdTask);
+      await toastNotification(ownerPage, /Task resolved successfully/i, 10000);
+      logWorkflowDebug('reviewer2:approve:done', createdTask.taskId);
+
+      logWorkflowDebug('reviewer2:state:wait:start');
+      await expect
+        .poll(
+          async () => {
+            const task = await fetchTaskById(apiContext, createdTask.id);
+
+            return task?.status ?? '';
+          },
+          {
+            timeout: 120000,
+            intervals: [1000, 2000, 5000],
+            message: 'Timed out waiting for the second approval to resolve the task',
+          }
+        )
+        .toBe('Approved');
+      logWorkflowDebug('reviewer2:state:wait:done');
+    } finally {
+      logWorkflowDebug('cleanup:start', workflowName);
+      await tag.delete(apiContext).catch(() => undefined);
+      await classification.delete(apiContext).catch(() => undefined);
+      await apiContext
+        .delete(
+          `/api/v1/governance/workflowDefinitions/name/${encodeURIComponent(
+            workflowName
+          )}?hardDelete=true`
+        )
+        .catch(() => undefined);
+      await afterAction();
+      logWorkflowDebug('cleanup:done', workflowName);
+    }
+  });
+});

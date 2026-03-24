@@ -220,11 +220,14 @@ export const TaskTabNew = ({
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
 
-  const isTaskGlossaryApproval = task.type === TaskEntityType.GlossaryApproval;
+  const isTaskApprovalRequest = [
+    TaskEntityType.GlossaryApproval,
+    TaskEntityType.RequestApproval,
+  ].includes(task.type);
 
   const isTaskRecognizerFeedbackApproval = isRecognizerFeedbackTask(task);
   const isApprovalWorkflowTask =
-    isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval;
+    isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
 
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);
@@ -237,7 +240,7 @@ export const TaskTabNew = ({
       return isAssignedIncidentTask
         ? INCIDENT_TASK_ACTION_LIST[0]
         : INCIDENT_TASK_ACTION_LIST[1];
-    } else if (isTaskGlossaryApproval) {
+    } else if (isTaskApprovalRequest) {
       return GLOSSARY_TASK_ACTION_LIST[0];
     } else if (showAddSuggestionButton) {
       return noSuggestionTaskMenuOptions[0];
@@ -247,7 +250,7 @@ export const TaskTabNew = ({
   }, [
     showAddSuggestionButton,
     testCaseResolutionStatus,
-    isTaskGlossaryApproval,
+    isTaskApprovalRequest,
     isTaskTestCaseResult,
     noSuggestionTaskMenuOptions,
     task.assignees,
@@ -784,7 +787,7 @@ export const TaskTabNew = ({
   }, [task, isAssignee, isPartOfAssigneeTeam, taskAction, renderCommentButton]);
 
   const actionButtons = useMemo(() => {
-    if (isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval) {
+    if (isTaskApprovalRequest || isTaskRecognizerFeedbackApproval) {
       return approvalWorkflowActions;
     }
 
@@ -860,7 +863,7 @@ export const TaskTabNew = ({
     handleMenuItemClick,
     taskAction,
     isTaskClosed,
-    isTaskGlossaryApproval,
+    isTaskApprovalRequest,
     isTaskRecognizerFeedbackApproval,
     showAddSuggestionButton,
     isCreator,
