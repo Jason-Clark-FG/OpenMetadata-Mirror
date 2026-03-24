@@ -130,7 +130,9 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     });
 
     const lineageDirection =
-      (queryParams['dir'] as LineageDirection) || LineageDirection.Downstream;
+      queryParams['dir'] === LineageDirection.Upstream
+        ? LineageDirection.Upstream
+        : LineageDirection.Downstream;
 
     const directionalDepth =
       lineageDirection === LineageDirection.Downstream
@@ -540,7 +542,14 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     if (impactLevel === EImpactLevel.ColumnLevel) {
       fetchNodes();
     }
-  }, [impactLevel]);
+  }, [
+    nodeDepth,
+    currentPage,
+    impactLevel,
+    pageSize,
+    queryFilter,
+    columnFilterValue,
+  ]);
 
   useEffect(() => {
     updateEntityData(entityType, entity, false);
