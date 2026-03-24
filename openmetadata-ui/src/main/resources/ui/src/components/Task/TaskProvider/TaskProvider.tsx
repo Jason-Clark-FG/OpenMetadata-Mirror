@@ -22,10 +22,14 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PAGE_SIZE_LARGE } from '../../../constants/constants';
+import {
+  DEFAULT_DOMAIN_VALUE,
+  PAGE_SIZE_LARGE,
+} from '../../../constants/constants';
 import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResolutionStatus';
 import { Paging } from '../../../generated/type/paging';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
+import { useDomainStore } from '../../../hooks/useDomainStore';
 import { getListTestCaseIncidentByStateId } from '../../../rest/incidentManagerAPI';
 import {
   addTaskComment,
@@ -36,6 +40,7 @@ import {
   getTaskById,
   listMyAssignedTasks,
   listMyCreatedTasks,
+  listMyOwnedTasks,
   listTasks,
   ListTasksParams,
   patchTask,
@@ -44,6 +49,7 @@ import {
   Task,
   TaskEntityStatus,
 } from '../../../rest/tasksAPI';
+import { isTaskPendingFurtherApproval } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 
 interface TaskProviderProps {
@@ -62,6 +68,7 @@ interface TaskProviderContextType {
   fetchTasks: (params?: ListTasksParams) => Promise<void>;
   fetchMyAssignedTasks: (status?: TaskEntityStatus) => Promise<void>;
   fetchMyCreatedTasks: (status?: TaskEntityStatus) => Promise<void>;
+  fetchMyOwnedTasks: (status?: TaskEntityStatus) => Promise<void>;
   fetchTaskById: (id: string) => Promise<Task | undefined>;
   createNewTask: (
     task: Parameters<typeof createTask>[0]
@@ -90,11 +97,14 @@ const TaskContext = createContext<TaskProviderContextType>(
 );
 
 const TASK_FIELDS =
-  'assignees,reviewers,watchers,about,domain,comments,createdBy';
+  'assignees,reviewers,watchers,about,domains,comments,createdBy,payload,resolution';
 
 export const TaskProvider = ({ children }: TaskProviderProps) => {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
+  const activeDomain = useDomainStore((state) => state.activeDomain);
+  const domain =
+    activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | undefined>();
@@ -149,6 +159,7 @@ export const TaskProvider = ({ children }: TaskProviderProps) => {
         const response = await listMyAssignedTasks({
           fields: TASK_FIELDS,
           status,
+          domain,
         });
         setTasks(response.data);
         setPaging(response.paging);
@@ -161,27 +172,54 @@ export const TaskProvider = ({ children }: TaskProviderProps) => {
         setLoading(false);
       }
     },
-    []
+    [domain]
   );
 
-  const fetchMyCreatedTasks = useCallback(async (status?: TaskEntityStatus) => {
-    setLoading(true);
-    try {
-      const response = await listMyCreatedTasks({
-        fields: TASK_FIELDS,
-        status,
-      });
-      setTasks(response.data);
-      setPaging(response.paging);
-    } catch (err) {
-      showErrorToast(
-        err as AxiosError,
-        t('server.entity-fetch-error', { entity: t('label.task-plural') })
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchMyCreatedTasks = useCallback(
+    async (status?: TaskEntityStatus) => {
+      setLoading(true);
+      try {
+        const response = await listMyCreatedTasks({
+          fields: TASK_FIELDS,
+          status,
+          domain,
+        });
+        setTasks(response.data);
+        setPaging(response.paging);
+      } catch (err) {
+        showErrorToast(
+          err as AxiosError,
+          t('server.entity-fetch-error', { entity: t('label.task-plural') })
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [domain]
+  );
+
+  const fetchMyOwnedTasks = useCallback(
+    async (status?: TaskEntityStatus) => {
+      setLoading(true);
+      try {
+        const response = await listMyOwnedTasks({
+          fields: TASK_FIELDS,
+          status,
+          domain,
+        });
+        setTasks(response.data);
+        setPaging(response.paging);
+      } catch (err) {
+        showErrorToast(
+          err as AxiosError,
+          t('server.entity-fetch-error', { entity: t('label.task-plural') })
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [domain]
+  );
 
   const fetchTaskById = useCallback(async (id: string) => {
     try {
@@ -263,7 +301,11 @@ export const TaskProvider = ({ children }: TaskProviderProps) => {
     async (id: string, data: ResolveTask) => {
       try {
         const task = await resolveTask(id, data);
-        showSuccessToast(t('server.task-resolved-successfully'));
+        showSuccessToast(
+          isTaskPendingFurtherApproval(task)
+            ? 'Vote recorded.'
+            : t('server.task-resolved-successfully')
+        );
 
         // Update in tasks list
         setTasks((prev) => prev.map((t) => (t.id === id ? task : t)));
@@ -444,6 +486,7 @@ export const TaskProvider = ({ children }: TaskProviderProps) => {
       fetchTasks,
       fetchMyAssignedTasks,
       fetchMyCreatedTasks,
+      fetchMyOwnedTasks,
       fetchTaskById,
       createNewTask,
       updateTask,
@@ -467,6 +510,7 @@ export const TaskProvider = ({ children }: TaskProviderProps) => {
       fetchTasks,
       fetchMyAssignedTasks,
       fetchMyCreatedTasks,
+      fetchMyOwnedTasks,
       fetchTaskById,
       createNewTask,
       updateTask,

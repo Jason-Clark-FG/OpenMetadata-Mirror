@@ -54,6 +54,15 @@ export const waitForAllLoadersToDisappear = async (
   await expect(loaders).toHaveCount(0, { timeout });
 };
 
+export const waitForLoadersInContainerToDisappear = async (
+  container: Locator,
+  timeout = 30000
+) => {
+  const loaders = container.locator('[data-testid="loader"]');
+
+  await expect(loaders).toHaveCount(0, { timeout });
+};
+
 export const visitEntityPage = async (data: {
   page: Page;
   searchTerm: string;

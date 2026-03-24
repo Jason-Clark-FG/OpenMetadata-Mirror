@@ -23,7 +23,10 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PAGE_SIZE_LARGE } from '../../../constants/constants';
+import {
+  DEFAULT_DOMAIN_VALUE,
+  PAGE_SIZE_LARGE,
+} from '../../../constants/constants';
 import { POST_FEED_PAGE_COUNT } from '../../../constants/Feeds.constants';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
@@ -39,6 +42,7 @@ import { TestCaseResolutionStatus } from '../../../generated/tests/testCaseResol
 import { Paging } from '../../../generated/type/paging';
 import { Reaction, ReactionType } from '../../../generated/type/reaction';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
+import { useDomainStore } from '../../../hooks/useDomainStore';
 import {
   addActivityReaction,
   deletePostById,
@@ -61,6 +65,9 @@ import { getListTestCaseIncidentByStateId } from '../../../rest/incidentManagerA
 import {
   addTaskComment,
   getTaskById,
+  listMyAssignedTasks,
+  listMyCreatedTasks,
+  listMyOwnedTasks,
   listTasks,
   Task,
   TaskEntityType,
@@ -109,6 +116,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
   >([]);
 
   const { currentUser } = useApplicationStore();
+  const activeDomain = useDomainStore((state) => state.activeDomain);
 
   const fetchTestCaseResolution = useCallback(async (id: string) => {
     setIsTestCaseResolutionLoading(true);
@@ -206,6 +214,13 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setLoading(true);
         const feedFilterType = filterType ?? FeedFilter.ALL;
         let userId = undefined;
+        const domain =
+          activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
+        const taskFields = 'assignees,createdBy,about,comments,payload';
+        const isCurrentUserEntity =
+          entityType === EntityType.USER &&
+          Boolean(fqn) &&
+          [currentUser?.fullyQualifiedName, currentUser?.name].includes(fqn);
 
         if (entityType === EntityType.USER) {
           userId = user;
@@ -215,21 +230,157 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
 
         // Use tasksAPI for Task type, feedsAPI for everything else
         if (type === ThreadType.Task) {
-          const { data: taskData, paging } = await listTasks({
-            statusGroup: taskStatusGroup,
-            assignee: userId,
-            aboutEntity:
-              entityType !== EntityType.USER && fqn ? fqn : undefined,
-            after,
-            limit,
-            fields: 'assignees,createdBy,about,comments,payload',
-          });
+          let taskResponse;
+
+          if (isCurrentUserEntity) {
+            if (feedFilterType === FeedFilter.ASSIGNED_BY) {
+              taskResponse = await listMyCreatedTasks({
+                statusGroup: taskStatusGroup,
+                after,
+                limit,
+                domain,
+                fields: taskFields,
+              });
+            } else if (feedFilterType === FeedFilter.ASSIGNED_TO) {
+              taskResponse = await listMyAssignedTasks({
+                statusGroup: taskStatusGroup,
+                after,
+                limit,
+                domain,
+                fields: taskFields,
+              });
+            } else if (!after) {
+              const [assignedTasks, ownedTasks] = await Promise.all([
+                listMyAssignedTasks({
+                  statusGroup: taskStatusGroup,
+                  limit,
+                  domain,
+                  fields: taskFields,
+                }),
+                listMyOwnedTasks({
+                  statusGroup: taskStatusGroup,
+                  limit,
+                  domain,
+                  fields: taskFields,
+                }),
+              ]);
+
+              const mergedTasks = [
+                ...assignedTasks.data,
+                ...ownedTasks.data.filter(
+                  (ownedTask) =>
+                    !assignedTasks.data.some(
+                      (assignedTask) => assignedTask.id === ownedTask.id
+                    )
+                ),
+              ];
+
+              taskResponse = {
+                data: mergedTasks,
+                paging: assignedTasks.paging,
+              };
+            } else {
+              taskResponse = await listMyAssignedTasks({
+                statusGroup: taskStatusGroup,
+                after,
+                limit,
+                domain,
+                fields: taskFields,
+              });
+            }
+          } else if (entityType === EntityType.USER) {
+            const assigneeFqn =
+              fqn || currentUser?.fullyQualifiedName || currentUser?.name;
+            taskResponse = await listTasks({
+              statusGroup: taskStatusGroup,
+              assignee:
+                feedFilterType === FeedFilter.ASSIGNED_BY
+                  ? undefined
+                  : assigneeFqn,
+              createdBy:
+                feedFilterType === FeedFilter.ASSIGNED_BY
+                  ? assigneeFqn
+                  : undefined,
+              aboutEntity: undefined,
+              after,
+              limit,
+              domain,
+              fields: taskFields,
+            });
+          } else if (entityType && fqn) {
+            taskResponse = await listTasks({
+              statusGroup: taskStatusGroup,
+              aboutEntity: fqn,
+              after,
+              limit,
+              domain,
+              fields: taskFields,
+            });
+          } else if (feedFilterType === FeedFilter.ASSIGNED_BY) {
+            taskResponse = await listMyCreatedTasks({
+              statusGroup: taskStatusGroup,
+              after,
+              limit,
+              domain,
+              fields: taskFields,
+            });
+          } else if (feedFilterType === FeedFilter.ASSIGNED_TO) {
+            taskResponse = await listMyAssignedTasks({
+              statusGroup: taskStatusGroup,
+              after,
+              limit,
+              domain,
+              fields: taskFields,
+            });
+          } else if (!after) {
+            const [assignedTasks, ownedTasks] = await Promise.all([
+              listMyAssignedTasks({
+                statusGroup: taskStatusGroup,
+                limit,
+                domain,
+                fields: taskFields,
+              }),
+              listMyOwnedTasks({
+                statusGroup: taskStatusGroup,
+                limit,
+                domain,
+                fields: taskFields,
+              }),
+            ]);
+
+            const mergedTasks = [
+              ...assignedTasks.data,
+              ...ownedTasks.data.filter(
+                (ownedTask) =>
+                  !assignedTasks.data.some(
+                    (assignedTask) => assignedTask.id === ownedTask.id
+                  )
+              ),
+            ];
+
+            taskResponse = {
+              data: mergedTasks,
+              paging: assignedTasks.paging,
+            };
+          } else {
+            taskResponse = await listMyAssignedTasks({
+              statusGroup: taskStatusGroup,
+              after,
+              limit,
+              domain,
+              fields: taskFields,
+            });
+          }
 
           // Sort tasks by createdAt descending (newest first)
-          const sortedTasks = orderBy(taskData, ['createdAt'], ['desc']);
+          const sortedTasks = orderBy(
+            taskResponse.data,
+            ['createdAt'],
+            ['desc']
+          );
 
           setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
-          setEntityPaging(paging);
+          setEntityPaging(taskResponse.paging);
         } else if (feedFilterType === FeedFilter.MENTIONS) {
           // For mentions, fetch tasks where user was mentioned in comments
           const userFqn = currentUser?.fullyQualifiedName ?? currentUser?.name;
@@ -239,7 +390,8 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
               entityType !== EntityType.USER && fqn ? fqn : undefined,
             after,
             limit,
-            fields: 'assignees,createdBy,about,comments,payload',
+            domain,
+            fields: taskFields,
           });
 
           // Sort tasks by createdAt descending (newest first)
@@ -273,7 +425,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setLoading(false);
       }
     },
-    [currentUser, user]
+    [currentUser, user, activeDomain]
   );
 
   // Here value is the post message and id can be thread id or post id.

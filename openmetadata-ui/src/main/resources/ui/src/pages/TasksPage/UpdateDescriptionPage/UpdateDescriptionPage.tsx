@@ -26,7 +26,6 @@ import ExploreSearchCard from '../../../components/ExploreV1/ExploreSearchCard/E
 import { SearchedDataProps } from '../../../components/SearchedData/SearchedData.interface';
 import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
-import { EntityField } from '../../../constants/Feeds.constants';
 import { TASK_SANITIZE_VALUE_REGEX } from '../../../constants/regex.constants';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
 import { Glossary } from '../../../generated/entity/data/glossary';
@@ -42,15 +41,15 @@ import {
 } from '../../../rest/tasksAPI';
 import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
-import { ENTITY_LINK_SEPARATOR } from '../../../utils/EntityUtils';
 import {
   fetchEntityDetail,
   fetchOptions,
   getBreadCrumbList,
-  getColumnObject,
-  getEntityColumnsDetails,
+  getColumnObjectByPath,
+  getDescriptionTaskFieldPath,
   getTaskAssignee,
   getTaskEntityFQN,
+  getTaskFieldColumns,
   getTaskMessage,
 } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
@@ -77,6 +76,7 @@ const UpdateDescription = () => {
   const [options, setOptions] = useState<Option[]>([]);
   const [assignees, setAssignees] = useState<Array<Option>>([]);
   const [currentDescription, setCurrentDescription] = useState<string>('');
+  const [suggestion, setSuggestion] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const entityFQN = useMemo(
@@ -104,14 +104,16 @@ const UpdateDescription = () => {
   const back = () => navigate(-1);
 
   const columnObject = useMemo(() => {
-    const column = sanitizeValue.split(FQN_SEPARATOR_CHAR).slice(-1);
+    const fieldPathSegments = sanitizeValue
+      .split(FQN_SEPARATOR_CHAR)
+      .filter(Boolean);
 
-    return getColumnObject(
-      column[0],
-      getEntityColumnsDetails(entityType, entityData),
+    return getColumnObjectByPath(
+      fieldPathSegments,
+      getTaskFieldColumns(entityType, entityData, field),
       entityType
     );
-  }, [field, entityData, entityType]);
+  }, [field, entityData, entityType, sanitizeValue]);
 
   const getDescription = () => {
     if (!isEmpty(columnObject) && !isUndefined(columnObject)) {
@@ -130,34 +132,30 @@ const UpdateDescription = () => {
   };
 
   const getTaskAbout = () => {
-    if (field && value) {
-      return `${field}${ENTITY_LINK_SEPARATOR}${value}${ENTITY_LINK_SEPARATOR}description`;
-    } else {
-      return EntityField.DESCRIPTION;
-    }
+    return getDescriptionTaskFieldPath(field, value);
   };
 
   const onCreateTask: FormProps['onFinish'] = async (formValues) => {
     setIsLoading(true);
 
-    const data: CreateTask = {
-      name: formValues.title || taskMessage,
-      category: TaskCategory.MetadataUpdate,
-      type: TaskEntityType.DescriptionUpdate,
-      priority: TaskPriority.Medium,
-      about: entityFQN,
-      aboutType: entityType,
-      assignees: assignees.map((assignee) => assignee.name ?? ''),
-      payload: {
-        suggestedValue: isDescriptionContentEmpty(formValues.description)
-          ? ''
-          : formValues.description,
-        currentValue: currentDescription,
-        field: getTaskAbout(),
-      },
-    };
-
     try {
+      const data: CreateTask = {
+        name: formValues.title || taskMessage,
+        category: TaskCategory.MetadataUpdate,
+        type: TaskEntityType.DescriptionUpdate,
+        priority: TaskPriority.Medium,
+        about: entityFQN,
+        aboutType: entityType,
+        assignees: assignees.map((assignee) => assignee.name ?? ''),
+        payload: {
+          newDescription: isDescriptionContentEmpty(suggestion)
+            ? ''
+            : suggestion,
+          currentDescription: currentDescription,
+          fieldPath: getTaskAbout(),
+        },
+      };
+
       await createTask(data);
       showSuccessToast(
         t('server.create-entity-success', {
@@ -198,7 +196,9 @@ const UpdateDescription = () => {
   }, [entityData]);
 
   useEffect(() => {
-    setCurrentDescription(getDescription());
+    const description = getDescription();
+    setCurrentDescription(description);
+    setSuggestion(description);
   }, [entityData, columnObject]);
 
   if (isEmpty(entityData)) {
@@ -267,18 +267,16 @@ const UpdateDescription = () => {
                   />
                 </Form.Item>
 
-                {currentDescription && (
-                  <Form.Item
-                    data-testid="description-tabs"
-                    label={`${t('label.description')}:`}
-                    name="description"
-                    rules={[{ required: true }]}>
-                    <DescriptionTabs
-                      suggestion={currentDescription}
-                      value={currentDescription}
-                    />
-                  </Form.Item>
-                )}
+                <Form.Item
+                  data-testid="description-tabs"
+                  label={`${t('label.description')}:`}
+                  name="description">
+                  <DescriptionTabs
+                    suggestion={suggestion}
+                    value={currentDescription}
+                    onChange={setSuggestion}
+                  />
+                </Form.Item>
 
                 <Form.Item>
                   <Space

@@ -25,6 +25,7 @@ import {
   openAddGlossaryTermModal,
   performExpandAll,
   selectActiveGlossary,
+  verifyTaskCreated,
 } from '../../../utils/glossary';
 import { sidebarClick } from '../../../utils/sidebar';
 
@@ -529,7 +530,7 @@ test.describe('Workflow History', () => {
     );
 
     if (await approveBtn.isVisible()) {
-      const taskResolve = page.waitForResponse('/api/v1/feed/tasks/*/resolve');
+      const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
       await approveBtn.click();
       await taskResolve;
     }

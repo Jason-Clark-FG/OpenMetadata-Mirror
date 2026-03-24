@@ -4,6 +4,7 @@ import org.openmetadata.it.auth.JwtAuthProvider;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.config.OpenMetadataConfig;
 import org.openmetadata.sdk.fluent.AIApplications;
+import org.openmetadata.sdk.fluent.Announcements;
 import org.openmetadata.sdk.fluent.Apps;
 import org.openmetadata.sdk.fluent.Charts;
 import org.openmetadata.sdk.fluent.Classifications;
@@ -35,6 +36,7 @@ import org.openmetadata.sdk.fluent.StorageServices;
 import org.openmetadata.sdk.fluent.StoredProcedures;
 import org.openmetadata.sdk.fluent.Tables;
 import org.openmetadata.sdk.fluent.Tags;
+import org.openmetadata.sdk.fluent.TaskFormSchemas;
 import org.openmetadata.sdk.fluent.Tasks;
 import org.openmetadata.sdk.fluent.Teams;
 import org.openmetadata.sdk.fluent.TestCases;
@@ -256,7 +258,11 @@ public class SdkClients {
     Metrics.setDefaultClient(client);
     Tags.setDefaultClient(client);
     Tasks.setDefaultClient(client);
+    TaskFormSchemas.setDefaultClient(client);
     TestCases.setDefaultClient(client);
+
+    // Feed
+    Announcements.setDefaultClient(client);
   }
 
   /** Get the base server URL for direct HTTP calls */

@@ -42,6 +42,7 @@ jest.mock('../../../components/common/ResizablePanels/ResizablePanels', () =>
   ))
 );
 jest.mock('../../../utils/TasksUtils', () => ({
+  ...jest.requireActual('../../../utils/TasksUtils'),
   fetchEntityDetail: jest
     .fn()
     .mockImplementation((_entityType, _decodedEntityFQN, setEntityData) => {
@@ -148,9 +149,9 @@ describe('RequestTagPage', () => {
       aboutType: 'table',
       assignees: ['sample_data'],
       payload: {
-        suggestedValue: '[]',
-        currentValue: '[]',
-        field: 'columns::"address.street_name"::tags',
+        fieldPath: 'columns."address.street_name"',
+        tagsToAdd: [],
+        operation: 'Add',
       },
     });
   });

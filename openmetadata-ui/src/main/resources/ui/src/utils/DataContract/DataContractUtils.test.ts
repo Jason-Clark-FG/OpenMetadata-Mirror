@@ -29,7 +29,7 @@ jest.mock('../date-time/DateTimeUtils', () => ({
       'Dec',
     ];
 
-    return monthNames[new Date(timestamp).getMonth()];
+    return monthNames[new Date(timestamp).getUTCMonth()];
   }),
   getCurrentMillis: jest.fn(() => 1640995200000),
   getEpochMillisForPastDays: jest.fn(

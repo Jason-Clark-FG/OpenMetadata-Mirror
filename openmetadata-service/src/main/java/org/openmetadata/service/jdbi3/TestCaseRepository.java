@@ -26,7 +26,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.entityN
 import static org.openmetadata.service.exception.CatalogExceptionMessage.notReviewer;
 import static org.openmetadata.service.security.mask.PIIMasker.maskSampleData;
 
-import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
@@ -58,7 +57,6 @@ import org.openmetadata.schema.api.feed.CloseTask;
 import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.api.tests.CreateTestSuite;
 import org.openmetadata.schema.entity.data.Table;
-import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.tests.TestCase;
@@ -82,7 +80,6 @@ import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.TableData;
 import org.openmetadata.schema.type.TagLabel;
-import org.openmetadata.schema.type.TaskStatus;
 import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.type.TestCaseParameterValidationRuleType;
 import org.openmetadata.schema.type.TestDefinitionEntityType;
@@ -97,7 +94,6 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.resources.dqtests.TestCaseResource;
 import org.openmetadata.service.resources.dqtests.TestSuiteMapper;
-import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.tags.TagLabelUtil;
 import org.openmetadata.service.search.SearchListFilter;
@@ -107,7 +103,6 @@ import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
-import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
 public class TestCaseRepository extends EntityRepository<TestCase> {
@@ -1494,56 +1489,29 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
   }
 
   private void closeApprovalTask(TestCase entity, String comment) {
-    MessageParser.EntityLink about =
-        new MessageParser.EntityLink(TEST_CASE, entity.getFullyQualifiedName());
-    FeedRepository feedRepository = Entity.getFeedRepository();
-
-    // Skip closing tasks if updatedBy is null (e.g., during tests)
     if (entity.getUpdatedBy() == null) {
       LOG.debug(
           "Skipping task closure for test case {} - updatedBy is null",
           entity.getFullyQualifiedName());
       return;
     }
-
-    // Close User Tasks
-    try {
-      Thread taskThread = feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
-      feedRepository.closeTask(
-          taskThread, entity.getUpdatedBy(), new CloseTask().withComment(comment));
-    } catch (EntityNotFoundException ex) {
-      LOG.info("No approval task found for test case {}", entity.getFullyQualifiedName());
-    }
+    TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+    taskRepository.closeApprovalTaskForEntity(
+        entity.getFullyQualifiedName(), entity.getUpdatedBy(), comment);
   }
 
   protected void updateTaskWithNewReviewers(TestCase testCase) {
-    try {
-      MessageParser.EntityLink about =
-          new MessageParser.EntityLink(TEST_CASE, testCase.getFullyQualifiedName());
-      FeedRepository feedRepository = Entity.getFeedRepository();
-      Thread originalTask =
-          feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
-      testCase =
-          Entity.getEntityByName(
-              Entity.TEST_CASE,
-              testCase.getFullyQualifiedName(),
-              "id,fullyQualifiedName,reviewers",
-              Include.ALL);
-
-      Thread updatedTask = JsonUtils.deepCopy(originalTask, Thread.class);
-      updatedTask.getTask().withAssignees(new ArrayList<>(testCase.getReviewers()));
-      JsonPatch patch = JsonUtils.getJsonPatch(originalTask, updatedTask);
-      RestUtil.PatchResponse<Thread> thread =
-          feedRepository.patchThread(null, originalTask.getId(), updatedTask.getUpdatedBy(), patch);
-
-      // Send WebSocket Notification
-      WebsocketNotificationHandler.handleTaskNotification(thread.entity());
-    } catch (EntityNotFoundException e) {
-      LOG.info(
-          "{} Task not found for test case {}",
-          TaskType.RequestApproval,
-          testCase.getFullyQualifiedName());
-    }
+    testCase =
+        Entity.getEntityByName(
+            Entity.TEST_CASE,
+            testCase.getFullyQualifiedName(),
+            "id,fullyQualifiedName,reviewers",
+            Include.ALL);
+    TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+    taskRepository.updateApprovalTaskAssignees(
+        testCase.getFullyQualifiedName(),
+        new ArrayList<>(testCase.getReviewers()),
+        testCase.getUpdatedBy());
   }
 
   public static void checkUpdatedByReviewer(TestCase testCase, String updatedBy) {

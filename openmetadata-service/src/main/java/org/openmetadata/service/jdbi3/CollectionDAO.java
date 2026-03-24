@@ -123,6 +123,8 @@ import org.openmetadata.schema.entity.events.EventSubscription;
 import org.openmetadata.schema.entity.events.FailedEvent;
 import org.openmetadata.schema.entity.events.FailedEventResponse;
 import org.openmetadata.schema.entity.events.NotificationTemplate;
+import org.openmetadata.schema.entity.feed.Announcement;
+import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.entity.learning.LearningResource;
 import org.openmetadata.schema.entity.policies.Policy;
 import org.openmetadata.schema.entity.services.ApiService;
@@ -378,6 +380,12 @@ public interface CollectionDAO {
 
   @CreateSqlObject
   TaskDAO taskDAO();
+
+  @CreateSqlObject
+  AnnouncementDAO announcementDAO();
+
+  @CreateSqlObject
+  TaskFormSchemaDAO taskFormSchemaDAO();
 
   @CreateSqlObject
   StoredProcedureDAO storedProcedureDAO();
@@ -3204,6 +3212,65 @@ public interface CollectionDAO {
                 + "AND ((json->>'deleted')::boolean = false OR json->>'deleted' IS NULL)",
         connectionType = POSTGRES)
     String fetchTaskByTestCaseResolutionStatusId(@Bind("stateId") String stateId);
+
+    @SqlQuery(
+        "SELECT json FROM task_entity "
+            + "WHERE aboutFqnHash = :aboutFqnHash AND type = :type AND status = :status "
+            + "AND (deleted = false OR deleted IS NULL) "
+            + "LIMIT 1")
+    String findByAboutAndTypeAndStatus(
+        @BindFQN("aboutFqnHash") String aboutFqn,
+        @Bind("type") String type,
+        @Bind("status") String status);
+
+    @SqlQuery(
+        "SELECT json FROM task_entity "
+            + "WHERE aboutFqnHash = :aboutFqnHash AND category = :category AND status = :status "
+            + "AND (deleted = false OR deleted IS NULL) "
+            + "LIMIT 1")
+    String findByAboutAndCategoryAndStatus(
+        @BindFQN("aboutFqnHash") String aboutFqn,
+        @Bind("category") String category,
+        @Bind("status") String status);
+
+    @SqlUpdate(
+        "DELETE FROM task_entity " + "WHERE createdById = :createdById AND category = :category")
+    void deleteByCreatorAndCategory(
+        @Bind("createdById") String createdById, @Bind("category") String category);
+  }
+
+  interface AnnouncementDAO extends EntityDAO<Announcement> {
+    @Override
+    default String getTableName() {
+      return "announcement_entity";
+    }
+
+    @Override
+    default Class<Announcement> getEntityClass() {
+      return Announcement.class;
+    }
+
+    @Override
+    default String getNameHashColumn() {
+      return "fqnHash";
+    }
+  }
+
+  interface TaskFormSchemaDAO extends EntityDAO<TaskFormSchema> {
+    @Override
+    default String getTableName() {
+      return "task_form_schema_entity";
+    }
+
+    @Override
+    default Class<TaskFormSchema> getEntityClass() {
+      return TaskFormSchema.class;
+    }
+
+    @Override
+    default String getNameHashColumn() {
+      return "fqnHash";
+    }
   }
 
   interface FieldRelationshipDAO {

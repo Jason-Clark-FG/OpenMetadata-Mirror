@@ -165,7 +165,13 @@ public class TestCaseResolutionStatusRepository
         Entity.getCollectionDAO()
             .taskDAO()
             .fetchTaskByTestCaseResolutionStatusId(incident.getStateId().toString());
-    return jsonTask != null ? JsonUtils.readValue(jsonTask, Task.class) : null;
+    if (jsonTask == null) {
+      return null;
+    }
+
+    TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+
+    return taskRepository.hydrateStoredTask(JsonUtils.readValue(jsonTask, Task.class));
   }
 
   @Override

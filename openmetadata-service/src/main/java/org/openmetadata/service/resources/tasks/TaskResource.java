@@ -47,6 +47,7 @@ import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.tasks.BulkTaskOperation;
@@ -96,6 +97,12 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
   public static final String COLLECTION_PATH = "v1/tasks/";
   static final String FIELDS =
       "assignees,reviewers,watchers,about,domains,comments,createdBy,payload";
+  private static final String COUNT_VIEW_ALL = "all";
+  private static final String COUNT_VIEW_ASSIGNED = "assigned";
+  private static final String COUNT_VIEW_OWNED = "owned";
+  private static final String COUNT_VIEW_CREATED = "created";
+  private static final String COUNT_VIEW_MENTIONED = "mentioned";
+  private static final String COUNT_VIEW_ENTITY = "entity";
 
   public TaskResource(Authorizer authorizer, Limits limits) {
     super(Entity.TASK, authorizer, limits);
@@ -210,34 +217,39 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
   public Response getTaskCount(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
-      @Parameter(description = "Filter by assignee ID") @QueryParam("assignee") String assignee,
+      @Parameter(description = "Filter by assignee FQN") @QueryParam("assignee") String assignee,
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
+      @Parameter(
+              description =
+                  "Count view: assigned, owned, created, mentioned, entity, or all")
+          @QueryParam("view")
+          String view,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
-          String aboutEntity) {
-    // Open tasks filter
-    ListFilter openFilter = new ListFilter(Include.NON_DELETED);
-    openFilter.addQueryParam("taskStatus", TaskEntityStatus.Open.value());
+          String aboutEntity,
+      @Parameter(description = "Filter by user FQN who was mentioned in task comments")
+          @QueryParam("mentionedUser")
+          String mentionedUser) {
+    ListFilter baseFilter =
+        buildCountFilter(
+            uriInfo,
+            securityContext,
+            assignee,
+            createdBy,
+            aboutEntity,
+            mentionedUser,
+            domain,
+            view);
 
-    // Closed tasks = all non-open statuses (Approved, Rejected, Completed, Cancelled, Failed)
-    // We count total and subtract open to get closed count
-    ListFilter allFilter = new ListFilter(Include.NON_DELETED);
+    ListFilter openFilter = copyCountFilter(baseFilter);
+    openFilter.addQueryParam("taskStatusGroup", "open");
 
-    if (assignee != null) {
-      openFilter.addQueryParam("assignee", assignee);
-      allFilter.addQueryParam("assignee", assignee);
-    }
-    if (createdBy != null) {
-      openFilter.addQueryParam("createdBy", createdBy);
-      allFilter.addQueryParam("createdBy", createdBy);
-    }
-    if (aboutEntity != null) {
-      openFilter.addQueryParam("aboutEntity", aboutEntity);
-      allFilter.addQueryParam("aboutEntity", aboutEntity);
-    }
+    ListFilter closedFilter = copyCountFilter(baseFilter);
+    closedFilter.addQueryParam("taskStatusGroup", "closed");
 
     int openCount = repository.getDao().listCount(openFilter);
-    int totalCount = repository.getDao().listCount(allFilter);
-    int completedCount = totalCount - openCount;
+    int completedCount = repository.getDao().listCount(closedFilter);
+    int totalCount = repository.getDao().listCount(baseFilter);
 
     TaskCount response =
         new TaskCount()
@@ -274,6 +286,12 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           String fieldsParam,
       @Parameter(description = "Filter by task status") @QueryParam("status")
           TaskEntityStatus status,
+      @Parameter(
+              description =
+                  "Filter by status group: 'open' for open tasks, 'closed' for terminal tasks")
+          @QueryParam("statusGroup")
+          String statusGroup,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
           @DefaultValue("10")
           @QueryParam("limit")
@@ -288,38 +306,10 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           @QueryParam("include")
           @DefaultValue("non-deleted")
           Include include) {
-    String userName = securityContext.getUserPrincipal().getName();
-    User user = Entity.getEntityByName(Entity.USER, userName, "teams", Include.NON_DELETED);
+    ListFilter filter = buildTaskListFilter(include, status, statusGroup, domain);
+    filter.addQueryParam("assigneeIds", getCurrentUserAssigneeIds(securityContext));
 
-    List<String> assigneeIds = new ArrayList<>();
-    assigneeIds.add(user.getId().toString());
-    if (user.getTeams() != null) {
-      for (EntityReference team : user.getTeams()) {
-        assigneeIds.add(team.getId().toString());
-      }
-    }
-
-    ListFilter filter = new ListFilter(include);
-    if (status != null) {
-      filter.addQueryParam("taskStatus", status.value());
-    }
-
-    List<Task> allTasksList = new ArrayList<>();
-    for (String assigneeId : assigneeIds) {
-      ListFilter assigneeFilter = new ListFilter(include);
-      if (status != null) {
-        assigneeFilter.addQueryParam("taskStatus", status.value());
-      }
-      assigneeFilter.addQueryParam("assigneeId", assigneeId);
-      ResultList<Task> tasks =
-          listInternal(
-              uriInfo, securityContext, fieldsParam, assigneeFilter, limitParam, before, after);
-      if (tasks.getData() != null) {
-        allTasksList.addAll(tasks.getData());
-      }
-    }
-
-    return new ResultList<>(allTasksList);
+    return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
   }
 
   @GET
@@ -347,6 +337,12 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           String fieldsParam,
       @Parameter(description = "Filter by task status") @QueryParam("status")
           TaskEntityStatus status,
+      @Parameter(
+              description =
+                  "Filter by status group: 'open' for open tasks, 'closed' for terminal tasks")
+          @QueryParam("statusGroup")
+          String statusGroup,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
           @DefaultValue("10")
           @QueryParam("limit")
@@ -373,10 +369,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       ownerIds.addAll(groupTeams.stream().map(team -> "'" + team.getId() + "'").toList());
     }
 
-    ListFilter filter = new ListFilter(include);
-    if (status != null) {
-      filter.addQueryParam("taskStatus", status.value());
-    }
+    ListFilter filter = buildTaskListFilter(include, status, statusGroup, domain);
     filter.addQueryParam("ownedByIds", String.join(",", ownerIds));
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
@@ -405,6 +398,12 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           String fieldsParam,
       @Parameter(description = "Filter by task status") @QueryParam("status")
           TaskEntityStatus status,
+      @Parameter(
+              description =
+                  "Filter by status group: 'open' for open tasks, 'closed' for terminal tasks")
+          @QueryParam("statusGroup")
+          String statusGroup,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
           @DefaultValue("10")
           @QueryParam("limit")
@@ -422,10 +421,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     String userName = securityContext.getUserPrincipal().getName();
     User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
 
-    ListFilter filter = new ListFilter(include);
-    if (status != null) {
-      filter.addQueryParam("taskStatus", status.value());
-    }
+    ListFilter filter = buildTaskListFilter(include, status, statusGroup, domain);
     filter.addQueryParam("createdById", user.getId().toString());
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
@@ -738,6 +734,132 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
 
     Task resolvedTask = repository.resolveTaskWithWorkflow(task, approved, newValue, userName);
     return Response.ok(resolvedTask).build();
+  }
+
+  private ListFilter buildTaskListFilter(
+      Include include, TaskEntityStatus status, String statusGroup, String domain) {
+    ListFilter filter = new ListFilter(include);
+    if (statusGroup != null) {
+      filter.addQueryParam("taskStatusGroup", statusGroup);
+    } else if (status != null) {
+      filter.addQueryParam("taskStatus", status.value());
+    }
+    repository.addDomainFilter(filter, domain);
+
+    return filter;
+  }
+
+  private ListFilter buildCountFilter(
+      UriInfo uriInfo,
+      SecurityContext securityContext,
+      String assignee,
+      String createdBy,
+      String aboutEntity,
+      String mentionedUser,
+      String domain,
+      String view) {
+    ListFilter filter = new ListFilter(Include.NON_DELETED);
+    repository.addDomainFilter(filter, domain);
+
+    String normalizedView =
+        view == null ? null : view.trim().toLowerCase(Locale.ROOT);
+
+    if (nullOrEmpty(normalizedView) || COUNT_VIEW_ALL.equals(normalizedView)) {
+      applyLegacyCountFilters(filter, assignee, createdBy, aboutEntity, mentionedUser);
+
+      return filter;
+    }
+
+    switch (normalizedView) {
+      case COUNT_VIEW_ASSIGNED -> filter.addQueryParam(
+          "assigneeIds", getCurrentUserAssigneeIds(securityContext));
+      case COUNT_VIEW_OWNED -> filter.addQueryParam(
+          "ownedByIds", getCurrentUserOwnedIds(uriInfo, securityContext));
+      case COUNT_VIEW_CREATED -> filter.addQueryParam(
+          "createdById", getCurrentUserId(securityContext));
+      case COUNT_VIEW_MENTIONED -> filter.addQueryParam(
+          "mentionedUser", getCurrentUserMentionedFqn(securityContext));
+      case COUNT_VIEW_ENTITY -> {
+        // aboutEntity is applied below when present.
+      }
+      default -> applyLegacyCountFilters(filter, assignee, createdBy, aboutEntity, mentionedUser);
+    }
+
+    if (aboutEntity != null) {
+      filter.addQueryParam("aboutEntity", aboutEntity);
+    }
+
+    return filter;
+  }
+
+  private void applyLegacyCountFilters(
+      ListFilter filter,
+      String assignee,
+      String createdBy,
+      String aboutEntity,
+      String mentionedUser) {
+    if (assignee != null) {
+      filter.addQueryParam("assignee", assignee);
+    }
+    if (createdBy != null) {
+      filter.addQueryParam("createdBy", createdBy);
+    }
+    if (aboutEntity != null) {
+      filter.addQueryParam("aboutEntity", aboutEntity);
+    }
+    if (mentionedUser != null) {
+      filter.addQueryParam("mentionedUser", mentionedUser);
+    }
+  }
+
+  private ListFilter copyCountFilter(ListFilter source) {
+    ListFilter copy = new ListFilter(Include.NON_DELETED);
+    source.getQueryParams().forEach(copy::addQueryParam);
+
+    return copy;
+  }
+
+  private String getCurrentUserAssigneeIds(SecurityContext securityContext) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "teams", Include.NON_DELETED);
+
+    List<String> assigneeIds = new ArrayList<>();
+    assigneeIds.add("'" + user.getId() + "'");
+    if (user.getTeams() != null) {
+      assigneeIds.addAll(user.getTeams().stream().map(team -> "'" + team.getId() + "'").toList());
+    }
+
+    return String.join(",", assigneeIds);
+  }
+
+  private String getCurrentUserOwnedIds(UriInfo uriInfo, SecurityContext securityContext) {
+    String userName = securityContext.getUserPrincipal().getName();
+    UserRepository userRepository = (UserRepository) Entity.getEntityRepository(Entity.USER);
+    User user = userRepository.getByName(uriInfo, userName, userRepository.getFields("email"));
+    List<EntityReference> groupTeams =
+        userRepository.getGroupTeams(uriInfo, securityContext, user.getEmail());
+
+    List<String> ownerIds = new ArrayList<>();
+    ownerIds.add("'" + user.getId() + "'");
+    if (groupTeams != null) {
+      ownerIds.addAll(groupTeams.stream().map(team -> "'" + team.getId() + "'").toList());
+    }
+
+    return String.join(",", ownerIds);
+  }
+
+  private String getCurrentUserId(SecurityContext securityContext) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
+
+    return user.getId().toString();
+  }
+
+  private String getCurrentUserMentionedFqn(SecurityContext securityContext) {
+    String userName = securityContext.getUserPrincipal().getName();
+    User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
+
+    return nullOrEmpty(user.getFullyQualifiedName()) ? user.getName() : user.getFullyQualifiedName();
   }
 
   @POST

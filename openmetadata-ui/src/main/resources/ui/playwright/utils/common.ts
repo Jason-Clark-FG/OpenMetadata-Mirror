@@ -16,7 +16,10 @@ import { SidebarItem } from '../constant/sidebar';
 import { DEFAULT_ADMIN_USER } from '../constant/user';
 import { adjectives, nouns } from '../constant/user';
 import { Domain } from '../support/domain/Domain';
-import { waitForAllLoadersToDisappear } from './entity';
+import {
+  waitForAllLoadersToDisappear,
+  waitForLoadersInContainerToDisappear,
+} from './entity';
 import { sidebarClick } from './sidebar';
 import { getToken as getTokenFromStorage } from './tokenStorage';
 
@@ -272,7 +275,9 @@ export const assignDomain = async (
   checkSelectedDomain = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await waitForAllLoadersToDisappear(page);
+  await waitForLoadersInContainerToDisappear(
+    page.getByTestId('domain-selectable-tree')
+  );
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -301,7 +306,6 @@ export const assignDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await waitForAllLoadersToDisappear(page);
 
   if (checkSelectedDomain) {
     await expect(page.getByTestId('domain-link')).toContainText(
@@ -315,7 +319,9 @@ export const assignSingleSelectDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await waitForAllLoadersToDisappear(page);
+  await waitForLoadersInContainerToDisappear(
+    page.getByTestId('domain-selectable-tree')
+  );
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -341,7 +347,6 @@ export const assignSingleSelectDomain = async (
   await tagSelector.click();
 
   await patchReq;
-  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('domain-link')).toContainText(
     domain.displayName
@@ -353,7 +358,9 @@ export const updateDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   await page.getByTestId('add-domain').click();
-  await waitForAllLoadersToDisappear(page);
+  await waitForLoadersInContainerToDisappear(
+    page.getByTestId('domain-selectable-tree')
+  );
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -382,7 +389,6 @@ export const updateDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('header-domain-container')).toContainText('+1');
 
@@ -399,7 +405,9 @@ export const removeDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await waitForAllLoadersToDisappear(page);
+  await waitForLoadersInContainerToDisappear(
+    page.getByTestId('domain-selectable-tree')
+  );
 
   const searchDomain = page.waitForResponse(
     (response) =>
@@ -425,7 +433,6 @@ export const removeDomain = async (
     .getByTestId('saveAssociatedTag')
     .click();
   await patchReq;
-  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -438,7 +445,9 @@ export const removeSingleSelectDomain = async (
   showDashPlaceholder = true
 ) => {
   await page.getByTestId('add-domain').click();
-  await waitForAllLoadersToDisappear(page);
+  await waitForLoadersInContainerToDisappear(
+    page.getByTestId('domain-selectable-tree')
+  );
 
   await page
     .getByTestId('domain-selectable-tree')
@@ -463,7 +472,6 @@ export const removeSingleSelectDomain = async (
   await page.getByTestId(`tag-${domain.fullyQualifiedName}`).click();
 
   await patchReq;
-  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('no-domain-text')).toContainText(
     showDashPlaceholder ? '--' : 'No Domains'
@@ -551,13 +559,12 @@ export const removeDataProduct = async (
     .getByTestId('edit-button')
     .click();
 
-  await waitForAllLoadersToDisappear(page);
+  const selectedTag = page.getByTestId(
+    `selected-tag-${dataProduct.fullyQualifiedName}`
+  );
+  await selectedTag.waitFor({ state: 'visible' });
 
-  await page
-    .getByTestId(`selected-tag-${dataProduct.fullyQualifiedName}`)
-    .getByTestId('remove-tags')
-    .locator('svg')
-    .click();
+  await selectedTag.getByTestId('remove-tags').locator('svg').click();
 
   await expect(
     page

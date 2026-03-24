@@ -26,7 +26,6 @@ import EntityPopOverCard from '../../../components/common/PopOverCard/EntityPopO
 import UserPopOverCard from '../../../components/common/PopOverCard/UserPopOverCard';
 import { TASK_ENTITY_TYPES } from '../../../constants/Task.constant';
 import { EntityType } from '../../../enums/entity.enum';
-import { TagLabel } from '../../../generated/type/tagLabel';
 import { useAuth } from '../../../hooks/authHooks';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useUserProfile } from '../../../hooks/user-profile/useUserProfile';
@@ -49,10 +48,13 @@ import EntityLink from '../../../utils/EntityLink';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getErrorText } from '../../../utils/StringsUtils';
 import {
+  getNormalizedTaskPayload,
   getTaskDetailPathFromTask,
+  getTaskDisplayId,
   isDescriptionTaskType,
   isRecognizerFeedbackTask,
   isTagsTaskType,
+  isTaskPendingFurtherApproval,
 } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
@@ -83,34 +85,16 @@ const TaskFeedCardFromTask = ({
   const { setActiveTask, showTaskDrawer } = useActivityFeedProvider();
   const { currentUser } = useApplicationStore();
   const { isAdminUser } = useAuth();
-  const payload = task.payload;
   const isTaskTags = isTagsTaskType(task.type);
   const isTaskDescription = isDescriptionTaskType(task.type);
-
-  // Compute suggestedValue from new payload format (tagsToAdd, currentTags) or use old format
-  const computedSuggestedValue = useMemo(() => {
-    if (!isTaskTags) {
-      return payload?.suggestedValue as string | undefined;
-    }
-    // For tags: support new format (tagsToAdd, currentTags, tagsToRemove)
-    if (payload?.tagsToAdd || payload?.tagsToRemove || payload?.currentTags) {
-      const tagsToAdd = (payload.tagsToAdd as TagLabel[]) ?? [];
-      const tagsToRemove = (payload.tagsToRemove as TagLabel[]) ?? [];
-      const currentTags = (payload.currentTags as TagLabel[]) ?? [];
-
-      const removeFQNs = new Set(tagsToRemove.map((t: TagLabel) => t.tagFQN));
-      const result = currentTags.filter(
-        (t: TagLabel) => !removeFQNs.has(t.tagFQN)
-      );
-      const suggestedTags = [...result, ...tagsToAdd];
-
-      return suggestedTags.length > 0
-        ? JSON.stringify(suggestedTags)
-        : undefined;
-    }
-
-    return payload?.suggestedValue as string | undefined;
-  }, [payload, isTaskTags]);
+  const taskDisplayId = useMemo(
+    () => getTaskDisplayId(task.taskId),
+    [task.taskId]
+  );
+  const { fieldPath, suggestedValue, isSuggestionEmpty } = useMemo(
+    () => getNormalizedTaskPayload(task),
+    [task]
+  );
   const [, , user] = useUserProfile({
     permission: true,
     name: task.createdBy?.name ?? '',
@@ -130,10 +114,10 @@ const TaskFeedCardFromTask = ({
   );
 
   const taskColumnName = useMemo(() => {
-    const columnName = task.about?.name
+    const columnName = fieldPath
       ? EntityLink.getTableColumnName(
-          `<#E::${entityType}::${entityFQN}::columns::${task.about.name}>`
-        )
+          `<#E::${entityType}::${entityFQN}::${fieldPath}>`
+        ) ?? ''
       : '';
 
     if (columnName) {
@@ -145,7 +129,7 @@ const TaskFeedCardFromTask = ({
     }
 
     return null;
-  }, [task, entityType, entityFQN]);
+  }, [entityFQN, entityType, fieldPath, t]);
 
   const handleTaskLinkClick = () => {
     navigate(getTaskDetailPathFromTask(task));
@@ -165,7 +149,7 @@ const TaskFeedCardFromTask = ({
             data-testid="redirect-task-button-link"
             type="link"
             onClick={handleTaskLinkClick}>
-            <Typography.Text className="m-r-xss task-details-id">{`#${task.taskId} `}</Typography.Text>
+            <Typography.Text className="m-r-xss task-details-id">{`#${taskDisplayId} `}</Typography.Text>
 
             <Typography.Text className="m-r-xss  m-r-xss task-details-entity-link">
               {t(TASK_ENTITY_TYPES[task.type] ?? 'label.task')}
@@ -183,7 +167,16 @@ const TaskFeedCardFromTask = ({
           </Button>
         </EntityPopOverCard>
       ) : null,
-    [isEntityDetailsAvailable, entityFQN, entityType, task]
+    [
+      entityFQN,
+      entityType,
+      handleTaskLinkClick,
+      isEntityDetailsAvailable,
+      t,
+      task.type,
+      taskDisplayId,
+      taskColumnName,
+    ]
   );
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
@@ -200,11 +193,15 @@ const TaskFeedCardFromTask = ({
       return;
     }
     try {
-      await resolveTaskAPI(task.id, {
+      const updatedTask = await resolveTaskAPI(task.id, {
         resolutionType,
         newValue,
       });
-      showSuccessToast(t('server.task-resolved-successfully'));
+      showSuccessToast(
+        isTaskPendingFurtherApproval(updatedTask)
+          ? 'Vote recorded.'
+          : t('server.task-resolved-successfully')
+      );
       onAfterClose?.();
       onUpdateEntityDetails?.();
     } catch (err) {
@@ -215,7 +212,7 @@ const TaskFeedCardFromTask = ({
   };
 
   const onTaskResolve = () => {
-    if (!isApprovalWorkflowTask && isEmpty(computedSuggestedValue)) {
+    if (!isApprovalWorkflowTask && isEmpty(suggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -228,11 +225,11 @@ const TaskFeedCardFromTask = ({
     }
 
     if (isTaskTags) {
-      updateTaskData(computedSuggestedValue || '[]');
+      updateTaskData(suggestedValue || '[]');
     } else {
       const newValue = isApprovalWorkflowTask
         ? 'approved'
-        : computedSuggestedValue ?? '';
+        : suggestedValue ?? '';
       updateTaskData(newValue);
     }
   };
@@ -276,12 +273,6 @@ const TaskFeedCardFromTask = ({
     (isAdminUser && !isTaskGlossaryApproval) ||
     isAssignee ||
     (Boolean(isPartOfAssigneeTeam) && !isCreator);
-
-  const isSuggestionEmpty =
-    (isEqual(payload?.suggestedValue, '[]') &&
-      task.type === TaskEntityType.TagUpdate) ||
-    (!payload?.suggestedValue &&
-      task.type === TaskEntityType.DescriptionUpdate);
 
   const showReplies = useCallback(() => {
     showTaskDrawer?.(task);

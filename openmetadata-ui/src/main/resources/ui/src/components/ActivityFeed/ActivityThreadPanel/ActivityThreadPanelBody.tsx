@@ -30,6 +30,8 @@ import {
 import { Paging } from '../../../generated/type/paging';
 import { useElementInView } from '../../../hooks/useElementInView';
 import { getAllFeeds } from '../../../rest/feedsAPI';
+import { listTasks, TaskStatusGroup } from '../../../rest/tasksAPI';
+import { getEntityFQN } from '../../../utils/FeedUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
@@ -83,9 +85,24 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   const isTaskClosed = isEqual(taskStatus, ThreadTaskStatus.Closed);
 
   const getThreads = (after?: string) => {
-    const status = isTaskType ? taskStatus : undefined;
     setIsThreadLoading(true);
-    getAllFeeds(threadLink, after, threadType, FeedFilter.ALL, status)
+
+    const fetchPromise = isTaskType
+      ? listTasks({
+          aboutEntity: threadLink ? getEntityFQN(threadLink) : undefined,
+          statusGroup:
+            taskStatus === ThreadTaskStatus.Closed
+              ? ('closed' as TaskStatusGroup)
+              : ('open' as TaskStatusGroup),
+          after,
+          fields: 'assignees,createdBy,about,comments,payload',
+        }).then(({ data, paging: pagingObj }) => ({
+          data: data as unknown as Thread[],
+          paging: pagingObj,
+        }))
+      : getAllFeeds(threadLink, after, threadType, FeedFilter.ALL, undefined);
+
+    fetchPromise
       .then((res) => {
         const { data, paging: pagingObj } = res;
         setThreads((prevData) => {

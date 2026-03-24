@@ -37,12 +37,22 @@ export interface TaskProviderContextType {
   fetchTasks: (params?: ListTasksParams) => Promise<void>;
   fetchMyAssignedTasks: (status?: TaskEntityStatus) => Promise<void>;
   fetchMyCreatedTasks: (status?: TaskEntityStatus) => Promise<void>;
+  fetchMyOwnedTasks: (status?: TaskEntityStatus) => Promise<void>;
   fetchTaskById: (id: string) => Promise<Task | undefined>;
   createNewTask: (task: CreateTask) => Promise<Task | undefined>;
   updateTask: (id: string, patch: Operation[]) => Promise<Task | undefined>;
   resolveTaskById: (id: string, data: ResolveTask) => Promise<Task | undefined>;
   closeTaskById: (id: string, comment?: string) => Promise<Task | undefined>;
   addComment: (taskId: string, message: string) => Promise<Task | undefined>;
+  editComment: (
+    taskId: string,
+    commentId: string,
+    message: string
+  ) => Promise<Task | undefined>;
+  deleteComment: (
+    taskId: string,
+    commentId: string
+  ) => Promise<Task | undefined>;
   // Selection and state
   setSelectedTask: (task: Task | undefined) => void;
   refreshTask: (id: string) => Promise<void>;

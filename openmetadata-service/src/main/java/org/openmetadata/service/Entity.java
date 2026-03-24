@@ -71,7 +71,6 @@ import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.PolicyRepository;
 import org.openmetadata.service.jdbi3.Repository;
 import org.openmetadata.service.jdbi3.RoleRepository;
-import org.openmetadata.service.jdbi3.SuggestionRepository;
 import org.openmetadata.service.jdbi3.SystemRepository;
 import org.openmetadata.service.jdbi3.TokenRepository;
 import org.openmetadata.service.jdbi3.TypeRepository;
@@ -108,7 +107,6 @@ public final class Entity {
   @Getter @Setter private static ChangeEventRepository changeEventRepository;
   @Getter @Setter private static SearchRepository searchRepository;
   @Getter @Setter private static AuditLogRepository auditLogRepository;
-  @Getter @Setter private static SuggestionRepository suggestionRepository;
   @Getter @Setter private static TypeRepository typeRepository;
   @Getter @Setter private static EntityRelationshipRepository entityRelationshipRepository;
   // List of all the entities
@@ -267,6 +265,8 @@ public final class Entity {
   public static final String NOTIFICATION_TEMPLATE = "notificationTemplate";
   public static final String THREAD = "THREAD";
   public static final String SUGGESTION = "SUGGESTION";
+  public static final String ANNOUNCEMENT = "announcement";
+  public static final String TASK_FORM_SCHEMA = "taskFormSchema";
   public static final String WORKFLOW = "workflow";
   public static final String WORKFLOW_DEFINITION = "workflowDefinition";
 

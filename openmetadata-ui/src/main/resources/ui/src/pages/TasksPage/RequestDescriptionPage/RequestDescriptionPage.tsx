@@ -26,7 +26,6 @@ import { EditorContentRef } from '../../../components/common/RichTextEditor/Rich
 import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import ExploreSearchCard from '../../../components/ExploreV1/ExploreSearchCard/ExploreSearchCard';
 import { SearchedDataProps } from '../../../components/SearchedData/SearchedData.interface';
-import { EntityField } from '../../../constants/Feeds.constants';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
 import { Glossary } from '../../../generated/entity/data/glossary';
 import { withPageLayout } from '../../../hoc/withPageLayout';
@@ -41,11 +40,11 @@ import {
 } from '../../../rest/tasksAPI';
 import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
-import { ENTITY_LINK_SEPARATOR } from '../../../utils/EntityUtils';
 import {
   fetchEntityDetail,
   fetchOptions,
   getBreadCrumbList,
+  getDescriptionTaskFieldPath,
   getTaskAssignee,
   getTaskEntityFQN,
   getTaskMessage,
@@ -105,11 +104,7 @@ const RequestDescription = () => {
   };
 
   const getTaskAbout = () => {
-    if (field && value) {
-      return `${field}${ENTITY_LINK_SEPARATOR}${value}${ENTITY_LINK_SEPARATOR}description`;
-    } else {
-      return EntityField.DESCRIPTION;
-    }
+    return getDescriptionTaskFieldPath(field, value);
   };
 
   const onSuggestionChange = (value: string) => {
@@ -130,11 +125,11 @@ const RequestDescription = () => {
         aboutType: entityType,
         assignees: assignees.map((assignee) => assignee.name ?? ''),
         payload: {
-          suggestedValue: isDescriptionContentEmpty(suggestionValue)
-            ? undefined
-            : suggestionValue,
-          currentValue: '',
-          field: getTaskAbout(),
+          newDescription: isDescriptionContentEmpty(suggestionValue)
+            ? ''
+            : suggestionValue ?? '',
+          currentDescription: '',
+          fieldPath: getTaskAbout(),
         },
       };
 

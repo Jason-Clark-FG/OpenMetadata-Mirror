@@ -37,7 +37,6 @@ import {
   last,
   orderBy,
   startCase,
-  unionBy,
 } from 'lodash';
 import { MenuInfo } from 'rc-menu/lib/interface';
 import React, {
@@ -54,7 +53,6 @@ import { ReactComponent as TaskCloseIcon } from '../../../../assets/svg/ic-close
 import { ReactComponent as TaskOpenIcon } from '../../../../assets/svg/ic-open-task.svg';
 import { ReactComponent as UserIcon } from '../../../../assets/svg/ic-user-profile.svg';
 import { ReactComponent as AddColored } from '../../../../assets/svg/plus-colored.svg';
-import { PAGE_SIZE_MEDIUM } from '../../../../constants/constants';
 import { TASK_ENTITY_TYPES } from '../../../../constants/Task.constant';
 import { usePermissionProvider } from '../../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../../context/PermissionProvider/PermissionProvider.interface';
@@ -97,12 +95,16 @@ import { getErrorText } from '../../../../utils/StringsUtils';
 import {
   fetchOptions,
   generateOptions,
+  getNormalizedTaskPayload,
   getTaskDetailPathFromTask,
+  getTaskDisplayId,
   GLOSSARY_TASK_ACTION_LIST,
   INCIDENT_TASK_ACTION_LIST,
   isDescriptionTaskType,
   isRecognizerFeedbackTask,
   isTagsTaskType,
+  isTaskPendingFurtherApproval,
+  isTaskTerminalStatus,
   TASK_ACTION_COMMON_ITEM,
   TASK_ACTION_LIST,
 } from '../../../../utils/TasksUtils';
@@ -110,15 +112,10 @@ import { showErrorToast, showSuccessToast } from '../../../../utils/ToastUtils';
 import TaskCommentCard from '../../../ActivityFeed/ActivityFeedCardNew/TaskCommentCard.component';
 import ActivityFeedEditorNew from '../../../ActivityFeed/ActivityFeedEditor/ActivityFeedEditorNew';
 import { useActivityFeedProvider } from '../../../ActivityFeed/ActivityFeedProvider/ActivityFeedProvider';
+import { EditIconButton } from '../../../common/IconButtons/EditIconButton';
 import InlineEdit from '../../../common/InlineEdit/InlineEdit.component';
 
-import { EntityType } from '../../../../enums/entity.enum';
-import { EntityReference } from '../../../../generated/tests/testCase';
-import { getUsers } from '../../../../rest/userAPI';
-import {
-  getEntityName,
-  getEntityReferenceListFromEntities,
-} from '../../../../utils/EntityUtils';
+import { getEntityName } from '../../../../utils/EntityUtils';
 import { getUserPath } from '../../../../utils/RouterUtils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
 import EntityPopOverCard from '../../../common/PopOverCard/EntityPopOverCard';
@@ -165,58 +162,41 @@ export const TaskTabNew = ({
     isPostsLoading,
   } = useActivityFeedProvider();
 
-  // Access payload without strict type assertion to allow dynamic property access
-  const payload = task.payload;
-
   const isTaskDescription = isDescriptionTaskType(task.type);
 
   const isTaskTags = isTagsTaskType(task.type);
-
-  // Compute suggestedValue from new payload format (tagsToAdd, currentTags) or use old format
-  const computedSuggestedValue = useMemo(() => {
-    if (!isTaskTags) {
-      return payload?.suggestedValue as string | undefined;
-    }
-    // For tags: support new format (tagsToAdd, currentTags, tagsToRemove)
-    // Check if new format properties exist (same logic as TagsTaskFromTask)
-    if (payload?.tagsToAdd || payload?.tagsToRemove || payload?.currentTags) {
-      const tagsToAdd = (payload.tagsToAdd as TagLabel[]) ?? [];
-      const tagsToRemove = (payload.tagsToRemove as TagLabel[]) ?? [];
-      const currentTags = (payload.currentTags as TagLabel[]) ?? [];
-
-      const removeFQNs = new Set(tagsToRemove.map((t) => t.tagFQN));
-      // Suggested = current - removed + added
-      const result = currentTags.filter((t) => !removeFQNs.has(t.tagFQN));
-      const suggestedTags = [...result, ...tagsToAdd];
-
-      return suggestedTags.length > 0
-        ? JSON.stringify(suggestedTags)
-        : undefined;
-    }
-
-    // Fallback to old format
-    return payload?.suggestedValue as string | undefined;
-  }, [payload, isTaskTags]);
+  const {
+    currentDescription,
+    currentTags,
+    fieldPath,
+    newDescription,
+    suggestedTags,
+    suggestedValue,
+  } = useMemo(() => getNormalizedTaskPayload(task), [task]);
+  const taskDisplayId = useMemo(
+    () => getTaskDisplayId(task.taskId),
+    [task.taskId]
+  );
 
   const showAddSuggestionButton = useMemo(() => {
     const taskType = task.type;
     const parsedSuggestion = [TaskEntityType.DescriptionUpdate].includes(
       taskType
     )
-      ? computedSuggestedValue
-      : JSON.parse(computedSuggestedValue || '[]');
+      ? suggestedValue
+      : JSON.parse(suggestedValue || '[]');
 
     return (
       [TaskEntityType.TagUpdate, TaskEntityType.DescriptionUpdate].includes(
         taskType
       ) && isEmpty(parsedSuggestion)
     );
-  }, [task.type, computedSuggestedValue]);
+  }, [task.type, suggestedValue]);
 
   const noSuggestionTaskMenuOptions = useMemo(() => {
     let label;
 
-    if (computedSuggestedValue) {
+    if (suggestedValue) {
       label = t('label.add-suggestion');
     } else if (isTaskTags) {
       label = t('label.add-entity', {
@@ -236,7 +216,7 @@ export const TaskTabNew = ({
       },
       ...TASK_ACTION_COMMON_ITEM,
     ];
-  }, [isTaskTags, computedSuggestedValue]);
+  }, [isTaskTags, suggestedValue]);
 
   const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
 
@@ -248,15 +228,15 @@ export const TaskTabNew = ({
 
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);
+    const isAssignedIncidentTask =
+      Boolean(task.assignees?.length) ||
+      resolutionStatus?.testCaseResolutionStatusType ===
+        TestCaseResolutionStatusTypes.Assigned;
 
     if (isTaskTestCaseResult) {
-      switch (resolutionStatus?.testCaseResolutionStatusType) {
-        case TestCaseResolutionStatusTypes.Assigned:
-          return INCIDENT_TASK_ACTION_LIST[1];
-
-        default:
-          return INCIDENT_TASK_ACTION_LIST[0];
-      }
+      return isAssignedIncidentTask
+        ? INCIDENT_TASK_ACTION_LIST[0]
+        : INCIDENT_TASK_ACTION_LIST[1];
     } else if (isTaskGlossaryApproval) {
       return GLOSSARY_TASK_ACTION_LIST[0];
     } else if (showAddSuggestionButton) {
@@ -270,15 +250,12 @@ export const TaskTabNew = ({
     isTaskGlossaryApproval,
     isTaskTestCaseResult,
     noSuggestionTaskMenuOptions,
+    task.assignees,
   ]);
 
-  const [usersList, setUsersList] = useState<EntityReference[]>([]);
   const [taskAction, setTaskAction] = useState<TaskAction>(latestAction);
   const [isActionLoading, setIsActionLoading] = useState(false);
-  const isTaskClosed =
-    isEqual(task.status, TaskEntityStatus.Completed) ||
-    isEqual(task.status, TaskEntityStatus.Cancelled) ||
-    isEqual(task.status, TaskEntityStatus.Rejected);
+  const isTaskClosed = isTaskTerminalStatus(task.status);
   const [showEditTaskModel, setShowEditTaskModel] = useState(false);
   const [comment, setComment] = useState('');
   const [isEditAssignee, setIsEditAssignee] = useState<boolean>(false);
@@ -287,35 +264,43 @@ export const TaskTabNew = ({
   const [isAssigneeLoading, setIsAssigneeLoading] = useState<boolean>(false);
   const { initialAssignees, assigneeOptions } = useMemo(() => {
     const initialAssignees = generateOptions(task.assignees ?? []);
-    const assigneeOptions = unionBy(
-      [...initialAssignees, ...generateOptions(usersList)],
-      'value'
-    );
 
-    return { initialAssignees, assigneeOptions };
-  }, [task.assignees, usersList]);
+    return { initialAssignees, assigneeOptions: initialAssignees };
+  }, [task.assignees]);
+
+  const taskColumnLabel = useMemo(
+    () =>
+      fieldPath
+        ? EntityLink.getTableColumnName(
+            `<#E::${task.about?.type}::${task.about?.fullyQualifiedName}::${fieldPath}>`
+          ) ?? ''
+        : '',
+    [fieldPath, task.about]
+  );
 
   const taskColumnName = useMemo(() => {
-    // Support both old format (field) and new format (fieldPath)
-    const fieldValue = (payload?.field ?? payload?.fieldPath) as
-      | string
-      | undefined;
-    const columnName = fieldValue
-      ? EntityLink.getTableColumnName(
-          `<#E::${task.about?.type}::${task.about?.fullyQualifiedName}::${fieldValue}>`
-        ) ?? ''
-      : '';
-
-    if (columnName) {
+    if (taskColumnLabel) {
       return (
         <Typography.Text className="p-r-xss">
-          {columnName} {t('label.in-lowercase')}
+          {taskColumnLabel} {t('label.in-lowercase')}
         </Typography.Text>
       );
     }
 
     return null;
-  }, [task.about, payload]);
+  }, [taskColumnLabel, t]);
+
+  const taskDisplayMessage = useMemo(() => {
+    const taskTypeLabel = t(TASK_ENTITY_TYPES[task.type] ?? 'label.task');
+    const entityName = entityFQN
+      ? getNameFromFQN(entityFQN)
+      : task.about?.name ?? '';
+    const taskScope = taskColumnLabel
+      ? `${taskColumnLabel} ${t('label.in-lowercase')} ${entityName}`
+      : entityName;
+
+    return [taskTypeLabel, taskScope].filter(Boolean).join(' ').trim();
+  }, [entityFQN, task.about, task.type, taskColumnLabel, t]);
 
   const isOwner = owners?.some((owner) => isEqual(owner.id, currentUser?.id));
   const isCreator = isEqual(task.createdBy?.name, currentUser?.name);
@@ -335,12 +320,42 @@ export const TaskTabNew = ({
     assignee.type === 'team' ? checkIfUserPartOfTeam(assignee.id) : false
   );
 
-  const getFormattedMenuOptions = (options: TaskAction[]) => {
+  const getFormattedMenuOptions = (
+    options: TaskAction[],
+    onItemClick?: (info: MenuInfo) => void
+  ) => {
     return options.map((item) => ({
       ...item,
+      label: (
+        <span
+          data-testid={`task-action-menu-item-${item.key}`}
+          onClick={
+            onItemClick
+              ? (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onItemClick({ key: item.key } as MenuInfo);
+                }
+              : undefined
+          }>
+          {item.label}
+        </span>
+      ),
       icon: <Icon component={item.icon} height={16} />,
     }));
   };
+
+  const renderDropdownButtons =
+    (testIdPrefix: string) => (buttons: React.ReactNode[]) =>
+      buttons.map((button, index) =>
+        React.isValidElement(button)
+          ? React.cloneElement(button, {
+              'data-testid': `${testIdPrefix}-${
+                index === 0 ? 'primary' : 'trigger'
+              }`,
+            })
+          : button
+      );
 
   const handleTaskLinkClick = () => {
     navigate({
@@ -357,7 +372,7 @@ export const TaskTabNew = ({
             data-testid="task-title"
             type="link"
             onClick={handleTaskLinkClick}>
-            <Typography.Text className="p-0 task-id text-sm task-details-id">{`#${task.taskId} `}</Typography.Text>
+            <Typography.Text className="p-0 task-id text-sm task-details-id">{`#${taskDisplayId} `}</Typography.Text>
 
             <Typography.Text className="p-xss task-details">
               {t(TASK_ENTITY_TYPES[task.type])}
@@ -375,7 +390,16 @@ export const TaskTabNew = ({
           </Button>
         </EntityPopOverCard>
       ) : null,
-    [isEntityDetailsAvailable, entityFQN, entityType, task, handleTaskLinkClick]
+    [
+      entityFQN,
+      entityType,
+      handleTaskLinkClick,
+      isEntityDetailsAvailable,
+      task.type,
+      taskColumnName,
+      taskDisplayId,
+      t,
+    ]
   );
 
   const updateTaskData = async (
@@ -386,11 +410,15 @@ export const TaskTabNew = ({
       return;
     }
     try {
-      await resolveTaskAPI(task.id, {
+      const updatedTask = await resolveTaskAPI(task.id, {
         resolutionType,
         newValue: data.newValue,
       });
-      showSuccessToast(t('server.task-resolved-successfully'));
+      showSuccessToast(
+        isTaskPendingFurtherApproval(updatedTask)
+          ? 'Vote recorded.'
+          : t('server.task-resolved-successfully')
+      );
       rest.onAfterClose?.();
       rest.onUpdateEntityDetails?.();
     } catch (err) {
@@ -405,12 +433,12 @@ export const TaskTabNew = ({
       status.toLowerCase() === 'approved'
         ? TaskResolutionType.Approved
         : TaskResolutionType.Rejected;
-    const newValue = isApprovalWorkflowTask ? status : computedSuggestedValue;
+    const newValue = isApprovalWorkflowTask ? status : suggestedValue;
     updateTaskData({ newValue }, resolutionType);
   };
 
   const onTaskResolve = () => {
-    if (!isApprovalWorkflowTask && isEmpty(computedSuggestedValue)) {
+    if (!isApprovalWorkflowTask && isEmpty(suggestedValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -424,14 +452,12 @@ export const TaskTabNew = ({
 
     if (isTaskTags) {
       const tagsData = {
-        newValue: computedSuggestedValue || '[]',
+        newValue: suggestedValue || '[]',
       };
 
       updateTaskData(tagsData);
     } else {
-      const newValue = isApprovalWorkflowTask
-        ? 'approved'
-        : computedSuggestedValue;
+      const newValue = isApprovalWorkflowTask ? 'approved' : suggestedValue;
       const data = { newValue: newValue };
       updateTaskData(data);
     }
@@ -692,12 +718,16 @@ export const TaskTabNew = ({
               : t('message.only-reviewers-can-approve-or-reject')
           }>
           <Dropdown.Button
+            buttonsRender={renderDropdownButtons('glossary-task-action')}
             className="task-action-button"
             data-testid="glossary-accept-reject-task-dropdown"
             disabled={!hasApprovalAccess}
             icon={<DownOutlined />}
             menu={{
-              items: getFormattedMenuOptions(GLOSSARY_TASK_ACTION_LIST),
+              items: getFormattedMenuOptions(
+                GLOSSARY_TASK_ACTION_LIST,
+                handleGlossaryTaskMenuClick
+              ),
               selectable: true,
               selectedKeys: [taskAction.key],
               onClick: handleGlossaryTaskMenuClick,
@@ -730,12 +760,16 @@ export const TaskTabNew = ({
     return (
       <div className=" d-flex justify-end items-center gap-4">
         <Dropdown.Button
+          buttonsRender={renderDropdownButtons('incident-task-action')}
           className="w-auto task-action-button"
           data-testid="task-cta-buttons"
           icon={<DownOutlined />}
           loading={isActionLoading}
           menu={{
-            items: getFormattedMenuOptions(INCIDENT_TASK_ACTION_LIST),
+            items: getFormattedMenuOptions(
+              INCIDENT_TASK_ACTION_LIST,
+              handleTaskMenuClick
+            ),
             selectable: true,
             selectedKeys: [taskAction.key],
             onClick: handleTaskMenuClick,
@@ -773,11 +807,17 @@ export const TaskTabNew = ({
             {showAddSuggestionButton ? (
               <div className="d-flex justify-end gap-2">
                 <Dropdown.Button
+                  buttonsRender={renderDropdownButtons(
+                    'no-suggestion-task-action'
+                  )}
                   className="task-action-button"
                   data-testid="add-close-task-dropdown"
                   icon={<DownOutlined />}
                   menu={{
-                    items: getFormattedMenuOptions(noSuggestionTaskMenuOptions),
+                    items: getFormattedMenuOptions(
+                      noSuggestionTaskMenuOptions,
+                      handleNoSuggestionMenuItemClick
+                    ),
                     selectable: true,
                     selectedKeys: [taskAction.key],
                     onClick: handleNoSuggestionMenuItemClick,
@@ -789,11 +829,15 @@ export const TaskTabNew = ({
               </div>
             ) : (
               <Dropdown.Button
+                buttonsRender={renderDropdownButtons('edit-accept-task-action')}
                 className="task-action-button"
                 data-testid="edit-accept-task-dropdown"
                 icon={<DownOutlined />}
                 menu={{
-                  items: getFormattedMenuOptions(TASK_ACTION_LIST),
+                  items: getFormattedMenuOptions(
+                    TASK_ACTION_LIST,
+                    handleMenuItemClick
+                  ),
                   selectable: true,
                   selectedKeys: [taskAction.key],
                   onClick: handleMenuItemClick,
@@ -830,18 +874,22 @@ export const TaskTabNew = ({
 
   const initialFormValue = useMemo(() => {
     if (isTaskDescription) {
-      const description =
-        payload?.suggestedValue ?? payload?.currentValue ?? '';
+      const description = newDescription ?? currentDescription ?? '';
 
       return { description };
     } else {
-      const updatedTags = JSON.parse(
-        payload?.suggestedValue ?? payload?.currentValue ?? '[]'
-      );
+      const updatedTags =
+        suggestedTags.length > 0 ? suggestedTags : currentTags;
 
       return { updatedTags };
     }
-  }, [payload, isTaskDescription]);
+  }, [
+    currentDescription,
+    currentTags,
+    isTaskDescription,
+    newDescription,
+    suggestedTags,
+  ]);
 
   const handleAssigneeUpdate = async () => {
     setIsAssigneeLoading(true);
@@ -865,36 +913,6 @@ export const TaskTabNew = ({
       setIsAssigneeLoading(false);
     }
   };
-
-  const fetchInitialAssign = useCallback(async () => {
-    try {
-      const { data } = await getUsers({
-        limit: PAGE_SIZE_MEDIUM,
-
-        isBot: false,
-      });
-      const filterData = getEntityReferenceListFromEntities(
-        data,
-        EntityType.USER
-      );
-      setUsersList(filterData);
-    } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        t('server.entity-fetch-error', {
-          entity: t('label.assignee'),
-        })
-      );
-      setUsersList([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    // fetch users only when the task is a test case result and the assignees are getting edited
-    if (isTaskTestCaseResult && isEmpty(usersList) && isEditAssignee) {
-      fetchInitialAssign();
-    }
-  }, [isTaskTestCaseResult, usersList, isEditAssignee]);
 
   useEffect(() => {
     assigneesForm.setFieldValue('assignees', initialAssignees);
@@ -1017,6 +1035,17 @@ export const TaskTabNew = ({
                     <Typography.Text className="text-grey-body">
                       {getEntityName(task?.assignees[0])}
                     </Typography.Text>
+                    {shouldEditAssignee && (
+                      <EditIconButton
+                        className="p-0"
+                        data-testid="edit-assignees"
+                        size="small"
+                        title={t('label.edit-entity', {
+                          entity: t('label.assignee-plural'),
+                        })}
+                        onClick={handleEditClick}
+                      />
+                    )}
                   </div>
                 ) : (
                   <OwnerLabel
@@ -1249,7 +1278,7 @@ export const TaskTabNew = ({
           }}
           okText={t('label.save')}
           open={showEditTaskModel}
-          title={`${t('label.resolve')} ${t('label.task')} #${task.taskId}`}
+          title={`${t('label.resolve')} ${t('label.task')} #${taskDisplayId}`}
           width={768}
           onCancel={() => setShowEditTaskModel(false)}
           onOk={form.submit}>
@@ -1291,7 +1320,7 @@ export const TaskTabNew = ({
           open={showEditTaskModel}
           title={`${t('label.edit-entity', {
             entity: t('label.task-lowercase'),
-          })} #${task.taskId} ${task.name}`}
+          })} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`}
           width={768}
           onCancel={() => {
             form.resetFields();
@@ -1359,7 +1388,7 @@ export const TaskTabNew = ({
           }}
           okText={t('label.save')}
           open={isEditAssignee}
-          title={`${t('label.re-assign')} ${t('label.task')} #${task.taskId}`}
+          title={`${t('label.re-assign')} ${t('label.task')} #${taskDisplayId}`}
           width={768}
           onCancel={() => setIsEditAssignee(false)}
           onOk={assigneesForm.submit}>

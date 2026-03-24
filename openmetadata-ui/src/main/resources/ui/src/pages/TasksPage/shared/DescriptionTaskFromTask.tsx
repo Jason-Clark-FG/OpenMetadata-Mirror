@@ -17,7 +17,10 @@ import { FC, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import RichTextEditor from '../../../components/common/RichTextEditor/RichTextEditor';
 import { Task, TaskEntityStatus, TaskEntityType } from '../../../rest/tasksAPI';
-import { getDescriptionDiff } from '../../../utils/TasksUtils';
+import {
+  getDescriptionDiff,
+  getNormalizedTaskPayload,
+} from '../../../utils/TasksUtils';
 import { DescriptionTabs } from './DescriptionTabs';
 import { DiffViewNew } from './DiffViewNew';
 
@@ -38,15 +41,15 @@ const DescriptionTaskFromTask: FC<DescriptionTaskFromTaskProps> = ({
   customClassName,
   showDescTitle = false,
 }) => {
-  const payload = task.payload;
   const { t } = useTranslation();
+  const { currentDescription, newDescription } = getNormalizedTaskPayload(task);
 
   const isRequestDescription =
-    task.type === TaskEntityType.DescriptionUpdate && !payload?.currentValue;
+    task.type === TaskEntityType.DescriptionUpdate && !currentDescription;
 
   const isUpdateDescription =
     task.type === TaskEntityType.DescriptionUpdate &&
-    Boolean(payload?.currentValue);
+    Boolean(currentDescription);
 
   const isTaskClosed = [
     TaskEntityStatus.Completed,
@@ -56,8 +59,8 @@ const DescriptionTaskFromTask: FC<DescriptionTaskFromTaskProps> = ({
   ].includes(task.status);
 
   const getDiffView = () => {
-    const oldValue = payload?.currentValue;
-    const newValue = payload?.suggestedValue;
+    const oldValue = currentDescription;
+    const newValue = newDescription;
     if (!oldValue && !newValue) {
       return (
         <div className="p-xs rounded-4 m-y-xss m-b-sm">
@@ -78,15 +81,12 @@ const DescriptionTaskFromTask: FC<DescriptionTaskFromTaskProps> = ({
   };
 
   const getSuggestedDescriptionDiff = () => {
-    const newDescription = payload?.suggestedValue;
-    const oldDescription = payload?.currentValue;
-
     const diffs = getDescriptionDiff(
-      oldDescription || '',
+      currentDescription || '',
       newDescription || ''
     );
 
-    return !newDescription && !oldDescription ? (
+    return !newDescription && !currentDescription ? (
       <div className="no-description-suggestion-card w-full">
         <Typography.Text className="text-grey-muted p-xs">
           {t('label.no-entity', { entity: t('label.suggestion') })}
@@ -112,7 +112,7 @@ const DescriptionTaskFromTask: FC<DescriptionTaskFromTaskProps> = ({
               <div data-testid="request-description">
                 {isTaskActionEdit && hasEditAccess ? (
                   <RichTextEditor
-                    initialValue={payload?.suggestedValue ?? ''}
+                    initialValue={newDescription ?? ''}
                     placeHolder={t('label.add-entity', {
                       entity: t('label.description'),
                     })}
@@ -131,8 +131,8 @@ const DescriptionTaskFromTask: FC<DescriptionTaskFromTaskProps> = ({
               <div data-testid="update-description">
                 {isTaskActionEdit && hasEditAccess ? (
                   <DescriptionTabs
-                    suggestion={payload?.suggestedValue ?? ''}
-                    value={payload?.currentValue ?? ''}
+                    suggestion={newDescription ?? ''}
+                    value={currentDescription ?? ''}
                     onChange={onChange}
                   />
                 ) : (

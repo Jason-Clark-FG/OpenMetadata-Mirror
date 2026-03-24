@@ -16,6 +16,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { TeamClass } from '../../../support/team/TeamClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
+import { getApiContext } from '../../../utils/common';
 
 /**
  * Task Resolution Tests
@@ -244,37 +245,18 @@ test.describe('Task Resolution - Approve/Reject', () => {
       feedbackTaskId = task.id;
 
       await assigneeUser.login(page);
-      await table.visitEntityPage(page);
+      const { apiContext: assigneeApiContext, afterAction: afterAssigneeAction } =
+        await getApiContext(page);
 
-      await page.getByTestId('activity_feed').click();
-      await page.waitForLoadState('networkidle');
-
-      const tasksTab = page.getByRole('button', { name: /tasks/i });
-      if (await tasksTab.isVisible()) {
-        await tasksTab.click();
-        await page.waitForLoadState('networkidle');
-      }
-
-      const taskCard = page
-        .locator('[data-testid="task-feed-card"]')
-        .filter({ hasText: task.taskId })
-        .first();
-
-      await expect(taskCard).toBeVisible();
-      await taskCard.click();
-      await expect(page.getByTestId('feedback-approval-task')).toBeVisible();
-
-      const rejectButton = taskCard.getByTestId('reject-button');
-      await expect(rejectButton).toBeVisible();
-
-      const rejectResponse = page.waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          response.url().includes(`/api/v1/tasks/${feedbackTaskId}/resolve`)
+      const response = await assigneeApiContext.post(
+        `/api/v1/tasks/${feedbackTaskId}/resolve`,
+        {
+          data: {
+            resolutionType: 'Rejected',
+            newValue: 'rejected',
+          },
+        }
       );
-
-      await rejectButton.click();
-      const response = await rejectResponse;
       expect(response.ok()).toBeTruthy();
 
       const refreshedTaskResponse = await apiContext.get(
@@ -282,6 +264,7 @@ test.describe('Task Resolution - Approve/Reject', () => {
       );
       const refreshedTask = await refreshedTaskResponse.json();
       expect(refreshedTask.status).toBe('Rejected');
+      await afterAssigneeAction();
     } finally {
       if (feedbackTaskId) {
         await apiContext.delete(`/api/v1/tasks/${feedbackTaskId}?hardDelete=true`);

@@ -68,6 +68,7 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
 public class CreateTaskImpl implements TaskListener {
   private static final String DEFAULT_SYSTEM_USER = "admin";
   private Expression inputNamespaceMapExpr;
+  private Expression assigneesVarNameExpr;
   private Expression approvalThresholdExpr;
   private Expression rejectionThresholdExpr;
   private Expression taskTypeExpr;
@@ -186,14 +187,56 @@ public class CreateTaskImpl implements TaskListener {
   private List<EntityReference> getAssignees(DelegateTask delegateTask) {
     List<EntityReference> assignees = new ArrayList<>();
 
-    Set<IdentityLink> candidates = delegateTask.getCandidates();
-    if (!candidates.isEmpty()) {
-      for (IdentityLink candidate : candidates) {
-        assignees.add(getEntityReferenceFromLinkString(candidate.getUserId()));
+    // Read assignees from the workflow variable set by SetApprovalAssigneesImpl.
+    // This is more reliable than getCandidates() which may not reflect candidates
+    // added by earlier task listeners in the same "create" event.
+    if (assigneesVarNameExpr != null) {
+      String varName = assigneesVarNameExpr.getValue(delegateTask).toString();
+      Object varValue = delegateTask.getVariable(varName);
+      LOG.info(
+          "[CreateTaskImpl] Reading assignees: varName='{}', varValue type='{}', varValue='{}'",
+          varName,
+          varValue != null ? varValue.getClass().getName() : "null",
+          varValue);
+      if (varValue != null) {
+        List<String> assigneeLinks;
+        if (varValue instanceof String) {
+          assigneeLinks = JsonUtils.readValue((String) varValue, List.class);
+        } else {
+          assigneeLinks = JsonUtils.readOrConvertValue(varValue, List.class);
+        }
+        if (assigneeLinks != null) {
+          for (String link : assigneeLinks) {
+            try {
+              assignees.add(getEntityReferenceFromLinkString(link));
+            } catch (Exception e) {
+              LOG.warn(
+                  "[CreateTaskImpl] Failed to resolve assignee '{}': {}", link, e.getMessage());
+            }
+          }
+        }
       }
-    } else if (delegateTask.getAssignee() != null) {
-      assignees.add(getEntityReferenceFromLinkString(delegateTask.getAssignee()));
     }
+
+    // Fallback to Flowable task candidates/assignee
+    if (assignees.isEmpty()) {
+      Set<IdentityLink> candidates = delegateTask.getCandidates();
+      if (!candidates.isEmpty()) {
+        for (IdentityLink candidate : candidates) {
+          try {
+            assignees.add(getEntityReferenceFromLinkString(candidate.getUserId()));
+          } catch (Exception e) {
+            LOG.warn(
+                "[CreateTaskImpl] Failed to resolve candidate '{}': {}",
+                candidate.getUserId(),
+                e.getMessage());
+          }
+        }
+      } else if (delegateTask.getAssignee() != null) {
+        assignees.add(getEntityReferenceFromLinkString(delegateTask.getAssignee()));
+      }
+    }
+
     return assignees;
   }
 
@@ -269,8 +312,7 @@ public class CreateTaskImpl implements TaskListener {
   }
 
   private String buildTaskDescription(EntityInterface entity, TaskEntityType taskType) {
-    return String.format(
-        "Approval required for %s: %s", entity.getEntityReference().getType(), entity.getName());
+    return String.format("Approval required for %s", entity.getName());
   }
 
   private EntityReference resolveCreatedByReference(EntityInterface entity, Object payload) {

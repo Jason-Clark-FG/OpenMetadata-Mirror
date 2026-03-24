@@ -29,6 +29,10 @@ import { addMultiOwner, removeOwner,
 } from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
 import {
+  waitForTaskCreateResponse,
+  waitForTaskResolveResponse,
+} from '../../utils/task';
+import {
   addTagToTableColumn,
   setTagDisabled,
   submitForm,
@@ -393,24 +397,13 @@ test('Classification Page', async ({ page }) => {
     await page.click('[data-testid="tag-PersonalData.Personal"]');
 
     await page.click('[data-testid="tags-label"]');
-    const taskCreated = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        response.url().includes('api/v1/feed')
-    );
+    const taskCreated = waitForTaskCreateResponse(page);
     await page.click('[data-testid="submit-tag-request"]');
     await taskCreated;
 
-    const acceptSuggestion = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'PUT' &&
-        response.url().includes('/api/v1/feed/tasks/') &&
-        response.url().includes('/resolve')
-    );
+    const acceptSuggestion = waitForTaskResolveResponse(page);
 
-    const acceptButton = page.locator(
-      '.ant-btn-compact-first-item:has-text("Accept Suggestion")'
-    );
+    const acceptButton = page.getByTestId('approve-button').first();
     await acceptButton.waitFor({ state: 'visible' });
     await acceptButton.click();
     await acceptSuggestion;

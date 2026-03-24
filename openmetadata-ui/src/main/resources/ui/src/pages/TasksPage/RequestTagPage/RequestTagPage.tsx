@@ -42,6 +42,7 @@ import {
   fetchEntityDetail,
   fetchOptions,
   getBreadCrumbList,
+  getTagTaskFieldPath,
   getTaskAssignee,
   getTaskEntityFQN,
   getTaskMessage,
@@ -99,11 +100,7 @@ const RequestTag = () => {
   };
 
   const getFieldPath = () => {
-    if (field && value) {
-      return `${field}.${value}`;
-    }
-
-    return undefined;
+    return getTagTaskFieldPath(field, value);
   };
 
   const onCreateTask: FormProps['onFinish'] = async (formValues) => {

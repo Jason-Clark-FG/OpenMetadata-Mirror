@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.openmetadata.it.bootstrap.SharedEntities;
+import org.openmetadata.it.factories.APIServiceTestFactory;
 import org.openmetadata.it.factories.ContainerServiceTestFactory;
 import org.openmetadata.it.factories.DashboardServiceTestFactory;
 import org.openmetadata.it.factories.DatabaseSchemaTestFactory;
@@ -34,6 +35,8 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.data.CreateContainer;
 import org.openmetadata.schema.api.data.CreateDashboard;
+import org.openmetadata.schema.api.data.CreateAPICollection;
+import org.openmetadata.schema.api.data.CreateAPIEndpoint;
 import org.openmetadata.schema.api.data.CreatePipeline;
 import org.openmetadata.schema.api.data.CreateTopic;
 import org.openmetadata.schema.api.domains.CreateDomain;
@@ -41,6 +44,8 @@ import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.api.teams.CreateUser;
+import org.openmetadata.schema.entity.data.APICollection;
+import org.openmetadata.schema.entity.data.APIEndpoint;
 import org.openmetadata.schema.entity.data.Container;
 import org.openmetadata.schema.entity.data.Dashboard;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
@@ -48,6 +53,7 @@ import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.data.Topic;
 import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.MessagingService;
@@ -62,6 +68,8 @@ import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Field;
 import org.openmetadata.schema.type.FieldDataType;
+import org.openmetadata.schema.type.APISchema;
+import org.openmetadata.schema.type.APIRequestMethod;
 import org.openmetadata.schema.type.MessageSchema;
 import org.openmetadata.schema.type.SchemaType;
 import org.openmetadata.schema.type.TagLabel;
@@ -626,6 +634,172 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   }
 
   @Test
+  void testAssignedEndpointSupportsStatusGroupAndDomainFilter(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain domainA = createDomain(ns, "assigned-endpoint-domain-a");
+    Domain domainB = createDomain(ns, "assigned-endpoint-domain-b");
+
+    Table tableInDomainA =
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+    Table tableInDomainB =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER1_REF));
+
+    Task openDomainTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "assigned-domain-open", tableInDomainA)
+                    .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+    Task closedDomainTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "assigned-domain-closed", tableInDomainA)
+                    .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+    Task otherDomainTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "assigned-domain-other", tableInDomainB)
+                    .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+
+    SdkClients.adminClient().tasks().close(closedDomainTask.getId().toString());
+
+    ListResponse<Task> openTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listAssigned(null, "open", domainA.getFullyQualifiedName(), "domains,about");
+    ListResponse<Task> closedTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listAssigned(null, "closed", domainA.getFullyQualifiedName(), "domains,about");
+
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Open assigned tasks should include the open task in the selected domain");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Open assigned tasks should exclude closed tasks");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Open assigned tasks should exclude tasks from other domains");
+
+    assertTrue(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Closed assigned tasks should include the closed task in the selected domain");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Closed assigned tasks should exclude open tasks");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Closed assigned tasks should exclude tasks from other domains");
+  }
+
+  @Test
+  void testCreatedEndpointSupportsStatusGroupAndDomainFilter(TestNamespace ns) {
+    Domain domainA = createDomain(ns, "created-endpoint-domain-a");
+    Domain domainB = createDomain(ns, "created-endpoint-domain-b");
+
+    Table tableInDomainA =
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of());
+    Table tableInDomainB =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of());
+
+    Task openDomainTask =
+        SdkClients.user1Client()
+            .tasks()
+            .create(createTaskRequestAboutTable(ns, "created-domain-open", tableInDomainA));
+    Task closedDomainTask =
+        SdkClients.user1Client()
+            .tasks()
+            .create(createTaskRequestAboutTable(ns, "created-domain-closed", tableInDomainA));
+    Task otherDomainTask =
+        SdkClients.user1Client()
+            .tasks()
+            .create(createTaskRequestAboutTable(ns, "created-domain-other", tableInDomainB));
+
+    SdkClients.user1Client().tasks().close(closedDomainTask.getId().toString());
+
+    ListResponse<Task> openTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listCreated(null, "open", domainA.getFullyQualifiedName(), "domains,about");
+    ListResponse<Task> closedTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listCreated(null, "closed", domainA.getFullyQualifiedName(), "domains,about");
+
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Open created tasks should include the open task in the selected domain");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Open created tasks should exclude closed tasks");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Open created tasks should exclude tasks from other domains");
+
+    assertTrue(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Closed created tasks should include the closed task in the selected domain");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Closed created tasks should exclude open tasks");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Closed created tasks should exclude tasks from other domains");
+  }
+
+  @Test
+  void testOwnedEndpointSupportsStatusGroupAndDomainFilter(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain domainA = createDomain(ns, "owned-endpoint-domain-a");
+    Domain domainB = createDomain(ns, "owned-endpoint-domain-b");
+
+    Table tableInDomainA =
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+    Table tableInDomainB =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER1_REF));
+
+    Task openDomainTask = createTaskAboutTable(ns, "owned-domain-open", tableInDomainA);
+    Task closedDomainTask = createTaskAboutTable(ns, "owned-domain-closed", tableInDomainA);
+    Task otherDomainTask = createTaskAboutTable(ns, "owned-domain-other", tableInDomainB);
+
+    SdkClients.user1Client().tasks().close(closedDomainTask.getId().toString());
+
+    ListResponse<Task> openTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listOwned(null, "open", domainA.getFullyQualifiedName(), "domains,about");
+    ListResponse<Task> closedTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listOwned(null, "closed", domainA.getFullyQualifiedName(), "domains,about");
+
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Open owned tasks should include the open task in the selected domain");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Open owned tasks should exclude closed tasks");
+    assertFalse(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Open owned tasks should exclude tasks from other domains");
+
+    assertTrue(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(closedDomainTask.getId())),
+        "Closed owned tasks should include the closed task in the selected domain");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(openDomainTask.getId())),
+        "Closed owned tasks should exclude open tasks");
+    assertFalse(
+        closedTasks.getData().stream().anyMatch(t -> t.getId().equals(otherDomainTask.getId())),
+        "Closed owned tasks should exclude tasks from other domains");
+  }
+
+  @Test
   void testListTasksSupportsDomainFilter(TestNamespace ns) {
     SharedEntities shared = SharedEntities.get();
 
@@ -1103,6 +1277,52 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   }
 
   @Test
+  void testTaskUpdatePreservesAboutReference(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    CreateTask request =
+        new CreateTask()
+            .withName(ns.prefix("preserve-about"))
+            .withDescription("Ensure task updates keep the target entity linkage")
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table")
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task created = createEntity(request);
+    created.setAssignees(List.of(shared.USER2_REF));
+
+    SdkClients.adminClient().tasks().update(created.getId().toString(), created);
+
+    Task fetched =
+        SdkClients.adminClient()
+            .tasks()
+            .get(created.getId().toString(), "about,assignees,createdBy,domains");
+
+    assertNotNull(fetched.getAbout(), "Updated task should still have an about reference");
+    assertEquals(
+        table.getFullyQualifiedName(),
+        fetched.getAbout().getFullyQualifiedName(),
+        "Updated task should still point to the original entity");
+    assertEquals(
+        List.of(shared.USER2.getFullyQualifiedName()),
+        fetched.getAssignees().stream().map(EntityReference::getFullyQualifiedName).toList(),
+        "Updated task assignees should be persisted");
+
+    ListParams params = new ListParams();
+    params.addFilter("aboutEntity", table.getFullyQualifiedName());
+    ListResponse<Task> filtered = SdkClients.adminClient().tasks().list(params);
+
+    assertTrue(
+        filtered.getData().stream().anyMatch(task -> task.getId().equals(created.getId())),
+        "Updated task should still be returned by aboutEntity filtering");
+  }
+
+  @Test
   void testGetCountByCreatedBy(TestNamespace ns) {
     SharedEntities shared = SharedEntities.get();
 
@@ -1137,6 +1357,70 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
         SdkClients.adminClient().tasks().getCount(shared.USER2.getFullyQualifiedName(), null, null);
 
     assertTrue(count.getTotal() >= 1, "Should have at least 1 task assigned to user2");
+  }
+
+  @Test
+  void testGetCountSupportsViewAndDomainFilter(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+
+    Domain domainA = createDomain(ns, "count-view-domain-a");
+    Domain domainB = createDomain(ns, "count-view-domain-b");
+
+    Table tableInDomainA =
+        createTableWithDomainAndOwners(ns, domainA.getEntityReference(), List.of(shared.USER1_REF));
+    Table tableInDomainB =
+        createTableWithDomainAndOwners(ns, domainB.getEntityReference(), List.of(shared.USER1_REF));
+
+    SdkClients.user1Client()
+        .tasks()
+        .create(
+            createTaskRequestAboutTable(ns, "count-view-domain-task-a", tableInDomainA)
+                .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+    SdkClients.user1Client()
+        .tasks()
+        .create(
+            createTaskRequestAboutTable(ns, "count-view-domain-task-b", tableInDomainB)
+                .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+
+    TaskCount assignedDomainACount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(null, null, null, "assigned", domainA.getFullyQualifiedName());
+    TaskCount createdDomainACount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(null, null, null, "created", domainA.getFullyQualifiedName());
+    TaskCount ownedDomainACount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(null, null, null, "owned", domainA.getFullyQualifiedName());
+    TaskCount entityDomainACount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(
+                null,
+                null,
+                tableInDomainA.getFullyQualifiedName(),
+                "entity",
+                domainA.getFullyQualifiedName());
+    TaskCount mismatchedEntityCount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(
+                null,
+                null,
+                tableInDomainB.getFullyQualifiedName(),
+                "entity",
+                domainA.getFullyQualifiedName());
+
+    assertEquals(1, assignedDomainACount.getTotal(), "Assigned count should be domain scoped");
+    assertEquals(1, createdDomainACount.getTotal(), "Created count should be domain scoped");
+    assertEquals(1, ownedDomainACount.getTotal(), "Owned count should be domain scoped");
+    assertEquals(1, entityDomainACount.getTotal(), "Entity count should include matching domain");
+    assertEquals(
+        0,
+        mismatchedEntityCount.getTotal(),
+        "Entity count should exclude tasks when domain filter does not match");
   }
 
   // ==================== Entity Change Application Tests ====================
@@ -2395,6 +2679,101 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     assertTrue(
         updatedTopic.getTags().stream()
             .anyMatch(t -> "PersonalData.Personal".equals(t.getTagFQN())));
+  }
+
+  @Test
+  void testResolveApiEndpointRequestSchemaTagUpdateTask(TestNamespace ns) {
+    ApiService service = APIServiceTestFactory.createRest(ns);
+    APICollection apiCollection =
+        SdkClients.adminClient()
+            .apiCollections()
+            .create(
+                new CreateAPICollection()
+                    .withName(ns.prefix("api_collection"))
+                    .withDescription("Collection for request schema tag task")
+                    .withService(service.getFullyQualifiedName()));
+
+    List<Field> requestSchemaFields =
+        List.of(
+            new Field()
+                .withName("default")
+                .withDataType(FieldDataType.RECORD)
+                .withChildren(
+                    List.of(
+                        new Field()
+                            .withName("name")
+                            .withDataType(FieldDataType.RECORD)
+                            .withChildren(
+                                List.of(
+                                    new Field()
+                                        .withName("last_name")
+                                        .withDataType(FieldDataType.STRING))))));
+
+    APIEndpoint apiEndpoint =
+        SdkClients.adminClient()
+            .apiEndpoints()
+            .create(
+                new CreateAPIEndpoint()
+                    .withName(ns.prefix("endpoint_request_schema_tag"))
+                    .withDescription("Endpoint with request schema field tags")
+                    .withApiCollection(apiCollection.getFullyQualifiedName())
+                    .withEndpointURL(java.net.URI.create("https://localhost:8585/api/v1/users"))
+                    .withRequestMethod(APIRequestMethod.POST)
+                    .withRequestSchema(new APISchema().withSchemaFields(requestSchemaFields)));
+
+    List<TagLabel> tagsToAdd =
+        List.of(
+            new TagLabel()
+                .withTagFQN("PII.None")
+                .withSource(TagLabel.TagSource.CLASSIFICATION)
+                .withLabelType(TagLabel.LabelType.MANUAL)
+                .withState(TagLabel.State.CONFIRMED)
+                .withName("None"));
+
+    org.openmetadata.schema.type.TagUpdatePayload payload =
+        new org.openmetadata.schema.type.TagUpdatePayload()
+            .withFieldPath("requestSchema.schemaFields.default.name.last_name")
+            .withCurrentTags(List.of())
+            .withTagsToAdd(tagsToAdd)
+            .withTagsToRemove(List.of());
+
+    Task task =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                new CreateTask()
+                    .withName(ns.prefix("api-endpoint-request-schema-tag"))
+                    .withDescription("Add tag to API endpoint request schema field")
+                    .withCategory(TaskCategory.MetadataUpdate)
+                    .withType(TaskEntityType.TagUpdate)
+                    .withAbout(apiEndpoint.getFullyQualifiedName())
+                    .withAboutType("apiEndpoint")
+                    .withPayload(payload));
+
+    Task resolvedTask =
+        SdkClients.adminClient()
+            .tasks()
+            .resolve(
+                task.getId().toString(),
+                new ResolveTask()
+                    .withResolutionType(TaskResolutionType.Approved)
+                    .withComment("Approved request schema field tag"));
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+
+    APIEndpoint updatedEndpoint =
+        SdkClients.adminClient()
+            .apiEndpoints()
+            .getByName(apiEndpoint.getFullyQualifiedName(), "requestSchema,tags");
+
+    Field defaultField = updatedEndpoint.getRequestSchema().getSchemaFields().get(0);
+    Field nameField = defaultField.getChildren().get(0);
+    Field lastNameField = nameField.getChildren().get(0);
+
+    assertNotNull(lastNameField.getTags(), "Request schema field should have tags after approval");
+    assertTrue(
+        lastNameField.getTags().stream().anyMatch(t -> "PII.None".equals(t.getTagFQN())),
+        "Request schema field should include the approved tag");
   }
 
   private Table createTableWithDomainAndOwners(

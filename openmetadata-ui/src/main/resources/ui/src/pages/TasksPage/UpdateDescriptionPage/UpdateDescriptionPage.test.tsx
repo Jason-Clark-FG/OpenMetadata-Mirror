@@ -70,6 +70,7 @@ const mockTableData = {
   ],
 };
 jest.mock('../../../utils/TasksUtils', () => ({
+  ...jest.requireActual('../../../utils/TasksUtils'),
   fetchEntityDetail: jest
     .fn()
     .mockImplementation((_entityType, _decodedEntityFQN, setEntityData) => {
@@ -78,10 +79,10 @@ jest.mock('../../../utils/TasksUtils', () => ({
   fetchOptions: jest.fn(),
   getBreadCrumbList: jest.fn().mockReturnValue([]),
   getTaskMessage: jest.fn().mockReturnValue('Task message'),
-  getEntityColumnsDetails: jest
+  getTaskFieldColumns: jest
     .fn()
     .mockImplementation(() => mockTableData.columns),
-  getColumnObject: jest.fn().mockImplementation(() => ({
+  getColumnObjectByPath: jest.fn().mockImplementation(() => ({
     description: mockTableData.columns[0].description,
   })),
   getTaskAssignee: jest.fn().mockReturnValue(MOCK_TASK_ASSIGNEE),
@@ -171,12 +172,30 @@ describe('UpdateDescriptionPage', () => {
       aboutType: 'table',
       assignees: ['sample_data'],
       payload: {
-        suggestedValue:
+        newDescription:
           'Unique identifier for the store. This column is the primary key for this table.',
-        currentValue:
+        currentDescription:
           'Unique identifier for the store. This column is the primary key for this table.',
-        field: 'columns::shop_id::description',
+        fieldPath: 'columns::shop_id::description',
       },
     });
+  });
+
+  it('should render description editor when current description is empty', async () => {
+    const { getColumnObjectByPath } = jest.requireMock(
+      '../../../utils/TasksUtils'
+    );
+    getColumnObjectByPath.mockReturnValueOnce({
+      description: '',
+    });
+
+    render(
+      <UpdateDescription pageTitle={i18n.t('label.update-description')} />
+    );
+
+    expect(await screen.findByTestId('description-tabs')).toBeInTheDocument();
+    expect(
+      await screen.findByText('RichTextEditor.component')
+    ).toBeInTheDocument();
   });
 });

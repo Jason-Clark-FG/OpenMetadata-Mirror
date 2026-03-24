@@ -7516,6 +7516,253 @@ public class WorkflowDefinitionResourceIT {
   }
 
   @Test
+  void test_WorkflowApprovalThresholdReturnsOpenTaskUntilThresholdIsMet(TestNamespace ns)
+      throws Exception {
+    LOG.info("Starting test_WorkflowApprovalThresholdReturnsOpenTaskUntilThresholdIsMet");
+
+    OpenMetadataClient client = SdkClients.adminClient();
+    ensureWorkflowEventConsumerIsActive(client);
+
+    String uniqueSuffix = String.valueOf(System.currentTimeMillis());
+    String workflowName = "ThresholdApprovalWorkflow_" + uniqueSuffix;
+
+    CreateUser createCandidate1 =
+        new CreateUser()
+            .withName("thresholdcandidate1_" + uniqueSuffix)
+            .withEmail("thresholdcandidate1_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Threshold Candidate 1");
+    User candidate1 = client.users().create(createCandidate1);
+
+    CreateUser createCandidate2 =
+        new CreateUser()
+            .withName("thresholdcandidate2_" + uniqueSuffix)
+            .withEmail("thresholdcandidate2_" + uniqueSuffix + "@example.com")
+            .withDisplayName("Threshold Candidate 2");
+    User candidate2 = client.users().create(createCandidate2);
+
+    CreateDatabaseService createDbService =
+        new CreateDatabaseService()
+            .withName(ns.prefix("threshold-db-service"))
+            .withServiceType(DatabaseServiceType.Mysql)
+            .withConnection(
+                new DatabaseConnection()
+                    .withConfig(
+                        new MysqlConnection()
+                            .withHostPort("localhost:3306")
+                            .withUsername("test")
+                            .withAuthType(new basicAuth().withPassword("test"))));
+    DatabaseService dbService = client.databaseServices().create(createDbService);
+
+    CreateDatabase createDb =
+        new CreateDatabase()
+            .withName(ns.prefix("threshold-database"))
+            .withService(dbService.getFullyQualifiedName())
+            .withDescription("Threshold approval workflow database");
+    Database database = client.databases().create(createDb);
+
+    CreateDatabaseSchema createSchema =
+        new CreateDatabaseSchema()
+            .withName(ns.prefix("threshold-schema"))
+            .withDatabase(database.getFullyQualifiedName())
+            .withDescription("Threshold approval workflow schema");
+    DatabaseSchema dbSchema = client.databaseSchemas().create(createSchema);
+
+    CreateTable createTable =
+        new CreateTable()
+            .withName(ns.prefix("threshold_approval_table"))
+            .withDatabaseSchema(dbSchema.getFullyQualifiedName())
+            .withDescription("Table used for threshold approval workflow test")
+            .withColumns(
+                List.of(
+                    new Column().withName("id").withDataType(ColumnDataType.INT),
+                    new Column().withName("name").withDataType(ColumnDataType.STRING)));
+
+    String workflowJson =
+        """
+            {
+              "name": "%s",
+              "displayName": "Threshold Approval Workflow",
+              "description": "Workflow that requires two approvals before closing the task",
+              "trigger": {
+                "type": "eventBasedEntity",
+                "config": {
+                  "entityTypes": ["table"],
+                  "events": ["Created"],
+                  "filter": {}
+                },
+                "output": ["relatedEntity"]
+              },
+              "nodes": [
+                {
+                  "name": "start",
+                  "displayName": "Start",
+                  "type": "startEvent",
+                  "subType": "startEvent"
+                },
+                {
+                  "name": "ApproveTable",
+                  "displayName": "Approve Table",
+                  "type": "userTask",
+                  "subType": "userApprovalTask",
+                  "config": {
+                    "assignees": {
+                      "addReviewers": false,
+                      "addOwners": false,
+                      "candidates": [
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        },
+                        {
+                          "id": "%s",
+                          "type": "user",
+                          "fullyQualifiedName": "%s",
+                          "name": "%s"
+                        }
+                      ]
+                    },
+                    "approvalThreshold": 2,
+                    "rejectionThreshold": 1
+                  },
+                  "input": ["relatedEntity"],
+                  "inputNamespaceMap": {
+                    "relatedEntity": "global"
+                  },
+                  "output": ["result"],
+                  "branches": ["true", "false"]
+                },
+                {
+                  "name": "endApproved",
+                  "displayName": "End Approved",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                },
+                {
+                  "name": "endRejected",
+                  "displayName": "End Rejected",
+                  "type": "endEvent",
+                  "subType": "endEvent"
+                }
+              ],
+              "edges": [
+                {"from": "start", "to": "ApproveTable"},
+                {"from": "ApproveTable", "to": "endApproved", "condition": "true"},
+                {"from": "ApproveTable", "to": "endRejected", "condition": "false"}
+              ]
+            }
+            """
+            .formatted(
+                workflowName,
+                candidate1.getId(),
+                candidate1.getFullyQualifiedName(),
+                candidate1.getName(),
+                candidate2.getId(),
+                candidate2.getFullyQualifiedName(),
+                candidate2.getName());
+
+    CreateWorkflowDefinition thresholdWorkflow =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+
+    String workflowResponse =
+        client
+            .getHttpClient()
+            .executeForString(
+                HttpMethod.POST,
+                BASE_PATH,
+                thresholdWorkflow,
+                RequestOptions.builder().build());
+
+    JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
+    String workflowId = workflowCreated.get("id").asText();
+
+    waitForWorkflowDeployment(client, workflowName);
+
+    Table testTable = client.tables().create(createTable);
+    String tableFqn = testTable.getFullyQualifiedName();
+    await()
+        .atMost(Duration.ofMinutes(2))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () ->
+                listOpenApprovalTasks(client, tableFqn).getData().stream()
+                    .anyMatch(
+                        task ->
+                            task.getAssignees() != null
+                                && task.getAssignees().size() == 2
+                                && task.getAssignees().stream()
+                                    .map(EntityReference::getName)
+                                    .sorted()
+                                    .toList()
+                                    .equals(
+                                        Stream.of(candidate1.getName(), candidate2.getName())
+                                            .sorted()
+                                            .toList())));
+
+    Task approvalTask =
+        listOpenApprovalTasks(client, tableFqn).getData().stream()
+            .filter(
+                task ->
+                    task.getAssignees() != null
+                        && task.getAssignees().size() == 2
+                        && task.getAssignees().stream()
+                            .map(EntityReference::getName)
+                            .sorted()
+                            .toList()
+                            .equals(
+                                Stream.of(candidate1.getName(), candidate2.getName())
+                                    .sorted()
+                                    .toList()))
+            .findFirst()
+            .orElseThrow();
+
+    OpenMetadataClient candidate1Client =
+        SdkClients.createClient(candidate1.getName(), candidate1.getEmail(), new String[] {});
+    org.openmetadata.schema.api.tasks.ResolveTask resolveApproval =
+        new org.openmetadata.schema.api.tasks.ResolveTask()
+            .withResolutionType(TaskResolutionType.Approved);
+
+    Task intermediateTask =
+        candidate1Client.tasks().resolve(approvalTask.getId().toString(), resolveApproval);
+
+    assertEquals(
+        TaskEntityStatus.Open,
+        intermediateTask.getStatus(),
+        "First approval should return the refreshed task in open state");
+    assertNotNull(intermediateTask.getAssignees(), "Intermediate task should retain assignees");
+    assertEquals(
+        1,
+        intermediateTask.getAssignees().size(),
+        "The approving user should be removed from remaining assignees");
+    assertEquals(
+        candidate2.getName(),
+        intermediateTask.getAssignees().get(0).getName(),
+        "The remaining assignee should still need to approve");
+
+    OpenMetadataClient candidate2Client =
+        SdkClients.createClient(candidate2.getName(), candidate2.getEmail(), new String[] {});
+    Task resolvedTask =
+        candidate2Client.tasks().resolve(approvalTask.getId().toString(), resolveApproval);
+
+    assertEquals(
+        TaskEntityStatus.Approved,
+        resolvedTask.getStatus(),
+        "Task should resolve only after the approval threshold is met");
+
+    Map<String, String> params = new HashMap<>();
+    params.put("hardDelete", "true");
+    params.put("recursive", "true");
+    client.workflowDefinitions().delete(workflowId);
+    client.tables().delete(testTable.getId().toString(), params);
+    client.databaseSchemas().delete(dbSchema.getId().toString(), params);
+    client.databases().delete(database.getId().toString(), params);
+    client.databaseServices().delete(dbService.getId().toString(), params);
+    client.users().delete(candidate1.getId().toString(), params);
+    client.users().delete(candidate2.getId().toString(), params);
+  }
+
+  @Test
   @Order(41)
   void test_WorkflowWithTeamCandidates(TestNamespace ns) throws Exception {
     LOG.info("Starting test_WorkflowWithTeamCandidates");

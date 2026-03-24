@@ -64,6 +64,7 @@ import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
+import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.schema.type.csv.CsvDocumentation;
 import org.openmetadata.schema.type.csv.CsvErrorType;
@@ -1235,8 +1236,6 @@ public class UserRepository extends EntityRepository<User> {
     if (Boolean.TRUE.equals(entity.getIsBot())) {
       BotTokenCache.invalidateToken(entity.getName());
     }
-    // Remove suggestions
-    daoCollection.suggestionDAO().deleteByCreatedBy(entity.getId());
     ExecutorService executorService = AsyncService.getInstance().getExecutorService();
     executorService.submit(
         () -> {
@@ -1244,6 +1243,14 @@ public class UserRepository extends EntityRepository<User> {
             updateIncidentAssignee(entity);
           } catch (Exception ex) {
             LOG.error("Error updating test case incident assignee: ", ex);
+          }
+          try {
+            daoCollection
+                .taskDAO()
+                .deleteByCreatorAndCategory(
+                    entity.getId().toString(), TaskCategory.MetadataUpdate.value());
+          } catch (Exception ex) {
+            LOG.error("Error deleting suggestion tasks for user: ", ex);
           }
         });
   }

@@ -59,6 +59,7 @@ import {
   getTaskDetailPath,
   isDescriptionTask,
   isTagsTask,
+  isTaskPendingFurtherApproval,
 } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
@@ -192,11 +193,15 @@ const TaskFeedCard = ({
       return;
     }
     try {
-      await resolveTaskAPI(feed.id, {
+      const updatedTask = await resolveTaskAPI(feed.id, {
         resolutionType: TaskResolutionType.Completed,
         newValue: (data as ResolveTask).newValue,
       });
-      showSuccessToast(t('server.task-resolved-successfully'));
+      showSuccessToast(
+        isTaskPendingFurtherApproval(updatedTask)
+          ? 'Vote recorded.'
+          : t('server.task-resolved-successfully')
+      );
       onAfterClose?.();
       onUpdateEntityDetails?.();
     } catch (err) {

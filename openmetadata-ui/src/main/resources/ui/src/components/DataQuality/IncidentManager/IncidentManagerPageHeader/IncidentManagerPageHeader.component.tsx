@@ -54,7 +54,10 @@ import { getCommonExtraInfoForVersionDetails } from '../../../../utils/EntityVer
 import { getEntityFQN } from '../../../../utils/FeedUtils';
 import { getPrioritizedEditPermission } from '../../../../utils/PermissionsUtils';
 import { getEntityDetailsPath } from '../../../../utils/RouterUtils';
-import { getTaskDetailPath as getOldTaskDetailPath } from '../../../../utils/TasksUtils';
+import {
+  getTaskDetailPath as getOldTaskDetailPath,
+  getTaskDisplayId,
+} from '../../../../utils/TasksUtils';
 import { getTaskDetailPath as getNewTaskDetailPath } from '../../../../utils/TaskUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../../utils/useRequiredParams';
@@ -293,7 +296,7 @@ const IncidentManagerPageHeader = ({
     const taskLinkInfo = incidentTask
       ? {
           path: getNewTaskDetailPath(incidentTask),
-          label: incidentTask.taskId,
+          label: `#${getTaskDisplayId(incidentTask.taskId)}`,
         }
       : activeTask
       ? {

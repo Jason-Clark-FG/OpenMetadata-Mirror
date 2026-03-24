@@ -34,6 +34,7 @@
       "type": "string",
       "enum": [
         "GlossaryApproval",
+        "RequestApproval",
         "DataAccessRequest",
         "DescriptionUpdate",
         "TagUpdate",
@@ -49,6 +50,7 @@
       ],
       "javaEnums": [
         {"name": "GlossaryApproval"},
+        {"name": "RequestApproval"},
         {"name": "DataAccessRequest"},
         {"name": "DescriptionUpdate"},
         {"name": "TagUpdate"},
@@ -264,6 +266,10 @@
     "createdBy": {
       "description": "User who created this task.",
       "$ref": "../../type/entityReference.json"
+    },
+    "createdById": {
+      "description": "UUID of the user who created this task. Stored in JSON for efficient querying via generated column index.",
+      "type": "string"
     },
     "assignees": {
       "description": "Users or teams assigned to complete this task.",

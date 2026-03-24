@@ -43,6 +43,7 @@ jest.mock('../../../components/common/ResizablePanels/ResizablePanels', () =>
   ))
 );
 jest.mock('../../../utils/TasksUtils', () => ({
+  ...jest.requireActual('../../../utils/TasksUtils'),
   fetchEntityDetail: jest
     .fn()
     .mockImplementation((_entityType, _decodedEntityFQN, setEntityData) => {
@@ -150,9 +151,9 @@ describe('RequestDescriptionPage', () => {
       aboutType: 'table',
       assignees: ['sample_data'],
       payload: {
-        suggestedValue: undefined,
-        currentValue: '',
-        field: 'columns::"address.street_name"::description',
+        newDescription: '',
+        currentDescription: '',
+        fieldPath: 'columns::"address.street_name"::description',
       },
     });
   });

@@ -86,7 +86,8 @@ public class TaskWorkflowHandler {
    * @param approved Whether the task is approved (true) or rejected (false)
    * @param newValue Optional new value to apply (for update tasks)
    * @param user The user resolving the task
-   * @return The updated task, or null if still waiting for more approvals
+   * @return The updated task. Workflow-managed tasks may remain open while waiting for more
+   *     approvals.
    */
   public Task resolveTask(Task task, boolean approved, String newValue, String user) {
     UUID taskId = task.getId();
@@ -137,9 +138,8 @@ public class TaskWorkflowHandler {
     // Check if multi-approval task is still waiting for more votes
     if (workflowHandler.isTaskStillOpen(taskId)) {
       LOG.info("[TaskWorkflowHandler] Task '{}' still open, waiting for more approvals", taskId);
-      // Update the task to reflect that this user has voted
       updateTaskVotes(task, user, approved);
-      return null; // Task is still open
+      return refreshTask(taskId);
     }
 
     // Task threshold met, apply resolution
@@ -207,7 +207,7 @@ public class TaskWorkflowHandler {
         task.getStatus(),
         resolutionType);
 
-    return task;
+    return refreshTask(taskId, task);
   }
 
   /**
@@ -400,7 +400,7 @@ public class TaskWorkflowHandler {
 
         String fieldPath = tagPayload.getFieldPath();
         if (fieldPath != null && !fieldPath.isEmpty()) {
-          targetFqn = entity.getFullyQualifiedName() + "." + fieldPath.replace("columns.", "");
+          targetFqn = resolveTagTargetFqn(entity, fieldPath);
         }
 
         tagsToAdd = tagPayload.getTagsToAdd();
@@ -431,6 +431,52 @@ public class TaskWorkflowHandler {
     } catch (Exception e) {
       LOG.error("[TaskWorkflowHandler] Failed to apply TagUpdate", e);
     }
+  }
+
+  private String resolveTagTargetFqn(EntityInterface entity, String fieldPath) {
+    if (fieldPath == null || fieldPath.isEmpty()) {
+      return entity.getFullyQualifiedName();
+    }
+
+    String normalizedFieldPath = fieldPath.replace("\"", "");
+
+    if (normalizedFieldPath.startsWith("requestSchema.schemaFields.")) {
+      return entity.getFullyQualifiedName()
+          + ".requestSchema."
+          + normalizedFieldPath.substring("requestSchema.schemaFields.".length());
+    }
+
+    if (normalizedFieldPath.startsWith("responseSchema.schemaFields.")) {
+      return entity.getFullyQualifiedName()
+          + ".responseSchema."
+          + normalizedFieldPath.substring("responseSchema.schemaFields.".length());
+    }
+
+    if (normalizedFieldPath.startsWith("requestSchema.")) {
+      return entity.getFullyQualifiedName() + "." + normalizedFieldPath;
+    }
+
+    if (normalizedFieldPath.startsWith("responseSchema.")) {
+      return entity.getFullyQualifiedName() + "." + normalizedFieldPath;
+    }
+
+    String[] supportedPrefixes = {
+      "columns.",
+      "messageSchema.schemaFields.",
+      "messageSchema.",
+      "dataModel.columns.",
+      "dataModel."
+    };
+
+    for (String prefix : supportedPrefixes) {
+      if (normalizedFieldPath.startsWith(prefix)) {
+        return entity.getFullyQualifiedName()
+            + "."
+            + normalizedFieldPath.substring(prefix.length());
+      }
+    }
+
+    return entity.getFullyQualifiedName() + "." + normalizedFieldPath;
   }
 
   private void applyOwnershipUpdate(
@@ -685,6 +731,29 @@ public class TaskWorkflowHandler {
           task.getId(),
           e.getMessage());
       return false;
+    }
+  }
+
+  private Task refreshTask(UUID taskId) {
+    return refreshTask(taskId, null);
+  }
+
+  private Task refreshTask(UUID taskId, Task fallbackTask) {
+    try {
+      TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+
+      return taskRepository.get(
+          null,
+          taskId,
+          taskRepository.getFields(
+              "assignees,reviewers,watchers,about,domains,comments,createdBy,payload,resolution"));
+    } catch (Exception e) {
+      LOG.warn(
+          "[TaskWorkflowHandler] Failed to refresh task '{}' after workflow update: {}",
+          taskId,
+          e.getMessage());
+
+      return fallbackTask;
     }
   }
 }

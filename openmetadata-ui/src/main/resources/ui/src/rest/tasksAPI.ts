@@ -94,12 +94,22 @@ export interface TaskResolution {
   newValue?: string;
 }
 
-// Task payload interface for description/tag tasks
+// Task payload interface - union of all payload types
 export interface TaskPayload {
+  // SuggestionPayload fields
+  suggestionType?: string;
   suggestedValue?: string;
   currentValue?: string;
-  field?: string;
+  confidence?: number;
+  source?: string;
+  reasoning?: string;
+  // DescriptionUpdatePayload fields
+  newDescription?: string;
+  currentDescription?: string;
+  // Common
   fieldPath?: string;
+  field?: string;
+  // TagUpdatePayload fields
   currentTags?: TagLabel[];
   tagsToAdd?: TagLabel[];
   tagsToRemove?: TagLabel[];
@@ -120,6 +130,7 @@ export interface Task {
   priority: TaskPriority;
   about?: EntityReference;
   domain?: EntityReference;
+  domains?: EntityReference[];
   createdBy?: EntityReference;
   assignees?: EntityReference[];
   reviewers?: EntityReference[];
@@ -180,6 +191,24 @@ export interface ResolveTask {
 const BASE_URL = '/tasks';
 
 export type TaskStatusGroup = 'open' | 'closed';
+export type TaskCountView =
+  | 'all'
+  | 'assigned'
+  | 'owned'
+  | 'created'
+  | 'mentioned'
+  | 'entity';
+
+interface TaskScopedListParams {
+  fields?: string;
+  status?: TaskEntityStatus;
+  statusGroup?: TaskStatusGroup;
+  domain?: string;
+  limit?: number;
+  before?: string;
+  after?: string;
+  include?: Include;
+}
 
 export interface ListTasksParams {
   fields?: string;
@@ -216,6 +245,8 @@ export const listTasks = async (params?: ListTasksParams) => {
 export const listMyAssignedTasks = async (params?: {
   fields?: string;
   status?: TaskEntityStatus;
+  statusGroup?: TaskStatusGroup;
+  domain?: string;
   limit?: number;
   before?: string;
   after?: string;
@@ -230,16 +261,21 @@ export const listMyAssignedTasks = async (params?: {
 };
 
 /**
+ * Get tasks for entities owned by the current user or their teams.
+ */
+export const listMyOwnedTasks = async (params?: TaskScopedListParams) => {
+  const response = await APIClient.get<PagingResponse<Task[]>>(
+    `${BASE_URL}/owned`,
+    { params }
+  );
+
+  return response.data;
+};
+
+/**
  * Get tasks created by the current user.
  */
-export const listMyCreatedTasks = async (params?: {
-  fields?: string;
-  status?: TaskEntityStatus;
-  limit?: number;
-  before?: string;
-  after?: string;
-  include?: Include;
-}) => {
+export const listMyCreatedTasks = async (params?: TaskScopedListParams) => {
   const response = await APIClient.get<PagingResponse<Task[]>>(
     `${BASE_URL}/created`,
     { params }
@@ -420,6 +456,9 @@ export const getTaskCounts = async (params?: {
   assignee?: string;
   createdBy?: string;
   aboutEntity?: string;
+  mentionedUser?: string;
+  view?: TaskCountView;
+  domain?: string;
 }) => {
   const response = await APIClient.get<{
     open: number;

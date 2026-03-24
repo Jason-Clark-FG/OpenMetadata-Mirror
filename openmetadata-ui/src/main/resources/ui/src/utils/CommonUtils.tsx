@@ -494,14 +494,26 @@ export const replaceAllSpacialCharWith_ = (text: string) => {
 export const getFeedCounts = async (
   entityType: string,
   entityFQN: string,
-  feedCountCallback: (countValue: FeedCounts) => void
+  domainOrCallback: string | undefined | ((countValue: FeedCounts) => void),
+  callback?: (countValue: FeedCounts) => void
 ) => {
   try {
+    const domain =
+      typeof domainOrCallback === 'string' || domainOrCallback === undefined
+        ? domainOrCallback
+        : undefined;
+    const feedCountCallback =
+      typeof domainOrCallback === 'function' ? domainOrCallback : callback;
+
+    if (!feedCountCallback) {
+      return;
+    }
+
     // Fetch activity events, task counts in parallel
     // Activity events from new activity API replaces conversation count
     const [activityRes, taskCounts] = await Promise.all([
       getEntityActivityByFqn(entityType, entityFQN, { days: 30, limit: 100 }),
-      getTaskCounts({ aboutEntity: entityFQN }),
+      getTaskCounts({ aboutEntity: entityFQN, domain }),
     ]);
 
     // Use activity events count

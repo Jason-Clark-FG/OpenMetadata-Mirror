@@ -25,7 +25,60 @@ export type TaskDetails = {
 
 const tag = 'PII.None';
 
-export const TASK_OPEN_FETCH_LINK = '/api/v1/feed**&type=Task&taskStatus=Open';
+export const TASK_OPEN_FETCH_LINK = '/api/v1/tasks**';
+
+const isTaskCreateRequest = (url: string) =>
+  /\/api\/v1\/tasks(?:\?|$)/.test(url) &&
+  !url.includes('/resolve') &&
+  !url.includes('/close') &&
+  !url.includes('/comments');
+
+export const waitForTaskListResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      (response.url().includes('/api/v1/tasks?') ||
+        response.url().includes('/api/v1/tasks/assigned') ||
+        response.url().includes('/api/v1/tasks/owned') ||
+        response.url().includes('/api/v1/tasks/created'))
+  );
+
+export const waitForTaskCountResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      response.url().includes('/api/v1/tasks/count')
+  );
+
+export const waitForTaskCreateResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      isTaskCreateRequest(response.url())
+  );
+
+export const waitForTaskResolveResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /\/api\/v1\/tasks\/[^/]+\/resolve(?:\?|$)/.test(response.url())
+  );
+
+export const waitForTaskActionResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      /\/api\/v1\/tasks\/[^/]+\/(resolve|close)(?:\?|$)/.test(response.url())
+  );
+
+export const waitForTaskCommentResponse = (page: Page) =>
+  page.waitForResponse(
+    (response) =>
+      ['POST', 'PATCH', 'DELETE'].includes(response.request().method()) &&
+      /\/api\/v1\/tasks\/[^/]+\/comments(?:\/[^/]+)?(?:\?|$)/.test(
+        response.url()
+      )
+  );
 
 export const createDescriptionTask = async (
   page: Page,
@@ -76,7 +129,9 @@ export const createDescriptionTask = async (
       .locator(descriptionBox)
       .fill(value.description ?? 'Updated description');
   }
+  const taskResponse = waitForTaskCreateResponse(page);
   await page.click('button[type="submit"]');
+  await taskResponse;
 
   await toastNotification(page, /Task created successfully./);
 };
@@ -142,7 +197,7 @@ export const createTagTask = async (
     await clickOutside(page);
   }
 
-  const taskResponse = page.waitForResponse(`/api/v1/feed`);
+  const taskResponse = waitForTaskCreateResponse(page);
   await page.click('button[type="submit"]');
   await taskResponse;
 

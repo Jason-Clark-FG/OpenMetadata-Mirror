@@ -14,15 +14,19 @@ import { APIRequestContext, expect, Page } from '@playwright/test';
 import { SidebarItem } from '../constant/sidebar';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { TableClass } from '../support/entity/TableClass';
-import { redirectToHomePage } from './common';
+import { getEncodedFqn } from '../../src/utils/StringsUtils';
 import { makeRetryRequest } from './serviceIngestion';
 import { sidebarClick } from './sidebar';
 import { waitForAllLoadersToDisappear } from './entity';
 
 export const visitProfilerTab = async (page: Page, table: TableClass) => {
-  await redirectToHomePage(page);
-  await table.visitEntityPage(page);
-  await page.click('[data-testid="profiler"]');
+  await page.goto(
+    `/table/${getEncodedFqn(
+      table.entityResponseData.fullyQualifiedName ?? ''
+    )}/profiler/data-quality`
+  );
+  await waitForAllLoadersToDisappear(page);
+  await expect(page.getByRole('tab', { name: 'Data Quality' })).toBeVisible();
 };
 
 export const acknowledgeTask = async (data: {

@@ -115,6 +115,16 @@ public class ListFilter extends Filter<ListFilter> {
   }
 
   private String getAssignee() {
+    String assigneeIds = queryParams.get("assigneeIds");
+    if (assigneeIds != null) {
+      return String.format(
+          "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
+              + "WHERE entity_relationship.fromEntity IN ('user', 'team') "
+              + "AND entity_relationship.fromId IN (%s) "
+              + "AND entity_relationship.relation = %d))",
+          assigneeIds, Relationship.ASSIGNED_TO.ordinal());
+    }
+
     String assigneeId = queryParams.get("assigneeId");
     if (assigneeId != null) {
       queryParams.put("assigneeIdParam", assigneeId);

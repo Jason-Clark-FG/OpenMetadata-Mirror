@@ -125,10 +125,12 @@ export class TaskClass {
   }
 
   async visitEntityPage(page: Page): Promise<void> {
-    if (!this.responseData?.taskId) {
+    const taskRouteId = this.responseData?.id ?? this.responseData?.taskId;
+
+    if (!taskRouteId) {
       throw new Error('Task not created');
     }
-    await page.goto(`/tasks/${this.responseData.taskId}`);
-    await page.waitForLoadState('networkidle');
+    await page.goto(`/tasks/${taskRouteId}`);
+    await page.waitForLoadState('load');
   }
 }

@@ -96,14 +96,29 @@ public class TaskService extends EntityServiceBase<Task> {
   }
 
   public ListResponse<Task> listAssigned() throws OpenMetadataException {
-    return listAssigned(null);
+    return listAssigned(null, null, null, null);
   }
 
   public ListResponse<Task> listAssigned(TaskEntityStatus status) throws OpenMetadataException {
+    return listAssigned(status, null, null, null);
+  }
+
+  public ListResponse<Task> listAssigned(
+      TaskEntityStatus status, String statusGroup, String domain, String fields)
+      throws OpenMetadataException {
     String path = basePath + "/assigned";
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     if (status != null) {
       optionsBuilder.queryParam("status", status.value());
+    }
+    if (statusGroup != null) {
+      optionsBuilder.queryParam("statusGroup", statusGroup);
+    }
+    if (domain != null) {
+      optionsBuilder.queryParam("domain", domain);
+    }
+    if (fields != null) {
+      optionsBuilder.queryParam("fields", fields);
     }
     String responseStr =
         httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
@@ -111,14 +126,29 @@ public class TaskService extends EntityServiceBase<Task> {
   }
 
   public ListResponse<Task> listCreated() throws OpenMetadataException {
-    return listCreated(null);
+    return listCreated(null, null, null, null);
   }
 
   public ListResponse<Task> listCreated(TaskEntityStatus status) throws OpenMetadataException {
+    return listCreated(status, null, null, null);
+  }
+
+  public ListResponse<Task> listCreated(
+      TaskEntityStatus status, String statusGroup, String domain, String fields)
+      throws OpenMetadataException {
     String path = basePath + "/created";
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     if (status != null) {
       optionsBuilder.queryParam("status", status.value());
+    }
+    if (statusGroup != null) {
+      optionsBuilder.queryParam("statusGroup", statusGroup);
+    }
+    if (domain != null) {
+      optionsBuilder.queryParam("domain", domain);
+    }
+    if (fields != null) {
+      optionsBuilder.queryParam("fields", fields);
     }
     String responseStr =
         httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
@@ -126,14 +156,29 @@ public class TaskService extends EntityServiceBase<Task> {
   }
 
   public ListResponse<Task> listOwned() throws OpenMetadataException {
-    return listOwned(null);
+    return listOwned(null, null, null, null);
   }
 
   public ListResponse<Task> listOwned(TaskEntityStatus status) throws OpenMetadataException {
+    return listOwned(status, null, null, null);
+  }
+
+  public ListResponse<Task> listOwned(
+      TaskEntityStatus status, String statusGroup, String domain, String fields)
+      throws OpenMetadataException {
     String path = basePath + "/owned";
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     if (status != null) {
       optionsBuilder.queryParam("status", status.value());
+    }
+    if (statusGroup != null) {
+      optionsBuilder.queryParam("statusGroup", statusGroup);
+    }
+    if (domain != null) {
+      optionsBuilder.queryParam("domain", domain);
+    }
+    if (fields != null) {
+      optionsBuilder.queryParam("fields", fields);
     }
     String responseStr =
         httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
@@ -212,7 +257,7 @@ public class TaskService extends EntityServiceBase<Task> {
    * @return Task counts for open, in-progress, completed, and total
    */
   public TaskCount getCount() throws OpenMetadataException {
-    return getCount(null, null, null);
+    return getCount(null, null, null, null, null);
   }
 
   /**
@@ -225,6 +270,12 @@ public class TaskService extends EntityServiceBase<Task> {
    */
   public TaskCount getCount(String assignee, String createdBy, String aboutEntity)
       throws OpenMetadataException {
+    return getCount(assignee, createdBy, aboutEntity, null, null);
+  }
+
+  public TaskCount getCount(
+      String assignee, String createdBy, String aboutEntity, String view, String domain)
+      throws OpenMetadataException {
     String path = basePath + "/count";
     RequestOptions.Builder optionsBuilder = RequestOptions.builder();
     if (assignee != null) {
@@ -235,6 +286,12 @@ public class TaskService extends EntityServiceBase<Task> {
     }
     if (aboutEntity != null) {
       optionsBuilder.queryParam("aboutEntity", aboutEntity);
+    }
+    if (view != null) {
+      optionsBuilder.queryParam("view", view);
+    }
+    if (domain != null) {
+      optionsBuilder.queryParam("domain", domain);
     }
     return httpClient.execute(HttpMethod.GET, path, null, TaskCount.class, optionsBuilder.build());
   }

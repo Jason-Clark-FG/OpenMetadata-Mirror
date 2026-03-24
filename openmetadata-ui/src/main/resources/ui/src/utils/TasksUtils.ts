@@ -77,7 +77,11 @@ import { getSearchIndexDetailsByFQN } from '../rest/SearchIndexAPI';
 import { getContainerByFQN } from '../rest/storageAPI';
 import { getStoredProceduresByFqn } from '../rest/storedProceduresAPI';
 import { getTableDetailsByFQN } from '../rest/tableAPI';
-import { Task as TaskEntity, TaskEntityType } from '../rest/tasksAPI';
+import {
+  Task as TaskEntity,
+  TaskEntityStatus,
+  TaskEntityType,
+} from '../rest/tasksAPI';
 import { getTopicByFqn } from '../rest/topicsAPI';
 import { getPartialNameFromTableFQN } from './CommonUtils';
 import { ContainerFields } from './ContainerDetailUtils';
@@ -88,9 +92,9 @@ import {
 import { DatabaseFields } from './Database/Database.util';
 import { defaultFields as DatabaseSchemaFields } from './DatabaseSchemaDetailsUtils';
 import { defaultFields as DataModelFields } from './DataModelsUtils';
-import { defaultFields as TableFields } from './DatasetDetailsUtils';
+import { defaultFieldsWithColumns as TableFields } from './DatasetDetailsUtils';
 import entityUtilClassBase from './EntityUtilClassBase';
-import { getEntityName } from './EntityUtils';
+import { ENTITY_LINK_SEPARATOR, getEntityName } from './EntityUtils';
 import { getEntityFQNFromAbout, getEntityTypeFromAbout } from './FeedUtils';
 import { getGlossaryBreadcrumbs } from './GlossaryUtils';
 import { t } from './i18next/LocalUtil';
@@ -246,6 +250,104 @@ export const getDescriptionDiff = (
   return diffLines(oldValue, newValue);
 };
 
+export interface NormalizedTaskPayload {
+  fieldPath?: string;
+  currentDescription?: string;
+  newDescription?: string;
+  currentTags: TagLabel[];
+  suggestedTags: TagLabel[];
+  suggestedValue?: string;
+  isSuggestionEmpty: boolean;
+}
+
+const parseTaskTags = (value?: string | TagLabel[]): TagLabel[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value) as TagLabel[];
+  } catch {
+    return [];
+  }
+};
+
+export const getNormalizedTaskPayload = (
+  task: TaskEntity
+): NormalizedTaskPayload => {
+  const payload = task.payload;
+  const isTagTask = task.type === TaskEntityType.TagUpdate;
+  const fieldPath = payload?.fieldPath ?? payload?.field;
+  const currentDescription =
+    payload?.currentDescription ?? payload?.currentValue;
+  const newDescription = payload?.newDescription ?? payload?.suggestedValue;
+
+  const currentTags = parseTaskTags(
+    payload?.currentTags ?? (payload?.currentValue as string | undefined)
+  );
+  const tagsToAdd = parseTaskTags(payload?.tagsToAdd as TagLabel[] | undefined);
+  const tagsToRemove = parseTaskTags(
+    payload?.tagsToRemove as TagLabel[] | undefined
+  );
+  const suggestedTagsFromLegacyPayload = parseTaskTags(payload?.suggestedValue);
+
+  const suggestedTags =
+    tagsToAdd.length > 0 || tagsToRemove.length > 0 || currentTags.length > 0
+      ? [
+          ...currentTags.filter(
+            (tag) => !tagsToRemove.some((item) => item.tagFQN === tag.tagFQN)
+          ),
+          ...tagsToAdd,
+        ]
+      : suggestedTagsFromLegacyPayload;
+
+  const suggestedValue = isTagTask
+    ? suggestedTags.length > 0
+      ? JSON.stringify(suggestedTags)
+      : undefined
+    : newDescription;
+
+  const isSuggestionEmpty = isTagTask
+    ? suggestedTags.length === 0
+    : isEmpty(newDescription);
+
+  return {
+    fieldPath,
+    currentDescription,
+    newDescription,
+    currentTags,
+    suggestedTags,
+    suggestedValue,
+    isSuggestionEmpty,
+  };
+};
+
+export const getTaskDisplayId = (taskId?: string) => {
+  if (!taskId) {
+    return '';
+  }
+
+  const matchedTaskId = /^TASK-0*([0-9]+)$/.exec(taskId);
+
+  return matchedTaskId?.[1] ?? taskId;
+};
+
+export const isTaskTerminalStatus = (status?: TaskEntityStatus) =>
+  [
+    TaskEntityStatus.Approved,
+    TaskEntityStatus.Rejected,
+    TaskEntityStatus.Completed,
+    TaskEntityStatus.Cancelled,
+    TaskEntityStatus.Failed,
+  ].includes(status as TaskEntityStatus);
+
+export const isTaskPendingFurtherApproval = (task?: TaskEntity) =>
+  Boolean(task) && !isTaskTerminalStatus(task?.status);
+
 export const fetchOptions = ({
   query,
   setOptions,
@@ -367,6 +469,40 @@ export const getColumnObject = (
   return columnObject;
 };
 
+export const getColumnObjectByPath = (
+  pathSegments: string[],
+  columns: EntityColumns,
+  entityType: EntityType,
+  chartData?: Chart[]
+): EntityColumnProps => {
+  const [currentSegment, ...remainingSegments] = pathSegments;
+  const matchedColumn = columns.find(
+    (column) => column.name === currentSegment
+  );
+
+  if (!matchedColumn) {
+    return {} as EntityColumnProps;
+  }
+
+  if (remainingSegments.length === 0) {
+    return {
+      description: matchedColumn.description ?? '',
+      tags:
+        matchedColumn.tags ??
+        (entityType === EntityType.DASHBOARD
+          ? chartData?.find((item) => item.name === currentSegment)?.tags ?? []
+          : []),
+    };
+  }
+
+  return getColumnObjectByPath(
+    remainingSegments,
+    (matchedColumn as Column).children || [],
+    entityType,
+    chartData
+  );
+};
+
 export const TASK_ENTITIES = [
   EntityType.TABLE,
   EntityType.DASHBOARD,
@@ -386,6 +522,93 @@ export const TASK_ENTITIES = [
   EntityType.METRIC,
   EntityType.DATA_PRODUCT,
 ];
+
+const TOPIC_TASK_FORM_FIELDS = [
+  TabSpecificField.OWNERS,
+  TabSpecificField.TAGS,
+  'messageSchema',
+].join(',');
+
+const API_ENDPOINT_TASK_FORM_FIELDS = [
+  TabSpecificField.OWNERS,
+  TabSpecificField.TAGS,
+  'requestSchema',
+  'responseSchema',
+].join(',');
+
+const TASK_FIELD_CONTAINER_MAP: Record<string, string> = {
+  'messageSchema.schemaFields': 'messageSchema',
+  'dataModel.columns': 'dataModel',
+  'requestSchema.schemaFields': 'requestSchema',
+  'responseSchema.schemaFields': 'responseSchema',
+};
+
+export const getNormalizedTaskFieldContainer = (field?: string | null) => {
+  if (!field) {
+    return undefined;
+  }
+
+  return TASK_FIELD_CONTAINER_MAP[field] ?? field;
+};
+
+export const getTaskFieldColumns = (
+  entityType: EntityType,
+  entityData: EntityData,
+  field?: string | null
+) => {
+  switch (field) {
+    case 'messageSchema.schemaFields':
+      return (entityData as Topic).messageSchema?.schemaFields ?? [];
+    case 'dataModel.columns':
+      return (entityData as Container).dataModel?.columns ?? [];
+    case 'requestSchema.schemaFields':
+      return (entityData as APIEndpoint).requestSchema?.schemaFields ?? [];
+    case 'responseSchema.schemaFields':
+      return (entityData as APIEndpoint).responseSchema?.schemaFields ?? [];
+    default:
+      return getEntityColumnsDetails(entityType, entityData);
+  }
+};
+
+export const getFormattedTaskFieldValue = (value?: string | null) => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (!value.includes('.') || /^".*"$/.test(value)) {
+    return value;
+  }
+
+  return `"${value}"`;
+};
+
+export const getDescriptionTaskFieldPath = (
+  field?: string | null,
+  value?: string | null
+) => {
+  const container = getNormalizedTaskFieldContainer(field);
+  const formattedValue = getFormattedTaskFieldValue(value);
+
+  if (!container || !formattedValue) {
+    return EntityField.DESCRIPTION;
+  }
+
+  return `${container}${ENTITY_LINK_SEPARATOR}${formattedValue}${ENTITY_LINK_SEPARATOR}description`;
+};
+
+export const getTagTaskFieldPath = (
+  field?: string | null,
+  value?: string | null
+) => {
+  const container = getNormalizedTaskFieldContainer(field);
+  const formattedValue = getFormattedTaskFieldValue(value);
+
+  if (!container || !formattedValue) {
+    return undefined;
+  }
+
+  return `${container}.${formattedValue}`;
+};
 
 export const getBreadCrumbList = (
   entityData: EntityData,
@@ -565,7 +788,7 @@ export const fetchEntityDetail = (
       break;
     case EntityType.TOPIC:
       getTopicByFqn(entityFQN, {
-        fields: [TabSpecificField.OWNERS, TabSpecificField.TAGS].join(','),
+        fields: TOPIC_TASK_FORM_FIELDS,
       })
         .then((res) => {
           setEntityData(res as EntityData);
@@ -714,7 +937,7 @@ export const fetchEntityDetail = (
     }
     case EntityType.API_ENDPOINT: {
       getApiEndPointByFQN(entityFQN, {
-        fields: [TabSpecificField.OWNERS, TabSpecificField.TAGS].join(','),
+        fields: API_ENDPOINT_TASK_FORM_FIELDS,
       })
         .then((res) => {
           setEntityData(res as EntityData);

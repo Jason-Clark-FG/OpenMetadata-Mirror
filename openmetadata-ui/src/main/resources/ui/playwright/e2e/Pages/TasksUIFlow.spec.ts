@@ -22,6 +22,12 @@ import {
   getApiContext,
   redirectToHomePage,
 } from '../../utils/common';
+import {
+  waitForTaskActionResponse,
+  waitForTaskCreateResponse,
+  waitForTaskListResponse,
+  waitForTaskResolveResponse,
+} from '../../utils/task';
 
 const adminFile = 'playwright/.auth/admin.json';
 test.use({ storageState: adminFile });
@@ -89,7 +95,7 @@ const createDescriptionTaskViaUI = async (
   await page.locator(descriptionBox).clear();
   await page.locator(descriptionBox).fill(description);
 
-  const taskResponse = page.waitForResponse('/api/v1/tasks');
+  const taskResponse = waitForTaskCreateResponse(page);
   await page.click('button[type="submit"]');
   await taskResponse;
 
@@ -144,7 +150,7 @@ const createTagTaskViaUI = async (
   await tagDropdownValue.click();
   await clickOutside(page);
 
-  const taskResponse = page.waitForResponse('/api/v1/tasks');
+  const taskResponse = waitForTaskCreateResponse(page);
   await page.click('button[type="submit"]');
   await taskResponse;
 
@@ -161,23 +167,17 @@ const resolveTaskWithApproval = async (page: Page) => {
   }
 
   // Look for approve button - try specific selectors in order
-  const acceptSuggestionBtn = page.locator('button:has-text("Accept Suggestion")').first();
-  const approveBtn = page.getByTestId('approve-button');
+  const approveBtn = page.getByTestId('approve-button').first();
   const approveTextBtn = page.locator('button:has-text("Approve")').first();
 
   let clicked = false;
-  if (await acceptSuggestionBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
-    await acceptSuggestionBtn.click();
-    await taskResolve;
-    clicked = true;
-  } else if (await approveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+  if (await approveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const taskResolve = waitForTaskResolveResponse(page);
     await approveBtn.click();
     await taskResolve;
     clicked = true;
   } else if (await approveTextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    const taskResolve = waitForTaskResolveResponse(page);
     await approveTextBtn.click();
     await taskResolve;
     clicked = true;
@@ -199,7 +199,7 @@ const resolveTaskWithRejection = async (page: Page, comment: string) => {
   // Try direct Reject button first (visible in task card summary)
   const rejectBtn = page.getByRole('button', { name: /^reject$/i });
   if (await rejectBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+    const taskResolve = waitForTaskActionResponse(page);
     await rejectBtn.click();
     await taskResolve;
     await page.waitForLoadState('networkidle');
@@ -214,7 +214,7 @@ const resolveTaskWithRejection = async (page: Page, comment: string) => {
     // The dropdown has "Close" option which closes/rejects the task
     const closeOption = page.getByRole('menuitem', { name: /close/i });
     if (await closeOption.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const taskResolve = page.waitForResponse('/api/v1/tasks/*/resolve');
+      const taskResolve = waitForTaskActionResponse(page);
       await closeOption.click();
       await taskResolve;
       await page.waitForLoadState('networkidle');
@@ -239,7 +239,7 @@ const navigateToActivityFeedTasks = async (page: Page) => {
 
     if (!isActive) {
       // Only wait for response if we're actually switching tabs
-      const taskFeeds = page.waitForResponse('/api/v1/tasks**', { timeout: 10000 }).catch(() => null);
+      const taskFeeds = waitForTaskListResponse(page).catch(() => null);
       await tasksTab.click();
       await taskFeeds;
     }

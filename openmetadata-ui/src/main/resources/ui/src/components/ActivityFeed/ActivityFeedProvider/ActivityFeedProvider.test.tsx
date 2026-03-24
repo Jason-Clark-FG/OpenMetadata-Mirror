@@ -30,7 +30,11 @@ import {
   postThread,
   removeActivityReaction,
 } from '../../../rest/feedsAPI';
-import { listTasks } from '../../../rest/tasksAPI';
+import {
+  listMyAssignedTasks,
+  listMyOwnedTasks,
+  listTasks,
+} from '../../../rest/tasksAPI';
 import ActivityFeedProvider from './ActivityFeedProvider';
 import {
   DummyActivityCommentComponent,
@@ -43,10 +47,18 @@ import {
   DummySetActiveActivityComponent,
 } from './DummyTestComponent';
 
+const mockUseApplicationStore = jest.fn(() => ({
+  currentUser: mockUserData,
+}));
+
 jest.mock('../../../hooks/useApplicationStore', () => ({
-  useApplicationStore: jest.fn(() => ({
-    currentUser: mockUserData,
-  })),
+  useApplicationStore: (...args: unknown[]) => mockUseApplicationStore(...args),
+}));
+
+jest.mock('../../../hooks/useDomainStore', () => ({
+  useDomainStore: jest.fn((selector) =>
+    selector({ activeDomain: 'All Domains' })
+  ),
 }));
 
 jest.mock('../ActivityFeedDrawer/ActivityFeedDrawer', () =>
@@ -85,6 +97,9 @@ jest.mock('../../../rest/feedsAPI', () => ({
 
 jest.mock('../../../rest/tasksAPI', () => ({
   listTasks: jest.fn().mockResolvedValue({ data: [], paging: {} }),
+  listMyAssignedTasks: jest.fn().mockResolvedValue({ data: [], paging: {} }),
+  listMyCreatedTasks: jest.fn().mockResolvedValue({ data: [], paging: {} }),
+  listMyOwnedTasks: jest.fn().mockResolvedValue({ data: [], paging: {} }),
   addTaskComment: jest.fn(),
   getTaskById: jest.fn(),
   tasksToThreads: jest.fn().mockReturnValue([]),
@@ -118,6 +133,9 @@ jest.mock('../../../utils/FeedUtils', () => ({
 describe('ActivityFeedProvider', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseApplicationStore.mockReturnValue({
+      currentUser: mockUserData,
+    });
   });
 
   it('should show loading indicator in initial fetch', async () => {
@@ -139,13 +157,14 @@ describe('ActivityFeedProvider', () => {
       );
     });
 
-    // When entityType is USER, userId is from the 'user' prop (undefined in this test)
     expect(listTasks).toHaveBeenCalledWith({
       statusGroup: 'open',
-      assignee: undefined,
+      assignee: 'admin',
+      createdBy: undefined,
       aboutEntity: undefined,
       after: undefined,
       limit: undefined,
+      domain: undefined,
       fields: 'assignees,createdBy,about,comments,payload',
     });
   });
@@ -159,15 +178,48 @@ describe('ActivityFeedProvider', () => {
       );
     });
 
-    // When entityType is USER, userId is from the 'user' prop (undefined in this test)
     expect(listTasks).toHaveBeenCalledWith({
       statusGroup: 'closed',
-      assignee: undefined,
+      assignee: 'admin',
+      createdBy: undefined,
       aboutEntity: undefined,
       after: 'after-234',
       limit: undefined,
+      domain: undefined,
       fields: 'assignees,createdBy,about,comments,payload',
     });
+  });
+
+  it('should use assigned and owned task endpoints for current user task feed', async () => {
+    mockUseApplicationStore.mockReturnValue({
+      currentUser: {
+        ...mockUserData,
+        name: 'admin',
+        fullyQualifiedName: 'admin',
+      },
+    });
+
+    await act(async () => {
+      render(
+        <ActivityFeedProvider>
+          <DummyChildrenComponent />
+        </ActivityFeedProvider>
+      );
+    });
+
+    expect(listMyAssignedTasks).toHaveBeenCalledWith({
+      statusGroup: 'open',
+      limit: undefined,
+      domain: undefined,
+      fields: 'assignees,createdBy,about,comments,payload',
+    });
+    expect(listMyOwnedTasks).toHaveBeenCalledWith({
+      statusGroup: 'open',
+      limit: undefined,
+      domain: undefined,
+      fields: 'assignees,createdBy,about,comments,payload',
+    });
+    expect(listTasks).not.toHaveBeenCalled();
   });
 
   it('should call getFeedData for table entity', async () => {

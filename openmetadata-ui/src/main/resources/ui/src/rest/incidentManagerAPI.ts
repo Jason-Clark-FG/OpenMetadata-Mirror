@@ -19,7 +19,8 @@ import { EntityReference } from '../generated/entity/data/table';
 import { TestCaseResolutionStatus } from '../generated/tests/testCaseResolutionStatus';
 import { ListParams } from '../interface/API.interface';
 import APIClient from './index';
-import { listTasks, ListTasksParams, Task, TaskCategory } from './tasksAPI';
+import type { ListTasksParams, Task } from './tasksAPI';
+import { listTasks, TaskCategory } from './tasksAPI';
 
 const testCaseIncidentUrl = '/dataQuality/testCases/testCaseIncidentStatus';
 
@@ -150,4 +151,5 @@ export const getIncidentTaskByStateId = async (
   return null;
 };
 
-export { Task, TaskCategory } from './tasksAPI';
+export { TaskCategory } from './tasksAPI';
+export type { Task } from './tasksAPI';

@@ -101,7 +101,10 @@ import {
   verifyWorkflowInstanceExists,
 } from '../../utils/glossary';
 import { sidebarClick } from '../../utils/sidebar';
-import { TaskDetails } from '../../utils/task';
+import {
+  TaskDetails,
+  waitForTaskResolveResponse,
+} from '../../utils/task';
 import { performUserLogin } from '../../utils/user';
 
 const user1 = new UserClass();
@@ -458,7 +461,7 @@ test.describe('Glossary tests', () => {
       await sidebarClick(page1, SidebarItem.GLOSSARY);
       await selectActiveGlossary(page1, glossary1.data.name);
 
-      const taskResolve = page1.waitForResponse('/api/v1/feed/tasks/*/resolve');
+      const taskResolve = page1.waitForResponse('/api/v1/tasks/*/resolve');
       await page1
         .getByTestId(`${glossary1.data.terms[0].data.name}-approve-btn`)
         .click();
@@ -472,7 +475,7 @@ test.describe('Glossary tests', () => {
       );
 
       const taskResolve2 = page1.waitForResponse(
-        '/api/v1/feed/tasks/*/resolve'
+        '/api/v1/tasks/*/resolve'
       );
       await page1
         .getByTestId(`${glossary1.data.terms[1].data.name}-reject-btn`)
@@ -1196,15 +1199,8 @@ test.describe('Glossary tests', () => {
 
       await createDescriptionTaskForGlossary(page, value, glossary1);
 
-      // Wait for task resolve - supports both old and new API endpoints
-      const taskResolve = page.waitForResponse((response) =>
-        response.url().includes('/resolve') &&
-        (response.url().includes('/api/v1/tasks/') ||
-          response.url().includes('/api/v1/feed/tasks/'))
-      );
-      await page.click(
-        '.ant-btn-compact-first-item:has-text("Accept Suggestion")'
-      );
+      const taskResolve = waitForTaskResolveResponse(page);
+      await page.getByTestId('approve-button').first().click();
       await taskResolve;
 
       await redirectToHomePage(page);
@@ -1244,15 +1240,8 @@ test.describe('Glossary tests', () => {
 
       await createDescriptionTaskForGlossary(page, value, glossaryTerm1, false);
 
-      // Wait for task resolve - supports both old and new API endpoints
-      const taskResolve = page.waitForResponse((response) =>
-        response.url().includes('/resolve') &&
-        (response.url().includes('/api/v1/tasks/') ||
-          response.url().includes('/api/v1/feed/tasks/'))
-      );
-      await page.click(
-        '.ant-btn-compact-first-item:has-text("Accept Suggestion")'
-      );
+      const taskResolve = waitForTaskResolveResponse(page);
+      await page.getByTestId('approve-button').first().click();
       await taskResolve;
 
       await redirectToHomePage(page);

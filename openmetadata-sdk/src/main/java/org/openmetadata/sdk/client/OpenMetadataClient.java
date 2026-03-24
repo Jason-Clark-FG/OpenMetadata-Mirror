@@ -38,7 +38,9 @@ import org.openmetadata.sdk.services.domains.DomainService;
 import org.openmetadata.sdk.services.events.ChangeEventService;
 import org.openmetadata.sdk.services.events.EventSubscriptionService;
 import org.openmetadata.sdk.services.events.NotificationTemplateService;
+import org.openmetadata.sdk.services.feed.AnnouncementService;
 import org.openmetadata.sdk.services.feed.FeedService;
+import org.openmetadata.sdk.services.feed.TaskFormSchemaService;
 import org.openmetadata.sdk.services.glossary.GlossaryService;
 import org.openmetadata.sdk.services.glossary.GlossaryTermService;
 import org.openmetadata.sdk.services.governance.AIGovernancePolicyService;
@@ -191,6 +193,12 @@ public class OpenMetadataClient {
   // Tasks
   private final TaskService tasks;
 
+  // Announcements
+  private final AnnouncementService announcements;
+
+  // Task Form Schemas
+  private final TaskFormSchemaService taskFormSchemas;
+
   public OpenMetadataClient(OpenMetadataConfig config) {
     this.config = config;
     this.httpClient = new OpenMetadataHttpClient(config);
@@ -301,6 +309,12 @@ public class OpenMetadataClient {
 
     // Initialize task services
     this.tasks = new TaskService(httpClient);
+
+    // Initialize announcement services
+    this.announcements = new AnnouncementService(httpClient);
+
+    // Initialize task form schema services
+    this.taskFormSchemas = new TaskFormSchemaService(httpClient);
 
     // Initialize feed service
     this.feed = new FeedService(httpClient);
@@ -595,6 +609,16 @@ public class OpenMetadataClient {
   // Task Service Getter
   public TaskService tasks() {
     return tasks;
+  }
+
+  // Announcement Service Getter
+  public AnnouncementService announcements() {
+    return announcements;
+  }
+
+  // Task Form Schema Service Getter
+  public TaskFormSchemaService taskFormSchemas() {
+    return taskFormSchemas;
   }
 
   /**

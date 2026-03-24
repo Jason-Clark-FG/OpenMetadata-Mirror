@@ -120,7 +120,10 @@ export const getErrorText = (
     }
     if (!errorText) {
       errorText = get(value, 'response.data', '');
-      errorText = typeof errorText === 'string' ? errorText : null;
+      errorText =
+        typeof errorText === 'string' && !errorText.trimStart().startsWith('<')
+          ? errorText
+          : null;
     }
   }
 

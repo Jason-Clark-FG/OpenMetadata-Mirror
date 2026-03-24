@@ -69,16 +69,10 @@ import {
   EntityStatus,
   GlossaryTerm,
 } from '../../../generated/entity/data/glossaryTerm';
-import {
-  Thread,
-  ThreadTaskStatus,
-  ThreadType,
-} from '../../../generated/entity/feed/thread';
 import { User } from '../../../generated/entity/teams/user';
 import { Paging } from '../../../generated/type/paging';
 import { usePaging } from '../../../hooks/paging/usePaging';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
-import { getAllFeeds } from '../../../rest/feedsAPI';
 import {
   getFirstLevelGlossaryTermsPaginated,
   getGlossaryTermChildrenLazy,
@@ -87,7 +81,11 @@ import {
   searchGlossaryTermsPaginated,
 } from '../../../rest/glossaryAPI';
 import {
+  listTasks,
   resolveTask as resolveTaskAPI,
+  Task,
+  TaskEntityStatus,
+  TaskEntityType,
   TaskResolutionType,
 } from '../../../rest/tasksAPI';
 import { Transi18next } from '../../../utils/CommonUtils';
@@ -106,6 +104,7 @@ import {
 } from '../../../utils/GlossaryUtils';
 import { getGlossaryPath } from '../../../utils/RouterUtils';
 import { ownerTableObject } from '../../../utils/TableColumn.util';
+import { isTaskPendingFurtherApproval } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { DraggableBodyRowProps } from '../../common/Draggable/DraggableBodyRowProps.interface';
 import Loader from '../../common/Loader/Loader';
@@ -138,7 +137,7 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
   const { permissions } = useGenericContext<GlossaryTerm>();
   const { t } = useTranslation();
   const [termTaskThreads, setTermTaskThreads] = useState<
-    Record<string, Thread[]>
+    Record<string, Task[]>
   >({});
 
   const { glossaryTerms, expandableKeys } = useMemo(() => {
@@ -393,30 +392,25 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
       return;
     }
 
-    const entityType = isGlossary
-      ? EntityType.GLOSSARY
-      : EntityType.GLOSSARY_TERM;
-
     try {
-      const { data } = await getAllFeeds(
-        `<#E::${entityType}::${activeGlossary.fullyQualifiedName}>`,
-        undefined,
-        ThreadType.Task,
-        undefined,
-        ThreadTaskStatus.Open,
-        undefined,
-        API_RES_MAX_SIZE
-      );
+      const { data } = await listTasks({
+        aboutEntity: activeGlossary.fullyQualifiedName,
+        status: TaskEntityStatus.Open,
+        type: TaskEntityType.GlossaryApproval,
+        limit: API_RES_MAX_SIZE,
+        fields: 'about,assignees',
+      });
 
-      // Organize tasks by glossary term FQN
+      // Organize tasks by glossary term FQN using entity link format
       const tasksByTerm = data.reduce(
-        (acc: Record<string, Thread[]>, thread: Thread) => {
-          const termFQN = thread.about;
+        (acc: Record<string, Task[]>, task: Task) => {
+          const termFQN = task.about?.fullyQualifiedName;
           if (termFQN) {
-            if (!acc[termFQN]) {
-              acc[termFQN] = [];
+            const entityLink = `<#E::${EntityType.GLOSSARY_TERM}::${termFQN}>`;
+            if (!acc[entityLink]) {
+              acc[entityLink] = [];
             }
-            acc[termFQN].push(thread);
+            acc[entityLink].push(task);
           }
 
           return acc;
@@ -653,6 +647,21 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
     }) as ModifiedGlossary[];
   };
 
+  const updateGlossaryTermTask = (
+    tasks: Record<string, Task[]>,
+    entityLink: string,
+    updatedTask: Task
+  ) => {
+    const existingTasks = tasks[entityLink] ?? [];
+
+    return {
+      ...tasks,
+      [entityLink]: existingTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      ),
+    };
+  };
+
   const updateTaskData = useCallback(
     async (
       data: ResolveTask,
@@ -669,16 +678,34 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             ? TaskResolutionType.Approved
             : TaskResolutionType.Rejected;
 
-        await resolveTaskAPI(taskId + '', {
+        const updatedTask = await resolveTaskAPI(taskId + '', {
           resolutionType,
           newValue: data.newValue,
         });
-        showSuccessToast(t('server.task-resolved-successfully'));
+        const isPendingFurtherApproval =
+          isTaskPendingFurtherApproval(updatedTask);
+
+        showSuccessToast(
+          isPendingFurtherApproval
+            ? 'Vote recorded.'
+            : t('server.task-resolved-successfully')
+        );
 
         const currentExpandedKeys = [...expandedRowKeys];
         setExpandedRowKeys(currentExpandedKeys);
 
         if (glossaryChildTerms && glossaryTermFqn) {
+          const entityLink = `<#E::${EntityType.GLOSSARY_TERM}::${glossaryTermFqn}>`;
+          if (isPendingFurtherApproval) {
+            if (termTaskThreads[entityLink]) {
+              setTermTaskThreads(
+                updateGlossaryTermTask(termTaskThreads, entityLink, updatedTask)
+              );
+            }
+
+            return;
+          }
+
           const newStatus =
             data.newValue === 'approved'
               ? EntityStatus.Approved
@@ -703,13 +730,10 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
             setGlossaryChildTerms(updatedTerms);
           }
 
-          // remove resolved task from term task threads
-          if (termTaskThreads[glossaryTermFqn]) {
+          if (termTaskThreads[entityLink]) {
             const updatedThreads = { ...termTaskThreads };
-            updatedThreads[glossaryTermFqn] = updatedThreads[
-              glossaryTermFqn
-            ].filter(
-              (thread) => !(thread.id && thread.id.toString() === taskId)
+            updatedThreads[entityLink] = updatedThreads[entityLink].filter(
+              (task) => !(task.id && task.id.toString() === taskId)
             );
 
             setTermTaskThreads(updatedThreads);

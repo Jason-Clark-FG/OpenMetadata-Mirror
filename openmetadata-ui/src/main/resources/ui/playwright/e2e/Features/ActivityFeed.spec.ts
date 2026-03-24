@@ -208,9 +208,10 @@ test.describe('FeedWidget on landing page', () => {
 
     const myDataOption = page.getByRole('menuitem', { name: 'My Data' });
 
-    const feedResponse = page.waitForResponse('/api/v1/feed*');
     await myDataOption.click();
-    await feedResponse;
+
+    // Wait for dropdown to close after selection
+    await expect(page.locator('.ant-dropdown')).not.toBeVisible();
 
     // Switch back to All Activity
     await sortDropdown.click();
@@ -221,7 +222,7 @@ test.describe('FeedWidget on landing page', () => {
     });
     if (await allActivityOption.isVisible()) {
       await allActivityOption.click();
-      await feedResponse;
+      await expect(page.locator('.ant-dropdown')).not.toBeVisible();
     }
   });
 

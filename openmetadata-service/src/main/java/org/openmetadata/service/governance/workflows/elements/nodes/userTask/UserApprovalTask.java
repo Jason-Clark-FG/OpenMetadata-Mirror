@@ -240,6 +240,7 @@ public class UserApprovalTask implements NodeInterface {
             .event("create")
             .implementation(CreateTaskImpl.class.getName())
             .addFieldExtension(inputNamespaceMapExpr)
+            .addFieldExtension(assigneesVarNameExpr)
             .addFieldExtension(approvalThresholdExpr)
             .addFieldExtension(rejectionThresholdExpr)
             .addFieldExtension(taskTypeExpr)

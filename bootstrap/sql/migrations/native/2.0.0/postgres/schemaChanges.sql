@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS task_entity (
     updatedat bigint GENERATED ALWAYS AS (((json ->> 'updatedAt'::text))::bigint) STORED NOT NULL,
     deleted boolean GENERATED ALWAYS AS (((json ->> 'deleted'::text))::boolean) STORED,
     aboutfqnhash character varying(256) GENERATED ALWAYS AS ((json ->> 'aboutFqnHash'::text)) STORED,
+    createdbyid character varying(36) GENERATED ALWAYS AS ((json ->> 'createdById'::text)) STORED,
     PRIMARY KEY (id),
     CONSTRAINT uk_task_fqn_hash UNIQUE (fqnhash)
 );
@@ -30,6 +31,8 @@ CREATE INDEX IF NOT EXISTS idx_task_deleted ON task_entity (deleted);
 CREATE INDEX IF NOT EXISTS idx_task_status_category ON task_entity (status, category);
 CREATE INDEX IF NOT EXISTS idx_task_about_fqn_hash ON task_entity (aboutfqnhash);
 CREATE INDEX IF NOT EXISTS idx_task_status_about ON task_entity (status, aboutfqnhash);
+CREATE INDEX IF NOT EXISTS idx_task_created_by_id ON task_entity (createdbyid);
+CREATE INDEX IF NOT EXISTS idx_task_created_by_category ON task_entity (createdbyid, category);
 
 CREATE TABLE IF NOT EXISTS new_task_sequence (
     id bigint NOT NULL DEFAULT 0
@@ -89,3 +92,51 @@ CREATE TABLE IF NOT EXISTS activity_stream_config (
 
 CREATE INDEX IF NOT EXISTS idx_activity_config_scope ON activity_stream_config (scope);
 CREATE INDEX IF NOT EXISTS idx_activity_config_enabled ON activity_stream_config (enabled);
+
+-- =====================================================
+-- ANNOUNCEMENT ENTITY TABLE
+-- Standalone entity for asset announcements (migrated from thread_entity)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS announcement_entity (
+    id character varying(36) NOT NULL,
+    json jsonb NOT NULL,
+    fqnhash character varying(768) NOT NULL,
+    name character varying(256) GENERATED ALWAYS AS ((json ->> 'name'::text)) STORED NOT NULL,
+    entitylink character varying(512) GENERATED ALWAYS AS ((json ->> 'entityLink'::text)) STORED,
+    status character varying(32) GENERATED ALWAYS AS ((json ->> 'status'::text)) STORED,
+    starttime bigint GENERATED ALWAYS AS (((json ->> 'startTime'::text))::bigint) STORED,
+    endtime bigint GENERATED ALWAYS AS (((json ->> 'endTime'::text))::bigint) STORED,
+    createdby character varying(256) GENERATED ALWAYS AS ((json ->> 'createdBy'::text)) STORED,
+    createdat bigint GENERATED ALWAYS AS (((json ->> 'createdAt'::text))::bigint) STORED,
+    updatedat bigint GENERATED ALWAYS AS (((json ->> 'updatedAt'::text))::bigint) STORED,
+    deleted boolean GENERATED ALWAYS AS (((json ->> 'deleted'::text))::boolean) STORED,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_announcement_fqn_hash UNIQUE (fqnhash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_announcement_status ON announcement_entity (status);
+CREATE INDEX IF NOT EXISTS idx_announcement_entitylink ON announcement_entity (entitylink);
+CREATE INDEX IF NOT EXISTS idx_announcement_starttime ON announcement_entity (starttime);
+CREATE INDEX IF NOT EXISTS idx_announcement_endtime ON announcement_entity (endtime);
+CREATE INDEX IF NOT EXISTS idx_announcement_deleted ON announcement_entity (deleted);
+
+-- =====================================================
+-- TASK FORM SCHEMA ENTITY TABLE
+-- Stores form schemas for different task types
+-- =====================================================
+CREATE TABLE IF NOT EXISTS task_form_schema_entity (
+    id character varying(36) NOT NULL,
+    json jsonb NOT NULL,
+    fqnhash character varying(768) NOT NULL,
+    name character varying(256) GENERATED ALWAYS AS ((json ->> 'name'::text)) STORED NOT NULL,
+    tasktype character varying(64) GENERATED ALWAYS AS ((json ->> 'taskType'::text)) STORED,
+    taskcategory character varying(32) GENERATED ALWAYS AS ((json ->> 'taskCategory'::text)) STORED,
+    updatedat bigint GENERATED ALWAYS AS (((json ->> 'updatedAt'::text))::bigint) STORED,
+    deleted boolean GENERATED ALWAYS AS (((json ->> 'deleted'::text))::boolean) STORED,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_task_form_schema_fqn_hash UNIQUE (fqnhash)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_form_schema_name ON task_form_schema_entity (name);
+CREATE INDEX IF NOT EXISTS idx_task_form_schema_tasktype ON task_form_schema_entity (tasktype);
+CREATE INDEX IF NOT EXISTS idx_task_form_schema_deleted ON task_form_schema_entity (deleted);

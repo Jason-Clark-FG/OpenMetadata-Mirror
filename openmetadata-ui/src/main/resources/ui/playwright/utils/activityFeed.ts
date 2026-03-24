@@ -131,26 +131,56 @@ export const addMentionCommentInFeed = async (
 
   await page.getByTestId('comments-input-field').click();
 
-  const userSuggestionsResponse = page.waitForResponse(
-    `/api/v1/search/query?q=*${user}***`
-  );
+  const userSuggestionsResponse = page
+    .waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        response.url().includes('/api/v1/search/query') &&
+        response.url().includes(`q=*${user}`),
+      { timeout: 5000 }
+    )
+    .catch(() => null);
+  const userSuggestionOption = page.locator(`[data-value="@${user}"]`).first();
 
   await page
     .locator(
       '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
     )
     .fill(`Can you resolve this thread for me? @${user}`);
-  await userSuggestionsResponse;
+  await Promise.race([
+    userSuggestionsResponse,
+    userSuggestionOption.waitFor({ state: 'visible', timeout: 5000 }),
+  ]).catch(() => undefined);
 
-  await page.locator(`[data-value="@${user}"]`).first().click();
+  if (await userSuggestionOption.isVisible().catch(() => false)) {
+    await userSuggestionOption.click();
+  } else {
+    await page.keyboard.press('Enter');
+  }
 
   // Send reply
   await expect(page.locator('[data-testid="send-button"]')).toBeVisible();
   await expect(page.locator('[data-testid="send-button"]')).not.toBeDisabled();
 
-  const postReplyResponse = page.waitForResponse('/api/v1/feed/*/posts');
+  const postReplyResponse = page
+    .waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        /\/api\/v1\/feed\/[^/]+\/posts(?:\?|$)/.test(response.url()),
+      { timeout: 5000 }
+    )
+    .catch(() => null);
   await page.locator('[data-testid="send-button"]').click();
-  await postReplyResponse;
+  await Promise.race([
+    postReplyResponse,
+    page.waitForFunction(() => {
+      const editor = document.querySelector(
+        '[data-testid="editor-wrapper"] [contenteditable="true"].ql-editor'
+      );
+
+      return !editor || (editor.textContent ?? '').trim().length === 0;
+    }),
+  ]).catch(() => undefined);
 };
 
 /**

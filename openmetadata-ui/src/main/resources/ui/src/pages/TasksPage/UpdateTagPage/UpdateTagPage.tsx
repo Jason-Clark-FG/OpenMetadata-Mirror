@@ -46,10 +46,11 @@ import {
   fetchEntityDetail,
   fetchOptions,
   getBreadCrumbList,
-  getColumnObject,
-  getEntityColumnsDetails,
+  getColumnObjectByPath,
+  getTagTaskFieldPath,
   getTaskAssignee,
   getTaskEntityFQN,
+  getTaskFieldColumns,
   getTaskMessage,
 } from '../../../utils/TasksUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
@@ -107,15 +108,17 @@ const UpdateTag = () => {
   const back = () => navigate(-1);
 
   const columnObject = useMemo(() => {
-    const column = sanitizeValue.split(FQN_SEPARATOR_CHAR).slice(-1);
+    const fieldPathSegments = sanitizeValue
+      .split(FQN_SEPARATOR_CHAR)
+      .filter(Boolean);
 
-    return getColumnObject(
-      column[0],
-      getEntityColumnsDetails(entityType, entityData),
+    return getColumnObjectByPath(
+      fieldPathSegments,
+      getTaskFieldColumns(entityType, entityData, field),
       entityType,
       chartData
     );
-  }, [field, entityData, chartData, entityType]);
+  }, [field, entityData, chartData, entityType, sanitizeValue]);
 
   const getTags = () => {
     if (!isEmpty(columnObject) && !isUndefined(columnObject)) {
@@ -134,11 +137,7 @@ const UpdateTag = () => {
   };
 
   const getFieldPath = () => {
-    if (field && value) {
-      return `${field}.${value}`;
-    }
-
-    return undefined;
+    return getTagTaskFieldPath(field, value);
   };
 
   const onCreateTask: FormProps['onFinish'] = async (formValues) => {
@@ -190,6 +189,11 @@ const UpdateTag = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSuggestionChange = (newTags: TagLabel[]) => {
+    setSuggestion(newTags);
+    form.setFieldValue('updatedTags', newTags);
   };
 
   useEffect(() => {
@@ -291,28 +295,26 @@ const UpdateTag = () => {
                   />
                 </Form.Item>
 
-                {currentTags.length ? (
-                  <Form.Item
-                    data-testid="tags-label"
-                    label={t('label.update-entity', {
-                      entity: t('label.tag-plural'),
-                    })}
-                    name="updatedTags"
-                    rules={[
-                      {
-                        required: true,
-                        message: t('message.field-text-is-required', {
-                          fieldText: t('label.tag-plural'),
-                        }),
-                      },
-                    ]}>
-                    <TagsTabs
-                      tags={currentTags}
-                      value={suggestion}
-                      onChange={setSuggestion}
-                    />
-                  </Form.Item>
-                ) : null}
+                <Form.Item
+                  data-testid="tags-label"
+                  label={t('label.update-entity', {
+                    entity: t('label.tag-plural'),
+                  })}
+                  name="updatedTags"
+                  rules={[
+                    {
+                      required: true,
+                      message: t('message.field-text-is-required', {
+                        fieldText: t('label.tag-plural'),
+                      }),
+                    },
+                  ]}>
+                  <TagsTabs
+                    tags={currentTags}
+                    value={suggestion}
+                    onChange={handleSuggestionChange}
+                  />
+                </Form.Item>
 
                 <Form.Item>
                   <Space

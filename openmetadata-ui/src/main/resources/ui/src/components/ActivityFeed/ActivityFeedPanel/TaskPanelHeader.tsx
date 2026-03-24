@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { TASK_ENTITY_TYPES } from '../../../constants/Task.constant';
 import { Task, TaskEntityStatus } from '../../../rest/tasksAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { getTaskDisplayId } from '../../../utils/TasksUtils';
 import './feed-panel-header.less';
 
 interface TaskPanelHeaderProps {
@@ -42,7 +43,7 @@ const TaskPanelHeader: FC<TaskPanelHeaderProps> = ({
       <Space className="w-full justify-between">
         <Space direction="vertical" size={0}>
           <Typography.Text className="font-semibold text-md">
-            {`#${task.taskId} `}
+            {`#${getTaskDisplayId(task.taskId)} `}
             {t(taskTypeLabel)}
           </Typography.Text>
           {task.about && (

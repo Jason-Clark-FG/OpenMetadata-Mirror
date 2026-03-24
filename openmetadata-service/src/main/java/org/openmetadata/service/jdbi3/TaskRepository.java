@@ -35,6 +35,7 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.SuggestionPayload;
+import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
@@ -57,6 +58,7 @@ import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
+import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
 @Repository
@@ -74,7 +76,13 @@ public class TaskRepository extends EntityRepository<Task> {
   public static final String FIELD_PAYLOAD = "payload";
 
   public TaskRepository() {
-    super(COLLECTION_PATH, Entity.TASK, Task.class, Entity.getCollectionDAO().taskDAO(), "", "");
+    super(
+        COLLECTION_PATH,
+        Entity.TASK,
+        Task.class,
+        Entity.getCollectionDAO().taskDAO(),
+        "assignees,reviewers,watchers,about,createdBy",
+        "assignees,reviewers,watchers,about,createdBy");
     supportsSearch = true;
     quoteFqn = false;
     this.allowedFields.add(FIELD_ASSIGNEES);
@@ -324,6 +332,11 @@ public class TaskRepository extends EntityRepository<Task> {
     List<EntityReference> assignees = task.getAssignees();
     List<EntityReference> reviewers = task.getReviewers();
     List<EntityReference> watchers = task.getWatchers();
+
+    // Preserve createdById in JSON for the generated column index
+    if (createdBy != null && createdBy.getId() != null) {
+      task.setCreatedById(createdBy.getId().toString());
+    }
 
     task.withDomains(null)
         .withAbout(null)
@@ -675,7 +688,8 @@ public class TaskRepository extends EntityRepository<Task> {
     // Allow if user is a direct assignee
     if (!nullOrEmpty(assignees)
         && assignees.stream().anyMatch(assignee -> assignee.getName().equals(userName))) {
-      if (about != null) {
+      // For approval tasks, assignees (reviewers) are authorized by assignment itself
+      if (about != null && !isApprovalTask(task)) {
         validateUnderlyingEntityPermission(authorizer, securityContext, task);
       }
       return;
@@ -690,7 +704,8 @@ public class TaskRepository extends EntityRepository<Task> {
       if (!nullOrEmpty(assignees)
           && assignees.stream().anyMatch(assignee -> teamNames.contains(assignee.getName()))) {
         // For resolution (not just closing), team members also need entity permission
-        if (!closeTask && about != null) {
+        // unless it's an approval task where assignment itself grants authorization
+        if (!closeTask && about != null && !isApprovalTask(task)) {
           validateUnderlyingEntityPermission(authorizer, securityContext, task);
         }
         return;
@@ -750,12 +765,18 @@ public class TaskRepository extends EntityRepository<Task> {
     return switch (taskType) {
       case DescriptionUpdate -> MetadataOperation.EDIT_DESCRIPTION;
       case TagUpdate -> MetadataOperation.EDIT_TAGS;
-      case GlossaryApproval -> MetadataOperation.EDIT_ALL;
+      case GlossaryApproval, RequestApproval -> MetadataOperation.EDIT_ALL;
       case OwnershipUpdate -> MetadataOperation.EDIT_OWNERS;
       case TierUpdate -> MetadataOperation.EDIT_TIER;
       case DomainUpdate -> MetadataOperation.EDIT_ALL;
       default -> null;
     };
+  }
+
+  private boolean isApprovalTask(Task task) {
+    TaskEntityType taskType = task.getType();
+    return taskType == TaskEntityType.GlossaryApproval
+        || taskType == TaskEntityType.RequestApproval;
   }
 
   private MetadataOperation getOperationForSuggestion(Task task) {
@@ -823,6 +844,112 @@ public class TaskRepository extends EntityRepository<Task> {
       UUID toId, String toEntity, Relationship relationship) {
     return EntityUtil.getEntityReferences(
         daoCollection.relationshipDAO().findFrom(toId, toEntity, relationship.ordinal()));
+  }
+
+  /**
+   * Find an open task for the given entity and task type.
+   *
+   * @param entityFqn Fully qualified name of the target entity
+   * @param taskType The type of task to find
+   * @return The task if found, or null
+   */
+  public Task findOpenTaskByEntityAndType(String entityFqn, TaskEntityType taskType) {
+    String json =
+        daoCollection
+            .taskDAO()
+            .findByAboutAndTypeAndStatus(
+                entityFqn, taskType.value(), TaskEntityStatus.Open.value());
+    if (json == null) {
+      return null;
+    }
+    return hydrateStoredTask(JsonUtils.readValue(json, Task.class));
+  }
+
+  /**
+   * Close any open approval task for the given entity. Silently does nothing if no open task exists.
+   * This is the replacement for feedRepository.getTask() + feedRepository.closeTask() pattern
+   * used by entity repositories when an entity's approval status changes.
+   *
+   * @param entityFqn Fully qualified name of the target entity
+   * @param taskType The type of approval task (e.g., GlossaryApproval, RequestApproval)
+   * @param user The user closing the task
+   * @param comment Optional comment explaining why the task was closed
+   */
+  public void closeApprovalTaskForEntity(
+      String entityFqn, TaskEntityType taskType, String user, String comment) {
+    Task task = findOpenTaskByEntityAndType(entityFqn, taskType);
+    if (task != null) {
+      closeTask(task, user, comment);
+    }
+  }
+
+  /**
+   * Find an open task for the given entity by category (e.g., Approval).
+   *
+   * @param entityFqn Fully qualified name of the target entity
+   * @param category The category of task to find
+   * @return The task if found, or null
+   */
+  public Task findOpenTaskByEntityAndCategory(String entityFqn, TaskCategory category) {
+    String json =
+        daoCollection
+            .taskDAO()
+            .findByAboutAndCategoryAndStatus(
+                entityFqn, category.value(), TaskEntityStatus.Open.value());
+    if (json == null) {
+      return null;
+    }
+    return hydrateStoredTask(JsonUtils.readValue(json, Task.class));
+  }
+
+  public Task hydrateStoredTask(Task task) {
+    if (task == null || task.getId() == null) {
+      return task;
+    }
+
+    return get(
+        null,
+        task.getId(),
+        getFields("assignees,reviewers,watchers,about,domains,createdBy,payload,resolution"));
+  }
+
+  /**
+   * Close any open approval-category task for the given entity.
+   * Searches by category=Approval which covers GlossaryApproval, RequestApproval, and any
+   * future approval types. Silently does nothing if no open task exists.
+   *
+   * @param entityFqn Fully qualified name of the target entity
+   * @param user The user closing the task
+   * @param comment Optional comment explaining why the task was closed
+   */
+  public void closeApprovalTaskForEntity(String entityFqn, String user, String comment) {
+    Task task = findOpenTaskByEntityAndCategory(entityFqn, TaskCategory.Approval);
+    if (task != null) {
+      closeTask(task, user, comment);
+    }
+  }
+
+  /**
+   * Update assignees on an open approval task for the given entity.
+   * Used when an entity's reviewers change while an approval task is in progress.
+   * Silently does nothing if no open task exists.
+   *
+   * @param entityFqn Fully qualified name of the target entity
+   * @param newAssignees The new list of assignees (typically entity reviewers)
+   * @param updatedBy The user making the change
+   */
+  public void updateApprovalTaskAssignees(
+      String entityFqn, List<EntityReference> newAssignees, String updatedBy) {
+    Task task = findOpenTaskByEntityAndCategory(entityFqn, TaskCategory.Approval);
+    if (task == null) {
+      return;
+    }
+    task.setAssignees(newAssignees);
+    task.setUpdatedBy(updatedBy);
+    task.setUpdatedAt(System.currentTimeMillis());
+    storeEntity(task, true);
+    storeRelationships(task);
+    WebsocketNotificationHandler.handleTaskNotification(task);
   }
 
   @Override

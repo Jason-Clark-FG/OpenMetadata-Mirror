@@ -1,6 +1,8 @@
 package org.openmetadata.service.migration.mysql.v200;
 
 import static org.openmetadata.service.migration.utils.v200.MigrationUtil.addTableColumnSearchSettings;
+import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateSuggestionsToTaskEntity;
+import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateThreadTasksToTaskEntity;
 
 import lombok.SneakyThrows;
 import org.openmetadata.service.migration.api.MigrationProcessImpl;
@@ -16,5 +18,7 @@ public class Migration extends MigrationProcessImpl {
   @SneakyThrows
   public void runDataMigration() {
     addTableColumnSearchSettings();
+    migrateSuggestionsToTaskEntity(handle);
+    migrateThreadTasksToTaskEntity(handle);
   }
 }

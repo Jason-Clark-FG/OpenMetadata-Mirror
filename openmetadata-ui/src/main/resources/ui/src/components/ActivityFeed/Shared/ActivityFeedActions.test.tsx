@@ -38,7 +38,10 @@ jest.mock('../../../hooks/useApplicationStore', () => ({
 }));
 
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { dir: () => 'ltr' },
+  }),
 }));
 
 const mockUseApplicationStore = jest.requireMock(

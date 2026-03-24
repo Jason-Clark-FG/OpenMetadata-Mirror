@@ -44,7 +44,6 @@ import static org.openmetadata.service.util.EntityUtil.termReferenceMatch;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
@@ -76,11 +75,9 @@ import org.openmetadata.schema.api.AddGlossaryToAssetsRequest;
 import org.openmetadata.schema.api.ValidateGlossaryTagsRequest;
 import org.openmetadata.schema.api.data.MoveGlossaryTermRequest;
 import org.openmetadata.schema.api.data.TermReference;
-import org.openmetadata.schema.api.feed.CloseTask;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.data.Table;
-import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.search.SearchRequest;
 import org.openmetadata.schema.type.ApiStatus;
@@ -95,8 +92,6 @@ import org.openmetadata.schema.type.ProviderType;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TagLabel.TagSource;
-import org.openmetadata.schema.type.TaskStatus;
-import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.schema.type.api.BulkResponse;
 import org.openmetadata.schema.type.change.ChangeSource;
@@ -109,7 +104,6 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO.EntityRelationshipRecord;
 import org.openmetadata.service.jdbi3.FeedRepository.TaskWorkflow;
 import org.openmetadata.service.jdbi3.FeedRepository.ThreadContext;
-import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.glossary.GlossaryTermResource;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
@@ -122,7 +116,6 @@ import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
-import org.openmetadata.service.util.WebsocketNotificationHandler;
 import org.openmetadata.service.workflows.searchIndex.ReindexingUtil;
 
 @Slf4j
@@ -1195,18 +1188,9 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   }
 
   private void closeApprovalTask(GlossaryTerm entity, String comment) {
-    EntityLink about = new EntityLink(GLOSSARY_TERM, entity.getFullyQualifiedName());
-    FeedRepository feedRepository = Entity.getFeedRepository();
-    try {
-      Thread taskThread = feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
-      feedRepository.closeTask(
-          taskThread, entity.getUpdatedBy(), new CloseTask().withComment(comment));
-    } catch (EntityNotFoundException ex) {
-      LOG.info(
-          "{} Task not found for glossary term {}",
-          TaskType.RequestApproval,
-          entity.getFullyQualifiedName());
-    }
+    TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+    taskRepository.closeApprovalTaskForEntity(
+        entity.getFullyQualifiedName(), entity.getUpdatedBy(), comment);
   }
 
   private void updateAssetIndexes(String oldFqn, String newFqn) {
@@ -1238,32 +1222,15 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   }
 
   protected void updateTaskWithNewReviewers(GlossaryTerm term) {
-    try {
-      MessageParser.EntityLink about =
-          new MessageParser.EntityLink(GLOSSARY_TERM, term.getFullyQualifiedName());
-      Thread originalTask =
-          feedRepository.getTask(about, TaskType.RequestApproval, TaskStatus.Open);
-      term =
-          Entity.getEntityByName(
-              Entity.GLOSSARY_TERM,
-              term.getFullyQualifiedName(),
-              "id,fullyQualifiedName,reviewers",
-              Include.ALL);
-
-      Thread updatedTask = JsonUtils.deepCopy(originalTask, Thread.class);
-      updatedTask.getTask().withAssignees(new ArrayList<>(term.getReviewers()));
-      JsonPatch patch = JsonUtils.getJsonPatch(originalTask, updatedTask);
-      RestUtil.PatchResponse<Thread> thread =
-          feedRepository.patchThread(null, originalTask.getId(), updatedTask.getUpdatedBy(), patch);
-
-      // Send WebSocket Notification
-      WebsocketNotificationHandler.handleTaskNotification(thread.entity());
-    } catch (EntityNotFoundException e) {
-      LOG.info(
-          "{} Task not found for glossary term {}",
-          TaskType.RequestApproval,
-          term.getFullyQualifiedName());
-    }
+    term =
+        Entity.getEntityByName(
+            Entity.GLOSSARY_TERM,
+            term.getFullyQualifiedName(),
+            "id,fullyQualifiedName,reviewers",
+            Include.ALL);
+    TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+    taskRepository.updateApprovalTaskAssignees(
+        term.getFullyQualifiedName(), new ArrayList<>(term.getReviewers()), term.getUpdatedBy());
   }
 
   private void fetchAndSetRelatedTerms(List<GlossaryTerm> entities, Fields fields) {

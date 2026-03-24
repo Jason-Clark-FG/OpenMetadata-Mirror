@@ -37,6 +37,7 @@ import { ReactComponent as TaskListIcon } from '../../../assets/svg/task-ic.svg'
 import { ReactComponent as MyTaskIcon } from '../../../assets/svg/task.svg';
 import {
   COMMON_ICON_STYLES,
+  DEFAULT_DOMAIN_VALUE,
   ICON_DIMENSION,
   ICON_DIMENSION_USER_PAGE,
 } from '../../../constants/constants';
@@ -49,6 +50,7 @@ import { ActivityEvent } from '../../../generated/entity/activity/activityEvent'
 import { Thread, ThreadType } from '../../../generated/entity/feed/thread';
 import { useAuth } from '../../../hooks/authHooks';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
+import { useDomainStore } from '../../../hooks/useDomainStore';
 import { useElementInView } from '../../../hooks/useElementInView';
 import { useFqn } from '../../../hooks/useFqn';
 import { FeedCounts } from '../../../interface/feed.interface';
@@ -96,6 +98,7 @@ export const ActivityFeedTab = ({
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
   const { isAdminUser } = useAuth();
+  const activeDomain = useDomainStore((state) => state.activeDomain);
   const { fqn: hookFqn } = useFqn();
   const fqn = hookFqn || urlFqn || '';
   const [elementRef, isInView] = useElementInView({
@@ -221,10 +224,13 @@ export const ActivityFeedTab = ({
   const fetchFeedsCount = async () => {
     setCountData((prev) => ({ ...prev, loading: true }));
     try {
-      // Use new tasksAPI for task counts
+      const domain =
+        activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
       const taskCountParams = isUserEntity
-        ? { assignee: currentUser?.id }
-        : { aboutEntity: fqn };
+        ? currentUser?.name === fqn
+          ? { view: 'all' as const, domain }
+          : { assignee: fqn, domain }
+        : { aboutEntity: fqn, view: 'entity' as const, domain };
 
       const taskCounts = await getTaskCounts(taskCountParams);
 
@@ -245,7 +251,7 @@ export const ActivityFeedTab = ({
         }));
       } else {
         // For non-user entities, get conversation counts and combine with task counts
-        await getFeedCounts(entityType, fqn, (feedData) => {
+        await getFeedCounts(entityType, fqn, domain, (feedData) => {
           handleFeedCount({
             ...feedData,
             totalTasksCount: taskCounts.total,
@@ -304,7 +310,7 @@ export const ActivityFeedTab = ({
         taskFilter
       );
     }
-  }, [feedFilter, threadType, fqn]);
+  }, [feedFilter, threadType, fqn, activeDomain]);
 
   useEffect(() => {
     if (fqn && entityType && !isUserEntity) {
@@ -327,7 +333,7 @@ export const ActivityFeedTab = ({
     } else {
       fetchFeedsCount();
     }
-  }, [feedCount]);
+  }, [feedCount, activeDomain]);
 
   useEffect(() => {
     if (activityEvents && activityEvents.length > 0) {
