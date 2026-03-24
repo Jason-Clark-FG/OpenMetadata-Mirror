@@ -27,6 +27,70 @@ public class QueryFilterParser {
    * @param queryFilter The query filter string (JSON DSL or query string)
    * @return Map of field names to values
    */
+  /**
+   * Parses a query filter into separate clauses preserving AND semantics.
+   * Each must clause becomes a separate map so multiple terms on the same field
+   * (e.g., two tags.tagFQN terms) are evaluated independently.
+   */
+  public static List<Map<String, List<String>>> parseFilterClauses(String queryFilter) {
+    if (nullOrEmpty(queryFilter)) {
+      return new ArrayList<>();
+    }
+    String trimmed = queryFilter.trim();
+    if (!trimmed.startsWith("{")) {
+      List<Map<String, List<String>>> clauses = new ArrayList<>();
+      clauses.add(parseQueryString(trimmed));
+      return clauses;
+    }
+
+    List<Map<String, List<String>>> clauses = new ArrayList<>();
+    try {
+      JsonNode rootNode = mapper.readTree(trimmed);
+      JsonNode queryNode = rootNode.has("query") ? rootNode.get("query") : rootNode;
+
+      if (queryNode.has("bool") && queryNode.get("bool").has("must")) {
+        JsonNode mustArray = queryNode.get("bool").get("must");
+        if (mustArray.isArray()) {
+          for (JsonNode mustClause : mustArray) {
+            Map<String, List<String>> clauseFields = new HashMap<>();
+            extractTermsFromNode(mustClause, clauseFields);
+            if (!clauseFields.isEmpty()) {
+              clauses.add(clauseFields);
+            }
+          }
+        }
+      }
+
+      if (clauses.isEmpty()) {
+        Map<String, List<String>> fieldValues = new HashMap<>();
+        extractTermsFromNode(queryNode, fieldValues);
+        if (!fieldValues.isEmpty()) {
+          clauses.add(fieldValues);
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to parse JSON query filter clauses: {}", trimmed, e);
+    }
+    return clauses;
+  }
+
+  /**
+   * Checks if entity matches filter using clause-based AND semantics.
+   * Each clause is evaluated independently — entity must match ALL clauses.
+   */
+  public static boolean matchesFilterClauses(
+      Map<String, Object> entityMap, List<Map<String, List<String>>> clauses) {
+    if (entityMap == null || clauses == null || clauses.isEmpty()) {
+      return false;
+    }
+    for (Map<String, List<String>> clause : clauses) {
+      if (!matchesFilter(entityMap, clause)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public static Map<String, List<String>> parseFilter(String queryFilter) {
     if (nullOrEmpty(queryFilter)) {
       return new HashMap<>();

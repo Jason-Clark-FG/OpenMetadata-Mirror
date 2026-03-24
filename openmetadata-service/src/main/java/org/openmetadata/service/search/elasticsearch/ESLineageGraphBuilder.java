@@ -46,6 +46,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.search.ColumnFilterMatcher;
 import org.openmetadata.service.search.ColumnMetadataCache;
 import org.openmetadata.service.search.LineagePathPreserver;
+import org.openmetadata.service.search.QueryFilterParser;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.LineageUtil;
 
@@ -612,28 +613,41 @@ public class ESLineageGraphBuilder
     upstreamDepthCounts.put(0, 1);
     downstreamDepthCounts.put(0, 1);
 
+    boolean hasNodeFilter = !nullOrEmpty(queryFilter);
     String countFilter = getStructuralFilterOnly(queryFilter);
 
-    if (upstreamDepth > 0) {
-      upstreamDepthCounts.putAll(
-          getDepthWiseEntityCounts(
-              fqn,
-              LineageDirection.UPSTREAM,
-              upstreamDepth,
-              countFilter,
-              includeDeleted,
-              entityType));
-    }
-
-    if (downstreamDepth > 0) {
-      downstreamDepthCounts.putAll(
-          getDepthWiseEntityCounts(
-              fqn,
-              LineageDirection.DOWNSTREAM,
-              downstreamDepth,
-              countFilter,
-              includeDeleted,
-              entityType));
+    if (hasNodeFilter) {
+      if (upstreamDepth > 0) {
+        upstreamDepthCounts.putAll(
+            getFilteredDepthCounts(
+                fqn, LineageDirection.UPSTREAM, upstreamDepth, queryFilter, includeDeleted));
+      }
+      if (downstreamDepth > 0) {
+        downstreamDepthCounts.putAll(
+            getFilteredDepthCounts(
+                fqn, LineageDirection.DOWNSTREAM, downstreamDepth, queryFilter, includeDeleted));
+      }
+    } else {
+      if (upstreamDepth > 0) {
+        upstreamDepthCounts.putAll(
+            getDepthWiseEntityCounts(
+                fqn,
+                LineageDirection.UPSTREAM,
+                upstreamDepth,
+                countFilter,
+                includeDeleted,
+                entityType));
+      }
+      if (downstreamDepth > 0) {
+        downstreamDepthCounts.putAll(
+            getDepthWiseEntityCounts(
+                fqn,
+                LineageDirection.DOWNSTREAM,
+                downstreamDepth,
+                countFilter,
+                includeDeleted,
+                entityType));
+      }
     }
 
     LineagePaginationInfo paginationInfo = new LineagePaginationInfo();
@@ -671,6 +685,69 @@ public class ESLineageGraphBuilder
     paginationInfo.setDownstreamDepthInfo(downstreamDepthInfo);
 
     return paginationInfo;
+  }
+
+  private Map<Integer, Integer> getFilteredDepthCounts(
+      String fqn,
+      LineageDirection direction,
+      int maxDepth,
+      String queryFilter,
+      boolean includeDeleted)
+      throws IOException {
+    Map<Integer, List<String>> entitiesByDepth =
+        getAllEntitiesByDepth(fqn, direction, maxDepth, null, includeDeleted, Set.of());
+
+    Set<String> allFqnHashes = new HashSet<>();
+    for (List<String> fqns : entitiesByDepth.values()) {
+      for (String entityFqn : fqns) {
+        allFqnHashes.add(FullyQualifiedName.buildHash(entityFqn));
+      }
+    }
+
+    if (allFqnHashes.isEmpty()) {
+      return new HashMap<>();
+    }
+
+    Map<String, Object> allDocs =
+        EsUtils.searchEntitiesByKey(
+            esClient,
+            null,
+            GLOBAL_SEARCH_ALIAS,
+            FIELD_FULLY_QUALIFIED_NAME_HASH_KEYWORD,
+            allFqnHashes,
+            0,
+            Math.min(allFqnHashes.size(), 10000),
+            SOURCE_FIELDS_TO_EXCLUDE);
+
+    List<Map<String, Object>> docList = new ArrayList<>();
+    for (Object doc : allDocs.values()) {
+      if (doc instanceof Map) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> docMap = (Map<String, Object>) doc;
+        docList.add(docMap);
+      }
+    }
+    LineageUtil.replaceWithEntityLevelTagsBatch(docList);
+
+    List<Map<String, List<String>>> clauses = QueryFilterParser.parseFilterClauses(queryFilter);
+
+    Map<Integer, Integer> depthCounts = new LinkedHashMap<>();
+    for (Map.Entry<Integer, List<String>> entry : entitiesByDepth.entrySet()) {
+      int depth = entry.getKey();
+      int count = 0;
+      for (String entityFqn : entry.getValue()) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> entityDoc = (Map<String, Object>) allDocs.get(entityFqn);
+        if (entityDoc != null && QueryFilterParser.matchesFilterClauses(entityDoc, clauses)) {
+          count++;
+        }
+      }
+      if (count > 0) {
+        depthCounts.put(depth, count);
+      }
+    }
+
+    return depthCounts;
   }
 
   public SearchLineageResult searchLineageByEntityCount(EntityCountLineageRequest request)
