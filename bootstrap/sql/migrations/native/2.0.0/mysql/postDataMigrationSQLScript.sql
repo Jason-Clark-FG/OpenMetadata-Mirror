@@ -57,6 +57,33 @@ FROM (
 ) migrated;
 
 -- =====================================================
+-- PHASE 2E: Rename legacy thread storage to fail stale references
+-- =====================================================
+SET @thread_entity_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.tables
+  WHERE table_schema = DATABASE()
+    AND table_name = 'thread_entity'
+);
+
+SET @thread_entity_legacy_exists = (
+  SELECT COUNT(*)
+  FROM information_schema.tables
+  WHERE table_schema = DATABASE()
+    AND table_name = 'thread_entity_legacy'
+);
+
+SET @rename_thread_entity_sql = IF(
+  @thread_entity_exists = 1 AND @thread_entity_legacy_exists = 0,
+  'RENAME TABLE thread_entity TO thread_entity_legacy',
+  'SELECT 1'
+);
+
+PREPARE rename_thread_entity_stmt FROM @rename_thread_entity_sql;
+EXECUTE rename_thread_entity_stmt;
+DEALLOCATE PREPARE rename_thread_entity_stmt;
+
+-- =====================================================
 -- PHASE 3D: Seed default TaskFormSchema entries
 -- =====================================================
 INSERT INTO task_form_schema_entity (id, json, fqnHash)

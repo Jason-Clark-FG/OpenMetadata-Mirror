@@ -3,6 +3,7 @@ package org.openmetadata.service.migration.utils.v201;
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +35,6 @@ import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
-import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.util.EntityUtil;
 
@@ -52,22 +52,19 @@ public class MigrationUtil {
   private final TaskRepository taskRepository;
   private final WorkflowDefinitionRepository workflowDefinitionRepository;
   private final WorkflowHandler workflowHandler;
-  private final ConnectionType connectionType;
 
-  public MigrationUtil(Handle handle, ConnectionType connectionType) {
+  public MigrationUtil(Handle handle) {
     this.handle = handle;
     this.collectionDAO = handle.attach(CollectionDAO.class);
     this.taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
     this.workflowDefinitionRepository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
     this.workflowHandler = WorkflowHandler.getInstance();
-    this.connectionType = connectionType;
   }
 
   public void runTaskWorkflowCutoverMigration() {
     int redeployedWorkflows = redeployUserApprovalWorkflows();
     MigrationStats stats = migrateLegacyThreadTasks();
-    archiveLegacyThreadEntity();
 
     LOG.info(
         "Completed task workflow cutover migration. workflowsRedeployed={}, migrated={}, alreadyMigrated={}, skipped={}, failures={}",
@@ -119,10 +116,15 @@ public class MigrationUtil {
   private MigrationStats migrateLegacyThreadTasks() {
     MigrationStats stats = new MigrationStats();
     int offset = 0;
+    String legacyThreadTable = getLegacyThreadSourceTable();
+
+    if (legacyThreadTable == null) {
+      LOG.info("No legacy thread task table found, skipping task workflow cutover migration");
+      return stats;
+    }
 
     while (true) {
-      List<String> threadBatch =
-          collectionDAO.feedDAO().listTaskThreadWithOffset(BATCH_SIZE, offset);
+      List<String> threadBatch = listTaskThreadWithOffset(legacyThreadTable, BATCH_SIZE, offset);
       if (threadBatch.isEmpty()) {
         break;
       }
@@ -144,6 +146,18 @@ public class MigrationUtil {
     }
 
     return stats;
+  }
+
+  private List<String> listTaskThreadWithOffset(String tableName, int limit, int offset) {
+    return handle
+        .createQuery(
+            String.format(
+                "SELECT json FROM %s WHERE type = 'Task' ORDER BY createdAt ASC LIMIT :limit OFFSET :offset",
+                tableName))
+        .bind("limit", limit)
+        .bind("offset", offset)
+        .mapTo(String.class)
+        .list();
   }
 
   private void migrateLegacyThreadTask(Thread legacyThread, MigrationStats stats) {
@@ -428,45 +442,28 @@ public class MigrationUtil {
         .execute();
   }
 
-  private void archiveLegacyThreadEntity() {
-    boolean threadEntityExists = tableExists("thread_entity");
-    boolean archivedExists = tableExists("thread_entity_archived");
-
-    if (!threadEntityExists) {
-      if (archivedExists) {
-        LOG.info("thread_entity is already archived as thread_entity_archived");
-      } else {
-        LOG.info("thread_entity does not exist, skipping archive step");
-      }
-      return;
-    }
-
-    if (archivedExists) {
-      LOG.warn(
-          "thread_entity_archived already exists while thread_entity is still present. Skipping rename to avoid clobbering archived data");
-      return;
-    }
-
-    String renameSql =
-        connectionType == ConnectionType.POSTGRES
-            ? "ALTER TABLE thread_entity RENAME TO thread_entity_archived"
-            : "RENAME TABLE thread_entity TO thread_entity_archived";
-
-    handle.execute(renameSql);
-    LOG.info(
-        "Archived legacy thread_entity table as thread_entity_archived after task workflow cutover");
-  }
-
   private boolean tableExists(String tableName) {
-    try {
-      handle
-          .createQuery(String.format("SELECT 1 FROM %s LIMIT 1", tableName))
-          .mapTo(Integer.class)
-          .one();
-      return true;
+    try (ResultSet tables =
+        handle.getConnection().getMetaData().getTables(null, null, tableName, new String[] {"TABLE"})) {
+      while (tables.next()) {
+        if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
+          return true;
+        }
+      }
+      return false;
     } catch (Exception e) {
       return false;
     }
+  }
+
+  private String getLegacyThreadSourceTable() {
+    if (tableExists("thread_entity_legacy")) {
+      return "thread_entity_legacy";
+    }
+    if (tableExists("thread_entity_archived")) {
+      return "thread_entity_archived";
+    }
+    return null;
   }
 
   private static class TypeAndCategory {

@@ -53,6 +53,11 @@ AND NOT EXISTS (
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================================================
+-- PHASE 2E: Rename legacy thread storage to fail stale references
+-- =====================================================
+ALTER TABLE IF EXISTS thread_entity RENAME TO thread_entity_legacy;
+
+-- =====================================================
 -- PHASE 3D: Seed default TaskFormSchema entries
 -- =====================================================
 

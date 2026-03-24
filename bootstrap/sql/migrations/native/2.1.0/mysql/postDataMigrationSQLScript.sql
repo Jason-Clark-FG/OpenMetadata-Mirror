@@ -1,0 +1,1 @@
+-- Post data migration script for legacy thread archival - OpenMetadata 2.1.0
