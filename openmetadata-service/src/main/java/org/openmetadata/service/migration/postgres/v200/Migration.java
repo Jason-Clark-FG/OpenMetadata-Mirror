@@ -1,7 +1,7 @@
 package org.openmetadata.service.migration.postgres.v200;
 
 import static org.openmetadata.service.migration.utils.v200.MigrationUtil.addTableColumnSearchSettings;
-import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateChangeEventsToActivityStream;
+import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateLegacyActivityThreadsToActivityStream;
 import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateSuggestionsToTaskEntity;
 import static org.openmetadata.service.migration.utils.v200.MigrationUtil.migrateThreadTasksToTaskEntity;
 
@@ -21,6 +21,6 @@ public class Migration extends MigrationProcessImpl {
     addTableColumnSearchSettings();
     migrateSuggestionsToTaskEntity(handle);
     migrateThreadTasksToTaskEntity(handle);
-    migrateChangeEventsToActivityStream(handle);
+    migrateLegacyActivityThreadsToActivityStream(handle);
   }
 }

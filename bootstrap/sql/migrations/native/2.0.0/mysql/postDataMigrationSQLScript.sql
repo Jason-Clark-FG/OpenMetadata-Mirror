@@ -2,11 +2,12 @@
 -- This script runs after the data migration completes
 
 -- =====================================================
--- NOTE: Suggestion migration (suggestions → task_entity) and
--- thread-based task migration (thread_entity → task_entity)
--- are handled in Java MigrationUtil.migrateSuggestionsToTaskEntity()
--- and MigrationUtil.migrateThreadTasksToTaskEntity() because they
--- require proper aboutFqnHash computation using FullyQualifiedName.buildHash()
+-- NOTE: Suggestion migration (suggestions → task_entity),
+-- thread-based task migration (thread_entity → task_entity),
+-- and legacy system activity migration
+-- (thread_entity generated feed rows → activity_stream)
+-- are handled in Java MigrationUtil because they require
+-- entity-link aware transformation logic.
 -- =====================================================
 
 -- =====================================================

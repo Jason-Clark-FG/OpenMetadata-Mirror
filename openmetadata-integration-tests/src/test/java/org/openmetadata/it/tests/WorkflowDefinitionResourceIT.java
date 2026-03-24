@@ -7739,6 +7739,10 @@ public class WorkflowDefinitionResourceIT {
         candidate2.getName(),
         intermediateTask.getAssignees().get(0).getName(),
         "The remaining assignee should still need to approve");
+    assertThrows(
+        Exception.class,
+        () -> candidate1Client.tasks().resolve(approvalTask.getId().toString(), resolveApproval),
+        "The pruned approver should no longer be able to resolve the task a second time");
 
     OpenMetadataClient candidate2Client =
         SdkClients.createClient(candidate2.getName(), candidate2.getEmail(), new String[] {});

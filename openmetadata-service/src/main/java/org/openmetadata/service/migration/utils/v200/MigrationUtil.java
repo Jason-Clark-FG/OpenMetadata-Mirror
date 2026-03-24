@@ -11,13 +11,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.openmetadata.schema.api.search.SearchSettings;
 import org.openmetadata.schema.entity.activity.ActivityEvent;
+import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.settings.Settings;
 import org.openmetadata.schema.type.ActivityEventType;
 import org.openmetadata.schema.type.ChangeDescription;
-import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
-import org.openmetadata.schema.type.EventType;
 import org.openmetadata.schema.type.FieldChange;
+import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.migration.utils.SearchSettingsMergeUtil;
@@ -371,30 +371,22 @@ public class MigrationUtil {
   }
 
   /**
-   * Backfill the new activity_stream table from legacy change_event rows so user dashboards and
-   * entity activity tabs can read from the new activity APIs immediately after migration.
+   * Backfill the new activity_stream table from legacy system-generated feed rows in
+   * thread_entity. User conversations stay in thread_entity; only generated activity entries are
+   * migrated.
    */
-  public static void migrateChangeEventsToActivityStream(Handle handle) {
-    LOG.info("Starting migration of change events to activity_stream");
+  public static void migrateLegacyActivityThreadsToActivityStream(Handle handle) {
+    LOG.info("Starting migration of legacy thread activity to activity_stream");
 
-    boolean tableExists;
-    try {
-      handle.createQuery("SELECT 1 FROM change_event LIMIT 1").mapTo(Integer.class).list();
-      tableExists = true;
-    } catch (Exception e) {
-      tableExists = false;
-    }
-
-    if (!tableExists) {
-      LOG.info("change_event table does not exist, skipping activity stream migration");
+    if (!tableExists(handle, "thread_entity")) {
+      LOG.info("thread_entity table does not exist, skipping activity stream migration");
       return;
     }
 
-    List<Map<String, Object>> rows =
-        handle.createQuery("SELECT json FROM change_event ORDER BY eventTime ASC").mapToMap().list();
+    List<Map<String, Object>> rows = listLegacyActivityThreadRows(handle);
 
     if (rows.isEmpty()) {
-      LOG.info("No change events found to migrate into activity_stream");
+      LOG.info("No legacy conversation rows found to inspect for activity migration");
       return;
     }
 
@@ -403,30 +395,32 @@ public class MigrationUtil {
 
     for (Map<String, Object> row : rows) {
       try {
-        ChangeEvent changeEvent = JsonUtils.readValue(row.get("json").toString(), ChangeEvent.class);
-        List<ActivityEvent> events = buildActivityEvents(handle, changeEvent);
+        String json = row.get("json").toString();
+        Thread legacyThread = JsonUtils.readValue(json, Thread.class);
+        JsonNode legacyThreadJson = JsonUtils.readTree(json);
+        ActivityEvent event =
+            buildActivityEventFromLegacyThread(handle, legacyThread, legacyThreadJson);
 
-        if (events.isEmpty()) {
+        if (event == null) {
           skipped++;
           continue;
         }
 
-        for (ActivityEvent event : events) {
-          if (activityEventExists(handle, event.getId(), event.getTimestamp())) {
-            continue;
-          }
-
-          insertActivityEvent(handle, event);
-          migrated++;
+        if (activityEventExists(handle, event.getId(), event.getTimestamp())) {
+          skipped++;
+          continue;
         }
+
+        insertActivityEvent(handle, event);
+        migrated++;
       } catch (Exception e) {
-        LOG.warn("Error migrating change event to activity_stream: {}", e.getMessage());
+        LOG.warn("Error migrating legacy activity thread to activity_stream: {}", e.getMessage());
         skipped++;
       }
     }
 
     LOG.info(
-        "Activity stream migration complete: migrated={}, skippedSourceEvents={}", migrated, skipped);
+        "Legacy activity thread migration complete: migrated={}, skipped={}", migrated, skipped);
   }
 
   private static void setAboutFromEntityLink(
@@ -597,133 +591,57 @@ public class MigrationUtil {
     };
   }
 
-  private static List<ActivityEvent> buildActivityEvents(Handle handle, ChangeEvent changeEvent) {
-    List<ActivityEvent> events = new ArrayList<>();
-
-    if (changeEvent == null
-        || changeEvent.getId() == null
-        || changeEvent.getEntityId() == null
-        || changeEvent.getEntityType() == null) {
-      return events;
+  private static ActivityEvent buildActivityEventFromLegacyThread(
+      Handle handle, Thread legacyThread, JsonNode legacyThreadJson) {
+    if (legacyThread == null
+        || legacyThread.getId() == null
+        || legacyThread.getGeneratedBy() != Thread.GeneratedBy.SYSTEM) {
+      return null;
     }
 
-    EntityReference entityRef =
-        new EntityReference()
-            .withId(changeEvent.getEntityId())
-            .withType(changeEvent.getEntityType())
-            .withFullyQualifiedName(changeEvent.getEntityFullyQualifiedName());
-    EntityReference actorRef = buildActivityActorReference(handle, changeEvent.getUserName());
-    List<EntityReference> domains = buildActivityDomains(changeEvent.getDomains());
-    ChangeDescription changeDescription = changeEvent.getChangeDescription();
-
-    int fieldChangeIndex = 0;
-    if (changeDescription != null) {
-      fieldChangeIndex =
-          appendFieldActivityEvents(
-              events,
-              changeEvent,
-              entityRef,
-              actorRef,
-              domains,
-              changeDescription.getFieldsAdded(),
-              fieldChangeIndex);
-      fieldChangeIndex =
-          appendFieldActivityEvents(
-              events,
-              changeEvent,
-              entityRef,
-              actorRef,
-              domains,
-              changeDescription.getFieldsUpdated(),
-              fieldChangeIndex);
-      appendFieldActivityEvents(
-          events,
-          changeEvent,
-          entityRef,
-          actorRef,
-          domains,
-          changeDescription.getFieldsDeleted(),
-          fieldChangeIndex);
+    EntityReference entityRef = resolveActivityEntityReference(legacyThread);
+    if (entityRef == null || entityRef.getId() == null || entityRef.getType() == null) {
+      LOG.debug(
+          "Skipping legacy activity thread '{}' because entityRef could not be resolved",
+          legacyThread.getId());
+      return null;
     }
 
-    if (events.isEmpty()) {
-      ActivityEventType eventType = mapChangeEventToActivityEventType(changeEvent.getEventType());
-      if (eventType != null) {
-        events.add(
-            buildActivityEvent(
-                changeEvent, entityRef, actorRef, domains, eventType, null, 0));
-      }
+    ActivityEventType eventType = mapLegacyActivityThreadType(legacyThread, legacyThreadJson);
+    if (eventType == null) {
+      return null;
     }
 
-    return events;
-  }
+    String actorName =
+        legacyThread.getUpdatedBy() != null && !legacyThread.getUpdatedBy().isBlank()
+            ? legacyThread.getUpdatedBy()
+            : legacyThread.getCreatedBy();
+    EntityReference actorRef = buildActivityActorReference(handle, actorName);
 
-  private static int appendFieldActivityEvents(
-      List<ActivityEvent> events,
-      ChangeEvent changeEvent,
-      EntityReference entityRef,
-      EntityReference actorRef,
-      List<EntityReference> domains,
-      List<FieldChange> fieldChanges,
-      int startIndex) {
-    if (fieldChanges == null) {
-      return startIndex;
-    }
+    long timestamp =
+        legacyThread.getUpdatedAt() != null
+            ? legacyThread.getUpdatedAt()
+            : legacyThread.getThreadTs() != null
+                ? legacyThread.getThreadTs()
+                : System.currentTimeMillis();
 
-    int currentIndex = startIndex;
-    for (FieldChange fieldChange : fieldChanges) {
-      ActivityEventType eventType =
-          mapFieldChangeToActivityEventType(fieldChange != null ? fieldChange.getName() : null);
-      if (eventType == null) {
-        continue;
-      }
-
-      events.add(
-          buildActivityEvent(
-              changeEvent,
-              entityRef,
-              actorRef,
-              domains,
-              eventType,
-              fieldChange,
-              currentIndex));
-      currentIndex++;
-    }
-
-    return currentIndex;
-  }
-
-  private static ActivityEvent buildActivityEvent(
-      ChangeEvent changeEvent,
-      EntityReference entityRef,
-      EntityReference actorRef,
-      List<EntityReference> domains,
-      ActivityEventType eventType,
-      FieldChange fieldChange,
-      int eventIndex) {
-    String seed =
-        changeEvent.getId()
-            + ":"
-            + eventType.value()
-            + ":"
-            + (fieldChange != null ? fieldChange.getName() : "")
-            + ":"
-            + eventIndex;
+    String fieldName = readThreadFeedFieldName(legacyThreadJson);
 
     return new ActivityEvent()
-        .withId(UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)))
+        .withId(legacyThread.getId())
         .withEventType(eventType)
         .withEntity(entityRef)
-        .withAbout(
-            buildActivityEntityLink(
-                changeEvent.getEntityType(), changeEvent.getEntityFullyQualifiedName(), fieldChange))
-        .withDomains(domains)
+        .withAbout(legacyThread.getAbout())
+        .withDomains(buildActivityDomains(legacyThread.getDomains()))
         .withActor(actorRef)
-        .withTimestamp(changeEvent.getTimestamp())
-        .withSummary(buildActivitySummary(changeEvent, eventType, fieldChange))
-        .withFieldName(fieldChange != null ? fieldChange.getName() : null)
-        .withOldValue(fieldChange != null ? truncateActivityValue(fieldChange.getOldValue()) : null)
-        .withNewValue(fieldChange != null ? truncateActivityValue(fieldChange.getNewValue()) : null);
+        .withTimestamp(timestamp)
+        .withSummary(readThreadActivitySummary(legacyThread, legacyThreadJson))
+        .withFieldName(fieldName)
+        .withOldValue(truncateActivityValue(readThreadActivityValue(legacyThreadJson, fieldName, true)))
+        .withNewValue(
+            truncateActivityValue(readThreadActivityValue(legacyThreadJson, fieldName, false)))
+        .withChangeDescription(legacyThread.getChangeDescription())
+        .withReactions(legacyThread.getReactions());
   }
 
   private static EntityReference buildActivityActorReference(Handle handle, String userName) {
@@ -752,108 +670,164 @@ public class MigrationUtil {
         .toList();
   }
 
-  private static ActivityEventType mapChangeEventToActivityEventType(EventType eventType) {
-    if (eventType == null) {
-      return null;
+  private static ActivityEventType mapLegacyActivityThreadType(
+      Thread legacyThread, JsonNode legacyThreadJson) {
+    if (legacyThread.getCardStyle() == null) {
+      return mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
     }
 
-    return switch (eventType) {
+    return switch (legacyThread.getCardStyle()) {
       case ENTITY_CREATED -> ActivityEventType.ENTITY_CREATED;
-      case ENTITY_UPDATED -> ActivityEventType.ENTITY_UPDATED;
       case ENTITY_DELETED -> ActivityEventType.ENTITY_DELETED;
       case ENTITY_SOFT_DELETED -> ActivityEventType.ENTITY_SOFT_DELETED;
-      case ENTITY_RESTORED -> ActivityEventType.ENTITY_RESTORED;
-      default -> null;
+      case DESCRIPTION -> isNestedFieldActivity(legacyThread.getAbout(), "description")
+          ? ActivityEventType.COLUMN_DESCRIPTION_UPDATED
+          : ActivityEventType.DESCRIPTION_UPDATED;
+      case TAGS -> isNestedFieldActivity(legacyThread.getAbout(), "tags")
+          ? ActivityEventType.COLUMN_TAGS_UPDATED
+          : ActivityEventType.TAGS_UPDATED;
+      case OWNER -> ActivityEventType.OWNER_UPDATED;
+      case DOMAIN -> ActivityEventType.DOMAIN_UPDATED;
+      case CUSTOM_PROPERTIES -> ActivityEventType.CUSTOM_PROPERTY_UPDATED;
+      case TEST_CASE_RESULT -> ActivityEventType.TEST_CASE_STATUS_CHANGED;
+      case LOGICAL_TEST_CASE_ADDED, ASSETS -> {
+        ActivityEventType fromField = mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
+        yield fromField != null ? fromField : ActivityEventType.ENTITY_UPDATED;
+      }
+      default -> {
+        ActivityEventType fromField = mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
+        yield fromField != null ? fromField : ActivityEventType.ENTITY_UPDATED;
+      }
     };
   }
 
-  private static ActivityEventType mapFieldChangeToActivityEventType(String fieldName) {
+  private static ActivityEventType mapFieldNameToActivityEventType(String fieldName) {
     if (fieldName == null || fieldName.isBlank()) {
       return null;
     }
 
-    if (fieldName.equals("description")
-        || fieldName.startsWith("columns.")
-        || fieldName.startsWith("schemaFields.")
-        || fieldName.startsWith("children.")) {
-      if (fieldName.contains("description")) {
-        return ActivityEventType.DESCRIPTION_UPDATED;
-      }
+    return switch (fieldName) {
+      case "description" -> ActivityEventType.DESCRIPTION_UPDATED;
+      case "tags" -> ActivityEventType.TAGS_UPDATED;
+      case "owner", "owners" -> ActivityEventType.OWNER_UPDATED;
+      case "domain", "domains" -> ActivityEventType.DOMAIN_UPDATED;
+      case "tier" -> ActivityEventType.TIER_UPDATED;
+      default -> fieldName.startsWith("extension")
+          ? ActivityEventType.CUSTOM_PROPERTY_UPDATED
+          : null;
+    };
+  }
+
+  private static EntityReference resolveActivityEntityReference(Thread legacyThread) {
+    if (legacyThread.getEntityRef() != null && legacyThread.getEntityRef().getId() != null) {
+      return legacyThread.getEntityRef();
     }
 
-    if (fieldName.equals("tags")
-        || fieldName.startsWith("columns.")
-        || fieldName.startsWith("schemaFields.")
-        || fieldName.startsWith("children.")) {
-      if (fieldName.contains("tags")) {
-        return ActivityEventType.TAGS_UPDATED;
-      }
+    if (legacyThread.getAbout() == null || legacyThread.getAbout().isBlank()) {
+      return null;
     }
 
-    if (fieldName.equals("owners") || fieldName.equals("owner")) {
-      return ActivityEventType.OWNER_UPDATED;
+    try {
+      MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(legacyThread.getAbout());
+      return Entity.getEntityReferenceByName(
+          entityLink.getEntityType(), entityLink.getEntityFQN(), Include.ALL);
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not resolve entity reference from legacy activity thread '{}': {}",
+          legacyThread.getId(),
+          e.getMessage());
+      return null;
     }
-    if (fieldName.equals("domain") || fieldName.equals("domains")) {
-      return ActivityEventType.DOMAIN_UPDATED;
+  }
+
+  private static String readThreadFeedFieldName(JsonNode legacyThreadJson) {
+    JsonNode fieldName = legacyThreadJson.path("feedInfo").path("fieldName");
+    return fieldName.isMissingNode() || fieldName.isNull() ? null : fieldName.asText();
+  }
+
+  private static String readThreadActivitySummary(Thread legacyThread, JsonNode legacyThreadJson) {
+    JsonNode summary = legacyThreadJson.path("feedInfo").path("headerMessage");
+    if (!summary.isMissingNode() && !summary.isNull() && !summary.asText().isBlank()) {
+      return summary.asText();
     }
-    if (fieldName.equals("tier")) {
-      return ActivityEventType.TIER_UPDATED;
+    return legacyThread.getMessage();
+  }
+
+  private static Object readThreadActivityValue(
+      JsonNode legacyThreadJson, String fieldName, boolean oldValue) {
+    JsonNode entitySpecificInfo = legacyThreadJson.path("feedInfo").path("entitySpecificInfo");
+    if (entitySpecificInfo.isMissingNode() || entitySpecificInfo.isNull()) {
+      return null;
     }
-    if (fieldName.startsWith("extension")) {
-      return ActivityEventType.CUSTOM_PROPERTY_UPDATED;
+
+    String previousKey = oldValue ? "previousDescription" : "newDescription";
+    if ("description".equals(fieldName) && entitySpecificInfo.has(previousKey)) {
+      return entitySpecificInfo.get(previousKey).asText();
+    }
+
+    if ("tags".equals(fieldName)) {
+      String key = oldValue ? "previousTags" : "updatedTags";
+      return entitySpecificInfo.has(key) ? entitySpecificInfo.get(key).toString() : null;
+    }
+
+    if ("owner".equals(fieldName) || "owners".equals(fieldName)) {
+      String key = oldValue ? "previousOwner" : "updatedOwner";
+      return entitySpecificInfo.has(key) ? entitySpecificInfo.get(key).toString() : null;
+    }
+
+    if ("domain".equals(fieldName) || "domains".equals(fieldName)) {
+      String key = oldValue ? "previousDomains" : "updatedDomains";
+      return entitySpecificInfo.has(key) ? entitySpecificInfo.get(key).toString() : null;
+    }
+
+    if (fieldName != null && fieldName.startsWith("extension")) {
+      String key = oldValue ? "previousValue" : "updatedValue";
+      return entitySpecificInfo.has(key) ? entitySpecificInfo.get(key).toString() : null;
     }
 
     return null;
   }
 
-  private static String buildActivitySummary(
-      ChangeEvent changeEvent, ActivityEventType eventType, FieldChange fieldChange) {
-    String entityType = changeEvent.getEntityType();
-    String entityName = changeEvent.getEntityFullyQualifiedName();
+  private static boolean isNestedFieldActivity(String about, String terminalField) {
+    if (about == null || about.isBlank()) {
+      return false;
+    }
 
-    return switch (eventType) {
-      case ENTITY_CREATED -> String.format("Created %s: %s", entityType, entityName);
-      case ENTITY_DELETED -> String.format("Deleted %s: %s", entityType, entityName);
-      case ENTITY_SOFT_DELETED -> String.format("Soft deleted %s: %s", entityType, entityName);
-      case ENTITY_RESTORED -> String.format("Restored %s: %s", entityType, entityName);
-      case DESCRIPTION_UPDATED -> fieldChange != null
-          ? String.format("Updated description of %s", entityName)
-          : String.format("Description updated on %s", entityName);
-      case TAGS_UPDATED -> String.format("Tags updated on %s", entityName);
-      case OWNER_UPDATED -> String.format("Owner changed on %s", entityName);
-      case DOMAIN_UPDATED -> String.format("Domain changed on %s", entityName);
-      case TIER_UPDATED -> String.format("Tier changed on %s", entityName);
-      case CUSTOM_PROPERTY_UPDATED -> fieldChange != null
-          ? String.format("Custom property '%s' updated on %s", fieldChange.getName(), entityName)
-          : String.format("Custom property updated on %s", entityName);
-      default -> String.format("Updated %s: %s", entityType, entityName);
-    };
+    try {
+      MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(about);
+      return List.of("columns", "schemaFields", "children").contains(entityLink.getFieldName())
+          && terminalField.equals(entityLink.getArrayFieldValue());
+    } catch (Exception e) {
+      LOG.debug("Could not parse legacy activity about link '{}': {}", about, e.getMessage());
+      return false;
+    }
   }
 
-  private static String buildActivityEntityLink(
-      String entityType, String entityFqn, FieldChange fieldChange) {
-    if (entityType == null || entityFqn == null || entityFqn.isBlank()) {
-      return null;
+  private static boolean tableExists(Handle handle, String tableName) {
+    try {
+      handle.createQuery(String.format("SELECT 1 FROM %s LIMIT 1", tableName)).mapTo(Integer.class).one();
+      return true;
+    } catch (Exception e) {
+      return false;
     }
+  }
 
-    StringBuilder link = new StringBuilder("<#E::");
-    link.append(entityType).append("::").append(entityFqn);
+  private static List<Map<String, Object>> listLegacyActivityThreadRows(Handle handle) {
+    String postgresQuery =
+        "SELECT json FROM thread_entity "
+            + "WHERE type = 'Conversation' AND json->>'generatedBy' = 'system' "
+            + "ORDER BY updatedAt ASC, createdAt ASC";
+    String mysqlQuery =
+        "SELECT json FROM thread_entity "
+            + "WHERE type = 'Conversation' "
+            + "AND JSON_UNQUOTE(JSON_EXTRACT(json, '$.generatedBy')) = 'system' "
+            + "ORDER BY updatedAt ASC, createdAt ASC";
 
-    if (fieldChange != null && fieldChange.getName() != null && !fieldChange.getName().isBlank()) {
-      String[] parts = fieldChange.getName().split("\\.", 3);
-      if (parts.length >= 2) {
-        link.append("::").append(parts[0]).append("::").append(parts[1]);
-        if (parts.length == 3) {
-          link.append("::").append(parts[2]);
-        }
-      } else {
-        link.append("::").append(fieldChange.getName());
-      }
+    try {
+      return handle.createQuery(postgresQuery).mapToMap().list();
+    } catch (Exception ignored) {
+      return handle.createQuery(mysqlQuery).mapToMap().list();
     }
-
-    link.append(">");
-
-    return link.toString();
   }
 
   private static String truncateActivityValue(Object value) {
