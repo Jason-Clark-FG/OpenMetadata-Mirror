@@ -5,6 +5,7 @@ import static org.openmetadata.service.Entity.TEST_CASE_RESOLUTION_STATUS;
 import static org.openmetadata.service.Entity.TEST_CASE_RESULT;
 
 import jakarta.ws.rs.core.Response;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.Getter;
@@ -85,6 +86,36 @@ public class SearchIndexApp extends AbstractNativeApplication {
   }
 
   private void purgeSearchIndexTables() {
+    List<CollectionDAO.SearchIndexJobDAO.SearchIndexJobRecord> activeJobs =
+        collectionDAO
+            .searchIndexJobDAO()
+            .findByStatuses(List.of("RUNNING", "READY", "INITIALIZING"));
+    if (!activeJobs.isEmpty()) {
+      LOG.warn(
+          "Uninstalling SearchIndexApp while {} distributed job(s) are still active. "
+              + "Forcing all active jobs to STOPPED before purging state tables. "
+              + "Other pods participating in these jobs will lose coordination.",
+          activeJobs.size());
+      for (CollectionDAO.SearchIndexJobDAO.SearchIndexJobRecord job : activeJobs) {
+        try {
+          collectionDAO
+              .searchIndexJobDAO()
+              .update(
+                  job.id(),
+                  "STOPPED",
+                  job.processedRecords(),
+                  job.successRecords(),
+                  job.failedRecords(),
+                  job.stats(),
+                  job.startedAt(),
+                  System.currentTimeMillis(),
+                  System.currentTimeMillis(),
+                  "Job force-stopped by uninstall");
+        } catch (Exception e) {
+          LOG.error("Failed to force-stop job {} during uninstall", job.id(), e);
+        }
+      }
+    }
     String appId = getApp().getId().toString();
     collectionDAO.searchIndexPartitionDAO().deleteAll();
     collectionDAO.searchIndexServerStatsDAO().deleteAll();

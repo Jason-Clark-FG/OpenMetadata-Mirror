@@ -95,6 +95,14 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       return doExecute(config, context, startTime);
     } catch (Exception e) {
       LOG.error("Distributed reindexing failed", e);
+      if (searchIndexSink != null) {
+        try {
+          searchIndexSink.close();
+        } catch (Exception closeEx) {
+          LOG.error("Error closing search index sink during exception handling", closeEx);
+        }
+        searchIndexSink = null;
+      }
       Stats stats = currentStats.get();
       return ExecutionResult.fromStats(stats, ExecutionResult.Status.FAILED, startTime);
     }
@@ -268,6 +276,13 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       LOG.warn("Distributed job monitoring interrupted");
     } finally {
       monitor.shutdownNow();
+      try {
+        if (!monitor.awaitTermination(5, TimeUnit.SECONDS)) {
+          LOG.warn("Distributed job monitor did not terminate within 5 seconds");
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
