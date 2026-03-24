@@ -18,7 +18,6 @@ import { useSnackbar } from 'notistack';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
-import { DRAWER_HEADER_STYLING } from '../../constants/DomainsListPage.constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { useNavigationContext } from '../../context/NavigationContext/NavigationContext';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
@@ -74,12 +73,8 @@ const DataProductListPage = () => {
 
   const { formDrawer, openDrawer, closeDrawer } = useFormDrawerWithRef({
     title: t('label.add-entity', { entity: t('label.data-product') }),
-    anchor: 'right',
     width: 670,
     closeOnEscape: false,
-    header: {
-      sx: DRAWER_HEADER_STYLING,
-    },
     onCancel: () => {
       form.resetFields();
     },

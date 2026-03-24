@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Space } from 'antd';
+import { Space, Typography } from 'antd';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import SearchDropdown from '../../SearchDropdown/SearchDropdown';
@@ -27,6 +27,7 @@ const AddTestCaseListFilters = ({
   filterOptions,
   filterSelectedKeys,
   filterLoading,
+  getPopupContainer,
   hideTableFilter = false,
   onChange,
   onSearch,
@@ -57,11 +58,13 @@ const AddTestCaseListFilters = ({
   );
 
   return (
-    <Space className="add-test-case-filters" size="middle">
+    <Space size={8}>
+      <Typography.Text>{t('label.filter-plural')}:</Typography.Text>
       {filtersToShow.map((filter) => (
         <SearchDropdown
           hideCounts
           dropdownClassName="add-test-case-filter-dropdown"
+          getPopupContainer={getPopupContainer}
           hideSearchBar={!filter.enableSearch}
           isSuggestionsLoading={filterLoading?.[filter.searchKey]}
           key={filter.searchKey}

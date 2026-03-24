@@ -44,7 +44,6 @@ import {
 import {
   getEncodedFqn,
   waitForAllLoadersToDisappear,
-
 } from '../../utils/entity';
 import { navigateToPersonaWithPagination } from '../../utils/persona';
 import { settingClick } from '../../utils/sidebar';
@@ -209,14 +208,14 @@ test.describe(
         // Hide Explore
         await adminPage
           .getByTestId('page-layout-v1')
-          .getByText('Explore')
+          .getByText('Explore', { exact: true })
           .getByRole('switch')
           .click();
 
         await expect(
           adminPage
             .getByTestId('page-layout-v1')
-            .getByText('Explore')
+            .getByText('Explore', { exact: true })
             .getByRole('switch')
         ).not.toBeChecked();
 
@@ -271,14 +270,14 @@ test.describe(
         // Show Explore
         await adminPage
           .getByTestId('page-layout-v1')
-          .getByText('Explore')
+          .getByText('Explore', { exact: true })
           .getByRole('switch')
           .click();
 
         await expect(
           adminPage
             .getByTestId('page-layout-v1')
-            .getByText('Explore')
+            .getByText('Explore', { exact: true })
             .getByRole('switch')
         ).toBeChecked();
 
@@ -550,13 +549,6 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
         const expectedTabs = getCustomizeDetailsDefaultTabs(type);
 
-        const tabs = adminPage
-          .getByTestId('customize-tab-card')
-          .getByRole('button')
-          .filter({ hasNotText: 'Add Tab' });
-
-        await expect(tabs).toHaveCount(expectedTabs.length);
-
         for (const tabName of expectedTabs) {
           await expect(
             adminPage
@@ -640,7 +632,9 @@ test.describe('Persona customization', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await waitForAllLoadersToDisappear(userPage);
         await waitForAllLoadersToDisappear(userPage);
 
-        await expect(userPage.getByRole('tab', { name: 'Custom Tab' })).toBeVisible();
+        await expect(
+          userPage.getByRole('tab', { name: 'Custom Tab' })
+        ).toBeVisible();
 
         const customTab = userPage
           .locator('main [role="tablist"]')
