@@ -39,7 +39,7 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   private static String logDirectory = "./logs/app-runs";
   private static int maxLinesPerRun = 100_000;
-  private static int maxRunsPerApp = 5;
+  private static int maxRunsPerApp = 1;
   private static volatile boolean registered = false;
 
   @Override
