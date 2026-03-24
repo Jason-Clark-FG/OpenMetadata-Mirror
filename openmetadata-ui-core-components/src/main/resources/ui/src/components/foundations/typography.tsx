@@ -45,10 +45,12 @@ type TypographySize =
 
 type TypographyWeight = "regular" | "medium" | "semibold" | "bold";
 
+type EllipsisRows = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+
 type TypographyEllipsis =
     | boolean
     | {
-          rows?: number;
+          rows?: EllipsisRows;
           tooltip?: ReactNode;
       };
 
