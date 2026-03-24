@@ -45,7 +45,7 @@ const CoreCreateErrorPlaceHolder = ({
         'tw:h-full tw:flex-center tw:border-default tw:border-radius-sm tw:bg-white tw:w-full tw:p-8 tw:pt-0'
       )}
       data-testid="no-data-placeholder">
-      <div className="tw:text-center">
+      <div className="tw:flex tw:flex-col tw:items-center">
         {icon && <div className="m-b-xs">{icon}</div>}
         <div
           className={classNames(
@@ -53,7 +53,10 @@ const CoreCreateErrorPlaceHolder = ({
             contentMaxWidthClass
           )}>
           {heading && (
-            <Typography as="p" className="tw:text-gray-400" size="text-md">
+            <Typography
+              as="p"
+              className="tw:text-gray-400 tw:text-center"
+              size="text-md">
               {heading}
             </Typography>
           )}
