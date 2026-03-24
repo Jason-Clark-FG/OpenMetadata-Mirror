@@ -4,7 +4,7 @@
   "title": "AirflowRestApiConnection",
   "description": "Airflow REST API Connection Config for connecting via REST API.",
   "type": "object",
-  "javaType": "org.openmetadata.schema.services.connections.pipeline.AirflowRestAPiConnection",
+  "javaType": "org.openmetadata.schema.services.connections.pipeline.AirflowRestApiConnection",
   "definitions": {
     "ApiVersion": {
       "description": "Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect the version automatically.",

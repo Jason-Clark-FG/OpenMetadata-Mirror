@@ -15,27 +15,40 @@ package org.openmetadata.service.secrets.converter;
 
 import java.util.List;
 import java.util.Map;
+import org.openmetadata.schema.entity.utils.common.AccessTokenConfig;
+import org.openmetadata.schema.entity.utils.common.BasicAuthConfig;
+import org.openmetadata.schema.entity.utils.common.GcpCredentialsConfig;
 import org.openmetadata.schema.security.credentials.GCPCredentials;
-import org.openmetadata.schema.services.connections.pipeline.AirflowRestAPiConnection;
+import org.openmetadata.schema.services.connections.pipeline.AirflowRestApiConnection;
 import org.openmetadata.schema.utils.JsonUtils;
 
-/** Converter class to get an `AirflowRestAPiConnection` object. */
+/** Converter class to get an `AirflowRestApiConnection` object. */
 public class AirflowRestApiConnectionClassConverter extends ClassConverter {
 
   public AirflowRestApiConnectionClassConverter() {
-    super(AirflowRestAPiConnection.class);
+    super(AirflowRestApiConnection.class);
   }
 
   @Override
   public Object convert(Object object) {
-    AirflowRestAPiConnection conn =
-        (AirflowRestAPiConnection) JsonUtils.convertValue(object, this.clazz);
+    AirflowRestApiConnection conn =
+        (AirflowRestApiConnection) JsonUtils.convertValue(object, this.clazz);
 
-    if (conn.getAuthConfig() instanceof Map<?, ?> authMap
-        && "GcpCredentials".equals(authMap.get("authType"))) {
-      Object credentials = authMap.get("credentials");
-      tryToConvertOrFail(credentials, List.of(GCPCredentials.class))
-          .ifPresent(converted -> ((Map) authMap).put("credentials", converted));
+    if (!(conn.getAuthConfig() instanceof Map<?, ?> authMap)) {
+      return conn;
+    }
+
+    if (authMap.containsKey("username")) {
+      tryToConvertOrFail(authMap, List.of(BasicAuthConfig.class)).ifPresent(conn::setAuthConfig);
+    } else if (authMap.containsKey("token")) {
+      tryToConvertOrFail(authMap, List.of(AccessTokenConfig.class)).ifPresent(conn::setAuthConfig);
+    } else if (authMap.containsKey("credentials")) {
+      tryToConvertOrFail(authMap, List.of(GcpCredentialsConfig.class))
+          .ifPresent(conn::setAuthConfig);
+      if (conn.getAuthConfig() instanceof GcpCredentialsConfig gcpCfg) {
+        tryToConvertOrFail(gcpCfg.getCredentials(), List.of(GCPCredentials.class))
+            .ifPresent(obj -> gcpCfg.setCredentials((GCPCredentials) obj));
+      }
     }
 
     return conn;

@@ -39,6 +39,39 @@ $$
 
 ## Airflow REST API Connection
 
+The REST API connection calls the Airflow web server over HTTP/HTTPS and does not require direct access to Airflow's metadata database. This makes it the right choice for managed deployments (Astronomer, GCP Cloud Composer, MWAA) and for any self-hosted Airflow where direct DB access is not available or desired.
+
+$$note
+The REST API connection fetches DAG topology, task structure, schedules, and run statuses. **Lineage is not captured through this connection.** To get table-level and column-level lineage in OpenMetadata, you must separately install the <a href="https://docs.open-metadata.org/connectors/pipeline/airflow/lineage-backend" target="_blank">OpenMetadata Lineage Backend</a> in Airflow (strategy 2) or use the <a href="https://docs.open-metadata.org/connectors/pipeline/airflow/lineage-operator" target="_blank">Lineage Operator</a> in your DAGs (strategy 3). Once those emit OpenLineage events, lineage edges will appear automatically in OpenMetadata.
+$$
+
+### Host URL Format by Deployment
+
+| Deployment | Example Host and Port URL |
+|---|---|
+| Self-hosted / Docker (ingestion runs on the host) | `http://localhost:8080` |
+| Self-hosted / Docker (ingestion runs inside Docker) | `http://host.docker.internal:8080` |
+| Google Cloud Composer | `https://<hash>-dot-<region>.composer.googleusercontent.com` |
+| Astronomer | `https://<deployment-name>.<astronomer-domain>/airflow` |
+| Amazon MWAA | The Airflow web server URL from the MWAA console |
+
+For **Cloud Composer**, find the web server URL in GCP Console → **Composer → Environments → Open Airflow UI**. Copy the base URL (omit any trailing path).
+
+For **Astronomer**, find your deployment URL in the Astronomer UI → **Deployments → Open Airflow**. Do **not** include a trailing slash.
+
+### When to Use REST API vs. a Database Connection
+
+Use the **REST API connection** when:
+- You are on Astronomer (DB access is unavailable).
+- You are on Cloud Composer or MWAA (DB access is unavailable or impractical).
+- You are running Airflow 3.x.
+- You do not have direct network access to the underlying MySQL / Postgres / SQLite metadata DB.
+
+Use a **Database connection** (MySQL / Postgres / SQLite sections below) when:
+- You self-host Airflow and have direct access to the metadata DB.
+- You want to read raw task-instance data directly from the DB rather than via the API.
+- You are using the Backend Connection strategy (Airflow plugin / Lineage Backend approach).
+
 $$section
 ### Authentication Configuration $(id="authConfig")
 
@@ -49,6 +82,15 @@ Select the authentication method for the Airflow REST API. Pick one of the three
 - **GCP Service Account**: Recommended for **Google Cloud Composer**. GCP OAuth2 tokens are fetched and auto-refreshed at runtime via `google-auth` — tokens never expire mid-run.
 
 $$
+
+### Authentication Quick Reference
+
+| Deployment | Recommended Auth |
+|---|---|
+| Self-hosted Airflow 2.x or 3.x | Basic Auth |
+| Astronomer | Access Token (Deployment API token) |
+| Google Cloud Composer | GCP Service Account |
+| Any deployment with a pre-generated bearer token | Access Token |
 
 $$section
 ### Username $(id="username")
@@ -75,6 +117,16 @@ Use this when you have generated a long-lived API token in your Airflow deployme
 
 $$
 
+### Generating an Astronomer Deployment Token
+
+For **Astronomer** deployments, use Access Token auth with a Deployment API token:
+1. Open the Astronomer UI and navigate to **Deployments**.
+2. Select your deployment and go to **API Keys** or **Tokens** (the exact label depends on your Astronomer version).
+3. Click **Add API Key** / **Generate Token**, give it a descriptive name (e.g. `openmetadata-ingestion`), and copy the value.
+4. Paste it in the **Token** field above.
+
+For self-hosted Airflow, you can generate an API token via the Airflow UI under **Admin → Users** or via the Airflow CLI.
+
 $$section
 ### GCP Credentials $(id="credentials")
 
@@ -90,6 +142,19 @@ Supports all four GCP authentication types:
 You can also optionally configure **service account impersonation** via `gcpImpersonateServiceAccount`.
 
 $$
+
+### Finding Your Cloud Composer Airflow URL
+
+In GCP Console, go to **Composer → Environments**, select your environment, and click **Open Airflow UI**. Copy the base URL (e.g. `https://<hash>-dot-<region>.composer.googleusercontent.com`) — this is what you enter in the **Host and Port** field above.
+
+### Choosing a GCP Credential Type
+
+| Credential Type | When to Use |
+|---|---|
+| **GCP Credentials Values** | Ingestion runs outside GCP (on-prem, local machine). Paste the service account JSON fields directly. |
+| **GCP Credentials Path** | Ingestion runs on a host where the service account JSON key file already exists at a known local path. |
+| **GCP ADC (Application Default Credentials)** | Ingestion runs on a GCE VM or GKE pod with an attached service account. Uses the GCE metadata server or `gcloud auth application-default login`. |
+| **GCP External Account (Workload Identity Federation)** | Ingestion runs on GKE with Workload Identity, or on a non-GCP system using federated identity (e.g. AWS → GCP). |
 
 $$section
 ### API Version $(id="apiVersion")
