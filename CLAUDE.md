@@ -10,17 +10,70 @@ OpenMetadata is a unified metadata platform for data discovery, data observabili
 
 - **Backend**: Java 21 + Dropwizard REST API framework, multi-module Maven project
 - **Frontend**: React + TypeScript, built with Webpack and Yarn; component library via `openmetadata-ui-core-components` (Tailwind CSS v4 with `tw:` prefix, react-aria-components foundation)
-- **Ingestion**: Python 3.11+ with Pydantic 2.x, 75+ data source connectors
+- **Ingestion**: Python 3.10-3.12 with Pydantic 2.x, 75+ data source connectors
 - **Database**: MySQL (default) or PostgreSQL with Flyway migrations
 - **Search**: Elasticsearch 7.17+ or OpenSearch 2.6+ for metadata discovery
 - **Infrastructure**: Apache Airflow for workflow orchestration
+
+## Environment Setup
+
+### Python Virtual Environment (REQUIRED)
+
+**You MUST activate the Python venv before any Python work.** The system `python` command does not exist and system `python3` is too old (3.9). OpenMetadata requires Python 3.11.
+
+```bash
+# First-time setup (already done — venv exists at ~/Code/OpenMetadata/env):
+# python3.11 -m venv env
+
+# ALWAYS activate before running Python, make generate, make install_dev, etc:
+source env/bin/activate
+
+# Verify:
+python --version   # Should show Python 3.11.x
+```
+
+**In worktrees**: When claustre creates a worktree, the venv from the main repo is NOT copied. You need to either:
+- Create a new venv in the worktree: `python3.11 -m venv env && source env/bin/activate && cd ingestion && make install_dev`
+- Or symlink the main repo's venv: `ln -s ~/Code/OpenMetadata/env env`
+
+### Initial Dev Environment Setup
+
+After activating the venv, install all dependencies:
+
+```bash
+source env/bin/activate
+
+# Generate Pydantic models from JSON schemas (required after schema changes)
+make generate
+
+# Install ingestion module with all dev dependencies
+cd ingestion
+make install_dev_env            # Full dev environment (edit mode + all extras)
+# OR for lighter install:
+make install_dev                # Just dev dependencies
+cd ..
+
+# Install UI dependencies
+make yarn_install_cache
+```
+
+### Other Environment Notes
+
+- **Java**: Java 21 required. Use `mvn` (Maven) for backend builds.
+- **Node/Yarn**: Use `yarn` (not `npm`) for frontend. Frontend root is `openmetadata-ui/src/main/resources/ui/`.
+- **Docker services**: Development services (MySQL, Elasticsearch, etc.) run via `docker/development/docker-compose.yml`:
+  ```bash
+  docker compose -f docker/development/docker-compose.yml up -d
+  ```
 
 ## Essential Development Commands
 
 ### Prerequisites and Setup
 ```bash
 make prerequisites              # Check system requirements
-make install_dev_env           # Install all development dependencies
+source env/bin/activate         # ALWAYS activate venv first
+make generate                  # Generate Pydantic models from JSON schemas
+cd ingestion && make install_dev_env  # Install Python dev dependencies
 make yarn_install_cache        # Install UI dependencies
 ```
 
