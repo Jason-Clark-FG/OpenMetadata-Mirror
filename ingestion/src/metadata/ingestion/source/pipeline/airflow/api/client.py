@@ -70,6 +70,7 @@ class AirflowApiClient:
         auth_token_value: Optional[str] = None
 
         if rest_config.token:
+            logger.debug("Using provided token for authentication")
             auth_token_value = rest_config.token.get_secret_value()
         elif rest_config.username and rest_config.password:
             jwt = _try_exchange_jwt(
@@ -139,26 +140,48 @@ class AirflowApiClient:
     def _date_field(self) -> str:
         return "logical_date" if self.api_version == "v2" else "execution_date"
 
+    def _parse_response(self, response):
+        """Parse response, handling both dict and Response objects"""
+        if hasattr(response, "json"):
+            try:
+                return response.json()
+            except Exception as exc:
+                logger.warning(f"Failed to parse JSON response: {exc}")
+                logger.warning(
+                    f"Response content type: {response.headers.get('content-type')}"
+                )
+                logger.debug(f"Response status code: {response.status_code}")
+                logger.debug(f"Response text: {response.text[:500]}")
+                return {}
+        return response
+
     def get_version(self) -> dict:
-        return self.client.get(f"{self._prefix}/version")
+        response = self.client.get(f"{self._prefix}/version")
+        return self._parse_response(response)
 
     def list_dags(self, limit: int = 100, offset: int = 0) -> dict:
-        return self.client.get(f"{self._prefix}/dags?limit={limit}&offset={offset}")
+        response = self.client.get(f"{self._prefix}/dags?limit={limit}&offset={offset}")
+        return self._parse_response(response)
 
     def get_dag_tasks(self, dag_id: str) -> dict:
-        return self.client.get(f"{self._prefix}/dags/{quote(dag_id, safe='')}/tasks")
+        response = self.client.get(
+            f"{self._prefix}/dags/{quote(dag_id, safe='')}/tasks"
+        )
+        return self._parse_response(response)
 
     def list_dag_runs(self, dag_id: str, limit: int = 10) -> dict:
-        return self.client.get(
+        response = self.client.get(
             f"{self._prefix}/dags/{quote(dag_id, safe='')}/dagRuns"
             f"?limit={limit}&order_by=-{self._date_field}"
         )
+        return self._parse_response(response)
 
     def get_task_instances(self, dag_id: str, dag_run_id: str) -> dict:
-        return self.client.get(
+        response = self.client.get(
             f"{self._prefix}/dags/{quote(dag_id, safe='')}"
             f"/dagRuns/{quote(dag_run_id, safe='')}/taskInstances"
         )
+        return self._parse_response(response)
 
     def _paginate(self, path: str, key: str, limit: int = 100) -> List[dict]:
         result: List[dict] = []
@@ -169,6 +192,11 @@ class AirflowApiClient:
             response = self.client.get(
                 f"{path}{separator}limit={limit}&offset={offset}"
             )
+
+            response = self._parse_response(response)
+            if not response:
+                break
+
             page = response.get(key, [])
             if not page:
                 break
@@ -206,6 +234,7 @@ class AirflowApiClient:
 
         try:
             task_response = self.get_dag_tasks(dag_id)
+            task_response = self._parse_response(task_response)
             tasks_data = task_response.get("tasks", [])
         except Exception as exc:
             logger.warning(f"Could not fetch tasks for DAG {dag_id}: {exc}")
@@ -240,6 +269,7 @@ class AirflowApiClient:
     def get_dag_runs(self, dag_id: str, limit: int = 10) -> List[AirflowApiDagRun]:
         try:
             response = self.list_dag_runs(dag_id, limit=limit)
+            response = self._parse_response(response)
             runs_data = response.get("dag_runs", [])
         except Exception as exc:
             logger.warning(f"Could not fetch dag runs for {dag_id}: {exc}")
