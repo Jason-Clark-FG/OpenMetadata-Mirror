@@ -14,6 +14,7 @@ Time utility functions
 """
 
 from datetime import datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from math import floor
 from typing import Optional, Union
 
@@ -171,8 +172,6 @@ def utc_from_timestamp(ts: Union[int, float]) -> datetime:
     and returns naive datetimes to stay compatible with database query
     results which are typically timezone-naive.
     """
-    from datetime import timezone as dt_timezone
-
     return datetime.fromtimestamp(ts, tz=dt_timezone.utc).replace(tzinfo=None)
 
 
