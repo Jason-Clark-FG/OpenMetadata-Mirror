@@ -63,13 +63,7 @@ const AnnouncementItemV2 = ({
       data-testid={`announcement-item-${announcement.id}`}
       role="button"
       tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}>
+      onClick={onClick}>
       <AnnouncementCardV1Content
         columnName={columnName}
         description={description}
