@@ -112,7 +112,7 @@ const AnnouncementsWidgetV2 = ({ isEditView }: WidgetCommonProps) => {
   if (loading) {
     return (
       <div
-        className="tw:rounded-xl tw:border tw:border-border-primary tw:bg-bg-brand-primary tw:px-1 tw:pt-3 tw:pb-1"
+        className="tw:rounded-xl tw:border tw:border-border-primary tw:bg-utility-blue-100 tw:px-1 tw:pt-3 tw:pb-1"
         data-testid="announcements-widget-v2">
         <Loader size="small" />
       </div>
@@ -125,7 +125,7 @@ const AnnouncementsWidgetV2 = ({ isEditView }: WidgetCommonProps) => {
 
   return (
     <div
-      className="tw:rounded-xl tw:border tw:border-border-primary tw:bg-bg-brand-primary tw:px-1 tw:pt-3 tw:pb-1 tw:mb-5"
+      className="tw:rounded-xl tw:border tw:border-border-primary tw:bg-utility-blue-100 tw:px-1 tw:pt-3 tw:pb-1 tw:mb-5"
       data-testid="announcements-widget-v2">
       <div className="tw:flex tw:items-center tw:justify-between tw:mb-2 tw:px-3">
         <div className="tw:flex tw:items-center tw:gap-2">
@@ -159,9 +159,8 @@ const AnnouncementsWidgetV2 = ({ isEditView }: WidgetCommonProps) => {
             onClick={() => setShowAll((prev) => !prev)}>
             {showAll ? t('label.show-less') : t('label.view-all')}
             <ChevronDown
-              className={`tw:size-4 tw:transition-transform ${
-                showAll ? 'tw:rotate-180' : ''
-              }`}
+              className={`tw:size-4 tw:transition-transform ${showAll ? 'tw:rotate-180' : ''
+                }`}
             />
           </button>
         )}
