@@ -15,6 +15,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, create_autospec, patch
 
+from metadata.generated.schema.api.data.createStoredProcedure import (
+    CreateStoredProcedureRequest,
+)
+from metadata.generated.schema.entity.data.storedProcedure import StoredProcedure
 from metadata.generated.schema.entity.services.connections.database.sapHana.sapHanaSQLConnection import (
     SapHanaSQLConnection,
 )
@@ -31,10 +35,6 @@ from metadata.generated.schema.metadataIngestion.workflow import (
 from metadata.generated.schema.metadataIngestion.workflow import SourceConfig
 from metadata.generated.schema.type.filterPattern import FilterPattern
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
-from metadata.generated.schema.api.data.createStoredProcedure import (
-    CreateStoredProcedureRequest,
-)
-from metadata.generated.schema.entity.data.storedProcedure import StoredProcedure
 from metadata.ingestion.source.database.saphana.cdata_parser import (
     ColumnMapping,
     DataSource,
@@ -1446,9 +1446,7 @@ def test_yield_stored_procedure_creates_request() -> None:
         "metadata.ingestion.source.database.saphana.metadata.fqn.build",
         return_value="sap-hana-svc.SYSTEMDB.SYSTEM",
     ):
-        results = list(
-            SaphanaSource.yield_stored_procedure(mock_source, stored_proc)
-        )
+        results = list(SaphanaSource.yield_stored_procedure(mock_source, stored_proc))
 
     assert len(results) == 1
     assert results[0].right is not None
@@ -1490,9 +1488,7 @@ def test_yield_stored_procedure_empty_definition() -> None:
         "metadata.ingestion.source.database.saphana.metadata.fqn.build",
         return_value="sap-hana-svc.SYSTEMDB.SYSTEM",
     ):
-        results = list(
-            SaphanaSource.yield_stored_procedure(mock_source, stored_proc)
-        )
+        results = list(SaphanaSource.yield_stored_procedure(mock_source, stored_proc))
 
     assert len(results) == 1
     request = results[0].right
