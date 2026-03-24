@@ -42,7 +42,9 @@ export const acknowledgeTask = async (data: {
     page.locator(`[data-testid="status-badge-${testCase}"]`)
   ).toContainText('Failed');
 
-  await page.locator(`[data-testid="${testCase}-status"] >> text=New`).waitFor();
+  await page
+    .locator(`[data-testid="${testCase}-status"] >> text=New`)
+    .waitFor();
   await page.click(`[data-testid="${testCase}"] >> text=${testCase}`);
   await waitForAllLoadersToDisappear(page);
   await page.click('[data-testid="edit-resolution-icon"]');
@@ -53,7 +55,9 @@ export const acknowledgeTask = async (data: {
   );
   await page.click('#update-status-button');
   await statusChangeResponse;
-  await page.locator(`[data-testid="${testCase}-status"] >> text=Ack`).waitFor();
+  await page
+    .locator(`[data-testid="${testCase}-status"] >> text=Ack`)
+    .waitFor();
 
   await expect(
     page.locator(
@@ -122,13 +126,11 @@ export const assignIncident = async (data: {
   } else {
     await page.click(`[data-testid="${testCaseName}-status"]`);
     await page.getByRole('menuitem', { name: 'Assigned' }).click();
-    await page
-      .getByTestId(`${testCaseName}-assignee-popover`)
-      .waitFor();
+    await page.getByTestId(`${testCaseName}-assignee-popover`).waitFor();
     await page.click('[data-testid="assignee-search-input"]');
 
     const searchUserResponse = page.waitForResponse(
-      'api/v1/search/query?q=*&index=user_search_index*'
+      'api/v1/search/query?q=*&index=user*'
     );
     await page.fill(
       '[data-testid="assignee-search-input"] input',

@@ -14,16 +14,31 @@
 package org.openmetadata.service.tasks;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.TaskEntityStatus;
+import org.openmetadata.schema.type.TaskEntityType;
+import org.openmetadata.schema.type.TaskResolution;
+import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
+import org.openmetadata.service.jdbi3.TaskRepository;
+import org.openmetadata.service.util.EntityUtil;
 
 /**
  * Unit tests for TaskWorkflowHandler.
@@ -77,6 +92,118 @@ class TaskWorkflowHandlerTest {
 
       assertFalse(handler.supportsMultiApproval(task));
       verify(workflowHandler).hasActiveRuntimeTask(task.getId());
+    }
+  }
+
+  @Test
+  void testResolveTaskReturnsRefreshedOpenTaskWhenWorkflowStillOpen() {
+    UUID taskId = UUID.randomUUID();
+    Task task =
+        new Task()
+            .withId(taskId)
+            .withWorkflowInstanceId(UUID.randomUUID())
+            .withStatus(TaskEntityStatus.Open)
+            .withType(TaskEntityType.RequestApproval);
+    Task refreshedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Open);
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    TaskRepository taskRepository = mock(TaskRepository.class);
+    EntityUtil.Fields fields = new EntityUtil.Fields(Set.of("about"));
+
+    try (MockedStatic<WorkflowHandler> workflowMock = Mockito.mockStatic(WorkflowHandler.class);
+        MockedStatic<Entity> entityMock = Mockito.mockStatic(Entity.class)) {
+      workflowMock.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.transformToNodeVariables(eq(taskId), any()))
+          .thenAnswer(invocation -> invocation.getArgument(1));
+      when(workflowHandler.resolveTask(eq(taskId), any())).thenReturn(true);
+      when(workflowHandler.isTaskStillOpen(taskId)).thenReturn(true);
+
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+      when(taskRepository.getFields(anyString())).thenReturn(fields);
+      when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
+
+      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+
+      assertSame(refreshedTask, result);
+      verify(taskRepository, never()).resolveTask(any(), any(TaskResolution.class), anyString());
+      verify(workflowHandler).isTaskStillOpen(taskId);
+    }
+  }
+
+  @Test
+  void testResolveStandaloneTaskReturnsRefreshedResolvedTask() {
+    UUID taskId = UUID.randomUUID();
+    Task task =
+        new Task().withId(taskId).withStatus(TaskEntityStatus.Open).withType(TaskEntityType.CustomTask);
+    Task storedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
+    Task refreshedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
+    EntityReference resolvedBy =
+        new EntityReference().withId(UUID.randomUUID()).withType(Entity.USER).withName("alice");
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    TaskRepository taskRepository = mock(TaskRepository.class);
+    EntityUtil.Fields fields = new EntityUtil.Fields(Set.of("resolution"));
+
+    try (MockedStatic<WorkflowHandler> workflowMock = Mockito.mockStatic(WorkflowHandler.class);
+        MockedStatic<Entity> entityMock = Mockito.mockStatic(Entity.class)) {
+      workflowMock.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.hasActiveRuntimeTask(taskId)).thenReturn(false);
+
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+      entityMock
+          .when(() -> Entity.getEntityReferenceByName(Entity.USER, "alice", Include.NON_DELETED))
+          .thenReturn(resolvedBy);
+      when(taskRepository.resolveTask(eq(task), any(TaskResolution.class), eq("alice")))
+          .thenReturn(storedTask);
+      when(taskRepository.getFields(anyString())).thenReturn(fields);
+      when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
+
+      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+
+      assertSame(refreshedTask, result);
+      verify(taskRepository).resolveTask(eq(task), any(TaskResolution.class), eq("alice"));
+      verify(workflowHandler).hasActiveRuntimeTask(taskId);
+    }
+  }
+
+  @Test
+  void testResolveStandaloneTaskBuildsApprovedResolution() {
+    UUID taskId = UUID.randomUUID();
+    Task task =
+        new Task().withId(taskId).withStatus(TaskEntityStatus.Open).withType(TaskEntityType.CustomTask);
+    Task storedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
+    EntityReference resolvedBy =
+        new EntityReference().withId(UUID.randomUUID()).withType(Entity.USER).withName("alice");
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    TaskRepository taskRepository = mock(TaskRepository.class);
+    EntityUtil.Fields fields = new EntityUtil.Fields(Set.of("resolution"));
+
+    try (MockedStatic<WorkflowHandler> workflowMock = Mockito.mockStatic(WorkflowHandler.class);
+        MockedStatic<Entity> entityMock = Mockito.mockStatic(Entity.class)) {
+      workflowMock.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.hasActiveRuntimeTask(taskId)).thenReturn(false);
+
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+      entityMock
+          .when(() -> Entity.getEntityReferenceByName(Entity.USER, "alice", Include.NON_DELETED))
+          .thenReturn(resolvedBy);
+      when(taskRepository.resolveTask(eq(task), any(TaskResolution.class), eq("alice")))
+          .thenReturn(storedTask);
+      when(taskRepository.getFields(anyString())).thenReturn(fields);
+      when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(storedTask);
+
+      TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+
+      verify(taskRepository)
+          .resolveTask(
+              eq(task),
+              Mockito.argThat(
+                  resolution ->
+                      resolution.getType() == TaskResolutionType.Approved
+                          && resolution.getResolvedBy() == resolvedBy
+                          && resolution.getResolvedAt() != null),
+              eq("alice"));
     }
   }
 }

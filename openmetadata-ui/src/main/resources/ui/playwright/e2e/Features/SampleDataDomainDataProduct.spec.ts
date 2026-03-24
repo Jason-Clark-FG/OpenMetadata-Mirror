@@ -18,7 +18,6 @@ import { redirectToHomePage } from '../../utils/common';
 import { selectDomain } from '../../utils/domain';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -31,7 +30,6 @@ const testDomainData: Domain['data'] = {
 
 test.describe(
   'Sample Data Domain and Data Product Validation',
-  PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
   () => {
     test.beforeEach(async ({ page }) => {
       await redirectToHomePage(page);
@@ -53,7 +51,7 @@ test.describe(
       await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomainData);
       const dpRes = page.waitForResponse((response) =>
-        response.url().includes('index=data_product_search_index')
+        response.url().includes('index=dataProduct')
       );
       await page.getByTestId('data_products').click();
       await dpRes;
@@ -70,7 +68,7 @@ test.describe(
       await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomainData);
       const dpRes = page.waitForResponse((response) =>
-        response.url().includes('index=data_product_search_index')
+        response.url().includes('index=dataProduct')
       );
       await page.getByTestId('data_products').click();
       await dpRes;

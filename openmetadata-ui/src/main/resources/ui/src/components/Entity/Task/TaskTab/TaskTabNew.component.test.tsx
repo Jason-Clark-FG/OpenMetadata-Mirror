@@ -10,7 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntityType } from '../../../../enums/entity.enum';
 import {
@@ -157,6 +158,47 @@ const MOCK_INCIDENT_TASK: Task = {
   payload: {
     field: 'testCaseStatus',
     testCaseResolutionStatusId: 'resolution-status-id',
+  } as Task['payload'],
+  comments: [],
+  commentCount: 0,
+};
+
+const MOCK_APPROVAL_TASK: Task = {
+  id: 'approval-4569705b-78b9-448f-8d1a-060401f03d9d',
+  taskId: 'TASK-01803',
+  name: 'RequestApproval-v_incnet_location-location_id',
+  category: TaskCategory.Approval,
+  type: TaskEntityType.RequestApproval,
+  status: TaskEntityStatus.Open,
+  priority: TaskPriority.Medium,
+  description: 'this is a test, I am a very good programmer',
+  about: {
+    id: '1bf67076-346e-46a6-b7ad-4914d89f7a3a',
+    type: 'table',
+    name: 'v_incnet_location',
+    fullyQualifiedName: 'starburst.cdl.sharp_incnet.v_incnet_location',
+    displayName: 'v_incnet_location',
+  },
+  createdBy: {
+    id: 'creator-id',
+    type: 'user',
+    name: 'calebknight',
+    displayName: 'Caleb Knight',
+  },
+  assignees: [
+    {
+      id: 'ce782180-36f6-4d4a-9fbe-ee6103d4146f',
+      type: 'user',
+      name: 'calebknight',
+      fullyQualifiedName: 'calebknight',
+      displayName: 'Caleb Knight',
+      deleted: false,
+    },
+  ],
+  payload: {
+    field: 'description',
+    currentValue: 'this is a test suggestion',
+    suggestedValue: 'this is a different test suggestion2',
   } as Task['payload'],
   comments: [],
   commentCount: 0,
@@ -759,5 +801,27 @@ describe('TaskTabNew Component', () => {
     });
 
     expect(screen.getByTestId('feed-replies')).toBeInTheDocument();
+  });
+
+  it('should display the task information for approval tasks with suggestion data', async () => {
+    const {
+      isTagsTask,
+      isDescriptionTask,
+    } = require('../../../../utils/TasksUtils');
+    isTagsTask.mockReturnValue(false);
+    isDescriptionTask.mockReturnValue(false);
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_APPROVAL_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(
+      screen.getByText('message.request-approval-message')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('entity-link')).toHaveTextContent('entityName');
+    expect(screen.getByText('label.created-by')).toBeInTheDocument();
+    expect(screen.getByText('label.assignee-plural')).toBeInTheDocument();
   });
 });

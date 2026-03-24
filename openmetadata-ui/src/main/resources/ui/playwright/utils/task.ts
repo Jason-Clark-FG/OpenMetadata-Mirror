@@ -111,7 +111,7 @@ export const createDescriptionTask = async (
     await assigneeField.click();
 
     const userSearchResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${value.assignee}**&index=user_search_index%2Cteam_search_index*`
+      `/api/v1/search/query?q=*${value.assignee}**&index=user%2Cteam*`
     );
 
     await assigneeField.fill(value.assignee);
@@ -164,7 +164,7 @@ export const createTagTask = async (
     await assigneeField.click();
 
     const userSearchResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${value.assignee}**&index=user_search_index%2Cteam_search_index*`
+      `/api/v1/search/query?q=*${value.assignee}**&index=user%2Cteam*`
     );
     await assigneeField.fill(value.assignee);
     await userSearchResponse;
@@ -184,7 +184,7 @@ export const createTagTask = async (
     await suggestTags.click();
 
     const querySearchResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${value.tag ?? tag}*&index=tag_search_index&*`
+      `/api/v1/search/query?q=*${value.tag ?? tag}*&index=tag&*`
     );
     await suggestTags.fill(value.tag ?? tag);
 

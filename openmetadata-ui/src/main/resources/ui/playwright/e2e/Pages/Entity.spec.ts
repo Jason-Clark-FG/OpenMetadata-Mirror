@@ -19,7 +19,6 @@ import {
 import { isUndefined } from 'lodash';
 import { Column, Table } from '../../../src/generated/entity/data/table';
 import { COMMON_TIER_TAG, KEY_PROFILE_METRICS } from '../../constant/common';
-import { PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ } from '../../constant/config';
 import { CustomPropertySupportedEntityList } from '../../constant/customProperty';
 import { DATA_CONSUMER_RULES } from '../../constant/permission';
 import { PolicyClass } from '../../support/access-control/PoliciesClass';
@@ -72,7 +71,6 @@ import {
   removeOwner,
   removeOwnersFromList,
   waitForAllLoadersToDisappear,
-
 } from '../../utils/entity';
 import { clickDataQualityStatCard } from '../../utils/entityPanel';
 import { visitServiceDetailsPage } from '../../utils/service';
@@ -490,7 +488,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             .waitFor({ state: 'visible' });
 
           const searchTag = page.waitForResponse(
-            '/api/v1/search/query?q=*index=tag_search_index*'
+            '/api/v1/search/query?q=*index=tag*'
           );
           await page
             .locator('[data-testid="tag-select-search-bar"]')
@@ -541,7 +539,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             .waitFor({ state: 'visible' });
 
           const searchTagCleanup = page.waitForResponse(
-            '/api/v1/search/query?q=*index=tag_search_index*'
+            '/api/v1/search/query?q=*index=tag*'
           );
           await page
             .locator('[data-testid="tag-select-search-bar"]')
@@ -612,7 +610,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           const glossarySearchResponse = page.waitForResponse(
             (response) =>
               response.url().includes('/api/v1/search/query') &&
-              response.url().includes('glossary_term_search_index') &&
+              response.url().includes('glossaryTerm') &&
               response.request().method() === 'GET'
           );
           await searchBar.fill(
@@ -667,7 +665,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           await expect(tagSearchBar).toBeVisible();
 
           const searchTag = page.waitForResponse(
-            '/api/v1/search/query?q=*index=tag_search_index*'
+            '/api/v1/search/query?q=*index=tag*'
           );
           await tagSearchBar.fill('PII.Sensitive');
           await searchTag;
@@ -739,7 +737,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             .waitFor({ state: 'visible' });
 
           const searchGlossaryCleanup = page.waitForResponse(
-            '/api/v1/search/query?q=*index=glossary_term_search_index*'
+            '/api/v1/search/query?q=*index=glossaryTerm*'
           );
           await page
             .locator('[data-testid="glossary-term-select-search-bar"]')
@@ -769,7 +767,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             .waitFor({ state: 'visible' });
 
           const searchTagCleanup2 = page.waitForResponse(
-            '/api/v1/search/query?q=*index=tag_search_index*'
+            '/api/v1/search/query?q=*index=tag*'
           );
           await page
             .locator('[data-testid="tag-select-search-bar"]')
@@ -2377,7 +2375,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
    * @description Tests soft deleting an entity and then hard deleting it to completely remove it from the system
 
    */
-  test(`Delete ${key}`, PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, async ({ page }) => {
+  test(`Delete ${key}`, async ({ page }) => {
     // increase timeout as it using single test for multiple steps
     test.slow(true);
 
