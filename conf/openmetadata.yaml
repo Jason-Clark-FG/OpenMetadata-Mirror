@@ -241,15 +241,15 @@ logging:
 
 database:
   # the name of the JDBC driver, mysql in our case
-  driverClass: ${DB_DRIVER_CLASS:-org.postgresql.Driver}
+  driverClass: ${DB_DRIVER_CLASS:-com.mysql.cj.jdbc.Driver}
   # the username and password
   user: ${DB_USER:-openmetadata_user}
   password: ${DB_USER_PASSWORD:-openmetadata_password}
   # the JDBC URL; the database is called openmetadata_db
-  url: jdbc:${DB_SCHEME:-postgresql}://${DB_HOST:-localhost}:${DB_PORT:-5432}/${OM_DATABASE:-openmetadata_db}?${DB_PARAMS:-allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC}
+  url: jdbc:${DB_SCHEME:-mysql}://${DB_HOST:-localhost}:${DB_PORT:-3306}/${OM_DATABASE:-openmetadata_db}?${DB_PARAMS:-allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC}
 
   # HikariCP Connection Pool Settings - Optimized for Performance
-  maxSize: ${DB_CONNECTION_POOL_MAX_SIZE:-150}  # Increased from 50 for better concurrency
+  maxSize: ${DB_CONNECTION_POOL_MAX_SIZE:-100}  # Increased from 50 for better concurrency
   minSize: ${DB_CONNECTION_POOL_MIN_SIZE:-20}   # Increased from 10 to reduce connection creation overhead
   minimumIdle: ${DB_CONNECTION_POOL_MIN_IDLE:-20}  # HikariCP specific minimum idle connections
   initialSize: ${DB_CONNECTION_POOL_INITIAL_SIZE:-20}  # Start with more connections ready
@@ -266,7 +266,7 @@ database:
     connectionTimeout: ${DB_CONNECTION_TIMEOUT:-30000}  # 30 seconds - fail fast if pool exhausted
     idleTimeout: ${DB_IDLE_TIMEOUT:-120000}  # 2 minutes - reclaim idle connections faster
     maxLifetime: ${DB_MAX_LIFETIME:-600000}  # 10 minutes - rotate connections (cloud DB friendly)
-    leakDetectionThreshold: ${DB_LEAK_DETECTION_THRESHOLD:-300000}  # 5 minutes - relaxed for virtual thread concurrency
+    leakDetectionThreshold: ${DB_LEAK_DETECTION_THRESHOLD:-60000}  # 1 minute - detect leaks early
     keepaliveTime: ${DB_KEEPALIVE_TIME:-0}  # 0 = disabled (set to 30000 for Aurora)
     validationTimeout: ${DB_VALIDATION_TIMEOUT:-5000}  # 5 seconds - HikariCP default
     # PostgreSQL specific - these are ignored by MySQL driver
@@ -445,7 +445,7 @@ jwtTokenConfiguration:
   keyId: ${JWT_KEY_ID:-"Gb389a-9f76-gdjs-a92j-0242bk94356"}
 
 elasticsearch:
-  searchType: ${SEARCH_TYPE:- "opensearch"}
+  searchType: ${SEARCH_TYPE:- "elasticsearch"}
   # Single host or comma-separated list for multiple hosts
   # Examples: "localhost" or "es-node1:9200,es-node2:9200,es-node3:9200"
   host: ${ELASTICSEARCH_HOST:-localhost}
@@ -460,7 +460,7 @@ elasticsearch:
   socketTimeoutSecs: ${ELASTICSEARCH_SOCKET_TIMEOUT_SECS:-120}  # Increased from 60s for slow queries
   keepAliveTimeoutSecs: ${ELASTICSEARCH_KEEP_ALIVE_TIMEOUT_SECS:-600}
   # Connection pool settings for better load balancing and performance
-  maxConnTotal: ${ELASTICSEARCH_MAX_CONN_TOTAL:-50}  # Total connections across all hosts
+  maxConnTotal: ${ELASTICSEARCH_MAX_CONN_TOTAL:-30}  # Total connections across all hosts
   maxConnPerRoute: ${ELASTICSEARCH_MAX_CONN_PER_ROUTE:-10}  # Max connections per host
   batchSize: ${ELASTICSEARCH_BATCH_SIZE:-100}
   payLoadSize: ${ELASTICSEARCH_PAYLOAD_BYTES_SIZE:-10485760}
@@ -480,8 +480,8 @@ elasticsearch:
     serviceName: ${SEARCH_AWS_SERVICE_NAME:-"es"}  # Use "es" for OpenSearch, "aoss" for OpenSearch Serverless
   naturalLanguageSearch:
     enabled: ${NATURAL_LANGUAGE_SEARCH_ENABLED:-false}
-    semanticSearchEnabled: ${SEMANTIC_SEARCH_ENABLED:-true}
-    embeddingProvider: ${EMBEDDING_PROVIDER:-djl} # Options: "openai", "bedrock", "djl"
+    semanticSearchEnabled: ${SEMANTIC_SEARCH_ENABLED:-false}
+    embeddingProvider: ${EMBEDDING_PROVIDER:-bedrock} # Options: "openai", "bedrock", "djl"
     maxConcurrentEmbeddingRequests: ${MAX_CONCURRENT_EMBEDDING_REQUESTS:-10}
     providerClass: ${NATURAL_LANGUAGE_SEARCH_PROVIDER_CLASS:-org.openmetadata.service.search.nlq.NoOpNLQService}
     bedrock:
@@ -599,7 +599,7 @@ pipelineServiceClientConfiguration:
 # no_encryption_at_rest is the default value, and it does what it says. Please read the manual on how
 # to secure your instance of OpenMetadata with TLS and encryption at rest.
 fernetConfiguration:
-  fernetKey: ${FERNET_KEY:-uzqSkIL_s2Bz0lmN8JTOsWf87edS6h_mAAH6Zf17Fso=}
+  fernetKey: ${FERNET_KEY:-jJ/9sz0g0OHxsfxOoSfdFdmk3ysNmPRnH3TUAbz3IHA=}
 
 secretsManagerConfiguration:
   secretsManager: ${SECRET_MANAGER:-db} # Possible values are "db", "managed-aws","aws", "managed-aws-ssm", "aws-ssm", "managed-azure-kv", "azure-kv", "in-memory", "gcp", "kubernetes"
