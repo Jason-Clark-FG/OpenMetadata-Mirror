@@ -707,9 +707,18 @@ public final class EntityUtil {
 
   public static String getSchemaField(APIEndpoint apiEndpoint, Field field, String fieldName) {
     // Remove APIEndpoint FQN from schemaField FQN to get the local name
+    // localFieldName contains the schema prefix, e.g. "requestSchema.body" or "responseSchema.body"
     String localFieldName =
         EntityUtil.getLocalColumnName(
             apiEndpoint.getFullyQualifiedName(), field.getFullyQualifiedName());
+    int dotIndex = localFieldName.indexOf(Entity.SEPARATOR);
+    if (dotIndex > 0) {
+      String schemaPrefix = localFieldName.substring(0, dotIndex);
+      String fieldLocalName = localFieldName.substring(dotIndex + 1);
+      return fieldName == null
+          ? FullyQualifiedName.build(schemaPrefix, "schemaFields", fieldLocalName)
+          : FullyQualifiedName.build(schemaPrefix, "schemaFields", fieldLocalName, fieldName);
+    }
     return fieldName == null
         ? FullyQualifiedName.build("schemaFields", localFieldName)
         : FullyQualifiedName.build("schemaFields", localFieldName, fieldName);
