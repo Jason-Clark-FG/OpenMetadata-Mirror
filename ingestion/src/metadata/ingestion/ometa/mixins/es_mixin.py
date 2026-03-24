@@ -15,6 +15,7 @@ To be used by OpenMetadata class
 """
 import functools
 import json
+import time
 import traceback
 from typing import (
     Generic,
@@ -47,6 +48,9 @@ from metadata.utils.logger import ometa_logger
 logger = ometa_logger()
 
 T = TypeVar("T", bound=BaseModel)
+
+CIRCUIT_BREAKING_EXCEPTION = "circuit_breaking_exception"
+ES_RETRY_BACKOFF_SECONDS = 2
 
 
 class TotalModel(BaseModel):
@@ -138,11 +142,27 @@ class ESMixin(Generic[T]):
         """
         Run the ES query and return a list of entities that match. It does an extra query to the OM API with the
         requested fields per each entity found in ES.
+
+        Exceptions are caught and None returned so that lru_cache stores the failure, preventing
+        repeated hammering of an overloaded Elasticsearch cluster for the same query.
+
         :param entity_type: Entity to look for
         :param query_string: Query to run
         :return: List of Entities or None
         """
-        response = self.client.get(query_string)
+        try:
+            response = self.client.get(query_string)
+        except Exception as exc:
+            logger.debug(traceback.format_exc())
+            if CIRCUIT_BREAKING_EXCEPTION in str(exc):
+                logger.warning(
+                    f"Elasticsearch circuit breaker triggered for query [{query_string}]: {exc}"
+                )
+            else:
+                logger.warning(
+                    f"Elasticsearch search failed for query [{query_string}]: {exc}"
+                )
+            return None
 
         if response:
             if fields:
@@ -290,19 +310,13 @@ class ESMixin(Generic[T]):
         )
 
         try:
-            response = self._search_es_entity(
+            return self._search_es_entity(
                 entity_type=entity_type, query_string=query_string, fields=fields
             )
-            return response
         except KeyError as err:
             logger.debug(traceback.format_exc())
             logger.warning(
                 f"Cannot find the index in ES_INDEX_MAP for {entity_type.__name__}: {err}"
-            )
-        except Exception as exc:
-            logger.debug(traceback.format_exc())
-            logger.warning(
-                f"Elasticsearch search failed for query [{query_string}]: {exc}"
             )
         return None
 
@@ -397,10 +411,12 @@ class ESMixin(Generic[T]):
             )
             response = self._get_es_response(query_string)
 
-            # Allow 3 errors getting pages before getting out of the loop
+            # Allow 3 errors getting pages before getting out of the loop,
+            # with exponential backoff to avoid hammering an overloaded ES cluster.
             if not response:
                 error_pages += 1
                 if error_pages < 3:
+                    time.sleep(error_pages * ES_RETRY_BACKOFF_SECONDS)
                     continue
                 else:
                     break
@@ -465,11 +481,18 @@ class ESMixin(Generic[T]):
             return ESResponse.model_validate(response)
         except Exception as exc:
             logger.debug(traceback.format_exc())
-            logger.error(
-                f"Elasticsearch query failed: {exc}. Query: {query_string}. "
-                "This may indicate issues with the Elasticsearch cluster, broken indexes, "
-                "or connectivity problems. Please check Elasticsearch cluster health and logs."
-            )
+            if CIRCUIT_BREAKING_EXCEPTION in str(exc):
+                logger.error(
+                    f"Elasticsearch circuit breaker triggered for query [{query_string}]: {exc}. "
+                    "The Elasticsearch cluster is under memory pressure. Consider reducing "
+                    "ingestion concurrency or increasing Elasticsearch heap size."
+                )
+            else:
+                logger.error(
+                    f"Elasticsearch query failed: {exc}. Query: {query_string}. "
+                    "This may indicate issues with the Elasticsearch cluster, broken indexes, "
+                    "or connectivity problems. Please check Elasticsearch cluster health and logs."
+                )
         return None
 
     def _yield_hits_from_api(
