@@ -16,8 +16,7 @@ public class MetricsErrorHandlingTest {
   @BeforeEach
   void setUp() {
     Metrics.globalRegistry.clear();
-    new java.util.ArrayList<>(Metrics.globalRegistry.getRegistries())
-        .forEach(Metrics.globalRegistry::remove);
+    Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
 
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     Metrics.addRegistry(registry);
