@@ -36,12 +36,14 @@ from metadata.utils.helpers import datetime_to_ts
 
 
 def _make_client(mock_rest_cls, api_version="v1"):
-    """Create an AirflowApiClient with mocked TrackedREST."""
+    """Create an AirflowApiClient with mocked TrackedREST using AccessToken auth."""
     mock_rest_cls.return_value = MagicMock()
+    auth_config = MagicMock()
+    auth_config.authType = "AccessToken"
+    auth_config.token = MagicMock()
+    auth_config.token.get_secret_value.return_value = "test_token"
     rest_config = MagicMock()
-    rest_config.token = None
-    rest_config.username = None
-    rest_config.password = None
+    rest_config.authConfig = auth_config
     rest_config.apiVersion = MagicMock()
     rest_config.apiVersion.value = api_version
     rest_config.verifySSL = True

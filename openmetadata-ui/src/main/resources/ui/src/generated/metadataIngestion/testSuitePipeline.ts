@@ -1098,7 +1098,7 @@ export interface ConfigObject {
      *
      * GCP Credentials for Google Drive API
      */
-    credentials?: CredentialsClass;
+    credentials?: PurpleGCPCredentials;
     /**
      * Regex to only include/exclude databases that matches the pattern.
      *
@@ -3313,6 +3313,8 @@ export interface ConfigSourceConnection {
  *
  * GCP credentials configuration for authenticating with Pub/Sub.
  *
+ * GCP credentials configuration.
+ *
  * GCP Credentials for Google Drive API
  *
  * AWS credentials required to access the S3 file.
@@ -3525,8 +3527,7 @@ export interface GCPImpersonateServiceAccountValues {
  * Choose between database connection or REST API connection to fetch metadata from
  * Airflow.
  *
- * Airflow REST API Connection Config for connecting via REST API with token or basic
- * authentication.
+ * Airflow REST API Connection Config for connecting via REST API.
  *
  * Lineage Backend Connection Config
  *
@@ -3541,8 +3542,6 @@ export interface ConfigConnection {
      * Password for Superset.
      *
      * Password to connect to Hana.
-     *
-     * Password for basic authentication to the Airflow API.
      *
      * Password to connect to SQLite. Blank for in-memory database.
      *
@@ -3569,8 +3568,6 @@ export interface ConfigConnection {
      * in Mysql.
      *
      * Username to connect to Hana. This user should have privileges to read all the metadata.
-     *
-     * Username for basic authentication to the Airflow API.
      *
      * Username to connect to SQLite. Blank for in-memory database.
      *
@@ -3687,9 +3684,10 @@ export interface ConfigConnection {
      */
     apiVersion?: APIVersion;
     /**
-     * Bearer token for API authentication.
+     * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
+     * Service Account (for Cloud Composer).
      */
-    token?: string;
+    authConfig?: AuthenticationConfiguration;
     /**
      * Regex exclude pipelines.
      */
@@ -3711,6 +3709,59 @@ export enum APIVersion {
     Auto = "auto",
     V1 = "v1",
     V2 = "v2",
+}
+
+/**
+ * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
+ * Service Account (for Cloud Composer).
+ *
+ * Username and password for Airflow API authentication.
+ *
+ * Static access token for Airflow API authentication.
+ *
+ * GCP credentials for Google Cloud Composer. Supports service account values, credentials
+ * path, workload identity (external account), and ADC. Tokens are auto-refreshed at runtime.
+ */
+export interface AuthenticationConfiguration {
+    /**
+     * Password for basic authentication to the Airflow API.
+     */
+    password?: string;
+    /**
+     * Username for basic authentication to the Airflow API.
+     */
+    username?: string;
+    /**
+     * Static access token for Airflow API authentication.
+     */
+    token?: string;
+    /**
+     * GCP credentials configuration.
+     */
+    credentials?: GcpConfigClass;
+}
+
+/**
+ * GCP credentials configs.
+ *
+ * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
+ *
+ * GCP credentials configuration.
+ *
+ * GCP Credentials for Google Drive API
+ */
+export interface GcpConfigClass {
+    /**
+     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+     * Credentials Path
+     */
+    gcpConfig: GCPCredentialsConfiguration;
+    /**
+     * we enable the authenticated service account to impersonate another service account
+     */
+    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
 }
 
 /**
@@ -3904,6 +3955,7 @@ export enum ConnectionType {
     MatillionETL = "MatillionETL",
     Mysql = "Mysql",
     Postgres = "Postgres",
+    RESTAPI = "RestAPI",
     SQLite = "SQLite",
 }
 
@@ -3927,6 +3979,8 @@ export enum VerifySSL {
  *
  * GCP credentials configuration for authenticating with Pub/Sub.
  *
+ * GCP credentials configuration.
+ *
  * GCP Credentials for Google Drive API
  *
  * Azure Cloud Credentials
@@ -3935,7 +3989,7 @@ export enum VerifySSL {
  *
  * Azure Credentials
  */
-export interface CredentialsClass {
+export interface PurpleGCPCredentials {
     /**
      * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
      * Credentials Path
@@ -4102,27 +4156,6 @@ export enum FHIRVersion {
     Dstu2 = "DSTU2",
     R4 = "R4",
     Stu3 = "STU3",
-}
-
-/**
- * GCP credentials configs.
- *
- * GCP Credentials
- *
- * GCP credentials configuration for authenticating with Pub/Sub.
- *
- * GCP Credentials for Google Drive API
- */
-export interface GcpConfigClass {
-    /**
-     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
-     * Credentials Path
-     */
-    gcpConfig: GCPCredentialsConfiguration;
-    /**
-     * we enable the authenticated service account to impersonate another service account
-     */
-    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
 }
 
 /**

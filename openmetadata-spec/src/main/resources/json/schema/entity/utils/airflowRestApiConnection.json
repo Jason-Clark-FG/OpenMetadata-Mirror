@@ -2,7 +2,7 @@
   "$id": "https://open-metadata.org/schema/entity/utils/airflowRestApiConnection.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AirflowRestApiConnection",
-  "description": "Airflow REST API Connection Config for connecting via REST API with token or basic authentication.",
+  "description": "Airflow REST API Connection Config for connecting via REST API.",
   "type": "object",
   "javaType": "org.openmetadata.schema.services.connections.pipeline.AirflowRestAPiConnection",
   "definitions": {
@@ -14,22 +14,27 @@
     }
   },
   "properties": {
-    "username": {
-      "title": "Username",
-      "description": "Username for basic authentication to the Airflow API.",
-      "type": "string"
-    },
-    "password": {
-      "title": "Password",
-      "description": "Password for basic authentication to the Airflow API.",
+    "type": {
+      "title": "Service Type",
+      "description": "Service Type",
       "type": "string",
-      "format": "password"
+      "enum": ["RestAPI"],
+      "default": "RestAPI"
     },
-    "token": {
-      "title": "Token",
-      "description": "Bearer token for API authentication.",
-      "type": "string",
-      "format": "password"
+    "authConfig": {
+      "title": "Authentication Configuration",
+      "description": "Choose an authentication method: Basic Auth (username/password), Access Token, or GCP Service Account (for Cloud Composer).",
+      "oneOf": [
+        {
+          "$ref": "./common/basicAuthConfig.json"
+        },
+        {
+          "$ref": "./common/accessTokenConfig.json"
+        },
+        {
+          "$ref": "./common/gcpCredentialsConfig.json"
+        }
+      ]
     },
     "apiVersion": {
       "title": "API Version",
@@ -44,5 +49,6 @@
       "default": true
     }
   },
+  "required": ["authConfig"],
   "additionalProperties": false
 }

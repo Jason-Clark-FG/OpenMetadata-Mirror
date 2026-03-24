@@ -11,68 +11,14 @@
  *  limitations under the License.
  */
 /**
- * Airflow REST API Connection Config for connecting via REST API.
- */
-export interface AirflowRESTAPIConnection {
-    /**
-     * Airflow REST API version.
-     */
-    apiVersion?: APIVersion;
-    /**
-     * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
-     * Service Account (for Cloud Composer).
-     */
-    authConfig: AuthenticationConfiguration;
-    /**
-     * Service Type
-     */
-    type?: ServiceType;
-    /**
-     * Whether to verify SSL certificates when connecting to the Airflow API.
-     */
-    verifySSL?: boolean;
-}
-
-/**
- * Airflow REST API version.
- *
- * Airflow REST API version. Use v1 for Airflow 2.x and v2 for Airflow 3.x. Auto will detect
- * the version automatically.
- */
-export enum APIVersion {
-    Auto = "auto",
-    V1 = "v1",
-    V2 = "v2",
-}
-
-/**
- * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
- * Service Account (for Cloud Composer).
- *
- * Username and password for Airflow API authentication.
- *
- * Static access token for Airflow API authentication.
- *
  * GCP credentials for Google Cloud Composer. Supports service account values, credentials
  * path, workload identity (external account), and ADC. Tokens are auto-refreshed at runtime.
  */
-export interface AuthenticationConfiguration {
-    /**
-     * Password for basic authentication to the Airflow API.
-     */
-    password?: string;
-    /**
-     * Username for basic authentication to the Airflow API.
-     */
-    username?: string;
-    /**
-     * Static access token for Airflow API authentication.
-     */
-    token?: string;
+export interface GcpCredentialsConfig {
     /**
      * GCP credentials configuration.
      */
-    credentials?: GCPCredentials;
+    credentials: GCPCredentials;
 }
 
 /**
@@ -192,11 +138,4 @@ export interface GCPImpersonateServiceAccountValues {
      */
     lifetime?: number;
     [property: string]: any;
-}
-
-/**
- * Service Type
- */
-export enum ServiceType {
-    RESTAPI = "RestAPI",
 }

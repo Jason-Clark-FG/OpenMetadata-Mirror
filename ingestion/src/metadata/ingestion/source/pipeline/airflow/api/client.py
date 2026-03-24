@@ -11,20 +11,28 @@
 """
 Client to interact with the Airflow REST API
 """
-import base64
 import traceback
 from typing import List, Optional
 from urllib.parse import quote
 
-import requests
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError
 
 from metadata.generated.schema.entity.services.connections.pipeline.airflowConnection import (
     AirflowConnection,
 )
+from metadata.generated.schema.entity.utils.common.accessTokenConfig import AccessToken
+from metadata.generated.schema.entity.utils.common.basicAuthConfig import BasicAuth
+from metadata.generated.schema.entity.utils.common.gcpCredentialsConfig import (
+    GcpServiceAccount,
+)
 from metadata.ingestion.connections.source_api_client import TrackedREST
 from metadata.ingestion.ometa.client import ClientConfig
+from metadata.ingestion.source.pipeline.airflow.api.auth import (
+    build_access_token_callback,
+    build_basic_auth_callback,
+    build_gcp_token_callback,
+)
 from metadata.ingestion.source.pipeline.airflow.api.models import (
     AirflowApiDagDetails,
     AirflowApiDagRun,
@@ -37,24 +45,6 @@ from metadata.utils.logger import ingestion_logger
 logger = ingestion_logger()
 
 
-def _try_exchange_jwt(host: str, username: str, password: str, verify) -> Optional[str]:
-    """POST {host}/auth/token to get a JWT Bearer token (Airflow 3.x). Returns None on failure."""
-    try:
-        resp = requests.post(
-            f"{host}/auth/token",
-            json={"username": username, "password": password},
-            timeout=10,
-            verify=verify,
-        )
-        resp.raise_for_status()
-        return resp.json().get("access_token")
-    except Exception:
-        logger.debug(
-            "JWT token exchange failed (likely Airflow 2.x): %s", traceback.format_exc()
-        )
-        return None
-
-
 class AirflowApiClient:
     """
     Client to interact with the Airflow REST API (v1 for Airflow 2.x, v2 for Airflow 3.x)
@@ -65,36 +55,30 @@ class AirflowApiClient:
         self._detected_version: Optional[str] = None
 
         rest_config = config.connection
-
+        auth_config = rest_config.authConfig
         auth_token_mode = "Bearer"
-        auth_token_value: Optional[str] = None
 
-        if rest_config.token:
-            logger.debug("Using provided token for authentication")
-            auth_token_value = rest_config.token.get_secret_value()
-        elif rest_config.username and rest_config.password:
-            jwt = _try_exchange_jwt(
-                clean_uri(str(config.hostPort)),
-                rest_config.username,
-                rest_config.password.get_secret_value(),
-                rest_config.verifySSL,
+        if isinstance(auth_config, AccessToken):
+            auth_token_fn = build_access_token_callback(
+                auth_config.token.get_secret_value()
             )
-            if jwt:
-                auth_token_value = jwt
-            else:
-                auth_token_mode = "Basic"
-                credentials = (
-                    f"{rest_config.username}:{rest_config.password.get_secret_value()}"
-                )
-                auth_token_value = base64.b64encode(credentials.encode("utf-8")).decode(
-                    "utf-8"
-                )
+        elif isinstance(auth_config, BasicAuth):
+            auth_token_fn, auth_token_mode = build_basic_auth_callback(
+                host=clean_uri(str(config.hostPort)),
+                username=auth_config.username,
+                password=auth_config.password.get_secret_value(),
+                verify=rest_config.verifySSL,
+            )
+        elif isinstance(auth_config, GcpServiceAccount):
+            auth_token_fn = build_gcp_token_callback(auth_config.credentials)
+        else:
+            auth_token_fn = None
 
         client_config = ClientConfig(
             base_url=clean_uri(str(config.hostPort)),
             api_version="api",
-            auth_header="Authorization" if auth_token_value else None,
-            auth_token=(lambda: (auth_token_value, 0)) if auth_token_value else None,
+            auth_header="Authorization" if auth_token_fn else None,
+            auth_token=auth_token_fn,
             auth_token_mode=auth_token_mode,
             verify=rest_config.verifySSL,
         )

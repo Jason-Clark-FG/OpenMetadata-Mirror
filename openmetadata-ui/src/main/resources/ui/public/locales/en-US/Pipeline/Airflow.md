@@ -37,6 +37,78 @@ Note that the **Backend Connection** is only used to extract metadata from a DAG
 
 $$
 
+## Airflow REST API Connection
+
+$$section
+### Authentication Configuration $(id="authConfig")
+
+Select the authentication method for the Airflow REST API. Pick one of the three options from the dropdown — the corresponding fields will appear:
+
+- **Basic Auth**: Enter a username and password. For Airflow 3.x, a short-lived JWT is automatically exchanged at startup; for Airflow 2.x, HTTP Basic auth is used directly.
+- **Access Token**: Paste a static bearer token you have generated in Airflow.
+- **GCP Service Account**: Recommended for **Google Cloud Composer**. GCP OAuth2 tokens are fetched and auto-refreshed at runtime via `google-auth` — tokens never expire mid-run.
+
+$$
+
+$$section
+### Username $(id="username")
+
+Username for Basic Auth. The user must have permission to call the Airflow REST API.
+
+For Airflow 3.x this triggers an automatic JWT exchange (`POST /auth/token`). For Airflow 2.x, HTTP Basic auth is used directly.
+
+$$
+
+$$section
+### Password $(id="password")
+
+Password for Basic Auth.
+
+$$
+
+$$section
+### Token $(id="token")
+
+Static bearer token for Access Token authentication. Paste the token value here — it will be sent as `Authorization: Bearer <token>` on every request.
+
+Use this when you have generated a long-lived API token in your Airflow deployment.
+
+$$
+
+$$section
+### GCP Credentials $(id="credentials")
+
+GCP credentials used to obtain short-lived OAuth2 tokens for authenticating with Google Cloud Composer. Tokens are automatically refreshed when they expire, so ingestion runs are never interrupted by token expiry.
+
+Supports all four GCP authentication types:
+
+- **GCP Credentials Values**: Paste the service account JSON fields directly (project ID, client email, private key, etc.).
+- **GCP Credentials Path**: Provide a file path to a service account JSON key file on the ingestion host.
+- **GCP External Account (Workload Identity Federation)**: For GKE or other workload identity setups.
+- **GCP ADC (Application Default Credentials)**: Uses the credentials already available in the environment (e.g. via `gcloud auth application-default login` or the GCE metadata server).
+
+You can also optionally configure **service account impersonation** via `gcpImpersonateServiceAccount`.
+
+$$
+
+$$section
+### API Version $(id="apiVersion")
+
+Airflow REST API version to use:
+
+- **auto** (default): OpenMetadata tries `v2` first (Airflow 3.x), then falls back to `v1` (Airflow 2.x).
+- **v1**: Force Airflow 2.x API.
+- **v2**: Force Airflow 3.x API.
+
+$$
+
+$$section
+### Verify SSL $(id="verifySSL")
+
+Whether to verify SSL certificates when connecting to the Airflow REST API. Set to `false` only in development environments with self-signed certificates.
+
+$$
+
 
 ## MySQL Connection
 

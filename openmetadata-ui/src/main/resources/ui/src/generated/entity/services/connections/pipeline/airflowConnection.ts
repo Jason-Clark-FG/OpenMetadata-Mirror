@@ -41,8 +41,7 @@ export interface AirflowConnection {
  * Choose between database connection or REST API connection to fetch metadata from
  * Airflow.
  *
- * Airflow REST API Connection Config for connecting via REST API with token or basic
- * authentication.
+ * Airflow REST API Connection Config for connecting via REST API.
  *
  * Lineage Backend Connection Config
  *
@@ -58,27 +57,14 @@ export interface AirflowConnectionClass {
      */
     apiVersion?: APIVersion;
     /**
-     * Password for basic authentication to the Airflow API.
-     *
-     * Password to connect to SQLite. Blank for in-memory database.
+     * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
+     * Service Account (for Cloud Composer).
      */
-    password?: string;
+    authConfig?: AuthenticationConfiguration;
     /**
-     * Bearer token for API authentication.
+     * Service Type
      */
-    token?: string;
-    /**
-     * Username for basic authentication to the Airflow API.
-     *
-     * Username to connect to MySQL. This user should have privileges to read all the metadata
-     * in Mysql.
-     *
-     * Username to connect to Postgres. This user should have privileges to read all the
-     * metadata in Postgres.
-     *
-     * Username to connect to SQLite. Blank for in-memory database.
-     */
-    username?: string;
+    type?: Type;
     /**
      * Whether to verify SSL certificates when connecting to the Airflow API.
      */
@@ -87,10 +73,6 @@ export interface AirflowConnectionClass {
      * Regex exclude pipelines.
      */
     pipelineFilterPattern?: FilterPattern;
-    /**
-     * Service Type
-     */
-    type?: Type;
     /**
      * Choose Auth Config Type.
      */
@@ -149,6 +131,16 @@ export interface AirflowConnectionClass {
      */
     tableFilterPattern?: FilterPattern;
     /**
+     * Username to connect to MySQL. This user should have privileges to read all the metadata
+     * in Mysql.
+     *
+     * Username to connect to Postgres. This user should have privileges to read all the
+     * metadata in Postgres.
+     *
+     * Username to connect to SQLite. Blank for in-memory database.
+     */
+    username?: string;
+    /**
      * Use slow logs to extract lineage.
      */
     useSlowLogs?: boolean;
@@ -179,7 +171,11 @@ export interface AirflowConnectionClass {
     /**
      * How to run the SQLite database. :memory: by default.
      */
-    databaseMode?:                  string;
+    databaseMode?: string;
+    /**
+     * Password to connect to SQLite. Blank for in-memory database.
+     */
+    password?:                      string;
     supportsViewLineageExtraction?: boolean;
 }
 
@@ -193,6 +189,155 @@ export enum APIVersion {
     Auto = "auto",
     V1 = "v1",
     V2 = "v2",
+}
+
+/**
+ * Choose an authentication method: Basic Auth (username/password), Access Token, or GCP
+ * Service Account (for Cloud Composer).
+ *
+ * Username and password for Airflow API authentication.
+ *
+ * Static access token for Airflow API authentication.
+ *
+ * GCP credentials for Google Cloud Composer. Supports service account values, credentials
+ * path, workload identity (external account), and ADC. Tokens are auto-refreshed at runtime.
+ */
+export interface AuthenticationConfiguration {
+    /**
+     * Password for basic authentication to the Airflow API.
+     */
+    password?: string;
+    /**
+     * Username for basic authentication to the Airflow API.
+     */
+    username?: string;
+    /**
+     * Static access token for Airflow API authentication.
+     */
+    token?: string;
+    /**
+     * GCP credentials configuration.
+     */
+    credentials?: GCPCredentials;
+}
+
+/**
+ * GCP credentials configuration.
+ *
+ * GCP credentials configs.
+ */
+export interface GCPCredentials {
+    /**
+     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+     * Credentials Path
+     */
+    gcpConfig: GCPCredentialsConfiguration;
+    /**
+     * we enable the authenticated service account to impersonate another service account
+     */
+    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
+}
+
+/**
+ * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+ * Credentials Path
+ *
+ * Pass the raw credential values provided by GCP
+ *
+ * Pass the path of file containing the GCP credentials info
+ *
+ * Use the application default credentials
+ */
+export interface GCPCredentialsConfiguration {
+    /**
+     * Google Cloud auth provider certificate.
+     */
+    authProviderX509CertUrl?: string;
+    /**
+     * Google Cloud auth uri.
+     */
+    authUri?: string;
+    /**
+     * Google Cloud email.
+     */
+    clientEmail?: string;
+    /**
+     * Google Cloud Client ID.
+     */
+    clientId?: string;
+    /**
+     * Google Cloud client certificate uri.
+     */
+    clientX509CertUrl?: string;
+    /**
+     * Google Cloud private key.
+     */
+    privateKey?: string;
+    /**
+     * Google Cloud private key id.
+     */
+    privateKeyId?: string;
+    /**
+     * Project ID
+     *
+     * GCP Project ID to parse metadata from
+     */
+    projectId?: string[] | string;
+    /**
+     * Google Cloud token uri.
+     */
+    tokenUri?: string;
+    /**
+     * Google Cloud Platform account type.
+     *
+     * Google Cloud Platform ADC ( Application Default Credentials )
+     */
+    type?: string;
+    /**
+     * Path of the file containing the GCP credentials info
+     */
+    path?: string;
+    /**
+     * Google Security Token Service audience which contains the resource name for the workload
+     * identity pool and the provider identifier in that pool.
+     */
+    audience?: string;
+    /**
+     * This object defines the mechanism used to retrieve the external credential from the local
+     * environment so that it can be exchanged for a GCP access token via the STS endpoint
+     */
+    credentialSource?: { [key: string]: string };
+    /**
+     * Google Cloud Platform account type.
+     */
+    externalType?: string;
+    /**
+     * Google Security Token Service subject token type based on the OAuth 2.0 token exchange
+     * spec.
+     */
+    subjectTokenType?: string;
+    /**
+     * Google Security Token Service token exchange endpoint.
+     */
+    tokenURL?: string;
+    [property: string]: any;
+}
+
+/**
+ * we enable the authenticated service account to impersonate another service account
+ *
+ * Pass the values to impersonate a service account of Google Cloud
+ */
+export interface GCPImpersonateServiceAccountValues {
+    /**
+     * The impersonated service account email
+     */
+    impersonateServiceAccount?: string;
+    /**
+     * Number of seconds the delegated credential should be valid
+     */
+    lifetime?: number;
+    [property: string]: any;
 }
 
 /**
@@ -456,6 +601,7 @@ export enum Type {
     Backend = "Backend",
     Mysql = "Mysql",
     Postgres = "Postgres",
+    RESTAPI = "RestAPI",
     SQLite = "SQLite",
 }
 
