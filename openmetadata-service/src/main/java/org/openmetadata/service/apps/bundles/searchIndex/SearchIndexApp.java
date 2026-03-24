@@ -12,11 +12,13 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.analytics.ReportData;
 import org.openmetadata.schema.entity.app.App;
+import org.openmetadata.schema.entity.app.AppRunRecord;
 import org.openmetadata.schema.system.EventPublisherJob;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.apps.AbstractNativeApplication;
 import org.openmetadata.service.apps.bundles.searchIndex.distributed.DistributedSearchIndexCoordinator;
 import org.openmetadata.service.exception.AppException;
+import org.openmetadata.service.jdbi3.AppRepository;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.search.SearchRepository;
 import org.quartz.JobExecutionContext;
@@ -91,7 +93,27 @@ public class SearchIndexApp extends AbstractNativeApplication {
       LOG.info("Stopping distributed job {} via coordinator fallback", jobIdStr);
       coordinator.requestStop(java.util.UUID.fromString(jobIdStr));
     }
+    updateRunRecordToStopped();
     return true;
+  }
+
+  private void updateRunRecordToStopped() {
+    try {
+      App app = getApp();
+      if (app == null) {
+        return;
+      }
+      AppRepository appRepository = new AppRepository();
+      AppRunRecord latestRun = appRepository.getLatestAppRuns(app);
+      if (latestRun != null && latestRun.getStatus() == AppRunRecord.Status.RUNNING) {
+        latestRun.withStatus(AppRunRecord.Status.STOPPED);
+        latestRun.withEndTime(System.currentTimeMillis());
+        appRepository.updateAppStatus(app.getId(), latestRun);
+        LOG.info("Updated app run record to STOPPED for {}", app.getName());
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to update app run record to STOPPED", e);
+    }
   }
 
   @Override
