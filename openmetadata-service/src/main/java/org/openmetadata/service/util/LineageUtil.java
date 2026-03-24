@@ -29,6 +29,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.search.IndexMapping;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.resources.tags.TagLabelUtil;
 
 @Slf4j
 public class LineageUtil {
@@ -297,6 +298,7 @@ public class LineageUtil {
       for (CollectionDAO.TagUsageDAO.TagLabelWithFQNHash result : batchResults) {
         TagLabel tag = result.toTagLabel();
         if (tag.getTagFQN() != null && !tag.getTagFQN().startsWith("Tier.")) {
+          TagLabelUtil.applyTagCommonFieldsGracefully(tag);
           tagsByFqnHash.computeIfAbsent(result.getTargetFQNHash(), k -> new ArrayList<>()).add(tag);
         }
       }

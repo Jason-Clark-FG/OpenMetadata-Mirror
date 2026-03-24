@@ -40,7 +40,6 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.search.ColumnFilterMatcher;
 import org.openmetadata.service.search.ColumnMetadataCache;
 import org.openmetadata.service.search.LineagePathPreserver;
-import org.openmetadata.service.search.QueryFilterParser;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.LineageUtil;
 import os.org.opensearch.client.json.JsonData;
@@ -709,37 +708,14 @@ public class OSLineageGraphBuilder
       return new HashMap<>();
     }
 
-    Map<String, Object> allDocs =
-        OsUtils.searchEntitiesByKey(
-            esClient,
-            null,
-            GLOBAL_SEARCH_ALIAS,
-            FIELD_FULLY_QUALIFIED_NAME_HASH_KEYWORD,
-            allFqnHashes,
-            0,
-            Math.min(allFqnHashes.size(), 10000),
-            SOURCE_FIELDS_TO_EXCLUDE);
-
-    List<Map<String, Object>> docList = new ArrayList<>();
-    for (Object doc : allDocs.values()) {
-      if (doc instanceof Map) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> docMap = (Map<String, Object>) doc;
-        docList.add(docMap);
-      }
-    }
-    LineageUtil.replaceWithEntityLevelTagsBatch(docList);
-
-    List<Map<String, List<String>>> clauses = QueryFilterParser.parseFilterClauses(queryFilter);
+    Map<String, Object> matchingDocs = fetchMatchingEntities(allFqnHashes, queryFilter);
 
     Map<Integer, Integer> depthCounts = new LinkedHashMap<>();
     for (Map.Entry<Integer, List<String>> entry : entitiesByDepth.entrySet()) {
       int depth = entry.getKey();
       int count = 0;
       for (String entityFqn : entry.getValue()) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> entityDoc = (Map<String, Object>) allDocs.get(entityFqn);
-        if (entityDoc != null && QueryFilterParser.matchesFilterClauses(entityDoc, clauses)) {
+        if (matchingDocs.containsKey(entityFqn)) {
           count++;
         }
       }
@@ -769,14 +745,7 @@ public class OSLineageGraphBuilder
 
     SearchLineageResult result;
 
-    if (hasQueryFilter) {
-      EntityCountLineageRequest unfilteredRequest =
-          JsonUtils.deepCopy(request, EntityCountLineageRequest.class).withQueryFilter(null);
-      result = searchLineageByEntityCountInternal(unfilteredRequest);
-      result = applyInMemoryFiltersWithPathPreservationForEntityCount(result, request);
-    } else {
-      result = searchLineageByEntityCountInternal(request);
-    }
+    result = searchLineageByEntityCountInternal(request);
 
     if (hasColumnFilter) {
       result = applyColumnFiltering(result, convertToSearchLineageRequest(request));
@@ -791,13 +760,14 @@ public class OSLineageGraphBuilder
 
   private SearchLineageResult searchLineageByEntityCountInternal(EntityCountLineageRequest request)
       throws IOException {
+    boolean hasQueryFilter = !nullOrEmpty(request.getQueryFilter());
+
     SearchLineageResult result =
         new SearchLineageResult()
             .withNodes(new HashMap<>())
             .withUpstreamEdges(new HashMap<>())
             .withDownstreamEdges(new HashMap<>());
 
-    // Handle root entity (nodeDepth = 0)
     addRootEntityWithPagingCounts(
         new SearchLineageRequest()
             .withFqn(request.getFqn())
@@ -807,40 +777,99 @@ public class OSLineageGraphBuilder
             .withIncludeSourceFields(request.getIncludeSourceFields()),
         result,
         false);
-    // If nodeDepth is specifically 0, return just root entity
+
     if (request.getNodeDepth() != null && request.getNodeDepth() == 0) {
       return result;
     }
 
-    // Filter by specific node depth if provided
-    if (request.getNodeDepth() != null) {
-      // Directly fetch entities at specific depth with pagination
+    if (request.getNodeDepth() != null && !hasQueryFilter) {
       getEntitiesAtSpecificDepthWithPagination(result, request);
     } else {
-      // Get all entities up to maxDepth and paginate
       Map<Integer, List<String>> entitiesByDepth =
           getAllEntitiesByDepth(
               request.getFqn(),
               request.getDirection(),
               request.getMaxDepth(),
-              request.getQueryFilter(),
+              null,
               request.getIncludeDeleted(),
               request.getIncludeSourceFields());
 
-      // Paginate across all depths
       List<String> allEntities = new ArrayList<>();
       for (int depth = 1; depth <= request.getMaxDepth(); depth++) {
         allEntities.addAll(entitiesByDepth.getOrDefault(depth, new ArrayList<>()));
       }
-      List<String> paginatedEntities =
-          paginateList(allEntities, request.getFrom(), request.getSize());
-      addEntitiesAcrossDepths(result, paginatedEntities, entitiesByDepth, request);
+
+      if (hasQueryFilter) {
+        Set<String> allFqnHashes = new HashSet<>();
+        for (String entityFqn : allEntities) {
+          allFqnHashes.add(FullyQualifiedName.buildHash(entityFqn));
+        }
+
+        if (!allFqnHashes.isEmpty()) {
+          Map<String, Object> matchingDocs =
+              fetchMatchingEntities(allFqnHashes, request.getQueryFilter());
+
+          Set<String> allCollectedFqns = new HashSet<>(matchingDocs.keySet());
+          allCollectedFqns.add(request.getFqn());
+
+          for (Map.Entry<String, Object> entry : matchingDocs.entrySet()) {
+            String entityFqn = entry.getKey();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> entityDoc = (Map<String, Object>) entry.getValue();
+            if (entityDoc != null && !entityDoc.isEmpty()) {
+              int nodeDepth = findEntityDepth(entityFqn, entitiesByDepth);
+              if (request.getDirection() == LineageDirection.UPSTREAM) {
+                nodeDepth = -nodeDepth;
+              }
+              result
+                  .getNodes()
+                  .put(entityFqn, getNodeInformation(entityDoc, null, null, nodeDepth));
+              addLineageEdges(result, entityDoc, request, allCollectedFqns);
+            }
+          }
+        }
+      } else {
+        List<String> paginatedEntities =
+            paginateList(allEntities, request.getFrom(), request.getSize());
+        addEntitiesAcrossDepths(result, paginatedEntities, entitiesByDepth, request);
+      }
     }
 
-    // Replace mixed ES tags with entity-level-only tags for Impact Analysis table view
     replaceTagsWithEntityLevelTags(result);
 
+    if (hasQueryFilter) {
+      return applyEntityCountPagination(result, request);
+    }
+
     return result;
+  }
+
+  private Map<String, Object> fetchMatchingEntities(Set<String> fqnHashes, String queryFilter)
+      throws IOException {
+    Map<String, Object> allMatchingDocs = new HashMap<>();
+    List<Set<String>> batches = new ArrayList<>();
+    List<String> hashList = new ArrayList<>(fqnHashes);
+
+    for (int i = 0; i < hashList.size(); i += 10000) {
+      batches.add(new HashSet<>(hashList.subList(i, Math.min(i + 10000, hashList.size()))));
+    }
+
+    for (Set<String> batch : batches) {
+      Map<String, Object> batchResult =
+          OsUtils.searchEntitiesByKey(
+              esClient,
+              null,
+              GLOBAL_SEARCH_ALIAS,
+              FIELD_FULLY_QUALIFIED_NAME_HASH_KEYWORD,
+              batch,
+              0,
+              10000,
+              SOURCE_FIELDS_TO_EXCLUDE,
+              queryFilter);
+      allMatchingDocs.putAll(batchResult);
+    }
+
+    return allMatchingDocs;
   }
 
   @SuppressWarnings("unchecked")

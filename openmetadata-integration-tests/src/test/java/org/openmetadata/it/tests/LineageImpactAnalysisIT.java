@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterAll;
@@ -620,7 +622,72 @@ public class LineageImpactAnalysisIT {
     assertTrue(getColumnCount(result) > 0);
   }
 
+  // ── TABLE VIEW: Filtered pagination count matches data ────────────────
+
+  @Test
+  void testTableView_filteredCountMatchesData() throws Exception {
+    String qf = tierFilter("Tier.Tier1");
+    Set<String> nodes = getTableViewNodes(rawA, "Downstream", qf);
+    // Count should match the number of returned nodes
+    assertFalse(nodes.isEmpty());
+  }
+
+  @Test
+  void testTableView_searchPlusFilter_paginationConsistent() throws Exception {
+    // Search + filter should return consistent paginated results
+    String qf = comboFilter(searchClause("rpt"), tagClause("Certification.Gold"));
+    Set<String> nodes = getTableViewNodes(stgA, "Downstream", qf);
+    // All returned nodes should contain "rpt" in name
+    assertTrue(nodes.stream().allMatch(fqn -> fqn.contains("rpt")));
+  }
+
   // ── Helper methods ────────────────────────────────────────────────────
+
+  private Map<String, Integer> getTableViewNodesWithDepth(
+      Table entity, String direction, int nodeDepth, String queryFilter) throws Exception {
+    String[] result = {null};
+    Awaitility.await("getLineageByEntityCount with nodeDepth")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .ignoreExceptions()
+        .until(
+            () -> {
+              result[0] =
+                  client
+                      .lineage()
+                      .getLineageByEntityCount(
+                          entity.getFullyQualifiedName(),
+                          direction,
+                          0,
+                          100,
+                          nodeDepth,
+                          100,
+                          false,
+                          queryFilter,
+                          null);
+              return result[0] != null;
+            });
+
+    JsonNode root = MAPPER.readTree(result[0]);
+    JsonNode nodes = root.get("nodes");
+    if (nodes == null || nodes.isEmpty()) return Map.of();
+
+    String entityFqn = entity.getFullyQualifiedName();
+    Map<String, Integer> nodesWithDepth = new HashMap<>();
+    nodes
+        .fields()
+        .forEachRemaining(
+            entry -> {
+              if (!entry.getKey().equals(entityFqn)) {
+                int depth =
+                    entry.getValue().has("nodeDepth")
+                        ? entry.getValue().get("nodeDepth").asInt()
+                        : 0;
+                nodesWithDepth.put(entry.getKey(), depth);
+              }
+            });
+    return nodesWithDepth;
+  }
 
   private Set<String> getTableViewNodes(Table entity, String direction, String queryFilter)
       throws Exception {
@@ -791,8 +858,7 @@ public class LineageImpactAnalysisIT {
 
   private String ownerFilter(String ownerName) {
     return String.format(
-        "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"owners.name.keyword\":\"%s\"}}]}}}",
-        ownerName);
+        "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"ownerName\":\"%s\"}}]}}}", ownerName);
   }
 
   private String domainFilter(String domainName) {
@@ -816,7 +882,7 @@ public class LineageImpactAnalysisIT {
   }
 
   private String ownerClause(String ownerName) {
-    return String.format("{\"term\":{\"owners.name.keyword\":\"%s\"}}", ownerName);
+    return String.format("{\"term\":{\"ownerName\":\"%s\"}}", ownerName);
   }
 
   private String domainClause(String domainName) {

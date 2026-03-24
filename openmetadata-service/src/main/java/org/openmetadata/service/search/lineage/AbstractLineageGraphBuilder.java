@@ -280,7 +280,7 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
     return applyEntityCountPagination(preservedResult, request);
   }
 
-  private SearchLineageResult applyEntityCountPagination(
+  protected SearchLineageResult applyEntityCountPagination(
       SearchLineageResult result, EntityCountLineageRequest request) {
 
     if (result == null || result.getNodes() == null) {

@@ -311,12 +311,27 @@ public class OsUtils {
       int size,
       List<String> fieldsToRemove)
       throws IOException {
+    return searchEntitiesByKey(
+        client, direction, indexAlias, keyName, keyValues, from, size, fieldsToRemove, null);
+  }
+
+  public static Map<String, Object> searchEntitiesByKey(
+      OpenSearchClient client,
+      LineageDirection direction,
+      String indexAlias,
+      String keyName,
+      Set<String> keyValues,
+      int from,
+      int size,
+      List<String> fieldsToRemove,
+      String queryFilter)
+      throws IOException {
     Map<String, Object> result = new HashMap<>();
     SearchRequest searchRequest =
         getSearchRequest(
             direction,
             indexAlias,
-            null,
+            queryFilter,
             null,
             Map.of(keyName, keyValues),
             from,
