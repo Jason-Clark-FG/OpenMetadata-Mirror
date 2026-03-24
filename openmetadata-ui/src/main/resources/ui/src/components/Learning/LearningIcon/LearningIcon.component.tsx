@@ -98,7 +98,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
         }}
         variant="text"
         onClick={handleClick}>
-        {resourceCount} {t('label.resource-plural').toLowerCase()}
+        {resourceCount} {t('label.tutorial-plural').toLowerCase()}
       </Button>
     </Box>
   );
@@ -147,7 +147,7 @@ export const LearningIcon: React.FC<LearningIconProps> = ({
                 transform: 'scale(1.1)',
               },
             }}>
-            <LearningIconSvg height={16} width={16} />
+            <LearningIconSvg height={18} width={18} />
           </Box>
         </Box>
       </Popover>

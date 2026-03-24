@@ -35,7 +35,6 @@ import { AlignRightIconButton } from '../../common/IconButtons/EditIconButton';
 import Loader from '../../common/Loader/Loader';
 import TabsLabel from '../../common/TabsLabel/TabsLabel.component';
 import { GenericTab } from '../../Customization/GenericTab/GenericTab';
-import OntologyExplorer from '../../OntologyExplorer/OntologyExplorer';
 import GlossaryHeader from '../GlossaryHeader/GlossaryHeader.component';
 import { useGlossaryStore } from '../useGlossary.store';
 import './glossary-details.less';
@@ -98,27 +97,6 @@ const GlossaryDetails = ({
       },
       ...(!isVersionView
         ? [
-            {
-              label: (
-                <TabsLabel
-                  id={EntityTabs.RELATIONS_GRAPH}
-                  isActive={activeTab === EntityTabs.RELATIONS_GRAPH}
-                  name={
-                    tabLabelMap[EntityTabs.RELATIONS_GRAPH] ??
-                    t('label.relations-graph')
-                  }
-                />
-              ),
-              key: EntityTabs.RELATIONS_GRAPH,
-              children: (
-                <OntologyExplorer
-                  glossaryId={glossary.id}
-                  height="calc(100vh - 216px)"
-                  scope="glossary"
-                  showHeader={false}
-                />
-              ),
-            },
             {
               label: (
                 <TabsLabel

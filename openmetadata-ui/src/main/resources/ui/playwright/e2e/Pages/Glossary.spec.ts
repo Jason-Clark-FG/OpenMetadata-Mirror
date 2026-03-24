@@ -2669,14 +2669,13 @@ test.describe('Glossary tests', () => {
       const createdResponse = await createRes;
       const createdTerm = await createdResponse.json();
       createdTermFqn = createdTerm.fullyQualifiedName;
-      await waitForAllLoadersToDisappear(page);
+
       expect(
         (createdTerm.tags ?? []).map((t: { tagFQN: string }) => t.tagFQN)
       ).toContain(tagFqn);
       expect(
         (createdTerm.relatedTerms ?? []).map(
-          (t: { relationType: string; term: { fullyQualifiedName: string } }) =>
-            t.term?.fullyQualifiedName
+          (t: { fullyQualifiedName: string }) => t.fullyQualifiedName
         )
       ).toContain(relatedTerm.responseData.fullyQualifiedName);
       expect(

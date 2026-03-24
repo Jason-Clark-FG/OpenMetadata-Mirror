@@ -148,14 +148,10 @@ export const setupGlossaryAndTerms = async (page: Page) => {
     op: 'add',
     path: '/relatedTerms/0',
     value: {
-      relationType: 'relatedTo',
-      term: {
-        id: term1.responseData.id,
-        type: 'glossaryTerm',
-        displayName: term1.responseData.displayName,
-        name: term1.responseData.name,
-        fullyQualifiedName: term1.responseData.fullyQualifiedName,
-      },
+      id: term1.responseData.id,
+      type: 'glossaryTerm',
+      displayName: term1.responseData.displayName,
+      name: term1.responseData.name,
     },
   };
 
