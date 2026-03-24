@@ -695,14 +695,14 @@ public final class EntityUtil {
         : FullyQualifiedName.build("columns", localColumnName, columnField);
   }
 
-  /** Return schema field name of format "schemaFields".fieldName.fieldName */
+  /** Return schema field name of format "messageSchema"."schemaFields".fieldName.fieldName */
   public static String getSchemaField(Topic topic, Field field, String fieldName) {
     // Remove topic FQN from schemaField FQN to get the local name
     String localFieldName =
         EntityUtil.getLocalColumnName(topic.getFullyQualifiedName(), field.getFullyQualifiedName());
     return fieldName == null
-        ? FullyQualifiedName.build("schemaFields", localFieldName)
-        : FullyQualifiedName.build("schemaFields", localFieldName, fieldName);
+        ? FullyQualifiedName.build("messageSchema", "schemaFields", localFieldName)
+        : FullyQualifiedName.build("messageSchema", "schemaFields", localFieldName, fieldName);
   }
 
   public static String getSchemaField(APIEndpoint apiEndpoint, Field field, String fieldName) {
