@@ -89,7 +89,7 @@ public class DistributedSearchIndexCoordinator {
   private final PartitionCalculator partitionCalculator;
   private final String serverId;
   private EntityCompletionTracker entityTracker;
-  private volatile long lastJobTouchTime = 0;
+  private final AtomicLong lastJobTouchTime = new AtomicLong(0);
 
   /** Monotonic counter to guarantee unique claimedAt values across concurrent worker threads. */
   private final AtomicLong claimCounter = new AtomicLong(0);
@@ -477,10 +477,10 @@ public class DistributedSearchIndexCoordinator {
   }
 
   private void touchJobThrottled(String jobId, long now) {
-    if (now - lastJobTouchTime < JOB_TOUCH_INTERVAL_MS) {
+    long last = lastJobTouchTime.get();
+    if (now - last < JOB_TOUCH_INTERVAL_MS || !lastJobTouchTime.compareAndSet(last, now)) {
       return;
     }
-    lastJobTouchTime = now;
     try {
       collectionDAO.searchIndexJobDAO().touchJob(jobId, now);
     } catch (Exception e) {

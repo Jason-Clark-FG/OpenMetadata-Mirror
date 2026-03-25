@@ -114,13 +114,14 @@ public class OmAppJobListener implements JobListener {
       // by matching their thread name prefix (no MDC propagation needed).
       String appRunId = String.valueOf(runRecord.getTimestamp());
       String serverId = ServerIdentityResolver.getInstance().getServerId();
+      String validatedAppName = jobApp.getName();
       MDC.put(AppRunLogAppender.MDC_APP_RUN_ID, appRunId);
-      MDC.put(AppRunLogAppender.MDC_APP_NAME, appName);
+      MDC.put(AppRunLogAppender.MDC_APP_NAME, validatedAppName);
       MDC.put(AppRunLogAppender.MDC_SERVER_ID, serverId);
       MDC.put(AppRunLogAppender.MDC_APP_ID, jobApp.getId().toString());
-      String[] threadPrefixes = getThreadPrefixesForApp(appName);
+      String[] threadPrefixes = getThreadPrefixesForApp(validatedAppName);
       AppRunLogAppender.startCapture(
-          appRunId, jobApp.getId().toString(), appName, serverId, threadPrefixes);
+          appRunId, jobApp.getId().toString(), validatedAppName, serverId, threadPrefixes);
       dataMap.put(APP_RUN_LOG_ID, appRunId);
 
       // Insert new Record Run
