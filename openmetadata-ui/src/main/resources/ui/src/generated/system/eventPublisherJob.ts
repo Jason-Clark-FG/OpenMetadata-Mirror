@@ -222,17 +222,17 @@ export interface StepStats {
      */
     totalRecords?: number;
     /**
-     * Count of Records with Warnings (e.g., stale references that were skipped)
+     * Count of records with failed vector embeddings
      */
-    warningRecords?: number;
+    vectorFailedRecords?: number;
     /**
      * Count of records with successful vector embeddings
      */
     vectorSuccessRecords?: number;
     /**
-     * Count of records with failed vector embeddings
+     * Count of Records with Warnings (e.g., stale references that were skipped)
      */
-    vectorFailedRecords?: number;
+    warningRecords?: number;
 }
 
 /**
