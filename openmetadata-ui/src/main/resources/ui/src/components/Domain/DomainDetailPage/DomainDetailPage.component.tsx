@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
+import { getDomainPath } from '../../../utils/RouterUtils';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
@@ -46,7 +47,7 @@ const DomainDetailPage = () => {
   const { fqn: domainFqn } = useFqn();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getDomainPath, domainBasePath } = useMarketplaceStore();
+  const { domainBasePath } = useMarketplaceStore();
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';
   const { permissions } = usePermissionProvider();

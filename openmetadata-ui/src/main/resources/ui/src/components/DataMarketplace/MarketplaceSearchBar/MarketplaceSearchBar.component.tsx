@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
+import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -38,8 +39,7 @@ const PAGE_SIZE = 5;
 const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dataProductBasePath, getDomainDetailsPath } =
-    useMarketplaceStore();
+  const { dataProductBasePath } = useMarketplaceStore();
   const [searchValue, setSearchValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
@@ -131,7 +131,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
         )}`
       );
     },
-    [navigate]
+    [navigate, dataProductBasePath]
   );
 
   const handleDomainClick = useCallback(

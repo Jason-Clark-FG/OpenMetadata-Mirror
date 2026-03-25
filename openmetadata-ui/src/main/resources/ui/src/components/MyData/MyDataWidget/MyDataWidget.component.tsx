@@ -42,8 +42,7 @@ import {
 import { searchQuery } from '../../../rest/searchAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
-import { getUserPath } from '../../../utils/RouterUtils';
+import { getDomainPath, getUserPath } from '../../../utils/RouterUtils';
 import searchClassBase from '../../../utils/SearchClassBase';
 import { getTermQuery } from '../../../utils/SearchUtils';
 import serviceUtilClassBase from '../../../utils/ServiceUtilClassBase';
@@ -66,7 +65,6 @@ const MyDataWidgetInternal = ({
   currentLayout,
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
-  const { getDomainPath } = useMarketplaceStore();
   const navigate = useNavigate();
   const { currentUser } = useApplicationStore();
   const [isLoading, setIsLoading] = useState(true);

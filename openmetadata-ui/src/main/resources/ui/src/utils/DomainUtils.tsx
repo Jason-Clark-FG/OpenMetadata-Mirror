@@ -64,8 +64,7 @@ import {
   getPrioritizedEditPermission,
   getPrioritizedViewPermission,
 } from './PermissionsUtils';
-import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
-import { getPathNameFromWindowLocation } from './RouterUtils';
+import { getDomainPath, getPathNameFromWindowLocation } from './RouterUtils';
 
 export const withDomainFilter = (
   config: InternalAxiosRequestConfig
@@ -393,7 +392,7 @@ export const renderDomainLink = (
           textClassName
         )}
         data-testid="domain-link"
-        to={useMarketplaceStore.getState().getDomainPath(domain?.fullyQualifiedName)}>
+        to={getDomainPath(domain?.fullyQualifiedName)}>
         {trimLink ? (
           <Typography.Text
             className="domain-link-name"

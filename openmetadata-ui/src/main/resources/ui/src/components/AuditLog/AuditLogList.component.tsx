@@ -25,8 +25,8 @@ import { getTextFromHtmlString } from '../../utils/BlockEditorUtils';
 import { getRelativeTime } from '../../utils/date-time/DateTimeUtils';
 import { getEntityLinkFromType, getEntityName } from '../../utils/EntityUtils';
 import Fqn from '../../utils/Fqn';
-import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import {
+  getDomainPath,
   getTagPath,
   getTeamsWithFqnPath,
   getUserPath,
@@ -146,15 +146,13 @@ const getEntityLinkForField = (
     return getTagPath(entityInfo.fqn);
   }
   if (field === 'dataproducts' || field.endsWith('.dataproducts')) {
-    return useMarketplaceStore
-      .getState()
-      .getDataProductDetailsPath(entityInfo.fqn);
+    return getEntityLinkFromType(entityInfo.fqn, EntityType.DATA_PRODUCT);
   }
   if (field === 'teams' || field.endsWith('.teams')) {
     return getTeamsWithFqnPath(entityInfo.fqn);
   }
   if (field === 'domain' || field.endsWith('.domain')) {
-    return useMarketplaceStore.getState().getDomainPath(entityInfo.fqn);
+    return getDomainPath(entityInfo.fqn);
   }
   if (field === 'owner' || field.endsWith('.owner')) {
     return getUserPath(entityInfo.fqn);

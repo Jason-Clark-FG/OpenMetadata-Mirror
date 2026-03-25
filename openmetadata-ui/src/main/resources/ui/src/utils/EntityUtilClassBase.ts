@@ -93,12 +93,12 @@ import {
   FormattedSearchServiceType,
   FormattedStorageServiceType,
 } from './EntityUtils.interface';
-import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import Fqn from './Fqn';
 import {
   getApplicationDetailsPath,
   getBotsPath,
   getClassificationTagPath,
+  getDomainDetailsPath,
   getEditWebhookPath,
   getEntityDetailsPath,
   getGlossaryTermDetailsPath,
@@ -356,15 +356,16 @@ class EntityUtilClassBase {
 
       case EntityType.DOMAIN:
       case SearchIndex.DOMAIN:
-        return useMarketplaceStore
-          .getState()
-          .getDomainDetailsPath(fullyQualifiedName, tab, subTab);
+        return getDomainDetailsPath(fullyQualifiedName, tab, subTab);
 
       case EntityType.DATA_PRODUCT:
       case SearchIndex.DATA_PRODUCT:
-        return useMarketplaceStore
-          .getState()
-          .getDataProductDetailsPath(fullyQualifiedName, tab, subTab);
+        return getEntityDetailsPath(
+          EntityType.DATA_PRODUCT,
+          fullyQualifiedName,
+          tab,
+          subTab
+        );
       case EntityType.APPLICATION:
         return getApplicationDetailsPath(fullyQualifiedName);
 

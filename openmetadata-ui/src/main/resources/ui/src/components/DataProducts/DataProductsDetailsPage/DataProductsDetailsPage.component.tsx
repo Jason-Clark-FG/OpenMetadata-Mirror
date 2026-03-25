@@ -88,7 +88,11 @@ import {
   DEFAULT_ENTITY_PERMISSION,
   getPrioritizedEditPermission,
 } from '../../../utils/PermissionsUtils';
-import { getVersionPath } from '../../../utils/RouterUtils';
+import {
+  getDataProductDetailsPath,
+  getDomainPath,
+  getVersionPath,
+} from '../../../utils/RouterUtils';
 import { getTermQuery } from '../../../utils/SearchUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
@@ -130,12 +134,7 @@ const DataProductsDetailsPage = ({
   const { t } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
-  const {
-    isMarketplace,
-    dataProductBasePath,
-    getDomainPath,
-    getDataProductDetailsPath,
-  } = useMarketplaceStore();
+  const { isMarketplace, dataProductBasePath } = useMarketplaceStore();
   const { getEntityPermission } = usePermissionProvider();
   const { tab: activeTab, version } = useRequiredParams<{
     tab: string;
@@ -253,7 +252,7 @@ const DataProductsDetailsPage = ({
     }
 
     return items;
-  }, [dataProduct.domains, t]);
+  }, [dataProduct.domains, isMarketplace, dataProductBasePath, t]);
 
   const { breadcrumbs } = useBreadcrumbs({ items: breadcrumbItems });
 
@@ -393,92 +392,92 @@ const DataProductsDetailsPage = ({
   const manageButtonContent: ItemType[] = [
     ...(editAllPermission
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.announcement-action-description')}
-              icon={IconAnnouncementsBlack}
-              id="announcement-button"
-              name={t('label.announcement-plural')}
-            />
-          ),
-          key: 'announcement-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            handleOpenAnnouncementDrawer();
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.announcement-action-description')}
+                icon={IconAnnouncementsBlack}
+                id="announcement-button"
+                name={t('label.announcement-plural')}
+              />
+            ),
+            key: 'announcement-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              handleOpenAnnouncementDrawer();
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(editDisplayNamePermission
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.rename-entity', {
-                entity: t('label.data-product'),
-              })}
-              icon={EditIcon}
-              id="rename-button"
-              name={t('label.rename')}
-            />
-          ),
-          key: 'rename-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsNameEditing(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.rename-entity', {
+                  entity: t('label.data-product'),
+                })}
+                icon={EditIcon}
+                id="rename-button"
+                name={t('label.rename')}
+              />
+            ),
+            key: 'rename-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsNameEditing(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(editAllPermission
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.edit-entity-style-description', {
-                entity: t('label.data-product'),
-              })}
-              icon={StyleIcon}
-              id="rename-button"
-              name={t('label.style')}
-            />
-          ),
-          key: 'edit-style-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsStyleEditing(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.edit-entity-style-description', {
+                  entity: t('label.data-product'),
+                })}
+                icon={StyleIcon}
+                id="rename-button"
+                name={t('label.style')}
+              />
+            ),
+            key: 'edit-style-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsStyleEditing(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(deleteDataProductPermission
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t(
-                'message.delete-entity-type-action-description',
-                {
-                  entityType: t('label.data-product'),
-                }
-              )}
-              icon={DeleteIcon}
-              id="delete-button"
-              name={t('label.delete')}
-            />
-          ),
-          key: 'delete-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsDelete(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t(
+                  'message.delete-entity-type-action-description',
+                  {
+                    entityType: t('label.data-product'),
+                  }
+                )}
+                icon={DeleteIcon}
+                id="delete-button"
+                name={t('label.delete')}
+              />
+            ),
+            key: 'delete-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsDelete(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
   ];
 
@@ -539,11 +538,11 @@ const DataProductsDetailsPage = ({
     if (activeKey !== activeTab) {
       const path = isVersionsView
         ? getVersionPath(
-          EntityType.DATA_PRODUCT,
-          dataProductFqn,
-          toString(dataProduct.version),
-          activeKey
-        )
+            EntityType.DATA_PRODUCT,
+            dataProductFqn,
+            toString(dataProduct.version),
+            activeKey
+          )
         : getDataProductDetailsPath(dataProductFqn, activeKey);
 
       navigate(path, {
@@ -556,10 +555,10 @@ const DataProductsDetailsPage = ({
     const path = isVersionsView
       ? getDataProductDetailsPath(dataProductFqn)
       : getVersionPath(
-        EntityType.DATA_PRODUCT,
-        dataProductFqn,
-        toString(dataProduct.version)
-      );
+          EntityType.DATA_PRODUCT,
+          dataProductFqn,
+          toString(dataProduct.version)
+        );
 
     navigate(path);
   };
@@ -711,13 +710,13 @@ const DataProductsDetailsPage = ({
               }
             )?.coverImage?.position
               ? {
-                y:
-                  (
-                    dataProduct.style as Style & {
-                      coverImage?: { position?: string };
-                    }
-                  )?.coverImage?.position ?? '',
-              }
+                  y:
+                    (
+                      dataProduct.style as Style & {
+                        coverImage?: { position?: string };
+                      }
+                    )?.coverImage?.position ?? '',
+                }
               : undefined
           }
         />
@@ -764,9 +763,10 @@ const DataProductsDetailsPage = ({
                 {dataProduct?.version && (
                   <Tooltip
                     title={t(
-                      `label.${isVersionsView
-                        ? 'exit-version-history'
-                        : 'version-plural-history'
+                      `label.${
+                        isVersionsView
+                          ? 'exit-version-history'
+                          : 'version-plural-history'
                       }`
                     )}>
                     <Button

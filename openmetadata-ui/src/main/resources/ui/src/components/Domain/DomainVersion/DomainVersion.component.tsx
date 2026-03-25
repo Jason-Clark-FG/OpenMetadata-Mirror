@@ -24,8 +24,10 @@ import {
   getDomainVersionData,
   getDomainVersionsList,
 } from '../../../rest/domainAPI';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
-import { getDomainVersionsPath } from '../../../utils/RouterUtils';
+import {
+  getDomainPath,
+  getDomainVersionsPath,
+} from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
@@ -36,7 +38,6 @@ import DomainDetails from '../DomainDetails/DomainDetails.component';
 
 const DomainVersion = () => {
   const navigate = useNavigate();
-  const { getDomainPath } = useMarketplaceStore();
   const { version } = useRequiredParams<{ version: string }>();
   const { fqn } = useFqn();
   const [loading, setLoading] = useState(true);

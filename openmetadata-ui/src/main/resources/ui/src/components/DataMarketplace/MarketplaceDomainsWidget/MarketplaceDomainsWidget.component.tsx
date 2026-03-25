@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
+import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
@@ -47,7 +48,7 @@ const MarketplaceDomainsWidget = ({
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { getDomainDetailsPath, domainBasePath } = useMarketplaceStore();
+  const { domainBasePath } = useMarketplaceStore();
   const { permissions } = usePermissionProvider();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [form] = useForm();

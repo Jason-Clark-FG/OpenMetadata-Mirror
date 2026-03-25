@@ -12,60 +12,20 @@
  */
 
 import { create } from 'zustand';
-import { EntityTabs } from '../enums/entity.enum';
-import { getEncodedFqn } from '../utils/StringsUtils';
 
 const DOMAIN_BASE_PATH = '/domain';
 const DATA_PRODUCT_BASE_PATH = '/dataProduct';
 const MARKETPLACE_DOMAIN_BASE_PATH = '/data-marketplace/domains';
 const MARKETPLACE_DATA_PRODUCT_BASE_PATH = '/data-marketplace/data-products';
 
-const buildDomainPath = (basePath: string, fqn?: string): string => {
-  if (fqn) {
-    return `${basePath}/${getEncodedFqn(fqn)}`;
-  }
-
-  return basePath;
-};
-
-const buildEntityDetailsPath = (
-  basePath: string,
-  fqn: string,
-  tab?: string,
-  subTab = 'all'
-): string => {
-  const encodedFqn = getEncodedFqn(fqn);
-
-  if (tab === EntityTabs.ACTIVITY_FEED) {
-    return `${basePath}/${encodedFqn}/${tab}/${subTab}`;
-  }
-
-  if (tab) {
-    return `${basePath}/${encodedFqn}/${tab}`;
-  }
-
-  return `${basePath}/${encodedFqn}`;
-};
-
 interface MarketplaceStore {
   isMarketplace: boolean;
   domainBasePath: string;
   dataProductBasePath: string;
   setMarketplaceContext: (enabled: boolean) => void;
-  getDomainPath: (fqn?: string) => string;
-  getDomainDetailsPath: (
-    fqn: string,
-    tab?: string,
-    subTab?: string
-  ) => string;
-  getDataProductDetailsPath: (
-    fqn: string,
-    tab?: string,
-    subTab?: string
-  ) => string;
 }
 
-export const useMarketplaceStore = create<MarketplaceStore>()((set, get) => ({
+export const useMarketplaceStore = create<MarketplaceStore>()((set) => ({
   isMarketplace: false,
   domainBasePath: DOMAIN_BASE_PATH,
   dataProductBasePath: DATA_PRODUCT_BASE_PATH,
@@ -80,22 +40,5 @@ export const useMarketplaceStore = create<MarketplaceStore>()((set, get) => ({
         ? MARKETPLACE_DATA_PRODUCT_BASE_PATH
         : DATA_PRODUCT_BASE_PATH,
     });
-  },
-
-  getDomainPath: (fqn?: string) => {
-    return buildDomainPath(get().domainBasePath, fqn);
-  },
-
-  getDomainDetailsPath: (fqn: string, tab?: string, subTab?: string) => {
-    return buildEntityDetailsPath(get().domainBasePath, fqn, tab, subTab);
-  },
-
-  getDataProductDetailsPath: (fqn: string, tab?: string, subTab?: string) => {
-    return buildEntityDetailsPath(
-      get().dataProductBasePath,
-      fqn,
-      tab,
-      subTab
-    );
   },
 }));

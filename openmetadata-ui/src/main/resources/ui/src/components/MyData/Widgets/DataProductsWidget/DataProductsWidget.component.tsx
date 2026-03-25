@@ -41,7 +41,7 @@ import { getAllDataProductsWithAssetsCount } from '../../../../rest/dataProductA
 import { searchData } from '../../../../rest/miscAPI';
 import { getEntityTypeExploreQueryFilter } from '../../../../utils/CommonUtils';
 import { getDataProductIconByUrl } from '../../../../utils/DataProductUtils';
-import { useMarketplaceStore } from '../../../../hooks/useMarketplaceStore';
+import { getEntityDetailsPath } from '../../../../utils/RouterUtils';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import WidgetEmptyState from '../Common/WidgetEmptyState/WidgetEmptyState';
 import WidgetFooter from '../Common/WidgetFooter/WidgetFooter';
@@ -61,7 +61,6 @@ const DataProductsWidget = ({
   currentLayout,
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
-  const { getDataProductDetailsPath } = useMarketplaceStore();
   const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
   const navigate = useNavigate();
   const [selectedSortBy, setSelectedSortBy] = useState<string>(
@@ -106,7 +105,8 @@ const DataProductsWidget = ({
   const handleDataProductClick = useCallback(
     (dataProduct: DataProduct) => {
       navigate(
-        getDataProductDetailsPath(
+        getEntityDetailsPath(
+          EntityType.DATA_PRODUCT,
           dataProduct.fullyQualifiedName ?? ''
         )
       );

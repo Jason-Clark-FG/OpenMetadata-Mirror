@@ -89,7 +89,11 @@ import {
   DEFAULT_ENTITY_PERMISSION,
   getPrioritizedEditPermission,
 } from '../../../utils/PermissionsUtils';
-import { getDomainVersionsPath } from '../../../utils/RouterUtils';
+import {
+  getDomainDetailsPath,
+  getDomainPath,
+  getDomainVersionsPath,
+} from '../../../utils/RouterUtils';
 import { getTermQuery } from '../../../utils/SearchUtils';
 import {
   escapeESReservedCharacters,
@@ -141,8 +145,7 @@ const DomainDetails = ({
   const { t } = useTranslation();
   const theme = useTheme();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
-  const { getDomainPath, getDomainDetailsPath, isMarketplace } =
-    useMarketplaceStore();
+  const { isMarketplace } = useMarketplaceStore();
   const { getEntityPermission, permissions } = usePermissionProvider();
   const routeParams = useParams<{
     fqn?: string;
@@ -426,7 +429,7 @@ const DomainDetails = ({
         };
       }),
     ];
-  }, [domainFqn, t]);
+  }, [domainFqn, isMarketplace, t]);
 
   const { breadcrumbs } = useBreadcrumbs({ items: breadcrumbItems });
 
@@ -566,26 +569,26 @@ const DomainDetails = ({
   const addButtonContent = [
     ...(domainPermission.Create
       ? [
-        {
-          label: t('label.asset-plural'),
-          key: '1',
-          onClick: openAssetDrawer,
-        },
-        {
-          label: t('label.sub-domain-plural'),
-          key: '2',
-          onClick: openSubDomainDrawer,
-        },
-      ]
+          {
+            label: t('label.asset-plural'),
+            key: '1',
+            onClick: openAssetDrawer,
+          },
+          {
+            label: t('label.sub-domain-plural'),
+            key: '2',
+            onClick: openSubDomainDrawer,
+          },
+        ]
       : []),
     ...(isOwner || permissions.dataProduct.Create
       ? [
-        {
-          label: t('label.data-product-plural'),
-          key: '3',
-          onClick: openDataProductDrawer,
-        },
-      ]
+          {
+            label: t('label.data-product-plural'),
+            key: '3',
+            onClick: openDataProductDrawer,
+          },
+        ]
       : []),
   ];
 
@@ -707,92 +710,92 @@ const DomainDetails = ({
   const manageButtonContent: ItemType[] = [
     ...(domainPermission?.EditAll
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.announcement-action-description')}
-              icon={IconAnnouncementsBlack}
-              id="announcement-button"
-              name={t('label.announcement-plural')}
-            />
-          ),
-          key: 'announcement-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            handleOpenAnnouncementDrawer();
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.announcement-action-description')}
+                icon={IconAnnouncementsBlack}
+                id="announcement-button"
+                name={t('label.announcement-plural')}
+              />
+            ),
+            key: 'announcement-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              handleOpenAnnouncementDrawer();
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(editDisplayNamePermission
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.rename-entity', {
-                entity: t('label.domain'),
-              })}
-              icon={EditIcon}
-              id="rename-button"
-              name={t('label.rename')}
-            />
-          ),
-          key: 'rename-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsNameEditing(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.rename-entity', {
+                  entity: t('label.domain'),
+                })}
+                icon={EditIcon}
+                id="rename-button"
+                name={t('label.rename')}
+              />
+            ),
+            key: 'rename-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsNameEditing(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(domainPermission?.EditAll
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t('message.edit-entity-style-description', {
-                entity: t('label.domain'),
-              })}
-              icon={StyleIcon}
-              id="edit-style-button"
-              name={t('label.style')}
-            />
-          ),
-          key: 'edit-style-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsStyleEditing(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t('message.edit-entity-style-description', {
+                  entity: t('label.domain'),
+                })}
+                icon={StyleIcon}
+                id="edit-style-button"
+                name={t('label.style')}
+              />
+            ),
+            key: 'edit-style-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsStyleEditing(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
     ...(domainPermission.Delete
       ? ([
-        {
-          label: (
-            <ManageButtonItemLabel
-              description={t(
-                'message.delete-entity-type-action-description',
-                {
-                  entityType: t('label.domain'),
-                }
-              )}
-              icon={DeleteIcon}
-              id="delete-button"
-              name={t('label.delete')}
-            />
-          ),
-          key: 'delete-button',
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsDelete(true);
-            setShowActions(false);
+          {
+            label: (
+              <ManageButtonItemLabel
+                description={t(
+                  'message.delete-entity-type-action-description',
+                  {
+                    entityType: t('label.domain'),
+                  }
+                )}
+                icon={DeleteIcon}
+                id="delete-button"
+                name={t('label.delete')}
+              />
+            ),
+            key: 'delete-button',
+            onClick: (e) => {
+              e.domEvent.stopPropagation();
+              setIsDelete(true);
+              setShowActions(false);
+            },
           },
-        },
-      ] as ItemType[])
+        ] as ItemType[])
       : []),
   ];
 
@@ -968,9 +971,10 @@ const DomainDetails = ({
                 {domain?.version && (
                   <Tooltip
                     title={t(
-                      `label.${isVersionsView
-                        ? 'exit-version-history'
-                        : 'version-plural-history'
+                      `label.${
+                        isVersionsView
+                          ? 'exit-version-history'
+                          : 'version-plural-history'
                       }`
                     )}>
                     <Button

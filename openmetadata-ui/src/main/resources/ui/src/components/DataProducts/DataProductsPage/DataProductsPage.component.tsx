@@ -37,7 +37,7 @@ import {
   updateDataProductVotes,
 } from '../../../rest/dataProductAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { getVersionPath } from '../../../utils/RouterUtils';
+import { getDomainPath, getVersionPath } from '../../../utils/RouterUtils';
 import { getEncodedFqn } from '../../../utils/StringsUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
@@ -50,7 +50,7 @@ import DataProductsDetailsPage from '../DataProductsDetailsPage/DataProductsDeta
 const DataProductsPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dataProductBasePath, getDomainPath } = useMarketplaceStore();
+  const { dataProductBasePath } = useMarketplaceStore();
   const { version } = useRequiredParams<{ version: string }>();
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';

@@ -26,7 +26,6 @@ import {
   ROUTES,
 } from '../constants/constants';
 import { EntityField } from '../constants/Feeds.constants';
-import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { TASK_SANITIZE_VALUE_REGEX } from '../constants/regex.constants';
 import {
   EntityTabs,
@@ -529,7 +528,7 @@ export const getBreadCrumbList = (
       return [
         {
           name: t('label.data-product-plural'),
-          url: useMarketplaceStore.getState().dataProductBasePath,
+          url: ROUTES.DATA_PRODUCT,
         },
         activeEntity,
       ];

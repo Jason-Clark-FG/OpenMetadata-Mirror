@@ -12,6 +12,7 @@
  */
 
 import { isUndefined } from 'lodash';
+import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { ServiceTypes } from 'Models';
 import QueryString from 'qs';
 import {
@@ -137,13 +138,13 @@ export const getEditIngestionPath = (
 };
 
 export const getDomainPath = (fqn?: string) => {
-  let path = ROUTES.DOMAIN;
+  const basePath = useMarketplaceStore.getState().domainBasePath;
+
   if (fqn) {
-    path = ROUTES.DOMAIN_DETAILS;
-    path = path.replace(PLACEHOLDER_ROUTE_FQN, getEncodedFqn(fqn));
+    return `${basePath}/${getEncodedFqn(fqn)}`;
   }
 
-  return path;
+  return basePath;
 };
 
 export const getDomainDetailsPath = (
@@ -151,19 +152,37 @@ export const getDomainDetailsPath = (
   tab?: string,
   subTab = 'all'
 ) => {
-  let path = tab ? ROUTES.DOMAIN_DETAILS_WITH_TAB : ROUTES.DOMAIN_DETAILS;
+  const basePath = useMarketplaceStore.getState().domainBasePath;
+  const encodedFqn = getEncodedFqn(fqn);
 
   if (tab === EntityTabs.ACTIVITY_FEED) {
-    path = ROUTES.DOMAIN_DETAILS_WITH_SUBTAB;
-    path = path.replace(PLACEHOLDER_ROUTE_SUB_TAB, subTab);
+    return `${basePath}/${encodedFqn}/${tab}/${subTab}`;
   }
 
   if (tab) {
-    path = path.replace(PLACEHOLDER_ROUTE_TAB, tab);
+    return `${basePath}/${encodedFqn}/${tab}`;
   }
-  path = path.replace(PLACEHOLDER_ROUTE_FQN, getEncodedFqn(fqn));
 
-  return path;
+  return `${basePath}/${encodedFqn}`;
+};
+
+export const getDataProductDetailsPath = (
+  fqn: string,
+  tab?: string,
+  subTab = 'all'
+) => {
+  const basePath = useMarketplaceStore.getState().dataProductBasePath;
+  const encodedFqn = getEncodedFqn(fqn);
+
+  if (tab === EntityTabs.ACTIVITY_FEED) {
+    return `${basePath}/${encodedFqn}/${tab}/${subTab}`;
+  }
+
+  if (tab) {
+    return `${basePath}/${encodedFqn}/${tab}`;
+  }
+
+  return `${basePath}/${encodedFqn}`;
 };
 
 export const getGlossaryPath = (fqn?: string) => {

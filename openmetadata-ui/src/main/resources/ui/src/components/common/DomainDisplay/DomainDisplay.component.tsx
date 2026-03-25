@@ -14,8 +14,8 @@ import { Dropdown, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { ReactComponent as DomainIcon } from '../../../assets/svg/ic-domain.svg';
 import { EntityReference } from '../../../generated/entity/type';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { getDomainPath } from '../../../utils/RouterUtils';
 
 interface DomainDisplayProps {
   domains: EntityReference[];
@@ -25,8 +25,7 @@ interface DomainDisplayProps {
 
 const DomainLink: React.FC<{
   domain: EntityReference;
-  getDomainPath: (fqn?: string) => string;
-}> = ({ domain, getDomainPath }) => (
+}> = ({ domain }) => (
   <>
     <Link
       className="no-underline"
@@ -44,8 +43,6 @@ export const DomainDisplay = ({
   showIcon = true,
   className = '',
 }: DomainDisplayProps) => {
-  const { getDomainPath } = useMarketplaceStore();
-
   if (!domains || domains.length === 0) {
     return null;
   }
@@ -85,7 +82,7 @@ export const DomainDisplay = ({
         )}
 
         <div className="d-flex items-center gap-2">
-          <DomainLink domain={firstDomain} getDomainPath={getDomainPath} />
+          <DomainLink domain={firstDomain} />
 
           <Dropdown
             menu={{
@@ -122,7 +119,7 @@ export const DomainDisplay = ({
       )}
 
       <div className="d-flex items-center gap-1">
-        <DomainLink domain={domains[0]} getDomainPath={getDomainPath} />
+        <DomainLink domain={domains[0]} />
       </div>
     </div>
   );

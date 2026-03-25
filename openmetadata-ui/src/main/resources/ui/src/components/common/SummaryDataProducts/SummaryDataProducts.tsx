@@ -15,9 +15,10 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as DataProductIcon } from '../../../assets/svg/ic-data-product.svg';
+import { EntityType } from '../../../enums/entity.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import { SearchedDataProps } from '../../SearchedData/SearchedData.interface';
 const SummaryDataProducts = ({
   dataAsset,
@@ -27,7 +28,6 @@ const SummaryDataProducts = ({
   };
 }) => {
   const { t } = useTranslation();
-  const { getDataProductDetailsPath } = useMarketplaceStore();
   const navigate = useNavigate();
 
   const dataProducts = useMemo(() => {
@@ -35,7 +35,7 @@ const SummaryDataProducts = ({
   }, [dataAsset]);
 
   const redirectLink = useCallback((fqn: string) => {
-    navigate(getDataProductDetailsPath(fqn));
+    navigate(getEntityDetailsPath(EntityType.DATA_PRODUCT, fqn));
   }, []);
 
   return (
