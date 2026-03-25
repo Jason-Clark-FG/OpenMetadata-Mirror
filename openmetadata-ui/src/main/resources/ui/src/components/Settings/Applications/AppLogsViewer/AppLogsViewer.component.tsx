@@ -280,9 +280,8 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
                   dataIndex: 'vectorEmbeddings',
                   key: 'vectorEmbeddings',
                   render: (value: number | null) => (
-                    <Typography.Text
-                      className={value !== null ? 'text-primary' : ''}>
-                      {value !== null ? value : '-'}
+                    <Typography.Text>
+                      {value !== null ? '\u2713' : '-'}
                     </Typography.Text>
                   ),
                 },
@@ -292,13 +291,13 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
   }, [successContext, failureContext]);
 
   const entityStatsRenderer = useCallback(
-    (entityStats: { [key: string]: StepStats }, vectorStats?: StepStats) => {
+    (entityStats: { [key: string]: StepStats }) => {
       return (
         <Table
           className="m-t-md"
           columns={tableColumn}
           data-testid="app-entity-stats-history-table"
-          dataSource={getEntityStatsData(entityStats, vectorStats)}
+          dataSource={getEntityStatsData(entityStats)}
           pagination={false}
           rowKey="name"
           scroll={scrollHeight ? { y: scrollHeight } : undefined}
@@ -554,15 +553,9 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
       {serverStatsRenderer()}
 
       {successContext?.stats?.entityStats &&
-        entityStatsRenderer(
-          successContext.stats.entityStats,
-          successContext.stats.vectorStats
-        )}
+        entityStatsRenderer(successContext.stats.entityStats)}
       {failureContext?.stats?.entityStats &&
-        entityStatsRenderer(
-          failureContext.stats.entityStats,
-          failureContext.stats.vectorStats
-        )}
+        entityStatsRenderer(failureContext.stats.entityStats)}
 
       {logsRender(
         formatJsonString(

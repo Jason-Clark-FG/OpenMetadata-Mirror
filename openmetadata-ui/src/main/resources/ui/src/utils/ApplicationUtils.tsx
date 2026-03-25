@@ -65,12 +65,9 @@ const VECTOR_INDEXABLE_ENTITIES = new Set([
   'topic',
 ]);
 
-export const getEntityStatsData = (
-  data: {
-    [key: string]: StepStats;
-  },
-  vectorStats?: StepStats
-): EntityStatsData[] => {
+export const getEntityStatsData = (data: {
+  [key: string]: StepStats;
+}): EntityStatsData[] => {
   const filteredRow = ['failedRecords', 'totalRecords', 'successRecords'];
 
   const result = Object.entries(data).reduce<EntityStatsData[]>(
