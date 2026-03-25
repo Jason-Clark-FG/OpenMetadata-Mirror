@@ -183,4 +183,29 @@ class TopicUpdaterPatchTest {
         updater.getPatchedFields().contains("messageSchema"),
         "patchedFields must contain original values after entitySpecificUpdate");
   }
+
+  @Test
+  void patch_addSchemaToTopicWithoutSchema_isDetected() {
+    // Original topic has no messageSchema
+    Topic original =
+        new Topic()
+            .withId(UUID.randomUUID())
+            .withName("test-topic")
+            .withFullyQualifiedName("test-svc.test-topic")
+            .withUpdatedBy("admin")
+            .withVersion(0.1);
+
+    // Updated topic adds a messageSchema with fields
+    Topic updated = createTopicWithNestedSchema();
+
+    TopicRepository.TopicUpdater updater = createUpdater(original, updated);
+    updater.setPatchedFields(Set.of("messageSchema"));
+    updater.changeDescription = new ChangeDescription();
+
+    updater.entitySpecificUpdate(false);
+
+    assertTrue(
+        updater.fieldsChanged(),
+        "Adding schema fields to a topic without messageSchema must be detected");
+  }
 }
