@@ -33,4 +33,5 @@ export enum WorkflowTriggerFields {
     Reviewers = "reviewers",
     Synonyms = "synonyms",
     Tags = "tags",
+    TestCaseStatus = "testCaseStatus",
 }
