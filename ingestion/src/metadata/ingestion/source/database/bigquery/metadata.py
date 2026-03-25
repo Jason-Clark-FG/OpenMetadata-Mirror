@@ -552,13 +552,14 @@ class BigquerySource(LifeCycleQueryMixin, CommonDbSourceService, MultiDBSource):
             location = getattr(dataset_obj, "location", None)
         except Exception as exc:
             logger.debug(traceback.format_exc())
-            logger.warning(
-                "Could not retrieve dataset '%s.%s', skipping DDL pre-fetch: %s",
+            logger.debug(
+                "Could not retrieve dataset location for '%s.%s', "
+                "falling back to dataset-scoped query: %s",
                 database,
                 schema_name,
                 exc,
             )
-            return
+            location = None
 
         query = (
             BIGQUERY_GET_TABLE_DDLS_BY_REGION.format(
@@ -1194,13 +1195,14 @@ class BigquerySource(LifeCycleQueryMixin, CommonDbSourceService, MultiDBSource):
                 location = getattr(dataset_obj, "location", None)
             except Exception as exc:
                 logger.debug(traceback.format_exc())
-                logger.warning(
-                    "Could not retrieve dataset '%s.%s', skipping stored procedures: %s",
+                logger.debug(
+                    "Could not retrieve dataset location for '%s.%s', "
+                    "falling back to dataset-scoped query: %s",
                     database,
                     schema,
                     exc,
                 )
-                return
+                location = None
             query = (
                 BIGQUERY_GET_STORED_PROCEDURES_BY_REGION.format(
                     database_name=database,

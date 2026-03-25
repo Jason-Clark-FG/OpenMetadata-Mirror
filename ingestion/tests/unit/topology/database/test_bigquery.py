@@ -834,10 +834,31 @@ class TestBigqueryRegionAwareQueries:
         assert "region-" not in query_str
         assert MOCK_DATABASE_SCHEMA.name.root in query_str
 
+    def test_get_stored_procedures_falls_back_when_location_unavailable(self):
+        """When client.get_dataset raises, falls back to dataset-scoped query and returns results."""
+        self.bq_source.client.get_dataset.side_effect = Exception("permission denied")
+        self.bq_source._current_dataset_obj = None
+        sp_row = {"name": "my_proc", "definition": "BEGIN END", "language": "SQL"}
+        mock_engine, mock_conn = self._make_engine_mock([sp_row])
+        self.bq_source.engine = mock_engine
+
+        results = list(self.bq_source.get_stored_procedures())
+
+        assert len(results) == 1
+        assert results[0].name == "my_proc"
+        query_str = str(mock_conn.execute.call_args[0][0])
+        assert "region-" not in query_str
+
     def test_get_stored_procedures_returns_empty_when_dataset_not_found(self):
-        """When client.get_dataset raises, returns empty without recording a producer failure."""
+        """When both client.get_dataset and SQL execution fail, returns empty without a producer failure."""
         self.bq_source.client.get_dataset.side_effect = Exception("404 Not found")
         self.bq_source._current_dataset_obj = None
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = Exception("404 Not found in location US")
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        self.bq_source.engine = mock_engine
         failures_before = len(self.bq_source.status.failures)
 
         results = list(self.bq_source.get_stored_procedures())
@@ -909,10 +930,35 @@ class TestBigqueryRegionAwareQueries:
         self.bq_source.client.get_dataset.assert_not_called()
         assert self.bq_source._table_ddl_cache == {}
 
+    def test_prefetch_table_ddls_falls_back_when_location_unavailable(self):
+        """When client.get_dataset raises, falls back to dataset-scoped query and populates cache."""
+        self.bq_source.client.get_dataset.side_effect = Exception("permission denied")
+        self.bq_source._current_dataset_obj = None
+        ddl_row = Mock()
+        ddl_row.table_name = "my_table"
+        ddl_row.ddl = "CREATE TABLE my_table (id INT64)"
+        mock_engine, mock_conn = self._make_engine_mock([ddl_row])
+        self.bq_source.engine = mock_engine
+
+        self.bq_source._prefetch_table_ddls(MOCK_DATABASE_SCHEMA.name.root)
+
+        assert (
+            self.bq_source._table_ddl_cache["my_table"]
+            == "CREATE TABLE my_table (id INT64)"
+        )
+        query_str = str(mock_conn.execute.call_args[0][0])
+        assert "region-" not in query_str
+
     def test_prefetch_table_ddls_cache_empty_when_dataset_not_found(self):
-        """When client.get_dataset raises, cache stays empty and no exception propagates."""
+        """When both client.get_dataset and SQL execution fail, cache stays empty and no exception propagates."""
         self.bq_source.client.get_dataset.side_effect = Exception("404 Not found")
         self.bq_source._current_dataset_obj = None
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = Exception("404 Not found in location US")
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        self.bq_source.engine = mock_engine
 
         self.bq_source._prefetch_table_ddls(MOCK_DATABASE_SCHEMA.name.root)
 
