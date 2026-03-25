@@ -15,14 +15,8 @@ import { reduce } from 'lodash';
 import { TagFilterOptions, TagsData } from 'Models';
 import React from 'react';
 import { TableTagsProps } from '../../components/Database/TableTags/TableTags.interface';
-import { FQN_SEPARATOR_CHAR } from '../../constants/char.constants';
 import { TagLabel, TagSource } from '../../generated/type/tagLabel';
-
-const isTierTag = (tagFQN: string) =>
-  tagFQN.startsWith(`Tier${FQN_SEPARATOR_CHAR}`);
-
-const isCertificationTag = (tagFQN: string) =>
-  tagFQN.startsWith(`Certification${FQN_SEPARATOR_CHAR}`);
+import { isCertificationTag, isTierTag } from '../TableUtils';
 
 export const getFilterTags = (tags: TagLabel[]): TableTagsProps =>
   reduce(
