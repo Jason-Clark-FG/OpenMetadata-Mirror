@@ -3,6 +3,8 @@ package org.openmetadata.service.apps.logging;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.classic.spi.IThrowableProxy;
+import ch.qos.logback.classic.spi.StackTraceElementProxy;
 import ch.qos.logback.core.AppenderBase;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -68,13 +70,33 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
   }
 
   static String formatLine(ILoggingEvent event) {
-    return String.format(
-        "{\"timestamp\":%d,\"level\":\"%s\",\"thread\":\"%s\",\"logger\":\"%s\",\"message\":\"%s\"}",
-        event.getTimeStamp(),
-        event.getLevel(),
-        escapeJson(event.getThreadName()),
-        escapeJson(event.getLoggerName()),
-        escapeJson(event.getFormattedMessage()));
+    StringBuilder sb = new StringBuilder();
+    sb.append(
+        String.format(
+            "{\"timestamp\":%d,\"level\":\"%s\",\"thread\":\"%s\",\"logger\":\"%s\",\"message\":\"%s\"",
+            event.getTimeStamp(),
+            event.getLevel(),
+            escapeJson(event.getThreadName()),
+            escapeJson(event.getLoggerName()),
+            escapeJson(event.getFormattedMessage())));
+    IThrowableProxy tp = event.getThrowableProxy();
+    if (tp != null) {
+      sb.append(",\"exception\":\"").append(escapeJson(formatThrowable(tp))).append("\"");
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+
+  private static String formatThrowable(IThrowableProxy proxy) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(proxy.getClassName()).append(": ").append(proxy.getMessage());
+    for (StackTraceElementProxy step : proxy.getStackTraceElementProxyArray()) {
+      sb.append("\n\tat ").append(step.getSTEAsString());
+    }
+    if (proxy.getCause() != null) {
+      sb.append("\nCaused by: ").append(formatThrowable(proxy.getCause()));
+    }
+    return sb.toString();
   }
 
   private static String escapeJson(String value) {

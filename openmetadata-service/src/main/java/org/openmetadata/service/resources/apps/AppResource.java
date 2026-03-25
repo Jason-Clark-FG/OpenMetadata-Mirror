@@ -420,7 +420,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
           @QueryParam("offset")
           @Min(0)
           int offset) {
-    repository.getByName(uriInfo, name, repository.getFields("id"));
+    App app = repository.getByName(uriInfo, name, repository.getFields("id"));
+    if (!"SearchIndexingApplication".equals(app.getName())) {
+      throw new BadRequestException(
+          "Live indexing queue is only available for SearchIndexingApplication");
+    }
     CollectionDAO.SearchIndexRetryQueueDAO retryQueueDAO =
         Entity.getCollectionDAO().searchIndexRetryQueueDAO();
     var records = retryQueueDAO.listAll(limitParam, offset);

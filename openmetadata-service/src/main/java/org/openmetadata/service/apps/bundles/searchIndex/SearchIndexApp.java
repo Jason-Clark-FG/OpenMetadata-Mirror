@@ -90,8 +90,12 @@ public class SearchIndexApp extends AbstractNativeApplication {
     DistributedSearchIndexCoordinator coordinator =
         new DistributedSearchIndexCoordinator(collectionDAO);
     for (String jobIdStr : runningJobIds) {
-      LOG.info("Stopping distributed job {} via coordinator fallback", jobIdStr);
-      coordinator.requestStop(java.util.UUID.fromString(jobIdStr));
+      try {
+        LOG.info("Stopping distributed job {} via coordinator fallback", jobIdStr);
+        coordinator.requestStop(java.util.UUID.fromString(jobIdStr));
+      } catch (Exception e) {
+        LOG.warn("Failed to stop distributed job {}", jobIdStr, e);
+      }
     }
     updateRunRecordToStopped();
     return true;
@@ -104,13 +108,16 @@ public class SearchIndexApp extends AbstractNativeApplication {
         return;
       }
       AppRepository appRepository = new AppRepository();
-      AppRunRecord latestRun = appRepository.getLatestAppRuns(app);
-      if (latestRun != null && latestRun.getStatus() == AppRunRecord.Status.RUNNING) {
-        latestRun.withStatus(AppRunRecord.Status.STOPPED);
-        latestRun.withEndTime(System.currentTimeMillis());
-        appRepository.updateAppStatus(app.getId(), latestRun);
-        LOG.info("Updated app run record to STOPPED for {}", app.getName());
-      }
+      appRepository
+          .getLatestAppRunsOptional(app)
+          .filter(run -> run.getStatus() == AppRunRecord.Status.RUNNING)
+          .ifPresent(
+              run -> {
+                run.withStatus(AppRunRecord.Status.STOPPED);
+                run.withEndTime(System.currentTimeMillis());
+                appRepository.updateAppStatus(app.getId(), run);
+                LOG.info("Updated app run record to STOPPED for {}", app.getName());
+              });
     } catch (Exception e) {
       LOG.warn("Failed to update app run record to STOPPED", e);
     }
