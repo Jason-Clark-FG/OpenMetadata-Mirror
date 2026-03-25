@@ -16,9 +16,13 @@ import {
   LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS,
   LOGS_VIEWER_PIPELINE_STATUS_RETRY_INTERVAL_MS,
 } from '../constant/logsViewer';
+import { waitForAllLoadersToDisappear } from './entity';
 
 export async function waitForFirstPipelineStatusNotQueued(page: Page) {
   await expect(async () => {
+    await page.reload();
+    await waitForAllLoadersToDisappear(page);
+
     const row = page
       .getByRole('row')
       .filter({ has: page.getByTestId('logs-button') })
