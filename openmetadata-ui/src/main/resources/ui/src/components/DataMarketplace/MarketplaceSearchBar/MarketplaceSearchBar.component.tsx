@@ -126,7 +126,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
         )}`
       );
     },
-    [navigate]
+    [navigate, navCtx]
   );
 
   const handleDomainClick = useCallback(
@@ -134,7 +134,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       setIsOpen(false);
       navigate(navCtx.getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
-    [navigate]
+    [navigate, navCtx]
   );
 
   const popoverContent = useMemo(() => {

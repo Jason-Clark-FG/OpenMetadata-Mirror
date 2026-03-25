@@ -151,7 +151,7 @@ test.describe(
             `search-result-dp-${dp.responseData.id}`
           );
           await resultItem.dispatchEvent('click');
-          await consumerPage.waitForURL('**/dataProduct/**');
+          await consumerPage.waitForURL('**/data-marketplace/data-products/**');
         }
       );
     });

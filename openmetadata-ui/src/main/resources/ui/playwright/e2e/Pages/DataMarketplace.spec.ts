@@ -19,7 +19,6 @@ import {
   navigateToMarketplace,
   searchMarketplace,
 } from '../../utils/dataMarketplace';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const domain1 = new Domain();
 const domain2 = new Domain();
@@ -134,7 +133,7 @@ test.describe(
             `search-result-dp-${dp4.responseData.id}`
           );
           await resultItem.dispatchEvent('click');
-          await page.waitForURL('**/dataProduct/**');
+          await page.waitForURL('**/data-marketplace/data-products/**');
         }
       );
 
@@ -155,7 +154,7 @@ test.describe(
             `search-result-domain-${domain4.responseData.id}`
           );
           await resultItem.dispatchEvent('click');
-          await page.waitForURL('**/domain/**');
+          await page.waitForURL('**/data-marketplace/domains/**');
         }
       );
     });
@@ -178,7 +177,7 @@ test.describe(
             .first();
           await expect(dpCard).toBeVisible();
           await dpCard.click();
-          await page.waitForURL('**/dataProduct/**');
+          await page.waitForURL('**/data-marketplace/data-products/**');
         }
       );
 
@@ -194,7 +193,7 @@ test.describe(
             .first();
           await expect(domainCard).toBeVisible();
           await domainCard.click();
-          await page.waitForURL('**/domain/**');
+          await page.waitForURL('**/data-marketplace/domains/**');
         }
       );
     });
@@ -212,7 +211,7 @@ test.describe(
           const viewAllDp = page.getByTestId('view-all-data-products');
           await expect(viewAllDp).toBeVisible();
           await viewAllDp.click();
-          await page.waitForURL('**/dataProduct**');
+          await page.waitForURL('**/data-marketplace/data-products**');
         }
       );
 
@@ -223,7 +222,7 @@ test.describe(
           const viewAllDomains = page.getByTestId('view-all-domains');
           await expect(viewAllDomains).toBeVisible();
           await viewAllDomains.click();
-          await page.waitForURL('**/domain**');
+          await page.waitForURL('**/data-marketplace/domains**');
         }
       );
     });

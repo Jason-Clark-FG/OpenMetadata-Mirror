@@ -41,7 +41,7 @@ export const searchMarketplace = async (page: Page, term: string) => {
 export const closeSearchPopover = async (page: Page) => {
   await page.getByTestId('marketplace-greeting').click();
   await expect(
-    page.locator('.marketplace-search-overlay')
+    page.locator('.marketplace-search-results')
   ).not.toBeVisible();
 };
 

@@ -12,7 +12,15 @@
  */
 
 import { isEmpty } from 'lodash';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ComponentType,
+  CSSProperties,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import RGL, { ReactGridLayoutProps, WidthProvider } from 'react-grid-layout';
 import marketplaceBg from '../../assets/img/widgets/marketplace-bg.png';
 import Loader from '../../components/common/Loader/Loader';
@@ -33,8 +41,8 @@ import dataMarketplaceClassBase from '../../utils/DataMarketplace/DataMarketplac
 import { WidgetConfig } from '../CustomizablePage/CustomizablePage.interface';
 import './data-marketplace-page.less';
 
-const ReactGridLayout = WidthProvider(RGL) as React.ComponentType<
-  ReactGridLayoutProps & { children?: React.ReactNode }
+const ReactGridLayout = WidthProvider(RGL) as ComponentType<
+  ReactGridLayoutProps & { children?: ReactNode }
 >;
 
 const DataMarketplacePage = () => {
@@ -117,7 +125,7 @@ const DataMarketplacePage = () => {
       <div
         className="marketplace-header-bg"
         style={
-          { '--marketplace-bg': `url(${marketplaceBg})` } as React.CSSProperties
+          { '--marketplace-bg': `url(${marketplaceBg})` } as CSSProperties
         }>
         <div className="marketplace-grid-wrapper" dir="ltr">
           <div className="p-x-box">

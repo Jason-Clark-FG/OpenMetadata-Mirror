@@ -72,7 +72,7 @@ const Sidebar = ({ className }: SidebarProps) => {
   return (
     <aside
       className={classNames(
-        'tw:flex tw:h-full tw:flex-col tw:bg-[#f8f9fc] tw:overflow-hidden',
+        'tw:flex tw:h-full tw:flex-col tw:bg-[var(--color-bg-secondary)] tw:overflow-hidden',
         'tw:transition-[width] tw:duration-300 tw:ease-in-out',
         className
       )}
