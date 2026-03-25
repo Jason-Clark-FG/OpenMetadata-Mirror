@@ -2227,7 +2227,8 @@
     "your-entity": "Ваш объект «{{entity}}»",
     "z-to-a": "Я до А",
     "zoom-in": "Увеличить",
-    "zoom-out": "Уменьшить"
+    "zoom-out": "Уменьшить",
+    "vector-embedding-plural": "Векторные эмбеддинги"
   },
   "message": {
     "access-block-time-message": "Доступ заблокируется после ряда неудачных попыток (на несколько секунд).",

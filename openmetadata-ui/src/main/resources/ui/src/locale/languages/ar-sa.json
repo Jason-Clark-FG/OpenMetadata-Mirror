@@ -2227,7 +2227,8 @@
     "your-entity": "{{entity}} الخاص بك",
     "z-to-a": "من Z إلى A",
     "zoom-in": "تكبير",
-    "zoom-out": "تصغير"
+    "zoom-out": "تصغير",
+    "vector-embedding-plural": "التضمينات المتجهية"
   },
   "message": {
     "access-block-time-message": "سيتم حظر الوصول لـ مللي ثانية بعد الوصول إلى الحد الأقصى لمحاولات تسجيل الدخول الفاشلة.",

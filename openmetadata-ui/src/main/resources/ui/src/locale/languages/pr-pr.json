@@ -2227,7 +2227,8 @@
     "your-entity": "{{entity}} شما",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "بزرگنمایی",
-    "zoom-out": "کوچک‌نمایی"
+    "zoom-out": "کوچک‌نمایی",
+    "vector-embedding-plural": "Embeddings vetoriais"
   },
   "message": {
     "access-block-time-message": "دسترسی برای مدت میلی‌ثانیه‌ها بعد از حداکثر تلاش‌های ناموفق ورود، مسدود خواهد شد.",

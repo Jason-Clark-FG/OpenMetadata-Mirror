@@ -2227,7 +2227,8 @@
     "your-entity": "Je {{entity}}",
     "z-to-a": "Z tot A",
     "zoom-in": "Inzoomen",
-    "zoom-out": "Uitzoomen"
+    "zoom-out": "Uitzoomen",
+    "vector-embedding-plural": "Vector-embeddings"
   },
   "message": {
     "access-block-time-message": "Toegang wordt geblokkeerd voor milliseconden nadat het maximale aantal mislukte aanmeldpogingen is uitgevoerd.",

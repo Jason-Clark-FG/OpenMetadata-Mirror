@@ -273,17 +273,32 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
               <Typography.Text className="text-failure">{text}</Typography.Text>
             ),
           },
+          ...(successContext?.stats?.vectorStats?.totalRecords
+            ? [
+                {
+                  title: t('label.vector-embedding-plural'),
+                  dataIndex: 'vectorEmbeddings',
+                  key: 'vectorEmbeddings',
+                  render: (value: number | null) => (
+                    <Typography.Text
+                      className={value !== null ? 'text-primary' : ''}>
+                      {value !== null ? value : '-'}
+                    </Typography.Text>
+                  ),
+                },
+              ]
+            : []),
         ];
   }, [successContext, failureContext]);
 
   const entityStatsRenderer = useCallback(
-    (entityStats: { [key: string]: StepStats }) => {
+    (entityStats: { [key: string]: StepStats }, vectorStats?: StepStats) => {
       return (
         <Table
           className="m-t-md"
           columns={tableColumn}
           data-testid="app-entity-stats-history-table"
-          dataSource={getEntityStatsData(entityStats)}
+          dataSource={getEntityStatsData(entityStats, vectorStats)}
           pagination={false}
           rowKey="name"
           scroll={scrollHeight ? { y: scrollHeight } : undefined}
@@ -539,9 +554,15 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
       {serverStatsRenderer()}
 
       {successContext?.stats?.entityStats &&
-        entityStatsRenderer(successContext.stats.entityStats)}
+        entityStatsRenderer(
+          successContext.stats.entityStats,
+          successContext.stats.vectorStats
+        )}
       {failureContext?.stats?.entityStats &&
-        entityStatsRenderer(failureContext.stats.entityStats)}
+        entityStatsRenderer(
+          failureContext.stats.entityStats,
+          failureContext.stats.vectorStats
+        )}
 
       {logsRender(
         formatJsonString(

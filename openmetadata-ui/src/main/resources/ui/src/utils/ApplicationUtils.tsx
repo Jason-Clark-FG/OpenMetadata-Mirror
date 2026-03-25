@@ -44,9 +44,33 @@ export const getStatusTypeForApplication = (status: Status) => {
       return StatusType.Stopped;
   }
 };
-export const getEntityStatsData = (data: {
-  [key: string]: StepStats;
-}): EntityStatsData[] => {
+const VECTOR_INDEXABLE_ENTITIES = new Set([
+  'table',
+  'glossary',
+  'glossaryterm',
+  'chart',
+  'dashboard',
+  'dashboarddatamodel',
+  'database',
+  'databaseschema',
+  'dataproduct',
+  'pipeline',
+  'mlmodel',
+  'metric',
+  'apiendpoint',
+  'apicollection',
+  'page',
+  'storedprocedure',
+  'searchindex',
+  'topic',
+]);
+
+export const getEntityStatsData = (
+  data: {
+    [key: string]: StepStats;
+  },
+  vectorStats?: StepStats
+): EntityStatsData[] => {
   const filteredRow = ['failedRecords', 'totalRecords', 'successRecords'];
 
   const result = Object.entries(data).reduce<EntityStatsData[]>(
@@ -64,6 +88,10 @@ export const getEntityStatsData = (data: {
         return acc;
       }
 
+      const isVectorIndexable = VECTOR_INDEXABLE_ENTITIES.has(
+        key.toLowerCase()
+      );
+
       return [
         ...acc,
         {
@@ -71,6 +99,9 @@ export const getEntityStatsData = (data: {
           totalRecords: stats.totalRecords,
           successRecords: stats.successRecords,
           failedRecords: stats.failedRecords,
+          vectorEmbeddings: isVectorIndexable
+            ? stats.successRecords
+            : null,
         },
       ];
     },

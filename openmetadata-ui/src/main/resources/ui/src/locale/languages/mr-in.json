@@ -2227,7 +2227,8 @@
     "your-entity": "तुमचे {{entity}}",
     "z-to-a": "ज ते अ",
     "zoom-in": "झूम इन",
-    "zoom-out": "झूम आउट"
+    "zoom-out": "झूम आउट",
+    "vector-embedding-plural": "व्हेक्टर एम्बेडिंग्ज"
   },
   "message": {
     "access-block-time-message": "कमाल अयशस्वी लॉगिन प्रयत्नांनंतर प्रवेश काही काळासाठी अवरोधित केला जाईल.",

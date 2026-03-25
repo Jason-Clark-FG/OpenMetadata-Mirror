@@ -2227,7 +2227,8 @@
     "your-entity": "당신의 {{entity}}",
     "z-to-a": "Z에서 A",
     "zoom-in": "확대",
-    "zoom-out": "축소"
+    "zoom-out": "축소",
+    "vector-embedding-plural": "벡터 임베딩"
   },
   "message": {
     "access-block-time-message": "최대 로그인 실패 시도 횟수 이후 밀리초 동안 접근이 차단됩니다.",

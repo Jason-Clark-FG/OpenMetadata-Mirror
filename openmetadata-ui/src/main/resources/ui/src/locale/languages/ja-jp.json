@@ -2227,7 +2227,8 @@
     "your-entity": "あなたの {{entity}}",
     "z-to-a": "ZからA",
     "zoom-in": "ズームイン",
-    "zoom-out": "ズームアウト"
+    "zoom-out": "ズームアウト",
+    "vector-embedding-plural": "ベクトル埋め込み"
   },
   "message": {
     "access-block-time-message": "最大回数のログイン失敗後、一定時間（ミリ秒）アクセスがブロックされます。",

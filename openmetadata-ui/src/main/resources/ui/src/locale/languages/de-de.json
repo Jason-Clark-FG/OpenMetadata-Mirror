@@ -2227,7 +2227,8 @@
     "your-entity": "Ihre {{entity}}",
     "z-to-a": "Z bis A",
     "zoom-in": "Vergrößern",
-    "zoom-out": "Verkleinern"
+    "zoom-out": "Verkleinern",
+    "vector-embedding-plural": "Vektoreinbettungen"
   },
   "message": {
     "access-block-time-message": "Der Zugriff wird für einige Millisekunden gesperrt, nachdem die maximale Anzahl fehlgeschlagener Anmeldeversuche erreicht wurde.",

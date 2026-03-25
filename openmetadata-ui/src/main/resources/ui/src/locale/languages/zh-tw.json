@@ -2227,7 +2227,8 @@
     "your-entity": "您的 {{entity}}",
     "z-to-a": "Z 到 A",
     "zoom-in": "放大",
-    "zoom-out": "縮小"
+    "zoom-out": "縮小",
+    "vector-embedding-plural": "向量嵌入"
   },
   "message": {
     "access-block-time-message": "達到最大登入失敗次數後，存取將被封鎖數毫秒。",

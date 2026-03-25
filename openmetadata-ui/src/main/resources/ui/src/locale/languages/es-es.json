@@ -2227,7 +2227,8 @@
     "your-entity": "Tu {{entity}}",
     "z-to-a": "Z a A",
     "zoom-in": "Acercar",
-    "zoom-out": "Alejar"
+    "zoom-out": "Alejar",
+    "vector-embedding-plural": "Embeddings vectoriales"
   },
   "message": {
     "access-block-time-message": "El acceso será bloqueado durante milisegundos después de que se realicen el máximo de intentos de inicio de sesión fallidos.",

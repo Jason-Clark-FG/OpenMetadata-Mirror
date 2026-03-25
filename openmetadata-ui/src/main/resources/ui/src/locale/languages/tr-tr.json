@@ -2227,7 +2227,8 @@
     "your-entity": "Sizin {{entity}}",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "Yakınlaştır",
-    "zoom-out": "Uzaklaştır"
+    "zoom-out": "Uzaklaştır",
+    "vector-embedding-plural": "Vektör Gömüleri"
   },
   "message": {
     "access-block-time-message": "Erişim, maksimum başarısız giriş denemesinden sonra milisaniye boyunca engellenecektir.",
