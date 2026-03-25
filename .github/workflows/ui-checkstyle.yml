@@ -754,7 +754,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: "${{ env.UI_WORKING_DIRECTORY }}/.nvmrc"
+          node-version-file: "${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}/.nvmrc"
           cache: yarn
           cache-dependency-path: "${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}/yarn.lock"
 
