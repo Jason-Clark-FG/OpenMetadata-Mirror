@@ -53,7 +53,6 @@ from metadata.ingestion.source.database.redshift.queries import (
     REDSHIFT_GET_ALL_RELATIONS,
     REDSHIFT_GET_DATABASE_NAMES,
     REDSHIFT_TEST_GET_QUERIES_MAP,
-    REDSHIFT_TEST_PARTITION_DETAILS,
 )
 from metadata.utils.constants import THREE_MIN
 from metadata.utils.logger import ingestion_logger
@@ -228,20 +227,9 @@ def test_connection(
     Test connection. This can be executed either as part
     of a metadata workflow or during an Automation Workflow
     """
-    table_and_view_query = text(
-        REDSHIFT_GET_ALL_RELATIONS.format(
-            schema_clause="", table_clause="", limit_clause="LIMIT 1"
-        )
+    table_and_view_query = REDSHIFT_GET_ALL_RELATIONS.format(
+        schema_clause="", table_clause="", limit_clause="LIMIT 1"
     )
-
-    def test_partition_details(engine_: Engine):
-        """Check if we have the right permissions to get partition details"""
-        with engine_.connect() as conn:
-            res = conn.execute(REDSHIFT_TEST_PARTITION_DETAILS).fetchone()
-            if not all(res):
-                raise SourceConnectionException(
-                    f"We don't have the right permissions to get partition details - {res}"
-                )
 
     def test_get_queries_permissions(engine_: Engine):
         """Check if we have the right permissions to list queries"""
@@ -249,7 +237,7 @@ def test_connection(
 
         with engine_.connect() as conn:
             res = conn.execute(
-                REDSHIFT_TEST_GET_QUERIES_MAP[redshift_instance_type]
+                text(REDSHIFT_TEST_GET_QUERIES_MAP[redshift_instance_type])
             ).fetchone()
             if not all(res):
                 raise SourceConnectionException(
@@ -267,7 +255,6 @@ def test_connection(
         "GetDatabases": partial(
             test_query, statement=REDSHIFT_GET_DATABASE_NAMES, engine=engine
         ),
-        "GetPartitionTableDetails": partial(test_partition_details, engine),
     }
 
     result = test_connection_steps(
