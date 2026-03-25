@@ -75,6 +75,7 @@ const DataProductListPage = () => {
     title: t('label.add-entity', { entity: t('label.data-product') }),
     width: 670,
     closeOnEscape: false,
+    className: 'tw:z-[20]',
     onCancel: () => {
       form.resetFields();
     },
@@ -124,11 +125,11 @@ const DataProductListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-            {
-              name: t('label.data-marketplace'),
-              url: '/data-marketplace',
-            },
-          ]
+          {
+            name: t('label.data-marketplace'),
+            url: '/data-marketplace',
+          },
+        ]
         : []),
       { name: t('label.data-product-plural'), url: dataProductBasePath },
     ],

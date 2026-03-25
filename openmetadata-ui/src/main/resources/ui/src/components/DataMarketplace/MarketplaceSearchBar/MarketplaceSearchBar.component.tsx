@@ -263,7 +263,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
       />
       <SelectPopover
         isNonModal
-        className="tw:max-h-[400px]!"
+        className="!tw:max-h-[400px]"
         isOpen={isOpen && searchValue?.trim().length > 0}
         offset={4}
         placement="bottom"

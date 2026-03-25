@@ -77,6 +77,7 @@ const DomainListPage = () => {
     title: t('label.add-entity', { entity: t('label.domain') }),
     width: 670,
     closeOnEscape: false,
+    className: 'tw:z-[20]',
     onCancel: () => {
       form.resetFields();
     },
@@ -126,11 +127,11 @@ const DomainListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-            {
-              name: t('label.data-marketplace'),
-              url: '/data-marketplace',
-            },
-          ]
+          {
+            name: t('label.data-marketplace'),
+            url: '/data-marketplace',
+          },
+        ]
         : []),
       { name: t('label.domain-plural'), url: domainBasePath },
     ],
@@ -285,10 +286,10 @@ const DomainListPage = () => {
       sx={
         isTreeView
           ? {
-              display: 'flex',
-              flexDirection: 'column',
-              height: 'calc(100vh - 80px)',
-            }
+            display: 'flex',
+            flexDirection: 'column',
+            height: 'calc(100vh - 80px)',
+          }
           : {}
       }>
       {breadcrumbs}
