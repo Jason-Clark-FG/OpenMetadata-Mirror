@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -38,7 +38,8 @@ const PAGE_SIZE = 5;
 const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const navCtx = useNavigationContext();
+  const { dataProductBasePath, getDomainDetailsPath } =
+    useMarketplaceStore();
   const [searchValue, setSearchValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [dataProducts, setDataProducts] = useState<DataProduct[]>([]);
@@ -125,20 +126,20 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     (dp: DataProduct) => {
       setIsOpen(false);
       navigate(
-        `${navCtx.dataProductBasePath}/${getEncodedFqn(
+        `${dataProductBasePath}/${getEncodedFqn(
           dp.fullyQualifiedName ?? ''
         )}`
       );
     },
-    [navigate, navCtx]
+    [navigate]
   );
 
   const handleDomainClick = useCallback(
     (domain: Domain) => {
       setIsOpen(false);
-      navigate(navCtx.getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
+      navigate(getDomainDetailsPath(domain.fullyQualifiedName ?? ''));
     },
-    [navigate, navCtx]
+    [navigate]
   );
 
   const popoverContent = useMemo(() => {

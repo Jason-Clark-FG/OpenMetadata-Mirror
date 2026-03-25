@@ -11,25 +11,28 @@
  *  limitations under the License.
  */
 
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
 import MarketplaceNavBar from '../../components/DataMarketplace/MarketplaceNavBar/MarketplaceNavBar.component';
 import PageLayoutV2 from '../../components/PageLayoutV2/PageLayoutV2';
-import { NavigationContextProvider } from '../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 
 const MarketplaceLayout = () => {
   const { t } = useTranslation();
+  const { setMarketplaceContext } = useMarketplaceStore();
+
+  useEffect(() => {
+    setMarketplaceContext(true);
+
+    return () => setMarketplaceContext(false);
+  }, []);
 
   return (
-    <NavigationContextProvider
-      isMarketplace
-      dataProductBasePath="/data-marketplace/data-products"
-      domainBasePath="/data-marketplace/domains">
-      <PageLayoutV2 pageTitle={t('label.data-marketplace')}>
-        <MarketplaceNavBar />
-        <Outlet />
-      </PageLayoutV2>
-    </NavigationContextProvider>
+    <PageLayoutV2 pageTitle={t('label.data-marketplace')}>
+      <MarketplaceNavBar />
+      <Outlet />
+    </PageLayoutV2>
   );
 };
 

@@ -19,7 +19,7 @@ import {
   DATAPRODUCT_DEFAULT_QUICK_FILTERS,
   DATAPRODUCT_FILTERS,
 } from '../../../constants/DataProduct.constants';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { TagSource } from '../../../generated/type/tagLabel';
@@ -33,7 +33,7 @@ import {
 } from '../../common/atoms/shared/types';
 
 export const useDataProductListingData = (): ListingData<DataProduct> => {
-  const { dataProductBasePath } = useNavigationContext();
+  const { dataProductBasePath } = useMarketplaceStore();
   const filterKeys = useMemo(() => DATAPRODUCT_DEFAULT_QUICK_FILTERS, []);
   const filterConfigs = useMemo(() => DATAPRODUCT_FILTERS, []);
 

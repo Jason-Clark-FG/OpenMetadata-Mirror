@@ -21,7 +21,8 @@ import { EntityHeader } from '../../components/Entity/EntityHeader/EntityHeader.
 import { CustomizablePageHeader } from '../../components/MyData/CustomizableComponents/CustomizablePageHeader/CustomizablePageHeader';
 import { CustomizeMyDataProps } from '../../components/MyData/CustomizableComponents/CustomizeMyData/CustomizeMyData.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
-import { DE_ACTIVE_COLOR, ROUTES } from '../../constants/constants';
+import { DE_ACTIVE_COLOR } from '../../constants/constants';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { EntityType } from '../../enums/entity.enum';
 import { DataProduct } from '../../generated/entity/domains/dataProduct';
 import { Page } from '../../generated/system/ui/page';
@@ -36,6 +37,7 @@ const CustomizableDataProductPage = ({
   onSaveLayout,
 }: CustomizeMyDataProps) => {
   const { t } = useTranslation();
+  const { dataProductBasePath } = useMarketplaceStore();
   const { currentPage, currentPageType, getPage } = useCustomizeStore();
 
   const handleReset = useCallback(async () => {
@@ -54,7 +56,7 @@ const CustomizableDataProductPage = ({
     return [
       {
         name: t('label.data-product-plural'),
-        url: ROUTES.DATA_PRODUCT,
+        url: dataProductBasePath,
         activeTitle: false,
       },
     ];

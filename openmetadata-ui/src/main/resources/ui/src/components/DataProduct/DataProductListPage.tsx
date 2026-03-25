@@ -19,7 +19,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
-import { useNavigationContext } from '../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
@@ -48,7 +48,7 @@ import { useDataProductListingData } from './hooks/useDataProductListingData';
 
 const DataProductListPage = () => {
   const dataProductListing = useDataProductListingData();
-  const { isMarketplace, dataProductBasePath } = useNavigationContext();
+  const { isMarketplace, dataProductBasePath } = useMarketplaceStore();
   const theme = useTheme();
   const { t } = useTranslation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();

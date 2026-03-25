@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
@@ -52,7 +52,7 @@ const MarketplaceDataProductsWidget = ({
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { dataProductBasePath } = useNavigationContext();
+  const { dataProductBasePath } = useMarketplaceStore();
   const { permissions } = usePermissionProvider();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [form] = useForm();

@@ -31,7 +31,7 @@ import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -130,7 +130,12 @@ const DataProductsDetailsPage = ({
   const { t } = useTranslation();
   const { enqueueSnackbar } = useSnackbar();
   const navigate = useNavigate();
-  const navCtx = useNavigationContext();
+  const {
+    isMarketplace,
+    dataProductBasePath,
+    getDomainPath,
+    getDataProductDetailsPath,
+  } = useMarketplaceStore();
   const { getEntityPermission } = usePermissionProvider();
   const { tab: activeTab, version } = useRequiredParams<{
     tab: string;
@@ -228,7 +233,7 @@ const DataProductsDetailsPage = ({
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(() => {
     const items: BreadcrumbItem[] = [];
 
-    if (navCtx.isMarketplace) {
+    if (isMarketplace) {
       items.push({
         name: t('label.data-marketplace'),
         url: '/data-marketplace',
@@ -237,18 +242,18 @@ const DataProductsDetailsPage = ({
 
     items.push({
       name: t('label.data-product-plural'),
-      url: navCtx.dataProductBasePath,
+      url: dataProductBasePath,
     });
 
     if (dataProduct.domains && dataProduct.domains.length > 0) {
       items.push({
         name: getEntityName(dataProduct.domains[0]),
-        url: navCtx.getDomainPath(dataProduct.domains[0].fullyQualifiedName),
+        url: getDomainPath(dataProduct.domains[0].fullyQualifiedName),
       });
     }
 
     return items;
-  }, [dataProduct.domains, navCtx, t]);
+  }, [dataProduct.domains, t]);
 
   const { breadcrumbs } = useBreadcrumbs({ items: breadcrumbItems });
 
@@ -388,92 +393,92 @@ const DataProductsDetailsPage = ({
   const manageButtonContent: ItemType[] = [
     ...(editAllPermission
       ? ([
-          {
-            label: (
-              <ManageButtonItemLabel
-                description={t('message.announcement-action-description')}
-                icon={IconAnnouncementsBlack}
-                id="announcement-button"
-                name={t('label.announcement-plural')}
-              />
-            ),
-            key: 'announcement-button',
-            onClick: (e) => {
-              e.domEvent.stopPropagation();
-              handleOpenAnnouncementDrawer();
-              setShowActions(false);
-            },
+        {
+          label: (
+            <ManageButtonItemLabel
+              description={t('message.announcement-action-description')}
+              icon={IconAnnouncementsBlack}
+              id="announcement-button"
+              name={t('label.announcement-plural')}
+            />
+          ),
+          key: 'announcement-button',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            handleOpenAnnouncementDrawer();
+            setShowActions(false);
           },
-        ] as ItemType[])
+        },
+      ] as ItemType[])
       : []),
     ...(editDisplayNamePermission
       ? ([
-          {
-            label: (
-              <ManageButtonItemLabel
-                description={t('message.rename-entity', {
-                  entity: t('label.data-product'),
-                })}
-                icon={EditIcon}
-                id="rename-button"
-                name={t('label.rename')}
-              />
-            ),
-            key: 'rename-button',
-            onClick: (e) => {
-              e.domEvent.stopPropagation();
-              setIsNameEditing(true);
-              setShowActions(false);
-            },
+        {
+          label: (
+            <ManageButtonItemLabel
+              description={t('message.rename-entity', {
+                entity: t('label.data-product'),
+              })}
+              icon={EditIcon}
+              id="rename-button"
+              name={t('label.rename')}
+            />
+          ),
+          key: 'rename-button',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            setIsNameEditing(true);
+            setShowActions(false);
           },
-        ] as ItemType[])
+        },
+      ] as ItemType[])
       : []),
     ...(editAllPermission
       ? ([
-          {
-            label: (
-              <ManageButtonItemLabel
-                description={t('message.edit-entity-style-description', {
-                  entity: t('label.data-product'),
-                })}
-                icon={StyleIcon}
-                id="rename-button"
-                name={t('label.style')}
-              />
-            ),
-            key: 'edit-style-button',
-            onClick: (e) => {
-              e.domEvent.stopPropagation();
-              setIsStyleEditing(true);
-              setShowActions(false);
-            },
+        {
+          label: (
+            <ManageButtonItemLabel
+              description={t('message.edit-entity-style-description', {
+                entity: t('label.data-product'),
+              })}
+              icon={StyleIcon}
+              id="rename-button"
+              name={t('label.style')}
+            />
+          ),
+          key: 'edit-style-button',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            setIsStyleEditing(true);
+            setShowActions(false);
           },
-        ] as ItemType[])
+        },
+      ] as ItemType[])
       : []),
     ...(deleteDataProductPermission
       ? ([
-          {
-            label: (
-              <ManageButtonItemLabel
-                description={t(
-                  'message.delete-entity-type-action-description',
-                  {
-                    entityType: t('label.data-product'),
-                  }
-                )}
-                icon={DeleteIcon}
-                id="delete-button"
-                name={t('label.delete')}
-              />
-            ),
-            key: 'delete-button',
-            onClick: (e) => {
-              e.domEvent.stopPropagation();
-              setIsDelete(true);
-              setShowActions(false);
-            },
+        {
+          label: (
+            <ManageButtonItemLabel
+              description={t(
+                'message.delete-entity-type-action-description',
+                {
+                  entityType: t('label.data-product'),
+                }
+              )}
+              icon={DeleteIcon}
+              id="delete-button"
+              name={t('label.delete')}
+            />
+          ),
+          key: 'delete-button',
+          onClick: (e) => {
+            e.domEvent.stopPropagation();
+            setIsDelete(true);
+            setShowActions(false);
           },
-        ] as ItemType[])
+        },
+      ] as ItemType[])
       : []),
   ];
 
@@ -499,7 +504,7 @@ const DataProductsDetailsPage = ({
 
         // If name changed, navigate to the new URL
         if (name && name.trim() !== dataProduct.name) {
-          navigate(navCtx.getDataProductDetailsPath(name.trim(), activeTab), {
+          navigate(getDataProductDetailsPath(name.trim(), activeTab), {
             replace: true,
           });
         }
@@ -534,12 +539,12 @@ const DataProductsDetailsPage = ({
     if (activeKey !== activeTab) {
       const path = isVersionsView
         ? getVersionPath(
-            EntityType.DATA_PRODUCT,
-            dataProductFqn,
-            toString(dataProduct.version),
-            activeKey
-          )
-        : navCtx.getDataProductDetailsPath(dataProductFqn, activeKey);
+          EntityType.DATA_PRODUCT,
+          dataProductFqn,
+          toString(dataProduct.version),
+          activeKey
+        )
+        : getDataProductDetailsPath(dataProductFqn, activeKey);
 
       navigate(path, {
         replace: true,
@@ -549,12 +554,12 @@ const DataProductsDetailsPage = ({
 
   const handleVersionClick = async () => {
     const path = isVersionsView
-      ? navCtx.getDataProductDetailsPath(dataProductFqn)
+      ? getDataProductDetailsPath(dataProductFqn)
       : getVersionPath(
-          EntityType.DATA_PRODUCT,
-          dataProductFqn,
-          toString(dataProduct.version)
-        );
+        EntityType.DATA_PRODUCT,
+        dataProductFqn,
+        toString(dataProduct.version)
+      );
 
     navigate(path);
   };
@@ -706,13 +711,13 @@ const DataProductsDetailsPage = ({
               }
             )?.coverImage?.position
               ? {
-                  y:
-                    (
-                      dataProduct.style as Style & {
-                        coverImage?: { position?: string };
-                      }
-                    )?.coverImage?.position ?? '',
-                }
+                y:
+                  (
+                    dataProduct.style as Style & {
+                      coverImage?: { position?: string };
+                    }
+                  )?.coverImage?.position ?? '',
+              }
               : undefined
           }
         />
@@ -759,10 +764,9 @@ const DataProductsDetailsPage = ({
                 {dataProduct?.version && (
                   <Tooltip
                     title={t(
-                      `label.${
-                        isVersionsView
-                          ? 'exit-version-history'
-                          : 'version-plural-history'
+                      `label.${isVersionsView
+                        ? 'exit-version-history'
+                        : 'version-plural-history'
                       }`
                     )}>
                     <Button

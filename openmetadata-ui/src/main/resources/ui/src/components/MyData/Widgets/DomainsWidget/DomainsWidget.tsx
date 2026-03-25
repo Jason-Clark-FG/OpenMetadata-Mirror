@@ -22,7 +22,6 @@ import {
   INITIAL_PAGING_VALUE,
   PAGE_SIZE_BASE,
   PAGE_SIZE_MEDIUM,
-  ROUTES,
 } from '../../../../constants/constants';
 import {
   applySortToData,
@@ -39,7 +38,7 @@ import {
 import { getAllDomainsWithAssetsCount } from '../../../../rest/domainAPI';
 import { searchQuery } from '../../../../rest/searchAPI';
 import { getDomainIcon } from '../../../../utils/DomainUtils';
-import { getDomainDetailsPath } from '../../../../utils/RouterUtils';
+import { useMarketplaceStore } from '../../../../hooks/useMarketplaceStore';
 import ErrorPlaceHolder from '../../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import WidgetEmptyState from '../Common/WidgetEmptyState/WidgetEmptyState';
 import WidgetFooter from '../Common/WidgetFooter/WidgetFooter';
@@ -59,6 +58,7 @@ const DomainsWidget = ({
   currentLayout,
 }: WidgetCommonProps) => {
   const { t } = useTranslation();
+  const { getDomainDetailsPath, domainBasePath } = useMarketplaceStore();
   const [domains, setDomains] = useState<Domain[]>([]);
   const navigate = useNavigate();
   const [selectedSortBy, setSelectedSortBy] = useState<string>(
@@ -127,13 +127,13 @@ const DomainsWidget = ({
   }, []);
 
   const handleTitleClick = useCallback(() => {
-    navigate(ROUTES.DOMAIN);
+    navigate(domainBasePath);
   }, [navigate]);
 
   const emptyState = useMemo(
     () => (
       <WidgetEmptyState
-        actionButtonLink={ROUTES.DOMAIN}
+        actionButtonLink={domainBasePath}
         actionButtonText={t('label.explore-domain')}
         description={t('message.domains-no-data-message')}
         icon={

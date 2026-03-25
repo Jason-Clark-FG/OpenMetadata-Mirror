@@ -13,11 +13,11 @@
 
 import { useDomainListing } from '../../../components/common/atoms/domain/compositions/useDomainListing';
 import { ListingData } from '../../../components/common/atoms/shared/types';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { Domain } from '../../../generated/entity/domains/domain';
 
 export const useDomainListingData = (): ListingData<Domain> => {
-  const { domainBasePath } = useNavigationContext();
+  const { domainBasePath } = useMarketplaceStore();
 
   const baseFilter = {
     query: {

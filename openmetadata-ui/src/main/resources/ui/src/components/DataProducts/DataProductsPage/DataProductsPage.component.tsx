@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { QueryVote } from '../../../components/Database/TableQueries/TableQueries.interface';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
@@ -50,7 +50,7 @@ import DataProductsDetailsPage from '../DataProductsDetailsPage/DataProductsDeta
 const DataProductsPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const navCtx = useNavigationContext();
+  const { dataProductBasePath, getDomainPath } = useMarketplaceStore();
   const { version } = useRequiredParams<{ version: string }>();
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';
@@ -81,7 +81,7 @@ const DataProductsPage = () => {
 
         if (dataProduct?.name !== updatedData.name) {
           navigate(
-            `${navCtx.dataProductBasePath}/${getEncodedFqn(
+            `${dataProductBasePath}/${getEncodedFqn(
               response.fullyQualifiedName ?? ''
             )}`
           );
@@ -106,7 +106,7 @@ const DataProductsPage = () => {
           entity: t('label.data-product'),
         })
       );
-      navigate(navCtx.dataProductBasePath);
+      navigate(dataProductBasePath);
     } catch (err) {
       showErrorToast(
         err as AxiosError,
@@ -185,7 +185,7 @@ const DataProductsPage = () => {
   };
 
   const onBackHandler = () => {
-    navigate(`${navCtx.dataProductBasePath}/${getEncodedFqn(dataProductFqn)}`);
+    navigate(`${dataProductBasePath}/${getEncodedFqn(dataProductFqn)}`);
   };
 
   const followDataProduct = async () => {
@@ -310,7 +310,7 @@ const DataProductsPage = () => {
             ghost
             className="m-t-sm"
             type="primary"
-            onClick={() => navigate(navCtx.getDomainPath())}>
+            onClick={() => navigate(getDomainPath())}>
             {t('label.go-back')}
           </Button>
         </div>

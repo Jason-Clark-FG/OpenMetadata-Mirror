@@ -16,7 +16,7 @@ import { compare } from 'fast-json-patch';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useNavigationContext } from '../../../context/NavigationContext/NavigationContext';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
@@ -46,7 +46,7 @@ const DomainDetailPage = () => {
   const { fqn: domainFqn } = useFqn();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const navCtx = useNavigationContext();
+  const { getDomainPath, domainBasePath } = useMarketplaceStore();
   const { currentUser } = useApplicationStore();
   const currentUserId = currentUser?.id ?? '';
   const { permissions } = usePermissionProvider();
@@ -78,7 +78,7 @@ const DomainDetailPage = () => {
         setActiveDomain(response);
 
         if (activeDomain?.name !== updatedData.name) {
-          navigate(navCtx.getDomainPath(response.fullyQualifiedName));
+          navigate(getDomainPath(response.fullyQualifiedName));
         }
       } catch (error) {
         showErrorToast(error as AxiosError);
@@ -89,7 +89,7 @@ const DomainDetailPage = () => {
   };
 
   const handleDomainDelete = () => {
-    navigate(navCtx.domainBasePath);
+    navigate(domainBasePath);
   };
 
   const fetchDomainByName = async (domainFqn: string) => {
@@ -213,9 +213,9 @@ const DomainDetailPage = () => {
 
   useEffect(() => {
     if (!domainFqn) {
-      navigate(navCtx.domainBasePath);
+      navigate(domainBasePath);
     }
-  }, [domainFqn, navigate, navCtx.domainBasePath]);
+  }, [domainFqn, navigate, domainBasePath]);
 
   if (!(viewBasicDomainPermission || viewAllDomainPermission)) {
     return (

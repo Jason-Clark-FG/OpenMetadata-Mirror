@@ -30,7 +30,7 @@ import { PageType } from '../../generated/system/ui/uiCustomization';
 import { getDummyDataByPage } from '../../utils/CustomizePage/CustomizePageUtils';
 import { getEntityName } from '../../utils/EntityUtils';
 import Fqn from '../../utils/Fqn';
-import { getDomainPath } from '../../utils/RouterUtils';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { useCustomizeStore } from '../CustomizablePage/CustomizeStore';
 import '../CustomizeDetailsPage/customize-details-page.less';
 
@@ -39,6 +39,7 @@ const CustomizableDomainPage = ({
   onSaveLayout,
 }: CustomizeMyDataProps) => {
   const { t } = useTranslation();
+  const { getDomainPath } = useMarketplaceStore();
   const { currentPage, currentPageType, getPage } = useCustomizeStore();
 
   const handleReset = useCallback(async () => {

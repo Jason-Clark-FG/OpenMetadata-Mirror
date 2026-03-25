@@ -126,6 +126,7 @@ import {
   getPartialNameFromTableFQN,
   getTableFQNFromColumnFQN,
 } from './CommonUtils';
+import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { getDataInsightPathWithFqn } from './DataInsightUtils';
 import EntityLink from './EntityLink';
 import { BasicEntityOverviewInfo } from './EntityUtils.interface';
@@ -136,8 +137,6 @@ import {
   getBotsPath,
   getClassificationTagPath,
   getDataQualityPagePath,
-  getDomainDetailsPath,
-  getDomainPath,
   getEntityDetailsPath,
   getGlossaryPath,
   getGlossaryTermDetailsPath,
@@ -1841,7 +1840,6 @@ export const getEntityLinkFromType = (
     case EntityType.CONTAINER:
     case EntityType.DATABASE:
     case EntityType.DATABASE_SCHEMA:
-    case EntityType.DATA_PRODUCT:
     case EntityType.DASHBOARD_DATA_MODEL:
     case EntityType.STORED_PROCEDURE:
     case EntityType.SEARCH_INDEX:
@@ -1854,6 +1852,10 @@ export const getEntityLinkFromType = (
       return getEntityDetailsPath(entityType, fullyQualifiedName);
     case EntityType.METRIC:
       return getEntityDetailsPath(entityType, fullyQualifiedName);
+    case EntityType.DATA_PRODUCT:
+      return useMarketplaceStore
+        .getState()
+        .getDataProductDetailsPath(fullyQualifiedName);
     case EntityType.GLOSSARY:
     case EntityType.GLOSSARY_TERM:
       return getGlossaryTermDetailsPath(fullyQualifiedName);
@@ -1927,7 +1929,9 @@ export const getEntityLinkFromType = (
         EntityTabs.PROFILER
       );
     case EntityType.DOMAIN:
-      return getDomainDetailsPath(fullyQualifiedName);
+      return useMarketplaceStore
+        .getState()
+        .getDomainDetailsPath(fullyQualifiedName);
     case EntityType.EVENT_SUBSCRIPTION:
       return (entity as EventSubscription)?.alertType ===
         AlertType.Observability
@@ -2524,7 +2528,7 @@ export const getEntityBreadcrumbs = (
       return [
         {
           name: i18next.t('label.domain-plural'),
-          url: getDomainPath(),
+          url: useMarketplaceStore.getState().getDomainPath(),
         },
       ];
 
@@ -2537,7 +2541,7 @@ export const getEntityBreadcrumbs = (
       return [
         {
           name: getEntityName(data.domains[0]),
-          url: getDomainPath(data.domains[0].fullyQualifiedName),
+          url: useMarketplaceStore.getState().getDomainPath(data.domains[0].fullyQualifiedName),
         },
       ];
     }
