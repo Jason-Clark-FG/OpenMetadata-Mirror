@@ -87,7 +87,8 @@ export interface OracleConnection {
     type?: OracleType;
     /**
      * Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA
-     * privileges.
+     * privileges. When disabled (default), ALL_* tables are used, which requires
+     * SELECT_CATALOG_ROLE.
      */
     useDBATable?: boolean;
     /**
