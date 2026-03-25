@@ -22,7 +22,7 @@ class ContinuousMigrationIT {
   @Test
   void continuousMigrationReprocessesOnlyNewSql() throws Exception {
     ConnectionType connectionType = currentConnectionType();
-    String version = "0.0." + ThreadLocalRandom.current().nextInt(9000, 9999);
+    String version = "0.0." + ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
     String tableName =
         "it_continuous_migration_"
             + Integer.toUnsignedString(ThreadLocalRandom.current().nextInt(), 36);

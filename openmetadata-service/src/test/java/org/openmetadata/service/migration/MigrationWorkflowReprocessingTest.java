@@ -151,7 +151,8 @@ class MigrationWorkflowReprocessingTest {
   }
 
   @Test
-  void testGetMigrationsToApplyOnlyNewerWhenNoCurrentMax() throws IOException {
+  void testGetMigrationsToApplyIncludesCurrentMaxAsReprocessingAndNewerVersions()
+      throws IOException {
     MigrationFile v1121 = createMigrationDir("1.12.1", "");
     MigrationFile v1122 = createMigrationDir("1.12.2", "");
     MigrationFile v1123 = createMigrationDir("1.12.3", "");
@@ -210,11 +211,17 @@ class MigrationWorkflowReprocessingTest {
     assertEquals(2, toApply.size());
 
     MigrationFile nativeMigration =
-        toApply.stream().filter(m -> !m.isExtension).findFirst().orElse(null);
+        toApply.stream()
+            .filter(m -> !m.isExtension)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Expected a native migration in toApply"));
     assertTrue(nativeMigration.isReprocessing());
 
     MigrationFile extensionMigration =
-        toApply.stream().filter(m -> m.isExtension).findFirst().orElse(null);
+        toApply.stream()
+            .filter(m -> m.isExtension)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Expected an extension migration in toApply"));
     assertFalse(extensionMigration.isReprocessing());
   }
 
