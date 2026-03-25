@@ -15,6 +15,8 @@ export const CircleProgressBar = (props: {
 
   const percentage = Math.min(100, Math.max(0, rawPercentage));
 
+  console.log('new');
+
   return (
     <div
       aria-valuemax={max}
