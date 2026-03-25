@@ -130,8 +130,8 @@
     "useDBATable": {
       "title": "Use DBA Tables",
       "type": "boolean",
-      "description": "Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA privileges.",
-      "default": true
+      "description": "Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA privileges. When disabled (default), ALL_* tables are used, which requires SELECT_CATALOG_ROLE.",
+      "default": false
     },
     "connectionOptions": {
       "title": "Connection Options",
