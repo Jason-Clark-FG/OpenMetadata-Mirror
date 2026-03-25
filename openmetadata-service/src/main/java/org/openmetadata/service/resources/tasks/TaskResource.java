@@ -220,9 +220,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Filter by assignee FQN") @QueryParam("assignee") String assignee,
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
       @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
-      @Parameter(
-              description =
-                  "Count view: assigned, owned, created, mentioned, entity, or all")
+      @Parameter(description = "Count view: assigned, owned, created, mentioned, entity, or all")
           @QueryParam("view")
           String view,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
@@ -761,8 +759,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     ListFilter filter = new ListFilter(Include.NON_DELETED);
     repository.addDomainFilter(filter, domain);
 
-    String normalizedView =
-        view == null ? null : view.trim().toLowerCase(Locale.ROOT);
+    String normalizedView = view == null ? null : view.trim().toLowerCase(Locale.ROOT);
 
     if (nullOrEmpty(normalizedView) || COUNT_VIEW_ALL.equals(normalizedView)) {
       applyLegacyCountFilters(filter, assignee, createdBy, aboutEntity, mentionedUser);
@@ -859,7 +856,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     String userName = securityContext.getUserPrincipal().getName();
     User user = Entity.getEntityByName(Entity.USER, userName, "", Include.NON_DELETED);
 
-    return nullOrEmpty(user.getFullyQualifiedName()) ? user.getName() : user.getFullyQualifiedName();
+    return nullOrEmpty(user.getFullyQualifiedName())
+        ? user.getName()
+        : user.getFullyQualifiedName();
   }
 
   @POST

@@ -85,7 +85,7 @@ class MigrationUtilTest {
   }
 
   @Test
-  void runTaskWorkflowCutoverMigrationSkipsTaskQueryWhenLegacyTableIsAbsent() {
+  void runTaskWorkflowCutoverMigrationSkipsTaskQueryWhenLegacyTableIsAbsent() throws Exception {
     stubTables(Set.of());
 
     MigrationUtil migrationUtil = newMigrationUtil();

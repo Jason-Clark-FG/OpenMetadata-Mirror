@@ -154,11 +154,13 @@ export const addOwner = async ({
 }) => {
   await page.getByTestId(initiatorId).click();
   if (type === 'Users') {
-    const userListResponse = page.waitForResponse(
-      '/api/v1/search/query?q=*&index=user&*'
-    );
-    await page.getByRole('tab', { name: type }).click();
-    await userListResponse;
+    const usersTab = page.getByRole('tab', { name: type });
+    const isTabAlreadySelected =
+      (await usersTab.getAttribute('aria-selected')) === 'true';
+
+    if (!isTabAlreadySelected) {
+      await usersTab.click();
+    }
   }
   await waitForAllLoadersToDisappear(page);
 
@@ -186,13 +188,8 @@ export const addOwner = async ({
     .toBe(true);
   await ownerSearchInput.scrollIntoViewIfNeeded();
 
-  const searchUser = page.waitForResponse(
-    `/api/v1/search/query?q=*${encodeURIComponent(owner)}*`
-  );
-  await ownerSearchInput.fill(owner);
-  await searchUser;
-
   if (type === 'Teams') {
+    await ownerSearchInput.fill(owner);
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
     await page.getByRole('listitem', { name: owner }).click();
     await patchRequest;
@@ -207,14 +204,8 @@ export const addOwner = async ({
             return true;
           }
 
-          const searchRetry = page.waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/search/query') &&
-              response.url().includes('user_search_index')
-          );
           await ownerSearchInput.fill('');
           await ownerSearchInput.fill(owner);
-          await searchRetry;
           await waitForAllLoadersToDisappear(page);
 
           return await ownerItem.isVisible().catch(() => false);
@@ -271,19 +262,32 @@ export const addOwnerWithoutValidation = async ({
   if (!ownerSearchBar) {
     await page.getByRole('tab', { name: type }).click();
   }
-
-  const searchUser = page.waitForResponse(
-    `/api/v1/search/query?q=*${encodeURIComponent(owner)}*`
+  const ownerSearchInput = page.getByTestId(
+    `owner-select-${lowerCase(type)}-search-bar`
   );
-  await page
-    .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
-    .fill(owner);
-  await searchUser;
+  const ownerItem = page.getByRole('listitem', { name: owner });
+
+  await expect
+    .poll(
+      async () => {
+        await ownerSearchInput.fill('');
+        await ownerSearchInput.fill(owner);
+        await waitForAllLoadersToDisappear(page);
+
+        return await ownerItem.isVisible().catch(() => false);
+      },
+      {
+        timeout: 60000,
+        intervals: [2000, 3000, 5000],
+        message: `Timed out waiting for owner ${owner} to appear`,
+      }
+    )
+    .toBe(true);
 
   if (type === 'Teams') {
     await page.getByRole('listitem', { name: owner }).click();
   } else {
-    await page.getByRole('listitem', { name: owner }).click();
+    await ownerItem.click();
     await page.getByTestId('selectable-list-update-btn').click();
   }
 };
@@ -304,18 +308,31 @@ export const updateOwner = async ({
   await page.getByTestId('edit-owner').click();
   await page.getByRole('tab', { name: type }).click();
   await waitForAllLoadersToDisappear(page);
-
-  const searchUser = page.waitForResponse(
-    `/api/v1/search/query?q=*${encodeURIComponent(owner)}*`
+  const ownerSearchInput = page.getByTestId(
+    `owner-select-${lowerCase(type)}-search-bar`
   );
-  await page
-    .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
-    .fill(owner);
-  await searchUser;
+  const ownerItem = page.getByRole('listitem', { name: owner });
+
+  await expect
+    .poll(
+      async () => {
+        await ownerSearchInput.fill('');
+        await ownerSearchInput.fill(owner);
+        await waitForAllLoadersToDisappear(page);
+
+        return await ownerItem.isVisible().catch(() => false);
+      },
+      {
+        timeout: 60000,
+        intervals: [2000, 3000, 5000],
+        message: `Timed out waiting for owner ${owner} to appear`,
+      }
+    )
+    .toBe(true);
 
   if (type === 'Teams') {
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
-    await page.getByRole('listitem', { name: owner }).click();
+    await ownerItem.click();
     await patchRequest;
   } else {
     await page.getByRole('listitem', { name: owner }).click();

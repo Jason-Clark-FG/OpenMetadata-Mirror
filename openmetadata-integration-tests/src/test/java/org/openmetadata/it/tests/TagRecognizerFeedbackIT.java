@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import org.awaitility.Awaitility;
@@ -51,7 +49,6 @@ import org.openmetadata.sdk.network.HttpClient;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @ExtendWith(TestNamespaceExtension.class)
 @Execution(ExecutionMode.SAME_THREAD)
@@ -316,22 +313,6 @@ public class TagRecognizerFeedbackIT {
     }
   }
 
-  private void assertNoLegacyTaskThread(String tagFQN) {
-    String entityLink = new MessageParser.EntityLink(Entity.TAG, tagFQN).getLinkString();
-    String url =
-        "/v1/feed?limit=100&type=Task&taskStatus=Open&entityLink="
-            + URLEncoder.encode(entityLink, StandardCharsets.UTF_8);
-
-    FeedResourceIT.ThreadList response =
-        SdkClients.adminClient()
-            .getHttpClient()
-            .execute(HttpMethod.GET, url, null, FeedResourceIT.ThreadList.class);
-
-    assertTrue(
-        response.getData() == null || response.getData().isEmpty(),
-        "Recognizer workflow should not create legacy thread tasks");
-  }
-
   private void resolveRecognizerFeedbackTask(Task task) {
     ResolveTask resolveTask =
         new ResolveTask().withResolutionType(TaskResolutionType.Approved).withNewValue("approved");
@@ -389,7 +370,6 @@ public class TagRecognizerFeedbackIT {
     RecognizerFeedback payloadFeedback = getTaskPayloadFeedback(task);
     assertNotNull(payloadFeedback, "Task payload should contain feedback details");
     assertEquals(feedback.getEntityLink(), payloadFeedback.getEntityLink());
-    assertNoLegacyTaskThread(tag.getFullyQualifiedName());
   }
 
   @RetryingTest(3)

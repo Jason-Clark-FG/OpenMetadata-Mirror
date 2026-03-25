@@ -763,7 +763,16 @@ public class FeedRepository {
   }
 
   public void deleteByAbout(UUID entityId) {
-    List<String> threadIds = listOrEmpty(dao.feedDAO().findByEntityId(entityId.toString()));
+    List<String> threadIds;
+    try {
+      threadIds = listOrEmpty(dao.feedDAO().findByEntityId(entityId.toString()));
+    } catch (Exception ex) {
+      LOG.debug(
+          "Skipping legacy feed cleanup for entity {} because thread storage is unavailable",
+          entityId,
+          ex);
+      return;
+    }
     for (String threadId : threadIds) {
       try {
         deleteThreadInternal(UUID.fromString(threadId));

@@ -3,7 +3,6 @@ package org.openmetadata.service.migration.utils.v200;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -14,9 +13,7 @@ import org.openmetadata.schema.entity.activity.ActivityEvent;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.settings.Settings;
 import org.openmetadata.schema.type.ActivityEventType;
-import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.EntityReference;
-import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
@@ -637,7 +634,8 @@ public class MigrationUtil {
         .withTimestamp(timestamp)
         .withSummary(readThreadActivitySummary(legacyThread, legacyThreadJson))
         .withFieldName(fieldName)
-        .withOldValue(truncateActivityValue(readThreadActivityValue(legacyThreadJson, fieldName, true)))
+        .withOldValue(
+            truncateActivityValue(readThreadActivityValue(legacyThreadJson, fieldName, true)))
         .withNewValue(
             truncateActivityValue(readThreadActivityValue(legacyThreadJson, fieldName, false)))
         .withChangeDescription(legacyThread.getChangeDescription())
@@ -645,13 +643,13 @@ public class MigrationUtil {
   }
 
   private static EntityReference buildActivityActorReference(Handle handle, String userName) {
-    String actorName =
-        userName == null || userName.isBlank() ? "system" : userName;
+    String actorName = userName == null || userName.isBlank() ? "system" : userName;
     String actorId = lookupUserId(handle, actorName);
     UUID actorUuid =
         actorId != null
             ? UUID.fromString(actorId)
-            : UUID.nameUUIDFromBytes(("activity-actor:" + actorName).getBytes(StandardCharsets.UTF_8));
+            : UUID.nameUUIDFromBytes(
+                ("activity-actor:" + actorName).getBytes(StandardCharsets.UTF_8));
 
     return new EntityReference()
         .withId(actorUuid)
@@ -691,11 +689,13 @@ public class MigrationUtil {
       case CUSTOM_PROPERTIES -> ActivityEventType.CUSTOM_PROPERTY_UPDATED;
       case TEST_CASE_RESULT -> ActivityEventType.TEST_CASE_STATUS_CHANGED;
       case LOGICAL_TEST_CASE_ADDED, ASSETS -> {
-        ActivityEventType fromField = mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
+        ActivityEventType fromField =
+            mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
         yield fromField != null ? fromField : ActivityEventType.ENTITY_UPDATED;
       }
       default -> {
-        ActivityEventType fromField = mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
+        ActivityEventType fromField =
+            mapFieldNameToActivityEventType(readThreadFeedFieldName(legacyThreadJson));
         yield fromField != null ? fromField : ActivityEventType.ENTITY_UPDATED;
       }
     };
@@ -805,7 +805,10 @@ public class MigrationUtil {
 
   private static boolean tableExists(Handle handle, String tableName) {
     try {
-      handle.createQuery(String.format("SELECT 1 FROM %s LIMIT 1", tableName)).mapTo(Integer.class).one();
+      handle
+          .createQuery(String.format("SELECT 1 FROM %s LIMIT 1", tableName))
+          .mapTo(Integer.class)
+          .one();
       return true;
     } catch (Exception e) {
       return false;
@@ -845,7 +848,8 @@ public class MigrationUtil {
 
   private static boolean activityEventExists(Handle handle, UUID activityId, long timestamp) {
     return handle
-            .createQuery("SELECT COUNT(*) FROM activity_stream WHERE id = :id AND timestamp = :timestamp")
+            .createQuery(
+                "SELECT COUNT(*) FROM activity_stream WHERE id = :id AND timestamp = :timestamp")
             .bind("id", activityId.toString())
             .bind("timestamp", timestamp)
             .mapTo(Long.class)

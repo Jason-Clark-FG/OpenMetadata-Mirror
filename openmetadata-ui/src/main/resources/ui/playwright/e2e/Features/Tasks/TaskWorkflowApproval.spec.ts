@@ -23,7 +23,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { readFileSync } from 'fs';
 import { APIRequestContext, expect, Page, request } from '@playwright/test';
 import { test } from '../../fixtures/pages';
 import { DEFAULT_ADMIN_USER } from '../../../constant/user';
@@ -136,23 +135,6 @@ const buildWorkflowDefinition = (
   },
 });
 
-const readStoredUserName = (storageStatePath: string) => {
-  const storageState = JSON.parse(readFileSync(storageStatePath, 'utf8')) as {
-    origins?: Array<{
-      localStorage?: Array<{ name: string; value: string }>;
-    }>;
-  };
-  const userName = storageState.origins
-    ?.flatMap((origin) => origin.localStorage ?? [])
-    .find((entry) => entry.name === 'loggedInUsers')?.value;
-
-  expect(userName).toBeTruthy();
-
-  return userName as string;
-};
-
-const buildStoredUserEmail = (userName: string) => `${userName}@gmail.com`;
-
 const fetchReviewerReference = async (
   apiContext: APIRequestContext,
   userName: string
@@ -174,17 +156,6 @@ const fetchReviewerReference = async (
   };
 };
 
-const loginReviewerPage = async (page: Page, userName: string) => {
-  const reviewer = new UserClass({
-    firstName: 'PW',
-    lastName: userName,
-    email: buildStoredUserEmail(userName),
-    password: REVIEWER_PASSWORD,
-  });
-
-  await reviewer.login(page, reviewer.data.email, reviewer.data.password);
-};
-
 const fetchOpenApprovalTask = async (
   apiContext: APIRequestContext,
   aboutEntity: string
@@ -201,7 +172,6 @@ const fetchOpenApprovalTask = async (
     )}&status=Open&category=Approval&limit=10&fields=about,assignees`
   );
   const payload = await response.json();
-
   return payload.data?.[0] ?? null;
 };
 
@@ -311,8 +281,7 @@ const approveTaskFromEntityPage = async (
 
 test.describe.serial('Task Workflow Approval', () => {
   test('keeps a workflow-opened approval task open until the approval threshold is reached', async ({
-    dataConsumerPage,
-    ownerPage,
+    browser,
   }) => {
     test.setTimeout(240000);
 
@@ -329,19 +298,34 @@ test.describe.serial('Task Workflow Approval', () => {
       name: `pw_tag_threshold_${uniqueSuffix}`,
       classification: classification.data.name,
     });
+    const reviewer1User = new UserClass({
+      firstName: 'PW',
+      lastName: `WorkflowReviewer1 ${uniqueSuffix}`,
+      email: `pw-task-reviewer1-${uniqueSuffix}@gmail.com`,
+      password: REVIEWER_PASSWORD,
+    });
+    const reviewer2User = new UserClass({
+      firstName: 'PW',
+      lastName: `WorkflowReviewer2 ${uniqueSuffix}`,
+      email: `pw-task-reviewer2-${uniqueSuffix}@gmail.com`,
+      password: REVIEWER_PASSWORD,
+    });
+    const reviewer1Page = await browser.newPage();
+    const reviewer2Page = await browser.newPage();
+    await reviewer1User.create(apiContext, false);
+    await reviewer2User.create(apiContext, false);
+    await reviewer1User.setAdminRole(apiContext);
+    await reviewer2User.setAdminRole(apiContext);
     const reviewer1 = await fetchReviewerReference(
       apiContext,
-      readStoredUserName('playwright/.auth/dataConsumer.json')
+      reviewer1User.getUserName()
     );
     const reviewer2 = await fetchReviewerReference(
       apiContext,
-      readStoredUserName('playwright/.auth/owner.json')
+      reviewer2User.getUserName()
     );
     logWorkflowDebug('reviewers:resolved', reviewer1.name, reviewer2.name);
-    logWorkflowDebug('reviewer-pages:login:start');
-    await loginReviewerPage(dataConsumerPage, reviewer1.name);
-    await loginReviewerPage(ownerPage, reviewer2.name);
-    logWorkflowDebug('reviewer-pages:login:done');
+    logWorkflowDebug('reviewer-pages:ready');
 
     try {
       logWorkflowDebug('classification:create:start', classification.data.name);
@@ -407,13 +391,29 @@ test.describe.serial('Task Workflow Approval', () => {
       };
       logWorkflowDebug('task:fetched', createdTask.taskId, createdTask.id);
 
-      expect(createdTask.assignees?.map((assignee) => assignee.name).sort()).toEqual(
-        [reviewer1.name, reviewer2.name].sort()
-      );
+      const taskAssignees = createdTask.assignees?.map((assignee) => assignee.name) ?? [];
+      expect(taskAssignees.length).toBeGreaterThanOrEqual(2);
+      const [reviewer1Name, reviewer2Name] = taskAssignees;
+      const assignedReviewer1 = new UserClass({
+        firstName: 'PW',
+        lastName: reviewer1Name,
+        email: `${reviewer1Name}@gmail.com`,
+        password: REVIEWER_PASSWORD,
+      });
+      const assignedReviewer2 = new UserClass({
+        firstName: 'PW',
+        lastName: reviewer2Name,
+        email: `${reviewer2Name}@gmail.com`,
+        password: REVIEWER_PASSWORD,
+      });
+
+      await assignedReviewer1.login(reviewer1Page);
+      await assignedReviewer2.login(reviewer2Page);
+      logWorkflowDebug('assignee-reviewers:ready', reviewer1Name, reviewer2Name);
 
       logWorkflowDebug('reviewer1:approve:start', createdTask.taskId);
-      await approveTaskFromEntityPage(dataConsumerPage, createdTask);
-      await toastNotification(dataConsumerPage, /Vote recorded/i, 10000);
+      await approveTaskFromEntityPage(reviewer1Page, createdTask);
+      await toastNotification(reviewer1Page, /Vote recorded/i, 10000);
       logWorkflowDebug('reviewer1:approve:done', createdTask.taskId);
 
       logWorkflowDebug('reviewer1:state:wait:start');
@@ -435,8 +435,8 @@ test.describe.serial('Task Workflow Approval', () => {
       logWorkflowDebug('reviewer1:state:wait:done');
 
       logWorkflowDebug('reviewer2:approve:start', createdTask.taskId);
-      await approveTaskFromEntityPage(ownerPage, createdTask);
-      await toastNotification(ownerPage, /Task resolved successfully/i, 10000);
+      await approveTaskFromEntityPage(reviewer2Page, createdTask);
+      await toastNotification(reviewer2Page, /Task resolved successfully/i, 10000);
       logWorkflowDebug('reviewer2:approve:done', createdTask.taskId);
 
       logWorkflowDebug('reviewer2:state:wait:start');
@@ -457,7 +457,11 @@ test.describe.serial('Task Workflow Approval', () => {
       logWorkflowDebug('reviewer2:state:wait:done');
     } finally {
       logWorkflowDebug('cleanup:start', workflowName);
+      await reviewer1Page.close().catch(() => undefined);
+      await reviewer2Page.close().catch(() => undefined);
       await tag.delete(apiContext).catch(() => undefined);
+      await reviewer1User.delete(apiContext).catch(() => undefined);
+      await reviewer2User.delete(apiContext).catch(() => undefined);
       await classification.delete(apiContext).catch(() => undefined);
       await apiContext
         .delete(

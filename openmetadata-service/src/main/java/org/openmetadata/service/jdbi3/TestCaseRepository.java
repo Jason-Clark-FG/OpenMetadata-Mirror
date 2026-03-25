@@ -27,7 +27,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.notRevi
 import static org.openmetadata.service.security.mask.PIIMasker.maskSampleData;
 
 import com.google.common.collect.Lists;
-import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;

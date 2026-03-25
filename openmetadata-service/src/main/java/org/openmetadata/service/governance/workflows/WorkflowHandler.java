@@ -940,7 +940,11 @@ public class WorkflowHandler {
 
       TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
       org.openmetadata.schema.entity.tasks.Task taskEntity =
-          taskRepository.find(customTaskId, Include.ALL);
+          taskRepository.get(
+              null,
+              customTaskId,
+              taskRepository.getFields(
+                  "assignees,reviewers,watchers,about,domains,comments,createdBy,payload,resolution"));
 
       if (taskEntity != null && taskEntity.getAssignees() != null) {
         List<EntityReference> currentAssignees = new ArrayList<>(taskEntity.getAssignees());

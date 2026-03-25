@@ -444,7 +444,10 @@ public class MigrationUtil {
 
   private boolean tableExists(String tableName) {
     try (ResultSet tables =
-        handle.getConnection().getMetaData().getTables(null, null, tableName, new String[] {"TABLE"})) {
+        handle
+            .getConnection()
+            .getMetaData()
+            .getTables(null, null, tableName, new String[] {"TABLE"})) {
       while (tables.next()) {
         if (tableName.equalsIgnoreCase(tables.getString("TABLE_NAME"))) {
           return true;

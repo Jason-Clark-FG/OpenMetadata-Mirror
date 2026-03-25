@@ -62,7 +62,6 @@ import org.openmetadata.schema.api.data.CreateMetric;
 import org.openmetadata.schema.api.data.CreateMlModel;
 import org.openmetadata.schema.api.data.CreateTable;
 import org.openmetadata.schema.api.domains.CreateDomain;
-import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.api.governance.CreateWorkflowDefinition;
 import org.openmetadata.schema.api.services.CreateApiService;
 import org.openmetadata.schema.api.services.CreateDashboardService;
@@ -88,7 +87,6 @@ import org.openmetadata.schema.entity.data.Metric;
 import org.openmetadata.schema.entity.data.MlModel;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.domains.Domain;
-import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
@@ -116,10 +114,9 @@ import org.openmetadata.schema.type.MetricUnitOfMeasurement;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
+import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskResolutionType;
-import org.openmetadata.schema.type.TaskStatus;
 import org.openmetadata.schema.utils.JsonUtils;
-import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.ApiException;
 import org.openmetadata.sdk.exceptions.ForbiddenException;
@@ -127,7 +124,6 @@ import org.openmetadata.sdk.exceptions.OpenMetadataException;
 import org.openmetadata.sdk.models.ListResponse;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
-import org.openmetadata.service.resources.feeds.MessageParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -5459,29 +5455,22 @@ public class WorkflowDefinitionResourceIT {
 
     // Helper lambda to wait for and resolve a task
     BiConsumer<String, String> waitAndResolveTask =
-        (entityLink, entityType) -> {
+        (entityFqn, entityType) -> {
           try {
             LOG.info("Waiting for approval task for {}...", entityType);
             await()
                 .atMost(Duration.ofMinutes(2))
                 .pollInterval(Duration.ofSeconds(2))
-                .until(
-                    () -> {
-                      ResultList<org.openmetadata.schema.entity.feed.Thread> threads =
-                          reviewerClient.feed().listTasks(entityLink, TaskStatus.Open, 1);
-                      return !threads.getData().isEmpty();
-                    });
+                .until(() -> !listOpenApprovalTasks(reviewerClient, entityFqn).getData().isEmpty());
 
             LOG.info("Approval task for {} found. Proceeding with resolution.", entityType);
-            ResultList<Thread> threads =
-                reviewerClient.feed().listTasks(entityLink, TaskStatus.Open, 1);
-
-            org.openmetadata.schema.entity.feed.Thread task = threads.getData().get(0);
+            ListResponse<Task> tasks = listOpenApprovalTasks(reviewerClient, entityFqn);
+            Task task = tasks.getData().get(0);
             LOG.debug("Found approval task for {}: {}", entityType, task.getId());
-            ResolveTask resolveTask =
-                new ResolveTask()
-                    .withNewValue(org.openmetadata.schema.type.EntityStatus.APPROVED.value());
-            reviewerClient.feed().resolveTask(task.getTask().getId().toString(), resolveTask);
+            org.openmetadata.schema.api.tasks.ResolveTask resolveTask =
+                new org.openmetadata.schema.api.tasks.ResolveTask()
+                    .withResolutionType(TaskResolutionType.Approved);
+            reviewerClient.tasks().resolve(task.getId().toString(), resolveTask);
             LOG.debug("Resolved {} approval task", entityType);
           } catch (Exception e) {
             LOG.error(
@@ -5494,27 +5483,19 @@ public class WorkflowDefinitionResourceIT {
         };
 
     // Resolve DataContract approval task
-    String dataContractEntityLink =
-        String.format("<#E::dataContract::%s>", dataContract.getFullyQualifiedName());
-    waitAndResolveTask.accept(dataContractEntityLink, "DataContract");
+    waitAndResolveTask.accept(dataContract.getFullyQualifiedName(), "DataContract");
 
     // Resolve Tag approval task
-    String tagEntityLink = String.format("<#E::tag::%s>", tag.getFullyQualifiedName());
-    waitAndResolveTask.accept(tagEntityLink, "Tag");
+    waitAndResolveTask.accept(tag.getFullyQualifiedName(), "Tag");
 
     // Resolve DataProduct approval task
-    String dataProductEntityLink =
-        String.format("<#E::dataProduct::%s>", dataProduct.getFullyQualifiedName());
-    waitAndResolveTask.accept(dataProductEntityLink, "DataProduct");
+    waitAndResolveTask.accept(dataProduct.getFullyQualifiedName(), "DataProduct");
 
     // Resolve Metric approval task
-    String metricEntityLink = String.format("<#E::metric::%s>", metric.getFullyQualifiedName());
-    waitAndResolveTask.accept(metricEntityLink, "Metric");
+    waitAndResolveTask.accept(metric.getFullyQualifiedName(), "Metric");
 
     // Resolve TestCase approval task
-    String testCaseEntityLink =
-        String.format("<#E::testCase::%s>", testCase.getFullyQualifiedName());
-    waitAndResolveTask.accept(testCaseEntityLink, "TestCase");
+    waitAndResolveTask.accept(testCase.getFullyQualifiedName(), "TestCase");
 
     // Step 7: Verify descriptions were updated by workflows after approval
     verifyEntityDescriptionsUpdated(
@@ -5586,19 +5567,19 @@ public class WorkflowDefinitionResourceIT {
     LOG.debug("Finding and resolving new approval tasks after updates");
 
     // Resolve new DataContract approval task
-    waitAndResolveTask.accept(dataContractEntityLink, "DataContract");
+    waitAndResolveTask.accept(dataContract.getFullyQualifiedName(), "DataContract");
 
     // Resolve new Tag approval task
-    waitAndResolveTask.accept(tagEntityLink, "Tag");
+    waitAndResolveTask.accept(tag.getFullyQualifiedName(), "Tag");
 
     // Resolve new DataProduct approval task
-    waitAndResolveTask.accept(dataProductEntityLink, "DataProduct");
+    waitAndResolveTask.accept(dataProduct.getFullyQualifiedName(), "DataProduct");
 
     // Resolve new Metric approval task
-    waitAndResolveTask.accept(metricEntityLink, "Metric");
+    waitAndResolveTask.accept(metric.getFullyQualifiedName(), "Metric");
 
     // Resolve new TestCase approval task
-    waitAndResolveTask.accept(testCaseEntityLink, "TestCase");
+    waitAndResolveTask.accept(testCase.getFullyQualifiedName(), "TestCase");
 
     // Step 10: Verify descriptions were updated back by workflows
     verifyEntityDescriptionsUpdated(
@@ -5931,18 +5912,14 @@ public class WorkflowDefinitionResourceIT {
             });
 
     // Verify no user tasks were created (since there are no reviewers, it should auto-approve)
-    String dataProductEntityLink =
-        String.format(
-            "<#E::%s::%s>",
-            org.openmetadata.service.Entity.DATA_PRODUCT, dataProduct.getFullyQualifiedName());
     await()
         .atMost(Duration.ofSeconds(60))
         .pollInterval(Duration.ofSeconds(2))
         .pollDelay(Duration.ofSeconds(1))
         .untilAsserted(
             () -> {
-              ResultList<org.openmetadata.schema.entity.feed.Thread> tasks =
-                  client.feed().listTasks(dataProductEntityLink, TaskStatus.Open, null);
+              ListResponse<Task> tasks =
+                  listOpenApprovalTasks(client, dataProduct.getFullyQualifiedName());
               assertTrue(
                   tasks.getData().isEmpty(),
                   "Expected no user tasks since dataProduct has no reviewers (should auto-approve)");
@@ -6177,19 +6154,14 @@ public class WorkflowDefinitionResourceIT {
     LOG.debug("Created tag with reviewer1: {}, Status: {}", tag.getName(), tag.getEntityStatus());
 
     // Verify that an approval task was created and assigned to the reviewers
-    String entityLink =
-        new MessageParser.EntityLink(
-                org.openmetadata.service.Entity.TAG, tag.getFullyQualifiedName())
-            .getLinkString();
-
     // Wait for task to be created
     await()
         .atMost(Duration.ofSeconds(30))
         .pollInterval(Duration.ofSeconds(2))
         .until(
             () -> {
-              ResultList<org.openmetadata.schema.entity.feed.Thread> taskList =
-                  client.feed().listTasks(entityLink, TaskStatus.Open, null);
+              ListResponse<Task> taskList =
+                  listOpenApprovalTasks(client, tag.getFullyQualifiedName());
               if (taskList.getData().isEmpty()) {
                 LOG.debug("Waiting for task to be created for tag...");
                 return false;
@@ -6197,34 +6169,16 @@ public class WorkflowDefinitionResourceIT {
               return true;
             });
 
-    ResultList<org.openmetadata.schema.entity.feed.Thread> threads =
-        client.feed().listTasks(entityLink, TaskStatus.Open, null);
+    ListResponse<Task> tasks = listOpenApprovalTasks(client, tag.getFullyQualifiedName());
 
     // The approval workflow should have created a task
-    assertFalse(threads.getData().isEmpty(), "Should have at least one task for the tag");
+    assertFalse(tasks.getData().isEmpty(), "Should have at least one task for the tag");
 
-    // Find the approval task (there might be other tasks too)
-    org.openmetadata.schema.entity.feed.Thread approvalTask =
-        threads.getData().stream()
-            .filter(
-                t ->
-                    t.getTask() != null
-                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
-                            t.getTask().getType()))
-            .findFirst()
-            .orElse(null);
-
-    // Verification logic adapted
-    if (approvalTask == null) {
-      approvalTask = threads.getData().getFirst();
-    }
-
-    org.openmetadata.schema.type.TaskDetails taskDetails = approvalTask.getTask();
-    assertNotNull(taskDetails, "Task details should not be null");
-    assertEquals(TaskStatus.Open, taskDetails.getStatus(), "Task should be open");
+    Task approvalTask = tasks.getData().getFirst();
+    assertEquals(TaskEntityStatus.Open, approvalTask.getStatus(), "Task should be open");
 
     // Verify initial assignee is reviewer1
-    List<EntityReference> assignees = taskDetails.getAssignees();
+    List<EntityReference> assignees = approvalTask.getAssignees();
     assertNotNull(assignees, "Assignees should not be null");
     assertFalse(assignees.isEmpty(), "Task should have at least 1 assignee");
     assertTrue(
@@ -6254,7 +6208,7 @@ public class WorkflowDefinitionResourceIT {
     LOG.debug("Tag reviewer changed from reviewer1 to reviewer2");
 
     // Wait for the async task assignee update to complete using Awaitility
-    final Integer taskId = taskDetails.getId();
+    final UUID taskId = approvalTask.getId();
     await()
         .atMost(Duration.ofSeconds(180))
         .pollInterval(Duration.ofSeconds(3))
@@ -6262,29 +6216,27 @@ public class WorkflowDefinitionResourceIT {
         .until(
             () -> {
               try {
-                ResultList<org.openmetadata.schema.entity.feed.Thread> taskThreads =
-                    client.feed().listTasks(entityLink, TaskStatus.Open, null);
+                ListResponse<Task> taskThreads =
+                    listOpenApprovalTasks(client, tag.getFullyQualifiedName());
 
                 if (taskThreads.getData().isEmpty()) {
                   return false;
                 }
 
-                Thread taskThread =
+                Task taskThread =
                     taskThreads.getData().stream()
                         .filter(
                             t ->
-                                t.getTask() != null
-                                    && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
-                                        t.getTask().getType())
-                                    && t.getTask().getId().equals(taskId))
+                                TaskEntityType.GlossaryApproval.equals(t.getType())
+                                    && t.getId().equals(taskId))
                         .findFirst()
                         .orElse(null);
 
-                if (taskThread == null || taskThread.getTask() == null) {
+                if (taskThread == null) {
                   return false;
                 }
 
-                List<EntityReference> currentAssignees = taskThread.getTask().getAssignees();
+                List<EntityReference> currentAssignees = taskThread.getAssignees();
                 if (currentAssignees == null || currentAssignees.isEmpty()) {
                   return false;
                 }
@@ -6305,24 +6257,19 @@ public class WorkflowDefinitionResourceIT {
             });
 
     // Verify that the task assignees have been updated
-    threads = client.feed().listTasks(entityLink, TaskStatus.Open, null);
+    tasks = listOpenApprovalTasks(client, tag.getFullyQualifiedName());
 
-    assertFalse(threads.getData().isEmpty(), "Should still have tasks");
+    assertFalse(tasks.getData().isEmpty(), "Should still have tasks");
     approvalTask =
-        threads.getData().stream()
+        tasks.getData().stream()
             .filter(
                 t ->
-                    t.getTask() != null
-                        && org.openmetadata.schema.type.TaskType.RequestApproval.equals(
-                            t.getTask().getType())
-                        && t.getTask().getId().equals(taskDetails.getId()))
+                    TaskEntityType.GlossaryApproval.equals(t.getType()) && t.getId().equals(taskId))
             .findFirst()
-            .orElse(threads.getData().getFirst());
-
-    org.openmetadata.schema.type.TaskDetails updatedTaskDetails = approvalTask.getTask();
+            .orElse(tasks.getData().getFirst());
 
     // Verify updated assignee is now reviewer2 instead of reviewer1
-    List<EntityReference> updatedAssignees = updatedTaskDetails.getAssignees();
+    List<EntityReference> updatedAssignees = approvalTask.getAssignees();
     assertNotNull(updatedAssignees, "Updated assignees should not be null");
     assertFalse(updatedAssignees.isEmpty(), "Task should have at least 1 assignee after update");
     assertTrue(
@@ -7669,10 +7616,7 @@ public class WorkflowDefinitionResourceIT {
         client
             .getHttpClient()
             .executeForString(
-                HttpMethod.POST,
-                BASE_PATH,
-                thresholdWorkflow,
-                RequestOptions.builder().build());
+                HttpMethod.POST, BASE_PATH, thresholdWorkflow, RequestOptions.builder().build());
 
     JsonNode workflowCreated = MAPPER.readTree(workflowResponse);
     String workflowId = workflowCreated.get("id").asText();

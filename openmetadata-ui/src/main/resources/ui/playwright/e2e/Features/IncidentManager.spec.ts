@@ -87,17 +87,32 @@ const expectIncidentTableRowsToContain = async (page: Page, text: string) => {
 };
 
 const openIncidentReassignModal = async (page: Page) => {
-  const primaryActionButton = page.getByTestId('incident-task-action-primary');
-  const actionTrigger = page.getByTestId('incident-task-action-trigger');
+  const visibleReassignButton = page
+    .getByRole('button', { name: /^Reassign$/ })
+    .last();
+  const primaryActionButton = page
+    .locator('[data-testid="incident-task-action-primary"]:visible')
+    .last();
+  const actionTrigger = page
+    .locator('[data-testid="incident-task-action-trigger"]:visible')
+    .last();
+  const editAssigneesButton = page.locator('[data-testid="edit-assignees"]:visible').last();
   const reassignModal = page
     .locator('.ant-modal-wrap:visible')
     .filter({ hasText: /Re-?assign Task/i });
   const reassignMenuItem = page
-    .locator('.task-action-dropdown')
-    .last()
-    .getByTestId('task-action-menu-item-re-assign');
+    .locator('.task-action-dropdown:visible')
+    .getByRole('menuitem', { name: /^Reassign$/ })
+    .last();
   const getPrimaryActionText = async () =>
     (await primaryActionButton.textContent())?.trim() ?? '';
+
+  if (await isVisible(visibleReassignButton)) {
+    await visibleReassignButton.click();
+    await expect(reassignModal).toBeVisible({ timeout: 10_000 });
+
+    return reassignModal;
+  }
 
   try {
     await expect
@@ -114,6 +129,13 @@ const openIncidentReassignModal = async (page: Page) => {
   } catch {
     // Fall back to explicit menu selection if the incident status has not
     // switched the primary action to Reassign yet.
+  }
+
+  if (await isVisible(editAssigneesButton)) {
+    await editAssigneesButton.click();
+    await expect(reassignModal).toBeVisible({ timeout: 10_000 });
+
+    return reassignModal;
   }
 
   await expect(actionTrigger).toBeVisible();
@@ -459,13 +481,15 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
         name: user3.data.email.split('@')[0],
         displayName: user3.getUserDisplayName(),
       };
-      const currentUrl = actorPage.url();
+      const testCasePageUrl = `/test-case/${encodeURIComponent(
+        testCase.fullyQualifiedName
+      )}/test-case-results`;
       actorPage = await browser.newPage();
-      await user2.login(actorPage);
+      await user1.login(actorPage);
       const testCaseResponse = actorPage.waitForResponse(
         '/api/v1/dataQuality/testCases/name/*?fields=*'
       );
-      await actorPage.goto(currentUrl);
+      await actorPage.goto(testCasePageUrl);
 
       await testCaseResponse;
       await expect(actorPage.getByTestId('entity-page-header')).toBeVisible();
@@ -782,19 +806,19 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     });
 
     await page.click('[data-testid="select-assignee"]');
-    const searchUserResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${assigneeTestCase.userDisplayName}*index=user*`
+    const assigneeOption = page.locator(
+      `[data-testid="${assigneeTestCase.username}"]`
     );
     await page
       .getByTestId('select-assignee')
       .locator('input')
       .fill(assigneeTestCase.userDisplayName);
-    await searchUserResponse;
+    await expect(assigneeOption).toBeVisible();
 
     const assigneeFilterRes = page.waitForResponse(
       `/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list?*assignee=${assigneeTestCase.username}*`
     );
-    await page.click(`[data-testid="${assigneeTestCase.username}"]`);
+    await assigneeOption.click();
     await assigneeFilterRes;
 
     await expectIncidentTableRowsToContain(
@@ -827,19 +851,14 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
     await nonStatusFilterRes;
 
     await page.click('[data-testid="test-case-select"]');
-    const testCaseResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes(`/api/v1/search/query`) &&
-        response.url().includes('index=testCase') &&
-        response.url().includes(encodeURIComponent(testCase1))
-    );
+    const testCaseOption = page.locator(`[title="${testCase1}"]`);
     await page.getByTestId('test-case-select').locator('input').fill(testCase1);
-    await testCaseResponse;
+    await expect(testCaseOption).toBeVisible();
 
     const testCaseFilterRes = page.waitForResponse(
       `/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list?*testCaseFQN=*`
     );
-    await page.click(`[title="${testCase1}"]`);
+    await testCaseOption.click();
     await testCaseFilterRes;
 
     await expect(

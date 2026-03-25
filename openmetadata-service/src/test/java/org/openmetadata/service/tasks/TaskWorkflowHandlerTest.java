@@ -134,7 +134,10 @@ class TaskWorkflowHandlerTest {
   void testResolveStandaloneTaskReturnsRefreshedResolvedTask() {
     UUID taskId = UUID.randomUUID();
     Task task =
-        new Task().withId(taskId).withStatus(TaskEntityStatus.Open).withType(TaskEntityType.CustomTask);
+        new Task()
+            .withId(taskId)
+            .withStatus(TaskEntityStatus.Open)
+            .withType(TaskEntityType.CustomTask);
     Task storedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
     Task refreshedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
     EntityReference resolvedBy =
@@ -170,7 +173,10 @@ class TaskWorkflowHandlerTest {
   void testResolveStandaloneTaskBuildsApprovedResolution() {
     UUID taskId = UUID.randomUUID();
     Task task =
-        new Task().withId(taskId).withStatus(TaskEntityStatus.Open).withType(TaskEntityType.CustomTask);
+        new Task()
+            .withId(taskId)
+            .withStatus(TaskEntityStatus.Open)
+            .withType(TaskEntityType.CustomTask);
     Task storedTask = new Task().withId(taskId).withStatus(TaskEntityStatus.Completed);
     EntityReference resolvedBy =
         new EntityReference().withId(UUID.randomUUID()).withType(Entity.USER).withName("alice");
