@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { NodeData } from '../../components/Lineage/Lineage.interface';
+import { LineageNodeType } from '../../components/Lineage/Lineage.interface';
 import { EImpactLevel } from '../../components/LineageTable/LineageTable.interface';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import { TagSource } from '../../generated/type/tagLabel';
@@ -26,7 +26,7 @@ import {
 } from './LineageUtils';
 
 describe('LineageUtils', () => {
-  const mockNodes: Record<string, NodeData> = {
+  const mockNodes: Record<string, LineageNodeType> = {
     'test.table1': {
       entity: {
         id: 'entity1',
@@ -839,17 +839,17 @@ describe('LineageUtils', () => {
       expect(result[0].fromColumn).toBe('col1');
       expect(result[0].toColumn).toBe('result');
       expect(result[0].docId).toBe('col1->result');
-      expect(result[0].tags).toBeUndefined(); // No column found with this FQN
+      expect(result[0].tags).toStrictEqual([]); // No column found with this FQN
 
       expect(result[1].fromColumn).toBe('col2');
       expect(result[1].toColumn).toBe('result');
       expect(result[1].docId).toBe('col2->result');
-      expect(result[1].tags).toBeUndefined(); // No column found with this FQN
+      expect(result[1].tags).toStrictEqual([]); // No column found with this FQN
 
       expect(result[2].fromColumn).toBe('col3');
       expect(result[2].toColumn).toBe('result');
       expect(result[2].docId).toBe('col3->result');
-      expect(result[2].tags).toBeUndefined(); // No column found with this FQN
+      expect(result[2].tags).toStrictEqual([]); // No column found with this FQN
     });
 
     it('should handle empty fromColumns array', () => {
@@ -982,8 +982,8 @@ describe('LineageUtils', () => {
       );
 
       expect(result).toHaveLength(1);
-      // Column not found in map, should return undefined
-      expect(result[0].tags).toBeUndefined();
+      // Column not found in map, should return empty array
+      expect(result[0].tags).toStrictEqual([]);
     });
   });
 });

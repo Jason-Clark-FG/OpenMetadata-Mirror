@@ -555,6 +555,20 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     updateEntityData(entityType, entity, false);
   }, [entityType, entity]);
 
+  // Sync node depth with lineageConfig
+  useEffect(() => {
+    updateURLParams({
+      depth:
+        lineageDirection === LineageDirection.Upstream
+          ? lineageConfig.upstreamDepth
+          : lineageConfig.downstreamDepth,
+    });
+  }, [
+    lineageConfig.upstreamDepth,
+    lineageConfig.downstreamDepth,
+    lineageDirection,
+  ]);
+
   const nodeDepthOptions = useMemo(() => {
     return (
       (lineageDirection === LineageDirection.Downstream
