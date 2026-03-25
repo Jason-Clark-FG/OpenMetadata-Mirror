@@ -77,6 +77,10 @@ class DataContractFieldSupportTest {
     EntityReference callGetDataContract(Table entity, Include include) {
       return getDataContract(entity, include);
     }
+
+    EntityReference callGetDataContractNoArg(Table entity) {
+      return getDataContract(entity);
+    }
   }
 
   @BeforeEach
@@ -280,6 +284,92 @@ class DataContractFieldSupportTest {
 
     verify(mockRelationshipDAO, never())
         .findToBatch(anyList(), anyString(), anyString(), anyInt(), any(Include.class));
+  }
+
+  @Test
+  void getDataContract_noArgDelegatesToIncludeOverload() {
+    UUID entityId = UUID.randomUUID();
+    UUID contractId = UUID.randomUUID();
+    Table table = new Table();
+    table.setId(entityId);
+
+    CollectionDAO.EntityRelationshipRecord record =
+        CollectionDAO.EntityRelationshipRecord.builder().id(contractId).type(DATA_CONTRACT).build();
+    when(mockRelationshipDAO.findTo(
+            entityId, "table", Relationship.CONTAINS.ordinal(), DATA_CONTRACT))
+        .thenReturn(List.of(record));
+
+    EntityReference contractRef = new EntityReference().withId(contractId).withType(DATA_CONTRACT);
+    when(mockEntityRelRepo.getEntityReferences(eq(List.of(record)), any(Include.class)))
+        .thenReturn(List.of(contractRef));
+
+    EntityReference result = repository.callGetDataContractNoArg(table);
+    assertNotNull(result);
+    assertEquals(contractId, result.getId());
+  }
+
+  @Test
+  void getDataContract_returnsFromReadBundleWhenPresent() {
+    UUID entityId = UUID.randomUUID();
+    UUID contractId = UUID.randomUUID();
+    Table table = new Table();
+    table.setId(entityId);
+
+    EntityReference contractRef = new EntityReference().withId(contractId).withType(DATA_CONTRACT);
+    ReadBundle bundle = new ReadBundle();
+    bundle.putRelations(entityId, FIELD_DATA_CONTRACT, NON_DELETED, List.of(contractRef));
+    ReadBundleContext.push(bundle);
+    try {
+      EntityReference result = repository.callGetDataContract(table, NON_DELETED);
+      assertNotNull(result);
+      assertEquals(contractId, result.getId());
+    } finally {
+      ReadBundleContext.pop();
+    }
+  }
+
+  @Test
+  void fetchAndSetDataContract_setsContractWhenFieldRequested() throws Exception {
+    UUID entityId = UUID.randomUUID();
+    UUID contractId = UUID.randomUUID();
+    Table table = new Table();
+    table.setId(entityId);
+
+    CollectionDAO.EntityRelationshipObject relObj =
+        CollectionDAO.EntityRelationshipObject.builder()
+            .fromId(entityId.toString())
+            .toId(contractId.toString())
+            .fromEntity("table")
+            .toEntity(DATA_CONTRACT)
+            .relation(Relationship.CONTAINS.ordinal())
+            .build();
+
+    when(mockRelationshipDAO.findToBatch(
+            anyList(),
+            eq("table"),
+            eq(DATA_CONTRACT),
+            eq(Relationship.CONTAINS.ordinal()),
+            eq(ALL)))
+        .thenReturn(List.of(relObj));
+
+    EntityReference contractRef = new EntityReference().withId(contractId).withType(DATA_CONTRACT);
+    Fields fields = new Fields(Set.of(FIELD_DATA_CONTRACT));
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class, Mockito.CALLS_REAL_METHODS)) {
+      entityMock
+          .when(
+              () -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(NON_DELETED)))
+          .thenReturn(List.of(contractRef));
+
+      Method method =
+          EntityRepository.class.getDeclaredMethod(
+              "fetchAndSetDataContract", List.class, Fields.class);
+      method.setAccessible(true);
+      method.invoke(repository, List.of(table), fields);
+
+      assertNotNull(table.getDataContract());
+      assertEquals(contractId, table.getDataContract().getId());
+    }
   }
 
   @Test
