@@ -62,5 +62,6 @@ export interface QualityBand {
 }
 
 export interface InputNamespaceMap {
+    entityList?:   string;
     relatedEntity: string;
 }

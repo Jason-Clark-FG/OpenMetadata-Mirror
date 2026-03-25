@@ -119,6 +119,6 @@ export enum SyncMode {
 }
 
 export interface InputNamespaceMap {
-    relatedEntity: string;
-    updatedBy?:    string;
+    entityList: string;
+    updatedBy?: string;
 }

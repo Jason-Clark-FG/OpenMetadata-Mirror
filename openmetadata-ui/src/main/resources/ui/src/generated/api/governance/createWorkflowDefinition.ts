@@ -102,9 +102,9 @@ export interface Definition {
      * Name that identifies this Node.
      */
     name?:    string;
+    output?:  string[];
     subType?: string;
     type?:    string;
-    output?:  string[];
     [property: string]: any;
 }
 
@@ -215,8 +215,9 @@ export interface EntityReference {
 }
 
 export interface InputNamespaceMap {
-    relatedEntity: string;
-    updatedBy?:    string;
+    entityList?:    string;
+    relatedEntity?: string;
+    updatedBy?:     string;
 }
 
 /**
