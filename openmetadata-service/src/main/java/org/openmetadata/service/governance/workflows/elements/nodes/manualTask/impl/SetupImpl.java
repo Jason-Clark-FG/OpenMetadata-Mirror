@@ -87,14 +87,14 @@ public class SetupImpl {
       EntityInterface entity, Map<String, Object> assigneesConfig) {
     boolean addOwners = true;
     boolean addReviewers = false;
-    List<String> specificUsers = List.of();
+    List<String> specificAssignees = List.of();
 
     if (assigneesConfig != null) {
       addOwners = Boolean.TRUE.equals(assigneesConfig.getOrDefault("addOwners", true));
       addReviewers = Boolean.TRUE.equals(assigneesConfig.getOrDefault("addReviewers", false));
-      Object specific = assigneesConfig.get("specificUsers");
+      Object specific = assigneesConfig.get("specificAssignees");
       if (specific instanceof List<?> list) {
-        specificUsers = (List<String>) list;
+        specificAssignees = (List<String>) list;
       }
     }
 
@@ -117,17 +117,19 @@ public class SetupImpl {
       }
     }
 
-    for (String userFqn : specificUsers) {
+    for (String entityLinkStr : specificAssignees) {
       try {
+        MessageParser.EntityLink link = MessageParser.EntityLink.parse(entityLinkStr);
         EntityReference ref =
-            Entity.getEntityReferenceByName(Entity.USER, userFqn, Include.NON_DELETED);
+            Entity.getEntityReferenceByName(
+                link.getEntityType(), link.getEntityFQN(), Include.NON_DELETED);
         if (seen.add(ref.getId())) {
           assignees.add(ref);
         }
       } catch (Exception e) {
         LOG.warn(
-            "[ManualTask.SetupImpl] Could not resolve specific user '{}': {}",
-            userFqn,
+            "[ManualTask.SetupImpl] Could not resolve specific assignee '{}': {}",
+            entityLinkStr,
             e.getMessage());
       }
     }

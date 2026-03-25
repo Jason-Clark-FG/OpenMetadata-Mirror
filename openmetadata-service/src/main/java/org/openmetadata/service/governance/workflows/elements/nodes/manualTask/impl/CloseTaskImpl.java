@@ -44,6 +44,8 @@ public class CloseTaskImpl {
   }
 
   private static boolean isAlreadyClosed(Task task) {
-    return task.getResolution() != null;
+    ManualTaskTemplateResolver.ResolvedTemplate template =
+        ManualTaskTemplateResolver.resolve(task.getType().value());
+    return template.terminalStatuses().contains(task.getStatus().value());
   }
 }
