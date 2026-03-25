@@ -64,9 +64,10 @@ export interface Assignees {
      */
     addReviewers?: boolean;
     /**
-     * Specific users to add to the assignees list (by fully qualified name).
+     * Specific users or teams to add to the assignees list. Each entry is an EntityLink string
+     * encoding type and FQN, e.g. '<#E::user::alice>' or '<#E::team::data_engineers>'.
      */
-    specificUsers?: string[];
+    specificAssignees?: string[];
 }
 
 export interface InputNamespaceMap {
