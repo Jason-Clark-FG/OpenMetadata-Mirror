@@ -1749,10 +1749,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
-    // Compute threshold dynamically: contract save bumps version by 0.1, domain assign bumps it again.
-    // threshold = initialVersion + 0.2 so that after contract save it passes and after domain assign it fails.
+    // Only domain assign bumps the entity version (+0.1); contract save does not.
+    // threshold = initialVersion + 0.1: entity < threshold passes before domain assign, fails after.
     const initialVersion = table.entityResponseData?.version ?? 0.1;
-    const versionThreshold = Number.parseFloat((initialVersion + 0.2).toFixed(2)).toString();
+    const versionThreshold = Number.parseFloat((initialVersion + 0.1).toFixed(2)).toString();
     await afterAction();
 
     await test.step('Open contract section and start adding contract', async () => {
@@ -1835,10 +1835,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
-    // Threshold = initialVersion + 0.1 so that after contract save (entity = v+0.1) the rule fails,
-    // and after domain assign (entity = v+0.2) the rule passes.
+    // Only domain assign bumps the entity version (+0.1); contract save does not.
+    // threshold = initialVersion: entity > threshold fails before domain assign, passes after.
     const initialVersion = table.entityResponseData?.version ?? 0.1;
-    const versionThreshold = Number.parseFloat((initialVersion + 0.1).toFixed(2)).toString();
+    const versionThreshold = Number.parseFloat(initialVersion.toFixed(2)).toString();
     await afterAction();
 
     await test.step('Open contract section and start adding contract', async () => {
@@ -1924,10 +1924,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
-    // Threshold = initialVersion + 0.1: after contract save (entity = v+0.1) it passes (<=),
-    // after domain assign (entity = v+0.2) it fails (>).
+    // Only domain assign bumps the entity version (+0.1); contract save does not.
+    // threshold = initialVersion: entity <= threshold passes before domain assign, fails after.
     const initialVersion = table.entityResponseData?.version ?? 0.1;
-    const versionThreshold = Number.parseFloat((initialVersion + 0.1).toFixed(2)).toString();
+    const versionThreshold = Number.parseFloat(initialVersion.toFixed(2)).toString();
     await afterAction();
 
     await test.step('Open contract section and start adding contract', async () => {
@@ -2013,10 +2013,10 @@ test.describe('Data Contracts Semantics Rule Version', () => {
     const domain = new Domain();
     await table.create(apiContext);
     await domain.create(apiContext);
-    // Threshold = initialVersion + 0.2: after contract save (entity = v+0.1) the rule fails (v+0.1 >= v+0.2 = false),
-    // and after domain assign (entity = v+0.2) the rule passes (v+0.2 >= v+0.2 = true).
+    // Only domain assign bumps the entity version (+0.1); contract save does not.
+    // threshold = initialVersion + 0.1: entity >= threshold fails before domain assign, passes after (equal satisfies >=).
     const initialVersion = table.entityResponseData?.version ?? 0.1;
-    const versionThreshold = Number.parseFloat((initialVersion + 0.2).toFixed(2)).toString();
+    const versionThreshold = Number.parseFloat((initialVersion + 0.1).toFixed(2)).toString();
     await afterAction();
 
     await test.step('Open contract section and start adding contract', async () => {
