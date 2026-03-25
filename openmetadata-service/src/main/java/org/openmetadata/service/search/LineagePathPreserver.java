@@ -196,10 +196,51 @@ public class LineagePathPreserver {
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(rootFqn); // Always include root
 
-    // Filter upstream edges - keep only edges with matching columns, narrowed to matching entries
+    // Collect matching nodes from edges with matching columns
     if (result.getUpstreamEdges() != null) {
-      Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredUpstream =
-          new HashMap<>();
+      result
+          .getUpstreamEdges()
+          .forEach(
+              (docId, edge) -> {
+                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter)) {
+                  if (edge.getFromEntity() != null) {
+                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
+                  }
+                  if (edge.getToEntity() != null) {
+                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
+                  }
+                }
+              });
+    }
+
+    if (result.getDownstreamEdges() != null) {
+      result
+          .getDownstreamEdges()
+          .forEach(
+              (docId, edge) -> {
+                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter)) {
+                  if (edge.getFromEntity() != null) {
+                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
+                  }
+                  if (edge.getToEntity() != null) {
+                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
+                  }
+                }
+              });
+    }
+
+    // Preserve intermediate nodes — trace paths BEFORE filtering edges
+    for (String nodeFqn : new HashSet<>(matchingNodes)) {
+      if (!nodeFqn.equals(rootFqn)) {
+        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
+      }
+    }
+
+    // Filter edges: keep edges connecting preserved nodes, narrow columns to matches
+    filterEdgesByNodes(result, matchingNodes);
+
+    // Narrow column lineage to only matching columns on kept edges
+    if (result.getUpstreamEdges() != null) {
       result
           .getUpstreamEdges()
           .forEach(
@@ -207,22 +248,11 @@ public class LineagePathPreserver {
                 java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
                     ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
                 if (!matched.isEmpty()) {
-                  filteredUpstream.put(docId, edge.withColumns(matched));
-                  if (edge.getFromEntity() != null) {
-                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
-                  }
-                  if (edge.getToEntity() != null) {
-                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
-                  }
+                  edge.setColumns(matched);
                 }
               });
-      result.setUpstreamEdges(filteredUpstream);
     }
-
-    // Filter downstream edges - keep only edges with matching columns, narrowed to matching entries
     if (result.getDownstreamEdges() != null) {
-      Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredDownstream =
-          new HashMap<>();
       result
           .getDownstreamEdges()
           .forEach(
@@ -230,23 +260,9 @@ public class LineagePathPreserver {
                 java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
                     ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
                 if (!matched.isEmpty()) {
-                  filteredDownstream.put(docId, edge.withColumns(matched));
-                  if (edge.getFromEntity() != null) {
-                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
-                  }
-                  if (edge.getToEntity() != null) {
-                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
-                  }
+                  edge.setColumns(matched);
                 }
               });
-      result.setDownstreamEdges(filteredDownstream);
-    }
-
-    // Preserve intermediate nodes between the root and directly matching nodes.
-    for (String nodeFqn : new HashSet<>(matchingNodes)) {
-      if (!nodeFqn.equals(rootFqn)) {
-        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
-      }
     }
 
     // Create filtered result preserving only matching nodes and their paths
@@ -336,10 +352,51 @@ public class LineagePathPreserver {
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(rootFqn); // Always include root
 
-    // Filter upstream edges - keep only matching column lineages within each edge
+    // Collect matching nodes from edges with matching columns
     if (result.getUpstreamEdges() != null) {
-      Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredUpstream =
-          new HashMap<>();
+      result
+          .getUpstreamEdges()
+          .forEach(
+              (docId, edge) -> {
+                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter, metadataCache)) {
+                  if (edge.getFromEntity() != null) {
+                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
+                  }
+                  if (edge.getToEntity() != null) {
+                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
+                  }
+                }
+              });
+    }
+
+    if (result.getDownstreamEdges() != null) {
+      result
+          .getDownstreamEdges()
+          .forEach(
+              (docId, edge) -> {
+                if (ColumnFilterMatcher.matchesColumnFilter(edge, columnFilter, metadataCache)) {
+                  if (edge.getFromEntity() != null) {
+                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
+                  }
+                  if (edge.getToEntity() != null) {
+                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
+                  }
+                }
+              });
+    }
+
+    // Trace paths BEFORE filtering edges
+    for (String nodeFqn : new HashSet<>(matchingNodes)) {
+      if (!nodeFqn.equals(rootFqn)) {
+        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
+      }
+    }
+
+    // Filter edges: keep edges connecting preserved nodes
+    filterEdgesByNodes(result, matchingNodes);
+
+    // Narrow column lineage to only matching columns on kept edges
+    if (result.getUpstreamEdges() != null) {
       result
           .getUpstreamEdges()
           .forEach(
@@ -348,22 +405,11 @@ public class LineagePathPreserver {
                     ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
                         edge, columnFilter, metadataCache);
                 if (!matched.isEmpty()) {
-                  filteredUpstream.put(docId, edge.withColumns(matched));
-                  if (edge.getFromEntity() != null) {
-                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
-                  }
-                  if (edge.getToEntity() != null) {
-                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
-                  }
+                  edge.setColumns(matched);
                 }
               });
-      result.setUpstreamEdges(filteredUpstream);
     }
-
-    // Filter downstream edges - keep only matching column lineages within each edge
     if (result.getDownstreamEdges() != null) {
-      Map<String, org.openmetadata.schema.api.lineage.EsLineageData> filteredDownstream =
-          new HashMap<>();
       result
           .getDownstreamEdges()
           .forEach(
@@ -372,23 +418,9 @@ public class LineagePathPreserver {
                     ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
                         edge, columnFilter, metadataCache);
                 if (!matched.isEmpty()) {
-                  filteredDownstream.put(docId, edge.withColumns(matched));
-                  if (edge.getFromEntity() != null) {
-                    matchingNodes.add(edge.getFromEntity().getFullyQualifiedName());
-                  }
-                  if (edge.getToEntity() != null) {
-                    matchingNodes.add(edge.getToEntity().getFullyQualifiedName());
-                  }
+                  edge.setColumns(matched);
                 }
               });
-      result.setDownstreamEdges(filteredDownstream);
-    }
-
-    // Preserve intermediate nodes between the root and directly matching nodes.
-    for (String nodeFqn : new HashSet<>(matchingNodes)) {
-      if (!nodeFqn.equals(rootFqn)) {
-        tracePathToRoot(nodeFqn, rootFqn, result, result.getNodes(), matchingNodes);
-      }
     }
 
     // Create filtered result preserving only matching nodes and their paths
