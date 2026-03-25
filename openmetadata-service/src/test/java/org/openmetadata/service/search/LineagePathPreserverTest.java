@@ -1,8 +1,10 @@
 package org.openmetadata.service.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.List;
@@ -259,6 +261,129 @@ class LineagePathPreserverTest {
         LineagePathPreserver.filterByColumnsWithMetadata(result, "tag:PII", ROOT, metadataCache);
 
     assertEquals(Set.of(ROOT, LEAF), filtered.getNodes().keySet());
+  }
+
+  @Test
+  void filterByColumnsNarrowsMatchingColumnsAndEmptiesNonMatching() {
+    // root→mid has columns [phone, address], mid→leaf has columns [email]
+    // Filter: columnName:email → root→mid columns should be emptied, mid→leaf kept
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(LEAF, node(LEAF));
+
+    ColumnLineage phoneCol =
+        new ColumnLineage()
+            .withFromColumns(List.of(ROOT + ".phone"))
+            .withToColumn(MID_ONE + ".phone");
+    ColumnLineage emailCol =
+        new ColumnLineage()
+            .withFromColumns(List.of(MID_ONE + ".email"))
+            .withToColumn(LEAF + ".email");
+
+    Map<String, EsLineageData> upstreamEdges = new HashMap<>();
+    upstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, phoneCol));
+    upstreamEdges.put("mid1-leaf", edge(MID_ONE, LEAF, emailCol));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(upstreamEdges);
+    result.setDownstreamEdges(new HashMap<>());
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "columnName:email", ROOT);
+
+    // root→mid1 edge has columns but none match → columns emptied to []
+    EsLineageData rootMidEdge = filtered.getUpstreamEdges().get("root-mid1");
+    assertNotNull(rootMidEdge);
+    assertTrue(rootMidEdge.getColumns().isEmpty());
+
+    // mid1→leaf edge matches → columns narrowed to [email]
+    EsLineageData midLeafEdge = filtered.getUpstreamEdges().get("mid1-leaf");
+    assertNotNull(midLeafEdge);
+    assertEquals(1, midLeafEdge.getColumns().size());
+    assertEquals(LEAF + ".email", midLeafEdge.getColumns().get(0).getToColumn());
+  }
+
+  @Test
+  void filterByColumnsPreservesEmptyColumnsOnPathOnlyEdges() {
+    // root→mid has no columns (path-only), mid→leaf has columns [email]
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(LEAF, node(LEAF));
+
+    ColumnLineage emailCol =
+        new ColumnLineage()
+            .withFromColumns(List.of(MID_ONE + ".email"))
+            .withToColumn(LEAF + ".email");
+
+    Map<String, EsLineageData> upstreamEdges = new HashMap<>();
+    upstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, null)); // no columns set
+    upstreamEdges.put("mid1-leaf", edge(MID_ONE, LEAF, emailCol));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(upstreamEdges);
+    result.setDownstreamEdges(new HashMap<>());
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "columnName:email", ROOT);
+
+    // root→mid1 has no columns → not modified by column narrowing
+    EsLineageData rootMidEdge = filtered.getUpstreamEdges().get("root-mid1");
+    assertNotNull(rootMidEdge);
+    // Columns should be empty (null or []), not filled with non-matching data
+    assertTrue(rootMidEdge.getColumns() == null || rootMidEdge.getColumns().isEmpty());
+  }
+
+  @Test
+  void filterByColumnsWithMetadataNarrowsColumnsCorrectly() throws Exception {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(LEAF, node(LEAF));
+
+    ColumnLineage phoneCol =
+        new ColumnLineage()
+            .withFromColumns(List.of(ROOT + ".phone"))
+            .withToColumn(MID_ONE + ".phone");
+    ColumnLineage emailCol =
+        new ColumnLineage()
+            .withFromColumns(List.of(MID_ONE + ".email"))
+            .withToColumn(LEAF + ".email");
+
+    Map<String, EsLineageData> upstreamEdges = new HashMap<>();
+    upstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, phoneCol));
+    upstreamEdges.put("mid1-leaf", edge(MID_ONE, LEAF, emailCol));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(upstreamEdges);
+    result.setDownstreamEdges(new HashMap<>());
+
+    ColumnMetadataCache metadataCache = new ColumnMetadataCache();
+    metadataCache.loadColumnMetadata(
+        Set.of(LEAF + ".email"),
+        fqn ->
+            Map.of(
+                "fullyQualifiedName",
+                LEAF,
+                "columns",
+                List.of(Map.of("name", "email", "tags", List.of(Map.of("tagFQN", "PII.Email"))))));
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumnsWithMetadata(result, "tag:PII", ROOT, metadataCache);
+
+    // root→mid1 has columns but none match tag → emptied
+    EsLineageData rootMidEdge = filtered.getUpstreamEdges().get("root-mid1");
+    assertNotNull(rootMidEdge);
+    assertTrue(rootMidEdge.getColumns().isEmpty());
+
+    // mid1→leaf matches → kept
+    EsLineageData midLeafEdge = filtered.getUpstreamEdges().get("mid1-leaf");
+    assertNotNull(midLeafEdge);
+    assertEquals(1, midLeafEdge.getColumns().size());
   }
 
   @Test

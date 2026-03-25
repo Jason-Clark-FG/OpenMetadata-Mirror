@@ -239,16 +239,15 @@ public class LineagePathPreserver {
     // Filter edges: keep edges connecting preserved nodes, narrow columns to matches
     filterEdgesByNodes(result, matchingNodes);
 
-    // Narrow column lineage to only matching columns on kept edges
+    // Narrow column lineage to only matching columns on edges that have columns
+    // Edges without columns (path-only) are left as-is to preserve null vs empty semantics
     if (result.getUpstreamEdges() != null) {
       result
           .getUpstreamEdges()
           .forEach(
               (docId, edge) -> {
-                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
-                    ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
-                if (!matched.isEmpty()) {
-                  edge.setColumns(matched);
+                if (edge.getColumns() != null && !edge.getColumns().isEmpty()) {
+                  edge.setColumns(ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter));
                 }
               });
     }
@@ -257,10 +256,8 @@ public class LineagePathPreserver {
           .getDownstreamEdges()
           .forEach(
               (docId, edge) -> {
-                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
-                    ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter);
-                if (!matched.isEmpty()) {
-                  edge.setColumns(matched);
+                if (edge.getColumns() != null && !edge.getColumns().isEmpty()) {
+                  edge.setColumns(ColumnFilterMatcher.filterMatchingColumns(edge, columnFilter));
                 }
               });
     }
@@ -395,17 +392,16 @@ public class LineagePathPreserver {
     // Filter edges: keep edges connecting preserved nodes
     filterEdgesByNodes(result, matchingNodes);
 
-    // Narrow column lineage to only matching columns on kept edges
+    // Narrow column lineage to only matching columns on edges that have columns
     if (result.getUpstreamEdges() != null) {
       result
           .getUpstreamEdges()
           .forEach(
               (docId, edge) -> {
-                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
-                    ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
-                        edge, columnFilter, metadataCache);
-                if (!matched.isEmpty()) {
-                  edge.setColumns(matched);
+                if (edge.getColumns() != null && !edge.getColumns().isEmpty()) {
+                  edge.setColumns(
+                      ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
+                          edge, columnFilter, metadataCache));
                 }
               });
     }
@@ -414,11 +410,10 @@ public class LineagePathPreserver {
           .getDownstreamEdges()
           .forEach(
               (docId, edge) -> {
-                java.util.List<org.openmetadata.schema.type.ColumnLineage> matched =
-                    ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
-                        edge, columnFilter, metadataCache);
-                if (!matched.isEmpty()) {
-                  edge.setColumns(matched);
+                if (edge.getColumns() != null && !edge.getColumns().isEmpty()) {
+                  edge.setColumns(
+                      ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
+                          edge, columnFilter, metadataCache));
                 }
               });
     }
