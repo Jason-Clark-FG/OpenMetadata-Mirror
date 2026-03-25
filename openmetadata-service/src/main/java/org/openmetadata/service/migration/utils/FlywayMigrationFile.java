@@ -97,6 +97,17 @@ public class FlywayMigrationFile extends MigrationFile {
     return sqlFile.getAbsolutePath();
   }
 
+  @Override
+  public MigrationFile copyWithReprocessing(boolean reprocessing) {
+    FlywayMigrationFile copy =
+        new FlywayMigrationFile(
+            sqlFile, migrationDAO, connectionType, openMetadataApplicationConfig);
+    copy.schemaChanges.addAll(schemaChanges);
+    copy.postDDLScripts.addAll(postDDLScripts);
+    copy.setReprocessing(reprocessing);
+    return copy;
+  }
+
   public static boolean isFlywayMigrationFile(File file) {
     return file.isFile() && FLYWAY_FILE_PATTERN.matcher(file.getName()).matches();
   }

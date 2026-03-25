@@ -309,11 +309,10 @@ public class MigrationWorkflow {
     List<MigrationFile> result = new ArrayList<>();
     for (MigrationFile migration : nativeMigrations) {
       if (migration.version.equals(maxVer)) {
-        migration.setReprocessing(true);
-        result.add(migration);
+        result.add(migration.copyWithReprocessing(true));
       } else if (!executedMigrations.contains(migration.version)
           && sameOrHigherMajorMinor(migration.version, maxVer)) {
-        result.add(migration);
+        result.add(migration.copyWithReprocessing(false));
       }
     }
     return result;
@@ -333,10 +332,9 @@ public class MigrationWorkflow {
     for (MigrationFile migration : extensionMigrations) {
       if (maxExecutedExtension.isPresent()
           && migration.version.equals(maxExecutedExtension.get())) {
-        migration.setReprocessing(true);
-        result.add(migration);
+        result.add(migration.copyWithReprocessing(true));
       } else if (!executedMigrations.contains(migration.version)) {
-        result.add(migration);
+        result.add(migration.copyWithReprocessing(false));
       }
     }
     return result;

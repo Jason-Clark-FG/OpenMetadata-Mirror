@@ -3,6 +3,7 @@ package org.openmetadata.service.migration.api;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -458,6 +459,47 @@ class MigrationWorkflowTest {
 
     assertEquals(List.of("1.12.1", "1.12.2"), nativeVersions);
     assertEquals(List.of("1.12.1-collate", "1.12.2-collate"), extensionVersions);
+  }
+
+  @Test
+  void getMigrationsToApplyDoesNotMutateAvailableMigrations() throws Exception {
+    MigrationFile nativeCurrent = createMigrationFile("1.12.1", false);
+    MigrationFile extensionCurrent = createMigrationFile("1.12.1-collate", true);
+    List<MigrationFile> availableMigrations =
+        List.of(
+            createMigrationFile("1.12.0", false),
+            nativeCurrent,
+            createMigrationFile("1.12.2", false),
+            extensionCurrent);
+    List<String> executedMigrations = List.of("1.12.0", "1.12.1", "1.12.1-collate");
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi, tempDir.toString(), ConnectionType.MYSQL, null, null, config, false);
+
+    List<MigrationFile> firstResult =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+    List<MigrationFile> secondResult =
+        workflow.getMigrationsToApply(executedMigrations, availableMigrations);
+
+    assertFalse(nativeCurrent.isReprocessing());
+    assertFalse(extensionCurrent.isReprocessing());
+    assertTrue(
+        firstResult.stream().anyMatch(m -> m.version.equals("1.12.1") && m.isReprocessing()));
+    assertTrue(
+        firstResult.stream()
+            .anyMatch(m -> m.version.equals("1.12.1-collate") && m.isReprocessing()));
+    assertNotSame(
+        nativeCurrent,
+        firstResult.stream().filter(m -> m.version.equals("1.12.1")).findFirst().orElseThrow());
+    assertNotSame(
+        extensionCurrent,
+        firstResult.stream()
+            .filter(m -> m.version.equals("1.12.1-collate"))
+            .findFirst()
+            .orElseThrow());
+    assertNotSame(firstResult.get(0), secondResult.get(0));
+    assertNotSame(firstResult.get(1), secondResult.get(1));
   }
 
   @Test

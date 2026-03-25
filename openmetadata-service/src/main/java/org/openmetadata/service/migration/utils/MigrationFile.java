@@ -203,6 +203,16 @@ public class MigrationFile implements Comparable<MigrationFile> {
     this.reprocessing = reprocessing;
   }
 
+  public MigrationFile copyWithReprocessing(boolean reprocessing) {
+    MigrationFile copy =
+        new MigrationFile(
+            dir, migrationDAO, connectionType, openMetadataApplicationConfig, isExtension);
+    copy.schemaChanges.addAll(schemaChanges);
+    copy.postDDLScripts.addAll(postDDLScripts);
+    copy.setReprocessing(reprocessing);
+    return copy;
+  }
+
   public boolean hasNewStatements() {
     return !schemaChanges.isEmpty() || !postDDLScripts.isEmpty();
   }
