@@ -44,10 +44,10 @@ describe('ApplicationUtils tests', () => {
       expect(entry).toHaveProperty('vectorEmbeddings');
     }
 
-    // Verify vector-indexable entities get a number
+    // Verify vector-indexable entities get a number (0 when no vectorSuccessRecords in mock)
     const tableEntry = resultData.find((e) => e.name === 'Table');
 
-    expect(tableEntry?.vectorEmbeddings).toBe(tableEntry?.successRecords);
+    expect(tableEntry?.vectorEmbeddings).toBe(0);
 
     // Verify non-vector-indexable entities get null
     const userEntry = resultData.find((e) => e.name === 'User');

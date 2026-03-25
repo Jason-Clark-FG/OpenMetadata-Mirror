@@ -280,8 +280,9 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
                   dataIndex: 'vectorEmbeddings',
                   key: 'vectorEmbeddings',
                   render: (value: number | null) => (
-                    <Typography.Text>
-                      {value !== null ? '\u2713' : '-'}
+                    <Typography.Text
+                      className={value !== null ? 'text-primary' : ''}>
+                      {value !== null ? value : '-'}
                     </Typography.Text>
                   ),
                 },

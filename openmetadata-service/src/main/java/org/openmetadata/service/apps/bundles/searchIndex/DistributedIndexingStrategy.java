@@ -298,16 +298,6 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
           Entity.getCollectionDAO()
               .searchIndexServerStatsDAO()
               .getAggregatedStats(distributedJob.getId().toString());
-      if (serverStatsAggr != null) {
-        LOG.info(
-            "Fetched aggregated server stats for job {}: readerSuccess={}, readerFailed={}, "
-                + "sinkSuccess={}, sinkFailed={}",
-            distributedJob.getId(),
-            serverStatsAggr.readerSuccess(),
-            serverStatsAggr.readerFailed(),
-            serverStatsAggr.sinkSuccess(),
-            serverStatsAggr.sinkFailed());
-      }
     } catch (Exception e) {
       LOG.debug("Could not fetch aggregated server stats for job {}", distributedJob.getId(), e);
     }

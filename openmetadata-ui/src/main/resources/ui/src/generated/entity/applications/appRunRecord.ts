@@ -273,4 +273,12 @@ export interface StepStats {
      * Count of Records with Warnings (e.g., stale references that were skipped)
      */
     warningRecords?: number;
+    /**
+     * Count of records with successful vector embeddings
+     */
+    vectorSuccessRecords?: number;
+    /**
+     * Count of records with failed vector embeddings
+     */
+    vectorFailedRecords?: number;
 }
