@@ -167,7 +167,7 @@ public class MigrationWorkflow {
       for (MigrationFile file : applyMigrations) {
         file.parseSQLFiles();
         if (file.isReprocessing() && !file.hasNewStatements()) {
-          LOG.info(
+          LOG.debug(
               "[MigrationWorkflow] Skipping version {} - reprocessing with no new SQL statements",
               file.version);
           continue;
