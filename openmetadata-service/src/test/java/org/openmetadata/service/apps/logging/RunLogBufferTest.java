@@ -1,6 +1,7 @@
 package org.openmetadata.service.apps.logging;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -105,5 +106,57 @@ class RunLogBufferTest {
     assertTrue(content.contains("batch 2 line"));
 
     buffer.close();
+  }
+
+  @Test
+  void startFlusherWithUnwritablePathDoesNotCreateFlusher() {
+    Path unwritable = Path.of("/proc/nonexistent/deep/path/log.log");
+    RunLogBuffer buffer =
+        new RunLogBuffer("app-7", "UnwriteApp", "server1", 7000L, 100_000, unwritable);
+
+    buffer.startFlusher();
+
+    buffer.append("line that won't be written");
+    buffer.flush();
+
+    assertFalse(Files.exists(unwritable));
+  }
+
+  @Test
+  void closeWithoutStartFlusherDoesNotThrow() {
+    Path logFile = tempDir.resolve("NoFlushApp").resolve("8000-server1.log");
+    RunLogBuffer buffer =
+        new RunLogBuffer("app-8", "NoFlushApp", "server1", 8000L, 100_000, logFile);
+
+    buffer.append("some line");
+    buffer.close();
+
+    assertTrue(buffer.getPendingLines().isEmpty());
+  }
+
+  @Test
+  void flushAfterCloseWriterDoesNotThrow() throws IOException {
+    Path logFile = tempDir.resolve("DoubleClose").resolve("9000-server1.log");
+    RunLogBuffer buffer =
+        new RunLogBuffer("app-9", "DoubleClose", "server1", 9000L, 100_000, logFile);
+    buffer.startFlusher();
+
+    buffer.append("before first close");
+    buffer.close();
+
+    buffer.append("after close");
+    buffer.flush();
+  }
+
+  @Test
+  void writeToFileWithNullWriterIsNoOp() {
+    Path logFile = tempDir.resolve("NullWriter").resolve("10000-server1.log");
+    RunLogBuffer buffer =
+        new RunLogBuffer("app-10", "NullWriter", "server1", 10000L, 100_000, logFile);
+
+    buffer.append("no writer");
+    buffer.flush();
+
+    assertFalse(Files.exists(logFile));
   }
 }
