@@ -68,6 +68,17 @@ const SignInPage = () => {
 
   const { handleLogin } = useBasicAuth();
 
+  const isPostLogout = useMemo(() => {
+    const flag = sessionStorage.getItem('om_explicit_logout');
+    if (flag) {
+      sessionStorage.removeItem('om_explicit_logout');
+
+      return true;
+    }
+
+    return false;
+  }, []);
+
   const handleSignIn = useCallback(() => {
     onLoginHandler && onLoginHandler();
   }, [onLoginHandler]);
@@ -76,7 +87,8 @@ const SignInPage = () => {
     authConfig?.enableAutoRedirect &&
     !isAuthProviderBasic &&
     !isAuthenticated &&
-    Boolean(onLoginHandler);
+    Boolean(onLoginHandler) &&
+    !isPostLogout;
 
   useLayoutEffect(() => {
     if (shouldAutoRedirect && !hasTriggeredAutoRedirect.current) {

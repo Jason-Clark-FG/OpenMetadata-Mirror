@@ -177,6 +177,8 @@ export const AuthProvider = ({
   const onLogoutHandler = useCallback(async () => {
     clearTimeout(timeoutId);
 
+    sessionStorage.setItem('om_explicit_logout', 'true');
+
     // Let SSO complete the logout process
     await authenticatorRef.current?.invokeLogout();
 

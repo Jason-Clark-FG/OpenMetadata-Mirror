@@ -139,6 +139,30 @@ describe('Test SignInPage Component', () => {
     expect(signinButton).toBeInTheDocument();
   });
 
+  it('should NOT auto-redirect after explicit logout', async () => {
+    sessionStorage.setItem('om_explicit_logout', 'true');
+
+    const onLoginHandler = jest.fn();
+    mockUseAuthProvider.mockReturnValue({ onLoginHandler });
+
+    mockuseApplicationStore.mockReturnValue({
+      isAuthDisabled: false,
+      authConfig: { provider: 'azure', enableAutoRedirect: true },
+      onLogoutHandler: jest.fn(),
+      getOidcToken: jest.fn(),
+    });
+
+    const { container } = render(<SignInPage />, {
+      wrapper: MemoryRouter,
+    });
+
+    const signinButton = await findByText(container, /label.sign-in-with-sso/i);
+
+    expect(signinButton).toBeInTheDocument();
+    expect(onLoginHandler).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem('om_explicit_logout')).toBeNull();
+  });
+
   it('SSO providers should auto-redirect when enableAutoRedirect is true', async () => {
     const onLoginHandler = jest.fn();
     mockUseAuthProvider.mockReturnValue({ onLoginHandler });
