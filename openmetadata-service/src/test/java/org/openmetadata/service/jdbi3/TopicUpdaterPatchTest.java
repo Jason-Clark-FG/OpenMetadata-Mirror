@@ -182,6 +182,9 @@ class TopicUpdaterPatchTest {
     assertTrue(
         updater.getPatchedFields().contains("messageSchema"),
         "patchedFields must contain original values after entitySpecificUpdate");
+    assertFalse(
+        updater.getPatchedFields().contains("schemaFields"),
+        "Temporary 'schemaFields' entry must not leak into restored patchedFields");
   }
 
   @Test

@@ -662,12 +662,19 @@ public class TopicRepository extends EntityRepository<Topic> {
                       ? null
                       : original.getMessageSchema().getSchemaType(),
                   updated.getMessageSchema().getSchemaType());
-              // Temporarily disable shouldCompare for nested schema field updates.
-              // The field names from getSchemaField() start with "schemaFields." which
-              // doesn't match the patchedField "messageSchema", causing recordChange
-              // to silently skip the update.
+              // Temporarily extend patchedFields to include "schemaFields" so that
+              // shouldCompare allows nested schema field changes through recordChange.
+              // EntityUtil.getSchemaField(Topic, ...) produces field names starting with
+              // "schemaFields." (e.g., "schemaFields.record.name.description"), which
+              // don't match the patchedField "messageSchema" extracted from the JSON patch
+              // path. Adding "schemaFields" unblocks only the schema field tracking without
+              // disabling shouldCompare filtering for other fields.
+              // TODO: The proper fix is to update EntityUtil.getSchemaField(Topic, ...) to
+              // return paths under "messageSchema.schemaFields" so they naturally match.
               Set<String> saved = getPatchedFields();
-              setPatchedFields(null);
+              Set<String> extended = new java.util.HashSet<>(saved != null ? saved : Set.of());
+              extended.add("schemaFields");
+              setPatchedFields(extended);
               try {
                 updateSchemaFields(
                     "messageSchema.schemaFields",
