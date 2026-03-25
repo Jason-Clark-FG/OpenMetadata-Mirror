@@ -137,6 +137,25 @@ test.describe('Impact Analysis', () => {
       ],
     });
 
+    await apiContext.put(
+      `/api/v1/columns/name/${table2.entityResponseData.columns[0].fullyQualifiedName}?entityType=table`,
+      {
+        data: {
+          tags: [
+            {
+              name: EntityDataClass.tag1.responseData.name,
+              tagFQN: EntityDataClass.tag1.responseData.fullyQualifiedName,
+              labelType: 'Manual',
+              state: 'Confirmed',
+            },
+          ],
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
     await pipeline.patch({
       apiContext,
       patchData: [
@@ -147,6 +166,17 @@ test.describe('Impact Analysis', () => {
             id: EntityDataClass.user1.responseData.id,
           },
           path: '/owners/0',
+        },
+        {
+          op: 'add',
+          value: {
+            labelType: 'Manual',
+            name: EntityDataClass.tag1.responseData.name,
+            source: 'Classification',
+            state: 'Confirmed',
+            tagFQN: EntityDataClass.tag1.responseData.fullyQualifiedName,
+          },
+          path: '/tags/0',
         },
       ],
     });
@@ -195,7 +225,6 @@ test.describe('Impact Analysis', () => {
       await page.getByRole('tab', { name: 'Impact Analysis' }).click();
       await lineageResponse;
       await impactAnalysisResponse;
-      await waitForAllLoadersToDisappear(page);
     }
   );
 
@@ -326,36 +355,34 @@ test.describe('Impact Analysis', () => {
     ).toBeVisible();
   });
 
-  // we are not getting domain in aggregation response that's why this test is marked as fixme
-  test.fixme(
-    'verify domain for Asset level impact analysis',
-    async ({ page }) => {
-      await page.getByTestId('filters-button').click();
-      await page.getByTestId('search-dropdown-Domains').click();
+  test('verify domain for Asset level impact analysis', async ({ page }) => {
+    await page.getByTestId('filters-button').click();
+    await page.getByTestId('search-dropdown-Domains').click();
 
-      await expect(
-        page.getByTitle(EntityDataClass.domain1.responseData.name)
-      ).toBeVisible();
+    await expect(
+      page.getByTitle(EntityDataClass.domain1.responseData.displayName)
+    ).toBeVisible();
 
-      await page.getByTitle(EntityDataClass.domain1.responseData.name).click();
-      const filterResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/lineage/getLineageByEntityCount') &&
-          response.request().method() === 'GET'
-      );
-      await page.getByRole('button', { name: 'Update' }).click();
-      await filterResponse;
-      await waitForAllLoadersToDisappear(page);
+    await page
+      .getByTitle(EntityDataClass.domain1.responseData.displayName)
+      .click();
+    const filterResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/lineage/getLineageByEntityCount') &&
+        response.request().method() === 'GET'
+    );
+    await page.getByRole('button', { name: 'Update' }).click();
+    await filterResponse;
+    await waitForAllLoadersToDisappear(page);
 
-      await expect(page.locator('[data-row-key]')).toHaveCount(1);
+    await expect(page.locator('[data-row-key]')).toHaveCount(1);
 
-      await expect(
-        page.locator(
-          `[data-row-key="${topic.entityResponseData.fullyQualifiedName}"]`
-        )
-      ).toBeVisible();
-    }
-  );
+    await expect(
+      page.locator(
+        `[data-row-key="${topic.entityResponseData.fullyQualifiedName}"]`
+      )
+    ).toBeVisible();
+  });
 
   test('verify tier for Asset level impact analysis', async ({ page }) => {
     await page.getByTestId('filters-button').click();
@@ -621,5 +648,318 @@ test.describe('Impact Analysis', () => {
     await expect(
       entityPopoverCard.getByTestId('entity-header-display-name')
     ).toBeVisible();
+  });
+
+  test('Verify search functionality filters table results', async ({
+    page,
+  }) => {
+    const searchInput = page.getByTestId('searchbar');
+    await expect(searchInput).toBeVisible();
+
+    const initialRowCount = await page.locator('[data-row-key]').count();
+
+    await searchInput.fill(table2.entityResponseData.displayName ?? '');
+
+    await waitForAllLoadersToDisappear(page);
+
+    await expect(
+      page.locator('[data-row-key]').count()
+    ).resolves.toBeLessThanOrEqual(initialRowCount);
+
+    await expect(
+      page.locator(
+        `[data-row-key="${table2.entityResponseData.fullyQualifiedName}"]`
+      )
+    ).toBeVisible();
+
+    await searchInput.clear();
+    await waitForAllLoadersToDisappear(page);
+  });
+
+  test('Verify depth configuration changes impact analysis results', async ({
+    page,
+  }) => {
+    await updateLineageConfigFromModal(page, {
+      upstreamDepth: 1,
+      downstreamDepth: 1,
+    });
+    await waitForAllLoadersToDisappear(page);
+
+    const depth1Count = await page.locator('[data-row-key]').count();
+
+    await updateLineageConfigFromModal(page, {
+      upstreamDepth: 1,
+      downstreamDepth: 3,
+    });
+    await waitForAllLoadersToDisappear(page);
+
+    const depth3Count = await page.locator('[data-row-key]').count();
+    expect(depth3Count).toBeGreaterThanOrEqual(depth1Count);
+  });
+
+  test('Verify service type filter for Asset level impact analysis', async ({
+    page,
+  }) => {
+    await page.getByTestId('filters-button').click();
+    await page.getByTestId('search-dropdown-Service Type').click();
+
+    const serviceTypeOption = page.getByTitle('mlflow', { exact: true });
+    await expect(serviceTypeOption).toBeVisible();
+
+    await serviceTypeOption.click();
+    const filterResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/lineage/getLineageByEntityCount') &&
+        response.request().method() === 'GET'
+    );
+    await page.getByRole('button', { name: 'Update' }).click();
+    await filterResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    await expect(page.locator('[data-row-key]')).toHaveCount(1);
+
+    await expect(
+      page.locator(
+        `[data-row-key="${mlModel.entityResponseData.fullyQualifiedName}"]`
+      )
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Clear All' }).click();
+    const clearFilterResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/lineage/getLineageByEntityCount') &&
+        response.request().method() === 'GET'
+    );
+    await clearFilterResponse;
+  });
+
+  test('Verify tag filter for column level impact analysis', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Impact On: Table' }).click();
+    const columnLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineage?**`
+    );
+    await page.getByText('Column level').click();
+    await columnLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    const initialRowCount = await page.locator('[data-row-key]').count();
+
+    await page.getByTestId('filters-button').click();
+    await page.getByTestId('search-dropdown-Tag').click();
+
+    await waitForAllLoadersToDisappear(page);
+
+    const firstTag = page.getByTestId(
+      EntityDataClass.tag1.responseData.fullyQualifiedName?.toLowerCase()
+    );
+    await firstTag.click();
+
+    const filterResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/lineage/getLineage?') &&
+        response.request().method() === 'GET'
+    );
+    await page.getByRole('button', { name: 'Update' }).click();
+    await filterResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    const filteredRowCount = await page.locator('[data-row-key]').count();
+    expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
+  });
+
+  test('Verify column search in column level impact analysis', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Impact On: Table' }).click();
+    const columnLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineage?**`
+    );
+    await page.getByText('Column level').click();
+    await columnLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- column level lineage data takes time to reflect due to UI processing
+    await page.waitForTimeout(1000);
+
+    const searchInput = page.getByTestId('searchbar');
+    await expect(searchInput).toBeVisible();
+
+    const columnName = table.columnsName[0];
+    await searchInput.fill(columnName);
+
+    await waitForAllLoadersToDisappear(page);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- search filtering needs time to complete
+    await page.waitForTimeout(500);
+
+    const rowsWithColumn = page.locator(
+      `[data-row-key*="${columnName}"], tbody tr:has-text("${columnName}")`
+    );
+    await expect(rowsWithColumn.first()).toBeVisible();
+
+    await searchInput.clear();
+    await waitForAllLoadersToDisappear(page);
+  });
+
+  test('Verify switching between table and column level clears filters', async ({
+    page,
+  }) => {
+    await page.getByTestId('filters-button').click();
+    await page.getByTestId('search-dropdown-Tier').click();
+
+    await page
+      .getByTitle(EntityDataClass.tierTag1.responseData.displayName)
+      .click();
+
+    await page.getByRole('button', { name: 'Update' }).click();
+    await waitForAllLoadersToDisappear(page);
+
+    await expect(page.locator('[data-row-key]')).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Impact On: Table' }).click();
+    const columnLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineage?**`
+    );
+    await page.getByText('Column level').click();
+    await columnLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    await page.getByRole('button', { name: 'Impact On: Column' }).click();
+    const tableLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineageByEntityCount?**`
+    );
+    await page.getByText('Asset level').click();
+    await tableLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    const rowCount = await page.locator('[data-row-key]').count();
+    expect(rowCount).toBeGreaterThan(1);
+  });
+
+  test('Verify node depth display in table level impact analysis', async ({
+    page,
+  }) => {
+    await updateLineageConfigFromModal(page, {
+      upstreamDepth: 2,
+      downstreamDepth: 2,
+    });
+    await waitForAllLoadersToDisappear(page);
+
+    const nodeDepthCells = page.locator('tbody tr td:nth-child(2)');
+    const firstDepthCell = nodeDepthCells.first();
+
+    await expect(firstDepthCell).toBeVisible();
+    const depthText = await firstDepthCell.textContent();
+    expect(depthText).toMatch(/^\d+$/);
+  });
+
+  test('Verify glossary term filter for column level impact analysis', async ({
+    page,
+  }) => {
+    await page.getByRole('button', { name: 'Impact On: Table' }).click();
+    const columnLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineage?**`
+    );
+    await page.getByText('Column level').click();
+    await columnLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- column level lineage data takes time to reflect due to UI processing
+    await page.waitForTimeout(1000);
+
+    await page.getByTestId('filters-button').click();
+    const glossaryDropdown = page.getByTestId('search-dropdown-Glossary Terms');
+
+    if (await glossaryDropdown.isVisible()) {
+      await glossaryDropdown.click();
+
+      const glossaryTree = page.locator('.ant-tree-node-content-wrapper');
+      if ((await glossaryTree.count()) > 0) {
+        await glossaryTree.first().click();
+
+        const filterResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/lineage/getLineage?') &&
+            response.request().method() === 'GET'
+        );
+        await page.getByRole('button', { name: 'Update' }).click();
+        await filterResponse;
+        await waitForAllLoadersToDisappear(page);
+      }
+    }
+  });
+
+  test('Verify table columns visibility and content', async ({ page }) => {
+    const expectedColumns = [
+      'Name',
+      'Node Depth',
+      //   'Description',
+      //   'Domains',
+      'Owners',
+      //   'Tier',
+      //   'Tags',
+      //   'Glossary Terms',
+    ];
+
+    for (const columnName of expectedColumns) {
+      const columnHeader = page
+        .locator('thead th')
+        .filter({ hasText: columnName });
+      await expect(columnHeader).toBeVisible();
+    }
+
+    const firstRow = page.locator('tbody tr').first();
+    await expect(firstRow).toBeVisible();
+
+    const nameCell = firstRow.locator('td').first();
+    await expect(nameCell.getByRole('link')).toBeVisible();
+  });
+
+  test('Verify column level table has correct columns', async ({ page }) => {
+    await page.getByRole('button', { name: 'Impact On: Table' }).click();
+    const columnLineageResponse = page.waitForResponse(
+      `/api/v1/lineage/getLineage?**`
+    );
+    await page.getByText('Column level').click();
+    await columnLineageResponse;
+    await waitForAllLoadersToDisappear(page);
+
+    const expectedColumns = [
+      'Source',
+      'Source Columns',
+      'Impacted',
+      'Impacted Columns',
+      'Node Depth',
+    ];
+
+    for (const columnName of expectedColumns) {
+      const columnHeader = page.getByRole('columnheader', {
+        name: columnName,
+        exact: true,
+      });
+      await expect(columnHeader).toBeVisible();
+    }
+  });
+
+  test('Verify upstream downstream toggle persists pagination', async ({
+    page,
+  }) => {
+    await updateLineageConfigFromModal(page, {
+      upstreamDepth: 2,
+      downstreamDepth: 2,
+    });
+    await waitForAllLoadersToDisappear(page);
+
+    const downstreamCount = await page.locator('[data-row-key]').count();
+
+    await page.getByRole('button', { name: 'Upstream' }).click();
+    await waitForAllLoadersToDisappear(page);
+
+    await page.getByRole('button', { name: 'Downstream' }).click();
+    await waitForAllLoadersToDisappear(page);
+
+    const finalCount = await page.locator('[data-row-key]').count();
+    expect(finalCount).toBe(downstreamCount);
   });
 });

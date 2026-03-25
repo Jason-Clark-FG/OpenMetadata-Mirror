@@ -79,7 +79,11 @@ import Table from '../common/Table/Table';
 import TierTag from '../common/TierTag';
 import TableTags from '../Database/TableTags/TableTags.component';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
-import { EdgeFromToData, LineageNode } from '../Lineage/Lineage.interface';
+import {
+  EdgeFromToData,
+  LineageNode,
+  LineageNodeType,
+} from '../Lineage/Lineage.interface';
 import {
   SearchedDataProps,
   SourceType,
@@ -408,7 +412,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
               selected={option.key === impactLevel}
               onClick={() => {
                 setSelectedImpactLevel(option.key);
-                // Clear column-level filter values when switching impact levels
+                // Clear filter values when switching impact levels
                 setSelectedQuickFilters([]);
                 handlePageChange(currentPage);
                 setImpactOnEl(null);
@@ -456,13 +460,13 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
           const upstreamNodes =
             prepareUpstreamColumnLevelNodesFromUpstreamEdges(
               upstreamEdges,
-              res.nodes
+              res.nodes as unknown as Record<string, LineageNodeType>
             );
 
           const downstreamNodes =
             prepareDownstreamColumnLevelNodesFromDownstreamEdges(
               downstreamEdges,
-              res.nodes
+              res.nodes as unknown as Record<string, LineageNodeType>
             );
 
           setColumnLineageNodes(upstreamNodes, downstreamNodes);
