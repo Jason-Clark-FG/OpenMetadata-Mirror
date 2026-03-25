@@ -2224,7 +2224,11 @@
     "your-entity": "Je {{entity}}",
     "z-to-a": "Z tot A",
     "zoom-in": "Inzoomen",
-    "zoom-out": "Uitzoomen"
+    "zoom-out": "Uitzoomen",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "Datakwaliteit",
+    "incident-metrics": "Incident Metrieken",
+    "test-case-status": "Testcase Status"
   },
   "message": {
     "access-block-time-message": "Toegang wordt geblokkeerd voor milliseconden nadat het maximale aantal mislukte aanmeldpogingen is uitgevoerd.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "schrijf je aankondiging",
     "write-your-description": "Schrijf je beschrijving",
     "write-your-text": "Schrijf je {{text}}",
-    "you-can-also-set-up-the-metadata-ingestion": "Je kunt ook de metadataingestie instellen."
+    "you-can-also-set-up-the-metadata-ingestion": "Je kunt ook de metadataingestie instellen.",
+    "data-dimensions-sub-header": "Krijg inzicht in belangrijke datakwaliteitsdimensies—zoals nauwkeurigheid, consistentie en integriteit—om de volledigheid en betrouwbaarheid van uw gegevens te beoordelen.",
+    "data-health-sub-header": "Volg de dekking, kwaliteit en testresultaten van uw data-assets om de algehele datakwaliteit te monitoren en verbetergebieden te identificeren.",
+    "incident-metrics-sub-header": "Volg het volume, responsiviteit en resolutie-efficiëntie van data-gerelateerde incidenten om operationele betrouwbaarheid te verbeteren.",
+    "test-case-status-sub-header": "Visualiseer de gezondheid van uw datavalidatietests met een uitsplitsing van succesvolle, mislukte en afgebroken cases."
   },
   "server": {
     "account-verify-success": "E-mail succesvol geverifieerd",

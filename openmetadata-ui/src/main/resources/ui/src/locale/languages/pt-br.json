@@ -2224,7 +2224,11 @@
     "your-entity": "Sua {{entity}}",
     "z-to-a": "Z a A",
     "zoom-in": "Aumentar Zoom",
-    "zoom-out": "Diminuir Zoom"
+    "zoom-out": "Diminuir Zoom",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "Saúde dos Dados",
+    "incident-metrics": "Métricas de Incidentes",
+    "test-case-status": "Status dos Casos de Teste"
   },
   "message": {
     "access-block-time-message": "O acesso será bloqueado por milissegundos após o máximo de tentativas de login falhas serem realizadas.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "escreva seu anúncio",
     "write-your-description": "Escreva sua descrição",
     "write-your-text": "Escreva o seu {{text}}",
-    "you-can-also-set-up-the-metadata-ingestion": "Você também pode configurar a ingestão de metadados."
+    "you-can-also-set-up-the-metadata-ingestion": "Você também pode configurar a ingestão de metadados.",
+    "data-dimensions-sub-header": "Obtenha insights sobre as principais dimensões de qualidade de dados—como precisão, consistência e integridade—para avaliar a completude e confiabilidade dos seus dados.",
+    "data-health-sub-header": "Acompanhe a cobertura, qualidade e resultados de teste dos seus ativos de dados para monitorar a saúde geral dos dados e identificar áreas de melhoria.",
+    "incident-metrics-sub-header": "Acompanhe o volume, responsividade e eficiência de resolução de incidentes relacionados a dados para melhorar a confiabilidade operacional.",
+    "test-case-status-sub-header": "Visualize a saúde dos seus testes de validação de dados com uma divisão de casos de sucesso, falha e abortados."
   },
   "server": {
     "account-verify-success": "E-mail verificado com sucesso",

@@ -2224,7 +2224,11 @@
     "your-entity": "Sizin {{entity}}",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "Yakınlaştır",
-    "zoom-out": "Uzaklaştır"
+    "zoom-out": "Uzaklaştır",
+    "data-dimensions": "Veri Boyutları",
+    "data-health": "Veri Sağlığı",
+    "incident-metrics": "Olay Metrikleri",
+    "test-case-status": "Test Durumu"
   },
   "message": {
     "access-block-time-message": "Erişim, maksimum başarısız giriş denemesinden sonra milisaniye boyunca engellenecektir.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "duyurunuzu yazın",
     "write-your-description": "Açıklamanızı yazın",
     "write-your-text": "{{text}} yazın",
-    "you-can-also-set-up-the-metadata-ingestion": "Metadata alımını da ayarlayabilirsiniz."
+    "you-can-also-set-up-the-metadata-ingestion": "Metadata alımını da ayarlayabilirsiniz.",
+    "data-dimensions-sub-header": "Verilerinizin eksiksizliğini ve güvenilirliğini değerlendirmek için doğruluk, tutarlılık ve bütünlük gibi temel veri kalitesi boyutları hakkında içgörüler edinin.",
+    "data-health-sub-header": "Genel veri sağlığını izlemek ve iyileştirme alanlarını belirlemek için veri varlıklarınızın kapsama alanını, kalitesini ve test sonuçlarını takip edin.",
+    "incident-metrics-sub-header": "Operasyonel güvenilirliği artırmak için veriyle ilgili olayların hacmini, yanıt hızını ve çözüm etkinliğini takip edin.",
+    "test-case-status-sub-header": "Başarılı, başarısız ve iptal edilen vakaların dökümüyle veri doğrulama testlerinizin durumunu görselleştirin."
   },
   "server": {
     "account-verify-success": "E-posta başarıyla doğrulandı",

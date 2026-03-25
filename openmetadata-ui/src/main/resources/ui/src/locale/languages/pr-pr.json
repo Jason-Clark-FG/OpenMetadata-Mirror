@@ -2224,7 +2224,11 @@
     "your-entity": "{{entity}} شما",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "بزرگنمایی",
-    "zoom-out": "کوچک‌نمایی"
+    "zoom-out": "کوچک‌نمایی",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "صحة البيانات",
+    "incident-metrics": "مقاييس الحوادث",
+    "test-case-status": "حالة حالات الاختبار"
   },
   "message": {
     "access-block-time-message": "دسترسی برای مدت میلی‌ثانیه‌ها بعد از حداکثر تلاش‌های ناموفق ورود، مسدود خواهد شد.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "اعلان خود را بنویسید",
     "write-your-description": "توضیحات خود را بنویسید",
     "write-your-text": "نوشتن {{text}} خود",
-    "you-can-also-set-up-the-metadata-ingestion": "همچنین می‌توانید ورود متادیتا را راه‌اندازی کنید."
+    "you-can-also-set-up-the-metadata-ingestion": "همچنین می‌توانید ورود متادیتا را راه‌اندازی کنید.",
+    "data-dimensions-sub-header": "احصل على رؤى حول أبعاد جودة البيانات الرئيسية—مثل الدقة والاتساق والنزاهة—لتقييم اكتمال وموثوقية بياناتك.",
+    "data-health-sub-header": "تتبع التغطية والجودة ونتائج الاختبار لأصول البيانات الخاصة بك لمراقبة الصحة العامة للبيانات وتحديد مجالات التحسين.",
+    "incident-metrics-sub-header": "تتبع حجم واستجابة وكفاءة حل الحوادث المتعلقة بالبيانات لتحسين الموثوقية التشغيلية.",
+    "test-case-status-sub-header": "اعرض بصرياً صحة اختبارات التحقق من البيانات الخاصة بك مع تفصيل لحالات النجاح والفشل والإلغاء."
   },
   "server": {
     "account-verify-success": "ایمیل با موفقیت تأیید شد.",

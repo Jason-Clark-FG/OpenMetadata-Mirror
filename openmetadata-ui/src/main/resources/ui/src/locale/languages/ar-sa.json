@@ -2224,7 +2224,11 @@
     "your-entity": "{{entity}} الخاص بك",
     "z-to-a": "من Z إلى A",
     "zoom-in": "تكبير",
-    "zoom-out": "تصغير"
+    "zoom-out": "تصغير",
+    "data-dimensions": "أبعاد البيانات",
+    "data-health": "صحة البيانات",
+    "incident-metrics": "مقاييس الحوادث",
+    "test-case-status": "حالة حالات الاختبار"
   },
   "message": {
     "access-block-time-message": "سيتم حظر الوصول لـ مللي ثانية بعد الوصول إلى الحد الأقصى لمحاولات تسجيل الدخول الفاشلة.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "اكتب إعلانك",
     "write-your-description": "اكتب وصفك",
     "write-your-text": "اكتب {{text}} الخاص بك",
-    "you-can-also-set-up-the-metadata-ingestion": "يمكنك أيضًا إعداد استيعاب البيانات الوصفية."
+    "you-can-also-set-up-the-metadata-ingestion": "يمكنك أيضًا إعداد استيعاب البيانات الوصفية.",
+    "data-dimensions-sub-header": "احصل على رؤى حول أبعاد جودة البيانات الرئيسية—مثل الدقة والاتساق والنزاهة—لتقييم اكتمال وموثوقية بياناتك.",
+    "data-health-sub-header": "تتبع التغطية والجودة ونتائج الاختبار لأصول البيانات الخاصة بك لمراقبة الصحة العامة للبيانات وتحديد مجالات التحسين.",
+    "incident-metrics-sub-header": "تتبع حجم واستجابة وكفاءة حل الحوادث المتعلقة بالبيانات لتحسين الموثوقية التشغيلية.",
+    "test-case-status-sub-header": "اعرض بصرياً صحة اختبارات التحقق من البيانات الخاصة بك مع تفصيل لحالات النجاح والفشل والإلغاء."
   },
   "server": {
     "account-verify-success": "تم التحقق من البريد الإلكتروني بنجاح",

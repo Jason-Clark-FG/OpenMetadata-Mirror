@@ -2224,7 +2224,11 @@
     "your-entity": "당신의 {{entity}}",
     "z-to-a": "Z에서 A",
     "zoom-in": "확대",
-    "zoom-out": "축소"
+    "zoom-out": "축소",
+    "data-dimensions": "데이터 차원",
+    "data-health": "데이터 상태",
+    "incident-metrics": "인시던트 지표",
+    "test-case-status": "테스트 케이스 상태"
   },
   "message": {
     "access-block-time-message": "최대 로그인 실패 시도 횟수 이후 밀리초 동안 접근이 차단됩니다.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "공지사항 작성",
     "write-your-description": "설명 작성",
     "write-your-text": "{{text}} 작성",
-    "you-can-also-set-up-the-metadata-ingestion": "메타데이터 수집을 설정할 수도 있습니다."
+    "you-can-also-set-up-the-metadata-ingestion": "메타데이터 수집을 설정할 수도 있습니다.",
+    "data-dimensions-sub-header": "정확성, 일관성, 무결성과 같은 주요 데이터 품질 차원에 대한 통찰을 얻어 데이터의 완전성과 신뢰성을 평가합니다.",
+    "data-health-sub-header": "전반적인 데이터 상태를 모니터링하고 개선이 필요한 영역을 식별하기 위해 데이터 자산의 커버리지, 품질 및 테스트 결과를 추적합니다.",
+    "incident-metrics-sub-header": "운영 신뢰성을 향상시키기 위해 데이터 관련 인시던트의 볼륨, 응답성 및 해결 효율성을 추적합니다.",
+    "test-case-status-sub-header": "성공, 실패 및 중단된 케이스의 분류와 함께 데이터 유효성 검사 테스트의 상태를 시각화합니다."
   },
   "server": {
     "account-verify-success": "이메일이 성공적으로 인증되었습니다",

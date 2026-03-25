@@ -2224,7 +2224,11 @@
     "your-entity": "您的{{entity}}",
     "z-to-a": "Z到A",
     "zoom-in": "放大",
-    "zoom-out": "缩小"
+    "zoom-out": "缩小",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "数据健康",
+    "incident-metrics": "事件指标",
+    "test-case-status": "测试用例状态"
   },
   "message": {
     "access-block-time-message": "在最多尝试登录失败后, 访问将被阻止(毫秒)",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "编写您的公告",
     "write-your-description": "编写您的描述",
     "write-your-text": "请编写您的{{text}}",
-    "you-can-also-set-up-the-metadata-ingestion": "您还可以设置元数据提取作业"
+    "you-can-also-set-up-the-metadata-ingestion": "您还可以设置元数据提取作业",
+    "data-dimensions-sub-header": "深入了解关键数据质量维度——如准确性、一致性和完整性——以评估数据的完整性和可靠性。",
+    "data-health-sub-header": "跟踪数据资产的覆盖率、质量和测试结果，以监控整体数据健康状况并识别改进领域。",
+    "incident-metrics-sub-header": "跟踪数据相关事件的数量、响应能力和解决效率，以提高操作可靠性。",
+    "test-case-status-sub-header": "通过成功、失败和中止用例的明细分解，可视化您的数据验证测试的健康状况。"
   },
   "server": {
     "account-verify-success": "邮箱验证成功",

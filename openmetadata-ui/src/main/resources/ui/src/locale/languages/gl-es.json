@@ -2224,7 +2224,11 @@
     "your-entity": "O teu {{entity}}",
     "z-to-a": "Z a A",
     "zoom-in": "Achegar",
-    "zoom-out": "Afastar"
+    "zoom-out": "Afastar",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "Saúde dos Datos",
+    "incident-metrics": "Métricas de Incidentes",
+    "test-case-status": "Estado dos Casos de Proba"
   },
   "message": {
     "access-block-time-message": "O acceso será bloqueado durante milisegundos despois de realizar o número máximo de intentos fallidos de inicio de sesión.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "escribe o teu anuncio",
     "write-your-description": "Escribe a túa descrición",
     "write-your-text": "Escribe o teu {{text}}",
-    "you-can-also-set-up-the-metadata-ingestion": "Tamén podes configurar a inxestión de metadatos."
+    "you-can-also-set-up-the-metadata-ingestion": "Tamén podes configurar a inxestión de metadatos.",
+    "data-dimensions-sub-header": "Obtén información sobre as dimensións clave da calidade dos datos—como a precisión, consistencia e integridade—para avaliar a completude e fiabilidade dos teus datos.",
+    "data-health-sub-header": "Fai un seguimento da cobertura, calidade e resultados de probas dos teus activos de datos para monitorizar a saúde xeral dos datos e identificar areas de mellora.",
+    "incident-metrics-sub-header": "Fai un seguimento do volume, capacidade de resposta e eficiencia de resolución de incidentes relacionados cos datos para mellorar a fiabilidade operacional.",
+    "test-case-status-sub-header": "Visualiza a saúde das túas probas de validación de datos cunha desagregación de casos de éxito, fallo e abortados."
   },
   "server": {
     "account-verify-success": "Correo electrónico verificado correctamente",

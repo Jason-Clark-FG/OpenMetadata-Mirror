@@ -2224,7 +2224,11 @@
     "your-entity": "Ihre {{entity}}",
     "z-to-a": "Z bis A",
     "zoom-in": "Vergrößern",
-    "zoom-out": "Verkleinern"
+    "zoom-out": "Verkleinern",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "Datengesundheit",
+    "incident-metrics": "Störfall-Metriken",
+    "test-case-status": "Testfall-Status"
   },
   "message": {
     "access-block-time-message": "Der Zugriff wird für einige Millisekunden gesperrt, nachdem die maximale Anzahl fehlgeschlagener Anmeldeversuche erreicht wurde.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "Schreiben Sie Ihre Ankündigung in Kleinbuchstaben",
     "write-your-description": "Schreiben Sie Ihre Beschreibung",
     "write-your-text": "Schreiben Sie Ihren {{text}}",
-    "you-can-also-set-up-the-metadata-ingestion": "Sie können auch die Metadateninhalation einrichten."
+    "you-can-also-set-up-the-metadata-ingestion": "Sie können auch die Metadateninhalation einrichten.",
+    "data-dimensions-sub-header": "Gewinnen Sie Einblicke in wichtige Datenqualitätsdimensionen wie Genauigkeit, Konsistenz und Integrität, um die Vollständigkeit und Zuverlässigkeit Ihrer Daten zu bewerten.",
+    "data-health-sub-header": "Verfolgen Sie die Abdeckung, Qualität und Testergebnisse Ihrer Datenbestände, um die allgemeine Datengesundheit zu überwachen und Verbesserungsbereiche zu identifizieren.",
+    "incident-metrics-sub-header": "Verfolgen Sie das Volumen, die Reaktionsfähigkeit und die Lösungseffizienz von datenbezogenen Vorfällen, um die operative Zuverlässigkeit zu verbessern.",
+    "test-case-status-sub-header": "Visualisieren Sie die Gesundheit Ihrer Datenvalidierungstests mit einer Aufschlüsselung von erfolgreichen, fehlgeschlagenen und abgebrochenen Fällen."
   },
   "server": {
     "account-verify-success": "E-Mail erfolgreich verifiziert",

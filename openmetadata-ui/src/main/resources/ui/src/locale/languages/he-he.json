@@ -2224,7 +2224,11 @@
     "your-entity": "ה{{entity}} שלך",
     "z-to-a": "ז עד א",
     "zoom-in": "הגדל תצוגה",
-    "zoom-out": "הקטן תצוגה"
+    "zoom-out": "הקטן תצוגה",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "בריאות הנתונים",
+    "incident-metrics": "מדדים של אירועים",
+    "test-case-status": "מצב מקרה בדיקה"
   },
   "message": {
     "access-block-time-message": "הגישה תחוסם למשך מילישניות לאחר שנעשו מספר ניסיונות התחברות כושלים.",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "כתוב את ההודעה שלך",
     "write-your-description": "כתוב את התיאור שלך",
     "write-your-text": "כתוב את ה-{{text}} שלך",
-    "you-can-also-set-up-the-metadata-ingestion": "תוכל גם להגדיר את ההזנה של המטה-דאטה."
+    "you-can-also-set-up-the-metadata-ingestion": "תוכל גם להגדיר את ההזנה של המטה-דאטה.",
+    "data-dimensions-sub-header": "קבל תובנות על מימדים מרכזיים של איכות הנתונים—כמו דיוק, עקביות ושלמות—כדי להעריך את השלמות והאמינות של הנתונים שלך.",
+    "data-health-sub-header": "עקב אחר הכיסוי, האיכות ותוצאות הבדיקות של נכסי הנתונים שלך כדי לעקוב אחר בריאות הנתונים הכללית ולזהות אזורים לשיפור.",
+    "incident-metrics-sub-header": "עקב אחר ההיקף, היעילות ויעילות הפתרון של אירועים הקשורים לנתונים כדי לשפר את האמינות התפעולית.",
+    "test-case-status-sub-header": "הצג את בריאות בדיקות האימות של הנתונים שלך עם פילוח של מקרים מוצלחים, כושלים ומופסקים."
   },
   "server": {
     "account-verify-success": "אימייל אומת בהצלחה",

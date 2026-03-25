@@ -2224,7 +2224,11 @@
     "your-entity": "あなたの {{entity}}",
     "z-to-a": "ZからA",
     "zoom-in": "ズームイン",
-    "zoom-out": "ズームアウト"
+    "zoom-out": "ズームアウト",
+    "data-dimensions": "Data Dimensions",
+    "data-health": "データヘルス",
+    "incident-metrics": "インシデントメトリクス",
+    "test-case-status": "テストケースステータス"
   },
   "message": {
     "access-block-time-message": "最大回数のログイン失敗後、一定時間（ミリ秒）アクセスがブロックされます。",
@@ -3123,7 +3127,11 @@
     "write-your-announcement-lowercase": "お知らせを入力してください",
     "write-your-description": "説明を入力してください",
     "write-your-text": "{{text}}を入力してください",
-    "you-can-also-set-up-the-metadata-ingestion": "メタデータ取り込みの設定も行えます。"
+    "you-can-also-set-up-the-metadata-ingestion": "メタデータ取り込みの設定も行えます。",
+    "data-dimensions-sub-header": "正確性、一貫性、整合性などの主要なデータ品質の次元に関する洞察を得て、データの完全性と信頼性を評価します。",
+    "data-health-sub-header": "データアセットのカバレッジ、品質、テスト結果を追跡して全体的なデータヘルスをモニタリングし、改善領域を特定します。",
+    "incident-metrics-sub-header": "データ関連インシデントのボリューム、応答性、解決効率を追跡して運用の信頼性を向上させます。",
+    "test-case-status-sub-header": "成功、失敗、中断されたケースの内訳とともに、データ検証テストのヘルスを視覚化します。"
   },
   "server": {
     "account-verify-success": "メールアドレスの認証に成功しました",
