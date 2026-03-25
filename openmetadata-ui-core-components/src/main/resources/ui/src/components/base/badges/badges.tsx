@@ -1,7 +1,7 @@
-import type { MouseEventHandler, ReactNode } from 'react';
-import { X as CloseX } from '@untitledui/icons';
 import { Dot } from '@/components/foundations/dot-icon';
 import { cx } from '@/utils/cx';
+import { X as CloseX } from '@untitledui/icons';
+import type { KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react';
 import type {
   BadgeColors,
   BadgeTypeToColorMap,
@@ -94,7 +94,7 @@ const addonOnlyColors = Object.fromEntries(
   Object.entries(filledColors).map(([key, value]) => [
     key,
     { root: '', addon: value.addon },
-  ])
+  ]),
 ) as Record<BadgeColors, { root: string; addon: string }>;
 
 const withPillTypes = {
@@ -179,7 +179,7 @@ export const Badge = <T extends BadgeTypes>(props: BadgeProps<T>) => {
         colors.common,
         sizes[type][size],
         colors.styles[color].root,
-        props.className
+        props.className,
       )}>
       {children}
     </span>
@@ -195,7 +195,7 @@ interface BadgeWithDotProps<T extends BadgeTypes> {
 }
 
 export const BadgeWithDot = <T extends BadgeTypes>(
-  props: BadgeWithDotProps<T>
+  props: BadgeWithDotProps<T>,
 ) => {
   const {
     size = 'md',
@@ -231,7 +231,7 @@ export const BadgeWithDot = <T extends BadgeTypes>(
         colors.common,
         sizes[type][size],
         colors.styles[color].root,
-        className
+        className,
       )}>
       <Dot className={colors.styles[color].addon} size="sm" />
       {children}
@@ -250,7 +250,7 @@ interface BadgeWithIconProps<T extends BadgeTypes> {
 }
 
 export const BadgeWithIcon = <T extends BadgeTypes>(
-  props: BadgeWithIconProps<T>
+  props: BadgeWithIconProps<T>,
 ) => {
   const {
     size = 'md',
@@ -315,7 +315,7 @@ export const BadgeWithIcon = <T extends BadgeTypes>(
         colors.common,
         sizes[type][size][icon],
         colors.styles[color].root,
-        className
+        className,
       )}>
       {IconLeading && (
         <IconLeading
@@ -341,7 +341,7 @@ interface BadgeWithFlagProps<T extends BadgeTypes> {
 }
 
 export const BadgeWithFlag = <T extends BadgeTypes>(
-  props: BadgeWithFlagProps<T>
+  props: BadgeWithFlagProps<T>,
 ) => {
   const {
     size = 'md',
@@ -375,7 +375,7 @@ export const BadgeWithFlag = <T extends BadgeTypes>(
       className={cx(
         colors.common,
         sizes[type][size],
-        colors.styles[color].root
+        colors.styles[color].root,
       )}>
       <img
         alt={`${flag} flag`}
@@ -396,7 +396,7 @@ interface BadgeWithImageProps<T extends BadgeTypes> {
 }
 
 export const BadgeWithImage = <T extends BadgeTypes>(
-  props: BadgeWithImageProps<T>
+  props: BadgeWithImageProps<T>,
 ) => {
   const {
     size = 'md',
@@ -430,7 +430,7 @@ export const BadgeWithImage = <T extends BadgeTypes>(
       className={cx(
         colors.common,
         sizes[type][size],
-        colors.styles[color].root
+        colors.styles[color].root,
       )}>
       <img
         alt="Badge image"
@@ -456,10 +456,18 @@ interface BadgeWithButtonProps<T extends BadgeTypes> {
    * The click event handler for the button.
    */
   onButtonClick?: MouseEventHandler<HTMLButtonElement>;
+  /**
+   * The keydown event handler for the button.
+   */
+  onButtonKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
+  /**
+   * Whether the button is disabled.
+   */
+  isDisabled?: boolean;
 }
 
 export const BadgeWithButton = <T extends BadgeTypes>(
-  props: BadgeWithButtonProps<T>
+  props: BadgeWithButtonProps<T>,
 ) => {
   const {
     size = 'md',
@@ -468,6 +476,8 @@ export const BadgeWithButton = <T extends BadgeTypes>(
     icon: Icon = CloseX,
     buttonLabel,
     children,
+    isDisabled,
+    onButtonKeyDown,
   } = props;
 
   const colors = withPillTypes[type];
@@ -494,18 +504,23 @@ export const BadgeWithButton = <T extends BadgeTypes>(
       className={cx(
         colors.common,
         sizes[type][size],
-        colors.styles[color].root
+        colors.styles[color].root,
       )}>
       {children}
       <button
-        aria-label={buttonLabel}
-        className={cx(
-          'tw:flex tw:cursor-pointer tw:items-center tw:justify-center tw:p-0.5 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear tw:focus-visible:outline-2',
-          colors.styles[color].addonButton,
-          type === 'pill-color' ? 'tw:rounded-full' : 'tw:rounded-[3px]'
-        )}
         type="button"
-        onClick={props.onButtonClick}>
+        aria-label={buttonLabel}
+        disabled={isDisabled}
+        onClick={props.onButtonClick}
+        onKeyDown={onButtonKeyDown}
+        className={cx(
+          'tw:flex tw:items-center tw:justify-center tw:p-0.5 tw:outline-focus-ring tw:transition tw:duration-100 tw:ease-linear tw:focus-visible:outline-2',
+          isDisabled
+            ? 'tw:cursor-not-allowed tw:opacity-50'
+            : 'tw:cursor-pointer',
+          colors.styles[color].addonButton,
+          type === 'pill-color' ? 'tw:rounded-full' : 'tw:rounded-[3px]',
+        )}>
         <Icon className="tw:size-3 tw:stroke-[3px] tw:transition-inherit-all" />
       </button>
     </span>
@@ -553,7 +568,7 @@ export const BadgeIcon = <T extends BadgeTypes>(props: BadgeIconProps<T>) => {
       className={cx(
         colors.common,
         sizes[type][size],
-        colors.styles[color].root
+        colors.styles[color].root,
       )}>
       <Icon
         className={cx('tw:size-3 tw:stroke-[3px]', colors.styles[color].addon)}

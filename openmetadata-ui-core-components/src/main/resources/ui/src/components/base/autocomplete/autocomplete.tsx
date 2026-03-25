@@ -7,6 +7,7 @@ import {
   SelectContext,
   sizes,
 } from '@/components/base/select/select';
+import { Typography } from '@/components/foundations/typography';
 import { useResizeObserver } from '@/hooks/use-resize-observer';
 import { cx } from '@/utils/cx';
 import { isReactComponent } from '@/utils/is-react-component';
@@ -44,7 +45,7 @@ import {
 } from 'react-aria-components';
 import type { ListData } from 'react-stately';
 import { Avatar } from '../avatar/avatar';
-import { CloseButton } from '../buttons/close-button';
+import { Badge, BadgeWithButton } from '../badges/badges';
 import { AutocompleteItem } from './autocomplete-item';
 
 interface AutocompleteContextValue {
@@ -54,6 +55,7 @@ interface AutocompleteContextValue {
   onRemove: (keys: Set<Key>) => void;
   onInputChange: (value: string) => void;
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
+  maxVisibleItems?: number;
 }
 
 const AutocompleteContext = createContext<AutocompleteContextValue>({
@@ -62,6 +64,7 @@ const AutocompleteContext = createContext<AutocompleteContextValue>({
   selectedItems: [],
   onRemove: () => {},
   onInputChange: () => {},
+  maxVisibleItems: undefined,
 });
 
 interface AutocompleteTriggerProps extends AriaGroupProps {
@@ -74,7 +77,8 @@ interface AutocompleteTriggerProps extends AriaGroupProps {
 }
 
 export interface AutocompleteProps
-  extends Omit<AriaComboBoxProps<SelectItemType>, 'children' | 'items'>,
+  extends
+    Omit<AriaComboBoxProps<SelectItemType>, 'children' | 'items'>,
     RefAttributes<HTMLDivElement> {
   hint?: string;
   label?: string;
@@ -90,6 +94,7 @@ export interface AutocompleteProps
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
   filterOption?: (item: SelectItemType, filterText: string) => boolean;
   onSearchChange?: (value: string) => void;
+  maxVisibleItems?: number;
 }
 
 const renderChipIcon = (item: SelectItemType) => {
@@ -153,7 +158,7 @@ const InnerAutocomplete = ({
 
   const handleTagKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
-    value: Key
+    value: Key,
   ) => {
     if (event.key === 'Tab') {
       return;
@@ -191,37 +196,52 @@ const InnerAutocomplete = ({
   };
 
   const isSelectionEmpty = context?.selectedItems?.length === 0;
+  const { maxVisibleItems } = context;
+  const allSelected = context?.selectedItems ?? [];
+  const visibleSelected =
+    maxVisibleItems === undefined
+      ? allSelected
+      : allSelected.slice(0, maxVisibleItems);
+  const overflowCount =
+    maxVisibleItems === undefined
+      ? 0
+      : allSelected.length - visibleSelected.length;
 
   return (
     <div className="tw:relative tw:flex tw:w-full tw:flex-1 tw:flex-row tw:flex-wrap tw:items-center tw:justify-start tw:gap-1.5">
       {!isSelectionEmpty &&
-        context?.selectedItems?.map((item) =>
+        visibleSelected.map((item) =>
           context.renderTag ? (
             context.renderTag(item, () => context.onRemove(new Set([item.id])))
           ) : (
-            <span
-              className="tw:flex tw:items-center tw:gap-1.5 tw:rounded-md tw:bg-primary tw:py-1.5 tw:px-2.5 tw:ring-1 tw:ring-primary tw:ring-inset"
-              key={item.id}>
+            <BadgeWithButton
+              type="modern"
+              color="gray"
+              key={item.id}
+              size="lg"
+              isDisabled={isDisabled}
+              onButtonClick={() => context.onRemove(new Set([item.id]))}
+              onButtonKeyDown={(e) => handleTagKeyDown(e, item.id)}>
               {renderChipIcon(item)}
-              <p className="tw:truncate tw:text-sm tw:font-medium tw:whitespace-nowrap tw:text-secondary tw:select-none">
-                {item.label}
-              </p>
-
-              <CloseButton
-                className="tw:ml-0.75 tw:h-auto tw:w-auto tw:p-0"
-                isDisabled={isDisabled}
-                size="sm"
-                onKeyDown={(event) => handleTagKeyDown(event, item.id)}
-                onPress={() => context.onRemove(new Set([item.id]))}
-              />
-            </span>
-          )
+              <div className="tw:min-w-0 tw:max-w-40">
+                <Typography as="p" ellipsis weight="medium">
+                  {item.label}
+                </Typography>
+              </div>
+            </BadgeWithButton>
+          ),
         )}
+
+      {overflowCount > 0 && (
+        <Badge type="modern" color="gray" size="lg">
+          +{overflowCount}
+        </Badge>
+      )}
 
       <div
         className={cx(
           'tw:relative tw:flex tw:min-w-[20%] tw:flex-1 tw:flex-row tw:items-center',
-          !isSelectionEmpty && 'tw:ml-0.5'
+          !isSelectionEmpty && 'tw:ml-0.5',
         )}>
         <AriaInput
           className="tw:w-full tw:flex-[1_0_0] tw:appearance-none tw:bg-transparent tw:text-md tw:text-ellipsis tw:text-primary tw:caret-alpha-black/90 tw:outline-none tw:placeholder:text-placeholder tw:focus:outline-hidden tw:disabled:cursor-not-allowed tw:disabled:text-disabled tw:disabled:placeholder:text-disabled"
@@ -249,7 +269,7 @@ const AutocompleteTrigger = ({
           'tw:relative tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset',
           isDisabled && 'tw:cursor-not-allowed tw:bg-disabled_subtle',
           isFocusWithin && 'tw:ring-2 tw:ring-brand',
-          sizes[size].root
+          sizes[size].root,
         )
       }>
       {({ isDisabled }) => (
@@ -270,7 +290,7 @@ const AutocompleteTrigger = ({
 };
 
 const resolveSelectedItems = (
-  value: SelectItemType[] | ListData<SelectItemType>
+  value: SelectItemType[] | ListData<SelectItemType>,
 ): SelectItemType[] => (Array.isArray(value) ? value : value.items);
 
 export const AutocompleteBase = ({
@@ -287,6 +307,7 @@ export const AutocompleteBase = ({
   renderTag,
   filterOption,
   onSearchChange,
+  maxVisibleItems,
   name: _name,
   className: _className,
   ...props
@@ -294,7 +315,7 @@ export const AutocompleteBase = ({
   const { contains } = useFilter({ sensitivity: 'base' });
 
   const [internalSelected, setInternalSelected] = useState<SelectItemType[]>(
-    resolveSelectedItems(selectedItems)
+    resolveSelectedItems(selectedItems),
   );
   const selectedKeys = internalSelected.map((item) => item.id);
 
@@ -324,7 +345,7 @@ export const AutocompleteBase = ({
 
   const itemMap = useMemo(
     () => new Map(allItems.map((item) => [item.id, item])),
-    [allItems]
+    [allItems],
   );
 
   const onRemove = useCallback(
@@ -337,7 +358,7 @@ export const AutocompleteBase = ({
       onItemCleared?.(key);
       setFilterText('');
     },
-    [onItemCleared]
+    [onItemCleared],
   );
 
   const onSelectionChange = (id: Key | null) => {
@@ -360,7 +381,7 @@ export const AutocompleteBase = ({
       setFilterText(value);
       onSearchChange?.(value);
     },
-    [onSearchChange]
+    [onSearchChange],
   );
 
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -386,8 +407,16 @@ export const AutocompleteBase = ({
       onInputChange,
       onRemove,
       renderTag,
+      maxVisibleItems,
     }),
-    [selectedKeys, internalSelected, onInputChange, onRemove, renderTag]
+    [
+      selectedKeys,
+      internalSelected,
+      onInputChange,
+      onRemove,
+      renderTag,
+      maxVisibleItems,
+    ],
   );
 
   return (
