@@ -36,7 +36,7 @@ import { AssetsTabRef } from '../../../components/Glossary/GlossaryTerms/tabs/As
 import { AssetsOfEntity } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import EntityNameModal from '../../../components/Modals/EntityNameModal/EntityNameModal.component';
 import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
-import { ERROR_MESSAGE } from '../../../constants/constants';
+import { ERROR_MESSAGE, ROUTES } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
@@ -401,7 +401,7 @@ const DomainDetails = ({
 
   const breadcrumbItems = useMemo<BreadcrumbItem[]>(() => {
     const marketplaceRoot: BreadcrumbItem[] = isMarketplace
-      ? [{ name: t('label.data-marketplace'), url: '/data-marketplace' }]
+      ? [{ name: t('label.data-marketplace'), url: ROUTES.DATA_MARKETPLACE }]
       : [];
 
     if (!domainFqn) {

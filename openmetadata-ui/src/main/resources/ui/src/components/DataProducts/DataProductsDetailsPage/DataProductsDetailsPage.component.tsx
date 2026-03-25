@@ -28,6 +28,7 @@ import { ReactComponent as DeleteIcon } from '../../../assets/svg/ic-delete.svg'
 import { ReactComponent as VersionIcon } from '../../../assets/svg/ic-version.svg';
 import { ReactComponent as IconDropdown } from '../../../assets/svg/menu.svg';
 import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
+import { ROUTES } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
@@ -235,7 +236,7 @@ const DataProductsDetailsPage = ({
     if (isMarketplace) {
       items.push({
         name: t('label.data-marketplace'),
-        url: '/data-marketplace',
+        url: ROUTES.DATA_MARKETPLACE,
       });
     }
 

@@ -18,6 +18,7 @@ import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
+import { ROUTES } from '../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
@@ -129,7 +130,7 @@ const DomainListPage = () => {
         ? [
             {
               name: t('label.data-marketplace'),
-              url: '/data-marketplace',
+              url: ROUTES.DATA_MARKETPLACE,
             },
           ]
         : []),
