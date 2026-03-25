@@ -219,7 +219,7 @@ const DomainsWidget = ({
   const footer = useMemo(
     () => (
       <WidgetFooter
-        moreButtonLink="/domain"
+        moreButtonLink={getDomainPath()}
         moreButtonText={t('label.view-more')}
         showMoreButton={showWidgetFooterMoreButton}
       />
