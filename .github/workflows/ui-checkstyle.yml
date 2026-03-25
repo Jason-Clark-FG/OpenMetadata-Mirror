@@ -106,14 +106,14 @@ jobs:
           files_ignore: |
             src/generated/**
           files: |
-            src/**/*.{ts,tsx,js,jsx}
+            src/**/*.{ts,tsx,js,jsx,json}
 
       - name: ESLint + Prettier + Organise Imports
         id: lint
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.added_modified_files }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           if [ -z "$CHANGED_FILES" ]; then
             echo "No added or modified files to process."
@@ -213,7 +213,7 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         env:
-          CHANGED_FILES_ALL: ${{ steps.changed-files.outputs.added_modified_files }}
+          CHANGED_FILES_ALL: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           if [ -z "$CHANGED_FILES_ALL" ]; then
             echo "No added or modified files to process."
@@ -573,7 +573,7 @@ jobs:
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ${{ env.UI_WORKING_DIRECTORY }}
         env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.added_modified_files }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           if [ -z "$CHANGED_FILES" ]; then
             echo "No added or modified files to process."
@@ -762,26 +762,20 @@ jobs:
         working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
         run: yarn install --frozen-lockfile
 
+
       - name: Get changed core-components files
-        id: changed-files
-        working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
-        run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          FILES=$(git diff --name-only --diff-filter=d --relative "$BASE...HEAD" -- src/ | grep -E '\.(ts|tsx)$' || true)
-          FILES=$(echo "$FILES" | tr '\n' ' ')
-          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
-          if [ -n "${FILES// }" ]; then
-            echo "any_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "any_changed=false" >> "$GITHUB_OUTPUT"
-          fi
+        uses: tj-actions/changed-files@22103cc46bda19c2b464ffe86db46df6922fd323
+        with:
+          path: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
+          files: |
+            src/**/*.{ts,tsx,js,jsx,json}
 
       - name: ESLint + Prettier (core-components)
         id: lint
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ${{ env.CORE_COMPONENTS_WORKING_DIRECTORY }}
         env:
-          CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           if [ -z "${CHANGED_FILES// }" ]; then
             echo "No added or modified files to process."
