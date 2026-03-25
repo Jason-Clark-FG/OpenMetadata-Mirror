@@ -725,12 +725,6 @@ test.describe('Impact Analysis', () => {
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Clear All' }).click();
-    const clearFilterResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/lineage/getLineageByEntityCount') &&
-        response.request().method() === 'GET'
-    );
-    await clearFilterResponse;
   });
 
   test('Verify tag filter for column level impact analysis', async ({
