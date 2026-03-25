@@ -387,6 +387,46 @@ public class SearchListFilterTest {
         "Expected testCaseFqn filter but got: " + actual);
   }
 
+  @Test
+  void testTestCaseResultConditionWithDataContractId() {
+    SearchListFilter searchListFilter = new SearchListFilter();
+    searchListFilter.addQueryParam("dataContractId", "abc-123-def");
+
+    String actual = searchListFilter.getCondition(Entity.TEST_CASE_RESULT);
+
+    assertTrue(
+        actual.contains("{\"term\": {\"dataContract.id\": \"abc-123-def\"}}"),
+        "Expected dataContract.id filter but got: " + actual);
+  }
+
+  @Test
+  void testTestCaseResultConditionWithDataContractIdAndOtherFilters() {
+    SearchListFilter searchListFilter = new SearchListFilter();
+    searchListFilter.addQueryParam("dataContractId", "contract-uuid");
+    searchListFilter.addQueryParam("testCaseStatus", "Failed");
+    searchListFilter.addQueryParam("startTimestamp", "100");
+    searchListFilter.addQueryParam("endTimestamp", "200");
+
+    String actual = searchListFilter.getCondition(Entity.TEST_CASE_RESULT);
+
+    assertTrue(actual.contains("{\"term\": {\"dataContract.id\": \"contract-uuid\"}}"));
+    assertTrue(actual.contains("{\"term\": {\"testCaseStatus\": \"Failed\"}}"));
+    assertTrue(actual.contains("{\"range\": {\"timestamp\": {\"gte\": 100}}}"));
+    assertTrue(actual.contains("{\"range\": {\"timestamp\": {\"lte\": 200}}}"));
+  }
+
+  @Test
+  void testTestCaseResultConditionDataContractIdEscapesDoubleQuotes() {
+    SearchListFilter searchListFilter = new SearchListFilter();
+    searchListFilter.addQueryParam("dataContractId", "id-with-\"quotes\"");
+
+    String actual = searchListFilter.getCondition(Entity.TEST_CASE_RESULT);
+
+    assertTrue(
+        actual.contains("id-with-\\\"quotes\\\""),
+        "Expected escaped quotes in dataContract.id filter but got: " + actual);
+  }
+
   private JsonNode parse(String json) {
     return JsonUtils.readTree(json);
   }
