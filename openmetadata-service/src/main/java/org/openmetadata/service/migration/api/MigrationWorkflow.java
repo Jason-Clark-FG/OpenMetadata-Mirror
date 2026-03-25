@@ -321,10 +321,25 @@ public class MigrationWorkflow {
 
   private List<MigrationFile> processExtensionMigrations(
       Set<String> executedMigrations, List<MigrationFile> availableMigrations) {
-    return availableMigrations.stream()
-        .filter(migration -> migration.isExtension)
-        .filter(migration -> !executedMigrations.contains(migration.version))
-        .toList();
+    List<MigrationFile> extensionMigrations =
+        availableMigrations.stream().filter(migration -> migration.isExtension).toList();
+    Set<String> extensionVersions =
+        extensionMigrations.stream().map(migration -> migration.version).collect(toSet());
+    Optional<String> maxExecutedExtension =
+        executedMigrations.stream()
+            .filter(extensionVersions::contains)
+            .max(MigrationWorkflow::compareReprocessingCandidates);
+    List<MigrationFile> result = new ArrayList<>();
+    for (MigrationFile migration : extensionMigrations) {
+      if (maxExecutedExtension.isPresent()
+          && migration.version.equals(maxExecutedExtension.get())) {
+        migration.setReprocessing(true);
+        result.add(migration);
+      } else if (!executedMigrations.contains(migration.version)) {
+        result.add(migration);
+      }
+    }
+    return result;
   }
 
   public void printMigrationInfo() {

@@ -16,6 +16,7 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.openmetadata.service.util.EntityUtil.hash;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -99,6 +100,120 @@ class MigrationWorkflowTest {
 
     assertEquals(List.of("1.0.1"), getMigrationVersions(workflow));
     assertEquals(Optional.of("1.2.0"), getCurrentMaxVersion(workflow));
+  }
+
+  @Test
+  void loadMigrationsReprocessesNativeAndExtensionWhenBothHaveNewSql() throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    Path extensionRoot = Files.createDirectories(tempDir.resolve("extension"));
+    createMigrationDir(nativeRoot, "1.12.1", "SELECT 11;");
+    createMigrationDir(extensionRoot, "1.12.1-collate", "SELECT 22;");
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.12.1", "1.12.1-collate"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn(null);
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi,
+            nativeRoot.toString(),
+            ConnectionType.POSTGRES,
+            extensionRoot.toString(),
+            null,
+            config,
+            false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of("1.12.1", "1.12.1-collate"), getMigrationVersions(workflow));
+  }
+
+  @Test
+  void loadMigrationsReprocessesOnlyNativeWhenExtensionHasNoNewSql() throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    Path extensionRoot = Files.createDirectories(tempDir.resolve("extension"));
+    createMigrationDir(nativeRoot, "1.12.1", "SELECT 11;");
+    createMigrationDir(extensionRoot, "1.12.1-collate", "SELECT 22;");
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.12.1", "1.12.1-collate"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString()))
+        .thenAnswer(
+            invocation -> {
+              String checksum = invocation.getArgument(0);
+              if (checksum.equals(hash("SELECT 22"))) {
+                return "SELECT 22";
+              }
+              return null;
+            });
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi,
+            nativeRoot.toString(),
+            ConnectionType.POSTGRES,
+            extensionRoot.toString(),
+            null,
+            config,
+            false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of("1.12.1"), getMigrationVersions(workflow));
+  }
+
+  @Test
+  void loadMigrationsReprocessesOnlyExtensionWhenNativeHasNoNewSql() throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    Path extensionRoot = Files.createDirectories(tempDir.resolve("extension"));
+    createMigrationDir(nativeRoot, "1.12.1", "SELECT 11;");
+    createMigrationDir(extensionRoot, "1.12.1-collate", "SELECT 22;");
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.12.1", "1.12.1-collate"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString()))
+        .thenAnswer(
+            invocation -> {
+              String checksum = invocation.getArgument(0);
+              if (checksum.equals(hash("SELECT 11"))) {
+                return "SELECT 11";
+              }
+              return null;
+            });
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi,
+            nativeRoot.toString(),
+            ConnectionType.POSTGRES,
+            extensionRoot.toString(),
+            null,
+            config,
+            false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of("1.12.1-collate"), getMigrationVersions(workflow));
+  }
+
+  @Test
+  void loadMigrationsReprocessesCurrentExtensionDespiteHigherExecutedCoreVersions()
+      throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    Path extensionRoot = Files.createDirectories(tempDir.resolve("extension"));
+    createMigrationDir(nativeRoot, "0.0.1", "SELECT 11;");
+    createMigrationDir(extensionRoot, "0.0.1-collate", "SELECT 22;");
+    when(migrationDAO.getMigrationVersions())
+        .thenReturn(List.of("1.13.0", "0.0.1", "0.0.1-collate"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn(null);
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi,
+            nativeRoot.toString(),
+            ConnectionType.POSTGRES,
+            extensionRoot.toString(),
+            null,
+            config,
+            false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of("0.0.1", "0.0.1-collate"), getMigrationVersions(workflow));
   }
 
   @Test
@@ -326,8 +441,8 @@ class MigrationWorkflowTest {
             createMigrationFile("1.12.0", false),
             createMigrationFile("1.12.1", false),
             createMigrationFile("1.12.2", false),
-            createMigrationFile("1.12.1", true),
-            createMigrationFile("1.12.2", true));
+            createMigrationFile("1.12.1-collate", true),
+            createMigrationFile("1.12.2-collate", true));
 
     MigrationWorkflow workflow =
         new MigrationWorkflow(
@@ -342,7 +457,7 @@ class MigrationWorkflowTest {
         result.stream().filter(m -> m.isExtension).map(m -> m.version).toList();
 
     assertEquals(List.of("1.12.1", "1.12.2"), nativeVersions);
-    assertEquals(List.of("1.12.2"), extensionVersions);
+    assertEquals(List.of("1.12.1-collate", "1.12.2-collate"), extensionVersions);
   }
 
   @Test

@@ -43,8 +43,7 @@ class MigrationProcessImplTest {
   @Test
   void delegatesHasNewStatementsToMigrationFile() throws IOException {
     when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn(null);
-    MigrationFile file =
-        createMigrationDir("1.12.3", "ALTER TABLE test ADD COLUMN a INT;", "");
+    MigrationFile file = createMigrationDir("1.12.3", "ALTER TABLE test ADD COLUMN a INT;", "");
     file.parseSQLFiles();
 
     MigrationProcessImpl process = new MigrationProcessImpl(file);
@@ -63,8 +62,8 @@ class MigrationProcessImplTest {
     assertFalse(process.hasNewStatements());
   }
 
-  private MigrationFile createMigrationDir(String version, String schemaChangesSql, String postDdlSql)
-      throws IOException {
+  private MigrationFile createMigrationDir(
+      String version, String schemaChangesSql, String postDdlSql) throws IOException {
     Path versionDir = tempDir.resolve(version);
     Path mysqlDir = versionDir.resolve("mysql");
     Files.createDirectories(mysqlDir);
