@@ -376,10 +376,10 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
 
   return (
     <Routes>
-        <Route
-          element={<ForbiddenPage pageTitle={t('label.no-access')} />}
-          path={ROUTES.FORBIDDEN}
-        />
+      <Route
+        element={<ForbiddenPage pageTitle={t('label.no-access')} />}
+        path={ROUTES.FORBIDDEN}
+      />
       <Route element={<MyDataPage />} path={ROUTES.MY_DATA} />
       <Route element={<TourPageComponent />} path={ROUTES.TOUR} />
       <Route

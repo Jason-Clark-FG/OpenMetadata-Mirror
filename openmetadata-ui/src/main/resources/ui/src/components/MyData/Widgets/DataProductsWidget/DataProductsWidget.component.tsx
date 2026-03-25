@@ -104,11 +104,7 @@ const DataProductsWidget = ({
 
   const handleDataProductClick = useCallback(
     (dataProduct: DataProduct) => {
-      navigate(
-        getDataProductDetailsPath(
-          dataProduct.fullyQualifiedName ?? ''
-        )
-      );
+      navigate(getDataProductDetailsPath(dataProduct.fullyQualifiedName ?? ''));
     },
     [navigate]
   );

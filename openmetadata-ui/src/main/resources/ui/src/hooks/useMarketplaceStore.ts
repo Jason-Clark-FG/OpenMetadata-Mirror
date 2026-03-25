@@ -33,9 +33,7 @@ export const useMarketplaceStore = create<MarketplaceStore>()((set) => ({
   setMarketplaceContext: (enabled: boolean) => {
     set({
       isMarketplace: enabled,
-      domainBasePath: enabled
-        ? MARKETPLACE_DOMAIN_BASE_PATH
-        : DOMAIN_BASE_PATH,
+      domainBasePath: enabled ? MARKETPLACE_DOMAIN_BASE_PATH : DOMAIN_BASE_PATH,
       dataProductBasePath: enabled
         ? MARKETPLACE_DATA_PRODUCT_BASE_PATH
         : DATA_PRODUCT_BASE_PATH,

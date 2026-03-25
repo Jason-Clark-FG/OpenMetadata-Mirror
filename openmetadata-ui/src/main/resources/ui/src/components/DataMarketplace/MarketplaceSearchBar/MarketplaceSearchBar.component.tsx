@@ -126,9 +126,7 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
     (dp: DataProduct) => {
       setIsOpen(false);
       navigate(
-        `${dataProductBasePath}/${getEncodedFqn(
-          dp.fullyQualifiedName ?? ''
-        )}`
+        `${dataProductBasePath}/${getEncodedFqn(dp.fullyQualifiedName ?? '')}`
       );
     },
     [navigate, dataProductBasePath]
