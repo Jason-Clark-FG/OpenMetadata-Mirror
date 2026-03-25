@@ -210,6 +210,25 @@ public class MigrationWorkflow {
     return 0; // Versions are equal
   }
 
+  private static int compareReprocessingCandidates(String version1, String version2) {
+    int versionComparison = compareVersions(version1, version2);
+    if (versionComparison != 0) {
+      return versionComparison;
+    }
+
+    int baseVersionComparison =
+        Boolean.compare(isBaseMigrationVersion(version1), isBaseMigrationVersion(version2));
+    if (baseVersionComparison != 0) {
+      return baseVersionComparison;
+    }
+
+    return version1.compareTo(version2);
+  }
+
+  private static boolean isBaseMigrationVersion(String version) {
+    return !version.contains("-");
+  }
+
   /*
    * Parse a version string into an array of integers
    * Follows the format major.minor.patch, patch can contain -extension
@@ -282,7 +301,7 @@ public class MigrationWorkflow {
     Optional<String> maxExecuted =
         executedMigrations.stream()
             .filter(nativeVersions::contains)
-            .max(MigrationWorkflow::compareVersions);
+            .max(MigrationWorkflow::compareReprocessingCandidates);
     if (maxExecuted.isEmpty()) {
       return nativeMigrations;
     }
@@ -369,12 +388,9 @@ public class MigrationWorkflow {
             // Schema Changes
             runSchemaChanges(row, process);
 
-            // Data Migration - skip for reprocessing (continuous migration only runs new SQL)
-            if (process.isReprocessing()) {
-              row.add(SUCCESS_MSG);
-            } else {
-              runStepAndAddStatus(row, process::runDataMigration);
-            }
+            // Reprocessing can rerun Java migrations when new SQL is appended to the current
+            // version. Implementations must remain idempotent, same as force mode.
+            runStepAndAddStatus(row, process::runDataMigration);
 
             // Post DDL Scripts
             runPostDDLChanges(row, process);
