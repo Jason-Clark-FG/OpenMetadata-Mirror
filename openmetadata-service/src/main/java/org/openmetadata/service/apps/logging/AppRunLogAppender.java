@@ -89,12 +89,18 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
 
   private static String formatThrowable(IThrowableProxy proxy) {
     StringBuilder sb = new StringBuilder();
-    sb.append(proxy.getClassName()).append(": ").append(proxy.getMessage());
-    for (StackTraceElementProxy step : proxy.getStackTraceElementProxyArray()) {
-      sb.append("\n\tat ").append(step.getSTEAsString());
-    }
-    if (proxy.getCause() != null) {
-      sb.append("\nCaused by: ").append(formatThrowable(proxy.getCause()));
+    Set<IThrowableProxy> seen =
+        java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    IThrowableProxy current = proxy;
+    while (current != null && seen.add(current)) {
+      if (sb.length() > 0) {
+        sb.append("\nCaused by: ");
+      }
+      sb.append(current.getClassName()).append(": ").append(current.getMessage());
+      for (StackTraceElementProxy step : current.getStackTraceElementProxyArray()) {
+        sb.append("\n\tat ").append(step.getSTEAsString());
+      }
+      current = current.getCause();
     }
     return sb.toString();
   }

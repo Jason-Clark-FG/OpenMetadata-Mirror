@@ -161,13 +161,15 @@ public class SearchIndexApp extends AbstractNativeApplication {
         }
       }
     }
-    String appId = getApp().getId().toString();
     collectionDAO.searchIndexPartitionDAO().deleteAll();
     collectionDAO.searchIndexServerStatsDAO().deleteAll();
     collectionDAO.searchIndexFailureDAO().deleteAll();
     collectionDAO.searchReindexLockDAO().delete("SEARCH_REINDEX_LOCK");
     collectionDAO.searchIndexJobDAO().deleteAll();
-    collectionDAO.appExtensionTimeSeriesDao().deleteAllByAppId(appId);
+    App app = getApp();
+    if (app != null) {
+      collectionDAO.appExtensionTimeSeriesDao().deleteAllByAppId(app.getId().toString());
+    }
   }
 
   @Override
