@@ -673,7 +673,7 @@ public class TopicRepository extends EntityRepository<Topic> {
               // return paths under "messageSchema.schemaFields" so they naturally match.
               Set<String> saved = getPatchedFields();
               if (saved != null) {
-                Set<String> extended = new java.util.HashSet<>(saved);
+                Set<String> extended = new HashSet<>(saved);
                 extended.add("schemaFields");
                 setPatchedFields(extended);
               }
