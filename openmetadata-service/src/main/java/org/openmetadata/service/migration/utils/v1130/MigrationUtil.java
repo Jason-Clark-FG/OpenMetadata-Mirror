@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.dataInsight.custom.DataInsightCustomChart;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
-import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.DataInsightSystemChartRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
@@ -92,28 +92,49 @@ public class MigrationUtil {
     WorkflowDefinitionRepository repository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
 
+    // Phase 1: Fix raw JSON in the DB without going through POJO deserialization.
+    // Stored workflows may contain fields (e.g. "relatedEntity" in setEntityAttributeTask
+    // inputNamespaceMap) that now fail schema validation, preventing listAll() from working.
+    // Reading and writing raw JSON strings bypasses that issue entirely.
+    int fixedCount = 0;
+    int offset = 0;
+    final int PAGE_SIZE = 100;
+    List<String> rawPage;
+    do {
+      rawPage = repository.getDao().listAfterWithOffset(PAGE_SIZE, offset);
+      for (String rawJson : rawPage) {
+        try {
+          JsonNode originalNode = MAPPER.readTree(rawJson);
+          JsonNode migrated = migrateWorkflowJson(originalNode);
+          if (migrated != originalNode) {
+            UUID id = UUID.fromString(originalNode.get("id").asText());
+            String fqn = originalNode.get("fullyQualifiedName").asText();
+            repository.getDao().update(id, fqn, MAPPER.writeValueAsString(migrated));
+            fixedCount++;
+            LOG.info("Fixed workflow JSON for '{}'", fqn);
+          }
+        } catch (Exception e) {
+          LOG.error("Error fixing raw workflow JSON: {}", e.getMessage(), e);
+        }
+      }
+      offset += PAGE_SIZE;
+    } while (rawPage.size() == PAGE_SIZE);
+
+    LOG.info("Phase 1 complete: {} workflow JSON records updated", fixedCount);
+
+    // Phase 2: Reload all workflows (now safe to deserialize) and redeploy BPMN processes.
     List<WorkflowDefinition> allWorkflows =
         repository.listAll(EntityUtil.Fields.EMPTY_FIELDS, new ListFilter());
 
     int totalRedeployed = 0;
     for (WorkflowDefinition workflow : allWorkflows) {
       try {
-        String originalJson = JsonUtils.pojoToJson(workflow);
-        JsonNode originalNode = MAPPER.readTree(originalJson);
-        JsonNode migrated = migrateWorkflowJson(originalNode);
-
-        WorkflowDefinition toSave =
-            migrated != originalNode
-                ? JsonUtils.readValue(MAPPER.writeValueAsString(migrated), WorkflowDefinition.class)
-                : workflow;
-
-        // Always call createOrUpdate to trigger BPMN redeployment with new loopCardinality
-        repository.createOrUpdate(null, toSave, ADMIN_USER_NAME);
+        repository.createOrUpdate(null, workflow, ADMIN_USER_NAME);
         totalRedeployed++;
         LOG.debug("Redeployed workflow: {}", workflow.getFullyQualifiedName());
       } catch (Exception e) {
         LOG.error(
-            "Error migrating workflow '{}': {}",
+            "Error redeploying workflow '{}': {}",
             workflow.getFullyQualifiedName(),
             e.getMessage(),
             e);
