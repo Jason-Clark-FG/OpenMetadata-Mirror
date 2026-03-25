@@ -672,9 +672,11 @@ public class TopicRepository extends EntityRepository<Topic> {
               // TODO: The proper fix is to update EntityUtil.getSchemaField(Topic, ...) to
               // return paths under "messageSchema.schemaFields" so they naturally match.
               Set<String> saved = getPatchedFields();
-              Set<String> extended = new java.util.HashSet<>(saved != null ? saved : Set.of());
-              extended.add("schemaFields");
-              setPatchedFields(extended);
+              if (saved != null) {
+                Set<String> extended = new java.util.HashSet<>(saved);
+                extended.add("schemaFields");
+                setPatchedFields(extended);
+              }
               try {
                 updateSchemaFields(
                     "messageSchema.schemaFields",

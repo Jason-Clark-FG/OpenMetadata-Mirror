@@ -211,4 +211,31 @@ class TopicUpdaterPatchTest {
         updater.fieldsChanged(),
         "Adding schema fields to a topic without messageSchema must be detected");
   }
+
+  @Test
+  void put_schemaFieldDescription_isDetectedWhenPatchedFieldsNull() {
+    // PUT operations have patchedFields=null, meaning "compare everything".
+    // The fix must not replace null with {"schemaFields"} as that would
+    // re-enable shouldCompare filtering and break PUT.
+    Topic original = createTopicWithNestedSchema();
+    Topic updated = createTopicWithNestedSchema();
+
+    updated
+        .getMessageSchema()
+        .getSchemaFields()
+        .get(1)
+        .getChildren()
+        .get(1)
+        .withDescription("PUT description");
+
+    TopicRepository.TopicUpdater updater = createUpdater(original, updated);
+    updater.setPatchedFields(null); // null = PUT, compare everything
+    updater.changeDescription = new ChangeDescription();
+
+    updater.entitySpecificUpdate(false);
+
+    assertTrue(
+        updater.fieldsChanged(),
+        "PUT with patchedFields=null must detect schema field changes without filtering");
+  }
 }
