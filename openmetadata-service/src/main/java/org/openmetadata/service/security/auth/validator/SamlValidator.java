@@ -318,18 +318,14 @@ public class SamlValidator {
       } else if (responseCode >= 200 && responseCode < 400) {
         // 200 or 302 means the IdP accepted our SAML request
         return null; // Success - SSO Login URL validated
-      } else if (responseCode >= 400 && responseCode < 500) {
-        // 400-499 could mean wrong URL or IdP rejecting the request
-        // Read a bit of the response to check for specific errors
-        String responseSnippet = readResponseSnippet(conn);
-        if (responseSnippet.toLowerCase().contains("saml")
-            || responseSnippet.toLowerCase().contains("invalid")) {
-          // Warning case - treat as success
-          LOG.warn(
-              "SSO URL responded with client error (HTTP {}). This might be due to the test SAML request format.",
-              responseCode);
-          return null;
-        }
+      } else if (responseCode == 400) {
+        // HTTP 400 from a SAML IdP is expected behavior — IdPs reject unsigned or malformed
+        // SAML requests with 400, which simply means the endpoint is reachable and responding.
+        LOG.debug(
+            "SSO URL responded with HTTP 400. This is expected for unsigned test SAML requests.");
+        return null;
+      } else if (responseCode > 400 && responseCode < 500) {
+        // Other 4xx errors (401, 403, 404, 405, etc.) indicate a URL or config problem
         return ValidationErrorBuilder.createFieldError(
             ValidationErrorBuilder.FieldPaths.SAML_IDP_SSO_URL,
             "SSO URL returned error (HTTP "
