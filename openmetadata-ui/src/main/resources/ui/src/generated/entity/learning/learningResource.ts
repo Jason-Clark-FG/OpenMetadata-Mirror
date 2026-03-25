@@ -253,6 +253,7 @@ export interface ResourceSource {
  * Lifecycle state for controllable publishing.
  */
 export enum Status {
+    Active = "Active",
     Deprecated = "Deprecated",
     Draft = "Draft",
 }

@@ -152,6 +152,7 @@ export interface ResourceSource {
 }
 
 export enum Status {
+    Active = "Active",
     Deprecated = "Deprecated",
     Draft = "Draft",
 }
