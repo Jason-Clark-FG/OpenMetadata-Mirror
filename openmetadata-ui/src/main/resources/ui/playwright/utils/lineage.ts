@@ -893,9 +893,8 @@ export const updateLineageConfigFromModal = async (
     .getByTestId('field-downstream')
     .fill(config.downstreamDepth.toString());
 
-  const saveRes = page.waitForResponse('/api/v1/lineage/getLineage?**');
   await page.getByText('OK').click();
-  await saveRes;
+  await page.getByRole('dialog').waitFor({ state: 'hidden' });
 };
 
 export const verifyPlatformLineageForEntity = async (
