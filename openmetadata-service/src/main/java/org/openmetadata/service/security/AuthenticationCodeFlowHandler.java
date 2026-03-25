@@ -631,8 +631,12 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
     if (credentials.getRefreshToken() != null) {
       LOG.trace("Credentials found in session with refresh token: {}", session.getId());
-      renewOidcCredentials(session, credentials);
-      return Optional.of(credentials);
+      try {
+        renewOidcCredentials(session, credentials);
+        return Optional.of(credentials);
+      } catch (Exception e) {
+        LOG.warn("Failed to renew credentials for session {}: {}", session.getId(), e.getMessage());
+      }
     }
 
     // No refresh token available (e.g., Azure Workload Identity Federation flows that do not
@@ -643,7 +647,8 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     try {
       if (credentials.getIdToken() != null) {
         Date expirationTime = credentials.getIdToken().getJWTClaimsSet().getExpirationTime();
-        if (expirationTime != null && expirationTime.after(new Date())) {
+        Date nowWithSkew = new Date(System.currentTimeMillis() - 30_000);
+        if (expirationTime != null && expirationTime.after(nowWithSkew)) {
           LOG.debug("idToken is still valid for session {}", session.getId());
           return Optional.of(credentials);
         }
