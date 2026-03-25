@@ -81,15 +81,11 @@ test.describe(
         await expect(
           adminPage.getByTestId('add-data-product-btn')
         ).toBeVisible();
-        await expect(
-          adminPage.getByTestId('add-domain-btn')
-        ).toBeVisible();
+        await expect(adminPage.getByTestId('add-domain-btn')).toBeVisible();
       });
     });
 
-    test('Data consumer does NOT see add buttons', async ({
-      consumerPage,
-    }) => {
+    test('Data consumer does NOT see add buttons', async ({ consumerPage }) => {
       test.slow();
 
       await test.step('Navigate to marketplace as consumer', async () => {
@@ -106,23 +102,20 @@ test.describe(
         ).not.toBeVisible();
       });
 
-      await test.step(
-        'Verify consumer can still see widgets and greeting',
-        async () => {
-          await expect(
-            consumerPage.getByTestId('marketplace-dp-widget')
-          ).toBeVisible();
-          await expect(
-            consumerPage.getByTestId('marketplace-domains-widget')
-          ).toBeVisible();
-          await expect(
-            consumerPage.getByTestId('marketplace-greeting')
-          ).toBeVisible();
-          await expect(
-            consumerPage.getByTestId('marketplace-search-bar')
-          ).toBeVisible();
-        }
-      );
+      await test.step('Verify consumer can still see widgets and greeting', async () => {
+        await expect(
+          consumerPage.getByTestId('marketplace-dp-widget')
+        ).toBeVisible();
+        await expect(
+          consumerPage.getByTestId('marketplace-domains-widget')
+        ).toBeVisible();
+        await expect(
+          consumerPage.getByTestId('marketplace-greeting')
+        ).toBeVisible();
+        await expect(
+          consumerPage.getByTestId('marketplace-search-bar')
+        ).toBeVisible();
+      });
     });
 
     test('Data consumer can search and view results', async ({
@@ -138,22 +131,17 @@ test.describe(
       await test.step('Search and verify results appear', async () => {
         await searchMarketplace(consumerPage, dp.data.displayName);
         await expect(
-          consumerPage.getByTestId(
-            `search-result-dp-${dp.responseData.id}`
-          )
+          consumerPage.getByTestId(`search-result-dp-${dp.responseData.id}`)
         ).toBeVisible();
       });
 
-      await test.step(
-        'Click result and verify navigation',
-        async () => {
-          const resultItem = consumerPage.getByTestId(
-            `search-result-dp-${dp.responseData.id}`
-          );
-          await resultItem.dispatchEvent('click');
-          await consumerPage.waitForURL('**/data-marketplace/data-products/**');
-        }
-      );
+      await test.step('Click result and verify navigation', async () => {
+        const resultItem = consumerPage.getByTestId(
+          `search-result-dp-${dp.responseData.id}`
+        );
+        await resultItem.dispatchEvent('click');
+        await consumerPage.waitForURL('**/data-marketplace/data-products/**');
+      });
     });
   }
 );

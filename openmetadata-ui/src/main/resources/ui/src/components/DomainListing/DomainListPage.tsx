@@ -127,11 +127,11 @@ const DomainListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-          {
-            name: t('label.data-marketplace'),
-            url: '/data-marketplace',
-          },
-        ]
+            {
+              name: t('label.data-marketplace'),
+              url: '/data-marketplace',
+            },
+          ]
         : []),
       { name: t('label.domain-plural'), url: domainBasePath },
     ],
@@ -286,10 +286,10 @@ const DomainListPage = () => {
       sx={
         isTreeView
           ? {
-            display: 'flex',
-            flexDirection: 'column',
-            height: 'calc(100vh - 80px)',
-          }
+              display: 'flex',
+              flexDirection: 'column',
+              height: 'calc(100vh - 80px)',
+            }
           : {}
       }>
       {breadcrumbs}

@@ -28,9 +28,7 @@ import { Document } from '../../../../generated/entity/docStore/document';
 import { Page } from '../../../../generated/system/ui/page';
 import { PageType } from '../../../../generated/system/ui/uiCustomization';
 import { useGridLayoutDirection } from '../../../../hooks/useGridLayoutDirection';
-import {
-  WidgetConfig,
-} from '../../../../pages/CustomizablePage/CustomizablePage.interface';
+import { WidgetConfig } from '../../../../pages/CustomizablePage/CustomizablePage.interface';
 import { useCustomizeStore } from '../../../../pages/CustomizablePage/CustomizeStore';
 import '../../../../pages/MyDataPage/my-data.less';
 import {
@@ -210,9 +208,8 @@ function CustomizeMyData({
   };
 
   const handleReset = useCallback(async () => {
-    const newMainPanelLayout = getLandingPageLayoutWithEmptyWidgetPlaceholder(
-      defaultLayout
-    );
+    const newMainPanelLayout =
+      getLandingPageLayoutWithEmptyWidgetPlaceholder(defaultLayout);
     setLayout(newMainPanelLayout);
     await handleBackgroundColorUpdate();
     await onSaveLayout();

@@ -11,7 +11,10 @@
  *  limitations under the License.
  */
 
-import { CommonWidgetType, GridSizes } from '../../constants/CustomizeWidgets.constants';
+import {
+  CommonWidgetType,
+  GridSizes,
+} from '../../constants/CustomizeWidgets.constants';
 import { DetailPageWidgetKeys } from '../../enums/CustomizeDetailPage.enum';
 import { EntityTabs } from '../../enums/entity.enum';
 import { DataProduct } from '../../generated/entity/domains/dataProduct';
@@ -65,9 +68,7 @@ class DataMarketplaceClassBase {
         static: false,
       },
       {
-        h: this.defaultWidgetHeight[
-          DetailPageWidgetKeys.MARKETPLACE_DOMAINS
-        ],
+        h: this.defaultWidgetHeight[DetailPageWidgetKeys.MARKETPLACE_DOMAINS],
         i: DetailPageWidgetKeys.MARKETPLACE_DOMAINS,
         w: 8,
         x: 0,

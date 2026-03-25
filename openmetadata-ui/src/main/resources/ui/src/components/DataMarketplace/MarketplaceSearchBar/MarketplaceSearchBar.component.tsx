@@ -11,7 +11,11 @@
  *  limitations under the License.
  */
 
-import { Input, SelectPopover, Typography } from '@openmetadata/ui-core-components';
+import {
+  Input,
+  SelectPopover,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { SearchLg } from '@untitledui/icons';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';

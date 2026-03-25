@@ -376,7 +376,7 @@ const MarketplaceNavBar = () => {
           background: 'transparent',
           marginBottom: 'calc(-1 * var(--ant-navbar-height))',
           position: 'relative' as const,
-          zIndex: 10
+          zIndex: 10,
         }}>
         <div className="navbar-container">
           <div className="flex-center gap-2">

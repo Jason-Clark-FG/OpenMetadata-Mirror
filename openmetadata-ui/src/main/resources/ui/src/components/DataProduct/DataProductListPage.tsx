@@ -125,11 +125,11 @@ const DataProductListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-          {
-            name: t('label.data-marketplace'),
-            url: '/data-marketplace',
-          },
-        ]
+            {
+              name: t('label.data-marketplace'),
+              url: '/data-marketplace',
+            },
+          ]
         : []),
       { name: t('label.data-product-plural'), url: dataProductBasePath },
     ],

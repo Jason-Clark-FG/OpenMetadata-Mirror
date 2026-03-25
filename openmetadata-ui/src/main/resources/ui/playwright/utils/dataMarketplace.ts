@@ -40,15 +40,10 @@ export const searchMarketplace = async (page: Page, term: string) => {
 
 export const closeSearchPopover = async (page: Page) => {
   await page.getByTestId('marketplace-greeting').click();
-  await expect(
-    page.locator('.marketplace-search-results')
-  ).not.toBeVisible();
+  await expect(page.locator('.marketplace-search-results')).not.toBeVisible();
 };
 
-export const verifyGreetingBanner = async (
-  page: Page,
-  displayName: string
-) => {
+export const verifyGreetingBanner = async (page: Page, displayName: string) => {
   await expect(page.getByTestId('marketplace-greeting')).toBeVisible();
   await expect(page.getByTestId('greeting-text')).toContainText(displayName);
 };

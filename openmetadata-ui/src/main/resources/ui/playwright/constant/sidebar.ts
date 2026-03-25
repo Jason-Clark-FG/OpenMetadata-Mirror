@@ -53,9 +53,18 @@ export const SIDEBAR_LIST_ITEMS = {
   ],
   [SidebarItem.TAGS]: [SidebarItem.GOVERNANCE, SidebarItem.TAGS],
   [SidebarItem.METRICS]: [SidebarItem.GOVERNANCE, SidebarItem.METRICS],
-  [SidebarItem.DATA_MARKETPLACE]: [SidebarItem.DATA_MARKETPLACE_SECTION, SidebarItem.DATA_MARKETPLACE],
-  [SidebarItem.DOMAIN]: [SidebarItem.DATA_MARKETPLACE_SECTION, SidebarItem.DOMAIN],
-  [SidebarItem.DATA_PRODUCT]: [SidebarItem.DATA_MARKETPLACE_SECTION, SidebarItem.DATA_PRODUCT],
+  [SidebarItem.DATA_MARKETPLACE]: [
+    SidebarItem.DATA_MARKETPLACE_SECTION,
+    SidebarItem.DATA_MARKETPLACE,
+  ],
+  [SidebarItem.DOMAIN]: [
+    SidebarItem.DATA_MARKETPLACE_SECTION,
+    SidebarItem.DOMAIN,
+  ],
+  [SidebarItem.DATA_PRODUCT]: [
+    SidebarItem.DATA_MARKETPLACE_SECTION,
+    SidebarItem.DATA_PRODUCT,
+  ],
   [SidebarItem.COLUMN_BULK_OPERATIONS]: [
     SidebarItem.GOVERNANCE,
     SidebarItem.COLUMN_BULK_OPERATIONS,

@@ -159,8 +159,9 @@ const AnnouncementsWidgetV2 = ({ isEditView }: WidgetCommonProps) => {
             onClick={() => setShowAll((prev) => !prev)}>
             {showAll ? t('label.show-less') : t('label.view-all')}
             <ChevronDown
-              className={`tw:size-4 tw:transition-transform ${showAll ? 'tw:rotate-180' : ''
-                }`}
+              className={`tw:size-4 tw:transition-transform ${
+                showAll ? 'tw:rotate-180' : ''
+              }`}
             />
           </button>
         )}

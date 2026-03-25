@@ -145,32 +145,32 @@ const ColumnGridTruncatingTagBadges: React.FC<
   renderBadge,
   tags,
 }) => {
-    if (tags.length === 0) {
-      return null;
-    }
+  if (tags.length === 0) {
+    return null;
+  }
 
-    const limit = Math.max(0, maxVisible);
-    const visibleTags = tags.slice(0, limit);
-    const remaining = tags.length - visibleTags.length;
+  const limit = Math.max(0, maxVisible);
+  const visibleTags = tags.slice(0, limit);
+  const remaining = tags.length - visibleTags.length;
 
-    return (
-      <div className="tw:flex tw:items-center tw:gap-1.5">
-        {visibleTags.map((tag: TagLabel, index: number) => {
-          const fullLabel = tag.name || tag.tagFQN.split('.').pop() || '';
+  return (
+    <div className="tw:flex tw:items-center tw:gap-1.5">
+      {visibleTags.map((tag: TagLabel, index: number) => {
+        const fullLabel = tag.name || tag.tagFQN.split('.').pop() || '';
 
-          return (
-            <div
-              className="tw:min-w-0 tw:flex-1 tw:basis-0 tw:overflow-hidden"
-              key={tag.tagFQN}
-              title={fullLabel}>
-              {renderBadge(tag, index)}
-            </div>
-          );
-        })}
-        {remaining > 0 && <Typography as="span">+{remaining}</Typography>}
-      </div>
-    );
-  };
+        return (
+          <div
+            className="tw:min-w-0 tw:flex-1 tw:basis-0 tw:overflow-hidden"
+            key={tag.tagFQN}
+            title={fullLabel}>
+            {renderBadge(tag, index)}
+          </div>
+        );
+      })}
+      {remaining > 0 && <Typography as="span">+{remaining}</Typography>}
+    </div>
+  );
+};
 
 const hasEditedValues = (r: ColumnGridRowData): boolean =>
   some(EDITED_ROW_KEYS, (key) => !isUndefined(r[key]));
@@ -251,16 +251,16 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
   const activeJobIdRef = useRef<string | null>(null);
   const lastBulkUpdateCountRef = useRef<number>(0);
   const pendingHighlightRowIdsRef = useRef<Set<string>>(new Set());
-  const closeDrawerRef = useRef<() => void>(() => { });
-  const openDrawerRef = useRef<() => void>(() => { });
+  const closeDrawerRef = useRef<() => void>(() => {});
+  const openDrawerRef = useRef<() => void>(() => {});
   const scrollToRowIdRef = useRef<string | null>(null);
   const expandedRowsRef = useRef<Set<string>>(new Set());
   const expandedStructRowsRef = useRef<Set<string>>(new Set());
   const handleGroupSelectRef = useRef<
     (groupId: string, checked: boolean) => void
-  >(() => { });
+  >(() => {});
   const handleSelectRef = useRef<(id: string, checked: boolean) => void>(
-    () => { }
+    () => {}
   );
 
   // Helper function to build path from occurrence
@@ -1166,16 +1166,16 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
         const updated = prev.map((row: ColumnGridRowData) =>
           row.id === rowId
             ? {
-              ...row,
-              [fieldName]: value,
-              ...(field === 'description'
-                ? {
-                  editedDescriptionPreview: getDescriptionPreview(
-                    value as string
-                  ),
-                }
-                : {}),
-            }
+                ...row,
+                [fieldName]: value,
+                ...(field === 'description'
+                  ? {
+                      editedDescriptionPreview: getDescriptionPreview(
+                        value as string
+                      ),
+                    }
+                  : {}),
+              }
             : row
         );
 
@@ -1713,11 +1713,11 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
   const hasActiveFiltersOrSearch = Boolean(
     columnGridListing.urlState?.searchQuery?.trim() ||
-    (columnGridListing.urlState?.filters &&
-      Object.values(columnGridListing.urlState.filters).some(
-        (filterValues: unknown) =>
-          Array.isArray(filterValues) && filterValues.length > 0
-      ))
+      (columnGridListing.urlState?.filters &&
+        Object.values(columnGridListing.urlState.filters).some(
+          (filterValues: unknown) =>
+            Array.isArray(filterValues) && filterValues.length > 0
+        ))
   );
 
   const tableColumns = useMemo(
@@ -1955,8 +1955,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
 
     return Boolean(
       bulkUpdateProgress &&
-      bulkUpdateProgress.total > 0 &&
-      bulkUpdateProgress.processed < bulkUpdateProgress.total
+        bulkUpdateProgress.total > 0 &&
+        bulkUpdateProgress.processed < bulkUpdateProgress.total
     );
   }, [bulkUpdateProgress, isUpdating]);
 
@@ -2046,8 +2046,8 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
               selectedCount === 1
                 ? firstRow?.columnName
                 : `${selectedCount} ${t('label.column-lowercase-plural')} ${t(
-                  'label.selected-lowercase'
-                )}`
+                    'label.selected-lowercase'
+                  )}`
             }
           />
         </div>
@@ -2257,8 +2257,9 @@ const ColumnGrid: React.FC<ColumnGridProps> = ({
     () => (
       <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
         <Typography as="h3" data-testid="form-heading">
-          {`${t('label.edit-entity', { entity: t('label.column') })} ${selectedCount > 0 ? String(selectedCount).padStart(2, '0') : ''
-            }`}
+          {`${t('label.edit-entity', { entity: t('label.column') })} ${
+            selectedCount > 0 ? String(selectedCount).padStart(2, '0') : ''
+          }`}
         </Typography>
         {viewAssetHeaderAction}
       </div>
