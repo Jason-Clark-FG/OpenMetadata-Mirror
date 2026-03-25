@@ -18,7 +18,7 @@ import { CloseButton } from "@/components/base/buttons/close-button";
 import { cx } from "@/utils/cx";
 
 interface ModalOverlayProps
-  extends AriaModalOverlayProps, RefAttributes<HTMLDivElement> {}
+  extends AriaModalOverlayProps, RefAttributes<HTMLDivElement> { }
 
 export const ModalOverlay = (props: ModalOverlayProps) => {
   return (
@@ -40,7 +40,7 @@ export const ModalOverlay = (props: ModalOverlayProps) => {
 ModalOverlay.displayName = "ModalOverlay";
 
 interface ModalProps
-  extends AriaModalOverlayProps, RefAttributes<HTMLDivElement> {}
+  extends AriaModalOverlayProps, RefAttributes<HTMLDivElement> { }
 
 export const Modal = (props: ModalProps) => (
   <AriaModal
@@ -49,9 +49,9 @@ export const Modal = (props: ModalProps) => (
       cx(
         "tw:inset-y-0 tw:right-0 tw:h-full tw:w-full tw:max-w-100 tw:shadow-xl tw:transition",
         state.isEntering &&
-          "tw:duration-300 tw:animate-in tw:slide-in-from-right",
+        "tw:duration-300 tw:animate-in tw:slide-in-from-right",
         state.isExiting &&
-          "tw:duration-500 tw:animate-out tw:slide-out-to-right",
+        "tw:duration-500 tw:animate-out tw:slide-out-to-right",
         typeof props.className === "function"
           ? props.className(state)
           : props.className,
@@ -61,7 +61,7 @@ export const Modal = (props: ModalProps) => (
 );
 Modal.displayName = "Modal";
 
-interface DialogProps extends AriaDialogProps, RefAttributes<HTMLElement> {}
+interface DialogProps extends AriaDialogProps, RefAttributes<HTMLElement> { }
 
 export const Dialog = (props: DialogProps) => (
   <AriaDialog
@@ -77,11 +77,11 @@ Dialog.displayName = "Dialog";
 
 interface SlideoutMenuProps
   extends
-    Omit<AriaModalOverlayProps, "children">,
-    RefAttributes<HTMLDivElement> {
+  Omit<AriaModalOverlayProps, "children">,
+  RefAttributes<HTMLDivElement> {
   children:
-    | ReactNode
-    | ((children: AriaModalRenderProps & { close: () => void }) => ReactNode);
+  | ReactNode
+  | ((children: AriaModalRenderProps & { close: () => void }) => ReactNode);
   dialogClassName?: string;
   width?: number | string;
 }

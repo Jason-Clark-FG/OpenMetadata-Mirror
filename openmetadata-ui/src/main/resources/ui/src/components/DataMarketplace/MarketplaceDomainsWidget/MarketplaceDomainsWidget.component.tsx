@@ -91,6 +91,7 @@ const MarketplaceDomainsWidget = ({
     title: t('label.add-entity', { entity: t('label.domain') }),
     width: 670,
     closeOnEscape: false,
+    className: 'tw:z-[20]',
     onCancel: () => {
       form.resetFields();
     },

@@ -98,6 +98,7 @@ const MarketplaceDataProductsWidget = ({
   const { formDrawer, openDrawer, closeDrawer } = useFormDrawerWithRef({
     title: t('label.add-entity', { entity: t('label.data-product') }),
     width: 670,
+    className: 'tw:z-[20]',
     closeOnEscape: false,
     onCancel: () => {
       form.resetFields();
