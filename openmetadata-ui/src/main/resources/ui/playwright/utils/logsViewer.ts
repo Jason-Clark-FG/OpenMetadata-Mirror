@@ -13,15 +13,12 @@
 
 import { expect, type Page } from '@playwright/test';
 import {
-  getLogsViewerPipelineQueuedTimeoutMessage,
   LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS,
-  LOGS_VIEWER_PIPELINE_STATUS_POLL_MS,
+  LOGS_VIEWER_PIPELINE_STATUS_RETRY_INTERVAL_MS,
 } from '../constant/logsViewer';
 
 export async function waitForFirstPipelineStatusNotQueued(page: Page) {
-  const deadline = Date.now() + LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS;
-
-  while (true) {
+  await expect(async () => {
     const row = page
       .getByRole('row')
       .filter({ has: page.getByTestId('logs-button') })
@@ -29,20 +26,10 @@ export async function waitForFirstPipelineStatusNotQueued(page: Page) {
     await expect(row).toBeVisible();
     const statusBadge = row.getByTestId('pipeline-status').last();
     const text = ((await statusBadge.textContent()) ?? '').trim();
-
-    if (text && !/^queued$/i.test(text)) {
-      return;
-    }
-
-    if (Date.now() >= deadline) {
-      throw new Error(
-        getLogsViewerPipelineQueuedTimeoutMessage(
-          LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS,
-          LOGS_VIEWER_PIPELINE_STATUS_POLL_MS
-        )
-      );
-    }
-
-    await page.waitForTimeout(LOGS_VIEWER_PIPELINE_STATUS_POLL_MS);
-  }
+    expect(text.length).toBeGreaterThan(0);
+    expect(text).not.toMatch(/^queued$/i);
+  }).toPass({
+    timeout: LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS,
+    intervals: [LOGS_VIEWER_PIPELINE_STATUS_RETRY_INTERVAL_MS],
+  });
 }

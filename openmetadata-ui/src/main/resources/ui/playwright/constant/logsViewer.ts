@@ -11,12 +11,7 @@
  *  limitations under the License.
  */
 
-export const LOGS_VIEWER_PIPELINE_STATUS_POLL_MS = 30_000;
+/** Delay between retries for `expect().toPass()` while waiting on pipeline status. */
+export const LOGS_VIEWER_PIPELINE_STATUS_RETRY_INTERVAL_MS = 30_000;
 
 export const LOGS_VIEWER_PIPELINE_STATUS_MAX_WAIT_MS = 5 * 60_000;
-
-export const getLogsViewerPipelineQueuedTimeoutMessage = (
-  maxWaitMs: number,
-  pollMs: number
-) =>
-  `Pipeline status remained Queued after ${maxWaitMs / 60_000} minutes of polling every ${pollMs / 1000} seconds.`;
