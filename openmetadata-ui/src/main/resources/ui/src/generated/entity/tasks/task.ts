@@ -21,6 +21,13 @@ export interface Task {
      */
     about?: EntityReference;
     /**
+     * EntityLink string providing hierarchical entity identity for this task. Format:
+     * <#E::entityType::fqn[::fieldName[::arrayFieldName]]>. For incident tasks, encodes
+     * testCase FQN and incident stateId. Used by lifecycle handlers for zero-resolution data
+     * extraction.
+     */
+    aboutEntityLink?: string;
+    /**
      * Hash of the target entity's fully qualified name for efficient querying. Computed from
      * about.fullyQualifiedName using FullyQualifiedName.buildHash().
      */
