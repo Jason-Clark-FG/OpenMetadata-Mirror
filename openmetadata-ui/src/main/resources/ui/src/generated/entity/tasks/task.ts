@@ -51,6 +51,11 @@ export interface Task {
      */
     createdBy: EntityReference;
     /**
+     * UUID of the user who created this task. Stored in JSON for efficient querying via
+     * generated column index.
+     */
+    createdById?: string;
+    /**
      * When true indicates the entity has been soft deleted.
      */
     deleted?: boolean;
@@ -1041,6 +1046,7 @@ export enum TaskType {
     IncidentResolution = "IncidentResolution",
     OwnershipUpdate = "OwnershipUpdate",
     PipelineReview = "PipelineReview",
+    RequestApproval = "RequestApproval",
     Suggestion = "Suggestion",
     TagUpdate = "TagUpdate",
     TestCaseResolution = "TestCaseResolution",
