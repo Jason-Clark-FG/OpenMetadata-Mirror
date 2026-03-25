@@ -197,7 +197,6 @@ export interface EntityReference {
  * Enum defining the possible Pipeline State.
  */
 export enum PipelineState {
-    Active = "Active",
     Inactive = "Inactive",
 }
 

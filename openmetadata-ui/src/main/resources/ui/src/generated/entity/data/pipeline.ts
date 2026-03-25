@@ -507,7 +507,6 @@ export interface EntityReference {
  * catalog.
  */
 export enum EntityStatus {
-    Active = "Active",
     Approved = "Approved",
     Archived = "Archived",
     Deprecated = "Deprecated",
@@ -837,7 +836,6 @@ export enum PipelineServiceType {
  * Enum defining the possible Pipeline State.
  */
 export enum PipelineState {
-    Active = "Active",
     Inactive = "Inactive",
 }
 

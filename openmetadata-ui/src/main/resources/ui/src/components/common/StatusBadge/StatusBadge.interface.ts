@@ -25,7 +25,6 @@ export enum StatusType {
   Version = 'version',
   Acknowledged = 'acknowledged',
   Unprocessed = 'unprocessed',
-  Active = 'active',
   Archived = 'archived',
 }
 

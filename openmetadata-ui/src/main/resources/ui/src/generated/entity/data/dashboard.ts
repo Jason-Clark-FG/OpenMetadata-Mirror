@@ -494,7 +494,6 @@ export enum DashboardType {
  * catalog.
  */
 export enum EntityStatus {
-    Active = "Active",
     Approved = "Approved",
     Archived = "Archived",
     Deprecated = "Deprecated",
