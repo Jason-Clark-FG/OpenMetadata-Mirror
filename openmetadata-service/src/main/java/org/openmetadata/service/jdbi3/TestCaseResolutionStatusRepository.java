@@ -247,6 +247,17 @@ public class TestCaseResolutionStatusRepository
     LOG.debug(
         "openOrAssignTask called with status: {}",
         incidentStatus.getTestCaseResolutionStatusType());
+
+    // Guard: skip if a workflow-managed Task already exists for this incident
+    Task existingWorkflowTask = getIncidentTask(incidentStatus);
+    if (existingWorkflowTask != null && existingWorkflowTask.getWorkflowInstanceId() != null) {
+      LOG.debug(
+          "[TCRS Guard] Workflow-managed Task {} exists for stateId={}, skipping.",
+          existingWorkflowTask.getId(),
+          incidentStatus.getStateId());
+      return;
+    }
+
     switch (incidentStatus.getTestCaseResolutionStatusType()) {
       case Ack -> {
         // If the incident has been acknowledged, the task will be assigned to the user

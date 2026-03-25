@@ -16,11 +16,13 @@ package org.openmetadata.it.tests;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,22 +40,31 @@ import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.tests.TestCase;
+import org.openmetadata.schema.tests.type.TestCaseResolutionStatus;
+import org.openmetadata.schema.tests.type.TestCaseResolutionStatusTypes;
+import org.openmetadata.schema.tests.type.TestCaseStatus;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.sdk.fluent.builders.TestCaseBuilder;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
 
 /**
- * E2E integration test for the outbox-based ManualTask message delivery pipeline.
+ * E2E integration test for the outbox-based ManualTask message delivery pipeline and incident TCRS
+ * sync.
  *
  * <p>Verifies that task status changes (via PATCH) flow through the full pipeline: ChangeEvent →
  * WorkflowEventConsumer → task_workflow_outbox → TaskWorkflowOutboxDrainer → Flowable
  * messageEventReceived → ManualTask subprocess processes each status in order.
+ *
+ * <p>Also verifies the IncidentTcrsSyncHandler: when a workflow creates an incident Task with
+ * aboutEntityLink, status changes are synced to TCRS records (Task → TCRS Strangler Fig bridge).
  *
  * <p>Proof of delivery: workflow instance stage results show each status transition, and the
  * workflow instance reaches FINISHED status.
@@ -66,7 +77,7 @@ public class ManualTaskOutboxIT {
   private static final Duration PIPELINE_TIMEOUT = Duration.ofSeconds(120);
 
   @Test
-  void outboxDeliversStatusChangesInOrder(TestNamespace ns) {
+  void outboxDeliversStatusChangesInOrder_andSyncsTcrs(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
     String id = ns.shortPrefix();
@@ -74,13 +85,31 @@ public class ManualTaskOutboxIT {
 
     DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("sv" + id, ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sc" + id, ns, service);
+    Table table =
+        TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+
+    // Deploy workflow and wait for Flowable to confirm the process definition is ready.
+    // The ChangeEvent consumer processes events in offset order — if we trigger
+    // the test failure before Flowable has the signal start event registered,
+    // the testCase-entityUpdated signal fires but no process catches it.
+    // Create TestCase BEFORE deploying workflow — the testCase-entityCreated ChangeEvent
+    // will be consumed before the workflow exists, avoiding spurious triggers.
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name("tc" + id)
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
 
     WorkflowDefinition workflow = deployManualTaskWorkflow(client, workflowName);
     assertNotNull(workflow, "Workflow should be deployed");
+    waitForWorkflowDeployed(client, workflowName);
 
     try {
-      Table table =
-          TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+      // Trigger: fail the test → ChangeEventHandler creates a testCase-entityUpdated ChangeEvent
+      // (via getChangeEventForEntityTimeSeries which resolves TestCaseResult → parent TestCase).
+      createFailedTestResult(client, testCase);
 
       AtomicReference<Task> taskRef = new AtomicReference<>();
       await()
@@ -88,7 +117,7 @@ public class ManualTaskOutboxIT {
           .pollInterval(Duration.ofSeconds(2))
           .until(
               () -> {
-                Task found = findIncidentTaskForEntity(client, table);
+                Task found = findIncidentTaskForTestCase(client, testCase);
                 if (found != null && found.getWorkflowInstanceId() != null) {
                   taskRef.set(found);
                   return true;
@@ -102,13 +131,40 @@ public class ManualTaskOutboxIT {
       assertEquals(TaskCategory.Incident, task.getCategory());
       assertEquals(TaskEntityType.IncidentResolution, task.getType());
 
+      // Verify aboutEntityLink encodes testCase FQN + incident stateId
+      String aboutLink = task.getAboutEntityLink();
+      assertNotNull(aboutLink, "aboutEntityLink should be populated");
+      assertTrue(aboutLink.contains("testCase"), "Should reference testCase entity type");
+      assertTrue(aboutLink.contains("incidents"), "Should contain incidents field");
+      assertTrue(
+          aboutLink.contains(testCase.getFullyQualifiedName()), "Should contain the testCase FQN");
+
+      // Get stateId from TestCase for TCRS verification
+      TestCase updatedTc =
+          client.testCases().getByName(testCase.getFullyQualifiedName(), "incidentId");
+      UUID stateId = updatedTc.getIncidentId();
+      assertNotNull(stateId, "TestCase should have incidentId set from test failure");
+      assertTrue(aboutLink.contains(stateId.toString()), "Should contain the incident stateId");
+
       patchTaskStatus(client, task.getId().toString(), "InProgress");
+
+      // Verify TCRS(Ack) synced by handler (async — poll)
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () ->
+                  listTcrsForStateId(client, stateId).stream()
+                      .anyMatch(
+                          r ->
+                              r.getTestCaseResolutionStatusType()
+                                  == TestCaseResolutionStatusTypes.Ack));
+
       patchTaskStatus(client, task.getId().toString(), "Completed");
 
       String workflowInstanceId = task.getWorkflowInstanceId().toString();
 
       // Workflow reaching FINISHED proves the full outbox pipeline delivered the terminal status
-      // (InProgress delivery is implicit — workflow can't reach FINISHED without processing it)
       await()
           .atMost(PIPELINE_TIMEOUT)
           .pollInterval(Duration.ofSeconds(2))
@@ -126,9 +182,39 @@ public class ManualTaskOutboxIT {
       Task resolvedTask = client.tasks().get(task.getId().toString(), "resolution");
       assertNotNull(resolvedTask.getResolution(), "CloseTaskDelegate should have set resolution");
 
-      // Count how many times the ManualTask subprocess was entered.
-      // Each entry creates a new stage record via WorkflowInstanceStageListener.
-      // Expected: 3 entries (Open cycle, InProgress cycle, Completed cycle)
+      // Verify TCRS(Resolved) synced by handler
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () ->
+                  listTcrsForStateId(client, stateId).stream()
+                      .anyMatch(
+                          r ->
+                              r.getTestCaseResolutionStatusType()
+                                  == TestCaseResolutionStatusTypes.Resolved));
+
+      // Final TCRS verification: all expected records exist
+      List<TestCaseResolutionStatus> allRecords = listTcrsForStateId(client, stateId);
+      assertTrue(
+          allRecords.stream()
+              .anyMatch(
+                  r -> r.getTestCaseResolutionStatusType() == TestCaseResolutionStatusTypes.New),
+          "TCRS(New) should exist from initial test failure");
+      assertTrue(
+          allRecords.stream()
+              .anyMatch(
+                  r -> r.getTestCaseResolutionStatusType() == TestCaseResolutionStatusTypes.Ack),
+          "TCRS(Ack) should be synced from Task InProgress");
+      assertTrue(
+          allRecords.stream()
+              .anyMatch(
+                  r ->
+                      r.getTestCaseResolutionStatusType()
+                          == TestCaseResolutionStatusTypes.Resolved),
+          "TCRS(Resolved) should be synced from Task Completed");
+
+      // Count ManualTask subprocess entries
       List<Map<String, Object>> states =
           getWorkflowInstanceStates(client, workflowName, workflowInstanceId);
       long manualTaskEntries =
@@ -155,12 +241,12 @@ public class ManualTaskOutboxIT {
         {
           "name": "%s",
           "displayName": "Outbox E2E Test Workflow",
-          "description": "Tests outbox-based ManualTask delivery",
+          "description": "Tests outbox-based ManualTask delivery and TCRS sync",
           "trigger": {
             "type": "eventBasedEntity",
             "config": {
-              "events": ["Created"],
-              "entityTypes": ["table"]
+              "events": ["Updated"],
+              "entityTypes": ["testCase"]
             },
             "output": ["relatedEntity"]
           },
@@ -215,23 +301,73 @@ public class ManualTaskOutboxIT {
     return client.workflowDefinitions().create(request);
   }
 
-  private Task findIncidentTaskForEntity(OpenMetadataClient client, Table table) {
+  private void waitForWorkflowDeployed(OpenMetadataClient client, String workflowName) {
+    await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .until(
+            () -> {
+              try {
+                WorkflowDefinition wd =
+                    client.workflowDefinitions().getByName(workflowName, "deployed");
+                return Boolean.TRUE.equals(wd.getDeployed());
+              } catch (Exception e) {
+                return false;
+              }
+            });
+  }
+
+  private void createFailedTestResult(OpenMetadataClient client, TestCase testCase) {
+    org.openmetadata.schema.api.tests.CreateTestCaseResult failedResult =
+        new org.openmetadata.schema.api.tests.CreateTestCaseResult();
+    failedResult.setTimestamp(System.currentTimeMillis());
+    failedResult.setTestCaseStatus(TestCaseStatus.Failed);
+    failedResult.setResult("Test failed - triggering incident");
+    client.testCaseResults().create(testCase.getFullyQualifiedName(), failedResult);
+  }
+
+  private Task findIncidentTaskForTestCase(OpenMetadataClient client, TestCase testCase) {
     ListParams params =
         new ListParams()
             .addFilter("category", "Incident")
-            .addFilter("status", "Open")
-            .setFields("payload,about")
+            .setFields("payload,about,aboutEntityLink")
             .setLimit(100);
     ListResponse<Task> tasks = client.tasks().list(params);
 
     for (Task task : tasks.getData()) {
       if (task.getAbout() != null
           && task.getAbout().getFullyQualifiedName() != null
-          && task.getAbout().getFullyQualifiedName().equals(table.getFullyQualifiedName())) {
+          && task.getAbout().getFullyQualifiedName().equals(testCase.getFullyQualifiedName())) {
         return task;
       }
     }
     return null;
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<TestCaseResolutionStatus> listTcrsForStateId(
+      OpenMetadataClient client, UUID stateId) {
+    try {
+      String response =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.GET,
+                  "/v1/dataQuality/testCases/testCaseIncidentStatus/stateId/" + stateId,
+                  null,
+                  RequestOptions.builder().build());
+
+      Map<String, Object> result = JsonUtils.readValue(response, new TypeReference<>() {});
+      List<Object> data = (List<Object>) result.get("data");
+      if (data == null) {
+        return List.of();
+      }
+      return data.stream()
+          .map(d -> JsonUtils.convertValue(d, TestCaseResolutionStatus.class))
+          .toList();
+    } catch (Exception e) {
+      return List.of();
+    }
   }
 
   private void patchTaskStatus(OpenMetadataClient client, String taskId, String status) {

@@ -9,6 +9,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
@@ -53,6 +54,7 @@ public class SetupImpl {
         Entity.getEntityReferenceByName(Entity.USER, resolvedCreator, Include.NON_DELETED);
 
     List<EntityReference> assignees = resolveAssignees(entity, assigneesConfig);
+    String aboutEntityLink = buildAboutEntityLink(entity, entityLinkStr, taskType);
 
     Task task =
         new Task()
@@ -62,6 +64,7 @@ public class SetupImpl {
             .withStatus(TaskEntityStatus.Open)
             .withPriority(TaskPriority.Medium)
             .withAbout(aboutRef)
+            .withAboutEntityLink(aboutEntityLink)
             .withAssignees(assignees)
             .withCreatedBy(createdByRef)
             .withWorkflowInstanceId(workflowInstanceId)
@@ -82,6 +85,27 @@ public class SetupImpl {
         entity.getFullyQualifiedName());
 
     return task.getId();
+  }
+
+  private static String buildAboutEntityLink(
+      EntityInterface entity, String entityLinkStr, TaskEntityType taskType) {
+    switch (taskType) {
+      case TestCaseResolution, IncidentResolution -> {
+        if (entity instanceof TestCase testCase && testCase.getIncidentId() != null) {
+          return new MessageParser.EntityLink(
+                  "testCase",
+                  testCase.getFullyQualifiedName(),
+                  "incidents",
+                  testCase.getIncidentId().toString(),
+                  null)
+              .getLinkString();
+        }
+        return entityLinkStr;
+      }
+      default -> {
+        return entityLinkStr;
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")

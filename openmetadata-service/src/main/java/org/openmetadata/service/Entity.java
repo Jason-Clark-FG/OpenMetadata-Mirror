@@ -58,6 +58,7 @@ import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventDispatcher;
 import org.openmetadata.service.events.lifecycle.handlers.DomainSyncHandler;
+import org.openmetadata.service.events.lifecycle.handlers.IncidentTcrsSyncHandler;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.ChangeEventRepository;
@@ -392,18 +393,25 @@ public final class Entity {
           }
         }
       }
-      registerDomainSyncHandler();
+      registerLifecycleHandlers();
       initializedRepositories = true;
     }
   }
 
-  private static void registerDomainSyncHandler() {
+  private static void registerLifecycleHandlers() {
     try {
       DomainSyncHandler domainSyncHandler = new DomainSyncHandler();
       EntityLifecycleEventDispatcher.getInstance().registerHandler(domainSyncHandler);
       LOG.info("Successfully registered DomainSyncHandler for entity lifecycle events");
     } catch (Exception e) {
       LOG.error("Failed to register DomainSyncHandler", e);
+    }
+    try {
+      IncidentTcrsSyncHandler incidentTcrsSyncHandler = new IncidentTcrsSyncHandler();
+      EntityLifecycleEventDispatcher.getInstance().registerHandler(incidentTcrsSyncHandler);
+      LOG.info("Successfully registered IncidentTcrsSyncHandler for entity lifecycle events");
+    } catch (Exception e) {
+      LOG.error("Failed to register IncidentTcrsSyncHandler", e);
     }
   }
 
