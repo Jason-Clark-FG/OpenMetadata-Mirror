@@ -1,6 +1,7 @@
 package org.openmetadata.service.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 import java.util.HashMap;
@@ -112,6 +113,79 @@ class LineagePathPreserverTest {
   }
 
   @Test
+  void filterByColumnsDownstreamEdgesPreservesPath() {
+    // Same chain but with downstream edges instead of upstream
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(MID_TWO, node(MID_TWO));
+    nodes.put(LEAF, node(LEAF));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, null));
+    downstreamEdges.put("mid1-mid2", edge(MID_ONE, MID_TWO, null));
+    downstreamEdges.put("mid2-leaf", edge(MID_TWO, LEAF, leafColumn()));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "toColumn:ssn", ROOT);
+
+    assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), filtered.getNodes().keySet());
+  }
+
+  @Test
+  void filterByColumnsWithMetadataDownstreamPreservesPath() throws Exception {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(MID_TWO, node(MID_TWO));
+    nodes.put(LEAF, node(LEAF));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, null));
+    downstreamEdges.put("mid1-mid2", edge(MID_ONE, MID_TWO, null));
+    downstreamEdges.put("mid2-leaf", edge(MID_TWO, LEAF, leafColumn()));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    ColumnMetadataCache metadataCache = new ColumnMetadataCache();
+    metadataCache.loadColumnMetadata(
+        Set.of(LEAF + ".ssn"),
+        fqn ->
+            Map.of(
+                "fullyQualifiedName",
+                LEAF,
+                "columns",
+                List.of(
+                    Map.of("name", "ssn", "tags", List.of(Map.of("tagFQN", "PII.Sensitive"))))));
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumnsWithMetadata(
+            result, "tag:Sensitive", ROOT, metadataCache);
+
+    assertEquals(Set.of(ROOT, MID_ONE, MID_TWO, LEAF), filtered.getNodes().keySet());
+  }
+
+  @Test
+  void filterByColumnsReturnsNullForNullResult() {
+    assertNull(LineagePathPreserver.filterByColumns(null, "toColumn:ssn", ROOT));
+  }
+
+  @Test
+  void filterByColumnsWithMetadataReturnsNullForNullResult() {
+    assertNull(
+        LineagePathPreserver.filterByColumnsWithMetadata(
+            null, "tag:PII", ROOT, new ColumnMetadataCache()));
+  }
+
+  @Test
   void filterByColumnsWithMetadataReturnsOriginalResultForBlankFilters() {
     SearchLineageResult result = lineageResultWithChain();
 
@@ -119,6 +193,112 @@ class LineagePathPreserverTest {
         result,
         LineagePathPreserver.filterByColumnsWithMetadata(
             result, " ", ROOT, new ColumnMetadataCache()));
+  }
+
+  @Test
+  void filterByColumnsWithDownstreamOnlyEdgesPreservesMatchingNodes() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(MID_ONE, node(MID_ONE));
+    nodes.put(LEAF, node(LEAF));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("root-mid1", edge(ROOT, MID_ONE, null));
+    downstreamEdges.put(
+        "mid1-leaf",
+        edge(
+            MID_ONE,
+            LEAF,
+            new ColumnLineage()
+                .withFromColumns(List.of(MID_ONE + ".col_a"))
+                .withToColumn(LEAF + ".col_a")));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "columnName:col_a", ROOT);
+
+    assertEquals(Set.of(ROOT, MID_ONE, LEAF), filtered.getNodes().keySet());
+  }
+
+  @Test
+  void filterByColumnsWithMetadataDownstreamEdgesPreservesMatchingNodes() throws Exception {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put(LEAF, node(LEAF));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put(
+        "root-leaf",
+        edge(
+            ROOT,
+            LEAF,
+            new ColumnLineage()
+                .withFromColumns(List.of(ROOT + ".email"))
+                .withToColumn(LEAF + ".email")));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    ColumnMetadataCache metadataCache = new ColumnMetadataCache();
+    metadataCache.loadColumnMetadata(
+        Set.of(ROOT + ".email", LEAF + ".email"),
+        fqn ->
+            Map.of(
+                "fullyQualifiedName",
+                fqn,
+                "columns",
+                List.of(Map.of("name", "email", "tags", List.of(Map.of("tagFQN", "PII.Email"))))));
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumnsWithMetadata(result, "tag:PII", ROOT, metadataCache);
+
+    assertEquals(Set.of(ROOT, LEAF), filtered.getNodes().keySet());
+  }
+
+  @Test
+  void filterByColumnsHandlesEdgesWithNullEntities() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+
+    EsLineageData edgeWithNullFrom = new EsLineageData();
+    edgeWithNullFrom.setFromEntity(null);
+    edgeWithNullFrom.setToEntity(
+        new RelationshipRef().withId(UUID.randomUUID()).withFullyQualifiedName(ROOT));
+    edgeWithNullFrom.setColumns(
+        List.of(
+            new ColumnLineage()
+                .withFromColumns(List.of("unknown.col"))
+                .withToColumn(ROOT + ".col")));
+
+    EsLineageData edgeWithNullTo = new EsLineageData();
+    edgeWithNullTo.setFromEntity(
+        new RelationshipRef().withId(UUID.randomUUID()).withFullyQualifiedName(ROOT));
+    edgeWithNullTo.setToEntity(null);
+    edgeWithNullTo.setColumns(
+        List.of(
+            new ColumnLineage()
+                .withFromColumns(List.of(ROOT + ".col"))
+                .withToColumn("unknown.col")));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("e1", edgeWithNullFrom);
+    downstreamEdges.put("e2", edgeWithNullTo);
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "columnName:col", ROOT);
+
+    assertEquals(Set.of(ROOT), filtered.getNodes().keySet());
   }
 
   private SearchLineageResult lineageResultWithChain() {

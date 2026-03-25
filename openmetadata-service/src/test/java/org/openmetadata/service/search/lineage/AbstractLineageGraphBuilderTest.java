@@ -337,6 +337,231 @@ class AbstractLineageGraphBuilderTest {
     return edgeData;
   }
 
+  // ── applyInMemoryFiltersWithPathPreservationForEntityCount ──
+
+  @Test
+  void inMemoryFilter_nullResult_returnsNull() {
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest().withFqn(ROOT_FQN).withFrom(0).withSize(50);
+    assertNull(builder.applyInMemoryFiltersWithPathPreservationForEntityCount(null, req));
+  }
+
+  @Test
+  void inMemoryFilter_nullRequest_returnsResult() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT_FQN, new NodeInformation().withNodeDepth(0));
+    SearchLineageResult result = resultWithNodes(nodes);
+    assertNotNull(builder.applyInMemoryFiltersWithPathPreservationForEntityCount(result, null));
+  }
+
+  @Test
+  void inMemoryFilter_emptyQueryFilter_returnsUnfiltered() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT_FQN, new NodeInformation().withNodeDepth(0));
+    nodes.put("svc.db.schema.t1", new NodeInformation().withNodeDepth(1));
+    SearchLineageResult result = resultWithNodes(nodes);
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest().withFqn(ROOT_FQN).withFrom(0).withSize(50);
+    SearchLineageResult out =
+        builder.applyInMemoryFiltersWithPathPreservationForEntityCount(result, req);
+    assertEquals(2, out.getNodes().size());
+  }
+
+  @Test
+  void inMemoryFilter_withFilter_keepsOnlyMatchingNodesAndRoot() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT_FQN, nodeWithEntity(ROOT_FQN, Map.of("fullyQualifiedName", ROOT_FQN)));
+    nodes.put(
+        "svc.db.schema.t1",
+        nodeWithEntity(
+            "svc.db.schema.t1",
+            Map.of(
+                "fullyQualifiedName", "svc.db.schema.t1", "tier", Map.of("tagFQN", "Tier.Tier5"))));
+    nodes.put(
+        "svc.db.schema.t2",
+        nodeWithEntity("svc.db.schema.t2", Map.of("fullyQualifiedName", "svc.db.schema.t2")));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(new HashMap<>());
+
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter(
+                "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"tier.tagFQN\":\"Tier.Tier5\"}}]}}}")
+            .withFrom(0)
+            .withSize(50);
+
+    SearchLineageResult out =
+        builder.applyInMemoryFiltersWithPathPreservationForEntityCount(result, req);
+
+    assertTrue(out.getNodes().containsKey(ROOT_FQN));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.t1"));
+    assertFalse(out.getNodes().containsKey("svc.db.schema.t2"));
+  }
+
+  @Test
+  void inMemoryFilter_withUpstreamEdgesAndMatchingFilter_preservesPathAndFiltersNodes() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(
+        ROOT_FQN,
+        new NodeInformation().withEntity(Map.of("fullyQualifiedName", ROOT_FQN)).withNodeDepth(0));
+    nodes.put(
+        "svc.db.schema.mid",
+        new NodeInformation()
+            .withEntity(Map.of("fullyQualifiedName", "svc.db.schema.mid"))
+            .withNodeDepth(-1));
+    nodes.put(
+        "svc.db.schema.leaf",
+        new NodeInformation()
+            .withEntity(
+                Map.of(
+                    "fullyQualifiedName",
+                    "svc.db.schema.leaf",
+                    "tier",
+                    Map.of("tagFQN", "Tier.Tier1")))
+            .withNodeDepth(-2));
+    nodes.put(
+        "svc.db.schema.unrelated",
+        new NodeInformation()
+            .withEntity(Map.of("fullyQualifiedName", "svc.db.schema.unrelated"))
+            .withNodeDepth(1));
+
+    Map<String, EsLineageData> upstreamEdges = new HashMap<>();
+    upstreamEdges.put("e1", edge("svc.db.schema.mid", ROOT_FQN));
+    upstreamEdges.put("e2", edge("svc.db.schema.leaf", "svc.db.schema.mid"));
+
+    SearchLineageResult input = new SearchLineageResult();
+    input.setNodes(nodes);
+    input.setUpstreamEdges(upstreamEdges);
+    input.setDownstreamEdges(new HashMap<>());
+
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter(
+                "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"tier.tagFQN\":\"Tier.Tier1\"}}]}}}")
+            .withFrom(0)
+            .withSize(50);
+
+    SearchLineageResult out =
+        builder.applyInMemoryFiltersWithPathPreservationForEntityCount(input, req);
+
+    assertTrue(out.getNodes().containsKey(ROOT_FQN));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.leaf"));
+    assertFalse(out.getNodes().containsKey("svc.db.schema.unrelated"));
+    // Intermediate node NOT kept in table view (only matching + root)
+    assertFalse(out.getNodes().containsKey("svc.db.schema.mid"));
+  }
+
+  @Test
+  void inMemoryFilter_multipleNodesSomeMatch_keepsOnlyMatchingAndRoot() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(
+        ROOT_FQN,
+        new NodeInformation().withEntity(Map.of("fullyQualifiedName", ROOT_FQN)).withNodeDepth(0));
+    nodes.put(
+        "svc.db.schema.match1",
+        new NodeInformation()
+            .withEntity(
+                Map.of(
+                    "fullyQualifiedName",
+                    "svc.db.schema.match1",
+                    "tier",
+                    Map.of("tagFQN", "Tier.Tier2")))
+            .withNodeDepth(1));
+    nodes.put(
+        "svc.db.schema.match2",
+        new NodeInformation()
+            .withEntity(
+                Map.of(
+                    "fullyQualifiedName",
+                    "svc.db.schema.match2",
+                    "tier",
+                    Map.of("tagFQN", "Tier.Tier2")))
+            .withNodeDepth(2));
+    nodes.put(
+        "svc.db.schema.nomatch",
+        new NodeInformation()
+            .withEntity(Map.of("fullyQualifiedName", "svc.db.schema.nomatch"))
+            .withNodeDepth(1));
+
+    SearchLineageResult input = new SearchLineageResult();
+    input.setNodes(nodes);
+    input.setUpstreamEdges(new HashMap<>());
+    input.setDownstreamEdges(new HashMap<>());
+
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter(
+                "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"tier.tagFQN\":\"Tier.Tier2\"}}]}}}")
+            .withFrom(0)
+            .withSize(50);
+
+    SearchLineageResult out =
+        builder.applyInMemoryFiltersWithPathPreservationForEntityCount(input, req);
+
+    assertTrue(out.getNodes().containsKey(ROOT_FQN));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.match1"));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.match2"));
+    assertFalse(out.getNodes().containsKey("svc.db.schema.nomatch"));
+  }
+
+  @Test
+  void inMemoryFilter_matchAtDepth2ButNotDepth1_intermediateNotKept() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(
+        ROOT_FQN,
+        new NodeInformation().withEntity(Map.of("fullyQualifiedName", ROOT_FQN)).withNodeDepth(0));
+    nodes.put(
+        "svc.db.schema.depth1",
+        new NodeInformation()
+            .withEntity(Map.of("fullyQualifiedName", "svc.db.schema.depth1"))
+            .withNodeDepth(1));
+    nodes.put(
+        "svc.db.schema.depth2_match",
+        new NodeInformation()
+            .withEntity(
+                Map.of(
+                    "fullyQualifiedName",
+                    "svc.db.schema.depth2_match",
+                    "tier",
+                    Map.of("tagFQN", "Tier.Tier3")))
+            .withNodeDepth(2));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("e1", edge(ROOT_FQN, "svc.db.schema.depth1"));
+    downstreamEdges.put("e2", edge("svc.db.schema.depth1", "svc.db.schema.depth2_match"));
+
+    SearchLineageResult input = new SearchLineageResult();
+    input.setNodes(nodes);
+    input.setUpstreamEdges(new HashMap<>());
+    input.setDownstreamEdges(downstreamEdges);
+
+    EntityCountLineageRequest req =
+        new EntityCountLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter(
+                "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"tier.tagFQN\":\"Tier.Tier3\"}}]}}}")
+            .withFrom(0)
+            .withSize(50);
+
+    SearchLineageResult out =
+        builder.applyInMemoryFiltersWithPathPreservationForEntityCount(input, req);
+
+    assertTrue(out.getNodes().containsKey(ROOT_FQN));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.depth2_match"));
+    // Table view strips intermediate nodes that don't match the filter
+    assertFalse(out.getNodes().containsKey("svc.db.schema.depth1"));
+  }
+
+  private NodeInformation nodeWithEntity(String fqn, Map<String, Object> entity) {
+    return new NodeInformation().withEntity(entity).withNodeDepth(1);
+  }
+
   private static class TestableLineageGraphBuilder extends AbstractLineageGraphBuilder {
 
     TestableLineageGraphBuilder() {

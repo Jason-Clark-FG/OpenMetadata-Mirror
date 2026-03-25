@@ -414,6 +414,147 @@ class ColumnFilterMatcherTest {
     assertEquals("svc.db.s.t2.email", result.get(0).getToColumn());
   }
 
+  @Test
+  void matchesMultipleFiltersWithMetadataReturnsFalseForEmptyGroupedFilters() throws Exception {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.schema.tbl.id"))
+            .withToColumn("svc.db.schema.tbl2.id");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    // A filter that parses to empty grouped filters (malformed ":" produces null criteria)
+    assertFalse(ColumnFilterMatcher.matchesColumnFilter(edge, ":,:"));
+    assertFalse(ColumnFilterMatcher.matchesColumnFilter(edge, ":,:", new ColumnMetadataCache()));
+  }
+
+  @Test
+  void matchesGroupedCriteriaWithMetadataTagMatching() throws Exception {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.s.t1.email"))
+            .withToColumn("svc.db.s.t2.email");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    ColumnMetadataCache cache = new ColumnMetadataCache();
+    cache.loadColumnMetadata(
+        Set.of("svc.db.s.t1.email", "svc.db.s.t2.email"),
+        parentFqn -> doc(parentFqn, column("email", "PII.Email")));
+
+    // tag filter with metadata cache - should match via grouped criteria with metadata
+    List<ColumnLineage> result =
+        ColumnFilterMatcher.filterMatchingColumnsWithMetadata(edge, "tag:PII", cache);
+    assertEquals(1, result.size());
+    assertEquals("svc.db.s.t2.email", result.get(0).getToColumn());
+  }
+
+  @Test
+  void matchesGroupedCriteriaWithMetadataGlossaryMatching() throws Exception {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.s.t1.name"))
+            .withToColumn("svc.db.s.t2.name");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    ColumnMetadataCache cache = new ColumnMetadataCache();
+    cache.loadColumnMetadata(
+        Set.of("svc.db.s.t1.name", "svc.db.s.t2.name"),
+        parentFqn ->
+            Map.of(
+                "fullyQualifiedName",
+                parentFqn,
+                "columns",
+                List.of(
+                    Map.of(
+                        "name",
+                        "name",
+                        "tags",
+                        List.of(Map.of("tagFQN", "Glossary.CustomerName"))))));
+
+    List<ColumnLineage> result =
+        ColumnFilterMatcher.filterMatchingColumnsWithMetadata(edge, "glossary:CustomerName", cache);
+    assertEquals(1, result.size());
+  }
+
+  @Test
+  void filterMatchingColumnsWithMetadataReturnsEmptyForMalformedFilter() {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.tbl.id"))
+            .withToColumn("svc.db.tbl2.id");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    List<ColumnLineage> result =
+        ColumnFilterMatcher.filterMatchingColumnsWithMetadata(
+            edge, "tag:", new ColumnMetadataCache());
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void normalizeFilterTypeHandlesUnknownTypesAsColumn() {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.schema.tbl.customer_id"))
+            .withToColumn("svc.db.schema.tbl2.customer_id");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    // "unknowntype" should normalize to "column" and match via column name matching
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "unknowntype:customer_id"));
+  }
+
+  @Test
+  void matchesMultipleFiltersWithMetadataTagAndColumnCombination() throws Exception {
+    ColumnLineage emailCol =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.s.t1.email"))
+            .withToColumn("svc.db.s.t2.email");
+    ColumnLineage ageCol =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.s.t1.age"))
+            .withToColumn("svc.db.s.t2.age");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(emailCol, ageCol));
+
+    ColumnMetadataCache cache = new ColumnMetadataCache();
+    cache.loadColumnMetadata(
+        Set.of("svc.db.s.t1.email", "svc.db.s.t2.email", "svc.db.s.t1.age", "svc.db.s.t2.age"),
+        parentFqn ->
+            Map.of(
+                "fullyQualifiedName",
+                parentFqn,
+                "columns",
+                List.of(column("email", "PII.Email"), column("age", "Internal"))));
+
+    // AND across types: column=email AND tag=PII → true
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:email,tag:PII", cache));
+    // AND across types: column=email AND tag=MissingTag → false
+    assertFalse(
+        ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:email,tag:MissingTag", cache));
+    // AND across types: column=age AND tag=PII - true because age matches column filter
+    // and email matches PII tag filter; AND is satisfied across all columns in the edge
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:age,tag:PII", cache));
+  }
+
+  @Test
+  void matchesColumnFilterFromColumnsMatchWithMetadata() throws Exception {
+    ColumnLineage col =
+        new ColumnLineage()
+            .withFromColumns(List.of("svc.db.s.t1.email"))
+            .withToColumn("svc.db.s.t2.id");
+    EsLineageData edge = new EsLineageData().withColumns(List.of(col));
+
+    ColumnMetadataCache cache = new ColumnMetadataCache();
+    cache.loadColumnMetadata(
+        Set.of("svc.db.s.t1.email", "svc.db.s.t2.id"),
+        parentFqn -> {
+          if (parentFqn.equals("svc.db.s.t1")) {
+            return doc(parentFqn, column("email", "PII.Email"));
+          }
+          return Map.of("fullyQualifiedName", parentFqn, "columns", List.of(Map.of("name", "id")));
+        });
+
+    // fromColumn has PII tag → match
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "tag:PII", cache));
+  }
+
   private static Map<String, Object> doc(String fullyQualifiedName, Map<String, Object> column) {
     return Map.of("fullyQualifiedName", fullyQualifiedName, "columns", List.of(column));
   }
