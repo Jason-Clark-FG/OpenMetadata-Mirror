@@ -2161,6 +2161,7 @@
     "value-boost": "הגברת ערך",
     "value-count": "ספירת ערכים",
     "value-plural": "ערכים",
+    "vector-embedding-plural": "הטמעות וקטוריות",
     "vector-stat-plural": "סטטיסטיקות וקטור",
     "verified": "מאומת",
     "verify-cert-plural": "אמת אישורים",
@@ -2227,8 +2228,7 @@
     "your-entity": "ה{{entity}} שלך",
     "z-to-a": "ז עד א",
     "zoom-in": "הגדל תצוגה",
-    "zoom-out": "הקטן תצוגה",
-    "vector-embedding-plural": "הטמעות וקטוריות"
+    "zoom-out": "הקטן תצוגה"
   },
   "message": {
     "access-block-time-message": "הגישה תחוסם למשך מילישניות לאחר שנעשו מספר ניסיונות התחברות כושלים.",

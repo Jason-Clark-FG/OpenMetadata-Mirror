@@ -2161,6 +2161,7 @@
     "value-boost": "値のブースト",
     "value-count": "値の件数",
     "value-plural": "値",
+    "vector-embedding-plural": "ベクトル埋め込み",
     "vector-stat-plural": "ベクトル統計",
     "verified": "検証済み",
     "verify-cert-plural": "証明書を検証",
@@ -2227,8 +2228,7 @@
     "your-entity": "あなたの {{entity}}",
     "z-to-a": "ZからA",
     "zoom-in": "ズームイン",
-    "zoom-out": "ズームアウト",
-    "vector-embedding-plural": "ベクトル埋め込み"
+    "zoom-out": "ズームアウト"
   },
   "message": {
     "access-block-time-message": "最大回数のログイン失敗後、一定時間（ミリ秒）アクセスがブロックされます。",

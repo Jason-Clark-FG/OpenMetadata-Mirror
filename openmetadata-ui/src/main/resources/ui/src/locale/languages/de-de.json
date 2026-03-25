@@ -2161,6 +2161,7 @@
     "value-boost": "Wert-Boost",
     "value-count": "Wertanzahl",
     "value-plural": "Werte",
+    "vector-embedding-plural": "Vektoreinbettungen",
     "vector-stat-plural": "Vektorstatistiken",
     "verified": "verifiziert",
     "verify-cert-plural": "Zertifikate überprüfen",
@@ -2227,8 +2228,7 @@
     "your-entity": "Ihre {{entity}}",
     "z-to-a": "Z bis A",
     "zoom-in": "Vergrößern",
-    "zoom-out": "Verkleinern",
-    "vector-embedding-plural": "Vektoreinbettungen"
+    "zoom-out": "Verkleinern"
   },
   "message": {
     "access-block-time-message": "Der Zugriff wird für einige Millisekunden gesperrt, nachdem die maximale Anzahl fehlgeschlagener Anmeldeversuche erreicht wurde.",

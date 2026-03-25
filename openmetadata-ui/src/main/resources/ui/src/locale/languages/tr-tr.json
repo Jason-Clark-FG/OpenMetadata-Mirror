@@ -2161,6 +2161,7 @@
     "value-boost": "Değer Desteği",
     "value-count": "Değer Sayısı",
     "value-plural": "Değerler",
+    "vector-embedding-plural": "Vektör Gömüleri",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "Sertifikaları Doğrula",
@@ -2227,8 +2228,7 @@
     "your-entity": "Sizin {{entity}}",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "Yakınlaştır",
-    "zoom-out": "Uzaklaştır",
-    "vector-embedding-plural": "Vektör Gömüleri"
+    "zoom-out": "Uzaklaştır"
   },
   "message": {
     "access-block-time-message": "Erişim, maksimum başarısız giriş denemesinden sonra milisaniye boyunca engellenecektir.",

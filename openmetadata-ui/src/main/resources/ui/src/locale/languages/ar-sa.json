@@ -2161,6 +2161,7 @@
     "value-boost": "تعزيز القيمة",
     "value-count": "عدد القيمة",
     "value-plural": "قيم",
+    "vector-embedding-plural": "التضمينات المتجهية",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "التحقق من الشهادات",
@@ -2227,8 +2228,7 @@
     "your-entity": "{{entity}} الخاص بك",
     "z-to-a": "من Z إلى A",
     "zoom-in": "تكبير",
-    "zoom-out": "تصغير",
-    "vector-embedding-plural": "التضمينات المتجهية"
+    "zoom-out": "تصغير"
   },
   "message": {
     "access-block-time-message": "سيتم حظر الوصول لـ مللي ثانية بعد الوصول إلى الحد الأقصى لمحاولات تسجيل الدخول الفاشلة.",

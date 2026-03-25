@@ -2161,6 +2161,7 @@
     "value-boost": "Waarde boost",
     "value-count": "Aantal waarden",
     "value-plural": "Waarden",
+    "vector-embedding-plural": "Vector-embeddings",
     "vector-stat-plural": "Vectorstatistieken",
     "verified": "geverifieerd",
     "verify-cert-plural": "Certificaten verifiëren",
@@ -2227,8 +2228,7 @@
     "your-entity": "Je {{entity}}",
     "z-to-a": "Z tot A",
     "zoom-in": "Inzoomen",
-    "zoom-out": "Uitzoomen",
-    "vector-embedding-plural": "Vector-embeddings"
+    "zoom-out": "Uitzoomen"
   },
   "message": {
     "access-block-time-message": "Toegang wordt geblokkeerd voor milliseconden nadat het maximale aantal mislukte aanmeldpogingen is uitgevoerd.",

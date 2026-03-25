@@ -2161,6 +2161,7 @@
     "value-boost": "Усиление значения",
     "value-count": "Количество значений",
     "value-plural": "Значения",
+    "vector-embedding-plural": "Векторные эмбеддинги",
     "vector-stat-plural": "Векторная статистика",
     "verified": "проверено",
     "verify-cert-plural": "Проверить сертификаты",
@@ -2227,8 +2228,7 @@
     "your-entity": "Ваш объект «{{entity}}»",
     "z-to-a": "Я до А",
     "zoom-in": "Увеличить",
-    "zoom-out": "Уменьшить",
-    "vector-embedding-plural": "Векторные эмбеддинги"
+    "zoom-out": "Уменьшить"
   },
   "message": {
     "access-block-time-message": "Доступ заблокируется после ряда неудачных попыток (на несколько секунд).",

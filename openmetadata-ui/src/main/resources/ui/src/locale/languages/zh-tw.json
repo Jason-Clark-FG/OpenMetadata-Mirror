@@ -2161,6 +2161,7 @@
     "value-boost": "值權重",
     "value-count": "值計數",
     "value-plural": "值",
+    "vector-embedding-plural": "向量嵌入",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "驗證憑證",
@@ -2227,8 +2228,7 @@
     "your-entity": "您的 {{entity}}",
     "z-to-a": "Z 到 A",
     "zoom-in": "放大",
-    "zoom-out": "縮小",
-    "vector-embedding-plural": "向量嵌入"
+    "zoom-out": "縮小"
   },
   "message": {
     "access-block-time-message": "達到最大登入失敗次數後，存取將被封鎖數毫秒。",

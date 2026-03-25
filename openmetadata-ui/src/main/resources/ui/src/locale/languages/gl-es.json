@@ -2161,6 +2161,7 @@
     "value-boost": "Impulso de valor",
     "value-count": "Reconto de valores",
     "value-plural": "Valores",
+    "vector-embedding-plural": "Embeddings vectoriais",
     "vector-stat-plural": "Vector Stats",
     "verified": "verificado",
     "verify-cert-plural": "Verificar certificados",
@@ -2227,8 +2228,7 @@
     "your-entity": "O teu {{entity}}",
     "z-to-a": "Z a A",
     "zoom-in": "Achegar",
-    "zoom-out": "Afastar",
-    "vector-embedding-plural": "Embeddings vectoriais"
+    "zoom-out": "Afastar"
   },
   "message": {
     "access-block-time-message": "O acceso será bloqueado durante milisegundos despois de realizar o número máximo de intentos fallidos de inicio de sesión.",

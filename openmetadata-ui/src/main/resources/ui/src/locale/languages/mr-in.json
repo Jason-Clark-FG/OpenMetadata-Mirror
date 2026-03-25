@@ -2161,6 +2161,7 @@
     "value-boost": "मूल्य बूस्ट",
     "value-count": "मूल्य संख्या",
     "value-plural": "मूल्ये",
+    "vector-embedding-plural": "व्हेक्टर एम्बेडिंग्ज",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "प्रमाणपत्रे सत्यापित करा",
@@ -2227,8 +2228,7 @@
     "your-entity": "तुमचे {{entity}}",
     "z-to-a": "ज ते अ",
     "zoom-in": "झूम इन",
-    "zoom-out": "झूम आउट",
-    "vector-embedding-plural": "व्हेक्टर एम्बेडिंग्ज"
+    "zoom-out": "झूम आउट"
   },
   "message": {
     "access-block-time-message": "कमाल अयशस्वी लॉगिन प्रयत्नांनंतर प्रवेश काही काळासाठी अवरोधित केला जाईल.",

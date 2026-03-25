@@ -2161,6 +2161,7 @@
     "value-boost": "세부 정보 보기",
     "value-count": "값 개수",
     "value-plural": "값들",
+    "vector-embedding-plural": "벡터 임베딩",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "인증서 확인",
@@ -2227,8 +2228,7 @@
     "your-entity": "당신의 {{entity}}",
     "z-to-a": "Z에서 A",
     "zoom-in": "확대",
-    "zoom-out": "축소",
-    "vector-embedding-plural": "벡터 임베딩"
+    "zoom-out": "축소"
   },
   "message": {
     "access-block-time-message": "최대 로그인 실패 시도 횟수 이후 밀리초 동안 접근이 차단됩니다.",

@@ -2161,6 +2161,7 @@
     "value-boost": "تقویت مقدار",
     "value-count": "تعداد مقادیر",
     "value-plural": "مقادیر",
+    "vector-embedding-plural": "Embeddings vetoriais",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "بررسی گواهینامه‌ها",
@@ -2227,8 +2228,7 @@
     "your-entity": "{{entity}} شما",
     "z-to-a": "Z'den A'ya",
     "zoom-in": "بزرگنمایی",
-    "zoom-out": "کوچک‌نمایی",
-    "vector-embedding-plural": "Embeddings vetoriais"
+    "zoom-out": "کوچک‌نمایی"
   },
   "message": {
     "access-block-time-message": "دسترسی برای مدت میلی‌ثانیه‌ها بعد از حداکثر تلاش‌های ناموفق ورود، مسدود خواهد شد.",

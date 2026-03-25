@@ -2161,6 +2161,7 @@
     "value-boost": "เพิ่มประสิทธิภาพค่า",
     "value-count": "จำนวนค่า",
     "value-plural": "ค่าหลายรายการ",
+    "vector-embedding-plural": "เวกเตอร์เอ็มเบดดิ้ง",
     "vector-stat-plural": "Vector Stats",
     "verified": "verified",
     "verify-cert-plural": "ตรวจสอบใบรับรอง",
@@ -2227,8 +2228,7 @@
     "your-entity": "เอนทิตีของคุณ {{entity}}",
     "z-to-a": "Z ถึง A",
     "zoom-in": "ขยายเข้า",
-    "zoom-out": "ขยายออก",
-    "vector-embedding-plural": "เวกเตอร์เอ็มเบดดิ้ง"
+    "zoom-out": "ขยายออก"
   },
   "message": {
     "access-block-time-message": "การเข้าถึงจะถูกบล็อกเป็นมิลลิวินาทีหลังจากมีความพยายามเข้าสู่ระบบที่ล้มเหลวสูงสุด",
