@@ -218,11 +218,11 @@ test.describe('Bulk Edit Entity', () => {
         })
       ).toBeVisible();
 
-      //   await expect(
-      //     page.getByRole('link', {
-      //       name: glossaryTerm.data.displayName,
-      //     })
-      //   ).toBeVisible();
+      await expect(
+        page.getByRole('link', {
+          name: glossaryTerm.data.displayName,
+        })
+      ).toBeVisible();
     });
 
     await table.delete(apiContext);

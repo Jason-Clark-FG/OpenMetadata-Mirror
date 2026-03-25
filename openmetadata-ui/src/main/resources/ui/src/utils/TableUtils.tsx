@@ -237,6 +237,20 @@ export const getTagsWithoutTier = (
   );
 };
 
+export const getCertificationTag = (tags: Array<TagLabel>) => {
+  return tags.find((item) =>
+    item.tagFQN.startsWith(`Certification${FQN_SEPARATOR_CHAR}`)
+  );
+};
+
+export const getTagsWithoutCertification = (
+  tags: Array<EntityTags>
+): Array<EntityTags> => {
+  return tags.filter(
+    (item) => !item.tagFQN.startsWith(`Certification${FQN_SEPARATOR_CHAR}`)
+  );
+};
+
 export const getConstraintIcon = ({
   constraint = '',
   className = '',
