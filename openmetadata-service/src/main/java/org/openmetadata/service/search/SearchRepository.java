@@ -98,6 +98,7 @@ import org.openmetadata.schema.api.lineage.LineagePaginationInfo;
 import org.openmetadata.schema.api.lineage.SearchLineageRequest;
 import org.openmetadata.schema.api.lineage.SearchLineageResult;
 import org.openmetadata.schema.api.search.SearchSettings;
+import org.openmetadata.schema.configuration.AssetCertificationSettings;
 import org.openmetadata.schema.dataInsight.DataInsightChartResult;
 import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.data.Pipeline;
@@ -1703,16 +1704,13 @@ public class SearchRepository {
   }
 
   private String getCertificationClassificationFromSettings() {
-    try {
-      return Entity.getSystemRepository()
-          .getAssetCertificationSettingOrDefault()
-          .getAllowedClassification();
-    } catch (Exception e) {
-      LOG.warn(
-          "Failed to retrieve certification classification from settings; skipping certification search update",
-          e);
-      return null;
-    }
+    return SettingsCache.getSettingOrDefault(
+            SettingsType.ASSET_CERTIFICATION_SETTINGS,
+            new AssetCertificationSettings()
+                .withAllowedClassification("Certification")
+                .withValidityPeriod("P30D"),
+            AssetCertificationSettings.class)
+        .getAllowedClassification();
   }
 
   private void handleEntityCertificationUpdate(EntityInterface entity, ChangeDescription change) {
