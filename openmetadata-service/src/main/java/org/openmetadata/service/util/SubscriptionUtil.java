@@ -44,6 +44,8 @@ import org.openmetadata.schema.SubscriptionAction;
 import org.openmetadata.schema.entity.events.StatusContext;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.entity.events.TestDestinationStatus;
+import org.openmetadata.schema.entity.events.authentication.WebhookBearerAuth;
+import org.openmetadata.schema.entity.events.authentication.WebhookOAuth2Config;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.entity.teams.User;
@@ -55,6 +57,7 @@ import org.openmetadata.schema.type.Profile;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.Webhook;
 import org.openmetadata.schema.type.profile.SubscriptionConfig;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.apps.bundles.changeEvent.Destination;
@@ -352,9 +355,9 @@ public class SubscriptionUtil {
     Set<String> receiverList = new HashSet<>();
 
     if (category.equals(SubscriptionDestination.SubscriptionCategory.USERS)) {
-      if (nullOrEmpty(action.getReceivers())) {
+      if (action.getReceivers() == null || action.getReceivers().isEmpty()) {
         throw new IllegalArgumentException(
-            "Email Alert Invoked with Illegal Type and Settings. Emtpy or Null Users Recipients List");
+            "Email Alert Invoked with Illegal Type and Settings. Empty or Null Users Recipients List");
       }
       List<User> users =
           action.getReceivers().stream()
@@ -362,9 +365,9 @@ public class SubscriptionUtil {
               .toList();
       receiverList.addAll(getEmailOrWebhookEndpointForUsers(users, type));
     } else if (category.equals(SubscriptionDestination.SubscriptionCategory.TEAMS)) {
-      if (nullOrEmpty(action.getReceivers())) {
+      if (action.getReceivers() == null || action.getReceivers().isEmpty()) {
         throw new IllegalArgumentException(
-            "Email Alert Invoked with Illegal Type and Settings. Emtpy or Null Teams Recipients List");
+            "Email Alert Invoked with Illegal Type and Settings. Empty or Null Teams Recipients List");
       }
       List<Team> teams =
           action.getReceivers().stream()
@@ -488,20 +491,44 @@ public class SubscriptionUtil {
     Invocation.Builder result = SecurityUtil.addHeaders(target, authHeaders);
     // Prepare webhook headers, including HMAC signature if secret key is provided
     prepareWebhookHeaders(result, webhook, json);
-    return SecurityUtil.addHeaders(target, authHeaders);
+    return result;
   }
 
   public static void prepareWebhookHeaders(
       Invocation.Builder target, Webhook webhook, String json) {
-    if (!nullOrEmpty(webhook.getSecretKey())) {
-      String hmac =
-          "sha256="
-              + CommonUtil.calculateHMAC(decryptWebhookSecretKey(webhook.getSecretKey()), json);
-      target.header("X-OM-Signature", hmac);
+    boolean oauth2Active = false;
+
+    if (webhook.getAuthType() instanceof Map<?, ?> authMap) {
+      String authType = (String) authMap.get("type");
+
+      if (WebhookBearerAuth.Type.BEARER.value().equals(authType)) {
+        WebhookBearerAuth bearerAuth =
+            JsonUtils.convertValue(webhook.getAuthType(), WebhookBearerAuth.class);
+        if (bearerAuth != null && !nullOrEmpty(bearerAuth.getSecretKey())) {
+          String hmac =
+              "sha256="
+                  + CommonUtil.calculateHMAC(
+                      decryptWebhookSecretKey(bearerAuth.getSecretKey()), json);
+          target.header("X-OM-Signature", hmac);
+        }
+      } else if (WebhookOAuth2Config.Type.OAUTH_2.value().equals(authType)) {
+        WebhookOAuth2Config oauth2Config =
+            JsonUtils.convertValue(webhook.getAuthType(), WebhookOAuth2Config.class);
+        if (oauth2Config != null) {
+          String accessToken = OAuth2TokenManager.getInstance().getAccessToken(oauth2Config);
+          target.header("Authorization", "Bearer " + accessToken);
+          oauth2Active = true;
+        }
+      }
     }
 
     if (webhook.getHeaders() != null && !webhook.getHeaders().isEmpty()) {
-      webhook.getHeaders().forEach(target::header);
+      for (Map.Entry<String, String> entry : webhook.getHeaders().entrySet()) {
+        if (oauth2Active && "Authorization".equalsIgnoreCase(entry.getKey())) {
+          continue;
+        }
+        target.header(entry.getKey(), entry.getValue());
+      }
     }
   }
 

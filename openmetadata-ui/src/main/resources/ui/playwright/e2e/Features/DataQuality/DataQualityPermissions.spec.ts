@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { DOMAIN_TAGS } from '../../../constant/config';
 import {
   CREATE_TEST_CASE_POLICY,
@@ -30,13 +30,14 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { redirectToHomePage, uuid } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { setupUserWithPolicy } from '../../../utils/permission';
 import {
   visitTestSuiteDetailsPage,
   visitTestSuitesPage,
-  waitForTestCaseDetailsResponse,
   waitForPermissionsResponse,
   waitForTableEntityPermissionsResponse,
+  waitForTestCaseDetailsResponse,
   waitForTestCaseListResponse,
 } from '../../../utils/testCases';
 
@@ -649,6 +650,7 @@ test.describe(
         viewBasicPage,
       }) => {
         await visitTestSuiteDetailsPage(viewBasicPage, logicalTestSuiteFqn);
+        await waitForAllLoadersToDisappear(viewBasicPage);
 
         await expect(
           viewBasicPage.getByTestId('add-test-case-btn')

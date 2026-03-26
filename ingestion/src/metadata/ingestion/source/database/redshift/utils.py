@@ -74,6 +74,16 @@ def _load_domains(self, connection, **kw):
     return {}
 
 
+def get_temp_table_names(self, connection, schema=None, **kw):
+    """
+    Override PGDialect's get_temp_table_names to avoid querying
+    pg_catalog.pg_class.relpersistence which does not exist in Redshift,
+    causing a ProgrammingError that aborts the transaction and breaks all
+    subsequent queries.
+    """
+    return []
+
+
 def get_multi_columns(self, connection, **kw):
     """
     Override PGDialect's get_multi_columns to avoid querying
@@ -419,8 +429,13 @@ def get_table_comment(
 @calculate_execution_time()
 def _get_all_relation_info(self, connection, **kw):  # pylint: disable=unused-argument
     """
+    Get all relation info for a schema.
+
     Uses a custom single-schema cache instead of @reflection.cache
     to prevent unbounded memory growth across schemas (issue #20649).
+    Only the most recently requested schema's data is retained.
+    The ``table_name`` kwarg is not used for filtering since the
+    cache is keyed by schema only.
     """
     # pylint: disable=consider-using-f-string
     schema = kw.get("schema", None)
@@ -432,15 +447,10 @@ def _get_all_relation_info(self, connection, **kw):  # pylint: disable=unused-ar
 
     schema_clause = "AND schema = '{schema}'".format(schema=schema) if schema else ""
 
-    table_name = kw.get("table_name", None)
-    table_clause = (
-        "AND relname = '{table}'".format(table=table_name) if table_name else ""
-    )
-
     result = connection.execute(
         sa.text(
             REDSHIFT_GET_ALL_RELATIONS.format(
-                schema_clause=schema_clause, table_clause=table_clause, limit_clause=""
+                schema_clause=schema_clause, table_clause="", limit_clause=""
             )
         )
     )

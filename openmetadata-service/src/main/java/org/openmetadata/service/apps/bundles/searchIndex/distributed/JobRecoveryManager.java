@@ -178,10 +178,6 @@ public class JobRecoveryManager {
           stoppingDuration,
           STOPPING_GRACE_PERIOD_MS);
       failJob(job, "Force-completed: stuck in STOPPING state");
-
-      // Release the lock so the new job can acquire it
-      SearchReindexLockDAO lockDAO = collectionDAO.searchReindexLockDAO();
-      lockDAO.releaseLock("SEARCH_REINDEX_LOCK", job.getId().toString());
       return true;
     }
     LOG.info(
@@ -236,34 +232,28 @@ public class JobRecoveryManager {
   private boolean isJobOrphaned(SearchIndexJob job) {
     SearchReindexLockDAO lockDAO = collectionDAO.searchReindexLockDAO();
 
-    // Check if there's a valid lock for this job
     SearchReindexLockDAO.LockInfo lockInfo = lockDAO.getLockInfo("SEARCH_REINDEX_LOCK");
 
     if (lockInfo == null) {
-      // No lock exists - job is orphaned
       return true;
     }
 
-    // Check if lock is for this job
     if (!lockInfo.jobId().equals(job.getId().toString())) {
-      // Lock is for a different job - this job is orphaned
       return true;
     }
 
-    // Check if lock is expired
     long now = System.currentTimeMillis();
+
     if (lockInfo.expiresAt() < now) {
-      // Lock is expired - job is orphaned
       return true;
     }
 
-    // Check if the lock holder server is still responsive
-    // We consider a job orphaned if it hasn't been updated recently
+    // Lock is valid — also check that the coordinator is making progress
+    // (the lock refresh loop touches updatedAt every 60s alongside the lock)
     long lastUpdateThreshold = now - ABANDONED_LOCK_THRESHOLD_MS;
     if (job.getUpdatedAt() < lastUpdateThreshold) {
-      // Job hasn't been updated recently - likely orphaned
       LOG.debug(
-          "Job {} last updated {} ms ago, considering orphaned",
+          "Job {} has valid lock but updatedAt is {} ms stale, considering orphaned",
           job.getId(),
           now - job.getUpdatedAt());
       return true;
@@ -288,9 +278,10 @@ public class JobRecoveryManager {
     boolean shouldRecover = shouldRecoverJob(job, jobAge);
 
     if (shouldRecover) {
-      recoverJob(job);
-      resultBuilder.incrementRecovered();
-      LOG.info("Job {} has been marked for recovery (will resume processing)", job.getId());
+      if (recoverJob(job)) {
+        resultBuilder.incrementRecovered();
+        LOG.info("Job {} has been marked for recovery (will resume processing)", job.getId());
+      }
     } else {
       failJob(job, "Job abandoned due to server crash or shutdown");
       resultBuilder.incrementFailed();
@@ -340,13 +331,13 @@ public class JobRecoveryManager {
    *
    * @param job The job to recover
    */
-  private void recoverJob(SearchIndexJob job) {
+  private boolean recoverJob(SearchIndexJob job) {
     boolean lockAcquired = coordinator.tryAcquireReindexLock(job.getId());
     if (!lockAcquired) {
       LOG.warn(
           "Could not acquire lock for job {} during recovery - another server may have claimed it",
           job.getId());
-      return;
+      return false;
     }
 
     try {
@@ -361,6 +352,7 @@ public class JobRecoveryManager {
           "Recovered job {}: reset {} processing partitions to pending",
           job.getId(),
           processing.size());
+      return true;
     } finally {
       coordinator.releaseReindexLock(job.getId());
     }

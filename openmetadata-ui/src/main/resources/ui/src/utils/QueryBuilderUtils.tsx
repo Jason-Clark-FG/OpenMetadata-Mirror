@@ -453,8 +453,7 @@ export const renderQueryBuilderFilterButtons: RenderSettings['renderButton'] = (
         className="action action--ADD-RULE"
         data-testid="add-condition-button"
         type="primary"
-        onClick={props?.onClick}
-      >
+        onClick={props?.onClick}>
         {t('label.add-entity', {
           entity: t('label.condition'),
         })}
@@ -529,7 +528,7 @@ export interface ElasticsearchQuery {
 }
 
 export interface JsonLogic {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const flattenAndClauses = (clauses: JsonLogic[]): JsonLogic[] => {
