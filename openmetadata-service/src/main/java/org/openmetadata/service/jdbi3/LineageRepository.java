@@ -103,7 +103,6 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO.EntityRelationshipRecord;
 import org.openmetadata.service.rdf.RdfUpdater;
 import org.openmetadata.service.search.SearchClient;
-import org.openmetadata.service.search.SearchIndexRetryQueue;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil;
 
@@ -1196,19 +1195,11 @@ public class LineageRepository {
   private void deleteLineageFromSearch(
       EntityReference fromEntity, EntityReference toEntity, LineageDetails lineageDetails) {
     String uniqueValue = getDocumentUniqueId(fromEntity, toEntity);
-    try {
-      searchClient.updateChildren(
-          GLOBAL_SEARCH_ALIAS,
-          new ImmutablePair<>("upstreamLineage.docUniqueId.keyword", uniqueValue),
-          new ImmutablePair<>(
-              REMOVE_LINEAGE_SCRIPT, Collections.singletonMap("docUniqueId", uniqueValue)));
-    } catch (Exception e) {
-      SearchIndexRetryQueue.enqueue(
-          fromEntity.getId() != null ? fromEntity.getId().toString() : null,
-          fromEntity.getFullyQualifiedName(),
-          SearchIndexRetryQueue.failureReason("deleteLineageFromSearch", e));
-      LOG.error("Failed to delete lineage from search for {}: {}", uniqueValue, e.getMessage());
-    }
+    searchClient.updateChildren(
+        GLOBAL_SEARCH_ALIAS,
+        new ImmutablePair<>("upstreamLineage.docUniqueId.keyword", uniqueValue),
+        new ImmutablePair<>(
+            REMOVE_LINEAGE_SCRIPT, Collections.singletonMap("docUniqueId", uniqueValue)));
   }
 
   private EntityLineage getLineage(

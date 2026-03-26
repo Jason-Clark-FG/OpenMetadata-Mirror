@@ -16,7 +16,6 @@ package org.openmetadata.service.events.lifecycle.handlers;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -217,7 +216,7 @@ class SearchIndexHandlerTest {
   }
 
   @Test
-  void testOnEntitiesCreatedSameType() throws IOException {
+  void testOnEntitiesCreatedSameType() {
     List<EntityInterface> entities = List.of(mockEntity, mockEntity2);
 
     searchIndexHandler.onEntitiesCreated(entities, mockSubjectContext);
@@ -227,7 +226,7 @@ class SearchIndexHandlerTest {
   }
 
   @Test
-  void testOnEntitiesCreatedMixedTypes() throws IOException {
+  void testOnEntitiesCreatedMixedTypes() {
     // Setup different entity types
     when(mockEntityRef2.getType()).thenReturn(Entity.DASHBOARD);
 
@@ -242,7 +241,7 @@ class SearchIndexHandlerTest {
   }
 
   @Test
-  void testOnEntitiesCreatedWithFallback() throws IOException {
+  void testOnEntitiesCreatedWithFallback() {
     List<EntityInterface> entities = List.of(mockEntity, mockEntity2);
 
     // Make bulk operation fail
