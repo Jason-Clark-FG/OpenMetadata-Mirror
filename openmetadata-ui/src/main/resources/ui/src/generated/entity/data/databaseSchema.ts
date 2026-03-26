@@ -707,6 +707,7 @@ export enum DatabaseServiceType {
     Impala = "Impala",
     Informix = "Informix",
     MariaDB = "MariaDB",
+    MicrosoftAccess = "MicrosoftAccess",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
     Mssql = "Mssql",
