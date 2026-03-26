@@ -1,4 +1,4 @@
-package org.openmetadata.service.migration.utils.v1124;
+package org.openmetadata.service.migration.utils.v1125;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -105,7 +105,7 @@ public class MigrationUtil {
 
   public static void migrateWorkflowDefinitions() {
     LOG.info(
-        "Starting v1124 migration: converting include fields from map to array format in workflow trigger configurations");
+        "Starting v1125 migration: converting include fields from map to array format in workflow trigger configurations");
 
     WorkflowDefinitionRepository repository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
@@ -140,13 +140,13 @@ public class MigrationUtil {
     }
 
     LOG.info(
-        "Completed v1124 migration: {} of {} workflow definitions updated with array-based include fields",
+        "Completed v1125 migration: {} of {} workflow definitions updated with array-based include fields",
         totalUpdated,
         allWorkflows.size());
 
     if (needsMigration > 0 && totalUpdated == 0) {
       throw new RuntimeException(
-          "v1124 migration: failed to update any workflow definitions out of "
+          "v1125 migration: failed to update any workflow definitions out of "
               + needsMigration
               + " that needed migration");
     }
