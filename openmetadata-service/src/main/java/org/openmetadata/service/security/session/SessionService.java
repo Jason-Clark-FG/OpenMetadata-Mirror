@@ -490,11 +490,10 @@ public class SessionService implements Managed {
       if (sessions.isEmpty()) {
         return;
       }
-      sessions.forEach(
-          session -> {
-            repository.delete(session.getId());
-            cache.invalidate(session.getId());
-          });
+      List<String> ids = sessions.stream().map(UserSession::getId).toList();
+      int deleted = repository.deleteByIds(ids);
+      ids.forEach(cache::invalidate);
+      LOG.debug("Pruned {} sessions in batch", deleted);
       if (sessions.size() < CLEANUP_BATCH_SIZE) {
         return;
       }

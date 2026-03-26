@@ -8923,6 +8923,9 @@ public interface CollectionDAO {
 
     @SqlUpdate("DELETE FROM user_session WHERE id = :id")
     void delete(@Bind("id") String id);
+
+    @SqlUpdate("DELETE FROM user_session WHERE id IN (<ids>)")
+    int deleteByIds(@BindList("ids") List<String> ids);
   }
 
   interface KpiDAO extends EntityDAO<Kpi> {

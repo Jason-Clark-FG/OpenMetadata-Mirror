@@ -510,7 +510,7 @@ class SessionServiceTest {
     assertTrue(
         updateCaptor.getAllValues().stream()
             .allMatch(session -> session.getStatus() == SessionStatus.EXPIRED));
-    verify(repository).delete("pruned-session");
+    verify(repository).deleteByIds(List.of("pruned-session"));
   }
 
   private UserSession activeSession(String id, User user, long version, long lastAccessedAt) {

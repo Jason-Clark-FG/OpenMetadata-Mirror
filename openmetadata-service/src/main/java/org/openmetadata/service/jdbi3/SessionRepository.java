@@ -57,4 +57,11 @@ public class SessionRepository {
   public void delete(String sessionId) {
     dao.getUserSessionDAO().delete(sessionId);
   }
+
+  public int deleteByIds(List<String> sessionIds) {
+    if (sessionIds.isEmpty()) {
+      return 0;
+    }
+    return dao.getUserSessionDAO().deleteByIds(sessionIds);
+  }
 }
