@@ -1137,21 +1137,36 @@ export const validateColumnCustomProperty = async (
 export const verifyTableColumnCustomPropertyPersistence = async ({
   page,
   columnFqn,
+  tableFqn,
   propertyName,
   propertyType,
   users,
 }: {
   page: Page;
   columnFqn: string;
+  tableFqn: string;
   propertyName: string;
   propertyType: string;
   users: Record<string, string>;
 }) => {
   const testValue = getPropertyValues(propertyType, users).value;
+  const columnsProfileResponse = () =>
+    page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .includes(
+            `/api/v1/tables/name/${encodeURIComponent(tableFqn)}/columns`
+          ) &&
+        response.url().includes('profile') &&
+        response.request().method() === 'GET',
+      { timeout: 90_000 }
+    );
 
   // 1. Navigate and Open Column Detail Panel
-  await page.goto(`/table/${columnFqn}`);
-  await page.waitForLoadState('networkidle');
+  const initialColumnsResponse = columnsProfileResponse();
+  await page.goto(`/table/${columnFqn}`, { waitUntil: 'domcontentloaded' });
+  await initialColumnsResponse;
   await waitForAllLoadersToDisappear(page);
   const sidePanel = page.locator('.column-detail-panel-container');
   await expect(sidePanel).toBeVisible();
@@ -1197,23 +1212,15 @@ export const verifyTableColumnCustomPropertyPersistence = async ({
     propertyName
   );
 
-  // 5. Reload Page
-  const getColumnDetails = page.waitForResponse(
-    '/api/v1/tables/name/*/columns?*fields=*extension*'
-  );
-  const getTableColumnTypes = page.waitForResponse(
-    '/api/v1/metadata/types/name/tableColumn*'
-  );
-  await page.reload();
-  await getTableColumnTypes;
-  await getColumnDetails;
-
-  await page.waitForSelector(
-    '.column-detail-panel-container [data-testid="custom-properties-tab"]',
-    {
-      state: 'visible',
-    }
-  );
+  const reloadColumnsResponse = columnsProfileResponse();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await reloadColumnsResponse;
+  await waitForAllLoadersToDisappear(page);
+  await expect(
+    page.locator(
+      '.column-detail-panel-container [data-testid="custom-properties-tab"]'
+    )
+  ).toBeVisible();
   await customPropertiesTab.click();
   await expect(searchbar).toBeVisible();
   await searchbar.fill(propertyName);
