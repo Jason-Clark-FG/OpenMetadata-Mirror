@@ -22,9 +22,4 @@ public class TestSparkEngineConnectionRequestClassConverter extends ClassConvert
   public TestSparkEngineConnectionRequestClassConverter() {
     super(TestSparkEngineConnectionRequest.class);
   }
-
-  @Override
-  public Object convert(Object object) {
-    return JsonUtils.convertValue(object, this.clazz);
-  }
 }

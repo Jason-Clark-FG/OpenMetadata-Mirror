@@ -332,11 +332,6 @@ class DataInsightsEntityEnricherProcessorTest {
     }
 
     @Override
-    public List<TagLabel> getTags() {
-      return null;
-    }
-
-    @Override
     public void setId(UUID id) {}
 
     @Override
@@ -437,11 +432,6 @@ class DataInsightsEntityEnricherProcessorTest {
     @Override
     public String getFullyQualifiedName() {
       return fqn;
-    }
-
-    @Override
-    public List<TagLabel> getTags() {
-      return null;
     }
 
     @Override
