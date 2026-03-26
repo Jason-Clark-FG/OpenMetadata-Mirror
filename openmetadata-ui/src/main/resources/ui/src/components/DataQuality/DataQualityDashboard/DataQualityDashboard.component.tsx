@@ -17,18 +17,11 @@ import {
   TooltipTrigger,
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import {
-  ABORTED_CHART_COLOR_SCHEME,
-  FAILED_CHART_COLOR_SCHEME,
-  SUCCESS_CHART_COLOR_SCHEME,
-} from '../../../constants/Chart.constants';
-import {
-  DATA_QUALITY_DASHBOARD_HEADER,
-  DQ_FILTER_KEYS,
-} from '../../../constants/DataQuality.constants';
-import { EntityReference } from '../../../generated/type/entityReference';
 import { isEmpty, isEqual, omit, uniqBy } from 'lodash';
 import { DateRangeObject } from 'Models';
+import QueryString from 'qs';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ReactComponent as DropDownIcon } from '../../../assets/svg/drop-down.svg';
 import DatePickerMenu from '../../../components/common/DatePickerMenu/DatePickerMenu.component';
 import { UserTeamSelectableList } from '../../../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
@@ -36,12 +29,22 @@ import PageHeader from '../../../components/PageHeader/PageHeader.component';
 import SearchDropdown from '../../../components/SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../../../components/SearchDropdown/SearchDropdown.interface';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
+import {
+  ABORTED_CHART_COLOR_SCHEME,
+  FAILED_CHART_COLOR_SCHEME,
+  SUCCESS_CHART_COLOR_SCHEME,
+} from '../../../constants/Chart.constants';
 import { PAGE_SIZE_BASE, ROUTES } from '../../../constants/constants';
+import {
+  DATA_QUALITY_DASHBOARD_HEADER,
+  DQ_FILTER_KEYS,
+} from '../../../constants/DataQuality.constants';
 import { PROFILER_FILTER_RANGE } from '../../../constants/profiler.constant';
 import { SearchIndex } from '../../../enums/search.enum';
 import { Tag } from '../../../generated/entity/classification/tag';
 import { TestCaseStatus } from '../../../generated/tests/testCase';
 import { TestCaseResolutionStatusTypes } from '../../../generated/tests/testCaseResolutionStatus';
+import { EntityReference } from '../../../generated/type/entityReference';
 import { DataQualityPageTabs } from '../../../pages/DataQuality/DataQualityPage.interface';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getTags } from '../../../rest/tagAPI';
@@ -55,9 +58,6 @@ import {
 } from '../../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getDataQualityPagePath } from '../../../utils/RouterUtils';
-import QueryString from 'qs';
-import { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import DataAssetsCoveragePieChartWidget from '../ChartWidgets/DataAssetsCoveragePieChartWidget/DataAssetsCoveragePieChartWidget.component';
 import EntityHealthStatusPieChartWidget from '../ChartWidgets/EntityHealthStatusPieChartWidget/EntityHealthStatusPieChartWidget.component';
 import IncidentTimeChartWidget from '../ChartWidgets/IncidentTimeChartWidget/IncidentTimeChartWidget.component';

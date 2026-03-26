@@ -12,12 +12,12 @@
  */
 import { Card, Typography } from 'antd';
 import { isNull, isUndefined } from 'lodash';
-import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
-import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
-import { fetchIncidentTimeMetrics } from '../../../../rest/dataQualityDashboardAPI';
-import { convertMillisecondsToHumanReadableFormat } from '../../../../utils/date-time/DateTimeUtils';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchIncidentTimeMetrics } from '../../../../rest/dataQualityDashboardAPI';
+import { convertMillisecondsToHumanReadableFormat } from '../../../../utils/date-time/DateTimeUtils';
+import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
+import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
 import { IncidentTimeChartWidgetProps } from '../../DataQuality.interface';
 import '../chart-widgets.less';
 

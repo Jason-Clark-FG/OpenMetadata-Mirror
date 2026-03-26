@@ -44,9 +44,8 @@ jest.mock('../../../../utils/date-time/DateTimeUtils', () => {
       .mockReturnValue('1h 32m'),
   };
 });
-jest.mock(
-  '../../../Visualisations/Chart/CustomAreaChart.component',
-  () => jest.fn().mockImplementation(() => <div>CustomAreaChart.component</div>)
+jest.mock('../../../Visualisations/Chart/CustomAreaChart.component', () =>
+  jest.fn().mockImplementation(() => <div>CustomAreaChart.component</div>)
 );
 
 const defaultProps: IncidentTimeChartWidgetProps = {

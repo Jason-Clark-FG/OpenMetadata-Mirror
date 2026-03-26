@@ -17,8 +17,8 @@ import {
   Typography,
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { ReactComponent as RightArrowIcon } from '../../../../assets/svg/line-arrow-right.svg';
 import { Link } from 'react-router-dom';
+import { ReactComponent as RightArrowIcon } from '../../../../assets/svg/line-arrow-right.svg';
 import { DataStatisticWidgetProps } from '../../DataQuality.interface';
 import './data-statistic-widget.less';
 
@@ -50,8 +50,7 @@ const DataStatisticWidget = ({
         <Button
           className="data-statistic-widget-default-button"
           color="link-color"
-          iconTrailing={<RightArrowIcon />}
-        >
+          iconTrailing={<RightArrowIcon />}>
           {linkLabel}
         </Button>
       </Link>
@@ -62,8 +61,7 @@ const DataStatisticWidget = ({
   return (
     <div
       className={classNames('data-statistic-widget-box', className)}
-      data-testid={`${name}-data-statistic-widget`}
-    >
+      data-testid={`${name}-data-statistic-widget`}>
       <div className="tw:flex tw:gap-4 tw:items-center tw:mb-1">
         <div className={classNames('data-statistic-widget-icon', styleType)}>
           <Icon {...iconProps} />
@@ -74,8 +72,7 @@ const DataStatisticWidget = ({
             className={classNames(
               'data-statistic-title-default',
               titleClassName
-            )}
-          >
+            )}>
             {title}
           </Typography>
           <Typography
@@ -84,8 +81,7 @@ const DataStatisticWidget = ({
               'data-statistic-count-default',
               countValueClassName
             )}
-            data-testid="total-value"
-          >
+            data-testid="total-value">
             {`${countValue} ${dataLabel ?? ''}`}
           </Typography>
         </div>

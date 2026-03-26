@@ -12,8 +12,8 @@
  */
 import '@testing-library/jest-dom/extend-expect';
 import { render, screen } from '@testing-library/react';
-import { TestCaseStatus } from '../../../../generated/tests/testCase';
 import { MemoryRouter } from 'react-router-dom';
+import { TestCaseStatus } from '../../../../generated/tests/testCase';
 import { DataStatisticWidgetProps } from '../../DataQuality.interface';
 import DataStatisticWidget from './DataStatisticWidget.component';
 
@@ -36,8 +36,7 @@ jest.mock('@openmetadata/ui-core-components', () => ({
   }: React.PropsWithChildren<Record<string, unknown>>) => (
     <span
       className={className as string}
-      data-testid={props['data-testid'] as string}
-    >
+      data-testid={props['data-testid'] as string}>
       {children}
     </span>
   ),
@@ -47,8 +46,7 @@ jest.mock('@openmetadata/ui-core-components', () => ({
   }: React.PropsWithChildren<Record<string, unknown>>) => (
     <button
       data-testid={props['data-testid'] as string}
-      onClick={props.onClick as React.MouseEventHandler}
-    >
+      onClick={props.onClick as React.MouseEventHandler}>
       {props.iconTrailing as React.ReactNode}
       {children}
     </button>

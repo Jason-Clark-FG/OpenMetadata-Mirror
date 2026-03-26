@@ -12,12 +12,12 @@
  */
 import '@testing-library/jest-dom/extend-expect';
 import { render, screen, waitFor } from '@testing-library/react';
-import { AreaChartColorScheme } from '../../../Visualisations/Chart/Chart.interface';
+import React from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { DataQualityReport } from '../../../../generated/tests/dataQualityReport';
 import { TestCaseStatus } from '../../../../generated/tests/testCase';
 import { fetchTestCaseStatusMetricsByDays } from '../../../../rest/dataQualityDashboardAPI';
-import React from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { AreaChartColorScheme } from '../../../Visualisations/Chart/Chart.interface';
 import { TestCaseStatusAreaChartWidgetProps } from '../../DataQuality.interface';
 import TestCaseStatusAreaChartWidget from './TestCaseStatusAreaChartWidget.component';
 
@@ -27,20 +27,18 @@ jest.mock('../../../../rest/dataQualityDashboardAPI', () => ({
 }));
 
 // Mock the CustomAreaChart component
-jest.mock(
-  '../../../Visualisations/Chart/CustomAreaChart.component',
-  () =>
-    jest.fn().mockImplementation((props) => (
-      <div data-testid="custom-area-chart">
-        <div>CustomAreaChart</div>
-        <div data-testid="chart-name">{props.name}</div>
-        <div data-testid="chart-height">{props.height}</div>
-        <div data-testid="chart-color-scheme">
-          {JSON.stringify(props.colorScheme)}
-        </div>
-        <div data-testid="chart-data">{JSON.stringify(props.data)}</div>
+jest.mock('../../../Visualisations/Chart/CustomAreaChart.component', () =>
+  jest.fn().mockImplementation((props) => (
+    <div data-testid="custom-area-chart">
+      <div>CustomAreaChart</div>
+      <div data-testid="chart-name">{props.name}</div>
+      <div data-testid="chart-height">{props.height}</div>
+      <div data-testid="chart-color-scheme">
+        {JSON.stringify(props.colorScheme)}
       </div>
-    ))
+      <div data-testid="chart-data">{JSON.stringify(props.data)}</div>
+    </div>
+  ))
 );
 
 // Mock SVG icons
@@ -82,8 +80,7 @@ jest.mock('@openmetadata/ui-core-components', () => ({
   }: React.PropsWithChildren<Record<string, unknown>>) => (
     <span
       className={className as string}
-      data-testid={props['data-testid'] as string}
-    >
+      data-testid={props['data-testid'] as string}>
       {children}
     </span>
   ),

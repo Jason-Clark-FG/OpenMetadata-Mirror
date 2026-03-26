@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import { act, render, screen } from '@testing-library/react';
-import { fetchEntityCoveredWithDQ } from '../../../../rest/dataQualityDashboardAPI';
 import { TestCaseStatus } from '../../../../generated/entity/feed/testCaseResult';
+import { fetchEntityCoveredWithDQ } from '../../../../rest/dataQualityDashboardAPI';
 import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
 import EntityHealthStatusPieChartWidget from './EntityHealthStatusPieChartWidget.component';
 
@@ -40,30 +40,28 @@ jest.mock('../../../../utils/DataQuality/DataQualityUtils', () => ({
   })),
 }));
 
-jest.mock(
-  '../../../Visualisations/Chart/CustomPieChart.component',
-  () =>
-    jest
-      .fn()
-      .mockImplementation(
-        (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
-          <div>
-            CustomPieChart.component
-            <button
-              data-testid="segment-0"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Healthy', value: 1 }, 0)
-              }
-            />
-            <button
-              data-testid="segment-1"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Unhealthy', value: 0 }, 1)
-              }
-            />
-          </div>
-        )
+jest.mock('../../../Visualisations/Chart/CustomPieChart.component', () =>
+  jest
+    .fn()
+    .mockImplementation(
+      (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
+        <div>
+          CustomPieChart.component
+          <button
+            data-testid="segment-0"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Healthy', value: 1 }, 0)
+            }
+          />
+          <button
+            data-testid="segment-1"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Unhealthy', value: 0 }, 1)
+            }
+          />
+        </div>
       )
+    )
 );
 
 describe('EntityHealthStatusPieChartWidget', () => {

@@ -29,9 +29,8 @@ jest.mock('../../../../rest/dataQualityDashboardAPI', () => ({
     })
   ),
 }));
-jest.mock(
-  '../../../Visualisations/Chart/CustomAreaChart.component',
-  () => jest.fn().mockImplementation(() => <div>CustomAreaChart.component</div>)
+jest.mock('../../../Visualisations/Chart/CustomAreaChart.component', () =>
+  jest.fn().mockImplementation(() => <div>CustomAreaChart.component</div>)
 );
 
 const defaultProps: IncidentTypeAreaChartWidgetProps = {

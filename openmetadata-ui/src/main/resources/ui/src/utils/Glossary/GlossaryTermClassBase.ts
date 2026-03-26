@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import React, { createElement } from 'react';
+import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
 import { TabProps } from '../../components/common/TabsLabel/TabsLabel.interface';
+import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import { EntityDetailsObjectInterface } from '../../components/Explore/ExplorePage.interface';
 import { AssetsTabRef } from '../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
-import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
-import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
 import { OperationPermission } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { EntityTabs } from '../../enums/entity.enum';
 import { GlossaryTerm } from '../../generated/entity/data/glossaryTerm';

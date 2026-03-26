@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 import { Card, Typography } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { ReactComponent as TestCaseIcon } from '../../../../assets/svg/all-activity-v2.svg';
-import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
-import type { CustomPieChartData } from '../../../Visualisations/Chart/Chart.interface';
 import {
   GREEN_3,
   RED_3,
@@ -26,12 +27,11 @@ import {
   getTestCaseTabPath,
   transformToTestCaseStatusObject,
 } from '../../../../utils/DataQuality/DataQualityUtils';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import type { CustomPieChartData } from '../../../Visualisations/Chart/Chart.interface';
+import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
 import { PieChartWidgetCommonProps } from '../../DataQuality.interface';
-import { TEST_CASE_STATUS_PIE_SEGMENT_ORDER } from '../ChartWidgets.constants';
 import '../chart-widgets.less';
+import { TEST_CASE_STATUS_PIE_SEGMENT_ORDER } from '../ChartWidgets.constants';
 
 const TestCaseStatusPieChartWidget = ({
   className = '',

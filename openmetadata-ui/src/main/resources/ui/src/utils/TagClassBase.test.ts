@@ -415,5 +415,4 @@ describe('TagClassBase', () => {
       expect(tabs).toEqual([]);
     });
   });
-
 });

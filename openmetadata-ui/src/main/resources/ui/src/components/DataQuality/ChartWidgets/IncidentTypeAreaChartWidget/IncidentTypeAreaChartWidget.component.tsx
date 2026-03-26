@@ -13,11 +13,11 @@
 import { Card, Typography } from 'antd';
 import classNames from 'classnames';
 import { isUndefined, last } from 'lodash';
-import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
-import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
-import { fetchCountOfIncidentStatusTypeByDays } from '../../../../rest/dataQualityDashboardAPI';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { fetchCountOfIncidentStatusTypeByDays } from '../../../../rest/dataQualityDashboardAPI';
+import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
+import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
 import { IncidentTypeAreaChartWidgetProps } from '../../DataQuality.interface';
 import '../chart-widgets.less';
 

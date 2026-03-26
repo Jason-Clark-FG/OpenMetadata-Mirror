@@ -12,8 +12,8 @@
  */
 import '@testing-library/jest-dom/extend-expect';
 import { render, screen } from '@testing-library/react';
-import { PRIMARY_COLOR } from '../../../../constants/Color.constants';
 import { MemoryRouter } from 'react-router-dom';
+import { PRIMARY_COLOR } from '../../../../constants/Color.constants';
 import StatusDataWidget from './StatusCardWidget.component';
 import { StatusCardWidgetProps } from './StatusCardWidget.interface';
 

@@ -95,7 +95,9 @@ describe('GlossaryTermClassBase', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const childProps = (dqTab?.children as any).props;
 
-      expect(childProps.initialFilters?.glossaryTerms).toEqual(['Finance.Revenue']);
+      expect(childProps.initialFilters?.glossaryTerms).toEqual([
+        'Finance.Revenue',
+      ]);
     });
 
     it('DQ tab hides glossaryTerms filter', () => {
@@ -182,7 +184,9 @@ describe('GlossaryTermClassBase', () => {
     it('includes DATA_OBSERVABILITY tab ID', () => {
       const tabs = instance.getGlossaryTermDetailPageTabsIds();
 
-      expect(tabs.find((t) => t.id === EntityTabs.DATA_OBSERVABILITY)).toBeDefined();
+      expect(
+        tabs.find((t) => t.id === EntityTabs.DATA_OBSERVABILITY)
+      ).toBeDefined();
     });
 
     it('DATA_OBSERVABILITY tab is not editable', () => {

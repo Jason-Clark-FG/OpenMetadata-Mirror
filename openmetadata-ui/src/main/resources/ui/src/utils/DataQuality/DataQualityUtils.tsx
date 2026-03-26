@@ -36,8 +36,8 @@ import { ReactComponent as UniquenessIcon } from '../../assets/svg/ic-uniqueness
 import { ReactComponent as ValidityIcon } from '../../assets/svg/ic-validity.svg';
 import { ReactComponent as NoDimensionIcon } from '../../assets/svg/no-dimension-icon.svg';
 import { SelectionOption } from '../../components/common/SelectionCardGroup/SelectionCardGroup.interface';
-import { TestCaseSearchParams } from '../../components/DataQuality/DataQuality.interface';
 import { StatusData } from '../../components/DataQuality/ChartWidgets/StatusCardWidget/StatusCardWidget.interface';
+import { TestCaseSearchParams } from '../../components/DataQuality/DataQuality.interface';
 import { SearchDropdownOption } from '../../components/SearchDropdown/SearchDropdown.interface';
 import { TEXT_GREY_MUTED } from '../../constants/constants';
 import { DEFAULT_DIMENSIONS_DATA } from '../../constants/DataQuality.constants';
@@ -63,11 +63,11 @@ import {
 } from '../../pages/DataQuality/DataQualityPage.interface';
 import { ListTestCaseParamsBySearch } from '../../rest/testAPI';
 import { getEntryFormattedValue } from '../DataInsightUtils';
-import { getDataQualityPagePath } from '../RouterUtils';
 import { formatDate } from '../date-time/DateTimeUtils';
 import EntityLink from '../EntityLink';
 import { getColumnNameFromEntityLink } from '../EntityUtils';
 import { getEntityFQN } from '../FeedUtils';
+import { getDataQualityPagePath } from '../RouterUtils';
 import { generateEntityLink } from '../TableUtils';
 
 /**

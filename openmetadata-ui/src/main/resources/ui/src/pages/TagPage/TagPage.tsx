@@ -39,7 +39,6 @@ import {
   ActivityFeedTabs,
 } from '../../components/ActivityFeed/ActivityFeedTab/ActivityFeedTab.interface';
 import { withActivityFeed } from '../../components/AppRouter/withActivityFeed';
-import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
 import { ManageButtonItemLabel } from '../../components/common/ManageButtonContentItem/ManageButtonContentItem.component';
@@ -52,6 +51,7 @@ import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/Ti
 import { GenericProvider } from '../../components/Customization/GenericProvider/GenericProvider';
 import { GenericTab } from '../../components/Customization/GenericTab/GenericTab';
 import { AssetSelectionModal } from '../../components/DataAssets/AssetsSelectionModal/AssetSelectionModal';
+import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import { EntityHeader } from '../../components/Entity/EntityHeader/EntityHeader.component';
 import { EntityStatusBadge } from '../../components/Entity/EntityStatusBadge/EntityStatusBadge.component';
 import EntitySummaryPanel from '../../components/Explore/EntitySummaryPanel/EntitySummaryPanel.component';
@@ -81,7 +81,11 @@ import {
   ResourceEntity,
 } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
-import { EntityTabs, EntityType, TabSpecificField } from '../../enums/entity.enum';
+import {
+  EntityTabs,
+  EntityType,
+  TabSpecificField,
+} from '../../enums/entity.enum';
 import { SearchIndex } from '../../enums/search.enum';
 import { ProviderType, Tag } from '../../generated/entity/classification/tag';
 import { EntityStatus } from '../../generated/entity/data/glossaryTerm';
@@ -620,7 +624,9 @@ const TagPage = () => {
       },
     ];
 
-    tabs.push(...tagClassBase.getAdditionalTagDetailPageTabs(tagItem, activeTab));
+    tabs.push(
+      ...tagClassBase.getAdditionalTagDetailPageTabs(tagItem, activeTab)
+    );
 
     return tabs;
   }, [

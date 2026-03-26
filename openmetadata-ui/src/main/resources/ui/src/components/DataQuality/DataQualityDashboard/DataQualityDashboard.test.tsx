@@ -1,15 +1,27 @@
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { SearchDropdownOption } from '../../../components/SearchDropdown/SearchDropdown.interface';
 import {
   ABORTED_CHART_COLOR_SCHEME,
   FAILED_CHART_COLOR_SCHEME,
   SUCCESS_CHART_COLOR_SCHEME,
 } from '../../../constants/Chart.constants';
-import { SearchDropdownOption } from '../../../components/SearchDropdown/SearchDropdown.interface';
 import { TestCaseStatus } from '../../../generated/tests/testCase';
 import { TestCaseResolutionStatusTypes } from '../../../generated/tests/testCaseResolutionStatus';
 import { DataQualityPageTabs } from '../../../pages/DataQuality/DataQualityPage.interface';
 import { getDataQualityPagePath } from '../../../utils/RouterUtils';
-import { MemoryRouter } from 'react-router-dom';
 import { IncidentTimeMetricsType } from '../DataQuality.interface';
 import DataQualityDashboard from './DataQualityDashboard.component';
 
@@ -85,9 +97,8 @@ jest.mock('../../../utils/RouterUtils', () => ({
   getDataQualityPagePath: jest.fn((tab: string) => `/data-quality/${tab}`),
 }));
 
-jest.mock(
-  '../../../components/PageHeader/PageHeader.component',
-  () => jest.fn().mockImplementation(() => <div data-testid="page-header" />)
+jest.mock('../../../components/PageHeader/PageHeader.component', () =>
+  jest.fn().mockImplementation(() => <div data-testid="page-header" />)
 );
 
 jest.mock('../../../rest/tagAPI', () => ({
@@ -104,8 +115,7 @@ jest.mock(
     jest.fn().mockImplementation(({ handleDateRangeChange }) => (
       <button
         data-testid="date-picker-menu"
-        onClick={() => handleDateRangeChange({ startTs: 1, endTs: 2 })}
-      >
+        onClick={() => handleDateRangeChange({ startTs: 1, endTs: 2 })}>
         DatePickerMenu
       </button>
     ))
@@ -121,8 +131,7 @@ jest.mock(
           {children}
           <button
             data-testid="user-team-selectable-list"
-            onClick={() => onUpdate([{ id: '1', name: 'owner1' }])}
-          >
+            onClick={() => onUpdate([{ id: '1', name: 'owner1' }])}>
             UserTeamSelectableList
           </button>
         </div>
@@ -135,8 +144,7 @@ jest.mock('../../../components/SearchDropdown/SearchDropdown', () =>
     <div>
       <button
         data-testid={`search-dropdown-${label}`}
-        onClick={() => onChange([{ key: 'tag1', label: 'Tag 1' }])}
-      >
+        onClick={() => onChange([{ key: 'tag1', label: 'Tag 1' }])}>
         {label} SearchDropdown
       </button>
       {selectedKeys

@@ -12,9 +12,9 @@
  */
 
 import { createElement } from 'react';
-import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
-import { TabProps } from '../../components/common/TabsLabel/TabsLabel.interface';
 import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
+import { TabProps } from '../../components/common/TabsLabel/TabsLabel.interface';
+import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import { DataProductsTabRef } from '../../components/Domain/DomainTabs/DataProductsTab/DataProductsTab.interface';
 import { EntityDetailsObjectInterface } from '../../components/Explore/ExplorePage.interface';
 import { AssetsTabRef } from '../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';

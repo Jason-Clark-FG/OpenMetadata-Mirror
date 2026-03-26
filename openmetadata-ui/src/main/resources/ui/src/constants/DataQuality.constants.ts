@@ -22,6 +22,7 @@ import {
   getEpochMillisForPastDays,
   getStartOfDayInMillis,
 } from '../utils/date-time/DateTimeUtils';
+
 export const TEST_CASE_STATUS_ICON = {
   Aborted: SkippedIcon,
   Failed: FailedIcon,
@@ -29,10 +30,7 @@ export const TEST_CASE_STATUS_ICON = {
   Success: SuccessIcon,
 };
 
-const moveItemsToEnd = <T>(
-  arr: T[],
-  predicate: (item: T) => boolean
-): T[] => {
+const moveItemsToEnd = <T>(arr: T[], predicate: (item: T) => boolean): T[] => {
   const keep: T[] = [];
   const move: T[] = [];
   for (const item of arr) {
@@ -42,6 +40,7 @@ const moveItemsToEnd = <T>(
       keep.push(item);
     }
   }
+
   return [...keep, ...move];
 };
 

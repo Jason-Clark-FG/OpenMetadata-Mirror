@@ -13,7 +13,10 @@
 
 import { createElement } from 'react';
 import { EntityTabs } from '../../enums/entity.enum';
-import domainClassBase, { DomainClassBase, DomainDetailPageTabProps } from './DomainClassBase';
+import domainClassBase, {
+  DomainClassBase,
+  DomainDetailPageTabProps,
+} from './DomainClassBase';
 
 jest.mock('../../constants/Domain.constants', () => ({
   DOMAIN_DUMMY_DATA: {},
@@ -84,8 +87,9 @@ describe('DomainClassBase', () => {
 
     it('DQ tab passes domain.fullyQualifiedName as initialFilters.domainFqn', () => {
       const tabs = instance.getDomainDetailPageTabs(mockProps);
-      const childProps = (tabs.at(-1)?.children as ReturnType<typeof createElement>)
-        .props;
+      const childProps = (
+        tabs.at(-1)?.children as ReturnType<typeof createElement>
+      ).props;
 
       expect(childProps.initialFilters?.domainFqn).toBe('Finance');
     });
@@ -96,8 +100,9 @@ describe('DomainClassBase', () => {
         domain: { fullyQualifiedName: undefined },
       } as unknown as DomainDetailPageTabProps;
       const tabs = instance.getDomainDetailPageTabs(props);
-      const childProps = (tabs.at(-1)?.children as ReturnType<typeof createElement>)
-        .props;
+      const childProps = (
+        tabs.at(-1)?.children as ReturnType<typeof createElement>
+      ).props;
 
       expect(childProps.initialFilters).toBeUndefined();
     });

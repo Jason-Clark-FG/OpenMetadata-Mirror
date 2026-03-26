@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { ReactComponent as DashboardIcon } from '../../assets/svg/ic-dashboard.svg';
 import { ReactComponent as TestCaseIcon } from '../../assets/svg/all-activity-v2.svg';
+import { ReactComponent as DashboardIcon } from '../../assets/svg/ic-dashboard.svg';
 import { ReactComponent as TestSuiteIcon } from '../../assets/svg/icon-test-suite.svg';
 import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import { TestCases } from '../../components/DataQuality/TestCases/TestCases.component';

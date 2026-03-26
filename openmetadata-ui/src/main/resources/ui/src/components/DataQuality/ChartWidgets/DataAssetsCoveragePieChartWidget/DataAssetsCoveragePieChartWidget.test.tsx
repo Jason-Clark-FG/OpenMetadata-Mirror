@@ -39,30 +39,28 @@ jest.mock('../../../../utils/RouterUtils', () => ({
   getDataQualityPagePath: jest.fn((tab: string) => `/data-quality/${tab}`),
 }));
 
-jest.mock(
-  '../../../Visualisations/Chart/CustomPieChart.component',
-  () =>
-    jest
-      .fn()
-      .mockImplementation(
-        (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
-          <div>
-            CustomPieChart.component
-            <button
-              data-testid="segment-covered"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Covered', value: 1 }, 0)
-              }
-            />
-            <button
-              data-testid="segment-not-covered"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Not covered', value: 0 }, 1)
-              }
-            />
-          </div>
-        )
+jest.mock('../../../Visualisations/Chart/CustomPieChart.component', () =>
+  jest
+    .fn()
+    .mockImplementation(
+      (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
+        <div>
+          CustomPieChart.component
+          <button
+            data-testid="segment-covered"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Covered', value: 1 }, 0)
+            }
+          />
+          <button
+            data-testid="segment-not-covered"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Not covered', value: 0 }, 1)
+            }
+          />
+        </div>
       )
+    )
 );
 
 describe('DataAssetsCoveragePieChartWidget', () => {

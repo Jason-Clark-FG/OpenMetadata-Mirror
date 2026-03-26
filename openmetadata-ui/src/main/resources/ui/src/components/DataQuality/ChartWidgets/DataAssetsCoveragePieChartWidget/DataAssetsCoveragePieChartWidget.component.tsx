@@ -11,9 +11,10 @@
  *  limitations under the License.
  */
 import { Card, Typography } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { ReactComponent as DataAssetsCoverageIcon } from '../../../../assets/svg/ic-data-assets-coverage.svg';
-import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
-import type { CustomPieChartData } from '../../../Visualisations/Chart/Chart.interface';
 import { GREEN_3, RED_3 } from '../../../../constants/Color.constants';
 import { ROUTES } from '../../../../constants/constants';
 import { INITIAL_DATA_ASSETS_COVERAGE_STATES } from '../../../../constants/profiler.constant';
@@ -22,11 +23,10 @@ import {
   fetchEntityCoveredWithDQ,
   fetchTotalEntityCount,
 } from '../../../../rest/dataQualityDashboardAPI';
-import { getDataQualityPagePath } from '../../../../utils/RouterUtils';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { getPieChartLabel } from '../../../../utils/DataQuality/DataQualityUtils';
+import { getDataQualityPagePath } from '../../../../utils/RouterUtils';
+import type { CustomPieChartData } from '../../../Visualisations/Chart/Chart.interface';
+import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
 import { PieChartWidgetCommonProps } from '../../DataQuality.interface';
 import '../chart-widgets.less';
 

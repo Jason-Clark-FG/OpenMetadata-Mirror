@@ -11,8 +11,10 @@
  *  limitations under the License.
  */
 import { Col, Row } from 'antd';
-import { DIMENSIONS_DATA } from '../../../../constants/DataQuality.constants';
 import { isUndefined } from 'lodash';
+import QueryString from 'qs';
+import { useEffect, useMemo, useState } from 'react';
+import { DIMENSIONS_DATA } from '../../../../constants/DataQuality.constants';
 import { DataQualityReport } from '../../../../generated/tests/dataQualityReport';
 import { DataQualityDimensions } from '../../../../generated/tests/testDefinition';
 import { DataQualityPageTabs } from '../../../../pages/DataQuality/DataQualityPage.interface';
@@ -25,8 +27,6 @@ import {
   transformToTestCaseStatusByDimension,
 } from '../../../../utils/DataQuality/DataQualityUtils';
 import { getDataQualityPagePath } from '../../../../utils/RouterUtils';
-import QueryString from 'qs';
-import { useEffect, useMemo, useState } from 'react';
 import { PieChartWidgetCommonProps } from '../../DataQuality.interface';
 import StatusByDimensionWidget from '../StatusCardWidget/StatusCardWidget.component';
 import './status-by-dimension-card-widget.less';

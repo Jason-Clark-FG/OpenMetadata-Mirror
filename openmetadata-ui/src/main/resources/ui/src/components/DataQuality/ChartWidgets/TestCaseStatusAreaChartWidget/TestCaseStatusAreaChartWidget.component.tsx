@@ -17,15 +17,15 @@ import {
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { isUndefined, last, toLower } from 'lodash';
-import { ReactComponent as SuccessIcon } from '../../../../assets/svg/ic-check.svg';
-import { ReactComponent as FailedIcon } from '../../../../assets/svg/ic-warning-2.svg';
-import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
-import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
-import { TestCaseStatus } from '../../../../generated/entity/feed/testCaseResult';
-import { fetchTestCaseStatusMetricsByDays } from '../../../../rest/dataQualityDashboardAPI';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ReactComponent as SuccessIcon } from '../../../../assets/svg/ic-check.svg';
+import { ReactComponent as FailedIcon } from '../../../../assets/svg/ic-warning-2.svg';
+import { TestCaseStatus } from '../../../../generated/entity/feed/testCaseResult';
+import { fetchTestCaseStatusMetricsByDays } from '../../../../rest/dataQualityDashboardAPI';
+import { CustomAreaChartData } from '../../../Visualisations/Chart/Chart.interface';
+import CustomAreaChart from '../../../Visualisations/Chart/CustomAreaChart.component';
 import { TestCaseStatusAreaChartWidgetProps } from '../../DataQuality.interface';
 import '../chart-widgets.less';
 import './test-case-status-area-chart-widget.less';
@@ -65,8 +65,7 @@ const TestCaseStatusAreaChartWidget = ({
               className={classNames(
                 'test-case-status-icon',
                 toLower(testCaseStatus)
-              )}
-            >
+              )}>
               <Icon />
             </div>
           )}
@@ -78,15 +77,13 @@ const TestCaseStatusAreaChartWidget = ({
                 {
                   'tw:mb-0': showIcon,
                 }
-              )}
-            >
+              )}>
               {title}
             </Typography>
             <Typography
               as="h4"
               className="chart-widget-value chart-widget-link-underline"
-              data-testid="total-value"
-            >
+              data-testid="total-value">
               {latestValue}
             </Typography>
           </div>
@@ -160,8 +157,7 @@ const TestCaseStatusAreaChartWidget = ({
   return (
     <div
       className={containerClassName}
-      data-testid={`test-case-${testCaseStatus}-area-chart-widget`}
-    >
+      data-testid={`test-case-${testCaseStatus}-area-chart-widget`}>
       <div className="chart-widget-content">
         {redirectPath ? (
           <Link to={redirectPath}>{bodyElement}</Link>

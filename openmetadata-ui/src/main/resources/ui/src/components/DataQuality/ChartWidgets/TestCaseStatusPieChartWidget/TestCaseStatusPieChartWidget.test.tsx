@@ -13,8 +13,8 @@
 import '@testing-library/jest-dom/extend-expect';
 import { act, render, screen } from '@testing-library/react';
 import { TestCaseStatus } from '../../../../generated/entity/feed/testCaseResult';
-import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
 import { fetchTestCaseSummary } from '../../../../rest/dataQualityDashboardAPI';
+import CustomPieChart from '../../../Visualisations/Chart/CustomPieChart.component';
 import TestCaseStatusPieChartWidget from './TestCaseStatusPieChartWidget.component';
 
 jest.mock('react-router-dom', () => {
@@ -51,36 +51,34 @@ jest.mock('../../../../constants/TestSuite.constant', () => ({
     total: 0,
   },
 }));
-jest.mock(
-  '../../../Visualisations/Chart/CustomPieChart.component',
-  () =>
-    jest
-      .fn()
-      .mockImplementation(
-        (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
-          <div>
-            CustomPieChart.component
-            <button
-              data-testid="segment-0"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Success', value: 4 }, 0)
-              }
-            />
-            <button
-              data-testid="segment-1"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Failed', value: 3 }, 1)
-              }
-            />
-            <button
-              data-testid="segment-2"
-              onClick={() =>
-                props.onSegmentClick?.({ name: 'Aborted', value: 1 }, 2)
-              }
-            />
-          </div>
-        )
+jest.mock('../../../Visualisations/Chart/CustomPieChart.component', () =>
+  jest
+    .fn()
+    .mockImplementation(
+      (props: { onSegmentClick?: (e: unknown, i: number) => void }) => (
+        <div>
+          CustomPieChart.component
+          <button
+            data-testid="segment-0"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Success', value: 4 }, 0)
+            }
+          />
+          <button
+            data-testid="segment-1"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Failed', value: 3 }, 1)
+            }
+          />
+          <button
+            data-testid="segment-2"
+            onClick={() =>
+              props.onSegmentClick?.({ name: 'Aborted', value: 1 }, 2)
+            }
+          />
+        </div>
       )
+    )
 );
 
 jest.mock('../../../../rest/dataQualityDashboardAPI', () => ({
