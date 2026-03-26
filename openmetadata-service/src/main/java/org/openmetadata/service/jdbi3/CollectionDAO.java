@@ -5208,6 +5208,13 @@ public interface CollectionDAO {
     void deleteTagsByTargets(@BindListFQN("targetFQNHashes") List<String> targetFQNs);
 
     @SqlUpdate(
+        "DELETE FROM tag_usage WHERE source = :source AND tagFQN LIKE :tagFQNPrefix AND targetFQNHash IN (<targetFQNHashes>)")
+    void deleteTagsByPrefixAndTargets(
+        @Bind("source") int source,
+        @Bind("tagFQNPrefix") String tagFQNPrefix,
+        @BindListFQN("targetFQNHashes") List<String> targetFQNHashes);
+
+    @SqlUpdate(
         "DELETE FROM tag_usage where tagFQNHash = :tagFqnHash AND targetFQNHash LIKE :targetFQNHash")
     void deleteTagsByTagAndTargetEntity(
         @BindFQN("tagFqnHash") String tagFqnHash,

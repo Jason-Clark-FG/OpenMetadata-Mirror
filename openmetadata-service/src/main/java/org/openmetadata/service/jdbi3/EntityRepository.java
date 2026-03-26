@@ -2334,7 +2334,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     storeReviewers(entities);
     storeDataProducts(entities);
     applyTagsToEntities(entities);
-    entities.forEach(this::applyCertification);
+    applyCertificationBatch(entities);
 
     // Repository-specific relationship writes can still batch here.
     storeEntitySpecificRelationshipsForMany(entities);
@@ -4512,6 +4512,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   protected void applyCertification(T entity) {
     if (!supportsCertification || entity.getCertification() == null) return;
+    if (entity.getCertification().getTagLabel() == null
+        || entity.getCertification().getTagLabel().getTagFQN() == null) return;
     AssetCertification existing = getCertification(entity);
     AssetCertification incoming = entity.getCertification();
     if (existing != null
@@ -4537,6 +4539,43 @@ public abstract class EntityRepository<T extends EntityInterface> {
             null,
             null,
             metadata);
+  }
+
+  protected void applyCertificationBatch(List<T> entities) {
+    if (!supportsCertification) return;
+    String certClassification = getCertificationClassification();
+    if (certClassification == null) return;
+
+    List<T> certEntities =
+        entities.stream()
+            .filter(
+                e ->
+                    e.getCertification() != null
+                        && e.getCertification().getTagLabel() != null
+                        && e.getCertification().getTagLabel().getTagFQN() != null)
+            .toList();
+    if (certEntities.isEmpty()) return;
+
+    List<String> targetFQNs =
+        certEntities.stream().map(EntityInterface::getFullyQualifiedName).toList();
+    daoCollection
+        .tagUsageDAO()
+        .deleteTagsByPrefixAndTargets(
+            TagLabel.TagSource.CLASSIFICATION.ordinal(), certClassification + ".%", targetFQNs);
+
+    Map<String, List<TagLabel>> certTagsByTarget = new LinkedHashMap<>();
+    for (T entity : certEntities) {
+      AssetCertification cert = entity.getCertification();
+      TagLabel tagLabel =
+          new TagLabel()
+              .withSource(TagLabel.TagSource.CLASSIFICATION)
+              .withTagFQN(cert.getTagLabel().getTagFQN())
+              .withLabelType(TagLabel.LabelType.AUTOMATED)
+              .withState(TagLabel.State.CONFIRMED)
+              .withMetadata(new TagLabelMetadata().withExpiryDate(cert.getExpiryDate()));
+      certTagsByTarget.put(entity.getFullyQualifiedName(), List.of(tagLabel));
+    }
+    daoCollection.tagUsageDAO().applyTagsBatchMultiTarget(certTagsByTarget);
   }
 
   protected void deleteCertificationTag(String entityFQN) {
