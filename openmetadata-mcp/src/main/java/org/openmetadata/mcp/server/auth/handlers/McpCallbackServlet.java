@@ -257,7 +257,9 @@ public class McpCallbackServlet extends HttpServlet {
 
       McpPendingAuthRequest pendingRequest = pendingAuthRepository.findByPac4jState(pac4jState);
       if (pendingRequest == null) {
-        LOG.warn("No pending auth request found for pac4j state: {}", pac4jState);
+        LOG.warn(
+            "No pending auth request found for pac4j state (hash={})",
+            Integer.toHexString(pac4jState.hashCode()));
         response.sendError(
             HttpServletResponse.SC_BAD_REQUEST,
             "Invalid MCP OAuth callback - state not found or expired");
@@ -301,7 +303,8 @@ public class McpCallbackServlet extends HttpServlet {
           new HttpServletResponseWrapper(response) {
             @Override
             public void sendRedirect(String location) throws IOException {
-              LOG.info("Intercepted redirect from SSO handler to: {}", location);
+              LOG.info("Intercepted redirect from SSO handler");
+              LOG.debug("Redirect target: {}", location);
             }
 
             @Override
@@ -435,11 +438,7 @@ public class McpCallbackServlet extends HttpServlet {
     JWTClaimsSet claimsSet;
     try {
       claimsSet = getIdTokenValidator(ssoHandler).validateAndDecode(idTokenString);
-      LOG.info(
-          "ID token signature validated successfully for auth request: {}. Issuer: {}, Subject: {}",
-          authRequestId,
-          claimsSet.getIssuer(),
-          claimsSet.getSubject());
+      LOG.debug("ID token signature validated successfully for auth request: {}", authRequestId);
     } catch (IdTokenValidator.IdTokenValidationException e) {
       LOG.error(
           "SECURITY ALERT: ID token validation failed for auth request: {}. Reason: {}. IP: {}",
