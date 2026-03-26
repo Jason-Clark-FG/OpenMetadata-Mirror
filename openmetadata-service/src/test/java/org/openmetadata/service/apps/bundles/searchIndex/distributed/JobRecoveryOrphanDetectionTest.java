@@ -257,5 +257,38 @@ class JobRecoveryOrphanDetectionTest {
 
       verify(jobDAO, atLeastOnce()).touchJob(eq(JOB_ID.toString()), anyLong());
     }
+
+    @Test
+    @DisplayName("touchJobThrottled handles exception gracefully when touchJob throws")
+    void touchJobThrottledHandlesExceptionGracefully() {
+      UUID partitionId = UUID.randomUUID();
+      CollectionDAO.SearchIndexPartitionDAO.SearchIndexPartitionRecord record =
+          mock(CollectionDAO.SearchIndexPartitionDAO.SearchIndexPartitionRecord.class);
+      when(record.jobId()).thenReturn(JOB_ID.toString());
+      when(record.entityType()).thenReturn("table");
+      when(record.rangeEnd()).thenReturn(100L);
+      when(record.assignedServer()).thenReturn("server1");
+      when(record.claimedAt()).thenReturn(NOW);
+      when(record.startedAt()).thenReturn(NOW);
+      when(record.lastError()).thenReturn(null);
+      when(record.retryCount()).thenReturn(0);
+      when(partitionDAO.findById(partitionId.toString())).thenReturn(record);
+
+      when(partitionDAO.findByJobIdAndStatus(JOB_ID.toString(), "PENDING"))
+          .thenReturn(List.of(record));
+      when(partitionDAO.findByJobIdAndStatus(JOB_ID.toString(), "PROCESSING"))
+          .thenReturn(List.of());
+
+      org.mockito.Mockito.doThrow(new RuntimeException("DB connection lost"))
+          .when(jobDAO)
+          .touchJob(eq(JOB_ID.toString()), anyLong());
+
+      PartitionCalculator calculator = new PartitionCalculator(10000);
+      DistributedSearchIndexCoordinator coordinator =
+          new DistributedSearchIndexCoordinator(collectionDAO, calculator);
+
+      org.junit.jupiter.api.Assertions.assertDoesNotThrow(
+          () -> coordinator.completePartition(partitionId, 100, 0));
+    }
   }
 }
