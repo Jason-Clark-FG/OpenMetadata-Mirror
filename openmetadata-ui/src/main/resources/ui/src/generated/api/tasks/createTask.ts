@@ -814,6 +814,7 @@ export enum TaskType {
     IncidentResolution = "IncidentResolution",
     OwnershipUpdate = "OwnershipUpdate",
     PipelineReview = "PipelineReview",
+    RequestApproval = "RequestApproval",
     Suggestion = "Suggestion",
     TagUpdate = "TagUpdate",
     TestCaseResolution = "TestCaseResolution",
