@@ -101,6 +101,12 @@ export interface AuthenticationConfiguration {
      */
     samlConfiguration?: SamlSSOClientConfig;
     /**
+     * Validity for the authenticated session across all auth providers. Values below 3600
+     * seconds fall back to the default 604800-second expiry. If unset, OpenMetadata falls back
+     * to the legacy OIDC-specific sessionExpiry when present.
+     */
+    sessionExpiry?: number;
+    /**
      * Token Validation Algorithm to use.
      */
     tokenValidationAlgorithm?: TokenValidationAlgorithm;
