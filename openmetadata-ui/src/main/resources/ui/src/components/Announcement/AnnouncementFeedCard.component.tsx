@@ -31,11 +31,6 @@ const AnnouncementFeedCard = ({
           <AnnouncementBadge />
           <AnnouncementFeedCardBody
             announcement={announcement}
-            announcementDetails={{
-              description: announcement.description,
-              startTime: announcement.startTime,
-              endTime: announcement.endTime,
-            }}
             editPermission={editPermission}
             updateAnnouncementHandler={updateAnnouncementHandler}
             onConfirmation={onConfirmation}

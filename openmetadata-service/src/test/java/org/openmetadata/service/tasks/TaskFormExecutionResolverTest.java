@@ -52,7 +52,8 @@ class TaskFormExecutionResolverTest {
       entityMock
           .when(() -> Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA))
           .thenReturn(repository);
-      when(repository.resolve(TaskEntityType.DescriptionUpdate.value(), TaskCategory.MetadataUpdate.value()))
+      when(repository.resolve(
+              TaskEntityType.DescriptionUpdate.value(), TaskCategory.MetadataUpdate.value()))
           .thenReturn(Optional.empty());
 
       TaskExecutionBinding binding = TaskFormExecutionResolver.resolve(task);

@@ -43,8 +43,6 @@ import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
-import org.openmetadata.schema.entity.feed.FormSchema;
-import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.data.APICollection;
 import org.openmetadata.schema.entity.data.APIEndpoint;
@@ -55,6 +53,8 @@ import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.data.Topic;
 import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.feed.FormSchema;
+import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
@@ -291,8 +291,7 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
                     .withAdditionalProperty("type", "object")
                     .withAdditionalProperty("required", List.of("reviewNotes"))
                     .withAdditionalProperty(
-                        "properties",
-                        Map.of("reviewNotes", Map.of("type", "string"))));
+                        "properties", Map.of("reviewNotes", Map.of("type", "string"))));
     SdkClients.adminClient().taskFormSchemas().create(schema);
 
     CreateTask invalidRequest =
@@ -302,7 +301,9 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
             .withType(TaskEntityType.CustomTask)
             .withPayload(Map.of("approved", true));
 
-    assertThrows(InvalidRequestException.class, () -> SdkClients.adminClient().tasks().create(invalidRequest));
+    assertThrows(
+        InvalidRequestException.class,
+        () -> SdkClients.adminClient().tasks().create(invalidRequest));
 
     CreateTask validRequest =
         new CreateTask()

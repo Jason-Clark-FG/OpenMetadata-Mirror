@@ -16,7 +16,7 @@ import { DateTime } from 'luxon';
 import { FC, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { VALIDATION_MESSAGES } from '../../../constants/constants';
-import { AnnouncementDetails } from '../../../generated/entity/feed/thread';
+import { AnnouncementEntity } from '../../../rest/announcementsAPI';
 import { FieldProp, FieldTypes } from '../../../interface/FormUtils.interface';
 import { getTimeZone } from '../../../utils/date-time/DateTimeUtils';
 import { getField } from '../../../utils/formUtils';
@@ -26,11 +26,14 @@ import { CreateAnnouncement } from './AddAnnouncementModal';
 import './announcement-modal.less';
 
 interface Props {
-  announcement: AnnouncementDetails;
+  announcement: Pick<AnnouncementEntity, 'description' | 'startTime' | 'endTime'>;
   announcementTitle: string;
   open: boolean;
   onCancel: () => void;
-  onConfirm: (title: string, announcement: AnnouncementDetails) => void;
+  onConfirm: (
+    title: string,
+    announcement: Pick<AnnouncementEntity, 'description' | 'startTime' | 'endTime'>
+  ) => void;
 }
 
 const EditAnnouncementModal: FC<Props> = ({

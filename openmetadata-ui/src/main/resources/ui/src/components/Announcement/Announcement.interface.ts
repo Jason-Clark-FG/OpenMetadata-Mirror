@@ -12,7 +12,6 @@
  */
 import { Operation } from 'fast-json-patch';
 import { HTMLAttributes } from 'react';
-import { AnnouncementDetails } from '../../generated/api/feed/createThread';
 import { ConfirmState } from '../ActivityFeed/ActivityFeedCard/ActivityFeedCard.interface';
 import { AnnouncementEntity } from '../../rest/announcementsAPI';
 
@@ -60,5 +59,4 @@ export interface AnnouncementFeedCardBodyProp
   editPermission: boolean;
   onConfirmation: (data: ConfirmState) => void;
   updateAnnouncementHandler: AnnouncementUpdatedFunction;
-  announcementDetails?: AnnouncementDetails;
 }

@@ -10,15 +10,20 @@ import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Handle;
 import org.openmetadata.schema.api.search.SearchSettings;
 import org.openmetadata.schema.entity.activity.ActivityEvent;
+import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.settings.Settings;
 import org.openmetadata.schema.type.ActivityEventType;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
+import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.AnnouncementRepository;
+import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.migration.utils.SearchSettingsMergeUtil;
 import org.openmetadata.service.resources.feeds.MessageParser;
+import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
@@ -365,6 +370,90 @@ public class MigrationUtil {
 
     updateSequenceValue(handle, seqVal);
     LOG.info("Thread task migration complete: migrated={}, skipped={}", migrated, skipped);
+  }
+
+  public static void backfillAnnouncementRelationships(Handle handle) {
+    LOG.info("Backfilling announcement relationships");
+
+    boolean tableExists;
+    try {
+      handle.createQuery("SELECT 1 FROM announcement_entity LIMIT 1").mapTo(Integer.class).one();
+      tableExists = true;
+    } catch (Exception e) {
+      tableExists = false;
+    }
+
+    if (!tableExists) {
+      LOG.info("announcement_entity table does not exist, skipping relationship backfill");
+      return;
+    }
+
+    List<Map<String, Object>> rows =
+        handle.createQuery("SELECT json FROM announcement_entity").mapToMap().list();
+    if (rows.isEmpty()) {
+      return;
+    }
+
+    AnnouncementRepository repository =
+        (AnnouncementRepository) Entity.getEntityRepository(Entity.ANNOUNCEMENT);
+    CollectionDAO.EntityRelationshipDAO relationshipDAO =
+        Entity.getCollectionDAO().relationshipDAO();
+
+    for (Map<String, Object> row : rows) {
+      try {
+        Announcement announcement =
+            JsonUtils.readValue(row.get("json").toString(), Announcement.class);
+
+        relationshipDAO.deleteTo(
+            announcement.getId(), Entity.ANNOUNCEMENT, Relationship.HAS.ordinal());
+        relationshipDAO.deleteTo(
+            announcement.getId(), Entity.ANNOUNCEMENT, Relationship.OWNS.ordinal());
+        relationshipDAO.deleteTo(
+            announcement.getId(), Entity.ANNOUNCEMENT, Relationship.MENTIONED_IN.ordinal());
+
+        if (announcement.getEntityLink() == null) {
+          continue;
+        }
+
+        EntityReference target =
+            EntityUtil.validateEntityLink(
+                MessageParser.EntityLink.parse(announcement.getEntityLink()));
+
+        relationshipDAO.insert(
+            target.getId(),
+            announcement.getId(),
+            target.getType(),
+            Entity.ANNOUNCEMENT,
+            Relationship.MENTIONED_IN.ordinal());
+
+        List<EntityReference> owners = Entity.getOwners(target);
+        if (owners != null) {
+          for (EntityReference owner : owners) {
+            relationshipDAO.insert(
+                owner.getId(),
+                announcement.getId(),
+                owner.getType(),
+                Entity.ANNOUNCEMENT,
+                Relationship.OWNS.ordinal());
+          }
+        }
+
+        repository.prepare(announcement, true);
+        List<EntityReference> domains = announcement.getDomains();
+        if (domains != null) {
+          for (EntityReference domain : domains) {
+            relationshipDAO.insert(
+                domain.getId(),
+                announcement.getId(),
+                Entity.DOMAIN,
+                Entity.ANNOUNCEMENT,
+                Relationship.HAS.ordinal());
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to backfill announcement relationships: {}", e.getMessage());
+      }
+    }
   }
 
   /**

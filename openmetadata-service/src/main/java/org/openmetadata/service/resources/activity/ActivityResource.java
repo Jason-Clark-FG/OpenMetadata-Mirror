@@ -530,8 +530,7 @@ public class ActivityResource {
     return requestedDomains;
   }
 
-  private List<UUID> getEffectiveDomainsByFqn(
-      SecurityContext securityContext, String domainFqn) {
+  private List<UUID> getEffectiveDomainsByFqn(SecurityContext securityContext, String domainFqn) {
     if (nullOrEmpty(domainFqn)) {
       return getEffectiveDomains(securityContext, null);
     }

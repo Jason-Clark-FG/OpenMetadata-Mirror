@@ -449,16 +449,10 @@ public class ActivityResourceIT {
 
     Table allowedTable =
         createTableInDomain(
-            ns,
-            "my-feed-allowed-table",
-            allowedDomain,
-            List.of(adminUser.getEntityReference()));
+            ns, "my-feed-allowed-table", allowedDomain, List.of(adminUser.getEntityReference()));
     Table blockedTable =
         createTableInDomain(
-            ns,
-            "my-feed-blocked-table",
-            blockedDomain,
-            List.of(adminUser.getEntityReference()));
+            ns, "my-feed-blocked-table", blockedDomain, List.of(adminUser.getEntityReference()));
 
     ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
     ActivityEvent blockedEvent = createTestActivityEvent(blockedTable, blockedDomain);
@@ -1029,8 +1023,7 @@ public class ActivityResourceIT {
       int days,
       String domainFqn)
       throws Exception {
-    RequestOptions options =
-        buildActivityRequestOptions(limit, days, domainFqn);
+    RequestOptions options = buildActivityRequestOptions(limit, days, domainFqn);
 
     String path = ACTIVITY_PATH + "/entity/" + entityType + "/" + entityId;
     String response = client.getHttpClient().executeForString(HttpMethod.GET, path, null, options);
@@ -1045,8 +1038,7 @@ public class ActivityResourceIT {
   private ActivityEventList getUserActivity(
       OpenMetadataClient client, UUID userId, int limit, int days, String domainFqn)
       throws Exception {
-    RequestOptions options =
-        buildActivityRequestOptions(limit, days, domainFqn);
+    RequestOptions options = buildActivityRequestOptions(limit, days, domainFqn);
 
     String path = ACTIVITY_PATH + "/user/" + userId;
     String response = client.getHttpClient().executeForString(HttpMethod.GET, path, null, options);
@@ -1179,7 +1171,8 @@ public class ActivityResourceIT {
     String response =
         client
             .getHttpClient()
-            .executeForString(HttpMethod.GET, ACTIVITY_PATH + "/about", null, optionsBuilder.build());
+            .executeForString(
+                HttpMethod.GET, ACTIVITY_PATH + "/about", null, optionsBuilder.build());
     return MAPPER.readValue(response, ActivityEventList.class);
   }
 

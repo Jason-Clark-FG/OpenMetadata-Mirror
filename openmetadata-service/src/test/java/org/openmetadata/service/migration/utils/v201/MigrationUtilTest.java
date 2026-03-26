@@ -35,13 +35,13 @@ import org.jdbi.v3.core.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
-import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
-import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 
 class MigrationUtilTest {
   private Handle handle;
@@ -104,14 +104,14 @@ class MigrationUtilTest {
     when(approvalNode.getSubType()).thenReturn("userApprovalTask");
     WorkflowDefinition workflowDefinition =
         new WorkflowDefinition().withName("ApprovalWorkflow").withNodes(List.of(approvalNode));
-    when(workflowDefinitionRepository.listAll(any(), any())).thenReturn(List.of(workflowDefinition));
+    when(workflowDefinitionRepository.listAll(any(), any()))
+        .thenReturn(List.of(workflowDefinition));
 
     MigrationUtil migrationUtil = newMigrationUtil();
 
     migrationUtil.runTaskWorkflowCutoverMigration();
 
-    verify(workflowDefinitionRepository)
-        .createOrUpdate(null, workflowDefinition, "admin");
+    verify(workflowDefinitionRepository).createOrUpdate(null, workflowDefinition, "admin");
     verify(handle, never()).createQuery(anyString());
   }
 

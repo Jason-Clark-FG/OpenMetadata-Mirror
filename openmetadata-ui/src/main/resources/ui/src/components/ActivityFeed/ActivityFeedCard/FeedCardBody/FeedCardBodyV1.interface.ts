@@ -11,18 +11,13 @@
  *  limitations under the License.
  */
 import { ActivityEvent } from '../../../../generated/entity/activity/activityEvent';
-import {
-  AnnouncementDetails,
-  Thread,
-} from '../../../../generated/entity/feed/thread';
+import { Thread } from '../../../../generated/entity/feed/thread';
 
 export interface FeedCardBodyV1Props {
   feed?: Thread;
   activity?: ActivityEvent;
   isEditPost: boolean;
   className?: string;
-  showSchedule?: boolean;
-  announcement?: AnnouncementDetails;
   message: string;
   isPost?: boolean;
   isOpenInDrawer?: boolean;

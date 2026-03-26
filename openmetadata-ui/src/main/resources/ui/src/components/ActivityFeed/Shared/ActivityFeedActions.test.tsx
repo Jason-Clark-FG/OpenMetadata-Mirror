@@ -116,22 +116,6 @@ describe('ActivityFeedActions', () => {
       expect(screen.queryByTestId('edit-message')).not.toBeInTheDocument();
     });
 
-    it('should NOT show edit button for announcement thread (non-post)', () => {
-      const post = createMockPost('testuser');
-      const feed = createMockFeed(ThreadType.Announcement);
-
-      render(
-        <ActivityFeedActions
-          feed={feed}
-          isPost={false}
-          post={post}
-          onEditPost={mockOnEditPost}
-        />
-      );
-
-      expect(screen.queryByTestId('edit-message')).not.toBeInTheDocument();
-    });
-
     it('should NOT show edit button for task thread (non-post)', () => {
       const post = createMockPost('testuser');
       const feed = createMockFeed(ThreadType.Task);
@@ -146,22 +130,6 @@ describe('ActivityFeedActions', () => {
       );
 
       expect(screen.queryByTestId('edit-message')).not.toBeInTheDocument();
-    });
-
-    it('should show edit button for announcement post when user is author', () => {
-      const post = createMockPost('testuser');
-      const feed = createMockFeed(ThreadType.Announcement);
-
-      render(
-        <ActivityFeedActions
-          isPost
-          feed={feed}
-          post={post}
-          onEditPost={mockOnEditPost}
-        />
-      );
-
-      expect(screen.getByTestId('edit-message')).toBeInTheDocument();
     });
 
     it('should call onEditPost when edit button is clicked', () => {

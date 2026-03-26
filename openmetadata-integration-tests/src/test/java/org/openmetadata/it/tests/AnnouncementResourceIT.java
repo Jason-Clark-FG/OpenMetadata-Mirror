@@ -15,17 +15,26 @@ package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.openmetadata.it.factories.DatabaseServiceTestFactory;
+import org.openmetadata.it.factories.TableTestFactory;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.feed.CreateAnnouncement;
+import org.openmetadata.schema.entity.data.Database;
+import org.openmetadata.schema.entity.data.DatabaseSchema;
+import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.feed.Announcement;
+import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.type.AnnouncementStatus;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.sdk.fluent.DatabaseSchemas;
+import org.openmetadata.sdk.fluent.Databases;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
 
@@ -35,11 +44,11 @@ public class AnnouncementResourceIT extends BaseEntityIT<Announcement, CreateAnn
   public AnnouncementResourceIT() {
     supportsFollowers = false;
     supportsTags = false;
-    supportsDomains = false;
+    supportsDomains = true;
     supportsDataProducts = false;
     supportsSoftDelete = true;
     supportsPatch = true;
-    supportsOwners = false;
+    supportsOwners = true;
     supportsSearchIndex = false;
     supportsVersionHistory = true;
   }
@@ -347,5 +356,45 @@ public class AnnouncementResourceIT extends BaseEntityIT<Announcement, CreateAnn
     EntityHistory history = getVersionHistory(created.getId());
     assertNotNull(history);
     assertTrue(history.getVersions().size() >= 2);
+  }
+
+  @Test
+  void testAnnouncementInheritsTargetOwnersAndDomains(TestNamespace ns) throws Exception {
+    Table table = createTestTable(ns);
+    long now = System.currentTimeMillis();
+    CreateAnnouncement request =
+        new CreateAnnouncement()
+            .withName(ns.prefix("entity-ann"))
+            .withDescription("Entity-linked announcement")
+            .withEntityLink("<#E::table::" + table.getFullyQualifiedName() + ">")
+            .withStartTime(now)
+            .withEndTime(now + 86400000L);
+
+    Announcement created = createEntity(request);
+    Announcement fetched = getEntityWithFields(created.getId().toString(), "owners,domains");
+
+    assertNotNull(fetched.getOwners());
+    assertFalse(fetched.getOwners().isEmpty());
+    assertNotNull(fetched.getDomains());
+    assertFalse(fetched.getDomains().isEmpty());
+  }
+
+  private Table createTestTable(TestNamespace ns) throws Exception {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    Database database =
+        Databases.create().name(ns.prefix("db")).in(service.getFullyQualifiedName()).execute();
+    DatabaseSchema schema =
+        DatabaseSchemas.create()
+            .name(ns.prefix("schema"))
+            .in(database.getFullyQualifiedName())
+            .execute();
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+    table = SdkClients.adminClient().tables().get(table.getId().toString(), "owners,domains");
+    table
+        .withOwners(List.of(testUser1().getEntityReference()))
+        .withDomains(List.of(testDomain().getEntityReference()));
+    Table updated = SdkClients.adminClient().tables().update(table.getId().toString(), table);
+
+    return SdkClients.adminClient().tables().get(updated.getId().toString(), "owners,domains");
   }
 }

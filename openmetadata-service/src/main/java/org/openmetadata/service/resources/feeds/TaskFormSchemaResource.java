@@ -206,9 +206,7 @@ public class TaskFormSchemaResource
                     schema = @Schema(implementation = TaskFormSchema.class)))
       })
   public Response createTaskFormSchema(
-      @Context UriInfo uriInfo,
-      @Context SecurityContext securityContext,
-      TaskFormSchema schema) {
+      @Context UriInfo uriInfo, @Context SecurityContext securityContext, TaskFormSchema schema) {
     schema.withId(UUID.randomUUID());
     schema.withUpdatedBy(securityContext.getUserPrincipal().getName());
     schema.withUpdatedAt(System.currentTimeMillis());
@@ -229,9 +227,7 @@ public class TaskFormSchemaResource
                     schema = @Schema(implementation = TaskFormSchema.class)))
       })
   public Response createOrUpdateTaskFormSchema(
-      @Context UriInfo uriInfo,
-      @Context SecurityContext securityContext,
-      TaskFormSchema schema) {
+      @Context UriInfo uriInfo, @Context SecurityContext securityContext, TaskFormSchema schema) {
     schema.withUpdatedBy(securityContext.getUserPrincipal().getName());
     schema.withUpdatedAt(System.currentTimeMillis());
     return super.createOrUpdate(uriInfo, securityContext, schema);

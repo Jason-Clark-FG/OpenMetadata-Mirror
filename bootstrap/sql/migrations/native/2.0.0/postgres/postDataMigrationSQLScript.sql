@@ -21,6 +21,7 @@ SELECT
     'id', json->>'id',
     'name', 'announcement-' || (json->>'id'),
     'fullyQualifiedName', 'announcement-' || (json->>'id'),
+    'displayName', NULLIF(json->>'message', ''),
     'description', COALESCE(
       json->'announcement'->>'description',
       json->>'message',
@@ -39,7 +40,7 @@ SELECT
     'createdBy', json->>'createdBy',
     'updatedBy', COALESCE(json->>'updatedBy', json->>'createdBy'),
     'createdAt', (json->>'threadTs')::bigint,
-    'updatedAt', (json->>'updatedAt')::bigint,
+    'updatedAt', COALESCE((json->>'updatedAt')::bigint, (json->>'threadTs')::bigint),
     'deleted', false,
     'version', 0.1,
     'reactions', COALESCE(json->'reactions', '[]'::jsonb)

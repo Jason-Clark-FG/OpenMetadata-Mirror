@@ -28,7 +28,6 @@ import { AnnouncementFeedCardBodyProp } from './Announcement.interface';
 
 const AnnouncementFeedCardBody = ({
   announcement,
-  announcementDetails,
   editPermission,
   onConfirmation,
   updateAnnouncementHandler,
@@ -38,7 +37,7 @@ const AnnouncementFeedCardBody = ({
   const entityType = getEntityType(announcement.entityLink ?? '');
   const entityFQN = getEntityFQN(announcement.entityLink ?? '');
   const announcementTitle = announcement.displayName ?? announcement.name;
-  const details = announcementDetails ?? {
+  const details = {
     description: announcement.description,
     startTime: announcement.startTime,
     endTime: announcement.endTime,
@@ -88,7 +87,10 @@ const AnnouncementFeedCardBody = ({
 
   const handleAnnouncementUpdate = async (
     title: string,
-    updatedDetails: NonNullable<AnnouncementFeedCardBodyProp['announcementDetails']>
+    updatedDetails: Pick<
+      AnnouncementEntity,
+      'description' | 'startTime' | 'endTime'
+    >
   ) => {
     const normalizedDisplayName =
       title === announcement.name ? undefined : title.trim();

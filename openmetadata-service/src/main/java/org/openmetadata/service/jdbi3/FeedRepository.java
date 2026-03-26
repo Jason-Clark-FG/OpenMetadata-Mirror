@@ -95,6 +95,7 @@ import org.openmetadata.service.formatter.decorators.FeedMessageDecorator;
 import org.openmetadata.service.formatter.decorators.MessageDecorator;
 import org.openmetadata.service.formatter.util.FeedMessage;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
+import org.openmetadata.service.resources.databases.DatasourceConfig;
 import org.openmetadata.service.resources.feeds.FeedResource;
 import org.openmetadata.service.resources.feeds.FeedUtil;
 import org.openmetadata.service.resources.feeds.MessageParser;
@@ -109,7 +110,6 @@ import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.RestUtil.DeleteResponse;
 import org.openmetadata.service.util.RestUtil.PatchResponse;
-import org.openmetadata.service.resources.databases.DatasourceConfig;
 
 /*
  * Feed relationships:
@@ -416,7 +416,8 @@ public class FeedRepository {
   @Transaction
   public void store(ThreadContext threadContext) {
     // Insert a new thread
-    dao.feedDAO().insert(getLegacyThreadTableName(), JsonUtils.pojoToJson(threadContext.getThread()));
+    dao.feedDAO()
+        .insert(getLegacyThreadTableName(), JsonUtils.pojoToJson(threadContext.getThread()));
   }
 
   @Transaction
@@ -512,8 +513,8 @@ public class FeedRepository {
       validateAssignee(thread);
       thread.getTask().withId(getNextTaskId());
     } else if (thread.getType() == ThreadType.Announcement) {
-      // Validate start and end time for announcement
-      validateAnnouncement(thread);
+      throw new IllegalArgumentException(
+          "Announcements are no longer created through feed threads. Use /v1/announcements.");
     }
     store(threadContext);
     storeRelationships(threadContext);
@@ -523,7 +524,8 @@ public class FeedRepository {
 
   public Thread get(UUID id) {
     Thread thread =
-        EntityUtil.validate(id, dao.feedDAO().findById(getLegacyThreadTableName(), id), Thread.class);
+        EntityUtil.validate(
+            id, dao.feedDAO().findById(getLegacyThreadTableName(), id), Thread.class);
     sortPosts(thread);
     return thread;
   }
@@ -689,7 +691,8 @@ public class FeedRepository {
 
     // Update the thread with the new post
     Thread thread =
-        EntityUtil.validate(id, dao.feedDAO().findById(getLegacyThreadTableName(), id), Thread.class);
+        EntityUtil.validate(
+            id, dao.feedDAO().findById(getLegacyThreadTableName(), id), Thread.class);
 
     // Populate Assignees if type is task
     populateAssignees(thread);
@@ -783,7 +786,8 @@ public class FeedRepository {
     List<String> threadIds;
     try {
       threadIds =
-          listOrEmpty(dao.feedDAO().findByEntityId(getLegacyThreadTableName(), entityId.toString()));
+          listOrEmpty(
+              dao.feedDAO().findByEntityId(getLegacyThreadTableName(), entityId.toString()));
     } catch (Exception ex) {
       LOG.debug(
           "Skipping legacy feed cleanup for entity {} because thread storage is unavailable",
@@ -873,7 +877,11 @@ public class FeedRepository {
             dao.feedDAO()
                 .listCountByOwner(
                     getLegacyThreadTableName(),
-                    userId, teamIds, user.getName(), userTeamJsonMysql, userTeamJsonPostgres);
+                    userId,
+                    teamIds,
+                    user.getName(),
+                    userTeamJsonMysql,
+                    userTeamJsonPostgres);
         mentions =
             dao.feedDAO()
                 .listCountThreadsByMentions(
@@ -959,15 +967,6 @@ public class FeedRepository {
               } else if (taskStatus.equals("Closed")) {
                 threadCount.setClosedTaskCount(count);
               }
-            } else if (type.equalsIgnoreCase("Announcement")) {
-              // announcements are set at entity level will be called only once
-              threadCount.setTotalAnnouncementCount(count);
-              int activeCount =
-                  (count > 0)
-                      ? dao.feedDAO().countActiveAnnouncement(getLegacyThreadTableName(), eLink)
-                      : 0;
-              threadCount.setActiveAnnouncementCount(activeCount);
-              threadCount.setInactiveAnnouncementCount(count - activeCount);
             }
             computeTotalTaskCount(threadCount);
             threadCounts.add(threadCount);
@@ -996,11 +995,16 @@ public class FeedRepository {
       // Get one extra result used for computing before cursor
       List<String> jsons =
           dao.feedDAO()
-              .list(getLegacyThreadTableName(), limit + 1, filter.getCondition(), filter.getQueryParams());
+              .list(
+                  getLegacyThreadTableName(),
+                  limit + 1,
+                  filter.getCondition(),
+                  filter.getQueryParams());
       threads = JsonUtils.readObjects(jsons, Thread.class);
       total =
           dao.feedDAO()
-              .listCount(getLegacyThreadTableName(), filter.getCondition(), filter.getQueryParams());
+              .listCount(
+                  getLegacyThreadTableName(), filter.getCondition(), filter.getQueryParams());
     } else {
       // Either one or both the filters are enabled. We don't support both the filters together.
       // If both are not null, entity link takes precedence
@@ -1029,13 +1033,22 @@ public class FeedRepository {
               dao.feedDAO()
                   .listThreadsByEntityLink(
                       getLegacyThreadTableName(),
-                      filter, entityLink, limit + 1, IS_ABOUT.ordinal(), userName, teamNameHash);
+                      filter,
+                      entityLink,
+                      limit + 1,
+                      IS_ABOUT.ordinal(),
+                      userName,
+                      teamNameHash);
           threads = JsonUtils.readObjects(jsons, Thread.class);
           total =
               dao.feedDAO()
                   .listCountThreadsByEntityLink(
                       getLegacyThreadTableName(),
-                      filter, entityLink, IS_ABOUT.ordinal(), userName, teamNameHash);
+                      filter,
+                      entityLink,
+                      IS_ABOUT.ordinal(),
+                      userName,
+                      teamNameHash);
         }
       } else {
         // userId filter present
@@ -1271,7 +1284,10 @@ public class FeedRepository {
         dao.feedDAO()
             .listAnnouncementBetween(
                 getLegacyThreadTableName(),
-                thread.getId(), thread.getEntityRef().getId(), startTime, endTime);
+                thread.getId(),
+                thread.getEntityRef().getId(),
+                startTime,
+                endTime);
     if (!announcements.isEmpty()) {
       // There is already an announcement that overlaps the new one
       throw new IllegalArgumentException(ANNOUNCEMENT_OVERLAP);
@@ -1565,7 +1581,9 @@ public class FeedRepository {
         dao.feedDAO()
             .listCountTasksAssignedBy(
                 getLegacyThreadTableName(),
-                username, filter.getCondition(false), filter.getQueryParams());
+                username,
+                filter.getCondition(false),
+                filter.getQueryParams());
     return new FilteredThreads(threads, totalCount);
   }
 
@@ -1581,13 +1599,20 @@ public class FeedRepository {
         dao.feedDAO()
             .listThreadsByOwner(
                 getLegacyThreadTableName(),
-                userId, teamIds, limit, filter.getCondition(), filter.getQueryParams());
+                userId,
+                teamIds,
+                limit,
+                filter.getCondition(),
+                filter.getQueryParams());
     List<Thread> threads = JsonUtils.readObjects(jsons, Thread.class);
     int totalCount =
         dao.feedDAO()
             .listCountThreadsByOwner(
                 getLegacyThreadTableName(),
-                userId, teamIds, filter.getCondition(false), filter.getQueryParams());
+                userId,
+                teamIds,
+                filter.getCondition(false),
+                filter.getQueryParams());
     return new FilteredThreads(threads, totalCount);
   }
 
@@ -1706,13 +1731,20 @@ public class FeedRepository {
         dao.feedDAO()
             .listThreadsByOwnerOrFollows(
                 getLegacyThreadTableName(),
-                userId, teamIds, limit, filter.getCondition(), filter.getQueryParams());
+                userId,
+                teamIds,
+                limit,
+                filter.getCondition(),
+                filter.getQueryParams());
     List<Thread> threads = JsonUtils.readObjects(jsons, Thread.class);
     int totalCount =
         dao.feedDAO()
             .listCountThreadsByOwnerOrFollows(
                 getLegacyThreadTableName(),
-                userId, teamIds, filter.getCondition(), filter.getQueryParams());
+                userId,
+                teamIds,
+                filter.getCondition(),
+                filter.getQueryParams());
     return new FilteredThreads(threads, totalCount);
   }
 

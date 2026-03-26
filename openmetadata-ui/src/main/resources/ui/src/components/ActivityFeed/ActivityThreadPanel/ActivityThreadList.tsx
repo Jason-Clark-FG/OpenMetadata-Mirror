@@ -13,20 +13,16 @@
 import { Card } from 'antd';
 import { FC, Fragment } from 'react';
 import {
-  ANNOUNCEMENT_BG,
-  ANNOUNCEMENT_BORDER,
   GLOBAL_BORDER,
 } from '../../../constants/Feeds.constants';
 import {
   Post,
-  ThreadType,
 } from '../../../generated/entity/feed/thread';
 import { getFeedListWithRelativeDays } from '../../../utils/FeedUtils';
 import ActivityFeedCard from '../ActivityFeedCard/ActivityFeedCard';
 import FeedCardFooter from '../ActivityFeedCard/FeedCardFooter/FeedCardFooter';
 import ActivityFeedEditor from '../ActivityFeedEditor/ActivityFeedEditor';
 import FeedListSeparator from '../FeedListSeparator/FeedListSeparator';
-import AnnouncementBadge from '../Shared/AnnouncementBadge';
 import { ActivityThreadListProp } from './ActivityThreadPanel.interface';
 
 const ActivityThreadList: FC<ActivityThreadListProp> = ({
@@ -62,7 +58,6 @@ const ActivityThreadList: FC<ActivityThreadListProp> = ({
                   id: thread.id,
                   reactions: thread.reactions,
                 } as Post;
-                const isAnnouncement = thread.type === ThreadType.Announcement;
                 const postLength = thread?.posts?.length || 0;
                 const replies = thread.postsCount ? thread.postsCount - 1 : 0;
                 const repliedUsers = [
@@ -81,20 +76,15 @@ const ActivityThreadList: FC<ActivityThreadListProp> = ({
                       key={`${index} - card`}
                       style={{
                         marginTop: '20px',
-                        border: `1px solid ${
-                          isAnnouncement ? ANNOUNCEMENT_BORDER : GLOBAL_BORDER
-                        }`,
-                        background: isAnnouncement ? `${ANNOUNCEMENT_BG}` : '',
+                        border: `1px solid ${GLOBAL_BORDER}`,
                       }}>
-                      {isAnnouncement && <AnnouncementBadge />}
                       <div data-testid="main-message">
                         <ActivityFeedCard
                           isEntityFeed
                           isThread
-                          announcementDetails={thread.announcement}
                           entityLink={thread.about}
                           feed={mainFeed}
-                          feedType={thread.type || ThreadType.Conversation}
+                          feedType={thread.type}
                           task={thread}
                           threadId={thread.id}
                           updateThreadHandler={updateThreadHandler}
@@ -121,7 +111,7 @@ const ActivityThreadList: FC<ActivityThreadListProp> = ({
                               isEntityFeed
                               className="m-l-lg"
                               feed={lastPost as Post}
-                              feedType={thread.type || ThreadType.Conversation}
+                              feedType={thread.type}
                               task={thread}
                               threadId={thread.id}
                               updateThreadHandler={updateThreadHandler}

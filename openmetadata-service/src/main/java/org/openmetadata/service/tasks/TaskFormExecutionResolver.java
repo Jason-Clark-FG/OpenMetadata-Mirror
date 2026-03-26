@@ -20,7 +20,6 @@ import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.TaskCategory;
-import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.TaskFormSchemaRepository;
@@ -131,7 +130,13 @@ public final class TaskFormExecutionResolver {
           "tagsToAdd",
           "tagsToRemove");
       case OwnershipUpdate -> new TaskExecutionBinding(
-          HandlerType.OWNERSHIP_UPDATE, MetadataOperation.EDIT_OWNERS, null, null, null, null, null);
+          HandlerType.OWNERSHIP_UPDATE,
+          MetadataOperation.EDIT_OWNERS,
+          null,
+          null,
+          null,
+          null,
+          null);
       case TierUpdate -> new TaskExecutionBinding(
           HandlerType.TIER_UPDATE, MetadataOperation.EDIT_TIER, null, null, null, null, null);
       case DomainUpdate -> new TaskExecutionBinding(

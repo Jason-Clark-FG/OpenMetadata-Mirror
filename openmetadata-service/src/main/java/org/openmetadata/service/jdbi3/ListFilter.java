@@ -524,9 +524,7 @@ public class ListFilter extends Filter<ListFilter> {
                   + "AND ownerRel.fromEntity IN ('user','team') "
                   + "AND ownerRel.relation = %d "
                   + "AND ownerRel.fromId IN (%s))",
-              Relationship.MENTIONED_IN.ordinal(),
-              Relationship.OWNS.ordinal(),
-              visibleOwnedByIds));
+              Relationship.MENTIONED_IN.ordinal(), Relationship.OWNS.ordinal(), visibleOwnedByIds));
     }
 
     return "(" + String.join(" OR ", conditions) + ")";

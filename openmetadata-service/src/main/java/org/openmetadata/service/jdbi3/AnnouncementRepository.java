@@ -13,13 +13,25 @@
 
 package org.openmetadata.service.jdbi3;
 
+import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.Entity.ANNOUNCEMENT;
+import static org.openmetadata.service.Entity.DOMAIN;
+import static org.openmetadata.service.Entity.FIELD_DOMAINS;
+import static org.openmetadata.service.Entity.FIELD_OWNERS;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.type.AnnouncementStatus;
+import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.Relationship;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.resources.feeds.MessageParser;
+import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
@@ -52,6 +64,7 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
     if (announcement.getName() == null) {
       announcement.setName("announcement-" + announcement.getId());
     }
+    inheritOwnersAndDomainsFromTargetEntity(announcement);
     if (announcement.getStatus() == null) {
       long now = System.currentTimeMillis();
       if (announcement.getEndTime() < now) {
@@ -66,31 +79,102 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
 
   @Override
   public void storeEntity(Announcement announcement, boolean update) {
+    List<EntityReference> owners = announcement.getOwners();
+    List<EntityReference> domains = announcement.getDomains();
+    announcement.withOwners(null).withDomains(null);
+
     if (update) {
       store(announcement, true);
-      return;
+    } else {
+      ((CollectionDAO.AnnouncementDAO) dao)
+          .insertAnnouncement(
+              announcement.getId().toString(),
+              JsonUtils.pojoToJson(announcement),
+              announcement.getFullyQualifiedName());
     }
 
-    ((CollectionDAO.AnnouncementDAO) dao)
-        .insertAnnouncement(
-            announcement.getId().toString(),
-            JsonUtils.pojoToJson(announcement),
-            announcement.getFullyQualifiedName());
+    announcement.withOwners(owners).withDomains(domains);
   }
 
   @Override
   public void setFields(Announcement announcement, Fields fields, RelationIncludes includes) {
-    // No relational fields to set
+    announcement.setOwners(
+        fields.contains(FIELD_OWNERS) ? getOwners(announcement) : announcement.getOwners());
+    announcement.setDomains(
+        fields.contains(FIELD_DOMAINS) ? getDomains(announcement) : announcement.getDomains());
   }
 
   @Override
   public void clearFields(Announcement announcement, Fields fields) {
-    // No extra fields to clear
+    announcement.setOwners(fields.contains(FIELD_OWNERS) ? announcement.getOwners() : null);
+    announcement.setDomains(fields.contains(FIELD_DOMAINS) ? announcement.getDomains() : null);
   }
 
   @Override
   public void storeRelationships(Announcement announcement) {
-    // No relationships needed for announcements
+    storeOwners(announcement, announcement.getOwners());
+    storeDomains(announcement, announcement.getDomains());
+
+    EntityReference about = getAboutEntity(announcement);
+    if (about != null) {
+      addRelationship(
+          about.getId(),
+          announcement.getId(),
+          about.getType(),
+          ANNOUNCEMENT,
+          Relationship.MENTIONED_IN);
+    }
+  }
+
+  @Override
+  protected List<EntityReference> getDomains(Announcement announcement) {
+    return findFrom(announcement.getId(), ANNOUNCEMENT, Relationship.HAS, DOMAIN);
+  }
+
+  public void addDomainFilter(ListFilter filter, String domainFilter) {
+    if (nullOrEmpty(domainFilter)) {
+      return;
+    }
+
+    List<EntityReference> domains =
+        Arrays.stream(domainFilter.split(","))
+            .map(String::trim)
+            .filter(domain -> !domain.isEmpty())
+            .map(domain -> Entity.getEntityReferenceByName(DOMAIN, domain, NON_DELETED))
+            .toList();
+
+    if (!nullOrEmpty(domains)) {
+      filter.addQueryParam("domainId", EntityUtil.getCommaSeparatedIdsFromRefs(domains));
+    }
+  }
+
+  public void syncAnnouncementDomainsForEntity(
+      UUID entityId, String entityType, List<EntityReference> newDomains) {
+    List<CollectionDAO.EntityRelationshipRecord> records =
+        daoCollection
+            .relationshipDAO()
+            .findTo(entityId, entityType, Relationship.MENTIONED_IN.ordinal(), ANNOUNCEMENT);
+
+    if (records.isEmpty()) {
+      return;
+    }
+
+    List<UUID> announcementIds =
+        records.stream().map(CollectionDAO.EntityRelationshipRecord::getId).toList();
+    List<String> announcementIdStrings = announcementIds.stream().map(UUID::toString).toList();
+
+    daoCollection
+        .relationshipDAO()
+        .deleteToMany(announcementIdStrings, ANNOUNCEMENT, Relationship.HAS.ordinal(), DOMAIN);
+
+    if (!nullOrEmpty(newDomains)) {
+      for (EntityReference domain : newDomains) {
+        daoCollection
+            .relationshipDAO()
+            .bulkInsertToRelationship(
+                domain.getId(), announcementIds, DOMAIN, ANNOUNCEMENT, Relationship.HAS.ordinal());
+      }
+    }
   }
 
   @Override
@@ -116,6 +200,79 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
       recordChange("startTime", original.getStartTime(), updated.getStartTime());
       recordChange("endTime", original.getEndTime(), updated.getEndTime());
       recordChange("status", original.getStatus(), updated.getStatus());
+    }
+  }
+
+  private void inheritOwnersAndDomainsFromTargetEntity(Announcement announcement) {
+    EntityReference about = getAboutEntity(announcement);
+    if (about == null) {
+      return;
+    }
+
+    if (nullOrEmpty(announcement.getOwners())) {
+      try {
+        announcement.setOwners(Entity.getOwners(about));
+      } catch (Exception e) {
+        LOG.debug(
+            "Could not inherit owners for announcement {} from {}: {}",
+            announcement.getId(),
+            about.getFullyQualifiedName(),
+            e.getMessage());
+      }
+    }
+
+    if (nullOrEmpty(announcement.getDomains())) {
+      try {
+        EntityRepository<?> targetRepo = Entity.getEntityRepository(about.getType());
+        Object targetEntity =
+            targetRepo.get(null, about.getId(), targetRepo.getFields(FIELD_DOMAINS));
+        announcement.setDomains(extractDomainsFromEntity(targetEntity));
+      } catch (Exception e) {
+        LOG.debug(
+            "Could not inherit domains for announcement {} from {}: {}",
+            announcement.getId(),
+            about.getFullyQualifiedName(),
+            e.getMessage());
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<EntityReference> extractDomainsFromEntity(Object entity) {
+    if (entity == null) {
+      return null;
+    }
+
+    try {
+      Object domains = entity.getClass().getMethod("getDomains").invoke(entity);
+      if (domains instanceof List<?>) {
+        return (List<EntityReference>) domains;
+      }
+    } catch (NoSuchMethodException e) {
+      LOG.debug("Entity {} does not expose domains", entity.getClass().getSimpleName());
+    } catch (Exception e) {
+      LOG.debug("Failed to extract announcement domains: {}", e.getMessage());
+    }
+
+    return null;
+  }
+
+  private EntityReference getAboutEntity(Announcement announcement) {
+    if (nullOrEmpty(announcement.getEntityLink())) {
+      return null;
+    }
+
+    try {
+      MessageParser.EntityLink entityLink =
+          MessageParser.EntityLink.parse(announcement.getEntityLink());
+      return EntityUtil.validateEntityLink(entityLink);
+    } catch (Exception e) {
+      LOG.warn(
+          "Failed to resolve announcement target for {} from entityLink {}: {}",
+          announcement.getId(),
+          announcement.getEntityLink(),
+          e.getMessage());
+      return null;
     }
   }
 }

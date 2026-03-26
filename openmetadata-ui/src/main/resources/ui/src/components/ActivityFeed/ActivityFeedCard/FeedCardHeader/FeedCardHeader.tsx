@@ -113,10 +113,6 @@ const FeedCardHeader: FC<FeedHeaderProp> = ({
     </span>
   );
 
-  const getAnnouncementLinkElement = entityCheck && (
-    <span>{t('message.made-announcement')} </span>
-  );
-
   return (
     <div className={classNames('d-inline-block feed-header', className)}>
       <UserPopOverCard userName={createdBy}>
@@ -127,7 +123,6 @@ const FeedCardHeader: FC<FeedHeaderProp> = ({
 
       {feedType === ThreadType.Conversation && getFeedLinkElement}
       {feedType === ThreadType.Task && getTaskLinkElement}
-      {feedType === ThreadType.Announcement && getAnnouncementLinkElement}
 
       {timeStamp && (
         <Tooltip className="text-grey-muted" title={formatDateTime(timeStamp)}>

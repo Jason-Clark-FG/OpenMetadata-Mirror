@@ -3115,9 +3115,7 @@ public interface CollectionDAO {
         value = "UPDATE <tableName> SET json = (:json :: jsonb) where id = :id",
         connectionType = POSTGRES)
     void update(
-        @Define("tableName") String tableName,
-        @BindUUID("id") UUID id,
-        @Bind("json") String json);
+        @Define("tableName") String tableName, @BindUUID("id") UUID id, @Bind("json") String json);
 
     @ConnectionAwareSqlUpdate(
         value = "UPDATE thread_entity SET json = :json where id = :id",
@@ -4110,8 +4108,7 @@ public interface CollectionDAO {
     }
 
     @ConnectionAwareSqlUpdate(
-        value =
-            "INSERT INTO announcement_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
+        value = "INSERT INTO announcement_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =
@@ -4370,7 +4367,8 @@ public interface CollectionDAO {
     }
 
     @ConnectionAwareSqlUpdate(
-        value = "INSERT INTO task_form_schema_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
+        value =
+            "INSERT INTO task_form_schema_entity (id, json, fqnHash) VALUES (:id, :json, :fqnHash)",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =

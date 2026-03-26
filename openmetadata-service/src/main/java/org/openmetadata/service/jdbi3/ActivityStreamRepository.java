@@ -185,11 +185,7 @@ public class ActivityStreamRepository {
 
   /** List activity for a specific entity scoped to specific domains. */
   public List<ActivityEvent> listByEntity(
-      String entityType,
-      UUID entityId,
-      List<UUID> domainIds,
-      long afterTimestamp,
-      int limit) {
+      String entityType, UUID entityId, List<UUID> domainIds, long afterTimestamp, int limit) {
     if (nullOrEmpty(domainIds)) {
       return listByEntity(entityType, entityId, afterTimestamp, limit);
     }

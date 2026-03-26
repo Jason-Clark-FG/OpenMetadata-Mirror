@@ -56,6 +56,16 @@ class MigrationUtilTest {
   }
 
   @Test
+  void backfillAnnouncementRelationshipsSkipsWhenAnnouncementTableIsMissing() {
+    when(handle.createQuery("SELECT 1 FROM announcement_entity LIMIT 1").mapTo(Integer.class).one())
+        .thenThrow(new RuntimeException("missing table"));
+
+    assertDoesNotThrow(() -> MigrationUtil.backfillAnnouncementRelationships(handle));
+
+    verify(handle, never()).createQuery("SELECT json FROM announcement_entity");
+  }
+
+  @Test
   void buildThreadTaskPayloadMapsNestedDescriptionSuggestion() throws Exception {
     JsonNode taskDetails =
         JsonUtilsHolder.readTree(

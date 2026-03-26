@@ -47,6 +47,7 @@ import org.openmetadata.schema.api.feed.CreateAnnouncement;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.type.AnnouncementStatus;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
@@ -56,6 +57,7 @@ import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.resources.Collection;
 import org.openmetadata.service.resources.EntityResource;
 import org.openmetadata.service.security.Authorizer;
+import org.openmetadata.service.util.EntityUtil;
 
 @Slf4j
 @Path("/v1/announcements")
@@ -98,6 +100,7 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
       @Parameter(description = "Filter by entity link") @QueryParam("entityLink") String entityLink,
       @Parameter(description = "Filter by status") @QueryParam("status") AnnouncementStatus status,
       @Parameter(description = "Filter active announcements") @QueryParam("active") Boolean active,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Limit the number results")
           @DefaultValue("10")
           @QueryParam("limit")
@@ -112,6 +115,8 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
           @DefaultValue("non-deleted")
           Include include) {
     ListFilter filter = new ListFilter(include);
+    repository.addDomainFilter(filter, domain);
+    EntityUtil.addDomainQueryParam(securityContext, filter, Entity.ANNOUNCEMENT);
     if (entityLink != null) {
       filter.addQueryParam("entityLink", entityLink);
     }
@@ -278,9 +283,7 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
 
   @PUT
   @Path("/restore")
-  @Operation(
-      operationId = "restoreAnnouncement",
-      summary = "Restore a soft deleted announcement")
+  @Operation(operationId = "restoreAnnouncement", summary = "Restore a soft deleted announcement")
   public Response restore(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
@@ -297,9 +300,30 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
         .withEntityLink(create.getEntityLink())
         .withStartTime(create.getStartTime())
         .withEndTime(create.getEndTime())
+        .withOwners(resolveOwners(create.getOwners()))
         .withCreatedBy(userName)
         .withUpdatedBy(userName)
         .withCreatedAt(System.currentTimeMillis())
         .withUpdatedAt(System.currentTimeMillis());
+  }
+
+  private java.util.List<EntityReference> resolveOwners(java.util.List<String> owners) {
+    if (owners == null || owners.isEmpty()) {
+      return null;
+    }
+
+    return owners.stream().map(this::resolveOwner).filter(java.util.Objects::nonNull).toList();
+  }
+
+  private EntityReference resolveOwner(String ownerName) {
+    try {
+      return Entity.getEntityReferenceByName(Entity.USER, ownerName, Include.NON_DELETED);
+    } catch (Exception ignored) {
+      try {
+        return Entity.getEntityReferenceByName(Entity.TEAM, ownerName, Include.NON_DELETED);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Invalid announcement owner: " + ownerName, e);
+      }
+    }
   }
 }

@@ -25,6 +25,7 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.events.lifecycle.EntityLifecycleEventHandler;
+import org.openmetadata.service.jdbi3.AnnouncementRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 
@@ -74,9 +75,7 @@ public class DomainSyncHandler implements EntityLifecycleEventHandler {
             : "null");
 
     syncTaskDomains(entityId, entityType, effectiveDomains);
-    // Future: Add sync for threads, announcements, etc.
-    // syncThreadDomains(entityId, entityType, effectiveDomains);
-    // syncAnnouncementDomains(entityId, entityType, effectiveDomains);
+    syncAnnouncementDomains(entityId, entityType, effectiveDomains);
   }
 
   private void syncTaskDomains(UUID entityId, String entityType, List<EntityReference> newDomains) {
@@ -86,6 +85,21 @@ public class DomainSyncHandler implements EntityLifecycleEventHandler {
     } catch (Exception e) {
       LOG.error(
           "Failed to sync task domains for entity {} {}: {}", entityType, entityId, e.getMessage());
+    }
+  }
+
+  private void syncAnnouncementDomains(
+      UUID entityId, String entityType, List<EntityReference> newDomains) {
+    try {
+      AnnouncementRepository announcementRepository =
+          (AnnouncementRepository) Entity.getEntityRepository(Entity.ANNOUNCEMENT);
+      announcementRepository.syncAnnouncementDomainsForEntity(entityId, entityType, newDomains);
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to sync announcement domains for entity {} {}: {}",
+          entityType,
+          entityId,
+          e.getMessage());
     }
   }
 

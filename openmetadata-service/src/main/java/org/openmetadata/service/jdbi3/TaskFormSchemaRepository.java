@@ -13,8 +13,8 @@
 
 package org.openmetadata.service.jdbi3;
 
-import static org.openmetadata.service.Entity.TASK_FORM_SCHEMA;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
+import static org.openmetadata.service.Entity.TASK_FORM_SCHEMA;
 
 import java.util.List;
 import java.util.Optional;
@@ -167,7 +167,8 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
   }
 
   private void validateUniqueTaskSchemaBinding(TaskFormSchema schema) {
-    Optional<TaskFormSchema> existing = resolveUncached(schema.getTaskType(), schema.getTaskCategory());
+    Optional<TaskFormSchema> existing =
+        resolveUncached(schema.getTaskType(), schema.getTaskCategory());
     if (existing.isPresent() && !existing.get().getId().equals(schema.getId())) {
       throw new IllegalArgumentException(
           String.format(

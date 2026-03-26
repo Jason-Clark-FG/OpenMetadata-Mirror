@@ -53,11 +53,6 @@ jest.mock('../Modals/AnnouncementModal/EditAnnouncementModal', () =>
 
 const mockProps = {
   announcement: MOCK_ANNOUNCEMENT_DATA.data[0],
-  announcementDetails: {
-    description: MOCK_ANNOUNCEMENT_DATA.data[0].description,
-    startTime: MOCK_ANNOUNCEMENT_DATA.data[0].startTime,
-    endTime: MOCK_ANNOUNCEMENT_DATA.data[0].endTime,
-  },
   editPermission: true,
   updateAnnouncementHandler: jest.fn(),
   onConfirmation: jest.fn(),

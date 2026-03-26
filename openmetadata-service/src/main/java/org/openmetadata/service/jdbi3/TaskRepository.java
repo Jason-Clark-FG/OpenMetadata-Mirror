@@ -53,8 +53,8 @@ import org.openmetadata.service.security.AuthorizationLogic;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContext;
-import org.openmetadata.service.tasks.TaskFormSchemaValidator;
 import org.openmetadata.service.tasks.TaskFormExecutionResolver;
+import org.openmetadata.service.tasks.TaskFormSchemaValidator;
 import org.openmetadata.service.tasks.TaskWorkflowHandler;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -629,7 +629,9 @@ public class TaskRepository extends EntityRepository<Task> {
         (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
     schemaRepository
         .resolve(task.getType().value(), task.getCategory().value())
-        .ifPresent(schema -> TaskFormSchemaValidator.validatePayload(schema.getFormSchema(), task.getPayload()));
+        .ifPresent(
+            schema ->
+                TaskFormSchemaValidator.validatePayload(schema.getFormSchema(), task.getPayload()));
   }
 
   /**

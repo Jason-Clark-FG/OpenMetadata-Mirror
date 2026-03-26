@@ -25,6 +25,7 @@ FROM (
       'id', JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.id')),
       'name', CONCAT('announcement-', JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.id'))),
       'fullyQualifiedName', CONCAT('announcement-', JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.id'))),
+      'displayName', NULLIF(JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.message')), ''),
       'description', COALESCE(
         JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.announcement.description')),
         JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.message')),
@@ -43,7 +44,12 @@ FROM (
       'createdBy', JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.createdBy')),
       'updatedBy', COALESCE(JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.updatedBy')), JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.createdBy'))),
       'createdAt', CAST(JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.threadTs')) AS UNSIGNED),
-      'updatedAt', CAST(JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.updatedAt')) AS UNSIGNED),
+      'updatedAt', CAST(
+        COALESCE(
+          JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.updatedAt')),
+          JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.threadTs'))
+        ) AS UNSIGNED
+      ),
       'deleted', false,
       'version', 0.1,
       'reactions', COALESCE(JSON_EXTRACT(t.json, '$.reactions'), JSON_ARRAY())

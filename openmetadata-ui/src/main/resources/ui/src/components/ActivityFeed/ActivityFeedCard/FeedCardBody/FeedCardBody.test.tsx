@@ -71,26 +71,6 @@ describe('Test FeedCardBody component', () => {
     expect(messagePreview).toBeInTheDocument();
   });
 
-  it('Check if FeedCardBody render announcement data', async () => {
-    const { container } = render(
-      <FeedCardBody
-        {...mockFeedCardBodyProps}
-        announcementDetails={{
-          description: 'description',
-          startTime: 1717070243489,
-          endTime: 1717070248489,
-        }}
-      />,
-      {
-        wrapper: MemoryRouter,
-      }
-    );
-
-    const announcementData = getByTestId(container, 'announcement-data');
-
-    expect(announcementData).toBeInTheDocument();
-  });
-
   it('Should render editor if editpost is true', async () => {
     const { container } = render(
       <FeedCardBody {...mockFeedCardBodyProps} isEditPost />,

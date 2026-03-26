@@ -42,9 +42,9 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
+import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionBinding;
 import org.openmetadata.service.util.EntityFieldUtils;
 import org.openmetadata.service.util.FieldPathUtils;
-import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionBinding;
 
 /**
  * Handles workflow integration for Task entities.
@@ -300,8 +300,8 @@ public class TaskWorkflowHandler {
 
       switch (binding.handlerType()) {
         case APPROVAL -> applyGlossaryApproval(entity, repository, user);
-        case DESCRIPTION_UPDATE ->
-            applyDescriptionUpdate(task, entity, repository, user, newValue, binding);
+        case DESCRIPTION_UPDATE -> applyDescriptionUpdate(
+            task, entity, repository, user, newValue, binding);
         case TAG_UPDATE -> applyTagUpdate(task, entity, repository, user, newValue, binding);
         case OWNERSHIP_UPDATE -> applyOwnershipUpdate(task, entity, repository, user);
         case TIER_UPDATE -> applyTierUpdate(task, entity, repository, user);
@@ -409,8 +409,7 @@ public class TaskWorkflowHandler {
 
         tagsToAdd =
             readTagLabels(payloadNode, binding.addTagsField(), "tagsToAdd", "suggestedValue");
-        tagsToRemove =
-            readTagLabels(payloadNode, binding.removeTagsField(), "tagsToRemove", null);
+        tagsToRemove = readTagLabels(payloadNode, binding.removeTagsField(), "tagsToRemove", null);
 
         if (tagsToAdd == null && tagsToRemove == null) {
           TagUpdatePayload tagPayload = JsonUtils.convertValue(payload, TagUpdatePayload.class);
@@ -491,7 +490,8 @@ public class TaskWorkflowHandler {
     return entity.getFullyQualifiedName() + "." + normalizedFieldPath;
   }
 
-  private String readPayloadString(JsonNode payloadNode, String preferredField, String fallbackField) {
+  private String readPayloadString(
+      JsonNode payloadNode, String preferredField, String fallbackField) {
     if (preferredField != null) {
       String preferredValue = payloadNode.path(preferredField).asText(null);
       if (preferredValue != null && !preferredValue.isEmpty()) {
