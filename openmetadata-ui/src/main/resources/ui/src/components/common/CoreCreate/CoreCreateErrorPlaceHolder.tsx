@@ -55,7 +55,7 @@ const CoreCreateErrorPlaceHolder = ({
           {heading && (
             <Typography
               as="p"
-              className="tw:text-gray-400 tw:text-center"
+              className="tw:text-gray-900 tw:text-center"
               size="text-md">
               {heading}
             </Typography>
