@@ -13,15 +13,13 @@ public class AuthLogoutServlet extends HttpServlet {
   @Override
   protected void doGet(
       final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse) {
-    AuthServeletHandler handler =
-        AuthServeletHandlerRegistry.getHandler(httpServletRequest.getServletContext());
-    handler.handleLogout(httpServletRequest, httpServletResponse);
+    httpServletResponse.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+    httpServletResponse.setHeader("Allow", "POST");
   }
 
   @Override
   protected void doPost(
       final HttpServletRequest httpServletRequest, final HttpServletResponse httpServletResponse) {
-    // Support both GET and POST for logout
     AuthServeletHandler handler =
         AuthServeletHandlerRegistry.getHandler(httpServletRequest.getServletContext());
     handler.handleLogout(httpServletRequest, httpServletResponse);

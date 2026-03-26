@@ -8881,10 +8881,21 @@ public interface CollectionDAO {
 
     @SqlQuery(
         "SELECT json FROM user_session "
-            + "WHERE status IN (<statuses>) AND (expiresAt <= :now OR idleExpiresAt <= :now) "
+            + "WHERE status IN (<statuses>) AND expiresAt <= :now "
             + "ORDER BY updatedAt ASC LIMIT :limit")
     @RegisterRowMapper(UserSessionRowMapper.class)
-    List<UserSession> findSessionsToExpire(
+    List<UserSession> findSessionsExpiredByAbsoluteTimeout(
+        @BindList("statuses") List<String> statuses,
+        @Bind("now") long now,
+        @Bind("limit") int limit)
+        throws StatementException;
+
+    @SqlQuery(
+        "SELECT json FROM user_session "
+            + "WHERE status IN (<statuses>) AND idleExpiresAt <= :now "
+            + "ORDER BY updatedAt ASC LIMIT :limit")
+    @RegisterRowMapper(UserSessionRowMapper.class)
+    List<UserSession> findSessionsExpiredByIdleTimeout(
         @BindList("statuses") List<String> statuses,
         @Bind("now") long now,
         @Bind("limit") int limit)

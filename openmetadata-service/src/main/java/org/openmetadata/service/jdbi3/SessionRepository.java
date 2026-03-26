@@ -1,6 +1,9 @@
 package org.openmetadata.service.jdbi3;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -28,14 +31,21 @@ public class SessionRepository {
   }
 
   public List<UserSession> findSessionsToExpire(long now, int limit) {
-    return dao.getUserSessionDAO()
-        .findSessionsToExpire(
-            List.of(
-                SessionStatus.ACTIVE.name(),
-                SessionStatus.REFRESHING.name(),
-                SessionStatus.PENDING.name()),
-            now,
-            limit);
+    List<String> statuses =
+        List.of(
+            SessionStatus.ACTIVE.name(),
+            SessionStatus.REFRESHING.name(),
+            SessionStatus.PENDING.name());
+    Map<String, UserSession> combined = new LinkedHashMap<>();
+    for (UserSession s :
+        dao.getUserSessionDAO().findSessionsExpiredByAbsoluteTimeout(statuses, now, limit)) {
+      combined.putIfAbsent(s.getId(), s);
+    }
+    for (UserSession s :
+        dao.getUserSessionDAO().findSessionsExpiredByIdleTimeout(statuses, now, limit)) {
+      combined.putIfAbsent(s.getId(), s);
+    }
+    return new ArrayList<>(combined.values());
   }
 
   public List<UserSession> findSessionsToPrune(long cutoff, int limit) {

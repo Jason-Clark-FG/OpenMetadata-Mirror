@@ -27,7 +27,8 @@ public class SessionService implements Managed {
   private static final long CLEANUP_INTERVAL_MINUTES = 15L;
   private static final long CLEANUP_RETENTION_MILLIS = TimeUnit.DAYS.toMillis(7);
   private static final int CLEANUP_BATCH_SIZE = 1_000;
-  private static final int MAX_ACTIVE_SESSIONS_PER_USER = 5;
+  // TODO: Make configurable via AuthenticationConfiguration.maxSessionsPerUser
+  private static final int DEFAULT_MAX_SESSIONS_PER_USER = 5;
   private static final int SESSION_LIMIT_RETRIES = 3;
 
   private volatile AuthenticationConfiguration authConfig;
@@ -41,7 +42,7 @@ public class SessionService implements Managed {
     this(
         authConfig,
         new SessionRepository(),
-        Caffeine.newBuilder().maximumSize(10_000).expireAfterAccess(60, TimeUnit.SECONDS).build(),
+        Caffeine.newBuilder().maximumSize(10_000).expireAfterAccess(10, TimeUnit.SECONDS).build(),
         Executors.newSingleThreadScheduledExecutor(
             runnable ->
                 Thread.ofPlatform().name("om-session-cleanup").daemon(true).unstarted(runnable)));
@@ -425,7 +426,7 @@ public class SessionService implements Managed {
     for (int attempt = 0; attempt < SESSION_LIMIT_RETRIES; attempt++) {
       List<UserSession> sessions =
           new ArrayList<>(repository.findByUserIdAndStatus(userId, SessionStatus.ACTIVE));
-      if (sessions.size() <= MAX_ACTIVE_SESSIONS_PER_USER) {
+      if (sessions.size() <= DEFAULT_MAX_SESSIONS_PER_USER) {
         return;
       }
 
@@ -436,7 +437,7 @@ public class SessionService implements Managed {
                   Comparator.comparing(
                       session ->
                           session.getLastAccessedAt() == null ? 0L : session.getLastAccessedAt()))
-              .limit(Math.max(0, sessions.size() - MAX_ACTIVE_SESSIONS_PER_USER))
+              .limit(Math.max(0, sessions.size() - DEFAULT_MAX_SESSIONS_PER_USER))
               .toList();
       if (sessionsToRevoke.isEmpty()) {
         return;

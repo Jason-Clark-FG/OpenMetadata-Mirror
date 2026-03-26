@@ -27,10 +27,11 @@ import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.SecurityContext;
-import jakarta.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -446,12 +447,14 @@ public final class SecurityUtil {
 
   public static String buildRedirectWithToken(
       String redirectUri, String accessToken, String email, String name) {
-    return UriBuilder.fromUri(redirectUri)
-        .queryParam("id_token", accessToken)
-        .queryParam("email", email)
-        .queryParam("name", name)
-        .build()
-        .toString();
+    String fragment =
+        "id_token="
+            + URLEncoder.encode(accessToken, StandardCharsets.UTF_8)
+            + "&email="
+            + URLEncoder.encode(email, StandardCharsets.UTF_8)
+            + "&name="
+            + URLEncoder.encode(name, StandardCharsets.UTF_8);
+    return redirectUri + "#" + fragment;
   }
 
   public static Set<String> trustedRedirects(String... trustedRedirects) {

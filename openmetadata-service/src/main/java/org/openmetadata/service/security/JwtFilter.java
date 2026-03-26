@@ -60,7 +60,10 @@ import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.LogoutRequest;
 import org.openmetadata.schema.auth.ServiceTokenType;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
+import org.openmetadata.schema.type.Include;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
@@ -180,7 +183,16 @@ public class JwtFilter implements ContainerRequestFilter {
           throw new AuthorizationException("Only bot users can impersonate other users");
         }
         impersonatedBy = userName;
-        userName = impersonateUser;
+        try {
+          User impersonatedUser =
+              Entity.getEntityByName(Entity.USER, impersonateUser, "", Include.NON_DELETED);
+          userName = impersonatedUser.getName();
+          email = impersonatedUser.getEmail();
+        } catch (Exception e) {
+          LOG.warn("Impersonation target user not found: {}", impersonateUser);
+          throw new AuthenticationException(
+              "Cannot impersonate non-existent user: " + impersonateUser);
+        }
       }
 
       checkValidationsForToken(claims, tokenFromHeader, userName, impersonatedBy);

@@ -2,6 +2,8 @@ package org.openmetadata.service.security;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -346,16 +348,20 @@ class SecurityUtilTest {
   }
 
   @Test
-  void buildRedirectWithToken_encodesQueryParameters() {
+  void buildRedirectWithToken_usesFragmentNotQueryString() {
     String redirectUrl =
         SecurityUtil.buildRedirectWithToken(
             "https://app.example.com/callback", "token-value", "user@example.com", "Jane & John");
 
-    String rawQuery = URI.create(redirectUrl).getRawQuery();
+    URI uri = URI.create(redirectUrl);
+    assertNull(uri.getRawQuery(), "Token must be in fragment, not query string");
 
-    assertEquals(3, rawQuery.split("&").length);
-    assertTrue(rawQuery.contains("email="));
-    assertTrue(rawQuery.contains("name="));
-    assertTrue(rawQuery.contains("%26"));
+    String fragment = uri.getRawFragment();
+    assertNotNull(fragment, "Fragment should contain token parameters");
+    assertEquals(3, fragment.split("&").length);
+    assertTrue(fragment.contains("id_token="));
+    assertTrue(fragment.contains("email="));
+    assertTrue(fragment.contains("name="));
+    assertTrue(fragment.contains("%26"));
   }
 }
