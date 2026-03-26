@@ -128,7 +128,7 @@ const BadgeList: React.FC<{ items: ReactNode[] }> = ({ items }) => {
     <div className="tw:flex tw:flex-wrap tw:mt-2 tw:gap-1">
       {items.slice(0, MAX_VISIBLE_BADGES)}
       {hiddenCount > 0 && (
-        <Badge color="gray-blue" size="sm" type="pill-color">
+        <Badge color="gray" size="sm" type="pill-color">
           +{hiddenCount}
         </Badge>
       )}
@@ -173,11 +173,7 @@ const RelatedTermTagButton: React.FC<RelatedTermTagButtonProps> = ({
         }
         data-testid={getEntityName(entity)}
         onPress={() => onRelatedTermClick(entity.fullyQualifiedName ?? '')}>
-        <BadgeWithIcon
-          color="gray-blue"
-          iconLeading={Tag01}
-          size="md"
-          type="color">
+        <BadgeWithIcon color="gray" iconLeading={Tag01} size="md" type="color">
           {getEntityName(entity)}
         </BadgeWithIcon>
       </TooltipTrigger>
