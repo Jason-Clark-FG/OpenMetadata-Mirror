@@ -191,7 +191,10 @@ const MarketplaceDataProductsWidget = ({
         <div>
           <Typography
             as="h5"
-            className="marketplace-widget-title tw:text-base tw:font-semibold tw:text-text-primary tw:m-0">
+            className="marketplace-widget-title tw:text-text-primary tw:m-0"
+            size="text-md"
+            weight='semibold'
+          >
             {t('label.new')} {t('label.data-product-plural')}
           </Typography>
           <Typography as="span" className="tw:text-xs tw:text-text-tertiary">
