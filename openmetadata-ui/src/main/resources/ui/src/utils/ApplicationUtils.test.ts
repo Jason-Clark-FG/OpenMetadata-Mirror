@@ -11,13 +11,9 @@
  *  limitations under the License.
  */
 
-import { upperFirst } from 'lodash';
 import { EntityStats } from '../components/Settings/Applications/AppLogsViewer/AppLogsViewer.interface';
 import { getEntityStatsData } from './ApplicationUtils';
-import {
-  MOCK_APPLICATION_ENTITY_STATS,
-  MOCK_APPLICATION_ENTITY_STATS_DATA,
-} from './mocks/ApplicationUtils.mock';
+import { MOCK_APPLICATION_ENTITY_STATS } from './mocks/ApplicationUtils.mock';
 
 describe('ApplicationUtils tests', () => {
   it('getEntityStatsData should return stats data in array with vector embeddings', () => {

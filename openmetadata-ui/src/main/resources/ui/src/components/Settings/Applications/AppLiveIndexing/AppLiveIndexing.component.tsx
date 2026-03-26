@@ -41,7 +41,7 @@ const STATUS_TYPE_MAP: Record<string, StatusType> = {
 
 const PAGE_SIZE = 15;
 
-const AppLiveIndexing = ({ appData }: AppLiveIndexingProps) => {
+const AppLiveIndexing = ({ appData: _appData }: AppLiveIndexingProps) => {
   const { t } = useTranslation();
   const { fqn } = useFqn();
   const [isLoading, setIsLoading] = useState(true);
@@ -134,9 +134,7 @@ const AppLiveIndexing = ({ appData }: AppLiveIndexingProps) => {
         dataIndex: 'retryCount',
         key: 'retryCount',
         width: 120,
-        render: (count: number) => (
-          <Typography.Text>{count}</Typography.Text>
-        ),
+        render: (count: number) => <Typography.Text>{count}</Typography.Text>,
       },
       {
         title: t('label.failure-reason'),
@@ -172,7 +170,6 @@ const AppLiveIndexing = ({ appData }: AppLiveIndexingProps) => {
         ),
       }}
       pageSize={pageSize}
-      paginationVisible={records.length > 0 && paging.total > pageSize}
       pagination={{
         total: paging.total,
         pageSize,
@@ -186,6 +183,7 @@ const AppLiveIndexing = ({ appData }: AppLiveIndexingProps) => {
           fetchRetryQueue(0);
         },
       }}
+      paginationVisible={records.length > 0 && paging.total > pageSize}
       rowKey={(record) => `${record.entityId}-${record.entityFqn}`}
       size="small"
     />

@@ -54,12 +54,13 @@ test.describe(
       );
 
       for (const record of SAMPLE_RETRY_RECORDS) {
-        await apiContext.post(
-          '/api/v1/databases/searchIndexRetryQueue/upsert',
-          { data: record }
-        ).catch(() => {
-          // If direct API doesn't exist, insert via SQL or skip gracefully
-        });
+        await apiContext
+          .post('/api/v1/databases/searchIndexRetryQueue/upsert', {
+            data: record,
+          })
+          .catch(() => {
+            // If direct API doesn't exist, insert via SQL or skip gracefully
+          });
       }
 
       await afterAction();
@@ -73,7 +74,9 @@ test.describe(
       for (const record of SAMPLE_RETRY_RECORDS) {
         await apiContext
           .delete(
-            `/api/v1/databases/searchIndexRetryQueue/${record.entityId}/${encodeURIComponent(record.entityFqn)}`
+            `/api/v1/databases/searchIndexRetryQueue/${
+              record.entityId
+            }/${encodeURIComponent(record.entityFqn)}`
           )
           .catch(() => {
             // Clean up best-effort
@@ -148,33 +151,30 @@ test.describe(
           .click();
       });
 
-      await test.step(
-        'Verify empty state message when queue is empty',
-        async () => {
-          // Mock empty response
-          await page.route(RETRY_QUEUE_API, (route) =>
-            route.fulfill({
-              status: 200,
-              contentType: 'application/json',
-              body: JSON.stringify({
-                data: [],
-                paging: { total: 0 },
-              }),
-            })
-          );
+      await test.step('Verify empty state message when queue is empty', async () => {
+        // Mock empty response
+        await page.route(RETRY_QUEUE_API, (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              data: [],
+              paging: { total: 0 },
+            }),
+          })
+        );
 
-          const liveIndexingTab = page.getByRole('tab', {
-            name: 'Live Indexing',
-          });
-          await liveIndexingTab.click();
+        const liveIndexingTab = page.getByRole('tab', {
+          name: 'Live Indexing',
+        });
+        await liveIndexingTab.click();
 
-          await expect(
-            page.getByText(
-              'No live indexing retry records found. All entities are indexed successfully.'
-            )
-          ).toBeVisible();
-        }
-      );
+        await expect(
+          page.getByText(
+            'No live indexing retry records found. All entities are indexed successfully.'
+          )
+        ).toBeVisible();
+      });
     });
 
     test('Live Indexing tab displays records with correct status badges', async ({
@@ -255,9 +255,7 @@ test.describe(
         await expect(
           table.getByText('table', { exact: true }).first()
         ).toBeVisible();
-        await expect(
-          table.getByText('topic', { exact: true })
-        ).toBeVisible();
+        await expect(table.getByText('topic', { exact: true })).toBeVisible();
 
         // Verify status badges via data-testid
         const statusBadges = table.getByTestId('retry-status');
@@ -279,25 +277,22 @@ test.describe(
         await settingClick(page, GlobalSettingOptions.APPLICATIONS);
       });
 
-      await test.step(
-        'Verify Live Indexing tab is absent on non-search apps',
-        async () => {
-          // Check if DataInsightsReportApplication card exists
-          const diCard = page.locator(
-            '[data-testid="data-insights-report-application-card"] [data-testid="config-btn"]'
-          );
+      await test.step('Verify Live Indexing tab is absent on non-search apps', async () => {
+        // Check if DataInsightsReportApplication card exists
+        const diCard = page.locator(
+          '[data-testid="data-insights-report-application-card"] [data-testid="config-btn"]'
+        );
 
-          if (await diCard.isVisible()) {
-            await diCard.click();
+        if (await diCard.isVisible()) {
+          await diCard.click();
 
-            const liveIndexingTab = page.getByRole('tab', {
-              name: 'Live Indexing',
-            });
+          const liveIndexingTab = page.getByRole('tab', {
+            name: 'Live Indexing',
+          });
 
-            await expect(liveIndexingTab).not.toBeVisible();
-          }
+          await expect(liveIndexingTab).not.toBeVisible();
         }
-      );
+      });
     });
   }
 );
