@@ -570,6 +570,7 @@ export enum DashboardServiceType {
     QuickSight = "QuickSight",
     Redash = "Redash",
     Sigma = "Sigma",
+    Ssrs = "Ssrs",
     Superset = "Superset",
     Tableau = "Tableau",
     ThoughtSpot = "ThoughtSpot",
