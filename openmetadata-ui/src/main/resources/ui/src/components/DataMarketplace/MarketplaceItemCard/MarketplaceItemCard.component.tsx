@@ -11,9 +11,8 @@
  *  limitations under the License.
  */
 
-import { Typography } from '@openmetadata/ui-core-components';
+import { Card, Typography } from '@openmetadata/ui-core-components';
 import { ReactNode } from 'react';
-import './marketplace-item-card.less';
 
 interface MarketplaceItemCardProps {
   icon: ReactNode;
@@ -33,8 +32,8 @@ const MarketplaceItemCard = ({
   dataTestId,
 }: MarketplaceItemCardProps) => {
   return (
-    <div
-      className="marketplace-item-card"
+    <Card
+      className="tw:flex tw:items-center tw:gap-3 tw:p-3 tw:cursor-pointer tw:flex-1 tw:min-w-[235px] tw:max-w-[calc((100%-24px)/3)] tw:shadow-xs"
       data-testid={dataTestId}
       role="button"
       tabIndex={0}
@@ -45,25 +44,25 @@ const MarketplaceItemCard = ({
         }
       }}>
       <div
-        className="marketplace-item-card-icon"
+        className="tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 tw:min-w-10 tw:rounded-lg [&_img]:tw:w-5 [&_img]:tw:h-5 [&_svg]:tw:w-5 [&_svg]:tw:h-5"
         style={{ backgroundColor: backgroundColor ?? '#E0E7FF' }}>
-        {icon}
+        <span className='tw:w-5 tw:h-5 tw:min-w-5'>{icon}</span>
       </div>
-      <div className="marketplace-item-card-content">
+      <div className="tw:flex tw:flex-col tw:min-w-0 tw:gap-0.5">
         <Typography
           as="span"
-          className="marketplace-item-card-name tw:truncate tw:block"
+          className="tw:font-semibold tw:text-sm tw:leading-5 tw:text-primary tw:truncate tw:block"
           title={name}>
           {name}
         </Typography>
         <Typography
           as="span"
-          className="marketplace-item-card-subtitle tw:truncate tw:block"
+          className="tw:text-xs tw:leading-[18px] tw:text-tertiary tw:truncate tw:block"
           title={subtitle}>
           {subtitle}
         </Typography>
       </div>
-    </div>
+    </Card>
   );
 };
 

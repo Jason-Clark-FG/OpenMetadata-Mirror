@@ -42,7 +42,7 @@ import Loader from '../../common/Loader/Loader';
 import AddDomainForm from '../../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../../Domain/DomainPage.interface';
 import MarketplaceItemCard from '../MarketplaceItemCard/MarketplaceItemCard.component';
-import './marketplace-data-products-widget.less';
+import '../marketplace-widget-shared.less'
 
 const DISPLAY_COUNT = 3;
 
@@ -183,6 +183,7 @@ const MarketplaceDataProductsWidget = ({
     );
   }
 
+
   return (
     <div
       className="marketplace-widget-section"
@@ -226,11 +227,13 @@ const MarketplaceDataProductsWidget = ({
         )}
       </div>
       {isEmpty(dataProducts) ? (
-        <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
-          {t('label.no-entity', {
-            entity: t('label.data-product-plural'),
-          })}
-        </Typography>
+        <div className="tw:flex tw:items-center tw:justify-center tw:min-h-16">
+          <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
+            {t('label.no-entity', {
+              entity: t('label.data-product-plural'),
+            })}
+          </Typography>
+        </div>
       ) : (
         cardList
       )}

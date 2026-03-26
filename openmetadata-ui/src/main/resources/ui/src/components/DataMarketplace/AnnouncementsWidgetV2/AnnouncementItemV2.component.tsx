@@ -66,7 +66,7 @@ const AnnouncementItemV2 = ({
       onClick={onClick}>
       <AnnouncementCardV1Content
         columnName={columnName}
-        currentBackgroundColor="var(--color-utility-blue-100)"
+        currentBackgroundColor="theme(--color-utility-blue-100)"
         description={description}
         entityFQN={entityFQN}
         entityIcon={entityIcon}

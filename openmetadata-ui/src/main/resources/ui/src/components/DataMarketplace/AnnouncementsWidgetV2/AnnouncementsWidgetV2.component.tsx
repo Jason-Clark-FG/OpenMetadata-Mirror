@@ -135,9 +135,13 @@ const AnnouncementsWidgetV2 = ({ isEditView }: WidgetCommonProps) => {
             className="tw:text-sm tw:font-semibold tw:text-text-primary">
             {t('label.announcement-plural')}
           </Typography>
-          <span className="tw:rounded-md tw:bg-bg-primary tw:px-2 tw:py-0.5 tw:text-sm tw:font-medium tw:text-text-tertiary">
+          <Typography
+            as="span"
+            className="tw:rounded-md tw:bg-bg-primary tw:px-2 tw:py-0.5 tw:text-text-tertiary"
+            size="text-sm"
+            weight="medium">
             {String(announcements.length).padStart(2, '0')}
-          </span>
+          </Typography>
         </div>
       </div>
 

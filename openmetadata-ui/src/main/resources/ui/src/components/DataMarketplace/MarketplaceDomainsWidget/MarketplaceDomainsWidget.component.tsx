@@ -38,7 +38,7 @@ import Loader from '../../common/Loader/Loader';
 import AddDomainForm from '../../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../../Domain/DomainPage.interface';
 import MarketplaceItemCard from '../MarketplaceItemCard/MarketplaceItemCard.component';
-import './marketplace-domains-widget.less';
+import '../marketplace-widget-shared.less'
 
 const DISPLAY_COUNT = 3;
 
@@ -220,9 +220,11 @@ const MarketplaceDomainsWidget = ({
         )}
       </div>
       {isEmpty(domains) ? (
-        <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
-          {t('label.no-entity', { entity: t('label.domain-plural') })}
-        </Typography>
+        <div className="tw:flex tw:items-center tw:justify-center tw:min-h-16">
+          <Typography as="span" className="tw:text-sm tw:text-text-tertiary">
+            {t('label.no-entity', { entity: t('label.domain-plural') })}
+          </Typography>
+        </div>
       ) : (
         cardList
       )}
