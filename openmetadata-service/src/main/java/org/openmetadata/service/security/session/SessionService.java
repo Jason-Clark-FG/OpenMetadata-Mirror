@@ -437,7 +437,8 @@ public class SessionService implements Managed {
   }
 
   private void expireSessionsInBatches(long now) {
-    while (true) {
+    int maxIterations = 100;
+    for (int i = 0; i < maxIterations; i++) {
       List<UserSession> sessions = repository.findSessionsToExpire(now, CLEANUP_BATCH_SIZE);
       if (sessions.isEmpty()) {
         return;
@@ -447,6 +448,7 @@ public class SessionService implements Managed {
         return;
       }
     }
+    LOG.warn("expireSessionsInBatches reached maximum iterations ({})", maxIterations);
   }
 
   private Optional<UserSession> reloadSession(String sessionId) {
@@ -467,7 +469,8 @@ public class SessionService implements Managed {
   }
 
   private void pruneSessionsInBatches(long cutoff) {
-    while (true) {
+    int maxIterations = 100;
+    for (int i = 0; i < maxIterations; i++) {
       List<UserSession> sessions = repository.findSessionsToPrune(cutoff, CLEANUP_BATCH_SIZE);
       if (sessions.isEmpty()) {
         return;
@@ -481,6 +484,7 @@ public class SessionService implements Managed {
         return;
       }
     }
+    LOG.warn("pruneSessionsInBatches reached maximum iterations ({})", maxIterations);
   }
 
   private void expireIfNecessary(UserSession session) {
@@ -542,7 +546,7 @@ public class SessionService implements Managed {
     return System.currentTimeMillis();
   }
 
-  static String truncateId(String sessionId) {
+  public static String truncateId(String sessionId) {
     if (sessionId == null || sessionId.length() <= 8) {
       return sessionId;
     }

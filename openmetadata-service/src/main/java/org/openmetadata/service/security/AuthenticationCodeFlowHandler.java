@@ -57,6 +57,8 @@ import jakarta.ws.rs.BadRequestException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.time.Instant;
 import java.util.Arrays;
@@ -382,7 +384,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
               .getPendingSession(req, resp)
               .orElseThrow(() -> new TechnicalException("No pending session found for callback"));
 
-      LOG.debug("Performing Auth Callback For User Session: {} ", pendingSession.getId());
+      LOG.debug(
+          "Performing Auth Callback For User Session: {} ",
+          SessionService.truncateId(pendingSession.getId()));
       String computedCallbackUrl = client.getCallbackUrl();
       Map<String, List<String>> parameters = retrieveCallbackParameters(req);
       AuthenticationResponse response =
@@ -617,7 +621,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       }
 
       LOG.debug("Request state: {}/response state: {}", requestState, responseState);
-      if (!requestState.equals(responseState.getValue())) {
+      if (!MessageDigest.isEqual(
+          requestState.getBytes(StandardCharsets.UTF_8),
+          responseState.getValue().getBytes(StandardCharsets.UTF_8))) {
         throw new TechnicalException(
             "State parameter is different from the one sent in authentication request.");
       }
@@ -661,7 +667,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
           throw BadJWTExceptions.MISSING_NONCE_CLAIM_EXCEPTION;
         }
 
-        if (!expectedNonce.equals(tokenNonce)) {
+        if (!MessageDigest.isEqual(
+            expectedNonce.getBytes(StandardCharsets.UTF_8),
+            tokenNonce.getBytes(StandardCharsets.UTF_8))) {
           throw new BadJWTException("Unexpected JWT nonce (nonce) claim: " + tokenNonce);
         }
       } else {
@@ -1015,7 +1023,10 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
             Entity.USER, session.getUsername(), "id,name,email,roles,isAdmin", Include.NON_DELETED);
       }
     } catch (Exception e) {
-      LOG.debug("Failed to load session user for session {}", session.getId(), e);
+      LOG.debug(
+          "Failed to load session user for session {}",
+          SessionService.truncateId(session.getId()),
+          e);
     }
     return null;
   }
