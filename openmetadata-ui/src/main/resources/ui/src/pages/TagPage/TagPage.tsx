@@ -39,6 +39,7 @@ import {
   ActivityFeedTabs,
 } from '../../components/ActivityFeed/ActivityFeedTab/ActivityFeedTab.interface';
 import { withActivityFeed } from '../../components/AppRouter/withActivityFeed';
+import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
 import { ManageButtonItemLabel } from '../../components/common/ManageButtonContentItem/ManageButtonContentItem.component';
@@ -46,6 +47,7 @@ import ResizablePanels from '../../components/common/ResizablePanels/ResizablePa
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge.component';
 import { StatusType } from '../../components/common/StatusBadge/StatusBadge.interface';
 import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
+import { TabProps } from '../../components/common/TabsLabel/TabsLabel.interface';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
 import { GenericProvider } from '../../components/Customization/GenericProvider/GenericProvider';
 import { GenericTab } from '../../components/Customization/GenericTab/GenericTab';
@@ -79,7 +81,7 @@ import {
   ResourceEntity,
 } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
-import { EntityType, TabSpecificField } from '../../enums/entity.enum';
+import { EntityTabs, EntityType, TabSpecificField } from '../../enums/entity.enum';
 import { SearchIndex } from '../../enums/search.enum';
 import { ProviderType, Tag } from '../../generated/entity/classification/tag';
 import { EntityStatus } from '../../generated/entity/data/glossaryTerm';
@@ -501,27 +503,28 @@ const TagPage = () => {
       return [];
     }
 
-    const items: Array<{
-      label: JSX.Element;
-      key: string;
-      children?: JSX.Element;
-      isHidden?: boolean;
-    }> = [
+    const tabs: TabProps[] = [
       {
-        label: <TabsLabel id={TagTabs.OVERVIEW} name={t('label.overview')} />,
-        key: 'overview',
+        label: (
+          <TabsLabel
+            id={EntityTabs.OVERVIEW}
+            isActive={activeTab === EntityTabs.OVERVIEW}
+            name={t('label.overview')}
+          />
+        ),
+        key: EntityTabs.OVERVIEW,
         children: <GenericTab type={PageType.Tag} />,
       },
       {
         label: (
           <TabsLabel
-            count={assetCount ?? 0}
-            id="assets"
-            isActive={activeTab === TagTabs.ASSETS}
+            count={assetCount}
+            id={EntityTabs.ASSETS}
+            isActive={activeTab === EntityTabs.ASSETS}
             name={t('label.asset-plural')}
           />
         ),
-        key: 'assets',
+        key: EntityTabs.ASSETS,
         children: (
           <ResizablePanels
             className="tag-height-with-resizable-panel"
@@ -572,12 +575,12 @@ const TagPage = () => {
         label: (
           <TabsLabel
             count={feedCount.totalCount}
-            id={TagTabs.ACTIVITY_FEED}
-            isActive={activeTab === TagTabs.ACTIVITY_FEED}
+            id={EntityTabs.ACTIVITY_FEED}
+            isActive={activeTab === EntityTabs.ACTIVITY_FEED}
             name={t('label.activity-feed-and-task-plural')}
           />
         ),
-        key: TagTabs.ACTIVITY_FEED,
+        key: EntityTabs.ACTIVITY_FEED,
         children: (
           <ActivityFeedTab
             refetchFeed
@@ -593,22 +596,45 @@ const TagPage = () => {
           />
         ),
       },
+      {
+        key: EntityTabs.DATA_OBSERVABILITY,
+        label: (
+          <TabsLabel
+            id={EntityTabs.DATA_OBSERVABILITY}
+            isActive={activeTab === EntityTabs.DATA_OBSERVABILITY}
+            name={t('label.data-observability')}
+          />
+        ),
+        children: (
+          <DataQualityDashboard
+            isGovernanceView
+            className="data-quality-governance-tab-wrapper"
+            hiddenFilters={['tags']}
+            initialFilters={
+              tagItem.fullyQualifiedName
+                ? { tags: [tagItem.fullyQualifiedName] }
+                : undefined
+            }
+          />
+        ),
+      },
     ];
 
-    items.push(
-      ...tagClassBase.getAdditionalTagDetailPageTabs(tagItem, activeTab)
-    );
+    tabs.push(...tagClassBase.getAdditionalTagDetailPageTabs(tagItem, activeTab));
 
-    return items;
+    return tabs;
   }, [
     tagItem,
-    previewAsset,
     activeTab,
     assetCount,
     feedCount,
-    assetTabRef,
+    previewAsset,
+    isCertificationClassification,
+    haveAssetEditPermission,
     handleAssetSave,
-    editTagsPermission,
+    handleAssetClick,
+    handleFeedCount,
+    t,
   ]);
   const icon = useMemo(() => {
     if (tagItem?.style?.iconURL) {
