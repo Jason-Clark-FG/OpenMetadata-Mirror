@@ -318,7 +318,7 @@ public class Auth0Validator {
                 ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS,
                 "Invalid JWKS format. Expected JSON with 'keys' array at: " + urlStr);
           }
-          if (jwks.has("keys") && jwks.get("keys").size() == 0) {
+          if (jwks.has("keys") && jwks.get("keys").isEmpty()) {
             return ValidationErrorBuilder.createFieldError(
                 ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS,
                 "JWKS endpoint returned empty keys array: " + urlStr);

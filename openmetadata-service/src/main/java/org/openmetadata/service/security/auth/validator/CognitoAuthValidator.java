@@ -275,7 +275,7 @@ public class CognitoAuthValidator {
           }
 
           // Validate keys array is not empty
-          if (jwks.get("keys").size() == 0) {
+          if (jwks.get("keys").isEmpty()) {
             return ValidationErrorBuilder.createFieldError(
                 ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS,
                 "JWKS endpoint returned empty keys array: " + urlStr);

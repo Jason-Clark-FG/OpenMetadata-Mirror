@@ -1,7 +1,6 @@
 package org.openmetadata.service.notifications.template.handlebars.helpers;
 
 import com.github.jknack.handlebars.Handlebars;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;

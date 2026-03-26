@@ -1506,7 +1506,7 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
           new ArrayList<>(tableObservabilityList.subList(startIndex, endIndex));
 
       // Generate cursors
-      if (paginatedList.size() > 0) {
+      if (!paginatedList.isEmpty()) {
         // Generate before cursor if not at start
         if (startIndex > 0) {
           beforeCursor = RestUtil.encodeCursor(paginatedList.get(0).getTableFqn());

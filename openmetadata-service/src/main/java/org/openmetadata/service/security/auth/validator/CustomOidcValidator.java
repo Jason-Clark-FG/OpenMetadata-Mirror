@@ -205,7 +205,7 @@ public class CustomOidcValidator {
 
       // Validate it's a proper JWKS format
       JsonNode jwks = JsonUtils.readTree(response.getBody());
-      if (!jwks.has("keys") || !jwks.get("keys").isArray() || jwks.get("keys").size() == 0) {
+      if (!jwks.has("keys") || !jwks.get("keys").isArray() || jwks.get("keys").isEmpty()) {
         return ValidationErrorBuilder.createFieldError(
             ValidationErrorBuilder.FieldPaths.AUTH_PUBLIC_KEY_URLS,
             "JWKS endpoint returned invalid or empty keys");

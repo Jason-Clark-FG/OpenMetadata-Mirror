@@ -4635,13 +4635,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected List<EntityReference> getFollowers(T entity, Include include) {
     Optional<List<EntityReference>> bundleFollowers =
         getRelationsFromReadBundle(entity, FIELD_FOLLOWERS, include);
-    if (bundleFollowers.isPresent()) {
-      return bundleFollowers.get();
-    }
-
-    return !supportsFollower || entity == null
-        ? Collections.emptyList()
-        : findFrom(entity.getId(), entityType, Relationship.FOLLOWS, USER, include);
+    return bundleFollowers.orElseGet(
+        () ->
+            !supportsFollower || entity == null
+                ? Collections.emptyList()
+                : findFrom(entity.getId(), entityType, Relationship.FOLLOWS, USER, include));
   }
 
   protected Votes getVotes(T entity) {
@@ -5275,11 +5273,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     Optional<List<EntityReference>> bundleDataProducts =
         getRelationsFromReadBundle(entity, FIELD_DATA_PRODUCTS, include);
-    if (bundleDataProducts.isPresent()) {
-      return bundleDataProducts.get();
-    }
-
-    return findFrom(entity.getId(), entityType, Relationship.HAS, DATA_PRODUCT, include);
+    return bundleDataProducts.orElseGet(
+        () -> findFrom(entity.getId(), entityType, Relationship.HAS, DATA_PRODUCT, include));
   }
 
   protected List<EntityReference> getDataProducts(UUID entityId, String entityType) {
@@ -5306,11 +5301,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected List<EntityReference> getChildren(T entity, Include include) {
     Optional<List<EntityReference>> bundleChildren =
         getRelationsFromReadBundle(entity, FIELD_CHILDREN, include);
-    if (bundleChildren.isPresent()) {
-      return bundleChildren.get();
-    }
-
-    return findTo(entity.getId(), entityType, Relationship.CONTAINS, entityType, include);
+    return bundleChildren.orElseGet(
+        () -> findTo(entity.getId(), entityType, Relationship.CONTAINS, entityType, include));
   }
 
   protected List<EntityReference> getReviewers(T entity) {
@@ -5320,13 +5312,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected List<EntityReference> getReviewers(T entity, Include include) {
     Optional<List<EntityReference>> bundleReviewers =
         getRelationsFromReadBundle(entity, FIELD_REVIEWERS, include);
-    if (bundleReviewers.isPresent()) {
-      return bundleReviewers.get();
-    }
-
-    return supportsReviewers
-        ? findFrom(entity.getId(), entityType, Relationship.REVIEWS, null, include)
-        : null;
+    return bundleReviewers.orElseGet(
+        () ->
+            supportsReviewers
+                ? findFrom(entity.getId(), entityType, Relationship.REVIEWS, null, include)
+                : null);
   }
 
   protected List<EntityReference> getExperts(T entity) {
@@ -5336,13 +5326,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected List<EntityReference> getExperts(T entity, Include include) {
     Optional<List<EntityReference>> bundleExperts =
         getRelationsFromReadBundle(entity, FIELD_EXPERTS, include);
-    if (bundleExperts.isPresent()) {
-      return bundleExperts.get();
-    }
-
-    return supportsExperts
-        ? findTo(entity.getId(), entityType, Relationship.EXPERT, USER, include)
-        : null;
+    return bundleExperts.orElseGet(
+        () ->
+            supportsExperts
+                ? findTo(entity.getId(), entityType, Relationship.EXPERT, USER, include)
+                : null);
   }
 
   public final void inheritDomains(T entity, Fields fields, EntityInterface parent) {

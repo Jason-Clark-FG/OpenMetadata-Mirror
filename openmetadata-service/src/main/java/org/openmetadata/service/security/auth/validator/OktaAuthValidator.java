@@ -248,7 +248,7 @@ public class OktaAuthValidator {
         }
 
         JsonNode jwks = JsonUtils.readTree(response.getBody());
-        if (!jwks.has("keys") || jwks.get("keys").size() == 0) {
+        if (!jwks.has("keys") || jwks.get("keys").isEmpty()) {
           throw new IllegalArgumentException("Invalid JWKS: " + urlStr);
         }
       }

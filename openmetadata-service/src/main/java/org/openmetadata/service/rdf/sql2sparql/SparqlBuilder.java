@@ -55,11 +55,11 @@ public class SparqlBuilder implements SqlVisitor<Void> {
     sparql.append("\nWHERE {\n");
     sparql.append(whereClause);
 
-    if (optionalClause.length() > 0) {
+    if (!optionalClause.isEmpty()) {
       sparql.append(optionalClause);
     }
 
-    if (filterClause.length() > 0) {
+    if (!filterClause.isEmpty()) {
       sparql.append("\n  FILTER (").append(filterClause).append(")");
     }
 
@@ -151,7 +151,7 @@ public class SparqlBuilder implements SqlVisitor<Void> {
 
       String var = getOrCreateVar(tableAlias);
 
-      if (filterClause.length() > 0) {
+      if (!filterClause.isEmpty()) {
         filterClause.append(" && ");
       }
       filterClause
@@ -177,7 +177,7 @@ public class SparqlBuilder implements SqlVisitor<Void> {
 
       String var = getOrCreateVar(tableAlias);
 
-      if (filterClause.length() > 0) {
+      if (!filterClause.isEmpty()) {
         filterClause.append(" && ");
       }
       filterClause

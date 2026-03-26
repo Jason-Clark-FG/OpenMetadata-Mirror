@@ -140,7 +140,7 @@ class ServerIdentityResolverTest {
     // 3. om-server-uuid (fallback)
 
     assertNotNull(serverId);
-    assertTrue(serverId.length() > 0);
+    assertFalse(serverId.isEmpty());
 
     // If it's a fallback ID, it should start with "om-server-"
     // If it's a Quartz ID, it could be various formats depending on Quartz AUTO setting
