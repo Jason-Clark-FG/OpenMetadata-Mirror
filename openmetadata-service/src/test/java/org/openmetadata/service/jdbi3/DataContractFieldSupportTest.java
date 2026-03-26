@@ -36,6 +36,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.openmetadata.schema.entity.Bot;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
@@ -81,6 +82,27 @@ class DataContractFieldSupportTest {
     EntityReference callGetDataContractNoArg(Table entity) {
       return getDataContract(entity);
     }
+  }
+
+  static class TestBotRepository extends EntityRepository<Bot> {
+    TestBotRepository(CollectionDAO collectionDAO, EntityDAO<Bot> entityDAO) {
+      super("/bots", "bot", Bot.class, entityDAO, "", "", Set.of());
+    }
+
+    @Override
+    protected void setFields(Bot entity, Fields fields, RelationIncludes relationIncludes) {}
+
+    @Override
+    protected void clearFields(Bot entity, Fields fields) {}
+
+    @Override
+    protected void prepare(Bot entity, boolean update) {}
+
+    @Override
+    protected void storeEntity(Bot entity, boolean update) {}
+
+    @Override
+    protected void storeRelationships(Bot entity) {}
   }
 
   @BeforeEach
@@ -185,30 +207,13 @@ class DataContractFieldSupportTest {
     assertEquals(existingContract, table.getDataContract());
   }
 
+  @SuppressWarnings("unchecked")
   @Test
-  void getDataContract_returnsNullWhenNotSupported() throws Exception {
-    var field = EntityRepository.class.getDeclaredField("supportsDataContract");
-    field.setAccessible(true);
+  void getDataContract_returnsNullWhenNotSupported() {
+    EntityDAO<Bot> mockBotDAO = mock(EntityDAO.class);
+    TestBotRepository botRepo = new TestBotRepository(mockCollectionDAO, mockBotDAO);
 
-    var unsafeClass = Class.forName("sun.misc.Unsafe");
-    var theUnsafe = unsafeClass.getDeclaredField("theUnsafe");
-    theUnsafe.setAccessible(true);
-    var unsafe = theUnsafe.get(null);
-
-    long offset =
-        (long)
-            unsafeClass
-                .getMethod("objectFieldOffset", java.lang.reflect.Field.class)
-                .invoke(unsafe, field);
-    unsafeClass
-        .getMethod("putBoolean", Object.class, long.class, boolean.class)
-        .invoke(unsafe, repository, offset, false);
-
-    Table table = new Table();
-    table.setId(UUID.randomUUID());
-
-    EntityReference result = repository.callGetDataContract(table, NON_DELETED);
-    assertNull(result);
+    assertNull(botRepo.getDataContract(new Bot(), NON_DELETED));
   }
 
   @Test
@@ -252,8 +257,7 @@ class DataContractFieldSupportTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class, Mockito.CALLS_REAL_METHODS)) {
       entityMock
-          .when(
-              () -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(NON_DELETED)))
+          .when(() -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(ALL)))
           .thenReturn(List.of(contractRef));
 
       Method method =
@@ -357,8 +361,7 @@ class DataContractFieldSupportTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class, Mockito.CALLS_REAL_METHODS)) {
       entityMock
-          .when(
-              () -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(NON_DELETED)))
+          .when(() -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(ALL)))
           .thenReturn(List.of(contractRef));
 
       Method method =

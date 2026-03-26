@@ -8920,10 +8920,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
                 Relationship.CONTAINS.ordinal(),
                 ALL);
 
+    if (records == null || records.isEmpty()) {
+      return dataContractMap;
+    }
+
     var contractIds =
         records.stream().map(rec -> UUID.fromString(rec.getToId())).distinct().toList();
 
-    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, NON_DELETED);
+    if (contractIds.isEmpty()) {
+      return dataContractMap;
+    }
+
+    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, ALL);
     var contractRefMap =
         contractRefs.stream().collect(Collectors.toMap(EntityReference::getId, ref -> ref));
 
