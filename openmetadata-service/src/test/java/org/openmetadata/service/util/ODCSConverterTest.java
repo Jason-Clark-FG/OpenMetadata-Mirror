@@ -521,7 +521,7 @@ class ODCSConverterTest {
     assertEquals(ODCSDataContract.OdcsStatus.DRAFT, getODCSStatus(EntityStatus.DRAFT));
     assertEquals(ODCSDataContract.OdcsStatus.ACTIVE, getODCSStatus(EntityStatus.APPROVED));
     assertEquals(ODCSDataContract.OdcsStatus.DEPRECATED, getODCSStatus(EntityStatus.DEPRECATED));
-    assertEquals(ODCSDataContract.OdcsStatus.DEPRECATED, getODCSStatus(EntityStatus.ARCHIVED));
+    assertEquals(ODCSDataContract.OdcsStatus.RETIRED, getODCSStatus(EntityStatus.ARCHIVED));
   }
 
   @Test
@@ -557,6 +557,31 @@ class ODCSConverterTest {
     assertEquals(original.getEntityStatus(), converted.getEntityStatus());
     assertEquals(original.getSchema().size(), converted.getSchema().size());
     assertEquals(original.getSchema().get(0).getName(), converted.getSchema().get(0).getName());
+  }
+
+  @Test
+  void testArchivedStatusRoundTrip() {
+    DataContract original = new DataContract();
+    original.setId(UUID.randomUUID());
+    original.setName("archived_contract");
+    original.setDescription("Archived round trip test");
+    original.setEntityStatus(EntityStatus.ARCHIVED);
+
+    EntityReference entity = new EntityReference();
+    entity.setId(UUID.randomUUID());
+    entity.setType("table");
+    entity.setFullyQualifiedName("db.schema.archived_table");
+    original.setEntity(entity);
+
+    ODCSDataContract odcs = ODCSConverter.toODCS(original);
+    assertEquals(ODCSDataContract.OdcsStatus.RETIRED, odcs.getStatus());
+
+    EntityReference newEntityRef = new EntityReference();
+    newEntityRef.setId(UUID.randomUUID());
+    newEntityRef.setType("table");
+
+    DataContract converted = ODCSConverter.fromODCS(odcs, newEntityRef);
+    assertEquals(EntityStatus.ARCHIVED, converted.getEntityStatus());
   }
 
   private ODCSDataContract.OdcsStatus getODCSStatus(EntityStatus status) {
