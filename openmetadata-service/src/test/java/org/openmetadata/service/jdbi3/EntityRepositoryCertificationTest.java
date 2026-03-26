@@ -14,9 +14,13 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import org.jdbi.v3.core.statement.StatementContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +32,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.CollectionDAO.TagUsageDAO;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
+import org.openmetadata.service.util.FullyQualifiedName;
 
 class EntityRepositoryCertificationTest {
 
@@ -374,6 +379,149 @@ class EntityRepositoryCertificationTest {
     assertNotNull(tags);
     assertEquals(1, tags.size());
     assertEquals("PII.Sensitive", tags.get(0).getTagFQN());
+  }
+
+  @Test
+  void storeRelationshipsInternalSingleEntityWithNoCert() {
+    Pipeline entity =
+        new Pipeline()
+            .withId(UUID.randomUUID())
+            .withName("my-pipeline")
+            .withFullyQualifiedName("service.my-pipeline")
+            .withCertification(null);
+
+    when(tagUsageDAO.getCertTagsInternalBatch(anyList(), anyString())).thenReturn(List.of());
+
+    assertDoesNotThrow(() -> repo.storeRelationshipsInternal(entity));
+  }
+
+  @Test
+  void fetchAndSetFieldsPopulatesCertification() {
+    UUID entityId = UUID.randomUUID();
+    Pipeline entity =
+        new Pipeline()
+            .withId(entityId)
+            .withName("my-pipeline")
+            .withFullyQualifiedName("service.my-pipeline");
+
+    CollectionDAO.TagUsageDAO.TagLabelWithFQNHash tagEntry =
+        new CollectionDAO.TagUsageDAO.TagLabelWithFQNHash();
+    tagEntry.setTagFQN("Certification.Gold");
+    tagEntry.setSource(TagLabel.TagSource.CLASSIFICATION.ordinal());
+    tagEntry.setLabelType(TagLabel.LabelType.AUTOMATED.ordinal());
+    tagEntry.setState(TagLabel.State.CONFIRMED.ordinal());
+    tagEntry.setTargetFQNHash(FullyQualifiedName.buildHash("service.my-pipeline"));
+
+    when(tagUsageDAO.getCertTagsInternalBatch(anyList(), anyString()))
+        .thenReturn(List.of(tagEntry));
+
+    Fields certFields = new Fields(Set.of("certification"));
+    repo.fetchAndSetFields(List.of(entity), certFields);
+
+    assertNotNull(entity.getCertification());
+    assertEquals("Certification.Gold", entity.getCertification().getTagLabel().getTagFQN());
+  }
+
+  @Test
+  void fetchAndSetFieldsFallsBackToIndividualFetchOnBatchException() {
+    Pipeline entity =
+        new Pipeline()
+            .withId(UUID.randomUUID())
+            .withName("my-pipeline")
+            .withFullyQualifiedName("service.my-pipeline");
+
+    when(tagUsageDAO.getCertTagsInternalBatch(anyList(), anyString()))
+        .thenThrow(new RuntimeException("DB error"))
+        .thenReturn(List.of());
+
+    Fields certFields = new Fields(Set.of("certification"));
+    assertDoesNotThrow(() -> repo.fetchAndSetFields(List.of(entity), certFields));
+  }
+
+  @Test
+  void tagLabelMapperMapsResultSetFields() throws SQLException {
+    ResultSet rs = mock(ResultSet.class);
+    StatementContext ctx = mock(StatementContext.class);
+
+    when(rs.getInt("source")).thenReturn(TagLabel.TagSource.CLASSIFICATION.ordinal());
+    when(rs.getInt("labelType")).thenReturn(TagLabel.LabelType.MANUAL.ordinal());
+    when(rs.getInt("state")).thenReturn(TagLabel.State.CONFIRMED.ordinal());
+    when(rs.getString("tagFQN")).thenReturn("PII.Sensitive");
+    when(rs.getString("reason")).thenReturn(null);
+    when(rs.getTimestamp("appliedAt")).thenReturn(null);
+    when(rs.getString("appliedBy")).thenReturn(null);
+    when(rs.getString("metadata")).thenReturn(null);
+
+    TagLabel label = new CollectionDAO.TagUsageDAO.TagLabelMapper().map(rs, ctx);
+
+    assertEquals("PII.Sensitive", label.getTagFQN());
+    assertEquals(TagLabel.TagSource.CLASSIFICATION, label.getSource());
+    assertNull(label.getMetadata());
+  }
+
+  @Test
+  void tagLabelWithFQNHashMapperMapsResultSetFields() throws SQLException {
+    ResultSet rs = mock(ResultSet.class);
+    StatementContext ctx = mock(StatementContext.class);
+
+    when(rs.getString("targetFQNHash")).thenReturn("abc123");
+    when(rs.getInt("source")).thenReturn(TagLabel.TagSource.CLASSIFICATION.ordinal());
+    when(rs.getString("tagFQN")).thenReturn("Certification.Gold");
+    when(rs.getInt("labelType")).thenReturn(TagLabel.LabelType.AUTOMATED.ordinal());
+    when(rs.getInt("state")).thenReturn(TagLabel.State.CONFIRMED.ordinal());
+    when(rs.getString("reason")).thenReturn(null);
+    when(rs.getTimestamp("appliedAt")).thenReturn(null);
+    when(rs.getString("appliedBy")).thenReturn(null);
+    when(rs.getString("metadata")).thenReturn(null);
+
+    CollectionDAO.TagUsageDAO.TagLabelWithFQNHash result =
+        new CollectionDAO.TagUsageDAO.TagLabelWithFQNHashMapper().map(rs, ctx);
+
+    assertEquals("abc123", result.getTargetFQNHash());
+    assertEquals("Certification.Gold", result.getTagFQN());
+    assertNull(result.getMetadata());
+  }
+
+  @Test
+  void toTagLabelUsesDefaultForOutOfBoundsSource() {
+    CollectionDAO.TagUsageDAO.TagLabelWithFQNHash hash =
+        new CollectionDAO.TagUsageDAO.TagLabelWithFQNHash();
+    hash.setSource(-1);
+    hash.setLabelType(TagLabel.LabelType.AUTOMATED.ordinal());
+    hash.setState(TagLabel.State.CONFIRMED.ordinal());
+    hash.setTagFQN("Certification.Gold");
+
+    TagLabel label = hash.toTagLabel();
+
+    assertEquals(TagLabel.TagSource.CLASSIFICATION, label.getSource());
+  }
+
+  @Test
+  void toTagLabelUsesDefaultForOutOfBoundsLabelType() {
+    CollectionDAO.TagUsageDAO.TagLabelWithFQNHash hash =
+        new CollectionDAO.TagUsageDAO.TagLabelWithFQNHash();
+    hash.setSource(TagLabel.TagSource.CLASSIFICATION.ordinal());
+    hash.setLabelType(-1);
+    hash.setState(TagLabel.State.CONFIRMED.ordinal());
+    hash.setTagFQN("Certification.Gold");
+
+    TagLabel label = hash.toTagLabel();
+
+    assertEquals(TagLabel.LabelType.MANUAL, label.getLabelType());
+  }
+
+  @Test
+  void toTagLabelUsesDefaultForOutOfBoundsState() {
+    CollectionDAO.TagUsageDAO.TagLabelWithFQNHash hash =
+        new CollectionDAO.TagUsageDAO.TagLabelWithFQNHash();
+    hash.setSource(TagLabel.TagSource.CLASSIFICATION.ordinal());
+    hash.setLabelType(TagLabel.LabelType.AUTOMATED.ordinal());
+    hash.setState(-1);
+    hash.setTagFQN("Certification.Gold");
+
+    TagLabel label = hash.toTagLabel();
+
+    assertEquals(TagLabel.State.CONFIRMED, label.getState());
   }
 
   @Test
