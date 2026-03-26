@@ -32,8 +32,7 @@ public class ETagResponseFilter implements ContainerResponseFilter {
 
   @Override
   public void filter(
-      ContainerRequestContext requestContext, ContainerResponseContext responseContext)
-      throws IOException {
+      ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
     try (var ignored = RequestLatencyContext.phase("etagGeneration")) {
       if ("GET".equals(requestContext.getMethod())
           && responseContext.getStatus() == Response.Status.OK.getStatusCode()

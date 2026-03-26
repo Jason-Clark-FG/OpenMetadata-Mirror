@@ -125,7 +125,7 @@ class K8sPipelineClientTest {
   private static final String NAMESPACE = "openmetadata-pipelines";
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() {
     Parameters params = new Parameters();
     params.setAdditionalProperty("namespace", NAMESPACE);
     params.setAdditionalProperty("inCluster", "false");
@@ -1339,7 +1339,7 @@ class K8sPipelineClientTest {
   }
 
   @Test
-  void testValidateNamespaceExistsAllowsAccessibleNamespace() throws Exception {
+  void testValidateNamespaceExistsAllowsAccessibleNamespace() {
     when(coreApi.readNamespace(eq(NAMESPACE))).thenReturn(readNamespaceRequest);
 
     assertDoesNotThrow(() -> invokePrivate(client, "validateNamespaceExists", new Class<?>[0]));

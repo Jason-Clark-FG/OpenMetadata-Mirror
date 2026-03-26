@@ -31,7 +31,7 @@ public class ETagRequestFilter implements ContainerRequestFilter {
   private static final ThreadLocal<String> IF_MATCH_HEADER = new ThreadLocal<>();
 
   @Override
-  public void filter(ContainerRequestContext requestContext) throws IOException {
+  public void filter(ContainerRequestContext requestContext) {
     // Start each request with a clean request-scoped cache.
     RequestEntityCache.clear();
 

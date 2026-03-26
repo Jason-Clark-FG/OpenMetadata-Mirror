@@ -151,7 +151,7 @@ public interface SearchManagementClient {
    * @return response containing search results
    * @throws IOException if search execution fails
    */
-  Response searchWithNLQ(SearchRequest request, SubjectContext subjectContext) throws IOException;
+  Response searchWithNLQ(SearchRequest request, SubjectContext subjectContext);
 
   /**
    * Search for entity relationships.

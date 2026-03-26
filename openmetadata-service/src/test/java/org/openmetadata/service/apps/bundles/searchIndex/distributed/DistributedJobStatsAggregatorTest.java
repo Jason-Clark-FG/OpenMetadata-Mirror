@@ -120,7 +120,7 @@ class DistributedJobStatsAggregatorTest {
   }
 
   @Test
-  void testStopsWhenJobNotFound() throws Exception {
+  void testStopsWhenJobNotFound() {
     when(coordinator.getJobWithAggregatedStats(jobId)).thenReturn(null);
 
     aggregator = new DistributedJobStatsAggregator(coordinator, jobId, 500);

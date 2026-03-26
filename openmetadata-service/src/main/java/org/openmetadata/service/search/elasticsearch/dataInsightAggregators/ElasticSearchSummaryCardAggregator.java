@@ -33,8 +33,7 @@ public class ElasticSearchSummaryCardAggregator
       long end,
       List<FormulaHolder> formulas,
       Map metricFormulaMap,
-      boolean live)
-      throws IOException {
+      boolean live) {
 
     SummaryCard summaryCard = JsonUtils.convertValue(diChart.getChartDetails(), SummaryCard.class);
 

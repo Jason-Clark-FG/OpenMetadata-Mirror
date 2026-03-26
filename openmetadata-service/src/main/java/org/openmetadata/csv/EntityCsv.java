@@ -355,8 +355,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
       CSVPrinter printer,
       CSVRecord csvRecord,
       int fieldNumber,
-      Function<Integer, String> invalidMessageCreator)
-      throws IOException {
+      Function<Integer, String> invalidMessageCreator) {
     if (!processRecord) {
       return null;
     }
@@ -381,18 +380,16 @@ public abstract class EntityCsv<T extends EntityInterface> {
     return refs.isEmpty() ? null : refs;
   }
 
-  public List<EntityReference> getOwners(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber)
-      throws IOException {
+  public List<EntityReference> getOwners(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     return getOwners(printer, csvRecord, fieldNumber, EntityCsv::invalidOwner);
   }
 
   public List<EntityReference> getReviewers(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     return getOwners(printer, csvRecord, fieldNumber, EntityCsv::invalidReviewer);
   }
 
-  public List<EntityReference> getDomains(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber)
-      throws IOException {
+  public List<EntityReference> getDomains(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     if (!processRecord) {
       return null;
     }
@@ -413,8 +410,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   /** Owner field is in entityName format */
-  public EntityReference getOwnerAsUser(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber)
-      throws IOException {
+  public EntityReference getOwnerAsUser(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     if (!processRecord) {
       return null;
     }
@@ -425,8 +421,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
     return getEntityReference(printer, csvRecord, fieldNumber, Entity.USER, owner);
   }
 
-  protected final Boolean getBoolean(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber)
-      throws IOException {
+  protected final Boolean getBoolean(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     String field = csvRecord.get(fieldNumber);
     if (nullOrEmpty(field)) {
       return null;
@@ -442,8 +437,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   protected final EntityReference getEntityReference(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType)
-      throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType) {
     if (!processRecord) {
       return null;
     }
@@ -462,8 +456,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   protected final EntityReference getEntityReference(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType, String fqn)
-      throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType, String fqn) {
     if (nullOrEmpty(fqn)) {
       return null;
     }
@@ -476,8 +469,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   protected final List<EntityReference> getEntityReferences(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType)
-      throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String entityType) {
     if (!processRecord) {
       return null;
     }
@@ -501,7 +493,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   protected final List<EntityReference> getEntityReferencesForGlossaryTerms(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     if (!processRecord) {
       return null;
     }
@@ -544,8 +536,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   protected final List<TagLabel> getTagLabels(
       CSVPrinter printer,
       CSVRecord csvRecord,
-      List<Pair<Integer, TagSource>> fieldNumbersWithSource)
-      throws IOException {
+      List<Pair<Integer, TagSource>> fieldNumbersWithSource) {
     if (!processRecord) {
       return null;
     }
@@ -687,8 +678,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   private Object parseEntityReferences(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String fieldValue, boolean isList)
-      throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String fieldValue, boolean isList) {
     List<EntityReference> entityReferences = new ArrayList<>();
 
     List<String> entityRefStrings =
@@ -721,8 +711,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
       String fieldName,
       String fieldValue,
       String fieldType,
-      String propertyConfig)
-      throws IOException {
+      String propertyConfig) {
     try {
       DateTimeFormatter formatter = DateTimeFormatter.ofPattern(propertyConfig, Locale.ENGLISH);
 
@@ -750,8 +739,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   private Map<String, Long> parseTimeInterval(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String fieldName, Object fieldValue)
-      throws IOException {
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String fieldName, Object fieldValue) {
     List<String> timestampValues = fieldToEntities(fieldValue.toString());
     Map<String, Long> timestampMap = new HashMap<>();
     if (timestampValues.size() == 2) {
@@ -780,8 +768,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
       int fieldNumber,
       String fieldName,
       String customPropertyType,
-      Object fieldValue)
-      throws IOException {
+      Object fieldValue) {
     try {
       return Long.parseLong(fieldValue.toString());
     } catch (NumberFormatException e) {
@@ -843,8 +830,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
       String fieldName,
       String customPropertyType,
       Object fieldValue,
-      String propertyConfig)
-      throws IOException {
+      String propertyConfig) {
     List<String> enumKeys = listOrEmpty(fieldToInternalArray(fieldValue.toString()));
     try {
       EntityRepository.validateEnumKeys(fieldName, JsonUtils.valueToTree(enumKeys), propertyConfig);
@@ -864,8 +850,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
       Object fieldValue,
       String customPropertyType,
       Map<String, Object> extensionMap,
-      Schema jsonSchema)
-      throws IOException {
+      Schema jsonSchema) {
     if (fieldValue != null) {
       JsonNode jsonNodeValue = JsonUtils.convertValue(fieldValue, JsonNode.class);
 
@@ -1855,8 +1840,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
     }
   }
 
-  protected void createColumnEntity(CSVPrinter printer, CSVRecord csvRecord, String entityFQN)
-      throws IOException {
+  protected void createColumnEntity(CSVPrinter printer, CSVRecord csvRecord, String entityFQN) {
     if (entityFQN == null) {
       LOG.error("Column entry is missing table reference in fullyQualifiedName");
       return;
@@ -1985,7 +1969,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   /** Flush all pending table updates - applies batched column changes with a single patch per table */
-  protected void flushPendingTableUpdates(CSVPrinter printer) throws IOException {
+  protected void flushPendingTableUpdates(CSVPrinter printer) {
     if (pendingTableUpdates.isEmpty()) {
       return;
     }
@@ -2029,8 +2013,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
     pendingTableUpdates.clear();
   }
 
-  private void updateColumnsFromCsvRecursive(Table table, CSVRecord csvRecord, CSVPrinter printer)
-      throws IOException {
+  private void updateColumnsFromCsvRecursive(Table table, CSVRecord csvRecord, CSVPrinter printer) {
     String columnFqn = csvRecord.get(0);
     String columnFullyQualifiedName = csvRecord.get(13);
     Column column = null;

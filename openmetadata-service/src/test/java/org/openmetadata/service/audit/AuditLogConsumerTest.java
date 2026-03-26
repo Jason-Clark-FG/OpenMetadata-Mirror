@@ -62,7 +62,7 @@ class AuditLogConsumerTest {
   }
 
   @Test
-  void testOffsetRecordSerialization() throws Exception {
+  void testOffsetRecordSerialization() {
     // Test that the AuditLogOffset record can be serialized/deserialized
     long timestamp = System.currentTimeMillis();
     long offset = 100L;
@@ -100,7 +100,7 @@ class AuditLogConsumerTest {
   }
 
   @Test
-  void testCreateValidChangeEventJson() throws Exception {
+  void testCreateValidChangeEventJson() {
     // Test that we can create valid ChangeEvent JSON for processing
     ChangeEvent event = new ChangeEvent();
     event.setId(UUID.randomUUID());

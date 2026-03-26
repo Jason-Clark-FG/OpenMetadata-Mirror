@@ -39,7 +39,7 @@ class IngestionLogHandlerTest {
   }
 
   @Test
-  void testBuildLogResponseMultipleChunks() throws Exception {
+  void testBuildLogResponseMultipleChunks() {
     // Create a large log that will require multiple chunks
     StringBuilder largeLog = new StringBuilder();
     String logLine =

@@ -278,7 +278,7 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
   }
 
   @Override
-  public void sendTestMessage() throws EventPublisherException {}
+  public void sendTestMessage() {}
 
   @Override
   public SubscriptionDestination getSubscriptionDestination() {

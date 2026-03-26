@@ -323,7 +323,7 @@ class OpenAIEmbeddingClientTest {
 
   @SuppressWarnings("unchecked")
   @Test
-  void testConcurrencyLimiterEnforced() throws Exception {
+  void testConcurrencyLimiterEnforced() {
     AtomicInteger concurrentCount = new AtomicInteger(0);
     AtomicInteger maxObservedConcurrent = new AtomicInteger(0);
     CountDownLatch allStarted = new CountDownLatch(1);
@@ -381,7 +381,7 @@ class OpenAIEmbeddingClientTest {
           @Override
           public <T> HttpResponse<T> send(
               HttpRequest request, HttpResponse.BodyHandler<T> responseBodyHandler)
-              throws IOException, InterruptedException {
+              throws InterruptedException {
             int current = concurrentCount.incrementAndGet();
             maxObservedConcurrent.accumulateAndGet(current, Math::max);
             try {

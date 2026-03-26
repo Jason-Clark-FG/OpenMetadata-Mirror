@@ -12,7 +12,7 @@ public interface BulkSink {
 
   StepStats getStats();
 
-  void close() throws IOException;
+  void close();
 
   /**
    * Flush any pending bulk requests and wait for them to complete. Unlike close(), this does not

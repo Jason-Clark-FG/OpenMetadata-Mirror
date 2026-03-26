@@ -66,7 +66,7 @@ public class UnifiedAuthTest {
   }
 
   @Test
-  void testUnifiedLoginEndpoint() throws Exception {
+  void testUnifiedLoginEndpoint() {
     when(mockAuthConfig.getProvider()).thenReturn(AuthProvider.BASIC);
     when(mockAuthConfig.getCallbackUrl()).thenReturn("http://localhost:8585");
     SecurityConfigurationManager.getInstance().setCurrentAuthConfig(mockAuthConfig);
@@ -81,7 +81,7 @@ public class UnifiedAuthTest {
   }
 
   @Test
-  void testSessionBasedRefreshToken() throws Exception {
+  void testSessionBasedRefreshToken() {
     // This test verifies refresh tokens are stored in session, not sent to client
 
     when(mockAuthConfig.getProvider()).thenReturn(AuthProvider.BASIC);

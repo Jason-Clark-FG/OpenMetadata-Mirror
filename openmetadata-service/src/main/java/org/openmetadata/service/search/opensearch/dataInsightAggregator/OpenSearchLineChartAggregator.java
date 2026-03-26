@@ -45,8 +45,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       long end,
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
-      boolean live)
-      throws IOException {
+      boolean live) {
     LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
     Map<String, Aggregation> aggregationsMap = new HashMap<>();
     int i = 0;

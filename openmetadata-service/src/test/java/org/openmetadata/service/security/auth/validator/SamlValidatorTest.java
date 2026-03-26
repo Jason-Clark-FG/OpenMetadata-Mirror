@@ -917,7 +917,7 @@ class SamlValidatorTest {
   }
 
   @Test
-  void validateX509CertificateTwoArgumentOverloadRejectsBrokenPem() throws Exception {
+  void validateX509CertificateTwoArgumentOverloadRejectsBrokenPem() {
     InvocationTargetException exception =
         assertThrows(
             InvocationTargetException.class,
@@ -932,7 +932,7 @@ class SamlValidatorTest {
   }
 
   @Test
-  void validateX509CertificateRejectsHeaderOnlyPemBlocks() throws Exception {
+  void validateX509CertificateRejectsHeaderOnlyPemBlocks() {
     InvocationTargetException exception =
         assertThrows(
             InvocationTargetException.class,
@@ -974,7 +974,7 @@ class SamlValidatorTest {
   }
 
   @Test
-  void validateIdpCertificateAgainstConfigThrowsForAuth0Mismatches() throws Exception {
+  void validateIdpCertificateAgainstConfigThrowsForAuth0Mismatches() {
     X509Certificate cert = mock(X509Certificate.class);
     when(cert.getSubjectDN()).thenReturn(new X500Principal("CN=wrong.auth0.com"));
 
@@ -995,7 +995,7 @@ class SamlValidatorTest {
   }
 
   @Test
-  void validateIdpCertificateAgainstConfigThrowsForAzureMismatches() throws Exception {
+  void validateIdpCertificateAgainstConfigThrowsForAzureMismatches() {
     X509Certificate cert = mock(X509Certificate.class);
     when(cert.getSubjectDN()).thenReturn(new X500Principal("CN=generic.example.com"));
 

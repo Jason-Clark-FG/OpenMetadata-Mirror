@@ -238,8 +238,7 @@ public interface OpenSearchDynamicChartAggregatorInterface {
       long end,
       List<FormulaHolder> formulas,
       Map metricFormulaHolder,
-      boolean live)
-      throws IOException;
+      boolean live);
 
   DataInsightCustomChartResultList processSearchResponse(
       @NotNull DataInsightCustomChart diChart,

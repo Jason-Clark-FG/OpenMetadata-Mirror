@@ -673,7 +673,7 @@ class SearchRepositoryBehaviorTest {
   }
 
   @Test
-  void deleteEntityIndexRemovesTagReferencesFromChildren() throws Exception {
+  void deleteEntityIndexRemovesTagReferencesFromChildren() {
     EntityInterface tag = mockEntity(Entity.TAG, UUID.randomUUID(), "revenue");
     when(tag.getFullyQualifiedName()).thenReturn("Glossary.Revenue");
 
@@ -1039,7 +1039,7 @@ class SearchRepositoryBehaviorTest {
   }
 
   @Test
-  void domainUpdateWrappersDelegateToSearchClient() throws IOException {
+  void domainUpdateWrappersDelegateToSearchClient() {
     EntityReference domain =
         new EntityReference().withId(UUID.randomUUID()).withType(Entity.DOMAIN);
     List<String> oldDomains = List.of("old.domain");
@@ -1631,8 +1631,7 @@ class SearchRepositoryBehaviorTest {
   }
 
   @Test
-  void createReindexHandlerAndDeleteRelationshipHelpersUseExpectedImplementations()
-      throws IOException {
+  void createReindexHandlerAndDeleteRelationshipHelpersUseExpectedImplementations() {
     repository.createReindexHandler();
 
     repository.deleteRelationshipFromSearch(

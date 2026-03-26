@@ -336,7 +336,7 @@ public class CacheWarmupApp extends AbstractNativeApplication {
     sendUpdates(jobExecutionContext);
   }
 
-  private boolean warmupEntity(String entityType, EntityInterface entity) throws Exception {
+  private boolean warmupEntity(String entityType, EntityInterface entity) {
     // Skip caching user entities
     if ("user".equals(entityType)) {
       return false; // Not cached, but not an error

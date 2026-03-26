@@ -141,7 +141,6 @@ public class RdfResource {
       })
   public Response debugGlossaryRelations(@Context SecurityContext securityContext) {
     authorizer.authorizeAdmin(securityContext);
-    try {
       if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
             .entity("{\"error\": \"RDF service not enabled\"}")
@@ -151,10 +150,6 @@ public class RdfResource {
       String result = getRdfRepository().debugGlossaryTermRelations();
       return Response.ok(result, MediaType.APPLICATION_JSON).build();
 
-    } catch (IOException e) {
-      LOG.error("Error debugging glossary relations", e);
-      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
-    }
   }
 
   @GET

@@ -203,7 +203,7 @@ public class JsonLdTranslator {
     return result;
   }
 
-  public Model toRdf(EntityInterface entity) throws JsonLdError {
+  public Model toRdf(EntityInterface entity) {
     Model model = ModelFactory.createDefaultModel();
 
     model.setNsPrefix("om", "https://open-metadata.org/ontology/");

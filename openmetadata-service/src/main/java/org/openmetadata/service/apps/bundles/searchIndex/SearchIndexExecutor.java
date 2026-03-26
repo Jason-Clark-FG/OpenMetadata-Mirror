@@ -1574,7 +1574,7 @@ public class SearchIndexExecutor implements AutoCloseable {
     return recreateIndexHandler.reCreateIndexes(entities);
   }
 
-  private void closeSinkIfNeeded() throws IOException {
+  private void closeSinkIfNeeded() {
     if (searchIndexSink != null && sinkClosed.compareAndSet(false, true)) {
       int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
       if (pendingVectorTasks > 0) {

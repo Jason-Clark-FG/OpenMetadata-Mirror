@@ -58,7 +58,7 @@ class RichPlatformMessageDecoratorTest {
   private static final long FIXED_TIME = 1_735_689_600_000L;
 
   @Test
-  void slackBuildEntityMessageHandlesQueryEventsWithoutEntityLink() throws Exception {
+  void slackBuildEntityMessageHandlesQueryEventsWithoutEntityLink() {
     SlackMessageDecorator decorator = new SlackMessageDecorator();
     ChangeEvent event =
         new ChangeEvent()
@@ -86,7 +86,7 @@ class RichPlatformMessageDecoratorTest {
   }
 
   @Test
-  void teamsBuildEntityMessageHandlesQueryEventsWithoutEntityLink() throws Exception {
+  void teamsBuildEntityMessageHandlesQueryEventsWithoutEntityLink() {
     MSTeamsMessageDecorator decorator = new MSTeamsMessageDecorator();
     ChangeEvent event =
         new ChangeEvent()
@@ -176,7 +176,7 @@ class RichPlatformMessageDecoratorTest {
   }
 
   @Test
-  void slackCreatesDQTemplateAttachmentWithResultSections() throws Exception {
+  void slackCreatesDQTemplateAttachmentWithResultSections() {
     SlackMessageDecorator decorator = new SlackMessageDecorator();
     ChangeEvent event = testCaseEvent();
     OutgoingMessage outgoingMessage = dqOutgoingMessage();
@@ -201,7 +201,7 @@ class RichPlatformMessageDecoratorTest {
   }
 
   @Test
-  void slackCreatesDataContractTemplateWithStatusColor() throws Exception {
+  void slackCreatesDataContractTemplateWithStatusColor() {
     SlackMessageDecorator decorator = new SlackMessageDecorator();
     ChangeEvent event =
         new ChangeEvent()
@@ -252,7 +252,7 @@ class RichPlatformMessageDecoratorTest {
   }
 
   @Test
-  void gchatCreatesDQTemplateWithStructuredSections() throws Exception {
+  void gchatCreatesDQTemplateWithStructuredSections() {
     GChatMessageDecorator decorator = new GChatMessageDecorator();
     ChangeEvent event = testCaseEvent();
     OutgoingMessage outgoingMessage = dqOutgoingMessage();

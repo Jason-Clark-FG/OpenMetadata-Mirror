@@ -1393,7 +1393,7 @@ class AuthenticationCodeFlowHandlerTest {
     return authorizerConfiguration;
   }
 
-  private static AuthenticationConfiguration oidcAuthConfig(URI discoveryUri) throws Exception {
+  private static AuthenticationConfiguration oidcAuthConfig(URI discoveryUri) {
     OidcClientConfig oidcClientConfig = new OidcClientConfig();
     oidcClientConfig.setId("client-id");
     oidcClientConfig.setSecret("client-secret");
@@ -1450,8 +1450,7 @@ class AuthenticationCodeFlowHandlerTest {
     return new OidcDiscoveryServer(server);
   }
 
-  private static String oidcDiscoveryMetadata(String authorizationEndpoint, String tokenEndpoint)
-      throws Exception {
+  private static String oidcDiscoveryMetadata(String authorizationEndpoint, String tokenEndpoint) {
     Map<String, Object> metadata = new HashMap<>();
     metadata.put("issuer", "https://issuer.example.com");
     metadata.put("jwks_uri", "https://issuer.example.com/jwks");

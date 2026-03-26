@@ -488,7 +488,7 @@ class PartitionWorkerTest {
   }
 
   @Test
-  void processPartitionKeepsProgressStatusProcessingAndCompletesSuccessfully() throws Exception {
+  void processPartitionKeepsProgressStatusProcessingAndCompletesSuccessfully() {
     PartitionWorker partitionWorker =
         new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 2);
@@ -530,7 +530,7 @@ class PartitionWorkerTest {
   }
 
   @Test
-  void processPartitionTracksReaderFailuresAndCompletesWithFailedCounts() throws Exception {
+  void processPartitionTracksReaderFailuresAndCompletesWithFailedCounts() {
     PartitionWorker partitionWorker =
         new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 2);
@@ -570,7 +570,7 @@ class PartitionWorkerTest {
   }
 
   @Test
-  void processPartitionStopsAfterReadWhenStopRequestedMidLoop() throws Exception {
+  void processPartitionStopsAfterReadWhenStopRequestedMidLoop() {
     PartitionWorker partitionWorker =
         new PartitionWorker(coordinator, bulkSink, BATCH_SIZE, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 2);
@@ -665,7 +665,7 @@ class PartitionWorkerTest {
   }
 
   @Test
-  void processPartitionAdjustsSuccessCountsForProcessFailures() throws Exception {
+  void processPartitionAdjustsSuccessCountsForProcessFailures() {
     PartitionWorker partitionWorker = new PartitionWorker(coordinator, bulkSink, 2, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 2);
 
@@ -709,7 +709,7 @@ class PartitionWorkerTest {
   }
 
   @Test
-  void processPartitionFailsPartitionWhenCompletionThrows() throws Exception {
+  void processPartitionFailsPartitionWhenCompletionThrows() {
     PartitionWorker partitionWorker = new PartitionWorker(coordinator, bulkSink, 2, null, false);
     SearchIndexPartition partition = buildPartition("table", 0, 1);
 

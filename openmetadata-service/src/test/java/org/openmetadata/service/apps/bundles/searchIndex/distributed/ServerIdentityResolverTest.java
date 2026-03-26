@@ -164,7 +164,7 @@ class ServerIdentityResolverTest {
   }
 
   @Test
-  void testGetServerId_FallsBackToHostIdWhenSchedulerMissing() throws UnknownHostException {
+  void testGetServerId_FallsBackToHostIdWhenSchedulerMissing() {
     AppScheduler appScheduler = mock(AppScheduler.class);
     InetAddress inetAddress = mock(InetAddress.class);
     when(appScheduler.getScheduler()).thenReturn(null);
@@ -182,8 +182,7 @@ class ServerIdentityResolverTest {
   }
 
   @Test
-  void testGetServerId_FallsBackToHostIdOnQuartzSchedulerException()
-      throws SchedulerException, UnknownHostException {
+  void testGetServerId_FallsBackToHostIdOnQuartzSchedulerException() throws SchedulerException {
     AppScheduler appScheduler = mock(AppScheduler.class);
     Scheduler scheduler = mock(Scheduler.class);
     InetAddress inetAddress = mock(InetAddress.class);
@@ -203,7 +202,7 @@ class ServerIdentityResolverTest {
   }
 
   @Test
-  void testGetServerId_UsesProcessHandleWhenRuntimeNameHasNoHost() throws UnknownHostException {
+  void testGetServerId_UsesProcessHandleWhenRuntimeNameHasNoHost() {
     AppScheduler appScheduler = mock(AppScheduler.class);
     RuntimeMXBean runtimeMXBean = mock(RuntimeMXBean.class);
     InetAddress inetAddress = mock(InetAddress.class);
@@ -226,7 +225,7 @@ class ServerIdentityResolverTest {
   }
 
   @Test
-  void testGetServerId_FallsBackToGeneratedUuidWhenHostLookupFails() throws UnknownHostException {
+  void testGetServerId_FallsBackToGeneratedUuidWhenHostLookupFails() {
     try (MockedStatic<AppScheduler> appSchedulerMock = mockStatic(AppScheduler.class);
         MockedStatic<InetAddress> inetAddressMock = mockStatic(InetAddress.class)) {
       appSchedulerMock

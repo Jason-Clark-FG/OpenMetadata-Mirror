@@ -255,7 +255,7 @@ class EventSubscriptionSchedulerClusteringTest {
   @DisallowConcurrentExecution
   public static class SlowConcurrencyTestJob implements Job {
     @Override
-    public void execute(JobExecutionContext context) throws JobExecutionException {
+    public void execute(JobExecutionContext context) {
       if (!jobRunning.compareAndSet(false, true)) {
         LOG.error("CONCURRENT EXECUTION DETECTED!");
         concurrentExecutionDetected.set(true);
@@ -280,7 +280,7 @@ class EventSubscriptionSchedulerClusteringTest {
   /** Job WITHOUT DisallowConcurrentExecution - allows concurrent execution. */
   public static class ConcurrentAllowedJob implements Job {
     @Override
-    public void execute(JobExecutionContext context) throws JobExecutionException {
+    public void execute(JobExecutionContext context) {
       if (!jobRunning.compareAndSet(false, true)) {
         LOG.warn("Concurrent execution detected (expected for this job)");
         concurrentExecutionDetected.set(true);

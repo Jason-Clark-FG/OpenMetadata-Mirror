@@ -763,7 +763,7 @@ public class S3LogStorage implements LogStorageInterface {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     // Close all active multipart upload streams
     for (StreamContext context : activeStreams.values()) {
       try {
@@ -1256,7 +1256,7 @@ public class S3LogStorage implements LogStorageInterface {
     }
 
     @Override
-    public void flush() throws IOException {}
+    public void flush() {}
 
     @Override
     public void close() throws IOException {
@@ -1443,7 +1443,7 @@ public class S3LogStorage implements LogStorageInterface {
    * This provides the best experience: processed logs when available, recent logs when not
    */
   private Map<String, Object> getCombinedLogsForActiveStream(
-      String pipelineFQN, UUID runId, String afterCursor, int limit) throws IOException {
+      String pipelineFQN, UUID runId, String afterCursor, int limit) {
     Map<String, Object> result = new HashMap<>();
     List<String> allLines = new ArrayList<>();
     boolean foundPartialFile = false;

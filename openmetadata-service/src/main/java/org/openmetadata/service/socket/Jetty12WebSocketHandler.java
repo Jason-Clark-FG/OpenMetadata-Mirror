@@ -57,14 +57,14 @@ public class Jetty12WebSocketHandler extends EngineIoWebSocket {
   }
 
   @Override
-  public void write(String message) throws IOException {
+  public void write(String message) {
     if (session != null && session.isOpen()) {
       session.sendText(message, Callback.NOOP);
     }
   }
 
   @Override
-  public void write(byte[] message) throws IOException {
+  public void write(byte[] message) {
     if (session != null && session.isOpen()) {
       session.sendBinary(ByteBuffer.wrap(message), Callback.NOOP);
     }

@@ -63,7 +63,7 @@ public class LogStorageFactoryTest {
   }
 
   @Test
-  void testCreateS3StorageWithMetrics() throws IOException {
+  void testCreateS3StorageWithMetrics() {
     // Note: This test would need additional setup to mock S3Client creation
     // For now, we're testing that the factory correctly passes metrics
     assertThrows(

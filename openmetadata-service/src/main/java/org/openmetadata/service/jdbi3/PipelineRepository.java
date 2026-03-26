@@ -2333,7 +2333,7 @@ public class PipelineRepository extends EntityRepository<Pipeline> {
    * Used for backfilling existing data after deploying the indexing fix.
    * This method should be called manually after deployment to populate ES with historical data.
    */
-  public void reindexPipelineExecutions() throws IOException {
+  public void reindexPipelineExecutions() {
     LOG.info("Starting pipeline execution reindexing from MySQL to Elasticsearch");
 
     // Get all pipelines

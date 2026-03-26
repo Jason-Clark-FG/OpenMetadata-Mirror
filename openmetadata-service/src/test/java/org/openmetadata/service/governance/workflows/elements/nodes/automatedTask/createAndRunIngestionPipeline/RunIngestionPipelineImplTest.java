@@ -114,7 +114,7 @@ class RunIngestionPipelineImplTest {
   }
 
   @Test
-  void testExecuteSuccessFirstAttempt() throws Exception {
+  void testExecuteSuccessFirstAttempt() {
     // Mock repository and entity setup
     when(mockRepository.get(any(), any(UUID.class), any())).thenReturn(testPipeline);
     when(mockRepository.getOpenMetadataApplicationConfig()).thenReturn(null);

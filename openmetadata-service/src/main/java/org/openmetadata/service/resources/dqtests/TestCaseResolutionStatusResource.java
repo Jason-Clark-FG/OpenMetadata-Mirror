@@ -315,8 +315,7 @@ public class TestCaseResolutionStatusResource
                       examples = {
                         @ExampleObject("[{op:remove, path:/a},{op:add, path: /b, value: val}]")
                       }))
-          JsonPatch patch)
-      throws IntrospectionException, InvocationTargetException, IllegalAccessException {
+          JsonPatch patch) {
 
     TestCaseResolutionStatus testCaseResolutionStatus = repository.getById(id);
     TestCase testCase =

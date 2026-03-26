@@ -31,8 +31,7 @@ public class OpenSearchSummaryCardAggregator implements OpenSearchDynamicChartAg
       long end,
       List<FormulaHolder> formulas,
       Map metricHolder,
-      boolean live)
-      throws IOException {
+      boolean live) {
 
     SummaryCard summaryCard = JsonUtils.convertValue(diChart.getChartDetails(), SummaryCard.class);
 

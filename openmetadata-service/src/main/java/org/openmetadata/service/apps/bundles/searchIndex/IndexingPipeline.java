@@ -291,7 +291,7 @@ public class IndexingPipeline implements AutoCloseable {
     }
   }
 
-  private void closeSink() throws IOException {
+  private void closeSink() {
     if (searchIndexSink != null) {
       int pendingVectorTasks = searchIndexSink.getPendingVectorTaskCount();
       if (pendingVectorTasks > 0) {

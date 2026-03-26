@@ -101,8 +101,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
   }
 
   private ExecutionResult doExecute(
-      ReindexingConfiguration config, ReindexingJobContext context, long startTime)
-      throws Exception {
+      ReindexingConfiguration config, ReindexingJobContext context, long startTime) {
 
     this.config = config;
     LOG.info("Starting distributed reindexing for entities: {}", config.entities());

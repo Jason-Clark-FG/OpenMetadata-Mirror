@@ -859,7 +859,7 @@ class SearchIndexExecutorControlFlowTest {
   }
 
   @Test
-  void executeCompletesRecreateFlowForZeroEntityWorkload() throws Exception {
+  void executeCompletesRecreateFlowForZeroEntityWorkload() {
     ReindexingProgressListener listener = mock(ReindexingProgressListener.class);
     ReindexingJobContext jobContext = mock(ReindexingJobContext.class);
     CollectionDAO.SearchIndexFailureDAO failureDao =
