@@ -29,8 +29,8 @@ import i18n from './i18next/LocalUtil';
 import {
   getCertificationTag,
   getTagsWithoutCertification,
-  getTierTags,
   getTagsWithoutTier,
+  getTierTags,
 } from './TableUtils';
 
 export const columnFilterIcon = (filtered: boolean) => (
