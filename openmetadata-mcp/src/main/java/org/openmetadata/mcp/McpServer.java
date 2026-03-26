@@ -179,63 +179,29 @@ public class McpServer implements McpServerProvider {
           java.util.EnumSet.of(jakarta.servlet.DispatcherType.REQUEST), false, "/.well-known/*");
       LOG.info("OAuth well-known filter registered for /.well-known/* discovery paths");
 
-      // Register SSO callback endpoint for SSO providers (Google, Azure, Okta).
-      // If SSO is not configured, register a fallback servlet that returns a clear error
-      // instead of falling through to the SPA asset servlet (which shows a confusing 404).
-      // The MCP state checker is always registered since it has no SSO dependency.
+      // Register MCP state checker so AuthCallbackServlet can forward MCP callbacks.
+      // SSO providers redirect to /callback (the registered URI), not /mcp/callback.
+      // This checker lets /callback detect MCP flow and forward to /mcp/callback.
       org.openmetadata.mcp.server.auth.repository.McpPendingAuthRequestRepository pendingAuthRepo =
           new org.openmetadata.mcp.server.auth.repository.McpPendingAuthRequestRepository();
       org.openmetadata.service.security.AuthenticationCodeFlowHandler.setMcpStateChecker(
           state -> pendingAuthRepo.findByPac4jState(state) != null);
       LOG.info("Registered MCP state checker for SSO callback forwarding");
 
-      boolean ssoCallbackRegistered = false;
-      try {
-        org.openmetadata.schema.api.security.AuthenticationConfiguration authConfig =
-            SecurityConfigurationManager.getCurrentAuthConfig();
-        if (authConfig != null
-            && authConfig.getProvider() != null
-            && authConfig.getProvider()
-                != org.openmetadata.schema.services.connections.metadata.AuthProvider.BASIC
-            && authConfig.getProvider()
-                != org.openmetadata.schema.services.connections.metadata.AuthProvider.LDAP) {
-          org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType ssoServiceType;
-          try {
-            String providerStr = authConfig.getProvider().toString().toUpperCase();
-            ssoServiceType =
-                org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.valueOf(providerStr);
-          } catch (Exception e) {
-            ssoServiceType = org.openmetadata.schema.auth.SSOAuthMechanism.SsoServiceType.GOOGLE;
-            LOG.info(
-                "Using default SSO service type GOOGLE for provider: {}", authConfig.getProvider());
-          }
-
-          org.openmetadata.service.security.AuthenticationCodeFlowHandler ssoHandler =
-              org.openmetadata.service.security.AuthenticationCodeFlowHandler.getInstance();
-          org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet ssoCallbackServlet =
-              new org.openmetadata.mcp.server.auth.handlers.SSOCallbackServlet(
-                  authProvider, ssoHandler, ssoServiceType, baseUrl);
-          ServletHolder ssoCallbackHolder = new ServletHolder(ssoCallbackServlet);
-          contextHandler.addServlet(ssoCallbackHolder, "/mcp/callback");
-          ssoCallbackRegistered = true;
-          LOG.info(
-              "Registered SSO callback endpoint at /mcp/callback for provider: {}", ssoServiceType);
-        }
-      } catch (Exception e) {
-        LOG.info(
-            "SSO callback servlet not available (auth provider does not use SSO): {}",
-            e.getMessage());
-      }
-
-      if (!ssoCallbackRegistered) {
-        contextHandler.addServlet(
-            new ServletHolder(new McpCallbackFallbackServlet()), "/mcp/callback");
-        LOG.info(
-            "Registered fallback /mcp/callback servlet — SSO not configured at startup. "
-                + "Restart the server after changing the authentication provider to enable MCP SSO.");
-      }
+      // Register MCP callback servlet unconditionally — SSO availability is checked at
+      // request time, not startup time. This follows the same pattern as the regular auth
+      // servlets (AuthCallbackServlet, AuthLoginServlet) which are always registered and
+      // dispatch to the appropriate handler at runtime.
+      contextHandler.addServlet(
+          new ServletHolder(
+              new org.openmetadata.mcp.server.auth.handlers.McpCallbackServlet(authProvider)),
+          "/mcp/callback");
+      LOG.info("Registered /mcp/callback servlet (runtime SSO dispatch)");
     } catch (Exception ex) {
-      LOG.error("Error adding stateless transport", ex);
+      LOG.error(
+          "MCP server initialization failed — MCP OAuth will be non-functional. "
+              + "Check the configuration and restart.",
+          ex);
     }
   }
 
