@@ -610,16 +610,18 @@ const TagPage = () => {
           />
         ),
         children: (
-          <DataQualityDashboard
-            isGovernanceView
-            className="data-quality-governance-tab-wrapper"
-            hiddenFilters={['tags']}
-            initialFilters={
-              tagItem.fullyQualifiedName
-                ? { tags: [tagItem.fullyQualifiedName] }
-                : undefined
-            }
-          />
+          <div className="tag-page-dq-tab-pane">
+            <DataQualityDashboard
+              isGovernanceView
+              className="data-quality-governance-tab-wrapper"
+              hiddenFilters={['tags']}
+              initialFilters={
+                tagItem.fullyQualifiedName
+                  ? { tags: [tagItem.fullyQualifiedName] }
+                  : undefined
+              }
+            />
+          </div>
         ),
       },
     ];
