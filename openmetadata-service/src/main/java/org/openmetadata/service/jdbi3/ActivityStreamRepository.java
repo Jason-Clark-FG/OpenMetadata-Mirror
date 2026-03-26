@@ -183,10 +183,44 @@ public class ActivityStreamRepository {
     return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
   }
 
+  /** List activity for a specific entity scoped to specific domains. */
+  public List<ActivityEvent> listByEntity(
+      String entityType,
+      UUID entityId,
+      List<UUID> domainIds,
+      long afterTimestamp,
+      int limit) {
+    if (nullOrEmpty(domainIds)) {
+      return listByEntity(entityType, entityId, afterTimestamp, limit);
+    }
+
+    List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
+    String domainJson = JsonUtils.pojoToJson(domainIdStrings);
+    List<String> jsonList =
+        activityStreamDAO.listByEntityAndDomains(
+            entityType, entityId.toString(), domainJson, domainIdStrings, afterTimestamp, limit);
+    return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
+  }
+
   /** List activity by a specific actor (user). */
   public List<ActivityEvent> listByActor(UUID actorId, long afterTimestamp, int limit) {
     List<String> jsonList =
         activityStreamDAO.listByActor(actorId.toString(), afterTimestamp, limit);
+    return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
+  }
+
+  /** List activity by a specific actor (user) scoped to specific domains. */
+  public List<ActivityEvent> listByActor(
+      UUID actorId, List<UUID> domainIds, long afterTimestamp, int limit) {
+    if (nullOrEmpty(domainIds)) {
+      return listByActor(actorId, afterTimestamp, limit);
+    }
+
+    List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
+    String domainJson = JsonUtils.pojoToJson(domainIdStrings);
+    List<String> jsonList =
+        activityStreamDAO.listByActorAndDomains(
+            actorId.toString(), domainJson, domainIdStrings, afterTimestamp, limit);
     return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
   }
 
@@ -206,7 +240,8 @@ public class ActivityStreamRepository {
     List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
     String domainJson = JsonUtils.pojoToJson(domainIdStrings);
 
-    List<String> jsonList = activityStreamDAO.listByDomains(domainJson, afterTimestamp, limit);
+    List<String> jsonList =
+        activityStreamDAO.listByDomains(domainJson, domainIdStrings, afterTimestamp, limit);
     return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
   }
 
@@ -223,6 +258,24 @@ public class ActivityStreamRepository {
     return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
   }
 
+  /** List activity for entities owned by a user or their teams within specific domains. */
+  public List<ActivityEvent> listByOwners(
+      String userId, List<String> teamIds, List<UUID> domainIds, long afterTimestamp, int limit) {
+    if (nullOrEmpty(domainIds)) {
+      return listByOwners(userId, teamIds, afterTimestamp, limit);
+    }
+    if (nullOrEmpty(teamIds)) {
+      teamIds = List.of("00000000-0000-0000-0000-000000000000");
+    }
+
+    List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
+    String domainJson = JsonUtils.pojoToJson(domainIdStrings);
+    List<String> jsonList =
+        activityStreamDAO.listByOwnersAndDomains(
+            userId, teamIds, domainJson, domainIdStrings, afterTimestamp, limit);
+    return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
+  }
+
   /** List activity events by EntityLink (about field). */
   public List<ActivityEvent> listByAbout(String entityLink, long afterTimestamp, int limit) {
     String aboutFqnHash = FullyQualifiedName.buildHash(entityLink);
@@ -230,9 +283,36 @@ public class ActivityStreamRepository {
     return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
   }
 
+  /** List activity events by EntityLink scoped to specific domains. */
+  public List<ActivityEvent> listByAbout(
+      String entityLink, List<UUID> domainIds, long afterTimestamp, int limit) {
+    if (nullOrEmpty(domainIds)) {
+      return listByAbout(entityLink, afterTimestamp, limit);
+    }
+
+    String aboutFqnHash = FullyQualifiedName.buildHash(entityLink);
+    List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
+    String domainJson = JsonUtils.pojoToJson(domainIdStrings);
+    List<String> jsonList =
+        activityStreamDAO.listByAboutAndDomains(
+            aboutFqnHash, domainJson, domainIdStrings, afterTimestamp, limit);
+    return jsonList.stream().map(json -> JsonUtils.readValue(json, ActivityEvent.class)).toList();
+  }
+
   /** Get count of activity events. */
   public int count(long afterTimestamp) {
     return activityStreamDAO.count(afterTimestamp);
+  }
+
+  /** Get count of activity events scoped to specific domains. */
+  public int count(List<UUID> domainIds, long afterTimestamp) {
+    if (nullOrEmpty(domainIds)) {
+      return count(afterTimestamp);
+    }
+
+    List<String> domainIdStrings = domainIds.stream().map(UUID::toString).toList();
+    String domainJson = JsonUtils.pojoToJson(domainIdStrings);
+    return activityStreamDAO.countByDomains(domainJson, domainIdStrings, afterTimestamp);
   }
 
   /** Delete events older than the cutoff timestamp. */
@@ -398,10 +478,11 @@ public class ActivityStreamRepository {
 
     // Map significant fields to specific event types
     if (fieldName.equals("description")
-        || fieldName.startsWith("columns") && fieldName.contains("description")) {
+        || (fieldName.startsWith("columns") && fieldName.contains("description"))) {
       return ActivityEventType.DESCRIPTION_UPDATED;
     }
-    if (fieldName.equals("tags") || fieldName.startsWith("columns") && fieldName.contains("tags")) {
+    if (fieldName.equals("tags")
+        || (fieldName.startsWith("columns") && fieldName.contains("tags"))) {
       return ActivityEventType.TAGS_UPDATED;
     }
     if (fieldName.equals("owners") || fieldName.equals("owner")) {

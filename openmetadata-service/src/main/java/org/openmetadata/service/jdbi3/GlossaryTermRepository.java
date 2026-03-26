@@ -1657,14 +1657,14 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
     daoCollection.fieldRelationshipDAO().renameByToFQN(oldFqn, newFqn);
 
     EntityLink newAbout = new EntityLink(GLOSSARY_TERM, newFqn);
-    daoCollection.feedDAO().updateByEntityId(newAbout.getLinkString(), updated.getId().toString());
+    feedRepository.updateLegacyThreadsAbout(newAbout.getLinkString(), updated.getId().toString());
 
     List<EntityReference> childTerms =
         findTo(updated.getId(), GLOSSARY_TERM, Relationship.CONTAINS, GLOSSARY_TERM);
 
     for (EntityReference child : childTerms) {
       newAbout = new EntityLink(entityType, child.getFullyQualifiedName());
-      daoCollection.feedDAO().updateByEntityId(newAbout.getLinkString(), child.getId().toString());
+      feedRepository.updateLegacyThreadsAbout(newAbout.getLinkString(), child.getId().toString());
     }
   }
 

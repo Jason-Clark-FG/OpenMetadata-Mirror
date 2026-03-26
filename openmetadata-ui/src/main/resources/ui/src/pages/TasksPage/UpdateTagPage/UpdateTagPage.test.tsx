@@ -109,10 +109,16 @@ jest.mock('../../../utils/TasksUtils', () => ({
   getTaskAssignee: jest.fn().mockReturnValue(MOCK_TASK_ASSIGNEE),
 }));
 
-const mockTagsTabs = jest.fn().mockImplementation(({ onChange }) => (
+const mockPayloadSchemaFields = jest.fn().mockImplementation(({ payload, onChange }) => (
   <button
     data-testid="mock-tags-tabs"
-    onClick={() => onChange?.([mockSuggestedTag])}>
+    onClick={() =>
+      onChange?.({
+        ...payload,
+        tagsToAdd: [mockSuggestedTag],
+        tagsToRemove: [],
+      })
+    }>
     TagsTabs.component
   </button>
 ));
@@ -130,15 +136,20 @@ jest.mock('../../../rest/tasksAPI', () => ({
   TaskEntityType: { TagUpdate: 'TagUpdate' },
   TaskPriority: { Medium: 'Medium' },
 }));
+jest.mock('../../../rest/taskFormSchemasAPI', () => ({
+  resolveTaskFormSchema: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock(
   '../../../components/ExploreV1/ExploreSearchCard/ExploreSearchCard',
   () =>
     jest.fn().mockImplementation(() => <div>ExploreSearchCard.component</div>)
 );
-jest.mock('../shared/TagsTabs', () => ({
-  TagsTabs: (props: {
-    onChange?: (tags: (typeof mockSuggestedTag)[]) => void;
-  }) => mockTagsTabs(props),
+jest.mock('../shared/TaskPayloadSchemaFields', () => ({
+  __esModule: true,
+  default: (props: {
+    payload: Record<string, unknown>;
+    onChange?: (payload: Record<string, unknown>) => void;
+  }) => mockPayloadSchemaFields(props),
 }));
 jest.mock('../../../hooks/useFqn', () => ({
   useFqn: jest

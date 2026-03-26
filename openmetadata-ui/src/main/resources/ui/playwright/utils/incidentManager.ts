@@ -119,6 +119,41 @@ export const assignIncident = async (data: {
 }) => {
   const { testCaseName, page, user, direct = false } = data;
   await sidebarClick(page, SidebarItem.INCIDENT_MANAGER);
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get(
+          '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list',
+          {
+            params: {
+              latest: true,
+              include: 'non-deleted',
+              limit: 50,
+              offset: 0,
+            },
+          }
+        );
+
+        if (!response.ok()) {
+          return false;
+        }
+
+        const body = await response.json();
+
+        return (body.data ?? []).some(
+          (incident: { testCaseReference?: { name?: string } }) =>
+            incident.testCaseReference?.name === testCaseName
+        );
+      },
+      {
+        message: `Wait for incident ${testCaseName} to be searchable in Incident Manager`,
+        timeout: 60_000,
+        intervals: [1_000, 2_000, 5_000],
+      }
+    )
+    .toBe(true);
+  await page.reload();
+  await waitForAllLoadersToDisappear(page);
   await page.getByTestId(`test-case-${testCaseName}`).waitFor();
   if (direct) {
     // direct assignment from edit assignee icon
@@ -207,8 +242,8 @@ export const triggerTestSuitePipelineAndWaitForSuccess = async (data: {
       {
         // Custom expect message for reporting, optional.
         message: 'Wait for the pipeline to be successful',
-        timeout: 180_000,
-        intervals: [5_000, 10_000],
+        timeout: 300_000,
+        intervals: [5_000, 10_000, 15_000],
       }
     )
     .toBe('success');

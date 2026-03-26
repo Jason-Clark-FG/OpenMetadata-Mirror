@@ -8153,7 +8153,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       variables.put(UPDATED_BY_VARIABLE, user);
       WorkflowHandler workflowHandler = WorkflowHandler.getInstance();
       boolean workflowSuccess =
-          workflowHandler.resolveTask(
+          workflowHandler.resolveLegacyThreadTask(
               taskId, workflowHandler.transformToNodeVariables(taskId, variables));
 
       if (!workflowSuccess) {

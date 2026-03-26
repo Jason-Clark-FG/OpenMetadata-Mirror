@@ -3,6 +3,7 @@ package org.openmetadata.it.tests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,8 +36,10 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Paging;
 import org.openmetadata.schema.type.ReactionType;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.sdk.exceptions.ForbiddenException;
 import org.openmetadata.sdk.fluent.DatabaseSchemas;
 import org.openmetadata.sdk.fluent.Databases;
+import org.openmetadata.sdk.fluent.Tables;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
 import org.openmetadata.service.Entity;
@@ -86,6 +89,34 @@ public class ActivityResourceIT {
     assertTrue(count >= 0, "Count should be non-negative");
   }
 
+  @Test
+  void test_insertActivityEventForTesting_requiresAdmin(TestNamespace ns) throws Exception {
+    Table table = createTestTable(ns);
+    User admin = getAdminUser();
+
+    ActivityEvent event =
+        new ActivityEvent()
+            .withId(UUID.randomUUID())
+            .withEventType(ActivityEventType.ENTITY_CREATED)
+            .withEntity(
+                new EntityReference()
+                    .withId(table.getId())
+                    .withType(Entity.TABLE)
+                    .withName(table.getName())
+                    .withFullyQualifiedName(table.getFullyQualifiedName()))
+            .withActor(
+                new EntityReference()
+                    .withId(admin.getId())
+                    .withType(Entity.USER)
+                    .withName(admin.getName())
+                    .withFullyQualifiedName(admin.getName()))
+            .withTimestamp(System.currentTimeMillis())
+            .withSummary("Non-admin insert should be rejected");
+
+    assertThrows(
+        ForbiddenException.class, () -> insertActivityEvent(SdkClients.user1Client(), event));
+  }
+
   // ==================== Pagination Tests ====================
 
   @Test
@@ -130,16 +161,15 @@ public class ActivityResourceIT {
       createTestTable(ns, "table-pagination-" + i);
     }
 
-    // Get all events with large limit
+    ActivityEventList smallPage = listActivityEvents(SdkClients.adminClient(), 5, 30);
+    // Fetch the larger page after the smaller snapshot so any concurrently inserted events
+    // still appear in the larger list and don't create false negatives in this consistency check.
     ActivityEventList allEvents = listActivityEvents(SdkClients.adminClient(), 200, 30);
 
-    if (allEvents.getData().size() < 3) {
-      // Not enough data to test pagination consistency
+    if (allEvents.getData().size() < smallPage.getData().size()) {
+      // Not enough data to validate pagination consistency
       return;
     }
-
-    // Verify that smaller pages contain subsets of the full list
-    ActivityEventList smallPage = listActivityEvents(SdkClients.adminClient(), 5, 30);
 
     for (ActivityEvent smallPageEvent : smallPage.getData()) {
       boolean found =
@@ -354,6 +384,129 @@ public class ActivityResourceIT {
         "Domain-only user should not see activity from blocked domain");
   }
 
+  @Test
+  void test_listActivityEvents_withEntityFilter_honorsDomainOnlyAccess(TestNamespace ns)
+      throws Exception {
+    Domain allowedDomain = createDomain(ns, "entity-filter-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "entity-filter-blocked-domain");
+
+    Table allowedTable = createTableInDomain(ns, "entity-filter-allowed-table", allowedDomain);
+    Table blockedTable = createTableInDomain(ns, "entity-filter-blocked-table", blockedDomain);
+
+    ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
+    ActivityEvent blockedEvent = createTestActivityEvent(blockedTable, blockedDomain);
+
+    OpenMetadataClient domainOnlyClient = createDomainOnlyActivityUserClient(allowedDomain);
+
+    ActivityEventList allowedEvents =
+        listActivityEventsWithEntityFilter(
+            domainOnlyClient, Entity.TABLE, allowedTable.getId(), 50, 30);
+    ActivityEventList blockedEvents =
+        listActivityEventsWithEntityFilter(
+            domainOnlyClient, Entity.TABLE, blockedTable.getId(), 50, 30);
+
+    assertTrue(
+        allowedEvents.getData().stream().anyMatch(e -> allowedEvent.getId().equals(e.getId())),
+        "Domain-only user should see entity activity from the allowed domain");
+    assertFalse(
+        blockedEvents.getData().stream().anyMatch(e -> blockedEvent.getId().equals(e.getId())),
+        "Domain-only user should not see entity activity from a blocked domain");
+  }
+
+  @Test
+  void test_getUserActivity_supportsDomainFilter(TestNamespace ns) throws Exception {
+    Domain allowedDomain = createDomain(ns, "user-activity-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "user-activity-blocked-domain");
+
+    Table allowedTable = createTableInDomain(ns, "user-activity-allowed-table", allowedDomain);
+    Table blockedTable = createTableInDomain(ns, "user-activity-blocked-table", blockedDomain);
+
+    ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
+    ActivityEvent blockedEvent = createTestActivityEvent(blockedTable, blockedDomain);
+    User adminUser = getAdminUser();
+
+    ActivityEventList events =
+        getUserActivity(
+            SdkClients.adminClient(),
+            adminUser.getId(),
+            200,
+            30,
+            allowedDomain.getFullyQualifiedName());
+
+    assertTrue(
+        events.getData().stream().anyMatch(e -> allowedEvent.getId().equals(e.getId())),
+        "User activity should include events from the requested domain");
+    assertFalse(
+        events.getData().stream().anyMatch(e -> blockedEvent.getId().equals(e.getId())),
+        "User activity should exclude events outside the requested domain");
+  }
+
+  @Test
+  void test_getMyFeed_supportsDomainFilter(TestNamespace ns) throws Exception {
+    Domain allowedDomain = createDomain(ns, "my-feed-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "my-feed-blocked-domain");
+    User adminUser = getAdminUser();
+
+    Table allowedTable =
+        createTableInDomain(
+            ns,
+            "my-feed-allowed-table",
+            allowedDomain,
+            List.of(adminUser.getEntityReference()));
+    Table blockedTable =
+        createTableInDomain(
+            ns,
+            "my-feed-blocked-table",
+            blockedDomain,
+            List.of(adminUser.getEntityReference()));
+
+    ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
+    ActivityEvent blockedEvent = createTestActivityEvent(blockedTable, blockedDomain);
+
+    ActivityEventList events =
+        getMyFeed(SdkClients.adminClient(), 200, 30, allowedDomain.getFullyQualifiedName());
+
+    assertTrue(
+        events.getData().stream().anyMatch(e -> allowedEvent.getId().equals(e.getId())),
+        "My feed should include activity from owned entities in the requested domain");
+    assertFalse(
+        events.getData().stream().anyMatch(e -> blockedEvent.getId().equals(e.getId())),
+        "My feed should exclude activity outside the requested domain");
+  }
+
+  @Test
+  void test_getEntityActivity_supportsDomainFilter(TestNamespace ns) throws Exception {
+    Domain allowedDomain = createDomain(ns, "entity-activity-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "entity-activity-blocked-domain");
+
+    Table allowedTable = createTableInDomain(ns, "entity-activity-allowed-table", allowedDomain);
+    ActivityEvent allowedEvent = createTestActivityEvent(allowedTable, allowedDomain);
+
+    ActivityEventList allowedEvents =
+        getEntityActivity(
+            SdkClients.adminClient(),
+            Entity.TABLE,
+            allowedTable.getId(),
+            200,
+            30,
+            allowedDomain.getFullyQualifiedName());
+    ActivityEventList blockedEvents =
+        getEntityActivity(
+            SdkClients.adminClient(),
+            Entity.TABLE,
+            allowedTable.getId(),
+            200,
+            30,
+            blockedDomain.getFullyQualifiedName());
+
+    assertTrue(
+        allowedEvents.getData().stream().anyMatch(e -> allowedEvent.getId().equals(e.getId())),
+        "Entity activity should include events from the requested domain");
+    assertTrue(
+        blockedEvents.getData().isEmpty(),
+        "Entity activity should exclude events outside the requested domain");
+  }
+
   // ==================== Count Tests ====================
 
   @Test
@@ -361,11 +514,28 @@ public class ActivityResourceIT {
     // Create test data
     createTestTable(ns);
 
-    // Count should generally decrease as we narrow the time range
-    int count7Days = getActivityCount(SdkClients.adminClient(), 7);
     int count1Day = getActivityCount(SdkClients.adminClient(), 1);
+    // Count should not decrease when we widen the time range. Query the broader window second so
+    // concurrently-created activity in the suite cannot invert the assertion.
+    int count7Days = getActivityCount(SdkClients.adminClient(), 7);
 
     assertTrue(count7Days >= count1Day, "7-day count should be >= 1-day count");
+  }
+
+  @Test
+  void test_getActivityCount_supportsDomainFilter(TestNamespace ns) throws Exception {
+    Domain domain = createDomain(ns, "activity-count-domain");
+    createTableInDomain(ns, "activity-count-table", domain);
+
+    ActivityEventList filteredEvents =
+        listActivityEventsWithDomains(SdkClients.adminClient(), domain.getId().toString(), 200, 30);
+    int filteredCount =
+        getActivityCount(SdkClients.adminClient(), 30, domain.getFullyQualifiedName());
+
+    assertEquals(
+        filteredEvents.getData().size(),
+        filteredCount,
+        "Activity count should match the filtered domain activity result size");
   }
 
   // ==================== Concurrent Access Tests ====================
@@ -567,6 +737,30 @@ public class ActivityResourceIT {
   }
 
   @Test
+  void test_getActivityByEntityLink_supportsDomainFilter(TestNamespace ns) throws Exception {
+    Domain allowedDomain = createDomain(ns, "about-allowed-domain");
+    Domain blockedDomain = createDomain(ns, "about-blocked-domain");
+
+    Table table = createTableInDomain(ns, "about-domain-table", allowedDomain);
+    String entityLink = "<#E::table::phase2-about-domain-table::description>";
+    ActivityEvent event = createTestActivityEventWithAbout(table, entityLink, allowedDomain);
+
+    ActivityEventList allowedEvents =
+        getActivityByEntityLink(
+            SdkClients.adminClient(), entityLink, 50, 30, allowedDomain.getFullyQualifiedName());
+    ActivityEventList blockedEvents =
+        getActivityByEntityLink(
+            SdkClients.adminClient(), entityLink, 50, 30, blockedDomain.getFullyQualifiedName());
+
+    assertTrue(
+        allowedEvents.getData().stream().anyMatch(e -> event.getId().equals(e.getId())),
+        "EntityLink activity should include events from the requested domain");
+    assertTrue(
+        blockedEvents.getData().isEmpty(),
+        "EntityLink activity should exclude events outside the requested domain");
+  }
+
+  @Test
   void test_getActivityByEntityLink_noResults(TestNamespace ns) throws Exception {
     // Query with non-existent entityLink
     String nonExistentLink = "<#E::table::nonexistent.schema.table>";
@@ -690,6 +884,12 @@ public class ActivityResourceIT {
 
   private Table createTableInDomain(TestNamespace ns, String tableName, Domain domain)
       throws Exception {
+    return createTableInDomain(ns, tableName, domain, null);
+  }
+
+  private Table createTableInDomain(
+      TestNamespace ns, String tableName, Domain domain, List<EntityReference> owners)
+      throws Exception {
     org.openmetadata.schema.api.services.CreateDatabaseService createService =
         new org.openmetadata.schema.api.services.CreateDatabaseService()
             .withName(ns.prefix(tableName + "-service"))
@@ -709,7 +909,12 @@ public class ActivityResourceIT {
             .name(ns.prefix(tableName + "-schema"))
             .in(database.getFullyQualifiedName())
             .execute();
-    return TableTestFactory.createWithName(ns, schema.getFullyQualifiedName(), tableName);
+    Table table = TableTestFactory.createWithName(ns, schema.getFullyQualifiedName(), tableName);
+    if (owners == null) {
+      return table;
+    }
+
+    return Tables.findByName(table.getFullyQualifiedName()).fetch().withOwners(owners).save().get();
   }
 
   private Domain createDomain(TestNamespace ns, String baseName) {
@@ -813,11 +1018,19 @@ public class ActivityResourceIT {
   private ActivityEventList getEntityActivity(
       OpenMetadataClient client, String entityType, UUID entityId, int limit, int days)
       throws Exception {
+    return getEntityActivity(client, entityType, entityId, limit, days, null);
+  }
+
+  private ActivityEventList getEntityActivity(
+      OpenMetadataClient client,
+      String entityType,
+      UUID entityId,
+      int limit,
+      int days,
+      String domainFqn)
+      throws Exception {
     RequestOptions options =
-        RequestOptions.builder()
-            .queryParam("limit", String.valueOf(limit))
-            .queryParam("days", String.valueOf(days))
-            .build();
+        buildActivityRequestOptions(limit, days, domainFqn);
 
     String path = ACTIVITY_PATH + "/entity/" + entityType + "/" + entityId;
     String response = client.getHttpClient().executeForString(HttpMethod.GET, path, null, options);
@@ -826,11 +1039,14 @@ public class ActivityResourceIT {
 
   private ActivityEventList getUserActivity(
       OpenMetadataClient client, UUID userId, int limit, int days) throws Exception {
+    return getUserActivity(client, userId, limit, days, null);
+  }
+
+  private ActivityEventList getUserActivity(
+      OpenMetadataClient client, UUID userId, int limit, int days, String domainFqn)
+      throws Exception {
     RequestOptions options =
-        RequestOptions.builder()
-            .queryParam("limit", String.valueOf(limit))
-            .queryParam("days", String.valueOf(days))
-            .build();
+        buildActivityRequestOptions(limit, days, domainFqn);
 
     String path = ACTIVITY_PATH + "/user/" + userId;
     String response = client.getHttpClient().executeForString(HttpMethod.GET, path, null, options);
@@ -838,8 +1054,12 @@ public class ActivityResourceIT {
   }
 
   private int getActivityCount(OpenMetadataClient client, int days) throws Exception {
-    RequestOptions options =
-        RequestOptions.builder().queryParam("days", String.valueOf(days)).build();
+    return getActivityCount(client, days, null);
+  }
+
+  private int getActivityCount(OpenMetadataClient client, int days, String domainFqn)
+      throws Exception {
+    RequestOptions options = buildActivityRequestOptions(0, days, domainFqn);
 
     String response =
         client
@@ -864,11 +1084,12 @@ public class ActivityResourceIT {
 
   private ActivityEventList getMyFeed(OpenMetadataClient client, int limit, int days)
       throws Exception {
-    RequestOptions options =
-        RequestOptions.builder()
-            .queryParam("limit", String.valueOf(limit))
-            .queryParam("days", String.valueOf(days))
-            .build();
+    return getMyFeed(client, limit, days, null);
+  }
+
+  private ActivityEventList getMyFeed(
+      OpenMetadataClient client, int limit, int days, String domainFqn) throws Exception {
+    RequestOptions options = buildActivityRequestOptions(limit, days, domainFqn);
     String response =
         client
             .getHttpClient()
@@ -876,7 +1097,27 @@ public class ActivityResourceIT {
     return MAPPER.readValue(response, ActivityEventList.class);
   }
 
+  private RequestOptions buildActivityRequestOptions(int limit, int days, String domainFqn) {
+    RequestOptions.Builder optionsBuilder =
+        RequestOptions.builder().queryParam("days", String.valueOf(days));
+
+    if (limit > 0) {
+      optionsBuilder.queryParam("limit", String.valueOf(limit));
+    }
+
+    if (domainFqn != null) {
+      optionsBuilder.queryParam("domain", domainFqn);
+    }
+
+    return optionsBuilder.build();
+  }
+
   private ActivityEvent createTestActivityEventWithAbout(Table table, String about)
+      throws Exception {
+    return createTestActivityEventWithAbout(table, about, null);
+  }
+
+  private ActivityEvent createTestActivityEventWithAbout(Table table, String about, Domain domain)
       throws Exception {
     EntityReference entityRef =
         new EntityReference()
@@ -901,23 +1142,44 @@ public class ActivityResourceIT {
             .withAbout(about)
             .withActor(actorRef)
             .withTimestamp(System.currentTimeMillis())
-            .withSummary("Updated description on: " + table.getFullyQualifiedName());
+            .withSummary("Updated description for entity-link domain filter test");
+
+    if (domain != null) {
+      event.withDomains(
+          List.of(
+              new EntityReference()
+                  .withId(domain.getId())
+                  .withType(Entity.DOMAIN)
+                  .withName(domain.getName())
+                  .withFullyQualifiedName(domain.getFullyQualifiedName())));
+    } else if (table.getDomains() != null && !table.getDomains().isEmpty()) {
+      event.withDomains(table.getDomains());
+    }
 
     return insertActivityEvent(SdkClients.adminClient(), event);
   }
 
   private ActivityEventList getActivityByEntityLink(
       OpenMetadataClient client, String entityLink, int limit, int days) throws Exception {
-    RequestOptions options =
+    return getActivityByEntityLink(client, entityLink, limit, days, null);
+  }
+
+  private ActivityEventList getActivityByEntityLink(
+      OpenMetadataClient client, String entityLink, int limit, int days, String domainFqn)
+      throws Exception {
+    RequestOptions.Builder optionsBuilder =
         RequestOptions.builder()
             .queryParam("entityLink", entityLink)
             .queryParam("limit", String.valueOf(limit))
-            .queryParam("days", String.valueOf(days))
-            .build();
+            .queryParam("days", String.valueOf(days));
+    if (domainFqn != null) {
+      optionsBuilder.queryParam("domain", domainFqn);
+    }
+
     String response =
         client
             .getHttpClient()
-            .executeForString(HttpMethod.GET, ACTIVITY_PATH + "/about", null, options);
+            .executeForString(HttpMethod.GET, ACTIVITY_PATH + "/about", null, optionsBuilder.build());
     return MAPPER.readValue(response, ActivityEventList.class);
   }
 

@@ -15,7 +15,6 @@ import { expect, test } from '@playwright/test';
 import { Domain } from '../../../support/domain/Domain';
 import { TableClass } from '../../../support/entity/TableClass';
 import { createNewPage } from '../../../utils/common';
-import { selectDomainFromNavbar } from '../../../utils/domain';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   waitForTaskCountResponse,
@@ -23,6 +22,41 @@ import {
 } from '../../../utils/task';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
+
+const DOMAIN_STORAGE_KEY = 'om_domains';
+
+const setActiveDomainInStorage = async (
+  page: Parameters<typeof test>[0]['page'],
+  domain?: Domain['responseData']
+) => {
+  await page.evaluate(
+    ({ storageKey, activeDomain, activeDomainEntityRef }) => {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          state: {
+            activeDomain,
+            activeDomainEntityRef,
+          },
+          version: 0,
+        })
+      );
+    },
+    {
+      storageKey: DOMAIN_STORAGE_KEY,
+      activeDomain: domain?.fullyQualifiedName ?? 'All Domains',
+      activeDomainEntityRef: domain
+        ? {
+            id: domain.id,
+            type: 'domain',
+            name: domain.name,
+            displayName: domain.displayName,
+            fullyQualifiedName: domain.fullyQualifiedName,
+          }
+        : null,
+    }
+  );
+};
 
 test.describe('Domain Filtering - Tasks Refetch on Domain Switch', () => {
   const domainA = new Domain();
@@ -124,7 +158,8 @@ test.describe('Domain Filtering - Tasks Refetch on Domain Switch', () => {
 
     const taskApiResponse = waitForTaskCountResponse(page);
 
-    await selectDomainFromNavbar(page, domainA.responseData);
+    await setActiveDomainInStorage(page, domainA.responseData);
+    await page.reload();
     const response = await taskApiResponse;
 
     expect(response.status()).toBe(200);
@@ -140,12 +175,14 @@ test.describe('Domain Filtering - Tasks Refetch on Domain Switch', () => {
     await activityFeedTab.click();
     await waitForAllLoadersToDisappear(page);
 
-    await selectDomainFromNavbar(page, domainA.responseData);
+    await setActiveDomainInStorage(page, domainA.responseData);
+    await page.reload();
     await waitForAllLoadersToDisappear(page);
 
     const taskApiResponse = waitForTaskCountResponse(page);
 
-    await selectDomainFromNavbar(page, domainB.responseData);
+    await setActiveDomainInStorage(page, domainB.responseData);
+    await page.reload();
     const response = await taskApiResponse;
 
     expect(response.status()).toBe(200);
@@ -161,17 +198,14 @@ test.describe('Domain Filtering - Tasks Refetch on Domain Switch', () => {
     await activityFeedTab.click();
     await waitForAllLoadersToDisappear(page);
 
-    await selectDomainFromNavbar(page, domainA.responseData);
+    await setActiveDomainInStorage(page, domainA.responseData);
+    await page.reload();
     await waitForAllLoadersToDisappear(page);
-
-    await page.getByTestId('domain-dropdown').click();
-    await page
-      .getByTestId('domain-selectable-tree')
-      .waitFor({ state: 'visible' });
 
     const taskApiResponse = waitForTaskCountResponse(page);
 
-    await page.getByTestId('all-domains-selector').click();
+    await setActiveDomainInStorage(page);
+    await page.reload();
     const response = await taskApiResponse;
 
     expect(response.status()).toBe(200);
@@ -321,7 +355,8 @@ test.describe('Domain Filtering - Entity Page Activity Feed', () => {
     // Switch domain and verify feeds API is called
     const taskApiResponse = waitForTaskCountResponse(page);
 
-    await selectDomainFromNavbar(page, domain.responseData);
+    await setActiveDomainInStorage(page, domain.responseData);
+    await page.reload();
     const response = await taskApiResponse;
 
     expect(response.status()).toBe(200);

@@ -38,6 +38,7 @@ import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -51,6 +52,8 @@ import java.util.List;
 import java.util.UUID;
 import org.openmetadata.schema.api.feed.CreatePost;
 import org.openmetadata.schema.api.feed.CreateThread;
+import org.openmetadata.schema.api.feed.CloseTask;
+import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.api.feed.ThreadCount;
 import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.type.EntityReference;
@@ -250,6 +253,88 @@ public class FeedResource {
           @PathParam("id")
           UUID id) {
     return addHref(uriInfo, dao.get(id));
+  }
+
+  @GET
+  @Path("/tasks/{id}")
+  @Operation(
+      operationId = "getTaskByID",
+      summary = "Get a task thread by task Id",
+      description = "Get a task thread by `task Id`.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task thread",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Thread.class))),
+        @ApiResponse(responseCode = "404", description = "Task for instance {id} is not found")
+      })
+  public Thread getTask(
+      @Context UriInfo uriInfo,
+      @Parameter(description = "Id of the task thread", schema = @Schema(type = "string"))
+          @PathParam("id")
+          String id) {
+    return addHref(uriInfo, dao.getTask(Integer.parseInt(id)));
+  }
+
+  @PUT
+  @Path("/tasks/{id}/resolve")
+  @Operation(
+      operationId = "resolveTask",
+      summary = "Resolve a task",
+      description = "Resolve a task.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task thread",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Thread.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request")
+      })
+  public Response resolveTask(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the task thread", schema = @Schema(type = "string"))
+          @PathParam("id")
+          String id,
+      @Valid ResolveTask resolveTask) {
+    Thread task = dao.getTask(Integer.parseInt(id));
+    dao.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
+    return dao.resolveTask(uriInfo, task, securityContext.getUserPrincipal().getName(), resolveTask)
+        .toResponse();
+  }
+
+  @PUT
+  @Path("/tasks/{id}/close")
+  @Operation(
+      operationId = "closeTask",
+      summary = "Close a task",
+      description = "Close a task without making any changes to the entity.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "The task thread.",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Thread.class))),
+        @ApiResponse(responseCode = "400", description = "Bad request")
+      })
+  public Response closeTask(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Id of the task thread", schema = @Schema(type = "string"))
+          @PathParam("id")
+          String id,
+      @Valid CloseTask closeTask) {
+    Thread task = dao.getTask(Integer.parseInt(id));
+    dao.checkPermissionsForResolveTask(authorizer, task, true, securityContext);
+    return dao.closeTask(uriInfo, task, securityContext.getUserPrincipal().getName(), closeTask)
+        .toResponse();
   }
 
   @PATCH

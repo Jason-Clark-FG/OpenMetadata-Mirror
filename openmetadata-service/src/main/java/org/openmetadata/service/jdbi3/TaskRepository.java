@@ -53,6 +53,8 @@ import org.openmetadata.service.security.AuthorizationLogic;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
 import org.openmetadata.service.security.policyevaluator.ResourceContext;
+import org.openmetadata.service.tasks.TaskFormSchemaValidator;
+import org.openmetadata.service.tasks.TaskFormExecutionResolver;
 import org.openmetadata.service.tasks.TaskWorkflowHandler;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -205,6 +207,7 @@ public class TaskRepository extends EntityRepository<Task> {
     setDefaultAssigneesFromEntityOwners(task);
     validateAssignees(task.getAssignees());
     validateTaskReviewers(task.getReviewers());
+    validatePayloadAgainstFormSchema(task);
 
     // Compute aboutFqnHash for efficient querying by target entity FQN
     computeAboutFqnHash(task);
@@ -617,6 +620,18 @@ public class TaskRepository extends EntityRepository<Task> {
     }
   }
 
+  private void validatePayloadAgainstFormSchema(Task task) {
+    if (task.getType() == null || task.getCategory() == null) {
+      return;
+    }
+
+    TaskFormSchemaRepository schemaRepository =
+        (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
+    schemaRepository
+        .resolve(task.getType().value(), task.getCategory().value())
+        .ifPresent(schema -> TaskFormSchemaValidator.validatePayload(schema.getFormSchema(), task.getPayload()));
+  }
+
   /**
    * Resolve a task with workflow integration.
    *
@@ -755,6 +770,12 @@ public class TaskRepository extends EntityRepository<Task> {
     TaskEntityType taskType = task.getType();
     if (taskType == null) {
       return null;
+    }
+
+    MetadataOperation schemaBoundOperation =
+        TaskFormExecutionResolver.resolve(task).permissionOperation();
+    if (schemaBoundOperation != null) {
+      return schemaBoundOperation;
     }
 
     // For Suggestion tasks, determine operation from payload's suggestionType
@@ -1065,6 +1086,11 @@ public class TaskRepository extends EntityRepository<Task> {
       List<EntityReference> origAssignees = new ArrayList<>(listOrEmpty(original.getAssignees()));
       List<EntityReference> updatedAssignees = new ArrayList<>(listOrEmpty(updated.getAssignees()));
 
+      if (operation == Operation.PUT && updated.getAssignees() == null) {
+        updated.setAssignees(origAssignees);
+        updatedAssignees = new ArrayList<>(origAssignees);
+      }
+
       origAssignees.sort(EntityUtil.compareEntityReference);
       updatedAssignees.sort(EntityUtil.compareEntityReference);
 
@@ -1095,8 +1121,13 @@ public class TaskRepository extends EntityRepository<Task> {
     }
 
     private void updateTaskReviewers() {
-      List<EntityReference> origReviewers = listOrEmpty(original.getReviewers());
-      List<EntityReference> updatedReviewers = listOrEmpty(updated.getReviewers());
+      List<EntityReference> origReviewers = new ArrayList<>(listOrEmpty(original.getReviewers()));
+      List<EntityReference> updatedReviewers = new ArrayList<>(listOrEmpty(updated.getReviewers()));
+
+      if (operation == Operation.PUT && updated.getReviewers() == null) {
+        updated.setReviewers(origReviewers);
+        updatedReviewers = new ArrayList<>(origReviewers);
+      }
 
       origReviewers.sort(EntityUtil.compareEntityReference);
       updatedReviewers.sort(EntityUtil.compareEntityReference);

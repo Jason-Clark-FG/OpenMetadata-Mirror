@@ -23,8 +23,8 @@ import {
 } from '../../../../constants/constants';
 import { MY_TASK_WIDGET_FILTER_OPTIONS } from '../../../../constants/Widgets.constant';
 import { SIZE } from '../../../../enums/common.enum';
-import { FeedFilter, MyTaskFilter } from '../../../../enums/mydata.enum';
-import { ThreadType } from '../../../../generated/entity/feed/thread';
+import { FeedFilter } from '../../../../enums/mydata.enum';
+import { MyTaskFilter } from '../../../../enums/mydata.enum';
 import { useApplicationStore } from '../../../../hooks/useApplicationStore';
 import { WidgetCommonProps } from '../../../../pages/CustomizablePage/CustomizablePage.interface';
 import { getUserPath } from '../../../../utils/RouterUtils';
@@ -52,7 +52,7 @@ const MyTaskWidget = ({
     MyTaskFilter.OWNER_OR_FOLLOWS
   );
 
-  const { loading, tasks, getFeedData } = useActivityFeedProvider();
+  const { loading, tasks, getTaskData } = useActivityFeedProvider();
 
   const myTaskData = useMemo(() => {
     return currentLayout?.find((layout) => layout.i === widgetKey);
@@ -63,28 +63,26 @@ const MyTaskWidget = ({
   }, []);
 
   useEffect(() => {
-    getFeedData(
+    getTaskData(
       selectedFilter as unknown as FeedFilter,
       undefined,
-      ThreadType.Task,
       undefined,
       undefined,
       undefined,
       PAGE_SIZE_MEDIUM
     );
-  }, [getFeedData, selectedFilter]);
+  }, [getTaskData, selectedFilter]);
 
   const handleFeedFetchFromFeedList = useCallback(() => {
-    getFeedData(
+    getTaskData(
       selectedFilter as unknown as FeedFilter,
       undefined,
-      ThreadType.Task,
       undefined,
       undefined,
       'open',
       PAGE_SIZE_MEDIUM
     );
-  }, [getFeedData, selectedFilter]);
+  }, [getTaskData, selectedFilter]);
 
   const handleAfterTaskClose = () => {
     handleFeedFetchFromFeedList();

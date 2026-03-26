@@ -29,9 +29,12 @@ import org.openmetadata.schema.tests.type.TestCaseResolutionStatus;
 import org.openmetadata.schema.tests.type.TestCaseResolutionStatusTypes;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
+import org.openmetadata.schema.type.Relationship;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
+import org.openmetadata.service.Entity;
 
 @Slf4j
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -259,6 +262,42 @@ public class IncidentPaginationIT {
                   response.getPaging().getTotal(),
                   "Total count must reflect only the filtered group, not all groups");
             });
+  }
+
+  @Test
+  public void testSearchListSkipsOrphanedIncidentRelationship() throws Exception {
+    TestCase target = testCases.get(0);
+
+    ListParams initialParams =
+        new ListParams()
+            .withLimit(PAGE_SIZE)
+            .withOffset(0)
+            .withLatest(true)
+            .addFilter("testCaseFQN", target.getFullyQualifiedName());
+    ListResponse<TestCaseResolutionStatus> initialResponse =
+        client.testCaseResolutionStatuses().searchList(initialParams);
+
+    assertEquals(1, initialResponse.getData().size(), "Expected initial incident to be searchable");
+
+    TestCaseResolutionStatus incident =
+        JsonUtils.convertValue(initialResponse.getData().get(0), TestCaseResolutionStatus.class);
+    Entity.getCollectionDAO()
+        .relationshipDAO()
+        .delete(
+            target.getId(),
+            Entity.TEST_CASE,
+            incident.getId(),
+            Entity.TEST_CASE_RESOLUTION_STATUS,
+            Relationship.PARENT_OF.ordinal());
+
+    ListResponse<TestCaseResolutionStatus> orphanedResponse =
+        client.testCaseResolutionStatuses().searchList(initialParams);
+
+    assertNotNull(orphanedResponse);
+    assertEquals(
+        0,
+        orphanedResponse.getData().size(),
+        "Orphaned incident records should be skipped instead of failing the search listing");
   }
 
   private Table createTestTable() throws Exception {

@@ -168,6 +168,10 @@ SELECT * FROM (
         )
       ),
       'uiSchema', JSON_OBJECT(
+        'ui:handler', JSON_OBJECT(
+          'type', 'approval',
+          'permission', 'EDIT_ALL'
+        ),
         'comment', JSON_OBJECT('ui:widget', 'textarea')
       ),
       'version', 0.1,
@@ -192,13 +196,15 @@ SELECT * FROM (
       'taskCategory', 'Incident',
       'formSchema', JSON_OBJECT(
         'type', 'object',
-        'required', JSON_ARRAY('rootCause'),
         'properties', JSON_OBJECT(
           'rootCause', JSON_OBJECT('type', 'string', 'title', 'Root Cause'),
           'resolution', JSON_OBJECT('type', 'string', 'title', 'Resolution')
         )
       ),
       'uiSchema', JSON_OBJECT(
+        'ui:handler', JSON_OBJECT(
+          'type', 'incident'
+        ),
         'rootCause', JSON_OBJECT('ui:widget', 'textarea'),
         'resolution', JSON_OBJECT('ui:widget', 'textarea')
       ),
@@ -211,3 +217,133 @@ SELECT * FROM (
   FROM DUAL
   WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnHash = MD5('TestCaseResolution'))
 ) seed_tcr;
+
+INSERT INTO task_form_schema_entity (id, json, fqnHash)
+SELECT * FROM (
+  SELECT
+    UUID() AS id,
+    JSON_OBJECT(
+      'id', UUID(),
+      'name', 'DescriptionUpdate',
+      'fullyQualifiedName', 'DescriptionUpdate',
+      'displayName', 'Description Update',
+      'taskType', 'DescriptionUpdate',
+      'taskCategory', 'MetadataUpdate',
+      'formSchema', JSON_OBJECT(
+        'type', 'object',
+        'additionalProperties', true,
+        'properties', JSON_OBJECT(
+          'fieldPath', JSON_OBJECT('type', 'string', 'title', 'Field Path'),
+          'currentDescription', JSON_OBJECT('type', 'string', 'title', 'Current Description'),
+          'newDescription', JSON_OBJECT('type', 'string', 'title', 'New Description'),
+          'source', JSON_OBJECT('type', 'string', 'title', 'Source'),
+          'confidence', JSON_OBJECT('type', 'number', 'title', 'Confidence')
+        )
+      ),
+      'uiSchema', JSON_OBJECT(
+        'ui:handler', JSON_OBJECT(
+          'type', 'descriptionUpdate',
+          'permission', 'EDIT_DESCRIPTION',
+          'fieldPathField', 'fieldPath',
+          'valueField', 'newDescription'
+        ),
+        'ui:editablePayload', JSON_OBJECT(
+          'fieldPathField', 'fieldPath',
+          'currentValueField', 'currentDescription',
+          'editedValueField', 'newDescription'
+        ),
+        'ui:resolution', JSON_OBJECT(
+          'mode', 'field',
+          'valueField', 'newDescription'
+        ),
+        'ui:order', JSON_ARRAY('newDescription', 'fieldPath', 'currentDescription', 'source', 'confidence'),
+        'fieldPath', JSON_OBJECT('ui:widget', 'hidden'),
+        'currentDescription', JSON_OBJECT('ui:widget', 'hidden'),
+        'source', JSON_OBJECT('ui:widget', 'hidden'),
+        'confidence', JSON_OBJECT('ui:widget', 'hidden'),
+        'newDescription', JSON_OBJECT('ui:widget', 'descriptionTabs')
+      ),
+      'version', 0.1,
+      'updatedBy', 'system',
+      'updatedAt', UNIX_TIMESTAMP() * 1000,
+      'deleted', false
+    ) AS json,
+    MD5('DescriptionUpdate') AS fqnHash
+  FROM DUAL
+  WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnHash = MD5('DescriptionUpdate'))
+) seed_description_update
+UNION ALL
+SELECT * FROM (
+  SELECT
+    UUID() AS id,
+    JSON_OBJECT(
+      'id', UUID(),
+      'name', 'TagUpdate',
+      'fullyQualifiedName', 'TagUpdate',
+      'displayName', 'Tag Update',
+      'taskType', 'TagUpdate',
+      'taskCategory', 'MetadataUpdate',
+      'formSchema', JSON_OBJECT(
+        'type', 'object',
+        'additionalProperties', true,
+        'properties', JSON_OBJECT(
+          'fieldPath', JSON_OBJECT('type', 'string', 'title', 'Field Path'),
+          'currentTags', JSON_OBJECT(
+            'type', 'array',
+            'title', 'Current Tags',
+            'items', JSON_OBJECT('type', 'object', 'additionalProperties', true)
+          ),
+          'tagsToAdd', JSON_OBJECT(
+            'type', 'array',
+            'title', 'Tags To Add',
+            'items', JSON_OBJECT('type', 'object', 'additionalProperties', true)
+          ),
+          'tagsToRemove', JSON_OBJECT(
+            'type', 'array',
+            'title', 'Tags To Remove',
+            'items', JSON_OBJECT('type', 'object', 'additionalProperties', true)
+          ),
+          'operation', JSON_OBJECT('type', 'string', 'title', 'Operation'),
+          'source', JSON_OBJECT('type', 'string', 'title', 'Source'),
+          'confidence', JSON_OBJECT('type', 'number', 'title', 'Confidence')
+        )
+      ),
+      'uiSchema', JSON_OBJECT(
+        'ui:handler', JSON_OBJECT(
+          'type', 'tagUpdate',
+          'permission', 'EDIT_TAGS',
+          'fieldPathField', 'fieldPath',
+          'currentTagsField', 'currentTags',
+          'addTagsField', 'tagsToAdd',
+          'removeTagsField', 'tagsToRemove'
+        ),
+        'ui:editablePayload', JSON_OBJECT(
+          'fieldPathField', 'fieldPath',
+          'currentTagsField', 'currentTags',
+          'addTagsField', 'tagsToAdd',
+          'removeTagsField', 'tagsToRemove'
+        ),
+        'ui:resolution', JSON_OBJECT(
+          'mode', 'tagMerge',
+          'currentField', 'currentTags',
+          'addField', 'tagsToAdd',
+          'removeField', 'tagsToRemove'
+        ),
+        'ui:order', JSON_ARRAY('tagsToAdd', 'fieldPath', 'currentTags', 'tagsToRemove', 'operation', 'source', 'confidence'),
+        'fieldPath', JSON_OBJECT('ui:widget', 'hidden'),
+        'currentTags', JSON_OBJECT('ui:widget', 'hidden'),
+        'tagsToRemove', JSON_OBJECT('ui:widget', 'hidden'),
+        'operation', JSON_OBJECT('ui:widget', 'hidden'),
+        'source', JSON_OBJECT('ui:widget', 'hidden'),
+        'confidence', JSON_OBJECT('ui:widget', 'hidden'),
+        'tagsToAdd', JSON_OBJECT('ui:widget', 'tagsTabs')
+      ),
+      'version', 0.1,
+      'updatedBy', 'system',
+      'updatedAt', UNIX_TIMESTAMP() * 1000,
+      'deleted', false
+    ) AS json,
+    MD5('TagUpdate') AS fqnHash
+  FROM DUAL
+  WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnHash = MD5('TagUpdate'))
+) seed_tag_update;

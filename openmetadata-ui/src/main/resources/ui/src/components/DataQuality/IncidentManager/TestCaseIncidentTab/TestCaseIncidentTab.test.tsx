@@ -18,7 +18,7 @@ import TestCaseIncidentTab from './TestCaseIncidentTab.component';
 const mockUseActivityFeedProviderValue = {
   entityPaging: { total: 4 },
   tasks: MOCK_TASK_DATA,
-  getFeedData: jest.fn().mockImplementation(() => Promise.resolve()),
+  getTaskData: jest.fn().mockImplementation(() => Promise.resolve()),
   loading: false,
   selectedTask: MOCK_TASK_DATA[0],
   setActiveTask: jest.fn(),
@@ -104,7 +104,7 @@ describe('TestCaseIssueTab', () => {
     expect(await screen.findAllByText('Loader')).toHaveLength(2);
   });
 
-  it('Should call getFeedData after closing the task', async () => {
+  it('Should call getTaskData after closing the task', async () => {
     render(<TestCaseIncidentTab />);
 
     const closeBtn = await screen.findByTestId('close-btn');
@@ -112,10 +112,9 @@ describe('TestCaseIssueTab', () => {
       fireEvent.click(closeBtn);
     });
 
-    expect(mockUseActivityFeedProviderValue.getFeedData).toHaveBeenCalledWith(
+    expect(mockUseActivityFeedProviderValue.getTaskData).toHaveBeenCalledWith(
       undefined,
       undefined,
-      'Task',
       'testCase',
       'sample_data.ecommerce_db.shopify.dim_address.table_column_count_between'
     );

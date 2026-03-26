@@ -122,8 +122,6 @@ export const visitEntityPageByUrl = async (data: {
     );
   });
 
-  await page.waitForLoadState('networkidle');
-
   await waitForAllLoadersToDisappear(page);
 
   const isWelcomeScreenVisible = await page
@@ -133,13 +131,14 @@ export const visitEntityPageByUrl = async (data: {
 
   if (isWelcomeScreenVisible) {
     await page.getByTestId('welcome-screen-close-btn').click();
-    await page.waitForLoadState('networkidle');
+    await waitForAllLoadersToDisappear(page);
   }
 };
 
 export const addOwner = async ({
   page,
   owner,
+  expectedOwnerText,
   endpoint,
   type = 'Users',
   dataTestId,
@@ -147,6 +146,7 @@ export const addOwner = async ({
 }: {
   page: Page;
   owner: string;
+  expectedOwnerText?: string;
   endpoint: EntityTypeEndpoint;
   type?: 'Teams' | 'Users';
   dataTestId?: string;
@@ -194,7 +194,10 @@ export const addOwner = async ({
     await page.getByRole('listitem', { name: owner }).click();
     await patchRequest;
   } else {
-    const ownerItem = page.getByRole('listitem', { name: owner });
+    const ownerItem = page
+      .locator('.selectable-list-item')
+      .filter({ hasText: owner })
+      .first();
 
     await expect
       .poll(
@@ -224,7 +227,10 @@ export const addOwner = async ({
   }
 
   await expect(
-    page.getByTestId(dataTestId ?? 'owner-link').getByTestId(`${owner}`)
+    page
+      .getByTestId(dataTestId ?? 'owner-link')
+      .filter({ hasText: expectedOwnerText ?? owner })
+      .first()
   ).toBeVisible();
 };
 
@@ -1450,7 +1456,9 @@ const announcementForm = async (
 
   await page.locator('#announcement-submit').scrollIntoViewIfNeeded();
   const announcementSubmit = page.waitForResponse(
-    '/api/v1/feed?entityLink=*type=Announcement*'
+    (response) =>
+      response.url().includes('/api/v1/announcements') &&
+      response.request().method() === 'POST'
   );
   await page.click('#announcement-submit');
   await announcementSubmit;
@@ -1496,76 +1504,38 @@ export const createAnnouncement = async (
 };
 
 export const replyAnnouncement = async (page: Page) => {
-  await page.click('[data-testid="announcement-card"]');
-
-  await page.hover(
-    '[data-testid="announcement-thread-body"] [data-testid="announcement-card"] [data-testid="main-message"]'
-  );
-
-  await page.locator('.ant-popover').first().waitFor({ state: 'visible' });
-
-  await expect(page.getByTestId('add-reply').locator('svg')).toBeVisible();
-
-  await page.getByTestId('add-reply').locator('svg').click();
-
-  await expect(page.locator('.ql-editor')).toBeVisible();
-
-  await expect(page.locator('[data-testid="send-button"]')).toBeDisabled();
-
-  await page.fill('[data-testid="editor-wrapper"] .ql-editor', 'Reply message');
-  await page.click('[data-testid="send-button"]');
-
-  await expect(
-    page.locator('[data-testid="replies"] [data-testid="viewer-container"]')
-  ).toHaveText('Reply message');
-  await expect(page.locator('[data-testid="show-reply-thread"]')).toHaveText(
-    '1 replies'
-  );
-
-  await page.hover('[data-testid="replies"] > [data-testid="main-message"]');
-  await page.locator('.ant-popover').first().waitFor({ state: 'visible' });
-  await page.click('[data-testid="edit-message"]');
-
-  await page.fill(
-    '[data-testid="editor-wrapper"] .ql-editor',
-    'Reply message edited'
-  );
-
-  await page.click('[data-testid="save-button"]');
-
-  await expect(
-    page.locator('[data-testid="replies"] [data-testid="viewer-container"]')
-  ).toHaveText('Reply message edited');
-
-  await page.reload();
+  await page.getByTestId('manage-button').click();
+  await page.getByTestId('announcement-button').click();
+  await expect(page.getByTestId('announcement-drawer')).toBeVisible();
+  await expect(page.getByTestId('add-reply')).toHaveCount(0);
 };
 
 export const deleteAnnouncement = async (page: Page) => {
   await page.getByTestId('manage-button').click();
   await page.getByTestId('announcement-button').click();
 
-  await page
-    .locator(
-      '[data-testid="announcement-thread-body"] [data-testid="announcement-card"]'
-    )
-    .isVisible();
-
-  await page.hover(
-    '[data-testid="announcement-thread-body"] [data-testid="announcement-card"] [data-testid="main-message"]'
+  const drawerAnnouncementCard = page.locator(
+    '[data-testid="announcement-drawer"] [data-testid="announcement-thread-body"] [data-testid="announcement-card"]'
   );
-
-  await page.locator('.ant-popover').first().waitFor({ state: 'visible' });
-
-  await page.click('[data-testid="delete-message"]');
+  await expect(drawerAnnouncementCard).toBeVisible();
+  await drawerAnnouncementCard
+    .getByTestId('announcement-actions')
+    .first()
+    .click();
+  await page.getByTestId('announcement-delete-action').click();
   const modalText = await page.textContent('.ant-modal-body');
 
   expect(modalText).toContain(
     'Are you sure you want to permanently delete this message?'
   );
 
-  const getFeed = page.waitForResponse('/api/v1/feed/*');
+  const deleteAnnouncementResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/announcements/') &&
+      response.request().method() === 'DELETE'
+  );
   await page.click('[data-testid="save-button"]');
-  await getFeed;
+  await deleteAnnouncementResponse;
 
   await page.reload();
   await page.getByTestId('manage-button').click();
@@ -1589,19 +1559,15 @@ export const editAnnouncement = async (
 
   // Target the announcement card specifically inside the drawer
   const drawerAnnouncementCard = page.locator(
-    '[data-testid="announcement-drawer"] [data-testid="announcement-thread-body"] [data-testid="announcement-card"] [data-testid="main-message"]'
+    '[data-testid="announcement-drawer"] [data-testid="announcement-thread-body"] [data-testid="announcement-card"]'
   );
 
   await expect(drawerAnnouncementCard).toBeVisible();
-
-  // Hover over the announcement card inside the drawer to show the edit options popover
-  await drawerAnnouncementCard.hover();
-
-  // Wait for the popover to become visible
-  await page.locator('.ant-popover').first().waitFor({ state: 'visible' });
-
-  // Click the edit message button in the popover
-  await page.click('[data-testid="edit-message"]');
+  await drawerAnnouncementCard
+    .getByTestId('announcement-actions')
+    .first()
+    .click();
+  await page.getByTestId('announcement-edit-action').click();
 
   // Wait for the edit announcement modal to open
   await expect(page.locator('.ant-modal-header')).toContainText(
@@ -1623,7 +1589,11 @@ export const editAnnouncement = async (
     .fill(data.description);
 
   // Save the changes and wait for the API response
-  const updateResponse = page.waitForResponse('/api/v1/feed/*');
+  const updateResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/v1/announcements/') &&
+      response.request().method() === 'PATCH'
+  );
   await page
     .locator(
       '[data-testid="edit-announcement"] .ant-modal-footer .ant-btn-primary'

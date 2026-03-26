@@ -15,14 +15,12 @@ import { Button, Form, FormProps, Input, Space, Typography } from 'antd';
 import { useForm } from 'antd/lib/form/Form';
 import { AxiosError } from 'axios';
 import { isEmpty } from 'lodash';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ActivityFeedTabs } from '../../../components/ActivityFeed/ActivityFeedTab/ActivityFeedTab.interface';
 import Loader from '../../../components/common/Loader/Loader';
 import ResizablePanels from '../../../components/common/ResizablePanels/ResizablePanels';
-import RichTextEditor from '../../../components/common/RichTextEditor/RichTextEditor';
-import { EditorContentRef } from '../../../components/common/RichTextEditor/RichTextEditor.interface';
 import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import ExploreSearchCard from '../../../components/ExploreV1/ExploreSearchCard/ExploreSearchCard';
 import { SearchedDataProps } from '../../../components/SearchedData/SearchedData.interface';
@@ -36,10 +34,15 @@ import {
   createTask,
   TaskCategory,
   TaskEntityType,
+  TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
-import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
+import {
+  applyTaskFormSchemaDefaults,
+  getResolvedTaskFormSchema,
+} from '../../../utils/TaskFormSchemaUtils';
 import {
   fetchEntityDetail,
   fetchOptions,
@@ -52,6 +55,7 @@ import {
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import Assignees from '../shared/Assignees';
+import TaskPayloadSchemaFields from '../shared/TaskPayloadSchemaFields';
 import '../task-page.style.less';
 import { EntityData, Option } from '../TasksPage.interface';
 
@@ -60,7 +64,6 @@ const RequestDescription = () => {
   const location = useCustomLocation();
   const navigate = useNavigate();
   const [form] = useForm();
-  const markdownRef = useRef<EditorContentRef>({} as EditorContentRef);
 
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
 
@@ -73,7 +76,8 @@ const RequestDescription = () => {
   const [entityData, setEntityData] = useState<EntityData>({} as EntityData);
   const [options, setOptions] = useState<Option[]>([]);
   const [assignees, setAssignees] = useState<Array<Option>>([]);
-  const [suggestion, setSuggestion] = useState<string>('');
+  const [payload, setPayload] = useState<TaskPayload>({});
+  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema>();
   const [isLoading, setIsLoading] = useState(false);
 
   const entityFQN = useMemo(
@@ -107,15 +111,9 @@ const RequestDescription = () => {
     return getDescriptionTaskFieldPath(field, value);
   };
 
-  const onSuggestionChange = (value: string) => {
-    setSuggestion(value);
-  };
-
   const onCreateTask: FormProps['onFinish'] = async (formValues) => {
     setIsLoading(true);
     if (assignees.length) {
-      const suggestionValue = markdownRef.current?.getEditorContent?.();
-
       const data: CreateTask = {
         name: formValues.title || taskMessage,
         category: TaskCategory.MetadataUpdate,
@@ -124,13 +122,7 @@ const RequestDescription = () => {
         about: entityFQN,
         aboutType: entityType,
         assignees: assignees.map((assignee) => assignee.name ?? ''),
-        payload: {
-          newDescription: isDescriptionContentEmpty(suggestionValue)
-            ? ''
-            : suggestionValue ?? '',
-          currentDescription: '',
-          fieldPath: getTaskAbout(),
-        },
+        payload: applyTaskFormSchemaDefaults(payload, taskFormSchema?.formSchema),
       };
 
       try {
@@ -164,6 +156,13 @@ const RequestDescription = () => {
   }, [entityFQN, entityType]);
 
   useEffect(() => {
+    getResolvedTaskFormSchema(
+      TaskEntityType.DescriptionUpdate,
+      TaskCategory.MetadataUpdate
+    ).then(setTaskFormSchema);
+  }, []);
+
+  useEffect(() => {
     const defaultAssignee = getTaskAssignee(entityData as Glossary);
 
     if (defaultAssignee) {
@@ -175,6 +174,20 @@ const RequestDescription = () => {
       assignees: defaultAssignee,
     });
   }, [entityData]);
+
+  useEffect(() => {
+    setPayload({
+      fieldPath: getTaskAbout(),
+      currentDescription: '',
+      newDescription: '',
+    });
+  }, [field, value]);
+
+  useEffect(() => {
+    setPayload((prevPayload) =>
+      applyTaskFormSchemaDefaults(prevPayload, taskFormSchema?.formSchema)
+    );
+  }, [taskFormSchema?.formSchema]);
 
   if (isEmpty(entityData)) {
     return <Loader />;
@@ -251,22 +264,12 @@ const RequestDescription = () => {
                     onSearch={onSearch}
                   />
                 </Form.Item>
-                <Form.Item
-                  data-testid="description-label"
-                  label={`${t('label.suggest-entity', {
-                    entity: t('label.description'),
-                  })}:`}
-                  name="SuggestDescription">
-                  <RichTextEditor
-                    initialValue=""
-                    placeHolder={t('label.suggest-entity', {
-                      entity: t('label.description'),
-                    })}
-                    ref={markdownRef}
-                    style={{ marginTop: '4px' }}
-                    onTextChange={onSuggestionChange}
-                  />
-                </Form.Item>
+                <TaskPayloadSchemaFields
+                  payload={payload}
+                  schema={taskFormSchema?.formSchema}
+                  uiSchema={taskFormSchema?.uiSchema}
+                  onChange={setPayload}
+                />
 
                 <Form.Item noStyle>
                   <Space
@@ -281,7 +284,7 @@ const RequestDescription = () => {
                       htmlType="submit"
                       loading={isLoading}
                       type="primary">
-                      {suggestion ? t('label.suggest') : t('label.save')}
+                      {payload.newDescription ? t('label.suggest') : t('label.save')}
                     </Button>
                   </Space>
                 </Form.Item>

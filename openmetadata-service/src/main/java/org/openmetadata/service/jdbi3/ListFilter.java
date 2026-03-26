@@ -53,6 +53,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getTestSuiteFQNCondition());
     conditions.add(getDomainCondition(tableName));
     conditions.add(getOwnerCondition(tableName));
+    conditions.add(getVisibleToCondition());
     conditions.add(getOwnedByCondition());
     conditions.add(getTierCondition(tableName));
     conditions.add(getEntityFQNHashCondition());
@@ -69,9 +70,12 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getApiCollectionCondition(tableName));
     conditions.add(getWorkflowDefinitionIdCondition());
     conditions.add(getEntityLinkCondition());
+    conditions.add(getActiveCondition(tableName));
     conditions.add(getAgentTypeCondition());
     conditions.add(getProviderCondition(tableName));
     conditions.add(getTaskStatusCondition(tableName));
+    conditions.add(getTaskFormTypeCondition(tableName));
+    conditions.add(getTaskFormCategoryCondition(tableName));
     conditions.add(getTaskTypeCondition(tableName));
     conditions.add(getTaskPriorityCondition(tableName));
     conditions.add(getEntityStatusCondition(tableName));
@@ -231,6 +235,21 @@ public class ListFilter extends Filter<ListFilter> {
   private String getEntityLinkCondition() {
     String entityLinkStr = queryParams.get("entityLink");
     return entityLinkStr == null ? "" : "entityLink = :entityLink";
+  }
+
+  private String getActiveCondition(String tableName) {
+    String active = queryParams.get("active");
+    if (active == null || !"announcement_entity".equals(tableName)) {
+      return "";
+    }
+
+    long now = System.currentTimeMillis();
+
+    if (Boolean.parseBoolean(active)) {
+      return String.format("(startTime <= %d AND endTime >= %d)", now, now);
+    }
+
+    return String.format("(startTime > %d OR endTime < %d)", now, now);
   }
 
   private String getEntityStatusCondition(String tableName) {
@@ -467,6 +486,50 @@ public class ListFilter extends Filter<ListFilter> {
             + "AND ownerRel.relation = %d "
             + "AND ownerRel.fromId IN (%s)))",
         Relationship.MENTIONED_IN.ordinal(), Relationship.OWNS.ordinal(), ownedByIds);
+  }
+
+  /**
+   * Filter tasks visible to the current user.
+   *
+   * <p>This is a union of:
+   * - tasks directly assigned to the user or their teams
+   * - tasks whose target entity is owned by the user or their teams
+   */
+  private String getVisibleToCondition() {
+    String visibleAssigneeIds = getQueryParam("visibleAssigneeIds");
+    String visibleOwnedByIds = getQueryParam("visibleOwnedByIds");
+    if (visibleAssigneeIds == null && visibleOwnedByIds == null) {
+      return "";
+    }
+
+    List<String> conditions = new ArrayList<>();
+
+    if (visibleAssigneeIds != null) {
+      conditions.add(
+          String.format(
+              "id IN (SELECT entity_relationship.toId FROM entity_relationship "
+                  + "WHERE entity_relationship.fromEntity IN ('user', 'team') "
+                  + "AND entity_relationship.fromId IN (%s) "
+                  + "AND entity_relationship.relation = %d)",
+              visibleAssigneeIds, Relationship.ASSIGNED_TO.ordinal()));
+    }
+
+    if (visibleOwnedByIds != null) {
+      conditions.add(
+          String.format(
+              "id IN (SELECT taskRel.toId FROM entity_relationship taskRel "
+                  + "INNER JOIN entity_relationship ownerRel ON ownerRel.toId = taskRel.fromId "
+                  + "WHERE taskRel.toEntity = 'task' "
+                  + "AND taskRel.relation = %d "
+                  + "AND ownerRel.fromEntity IN ('user','team') "
+                  + "AND ownerRel.relation = %d "
+                  + "AND ownerRel.fromId IN (%s))",
+              Relationship.MENTIONED_IN.ordinal(),
+              Relationship.OWNS.ordinal(),
+              visibleOwnedByIds));
+    }
+
+    return "(" + String.join(" OR ", conditions) + ")";
   }
 
   private String getTierCondition(String tableName) {
@@ -823,7 +886,7 @@ public class ListFilter extends Filter<ListFilter> {
     if (statusGroup != null) {
       String column = tableName == null ? "status" : tableName + ".status";
       if ("open".equalsIgnoreCase(statusGroup)) {
-        return String.format("%s = 'Open'", column);
+        return String.format("%s IN ('Open', 'InProgress')", column);
       } else if ("closed".equalsIgnoreCase(statusGroup)) {
         return String.format(
             "%s IN ('Approved', 'Rejected', 'Completed', 'Cancelled', 'Failed')", column);
@@ -849,6 +912,28 @@ public class ListFilter extends Filter<ListFilter> {
     return tableName == null
         ? String.format("type = '%s'", safeType)
         : String.format("%s.type = '%s'", tableName, safeType);
+  }
+
+  private String getTaskFormTypeCondition(String tableName) {
+    String taskFormType = queryParams.get("taskFormType");
+    if (taskFormType == null) {
+      return "";
+    }
+    String safeType = escapeApostrophe(taskFormType);
+    return tableName == null
+        ? String.format("taskType = '%s'", safeType)
+        : String.format("%s.taskType = '%s'", tableName, safeType);
+  }
+
+  private String getTaskFormCategoryCondition(String tableName) {
+    String taskFormCategory = queryParams.get("taskFormCategory");
+    if (taskFormCategory == null) {
+      return "";
+    }
+    String safeCategory = escapeApostrophe(taskFormCategory);
+    return tableName == null
+        ? String.format("taskCategory = '%s'", safeCategory)
+        : String.format("%s.taskCategory = '%s'", tableName, safeCategory);
   }
 
   private String getTaskPriorityCondition(String tableName) {

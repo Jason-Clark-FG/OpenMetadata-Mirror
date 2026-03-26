@@ -23,15 +23,12 @@ import { observerOptions } from '../../../constants/Mydata.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
-import {
-  Thread,
-  ThreadTaskStatus,
-  ThreadType,
-} from '../../../generated/entity/feed/thread';
+import { Thread, ThreadType } from '../../../generated/entity/feed/thread';
 import { Paging } from '../../../generated/type/paging';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useElementInView } from '../../../hooks/useElementInView';
 import { getAllFeeds } from '../../../rest/feedsAPI';
+import { TaskStatusGroup } from '../../../rest/tasksAPI';
 import { getEntityFQN, getEntityType } from '../../../utils/FeedUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
@@ -56,7 +53,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   updateThreadHandler,
   className,
   showHeader = true,
-  threadType,
+  view,
 }) => {
   const { t } = useTranslation();
   const { currentUser } = useApplicationStore();
@@ -64,7 +61,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
     tasks,
     selectedTask,
     setActiveTask,
-    getFeedData,
+    getTaskData,
     loading,
     entityPaging,
   } = useActivityFeedProvider();
@@ -84,25 +81,23 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 
   const [isThreadLoading, setIsThreadLoading] = useState(false);
 
-  const [taskStatus, setTaskStatus] = useState<ThreadTaskStatus>(
-    ThreadTaskStatus.Open
-  );
+  const [taskStatusGroup, setTaskStatusGroup] = useState<TaskStatusGroup>('open');
 
-  const isTaskType = isEqual(threadType, ThreadType.Task);
+  const isTaskType = view === 'tasks';
 
-  const isConversationType = isEqual(threadType, ThreadType.Conversation);
+  const isConversationType = view === 'conversations';
 
-  const isTaskClosed = isEqual(taskStatus, ThreadTaskStatus.Closed);
+  const isTaskClosed = taskStatusGroup === 'closed';
+  const taskList = tasks ?? [];
 
   const getThreads = (after?: string) => {
     if (isTaskType) {
-      getFeedData(
+      getTaskData?.(
         FeedFilter.ALL,
         after,
-        ThreadType.Task,
         (threadLink ? getEntityType(threadLink) : undefined) as EntityType,
         threadLink ? getEntityFQN(threadLink) : undefined,
-        taskStatus === ThreadTaskStatus.Closed ? 'closed' : 'open'
+        taskStatusGroup
       );
 
       return;
@@ -113,7 +108,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
     const fetchPromise = getAllFeeds(
       threadLink,
       after,
-      threadType,
+      ThreadType.Conversation,
       FeedFilter.ALL,
       undefined
     );
@@ -229,11 +224,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   };
 
   const onSwitchChange = (checked: boolean) => {
-    if (checked) {
-      setTaskStatus(ThreadTaskStatus.Closed);
-    } else {
-      setTaskStatus(ThreadTaskStatus.Open);
-    }
+    setTaskStatusGroup(checked ? 'closed' : 'open');
   };
 
   useEffect(() => {
@@ -257,7 +248,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 
   useEffect(() => {
     getThreads();
-  }, [threadLink, threadType, taskStatus]);
+  }, [getTaskData, isConversationType, isTaskType, taskStatusGroup, threadLink, view]);
 
   useEffect(() => {
     fetchMoreThread(
@@ -364,7 +355,7 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
             ) : null}
             {isTaskType ? (
               <div className={classNames(className, 'd-flex flex-col gap-3')}>
-                {tasks.map((task) => (
+                {taskList.map((task) => (
                   <TaskFeedCardFromTask
                     isOpenInDrawer
                     isActive={selectedTask?.id === task.id}

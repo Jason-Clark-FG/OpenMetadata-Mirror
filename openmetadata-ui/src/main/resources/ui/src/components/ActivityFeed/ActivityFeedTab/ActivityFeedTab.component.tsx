@@ -126,6 +126,7 @@ export const ActivityFeedTab = ({
     setActiveThread,
     entityThread,
     getFeedData,
+    getTaskData,
     loading,
     entityPaging,
     tasks,
@@ -226,9 +227,13 @@ export const ActivityFeedTab = ({
     try {
       const domain =
         activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
+      const isCurrentUserProfile =
+        isUserEntity &&
+        Boolean(fqn) &&
+        [currentUser?.name, currentUser?.fullyQualifiedName].includes(fqn);
       const taskCountParams = isUserEntity
-        ? currentUser?.name === fqn
-          ? { view: 'all' as const, domain }
+        ? isCurrentUserProfile
+          ? { view: 'visible' as const, domain }
           : { assignee: fqn, domain }
         : { aboutEntity: fqn, view: 'entity' as const, domain };
 
@@ -266,51 +271,76 @@ export const ActivityFeedTab = ({
     setCountData((prev) => ({ ...prev, loading: false }));
   };
 
-  const getThreadType = useCallback((activeTab?: ActivityFeedTabs) => {
-    if (activeTab === ActivityFeedTabs.TASKS) {
-      return ThreadType.Task;
-    } else if (activeTab === ActivityFeedTabs.ALL) {
-      return ThreadType.Conversation;
-    } else {
-      return;
-    }
-  }, []);
-
-  const { feedFilter, threadType } = useMemo(() => {
+  const { feedFilter, feedThreadType } = useMemo(() => {
     const currentFilter =
       isAdminUser &&
-      currentUser?.name === fqn &&
+      [currentUser?.name, currentUser?.fullyQualifiedName].includes(fqn) &&
       activeTab !== ActivityFeedTabs.TASKS
         ? FeedFilter.ALL
         : FeedFilter.OWNER_OR_FOLLOWS;
     const filter = isUserEntity ? currentFilter : undefined;
 
     return {
-      threadType: getThreadType(activeTab),
+      feedThreadType:
+        activeTab === ActivityFeedTabs.ALL ? ThreadType.Conversation : undefined,
       feedFilter: activeTab === 'mentions' ? FeedFilter.MENTIONS : filter,
     };
-  }, [activeTab, isUserEntity, currentUser]);
+  }, [activeTab, isAdminUser, currentUser, fqn, isUserEntity]);
 
   const handleFeedFetchFromFeedList = useCallback(
     (after?: string) => {
       setIsFirstLoad(false);
-      getFeedData(feedFilter, after, threadType, entityType, fqn, taskFilter);
+      if (isTaskActiveTab) {
+        getTaskData(feedFilter, after, entityType, fqn, taskFilter);
+      } else {
+        getFeedData(
+          feedFilter,
+          after,
+          feedThreadType,
+          entityType,
+          fqn,
+          taskFilter
+        );
+      }
     },
-    [threadType, feedFilter, entityType, fqn, taskFilter, getFeedData]
+    [
+      isTaskActiveTab,
+      feedFilter,
+      entityType,
+      fqn,
+      taskFilter,
+      getFeedData,
+      getTaskData,
+      feedThreadType,
+    ]
   );
 
   useEffect(() => {
     if (fqn) {
-      getFeedData(
-        feedFilter,
-        undefined,
-        threadType,
-        entityType,
-        fqn,
-        taskFilter
-      );
+      if (isTaskActiveTab) {
+        getTaskData(feedFilter, undefined, entityType, fqn, taskFilter);
+      } else {
+        getFeedData(
+          feedFilter,
+          undefined,
+          feedThreadType,
+          entityType,
+          fqn,
+          taskFilter
+        );
+      }
     }
-  }, [feedFilter, threadType, fqn, activeDomain]);
+  }, [
+    feedFilter,
+    feedThreadType,
+    fqn,
+    activeDomain,
+    entityType,
+    taskFilter,
+    getFeedData,
+    getTaskData,
+    isTaskActiveTab,
+  ]);
 
   useEffect(() => {
     if (fqn && entityType && !isUserEntity) {
@@ -398,7 +428,7 @@ export const ActivityFeedTab = ({
 
   const handleUpdateTaskFilter = (filter: TaskStatusGroup) => {
     setTaskFilter(filter);
-    getFeedData(feedFilter, undefined, threadType, entityType, fqn, filter);
+    getTaskData(feedFilter, undefined, entityType, fqn, filter);
   };
 
   const handleAfterTaskClose = () => {

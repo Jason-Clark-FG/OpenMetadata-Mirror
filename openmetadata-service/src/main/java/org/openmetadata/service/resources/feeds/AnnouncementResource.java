@@ -42,6 +42,7 @@ import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.api.data.RestoreEntity;
 import org.openmetadata.schema.api.feed.CreateAnnouncement;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.type.AnnouncementStatus;
@@ -94,6 +95,7 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
       @Context SecurityContext securityContext,
       @Parameter(description = "Fields to include in response") @QueryParam("fields")
           String fieldsParam,
+      @Parameter(description = "Filter by entity link") @QueryParam("entityLink") String entityLink,
       @Parameter(description = "Filter by status") @QueryParam("status") AnnouncementStatus status,
       @Parameter(description = "Filter active announcements") @QueryParam("active") Boolean active,
       @Parameter(description = "Limit the number results")
@@ -110,8 +112,14 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
           @DefaultValue("non-deleted")
           Include include) {
     ListFilter filter = new ListFilter(include);
+    if (entityLink != null) {
+      filter.addQueryParam("entityLink", entityLink);
+    }
     if (status != null) {
       filter.addQueryParam("status", status.value());
+    }
+    if (active != null) {
+      filter.addQueryParam("active", String.valueOf(active));
     }
     return super.listInternal(
         uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
@@ -266,6 +274,18 @@ public class AnnouncementResource extends EntityResource<Announcement, Announcem
       @PathParam("id") UUID id,
       @QueryParam("hardDelete") @DefaultValue("false") boolean hardDelete) {
     return delete(uriInfo, securityContext, id, false, hardDelete);
+  }
+
+  @PUT
+  @Path("/restore")
+  @Operation(
+      operationId = "restoreAnnouncement",
+      summary = "Restore a soft deleted announcement")
+  public Response restore(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Valid RestoreEntity restore) {
+    return restoreEntity(uriInfo, securityContext, restore.getId());
   }
 
   private Announcement getAnnouncement(CreateAnnouncement create, String userName) {

@@ -136,6 +136,10 @@ SELECT
       )
     ),
     'uiSchema', jsonb_build_object(
+      'ui:handler', jsonb_build_object(
+        'type', 'approval',
+        'permission', 'EDIT_ALL'
+      ),
       'comment', jsonb_build_object('ui:widget', 'textarea')
     ),
     'version', 0.1,
@@ -157,13 +161,15 @@ SELECT
     'taskCategory', 'Incident',
     'formSchema', jsonb_build_object(
       'type', 'object',
-      'required', jsonb_build_array('rootCause'),
       'properties', jsonb_build_object(
         'rootCause', jsonb_build_object('type', 'string', 'title', 'Root Cause'),
         'resolution', jsonb_build_object('type', 'string', 'title', 'Resolution')
       )
     ),
     'uiSchema', jsonb_build_object(
+      'ui:handler', jsonb_build_object(
+        'type', 'incident'
+      ),
       'rootCause', jsonb_build_object('ui:widget', 'textarea'),
       'resolution', jsonb_build_object('ui:widget', 'textarea')
     ),
@@ -174,3 +180,131 @@ SELECT
   ),
   md5('TestCaseResolution')
 WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnhash = md5('TestCaseResolution'));
+
+INSERT INTO task_form_schema_entity (id, json, fqnhash)
+SELECT * FROM (
+  SELECT
+    gen_random_uuid() AS id,
+    jsonb_build_object(
+      'id', gen_random_uuid(),
+      'name', 'DescriptionUpdate',
+      'fullyQualifiedName', 'DescriptionUpdate',
+      'displayName', 'Description Update',
+      'taskType', 'DescriptionUpdate',
+      'taskCategory', 'MetadataUpdate',
+      'formSchema', jsonb_build_object(
+        'type', 'object',
+        'additionalProperties', true,
+        'properties', jsonb_build_object(
+          'fieldPath', jsonb_build_object('type', 'string', 'title', 'Field Path'),
+          'currentDescription', jsonb_build_object('type', 'string', 'title', 'Current Description'),
+          'newDescription', jsonb_build_object('type', 'string', 'title', 'New Description'),
+          'source', jsonb_build_object('type', 'string', 'title', 'Source'),
+          'confidence', jsonb_build_object('type', 'number', 'title', 'Confidence')
+        )
+      ),
+      'uiSchema', jsonb_build_object(
+        'ui:handler', jsonb_build_object(
+          'type', 'descriptionUpdate',
+          'permission', 'EDIT_DESCRIPTION',
+          'fieldPathField', 'fieldPath',
+          'valueField', 'newDescription'
+        ),
+        'ui:editablePayload', jsonb_build_object(
+          'fieldPathField', 'fieldPath',
+          'currentValueField', 'currentDescription',
+          'editedValueField', 'newDescription'
+        ),
+        'ui:resolution', jsonb_build_object(
+          'mode', 'field',
+          'valueField', 'newDescription'
+        ),
+        'ui:order', jsonb_build_array('newDescription', 'fieldPath', 'currentDescription', 'source', 'confidence'),
+        'fieldPath', jsonb_build_object('ui:widget', 'hidden'),
+        'currentDescription', jsonb_build_object('ui:widget', 'hidden'),
+        'source', jsonb_build_object('ui:widget', 'hidden'),
+        'confidence', jsonb_build_object('ui:widget', 'hidden'),
+        'newDescription', jsonb_build_object('ui:widget', 'descriptionTabs')
+      ),
+      'version', 0.1,
+      'updatedBy', 'system',
+      'updatedAt', CAST(EXTRACT(EPOCH FROM NOW()) * 1000 AS BIGINT),
+      'deleted', false
+    ) AS json,
+    md5('DescriptionUpdate') AS fqnhash
+  WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnhash = md5('DescriptionUpdate'))
+) seed_description_update
+UNION ALL
+SELECT * FROM (
+  SELECT
+    gen_random_uuid() AS id,
+    jsonb_build_object(
+      'id', gen_random_uuid(),
+      'name', 'TagUpdate',
+      'fullyQualifiedName', 'TagUpdate',
+      'displayName', 'Tag Update',
+      'taskType', 'TagUpdate',
+      'taskCategory', 'MetadataUpdate',
+      'formSchema', jsonb_build_object(
+        'type', 'object',
+        'additionalProperties', true,
+        'properties', jsonb_build_object(
+          'fieldPath', jsonb_build_object('type', 'string', 'title', 'Field Path'),
+          'currentTags', jsonb_build_object(
+            'type', 'array',
+            'title', 'Current Tags',
+            'items', jsonb_build_object('type', 'object', 'additionalProperties', true)
+          ),
+          'tagsToAdd', jsonb_build_object(
+            'type', 'array',
+            'title', 'Tags To Add',
+            'items', jsonb_build_object('type', 'object', 'additionalProperties', true)
+          ),
+          'tagsToRemove', jsonb_build_object(
+            'type', 'array',
+            'title', 'Tags To Remove',
+            'items', jsonb_build_object('type', 'object', 'additionalProperties', true)
+          ),
+          'operation', jsonb_build_object('type', 'string', 'title', 'Operation'),
+          'source', jsonb_build_object('type', 'string', 'title', 'Source'),
+          'confidence', jsonb_build_object('type', 'number', 'title', 'Confidence')
+        )
+      ),
+      'uiSchema', jsonb_build_object(
+        'ui:handler', jsonb_build_object(
+          'type', 'tagUpdate',
+          'permission', 'EDIT_TAGS',
+          'fieldPathField', 'fieldPath',
+          'currentTagsField', 'currentTags',
+          'addTagsField', 'tagsToAdd',
+          'removeTagsField', 'tagsToRemove'
+        ),
+        'ui:editablePayload', jsonb_build_object(
+          'fieldPathField', 'fieldPath',
+          'currentTagsField', 'currentTags',
+          'addTagsField', 'tagsToAdd',
+          'removeTagsField', 'tagsToRemove'
+        ),
+        'ui:resolution', jsonb_build_object(
+          'mode', 'tagMerge',
+          'currentField', 'currentTags',
+          'addField', 'tagsToAdd',
+          'removeField', 'tagsToRemove'
+        ),
+        'ui:order', jsonb_build_array('tagsToAdd', 'fieldPath', 'currentTags', 'tagsToRemove', 'operation', 'source', 'confidence'),
+        'fieldPath', jsonb_build_object('ui:widget', 'hidden'),
+        'currentTags', jsonb_build_object('ui:widget', 'hidden'),
+        'tagsToRemove', jsonb_build_object('ui:widget', 'hidden'),
+        'operation', jsonb_build_object('ui:widget', 'hidden'),
+        'source', jsonb_build_object('ui:widget', 'hidden'),
+        'confidence', jsonb_build_object('ui:widget', 'hidden'),
+        'tagsToAdd', jsonb_build_object('ui:widget', 'tagsTabs')
+      ),
+      'version', 0.1,
+      'updatedBy', 'system',
+      'updatedAt', CAST(EXTRACT(EPOCH FROM NOW()) * 1000 AS BIGINT),
+      'deleted', false
+    ) AS json,
+    md5('TagUpdate') AS fqnhash
+  WHERE NOT EXISTS (SELECT 1 FROM task_form_schema_entity WHERE fqnhash = md5('TagUpdate'))
+) seed_tag_update;

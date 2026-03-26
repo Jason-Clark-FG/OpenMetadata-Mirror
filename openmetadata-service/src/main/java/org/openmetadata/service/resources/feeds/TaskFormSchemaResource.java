@@ -42,6 +42,7 @@ import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.api.data.RestoreEntity;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.Include;
@@ -94,6 +95,8 @@ public class TaskFormSchemaResource
       @Parameter(description = "Fields to include in response") @QueryParam("fields")
           String fieldsParam,
       @Parameter(description = "Filter by task type") @QueryParam("taskType") String taskType,
+      @Parameter(description = "Filter by task category") @QueryParam("taskCategory")
+          String taskCategory,
       @Parameter(description = "Limit the number results")
           @DefaultValue("10")
           @QueryParam("limit")
@@ -109,7 +112,10 @@ public class TaskFormSchemaResource
           Include include) {
     ListFilter filter = new ListFilter(include);
     if (taskType != null) {
-      filter.addQueryParam("taskType", taskType);
+      filter.addQueryParam("taskFormType", taskType);
+    }
+    if (taskCategory != null) {
+      filter.addQueryParam("taskFormCategory", taskCategory);
     }
     return super.listInternal(
         uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
@@ -174,6 +180,18 @@ public class TaskFormSchemaResource
     return super.listVersionsInternal(securityContext, id);
   }
 
+  @GET
+  @Path("/{id}/versions/{version}")
+  @Operation(
+      operationId = "getTaskFormSchemaVersion",
+      summary = "Get a specific version of a task form schema")
+  public TaskFormSchema getVersion(
+      @Context SecurityContext securityContext,
+      @PathParam("id") UUID id,
+      @PathParam("version") String version) {
+    return super.getVersionInternal(securityContext, id, version);
+  }
+
   @POST
   @Operation(
       operationId = "createTaskFormSchema",
@@ -187,14 +205,14 @@ public class TaskFormSchemaResource
                     mediaType = "application/json",
                     schema = @Schema(implementation = TaskFormSchema.class)))
       })
-  public Response create(
+  public Response createTaskFormSchema(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
-      @Valid TaskFormSchema schema) {
+      TaskFormSchema schema) {
     schema.withId(UUID.randomUUID());
     schema.withUpdatedBy(securityContext.getUserPrincipal().getName());
     schema.withUpdatedAt(System.currentTimeMillis());
-    return create(uriInfo, securityContext, schema);
+    return super.create(uriInfo, securityContext, schema);
   }
 
   @PUT
@@ -210,13 +228,13 @@ public class TaskFormSchemaResource
                     mediaType = "application/json",
                     schema = @Schema(implementation = TaskFormSchema.class)))
       })
-  public Response createOrUpdate(
+  public Response createOrUpdateTaskFormSchema(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
-      @Valid TaskFormSchema schema) {
+      TaskFormSchema schema) {
     schema.withUpdatedBy(securityContext.getUserPrincipal().getName());
     schema.withUpdatedAt(System.currentTimeMillis());
-    return createOrUpdate(uriInfo, securityContext, schema);
+    return super.createOrUpdate(uriInfo, securityContext, schema);
   }
 
   @PATCH
@@ -249,5 +267,17 @@ public class TaskFormSchemaResource
       @PathParam("id") UUID id,
       @QueryParam("hardDelete") @DefaultValue("false") boolean hardDelete) {
     return delete(uriInfo, securityContext, id, false, hardDelete);
+  }
+
+  @PUT
+  @Path("/restore")
+  @Operation(
+      operationId = "restoreTaskFormSchema",
+      summary = "Restore a soft deleted task form schema")
+  public Response restore(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Valid RestoreEntity restore) {
+    return restoreEntity(uriInfo, securityContext, restore.getId());
   }
 }

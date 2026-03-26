@@ -16,6 +16,7 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.service.Entity.ANNOUNCEMENT;
 
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.type.AnnouncementStatus;
 import org.openmetadata.service.Entity;
@@ -65,7 +66,16 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
 
   @Override
   public void storeEntity(Announcement announcement, boolean update) {
-    store(announcement, update);
+    if (update) {
+      store(announcement, true);
+      return;
+    }
+
+    ((CollectionDAO.AnnouncementDAO) dao)
+        .insertAnnouncement(
+            announcement.getId().toString(),
+            JsonUtils.pojoToJson(announcement),
+            announcement.getFullyQualifiedName());
   }
 
   @Override
@@ -103,7 +113,6 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
 
     @Override
     public void entitySpecificUpdate(boolean consolidatingChanges) {
-      recordChange("description", original.getDescription(), updated.getDescription());
       recordChange("startTime", original.getStartTime(), updated.getStartTime());
       recordChange("endTime", original.getEndTime(), updated.getEndTime());
       recordChange("status", original.getStatus(), updated.getStatus());

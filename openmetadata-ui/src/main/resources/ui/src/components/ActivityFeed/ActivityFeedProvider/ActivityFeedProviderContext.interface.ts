@@ -73,6 +73,14 @@ export interface ActivityFeedProviderContextType {
     taskStatusGroup?: TaskStatusGroup,
     limit?: number
   ) => Promise<void>;
+  getTaskData: (
+    filterType?: FeedFilter,
+    after?: string,
+    entityType?: EntityType,
+    fqn?: string,
+    taskStatusGroup?: TaskStatusGroup,
+    limit?: number
+  ) => Promise<void>;
   showDrawer: (thread: Thread) => void;
   showTaskDrawer: (task: Task) => void;
   showActivityDrawer: (activity: ActivityEvent) => void;

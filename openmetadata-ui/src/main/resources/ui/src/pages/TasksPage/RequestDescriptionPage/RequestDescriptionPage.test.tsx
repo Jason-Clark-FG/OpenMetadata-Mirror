@@ -11,7 +11,6 @@
  *  limitations under the License.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { forwardRef } from 'react';
 import { MOCK_TASK_ASSIGNEE } from '../../../mocks/Task.mock';
 import { createTask } from '../../../rest/tasksAPI';
 import i18n from '../../../utils/i18next/LocalUtil';
@@ -81,11 +80,12 @@ jest.mock(
   '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component',
   () => jest.fn().mockImplementation(() => <div>TitleBreadcrumb.component</div>)
 );
-jest.mock('../../../components/common/RichTextEditor/RichTextEditor', () =>
-  forwardRef(
-    jest.fn().mockImplementation(() => <div>RichTextEditor.component</div>)
-  )
+jest.mock('../shared/TaskPayloadSchemaFields', () =>
+  jest.fn().mockImplementation(() => <div>RichTextEditor.component</div>)
 );
+jest.mock('../../../rest/taskFormSchemasAPI', () => ({
+  resolveTaskFormSchema: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../../../rest/tasksAPI', () => ({
   createTask: jest.fn().mockResolvedValue({}),
   TaskCategory: { MetadataUpdate: 'MetadataUpdate' },

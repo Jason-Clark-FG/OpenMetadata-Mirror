@@ -37,10 +37,15 @@ import {
   createTask,
   TaskCategory,
   TaskEntityType,
+  TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
-import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
+import {
+  applyTaskFormSchemaDefaults,
+  getResolvedTaskFormSchema,
+} from '../../../utils/TaskFormSchemaUtils';
 import {
   fetchEntityDetail,
   fetchOptions,
@@ -55,7 +60,7 @@ import {
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import Assignees from '../shared/Assignees';
-import { DescriptionTabs } from '../shared/DescriptionTabs';
+import TaskPayloadSchemaFields from '../shared/TaskPayloadSchemaFields';
 import '../task-page.style.less';
 import { EntityData, Option } from '../TasksPage.interface';
 
@@ -75,8 +80,8 @@ const UpdateDescription = () => {
   const [entityData, setEntityData] = useState<EntityData>({} as EntityData);
   const [options, setOptions] = useState<Option[]>([]);
   const [assignees, setAssignees] = useState<Array<Option>>([]);
-  const [currentDescription, setCurrentDescription] = useState<string>('');
-  const [suggestion, setSuggestion] = useState<string>('');
+  const [payload, setPayload] = useState<TaskPayload>({});
+  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema>();
   const [isLoading, setIsLoading] = useState(false);
 
   const entityFQN = useMemo(
@@ -147,13 +152,7 @@ const UpdateDescription = () => {
         about: entityFQN,
         aboutType: entityType,
         assignees: assignees.map((assignee) => assignee.name ?? ''),
-        payload: {
-          newDescription: isDescriptionContentEmpty(suggestion)
-            ? ''
-            : suggestion,
-          currentDescription: currentDescription,
-          fieldPath: getTaskAbout(),
-        },
+        payload: applyTaskFormSchemaDefaults(payload, taskFormSchema?.formSchema),
       };
 
       await createTask(data);
@@ -182,6 +181,13 @@ const UpdateDescription = () => {
   }, [entityFQN, entityType]);
 
   useEffect(() => {
+    getResolvedTaskFormSchema(
+      TaskEntityType.DescriptionUpdate,
+      TaskCategory.MetadataUpdate
+    ).then(setTaskFormSchema);
+  }, []);
+
+  useEffect(() => {
     const defaultAssignee = getTaskAssignee(entityData as Glossary);
 
     if (defaultAssignee) {
@@ -197,9 +203,18 @@ const UpdateDescription = () => {
 
   useEffect(() => {
     const description = getDescription();
-    setCurrentDescription(description);
-    setSuggestion(description);
+    setPayload({
+      fieldPath: getTaskAbout(),
+      currentDescription: description,
+      newDescription: description,
+    });
   }, [entityData, columnObject]);
+
+  useEffect(() => {
+    setPayload((prevPayload) =>
+      applyTaskFormSchemaDefaults(prevPayload, taskFormSchema?.formSchema)
+    );
+  }, [taskFormSchema?.formSchema]);
 
   if (isEmpty(entityData)) {
     return <Loader />;
@@ -267,16 +282,12 @@ const UpdateDescription = () => {
                   />
                 </Form.Item>
 
-                <Form.Item
-                  data-testid="description-tabs"
-                  label={`${t('label.description')}:`}
-                  name="description">
-                  <DescriptionTabs
-                    suggestion={suggestion}
-                    value={currentDescription}
-                    onChange={setSuggestion}
-                  />
-                </Form.Item>
+                <TaskPayloadSchemaFields
+                  payload={payload}
+                  schema={taskFormSchema?.formSchema}
+                  uiSchema={taskFormSchema?.uiSchema}
+                  onChange={setPayload}
+                />
 
                 <Form.Item>
                   <Space

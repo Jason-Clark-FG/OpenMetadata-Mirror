@@ -97,6 +97,7 @@ export interface TaskResolution {
 
 // Task payload interface - union of all payload types
 export interface TaskPayload {
+  [key: string]: unknown;
   // SuggestionPayload fields
   suggestionType?: string;
   suggestedValue?: string;
@@ -194,6 +195,7 @@ const BASE_URL = '/tasks';
 export type TaskStatusGroup = 'open' | 'closed';
 export type TaskCountView =
   | 'all'
+  | 'visible'
   | 'assigned'
   | 'owned'
   | 'created'
@@ -267,6 +269,20 @@ export const listMyAssignedTasks = async (params?: {
 export const listMyOwnedTasks = async (params?: TaskScopedListParams) => {
   const response = await APIClient.get<PagingResponse<Task[]>>(
     `${BASE_URL}/owned`,
+    { params }
+  );
+
+  return response.data;
+};
+
+/**
+ * Get tasks visible to the current user.
+ * Includes tasks assigned to the current user or their teams,
+ * and tasks about entities owned by the current user or their teams.
+ */
+export const listMyVisibleTasks = async (params?: TaskScopedListParams) => {
+  const response = await APIClient.get<PagingResponse<Task[]>>(
+    `${BASE_URL}/visible`,
     { params }
   );
 

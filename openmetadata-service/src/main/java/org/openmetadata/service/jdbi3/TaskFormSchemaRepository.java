@@ -14,10 +14,17 @@
 package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.service.Entity.TASK_FORM_SCHEMA;
+import static org.openmetadata.schema.type.Include.NON_DELETED;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.tasks.TaskFormSchemaValidator;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
@@ -27,6 +34,8 @@ import org.openmetadata.service.util.FullyQualifiedName;
 public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
 
   public static final String COLLECTION_PATH = "/v1/taskFormSchemas";
+  private final ConcurrentMap<String, Optional<TaskFormSchema>> schemaCache =
+      new ConcurrentHashMap<>();
 
   public TaskFormSchemaRepository() {
     super(
@@ -47,12 +56,43 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
 
   @Override
   public void prepare(TaskFormSchema schema, boolean update) {
-    // No special preparation needed
+    if (schema.getName() == null || schema.getName().isBlank()) {
+      throw new IllegalArgumentException("Task form schema name must not be empty");
+    }
+    if (schema.getName().length() > 256) {
+      throw new IllegalArgumentException("Task form schema name length must be <= 256");
+    }
+    if (schema.getTaskType() == null || schema.getTaskType().isBlank()) {
+      throw new IllegalArgumentException("Task form schema taskType must not be empty");
+    }
+    if (schema.getTaskType().length() > 64) {
+      throw new IllegalArgumentException("Task form schema taskType length must be <= 64");
+    }
+    if (schema.getTaskCategory() == null || schema.getTaskCategory().isBlank()) {
+      throw new IllegalArgumentException("Task form schema taskCategory must not be empty");
+    }
+    if (schema.getTaskCategory().length() > 32) {
+      throw new IllegalArgumentException("Task form schema taskCategory length must be <= 32");
+    }
+    TaskFormSchemaValidator.validateFormSchema(schema.getFormSchema());
+    validateUniqueTaskSchemaBinding(schema);
   }
 
   @Override
   public void storeEntity(TaskFormSchema schema, boolean update) {
-    store(schema, update);
+    schemaCache.clear();
+    if (update) {
+      daoCollection
+          .taskFormSchemaDAO()
+          .update(schema.getId(), schema.getFullyQualifiedName(), JsonUtils.pojoToJson(schema));
+    } else {
+      daoCollection
+          .taskFormSchemaDAO()
+          .insertTaskFormSchema(
+              schema.getId().toString(),
+              JsonUtils.pojoToJson(schema),
+              schema.getFullyQualifiedName());
+    }
   }
 
   @Override
@@ -94,6 +134,45 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
       recordChange("uiSchema", original.getUiSchema(), updated.getUiSchema());
       recordChange("taskType", original.getTaskType(), updated.getTaskType());
       recordChange("taskCategory", original.getTaskCategory(), updated.getTaskCategory());
+    }
+  }
+
+  public Optional<TaskFormSchema> resolve(String taskType, String taskCategory) {
+    if (taskType == null || taskType.isBlank()) {
+      return Optional.empty();
+    }
+
+    String cacheKey = taskType + "::" + (taskCategory == null ? "" : taskCategory);
+    return schemaCache.computeIfAbsent(cacheKey, key -> resolveUncached(taskType, taskCategory));
+  }
+
+  private Optional<TaskFormSchema> resolveUncached(String taskType, String taskCategory) {
+    ListFilter filter = new ListFilter(NON_DELETED);
+    filter.addQueryParam("taskFormType", taskType);
+    if (taskCategory != null && !taskCategory.isBlank()) {
+      filter.addQueryParam("taskFormCategory", taskCategory);
+    }
+
+    List<TaskFormSchema> matches = listAll(getFields(""), filter);
+    if (matches.isEmpty()) {
+      return Optional.empty();
+    }
+    if (matches.size() > 1) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Multiple task form schemas found for taskType='%s' and taskCategory='%s'",
+              taskType, taskCategory));
+    }
+    return Optional.of(matches.get(0));
+  }
+
+  private void validateUniqueTaskSchemaBinding(TaskFormSchema schema) {
+    Optional<TaskFormSchema> existing = resolveUncached(schema.getTaskType(), schema.getTaskCategory());
+    if (existing.isPresent() && !existing.get().getId().equals(schema.getId())) {
+      throw new IllegalArgumentException(
+          String.format(
+              "A task form schema already exists for taskType='%s' and taskCategory='%s'",
+              schema.getTaskType(), schema.getTaskCategory()));
     }
   }
 }

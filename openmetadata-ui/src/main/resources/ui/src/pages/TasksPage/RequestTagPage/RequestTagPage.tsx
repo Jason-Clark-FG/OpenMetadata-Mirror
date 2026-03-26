@@ -35,9 +35,15 @@ import {
   createTask,
   TaskCategory,
   TaskEntityType,
+  TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
+import {
+  applyTaskFormSchemaDefaults,
+  getResolvedTaskFormSchema,
+} from '../../../utils/TaskFormSchemaUtils';
 import {
   fetchEntityDetail,
   fetchOptions,
@@ -50,7 +56,7 @@ import {
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import Assignees from '../shared/Assignees';
-import TagSuggestion from '../shared/TagSuggestion';
+import TaskPayloadSchemaFields from '../shared/TaskPayloadSchemaFields';
 import '../task-page.style.less';
 import { EntityData, Option } from '../TasksPage.interface';
 
@@ -69,7 +75,8 @@ const RequestTag = () => {
   const [entityData, setEntityData] = useState<EntityData>({} as EntityData);
   const [options, setOptions] = useState<Option[]>([]);
   const [assignees, setAssignees] = useState<Option[]>([]);
-  const [suggestion] = useState<TagLabel[]>([]);
+  const [payload, setPayload] = useState<TaskPayload>({});
+  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema>();
   const [isLoading, setIsLoading] = useState(false);
 
   const entityFQN = useMemo(
@@ -114,11 +121,7 @@ const RequestTag = () => {
       about: entityFQN,
       aboutType: entityType,
       assignees: assignees.map((assignee) => assignee.name ?? ''),
-      payload: {
-        fieldPath: getFieldPath(),
-        tagsToAdd: formValues.suggestTags,
-        operation: 'Add',
-      },
+      payload: applyTaskFormSchemaDefaults(payload, taskFormSchema?.formSchema),
     };
 
     try {
@@ -148,6 +151,13 @@ const RequestTag = () => {
   }, [entityFQN, entityType]);
 
   useEffect(() => {
+    getResolvedTaskFormSchema(
+      TaskEntityType.TagUpdate,
+      TaskCategory.MetadataUpdate
+    ).then(setTaskFormSchema);
+  }, []);
+
+  useEffect(() => {
     const defaultAssignee = getTaskAssignee(entityData as Glossary);
 
     if (defaultAssignee) {
@@ -159,6 +169,22 @@ const RequestTag = () => {
       assignees: defaultAssignee,
     });
   }, [entityData]);
+
+  useEffect(() => {
+    setPayload({
+      fieldPath: getFieldPath(),
+      currentTags: [],
+      tagsToAdd: [],
+      tagsToRemove: [],
+      operation: 'Add',
+    });
+  }, [field, value]);
+
+  useEffect(() => {
+    setPayload((prevPayload) =>
+      applyTaskFormSchemaDefaults(prevPayload, taskFormSchema?.formSchema)
+    );
+  }, [taskFormSchema?.formSchema]);
 
   if (isEmpty(entityData)) {
     return <Loader />;
@@ -235,14 +261,12 @@ const RequestTag = () => {
                     onSearch={onSearch}
                   />
                 </Form.Item>
-                <Form.Item
-                  data-testid="tags-label"
-                  label={`${t('label.suggest-entity', {
-                    entity: t('label.tag-plural'),
-                  })}:`}
-                  name="suggestTags">
-                  <TagSuggestion />
-                </Form.Item>
+                <TaskPayloadSchemaFields
+                  payload={payload}
+                  schema={taskFormSchema?.formSchema}
+                  uiSchema={taskFormSchema?.uiSchema}
+                  onChange={setPayload}
+                />
 
                 <Form.Item>
                   <Space
@@ -257,7 +281,9 @@ const RequestTag = () => {
                       htmlType="submit"
                       loading={isLoading}
                       type="primary">
-                      {suggestion ? t('label.suggest') : t('label.save')}
+                      {(payload.tagsToAdd as TagLabel[] | undefined)?.length
+                        ? t('label.suggest')
+                        : t('label.save')}
                     </Button>
                   </Space>
                 </Form.Item>

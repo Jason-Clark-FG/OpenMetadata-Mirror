@@ -40,6 +40,8 @@ import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 
 class MigrationUtilTest {
   private Handle handle;
@@ -93,6 +95,24 @@ class MigrationUtilTest {
     assertDoesNotThrow(migrationUtil::runTaskWorkflowCutoverMigration);
     verify(handle, never()).createQuery(anyString());
     verify(taskRepository, never()).create(any(), any());
+  }
+
+  @Test
+  void runTaskWorkflowCutoverMigrationRedeploysApprovalWorkflows() throws Exception {
+    stubTables(Set.of());
+    WorkflowNodeDefinitionInterface approvalNode = mock(WorkflowNodeDefinitionInterface.class);
+    when(approvalNode.getSubType()).thenReturn("userApprovalTask");
+    WorkflowDefinition workflowDefinition =
+        new WorkflowDefinition().withName("ApprovalWorkflow").withNodes(List.of(approvalNode));
+    when(workflowDefinitionRepository.listAll(any(), any())).thenReturn(List.of(workflowDefinition));
+
+    MigrationUtil migrationUtil = newMigrationUtil();
+
+    migrationUtil.runTaskWorkflowCutoverMigration();
+
+    verify(workflowDefinitionRepository)
+        .createOrUpdate(null, workflowDefinition, "admin");
+    verify(handle, never()).createQuery(anyString());
   }
 
   private MigrationUtil newMigrationUtil() {

@@ -12,17 +12,26 @@
  */
 
 import { HTMLAttributes } from 'react';
-import { ThreadType } from '../../generated/api/feed/createThread';
-import { Thread } from '../../generated/entity/feed/thread';
-import { Task } from '../../generated/entity/tasks/task';
+import { Post } from '../../generated/entity/feed/thread';
+import { EntityReference } from '../../generated/type/entityReference';
+import { Task } from '../../rest/tasksAPI';
+
+export interface MentionNotification {
+  id: string;
+  about?: string;
+  createdBy?: string;
+  entityRef?: EntityReference;
+  message?: string;
+  posts?: Post[];
+  reactions?: Post['reactions'];
+  threadTs?: number;
+}
 
 export interface NotificationFeedProp extends HTMLAttributes<HTMLDivElement> {
   createdBy: string;
   entityType: string;
   entityFQN: string;
   timestamp?: number;
-  isConversationFeed?: boolean;
-  feedType: ThreadType;
-  task?: Thread;
+  mentionNotification?: MentionNotification;
   taskEntity?: Task;
 }

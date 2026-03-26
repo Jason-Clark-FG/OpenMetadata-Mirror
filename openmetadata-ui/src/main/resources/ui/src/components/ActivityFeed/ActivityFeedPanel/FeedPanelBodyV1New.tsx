@@ -15,9 +15,8 @@ import { Button } from 'antd';
 import classNames from 'classnames';
 import { isUndefined } from 'lodash';
 import { FC, useCallback, useMemo } from 'react';
-import { Post, ThreadType } from '../../../generated/entity/feed/thread';
+import { Post } from '../../../generated/entity/feed/thread';
 import ActivityFeedCardNew from '../ActivityFeedCardNew/ActivityFeedcardNew.component';
-import TaskFeedCardNew from '../TaskFeedCard/TaskFeedCardNew.component';
 import './feed-panel-body-v1.less';
 import { FeedPanelBodyPropV1 } from './FeedPanelBodyV1.interface';
 
@@ -29,11 +28,8 @@ const FeedPanelBodyV1: FC<FeedPanelBodyPropV1> = ({
   onActivityClick,
   isActive,
   showActivityFeedEditor = false,
-  onAfterClose,
-  onUpdateEntityDetails,
   isForFeedTab = false,
   isOpenInDrawer = false,
-  hideCardBorder = false,
   isFeedWidget = false,
   isFullSizeWidget = false,
 }) => {
@@ -102,30 +98,17 @@ const FeedPanelBodyV1: FC<FeedPanelBodyPropV1> = ({
       data-testid="message-container"
       type="text"
       onClick={handleFeedClick}>
-      {feed.type === ThreadType.Task ? (
-        <TaskFeedCardNew
-          feed={feed}
-          hideCardBorder={hideCardBorder}
-          isActive={isActive}
-          isForFeedTab={isForFeedTab}
-          isOpenInDrawer={isOpenInDrawer}
-          key={feed.id}
-          onAfterClose={onAfterClose}
-          onUpdateEntityDetails={onUpdateEntityDetails}
-        />
-      ) : (
-        <ActivityFeedCardNew
-          feed={feed}
-          isActive={isActive}
-          isFeedWidget={isFeedWidget}
-          isForFeedTab={isForFeedTab}
-          isFullSizeWidget={isFullSizeWidget}
-          isPost={false}
-          post={mainFeed}
-          showActivityFeedEditor={showActivityFeedEditor}
-          showThread={showThread}
-        />
-      )}
+      <ActivityFeedCardNew
+        feed={feed}
+        isActive={isActive}
+        isFeedWidget={isFeedWidget}
+        isForFeedTab={isForFeedTab}
+        isFullSizeWidget={isFullSizeWidget}
+        isPost={false}
+        post={mainFeed}
+        showActivityFeedEditor={showActivityFeedEditor}
+        showThread={showThread}
+      />
     </Button>
   );
 };

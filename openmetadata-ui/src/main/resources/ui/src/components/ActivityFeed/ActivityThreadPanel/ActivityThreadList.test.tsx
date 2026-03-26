@@ -13,7 +13,6 @@
 
 import {
   findByTestId,
-  getByText,
   queryByTestId,
   render,
 } from '@testing-library/react';
@@ -53,10 +52,6 @@ jest.mock('../FeedListSeparator/FeedListSeparator', () => {
 jest.mock('../ActivityFeedCard/FeedCardFooter/FeedCardFooter', () => {
   return jest.fn().mockReturnValue(<p>FeedCardFooter</p>);
 });
-
-jest.mock('../../common/OwnerLabel/OwnerLabel.component', () => ({
-  OwnerLabel: jest.fn().mockReturnValue(<div>OwnerLabel</div>),
-}));
 
 describe('Test ActivityThreadList Component', () => {
   it('Check if it has all child elements', async () => {
@@ -154,15 +149,4 @@ describe('Test ActivityThreadList Component', () => {
     expect(thread2QuickReplyEditor).toBeInTheDocument();
   });
 
-  it('should render task assignee when there is task', async () => {
-    const { container } = render(
-      <ActivityThreadList {...mockActivityThreadListProp} />,
-      {
-        wrapper: MemoryRouter,
-      }
-    );
-
-    expect(getByText(container, 'label.assignee-plural:')).toBeInTheDocument();
-    expect(getByText(container, 'OwnerLabel')).toBeInTheDocument();
-  });
 });

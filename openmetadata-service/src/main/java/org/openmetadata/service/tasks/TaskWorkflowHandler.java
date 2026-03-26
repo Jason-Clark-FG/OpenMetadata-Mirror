@@ -44,6 +44,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.util.EntityFieldUtils;
 import org.openmetadata.service.util.FieldPathUtils;
+import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionBinding;
 
 /**
  * Handles workflow integration for Task entities.
@@ -277,6 +278,7 @@ public class TaskWorkflowHandler {
   private void applyEntityChanges(Task task, String newValue, String user) {
     TaskEntityType taskType = task.getType();
     EntityReference aboutRef = task.getAbout();
+    TaskExecutionBinding binding = TaskFormExecutionResolver.resolve(task);
 
     LOG.info(
         "[TaskWorkflowHandler] applyEntityChanges called: taskId='{}', taskType={}, newValue='{}', aboutRef={}",
@@ -296,14 +298,15 @@ public class TaskWorkflowHandler {
       EntityInterface entity = Entity.getEntity(aboutRef, "*", Include.ALL);
       EntityRepository<?> repository = Entity.getEntityRepository(aboutRef.getType());
 
-      switch (taskType) {
-        case GlossaryApproval -> applyGlossaryApproval(entity, repository, user);
-        case DescriptionUpdate -> applyDescriptionUpdate(task, entity, repository, user, newValue);
-        case TagUpdate -> applyTagUpdate(task, entity, repository, user, newValue);
-        case OwnershipUpdate -> applyOwnershipUpdate(task, entity, repository, user);
-        case TierUpdate -> applyTierUpdate(task, entity, repository, user);
-        case DomainUpdate -> applyDomainUpdate(task, entity, repository, user);
-        case Suggestion -> applySuggestion(task, entity, repository, user);
+      switch (binding.handlerType()) {
+        case APPROVAL -> applyGlossaryApproval(entity, repository, user);
+        case DESCRIPTION_UPDATE ->
+            applyDescriptionUpdate(task, entity, repository, user, newValue, binding);
+        case TAG_UPDATE -> applyTagUpdate(task, entity, repository, user, newValue, binding);
+        case OWNERSHIP_UPDATE -> applyOwnershipUpdate(task, entity, repository, user);
+        case TIER_UPDATE -> applyTierUpdate(task, entity, repository, user);
+        case DOMAIN_UPDATE -> applyDomainUpdate(task, entity, repository, user);
+        case SUGGESTION -> applySuggestion(task, entity, repository, user);
         default -> LOG.debug("No entity changes for task type: {}", taskType);
       }
     } catch (Exception e) {
@@ -329,7 +332,8 @@ public class TaskWorkflowHandler {
       EntityInterface entity,
       EntityRepository<?> repository,
       String user,
-      String newValue) {
+      String newValue,
+      TaskExecutionBinding binding) {
     Object payload = task.getPayload();
 
     LOG.info(
@@ -344,12 +348,12 @@ public class TaskWorkflowHandler {
 
       if (payload != null) {
         JsonNode payloadNode = JsonUtils.valueToTree(payload);
-        fieldPath = payloadNode.path("fieldPath").asText(null);
+        fieldPath = readPayloadString(payloadNode, binding.fieldPathField(), "fieldPath");
         if (fieldPath == null || fieldPath.isEmpty()) {
           fieldPath = payloadNode.path("field").asText(null);
         }
         if (newDescription == null || newDescription.isEmpty()) {
-          newDescription = payloadNode.path("suggestedValue").asText(null);
+          newDescription = readPayloadString(payloadNode, binding.valueField(), "suggestedValue");
         }
       }
 
@@ -386,7 +390,8 @@ public class TaskWorkflowHandler {
       EntityInterface entity,
       EntityRepository<?> repository,
       String user,
-      String newValue) {
+      String newValue,
+      TaskExecutionBinding binding) {
     Object payload = task.getPayload();
 
     try {
@@ -396,15 +401,22 @@ public class TaskWorkflowHandler {
 
       // Try to get tags from payload first (new format with tagsToAdd/tagsToRemove)
       if (payload != null) {
-        TagUpdatePayload tagPayload = JsonUtils.convertValue(payload, TagUpdatePayload.class);
-
-        String fieldPath = tagPayload.getFieldPath();
+        JsonNode payloadNode = JsonUtils.valueToTree(payload);
+        String fieldPath = readPayloadString(payloadNode, binding.fieldPathField(), "fieldPath");
         if (fieldPath != null && !fieldPath.isEmpty()) {
           targetFqn = resolveTagTargetFqn(entity, fieldPath);
         }
 
-        tagsToAdd = tagPayload.getTagsToAdd();
-        tagsToRemove = tagPayload.getTagsToRemove();
+        tagsToAdd =
+            readTagLabels(payloadNode, binding.addTagsField(), "tagsToAdd", "suggestedValue");
+        tagsToRemove =
+            readTagLabels(payloadNode, binding.removeTagsField(), "tagsToRemove", null);
+
+        if (tagsToAdd == null && tagsToRemove == null) {
+          TagUpdatePayload tagPayload = JsonUtils.convertValue(payload, TagUpdatePayload.class);
+          tagsToAdd = tagPayload.getTagsToAdd();
+          tagsToRemove = tagPayload.getTagsToRemove();
+        }
       }
 
       // If newValue is provided (from resolution), parse it as the final tags to apply
@@ -477,6 +489,46 @@ public class TaskWorkflowHandler {
     }
 
     return entity.getFullyQualifiedName() + "." + normalizedFieldPath;
+  }
+
+  private String readPayloadString(JsonNode payloadNode, String preferredField, String fallbackField) {
+    if (preferredField != null) {
+      String preferredValue = payloadNode.path(preferredField).asText(null);
+      if (preferredValue != null && !preferredValue.isEmpty()) {
+        return preferredValue;
+      }
+    }
+
+    if (fallbackField == null) {
+      return null;
+    }
+
+    String fallbackValue = payloadNode.path(fallbackField).asText(null);
+    return fallbackValue == null || fallbackValue.isEmpty() ? null : fallbackValue;
+  }
+
+  private List<TagLabel> readTagLabels(
+      JsonNode payloadNode,
+      String preferredField,
+      String fallbackField,
+      String jsonEncodedFallbackField) {
+    JsonNode node = preferredField != null ? payloadNode.get(preferredField) : null;
+    if (node == null && fallbackField != null) {
+      node = payloadNode.get(fallbackField);
+    }
+
+    if (node != null && !node.isNull()) {
+      return JsonUtils.convertValue(node, new TypeReference<List<TagLabel>>() {});
+    }
+
+    if (jsonEncodedFallbackField != null) {
+      String jsonValue = payloadNode.path(jsonEncodedFallbackField).asText(null);
+      if (jsonValue != null && !jsonValue.isEmpty()) {
+        return JsonUtils.readValue(jsonValue, new TypeReference<List<TagLabel>>() {});
+      }
+    }
+
+    return null;
   }
 
   private void applyOwnershipUpdate(

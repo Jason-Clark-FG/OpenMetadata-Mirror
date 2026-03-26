@@ -178,7 +178,7 @@ const PopoverContent: FC<Props> = ({
         />
       </Popover>
 
-      {(onReply || isThread) && (
+      {(onReply || (isThread && !isAnnouncement)) && (
         <Icon
           component={IconReplyFeed}
           data-testid="add-reply"

@@ -43,6 +43,8 @@ import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.tasks.CreateTask;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
+import org.openmetadata.schema.entity.feed.FormSchema;
+import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.data.APICollection;
 import org.openmetadata.schema.entity.data.APIEndpoint;
@@ -80,6 +82,7 @@ import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.ForbiddenException;
+import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
 
@@ -273,6 +276,45 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
 
     assertEquals(TaskCategory.MetadataUpdate, task.getCategory());
     assertEquals(TaskEntityType.DescriptionUpdate, task.getType());
+  }
+
+  @Test
+  void testCreateTaskValidatesPayloadAgainstTaskFormSchema(TestNamespace ns) {
+    TaskFormSchema schema =
+        new TaskFormSchema()
+            .withId(UUID.randomUUID())
+            .withName(ns.prefix("custom-task-form"))
+            .withTaskType(TaskEntityType.CustomTask.value())
+            .withTaskCategory(TaskCategory.Custom.value())
+            .withFormSchema(
+                new FormSchema()
+                    .withAdditionalProperty("type", "object")
+                    .withAdditionalProperty("required", List.of("reviewNotes"))
+                    .withAdditionalProperty(
+                        "properties",
+                        Map.of("reviewNotes", Map.of("type", "string"))));
+    SdkClients.adminClient().taskFormSchemas().create(schema);
+
+    CreateTask invalidRequest =
+        new CreateTask()
+            .withName(ns.prefix("invalid-custom-task"))
+            .withCategory(TaskCategory.Custom)
+            .withType(TaskEntityType.CustomTask)
+            .withPayload(Map.of("approved", true));
+
+    assertThrows(InvalidRequestException.class, () -> SdkClients.adminClient().tasks().create(invalidRequest));
+
+    CreateTask validRequest =
+        new CreateTask()
+            .withName(ns.prefix("valid-custom-task"))
+            .withCategory(TaskCategory.Custom)
+            .withType(TaskEntityType.CustomTask)
+            .withPayload(Map.of("reviewNotes", "ready for approval"));
+
+    Task task = SdkClients.adminClient().tasks().create(validRequest);
+
+    assertNotNull(task);
+    assertEquals("ready for approval", ((Map<?, ?>) task.getPayload()).get("reviewNotes"));
   }
 
   @Test
@@ -593,6 +635,45 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   }
 
   @Test
+  void testAssignedOpenStatusGroupIncludesInProgressTasks(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+    Domain domain = createDomain(ns, "assigned-inprogress-domain");
+    Table table =
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER1_REF));
+
+    CreateTask openRequest =
+        createTaskRequestAboutTable(ns, "assigned-inprogress-open", table)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+    CreateTask inProgressRequest =
+        createTaskRequestAboutTable(ns, "assigned-inprogress-active", table)
+            .withAssignees(List.of(shared.USER1.getFullyQualifiedName()));
+
+    Task openTask = SdkClients.adminClient().tasks().create(openRequest);
+    Task inProgressTask = SdkClients.adminClient().tasks().create(inProgressRequest);
+    inProgressTask.setStatus(TaskEntityStatus.InProgress);
+    SdkClients.adminClient().tasks().update(inProgressTask.getId().toString(), inProgressTask);
+
+    ListResponse<Task> openTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listAssigned(null, "open", domain.getFullyQualifiedName(), "about,domains");
+    TaskCount assignedCount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(null, null, null, "assigned", domain.getFullyQualifiedName());
+
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(openTask.getId())),
+        "Open assigned tasks should include Open tasks");
+    assertTrue(
+        openTasks.getData().stream().anyMatch(t -> t.getId().equals(inProgressTask.getId())),
+        "Open assigned tasks should include InProgress tasks");
+    assertEquals(2, assignedCount.getOpen(), "Open count should include InProgress tasks");
+    assertEquals(0, assignedCount.getCompleted(), "Completed count should exclude active tasks");
+    assertEquals(2, assignedCount.getTotal(), "Total count should include both active tasks");
+  }
+
+  @Test
   void testCreatedEndpointSupportsStatusFilter(TestNamespace ns) {
     CreateTask openRequest =
         new CreateTask()
@@ -838,22 +919,24 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   @Test
   void testOwnedEndpointReturnsTasksForOwnedEntities(TestNamespace ns) {
     SharedEntities shared = SharedEntities.get();
+    Domain domain = createDomain(ns, "owned-visibility-domain");
 
     Table userOwnedTable =
-        createTableWithDomainAndOwners(
-            ns, shared.DOMAIN.getEntityReference(), List.of(shared.USER1_REF));
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER1_REF));
     Table teamOwnedTable =
         createTableWithDomainAndOwners(
-            ns, shared.DOMAIN.getEntityReference(), List.of(shared.TEAM11.getEntityReference()));
+            ns, domain.getEntityReference(), List.of(shared.TEAM11.getEntityReference()));
     Table otherOwnedTable =
-        createTableWithDomainAndOwners(
-            ns, shared.DOMAIN.getEntityReference(), List.of(shared.USER2_REF));
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER2_REF));
 
     Task userOwnedTask = createTaskAboutTable(ns, "owned-by-user", userOwnedTable);
     Task teamOwnedTask = createTaskAboutTable(ns, "owned-by-team", teamOwnedTable);
     Task otherOwnedTask = createTaskAboutTable(ns, "owned-by-other", otherOwnedTable);
 
-    ListResponse<Task> user1OwnedTasks = SdkClients.user1Client().tasks().listOwned();
+    ListResponse<Task> user1OwnedTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listOwned(null, "open", domain.getFullyQualifiedName(), "domains,about");
 
     assertNotNull(user1OwnedTasks);
     assertTrue(
@@ -1123,7 +1206,12 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
 
   @Test
   void testGetCountReturnsCorrectTotals(TestNamespace ns) {
-    TaskCount initialCount = SdkClients.adminClient().tasks().getCount();
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    TaskCount initialCount =
+        SdkClients.adminClient().tasks().getCountByAboutEntity(table.getFullyQualifiedName());
     int initialTotal = initialCount.getTotal();
     int initialOpen = initialCount.getOpen();
 
@@ -1131,18 +1219,23 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
         new CreateTask()
             .withName(ns.prefix("count-test-1"))
             .withCategory(TaskCategory.Approval)
-            .withType(TaskEntityType.GlossaryApproval);
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
 
     CreateTask request2 =
         new CreateTask()
             .withName(ns.prefix("count-test-2"))
             .withCategory(TaskCategory.MetadataUpdate)
-            .withType(TaskEntityType.DescriptionUpdate);
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withAbout(table.getFullyQualifiedName())
+            .withAboutType("table");
 
     createEntity(request1);
     createEntity(request2);
 
-    TaskCount afterCount = SdkClients.adminClient().tasks().getCount();
+    TaskCount afterCount =
+        SdkClients.adminClient().tasks().getCountByAboutEntity(table.getFullyQualifiedName());
 
     assertTrue(
         afterCount.getTotal() >= initialTotal + 2,
@@ -1421,6 +1514,69 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
         0,
         mismatchedEntityCount.getTotal(),
         "Entity count should exclude tasks when domain filter does not match");
+  }
+
+  @Test
+  void testVisibleEndpointAndAllViewCountReturnVisibleTaskUnion(TestNamespace ns) {
+    SharedEntities shared = SharedEntities.get();
+    Domain domain = createDomain(ns, "visible-view-domain");
+
+    Table ownedOnlyTable =
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER1_REF));
+    Table assignedOnlyTable =
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER2_REF));
+    Table invisibleTable =
+        createTableWithDomainAndOwners(ns, domain.getEntityReference(), List.of(shared.USER2_REF));
+
+    Task ownedOnlyTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "visible-owned-only", ownedOnlyTable)
+                    .withAssignees(List.of(shared.USER2.getFullyQualifiedName())));
+    Task assignedOnlyTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "visible-assigned-only", assignedOnlyTable)
+                    .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+    Task bothVisibleTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "visible-both", ownedOnlyTable)
+                    .withAssignees(List.of(shared.USER1.getFullyQualifiedName())));
+    Task invisibleTask =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                createTaskRequestAboutTable(ns, "visible-hidden", invisibleTable)
+                    .withAssignees(List.of(shared.USER2.getFullyQualifiedName())));
+
+    ListResponse<Task> visibleTasks =
+        SdkClients.user1Client()
+            .tasks()
+            .listVisible(null, "open", domain.getFullyQualifiedName(), "about,assignees,domains");
+    TaskCount visibleCount =
+        SdkClients.user1Client()
+            .tasks()
+            .getCount(null, null, null, "all", domain.getFullyQualifiedName());
+
+    assertTrue(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(ownedOnlyTask.getId())),
+        "Visible tasks should include owned-only tasks");
+    assertTrue(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(assignedOnlyTask.getId())),
+        "Visible tasks should include assigned-only tasks");
+    assertTrue(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(bothVisibleTask.getId())),
+        "Visible tasks should include tasks that are both assigned and owned");
+    assertFalse(
+        visibleTasks.getData().stream().anyMatch(t -> t.getId().equals(invisibleTask.getId())),
+        "Visible tasks should exclude tasks that are neither assigned nor owned");
+    assertEquals(3, visibleTasks.getData().size(), "Visible list should de-duplicate the union");
+    assertEquals(3, visibleCount.getTotal(), "All-view count should match the visible task union");
+    assertEquals(3, visibleCount.getOpen(), "All-view open count should match visible open tasks");
   }
 
   // ==================== Entity Change Application Tests ====================

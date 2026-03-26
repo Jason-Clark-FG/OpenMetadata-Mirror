@@ -240,6 +240,69 @@ public class AnnouncementResourceIT extends BaseEntityIT<Announcement, CreateAnn
   }
 
   @Test
+  void testListAnnouncementsByEntityLink(TestNamespace ns) {
+    long now = System.currentTimeMillis();
+    String entityLink = "<#E::table::" + ns.prefix("service.db.schema.table") + ">";
+    CreateAnnouncement matching =
+        new CreateAnnouncement()
+            .withName(ns.prefix("entity-link-match"))
+            .withDescription("Entity scoped announcement")
+            .withEntityLink(entityLink)
+            .withStartTime(now)
+            .withEndTime(now + 86400000L);
+    CreateAnnouncement nonMatching =
+        new CreateAnnouncement()
+            .withName(ns.prefix("entity-link-other"))
+            .withDescription("Other entity announcement")
+            .withEntityLink("<#E::table::" + ns.prefix("service.db.schema.other") + ">")
+            .withStartTime(now)
+            .withEndTime(now + 86400000L);
+
+    Announcement createdMatching = createEntity(matching);
+    createEntity(nonMatching);
+
+    ListResponse<Announcement> list =
+        listEntities(new ListParams().addQueryParam("entityLink", entityLink).setLimit(100));
+
+    assertEquals(1, list.getData().size());
+    assertEquals(createdMatching.getId(), list.getData().get(0).getId());
+  }
+
+  @Test
+  void testListActiveAnnouncements(TestNamespace ns) {
+    long now = System.currentTimeMillis();
+    String entityLink = "<#E::table::" + ns.prefix("service.db.schema.active") + ">";
+    CreateAnnouncement activeAnnouncement =
+        new CreateAnnouncement()
+            .withName(ns.prefix("active-filter-match"))
+            .withDescription("Active announcement")
+            .withEntityLink(entityLink)
+            .withStartTime(now - 3600000L)
+            .withEndTime(now + 3600000L);
+    CreateAnnouncement inactiveAnnouncement =
+        new CreateAnnouncement()
+            .withName(ns.prefix("active-filter-miss"))
+            .withDescription("Inactive announcement")
+            .withEntityLink(entityLink)
+            .withStartTime(now + 86400000L)
+            .withEndTime(now + 172800000L);
+
+    Announcement createdActive = createEntity(activeAnnouncement);
+    createEntity(inactiveAnnouncement);
+
+    ListResponse<Announcement> list =
+        listEntities(
+            new ListParams()
+                .addQueryParam("active", "true")
+                .addQueryParam("entityLink", entityLink)
+                .setLimit(100));
+
+    assertTrue(list.getData().stream().anyMatch(a -> a.getId().equals(createdActive.getId())));
+    assertTrue(
+        list.getData().stream().noneMatch(a -> a.getName().equals(inactiveAnnouncement.getName())));
+  }
+
+  @Test
   void testGetAnnouncementById(TestNamespace ns) {
     CreateAnnouncement request = createMinimalRequest(ns);
     Announcement created = createEntity(request);

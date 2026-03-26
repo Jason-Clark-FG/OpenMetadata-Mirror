@@ -62,7 +62,6 @@ import {
   TestCaseFailureReasonType,
   TestCaseResolutionStatusTypes,
 } from '../../../../generated/tests/testCaseResolutionStatus';
-import { TagLabel } from '../../../../generated/type/tagLabel';
 import { useAuth } from '../../../../hooks/authHooks';
 import { useApplicationStore } from '../../../../hooks/useApplicationStore';
 import {
@@ -72,6 +71,7 @@ import {
 import Assignees from '../../../../pages/TasksPage/shared/Assignees';
 import DescriptionTaskFromTask from '../../../../pages/TasksPage/shared/DescriptionTaskFromTask';
 import FeedbackApprovalTask from '../../../../pages/TasksPage/shared/FeedbackApprovalTask';
+import TaskPayloadSchemaFields from '../../../../pages/TasksPage/shared/TaskPayloadSchemaFields';
 import TagsTaskFromTask from '../../../../pages/TasksPage/shared/TagsTaskFromTask';
 import {
   Option,
@@ -79,10 +79,12 @@ import {
   TaskActionMode,
 } from '../../../../pages/TasksPage/TasksPage.interface';
 import { postTestCaseIncidentStatus } from '../../../../rest/incidentManagerAPI';
+import { TaskFormSchema } from '../../../../rest/taskFormSchemasAPI';
 import {
   closeTask as closeTaskAPI,
   patchTask,
   resolveTask as resolveTaskAPI,
+  TaskPayload,
   TaskEntityStatus,
   TaskEntityType,
   TaskResolutionType,
@@ -93,6 +95,13 @@ import { getField } from '../../../../utils/formUtils';
 import { checkPermission } from '../../../../utils/PermissionsUtils';
 import { getErrorText } from '../../../../utils/StringsUtils';
 import {
+  applyTaskFormSchemaDefaults,
+  getEditableTaskPayload,
+  getTaskFormHandlerConfig,
+  getResolvedTaskFormSchema,
+  getTaskResolutionNewValue,
+} from '../../../../utils/TaskFormSchemaUtils';
+import {
   fetchOptions,
   generateOptions,
   getNormalizedTaskPayload,
@@ -100,9 +109,6 @@ import {
   getTaskDisplayId,
   GLOSSARY_TASK_ACTION_LIST,
   INCIDENT_TASK_ACTION_LIST,
-  isDescriptionTaskType,
-  isRecognizerFeedbackTask,
-  isTagsTaskType,
   isTaskPendingFurtherApproval,
   isTaskTerminalStatus,
   TASK_ACTION_COMMON_ITEM,
@@ -152,6 +158,7 @@ export const TaskTabNew = ({
 
   const { t } = useTranslation();
   const [form] = Form.useForm();
+  const editablePayload = Form.useWatch('payload', form) as TaskPayload | undefined;
   const { isAdminUser } = useAuth();
   const {
     postFeed,
@@ -161,37 +168,50 @@ export const TaskTabNew = ({
     testCaseResolutionStatus,
     isPostsLoading,
   } = useActivityFeedProvider();
-
-  const isTaskDescription = isDescriptionTaskType(task.type);
-
-  const isTaskTags = isTagsTaskType(task.type);
-  const {
-    currentDescription,
-    currentTags,
-    fieldPath,
-    newDescription,
-    suggestedTags,
-    suggestedValue,
-  } = useMemo(() => getNormalizedTaskPayload(task), [task]);
+  const { fieldPath, suggestedValue } = useMemo(
+    () => getNormalizedTaskPayload(task),
+    [task]
+  );
   const taskDisplayId = useMemo(
     () => getTaskDisplayId(task.taskId),
     [task.taskId]
   );
+  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema>();
+  const taskHandler = useMemo(
+    () => getTaskFormHandlerConfig(task, taskFormSchema?.uiSchema),
+    [task, taskFormSchema?.uiSchema]
+  );
+  const isTaskDescription = taskHandler.type === 'descriptionUpdate';
+  const isTaskTags = taskHandler.type === 'tagUpdate';
+  const isTaskApprovalRequest = taskHandler.type === 'approval';
+  const isTaskRecognizerFeedbackApproval =
+    taskHandler.type === 'feedbackApproval';
+  const isApprovalWorkflowTask =
+    isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
+  const initialTaskPayload = useMemo(
+    () =>
+      applyTaskFormSchemaDefaults(
+        getEditableTaskPayload(task, taskFormSchema?.uiSchema),
+        taskFormSchema?.formSchema
+      ),
+    [task, taskFormSchema]
+  );
 
   const showAddSuggestionButton = useMemo(() => {
-    const taskType = task.type;
-    const parsedSuggestion = [TaskEntityType.DescriptionUpdate].includes(
-      taskType
-    )
-      ? suggestedValue
-      : JSON.parse(suggestedValue || '[]');
+    if (!['tagUpdate', 'descriptionUpdate'].includes(taskHandler.type)) {
+      return false;
+    }
+
+    const parsedSuggestion =
+      taskHandler.type === 'descriptionUpdate'
+        ? suggestedValue
+        : JSON.parse(suggestedValue || '[]');
 
     return (
-      [TaskEntityType.TagUpdate, TaskEntityType.DescriptionUpdate].includes(
-        taskType
-      ) && isEmpty(parsedSuggestion)
+      ['tagUpdate', 'descriptionUpdate'].includes(taskHandler.type) &&
+      isEmpty(parsedSuggestion)
     );
-  }, [task.type, suggestedValue]);
+  }, [taskHandler.type, suggestedValue]);
 
   const noSuggestionTaskMenuOptions = useMemo(() => {
     let label;
@@ -218,16 +238,9 @@ export const TaskTabNew = ({
     ];
   }, [isTaskTags, suggestedValue]);
 
-  const isTaskTestCaseResult = task.type === TaskEntityType.TestCaseResolution;
-
-  const isTaskApprovalRequest = [
-    TaskEntityType.GlossaryApproval,
-    TaskEntityType.RequestApproval,
-  ].includes(task.type);
-
-  const isTaskRecognizerFeedbackApproval = isRecognizerFeedbackTask(task);
-  const isApprovalWorkflowTask =
-    isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
+  const isTaskTestCaseResult =
+    taskHandler.type === 'incident' &&
+    task.type === TaskEntityType.TestCaseResolution;
 
   const latestAction = useMemo(() => {
     const resolutionStatus = last(testCaseResolutionStatus);
@@ -436,12 +449,23 @@ export const TaskTabNew = ({
       status.toLowerCase() === 'approved'
         ? TaskResolutionType.Approved
         : TaskResolutionType.Rejected;
-    const newValue = isApprovalWorkflowTask ? status : suggestedValue;
+    const newValue =
+      isApprovalWorkflowTask && status.toLowerCase() === 'approved'
+        ? taskHandler.approvedValue
+        : isApprovalWorkflowTask
+          ? taskHandler.rejectedValue
+          : suggestedValue;
     updateTaskData({ newValue }, resolutionType);
   };
 
   const onTaskResolve = () => {
-    if (!isApprovalWorkflowTask && isEmpty(suggestedValue)) {
+    const newValue = getTaskResolutionNewValue(
+      task,
+      initialTaskPayload,
+      taskFormSchema?.uiSchema
+    );
+
+    if (!isApprovalWorkflowTask && isEmpty(newValue)) {
       showErrorToast(
         t('message.field-text-is-required', {
           fieldText: isTaskTags
@@ -453,38 +477,15 @@ export const TaskTabNew = ({
       return;
     }
 
-    if (isTaskTags) {
-      const tagsData = {
-        newValue: suggestedValue || '[]',
-      };
-
-      updateTaskData(tagsData);
-    } else {
-      const newValue = isApprovalWorkflowTask ? 'approved' : suggestedValue;
-      const data = { newValue: newValue };
-      updateTaskData(data);
-    }
+    updateTaskData({
+      newValue: isApprovalWorkflowTask ? taskHandler.approvedValue : newValue,
+    });
   };
 
-  const onEditAndSuggest = ({
-    description,
-    updatedTags,
-  }: {
-    description: string;
-    updatedTags: TagLabel[];
-    testCaseFailureReason: TestCaseFailureReasonType;
-    testCaseFailureComment: string;
-  }) => {
-    let data: { newValue?: string } = {};
-    if (isTaskTags) {
-      data = {
-        newValue: JSON.stringify(updatedTags) || '[]',
-      };
-    } else {
-      data = { newValue: description };
-    }
-
-    updateTaskData(data);
+  const onEditAndSuggest = ({ payload }: { payload: TaskPayload }) => {
+    updateTaskData({
+      newValue: getTaskResolutionNewValue(task, payload, taskFormSchema?.uiSchema),
+    });
   };
 
   /**
@@ -527,7 +528,10 @@ export const TaskTabNew = ({
     }
 
     if (isApprovalWorkflowTask) {
-      updateTaskData({ newValue: 'rejected' }, TaskResolutionType.Rejected);
+      updateTaskData(
+        { newValue: taskHandler.rejectedValue },
+        TaskResolutionType.Rejected
+      );
 
       return;
     }
@@ -750,6 +754,8 @@ export const TaskTabNew = ({
     renderCommentButton,
     handleGlossaryTaskMenuClick,
     onTaskDropdownClick,
+    taskHandler.approvedValue,
+    taskHandler.rejectedValue,
   ]);
 
   const testCaseResultFlow = useMemo(() => {
@@ -875,24 +881,10 @@ export const TaskTabNew = ({
     onNoSuggestionTaskDropdownClick,
   ]);
 
-  const initialFormValue = useMemo(() => {
-    if (isTaskDescription) {
-      const description = newDescription ?? currentDescription ?? '';
-
-      return { description };
-    } else {
-      const updatedTags =
-        suggestedTags.length > 0 ? suggestedTags : currentTags;
-
-      return { updatedTags };
-    }
-  }, [
-    currentDescription,
-    currentTags,
-    isTaskDescription,
-    newDescription,
-    suggestedTags,
-  ]);
+  const initialFormValue = useMemo(
+    () => ({ payload: initialTaskPayload }),
+    [initialTaskPayload]
+  );
 
   const handleAssigneeUpdate = async () => {
     setIsAssigneeLoading(true);
@@ -921,6 +913,14 @@ export const TaskTabNew = ({
     assigneesForm.setFieldValue('assignees', initialAssignees);
     setOptions(assigneeOptions);
   }, [initialAssignees, assigneeOptions]);
+
+  useEffect(() => {
+    getResolvedTaskFormSchema(task.type, task.category).then(setTaskFormSchema);
+  }, [task.category, task.type]);
+
+  useEffect(() => {
+    form.setFieldsValue(initialFormValue);
+  }, [form, initialFormValue]);
 
   useEffect(() => {
     setTaskAction(latestAction);
@@ -1335,49 +1335,13 @@ export const TaskTabNew = ({
             initialValues={initialFormValue}
             layout="vertical"
             onFinish={onEditAndSuggest}>
-            {isTaskTags ? (
-              <Form.Item
-                data-testid="tags-label"
-                label={t('label.tag-plural')}
-                name="updatedTags"
-                rules={[
-                  {
-                    required: true,
-                    message: t('message.field-text-is-required', {
-                      fieldText: t('label.tag-plural'),
-                    }),
-                  },
-                ]}
-                trigger="onChange">
-                <TagsTaskFromTask
-                  isTaskActionEdit
-                  hasEditAccess={hasEditAccess}
-                  task={task}
-                  onChange={(value) => form.setFieldValue('updatedTags', value)}
-                />
-              </Form.Item>
-            ) : (
-              <Form.Item
-                data-testid="tags-label"
-                label={t('label.description')}
-                name="description"
-                rules={[
-                  {
-                    required: true,
-                    message: t('message.field-text-is-required', {
-                      fieldText: t('label.description'),
-                    }),
-                  },
-                ]}
-                trigger="onTextChange">
-                <DescriptionTaskFromTask
-                  isTaskActionEdit
-                  hasEditAccess={hasEditAccess}
-                  task={task}
-                  onChange={(value) => form.setFieldValue('description', value)}
-                />
-              </Form.Item>
-            )}
+            <Form.Item hidden name="payload" />
+            <TaskPayloadSchemaFields
+              payload={editablePayload ?? initialTaskPayload}
+              schema={taskFormSchema?.formSchema}
+              uiSchema={taskFormSchema?.uiSchema}
+              onChange={(payload) => form.setFieldValue('payload', payload)}
+            />
           </Form>
         </Modal>
       )}

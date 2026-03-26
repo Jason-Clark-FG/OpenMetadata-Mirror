@@ -12,7 +12,7 @@
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { NOTIFICATION_READ_TIMER } from '../../constants/constants';
-import { ThreadType } from '../../generated/api/feed/createThread';
+import { NotificationTabsKey } from '../../enums/notification.enum';
 import { listMyAssignedTasks } from '../../rest/tasksAPI';
 import NotificationBox from './NotificationBox.component';
 
@@ -45,7 +45,7 @@ const mockShowErrorToast = jest.fn();
 const mockOnMarkTaskNotificationRead = jest.fn();
 
 const mockProps = {
-  activeTab: ThreadType.Task,
+  activeTab: NotificationTabsKey.TASK,
   hasMentionNotification: true,
   hasTaskNotification: true,
   onMarkMentionsNotificationRead: jest.fn(),

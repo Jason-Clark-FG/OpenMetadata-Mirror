@@ -20,12 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ReactComponent as InternalLinkIcon } from '../../../../assets/svg/InternalIcons.svg';
 import { EntityTabs, EntityType } from '../../../../enums/entity.enum';
-import { ThreadType } from '../../../../generated/api/feed/createThread';
 import { CreateTestCaseResolutionStatus } from '../../../../generated/api/tests/createTestCaseResolutionStatus';
-import {
-  Thread,
-  ThreadTaskStatus,
-} from '../../../../generated/entity/feed/thread';
 import { Operation } from '../../../../generated/entity/policies/policy';
 import {
   ChangeDescription,
@@ -43,6 +38,7 @@ import {
   getListTestCaseIncidentByStateId,
   postTestCaseIncidentStatus,
   Task,
+  TestCaseResolutionPayload,
   updateTestCaseIncidentById,
 } from '../../../../rest/incidentManagerAPI';
 import { getNameFromFQN } from '../../../../utils/CommonUtils';
@@ -54,10 +50,7 @@ import { getCommonExtraInfoForVersionDetails } from '../../../../utils/EntityVer
 import { getEntityFQN } from '../../../../utils/FeedUtils';
 import { getPrioritizedEditPermission } from '../../../../utils/PermissionsUtils';
 import { getEntityDetailsPath } from '../../../../utils/RouterUtils';
-import {
-  getTaskDetailPath as getOldTaskDetailPath,
-  getTaskDisplayId,
-} from '../../../../utils/TasksUtils';
+import { getTaskDisplayId } from '../../../../utils/TasksUtils';
 import { getTaskDetailPath as getNewTaskDetailPath } from '../../../../utils/TaskUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../../utils/useRequiredParams';
@@ -76,21 +69,17 @@ const IncidentManagerPageHeader = ({
 }: IncidentManagerPageHeaderProps) => {
   const { t } = useTranslation();
   const { entityRules } = useEntityRules(EntityType.TABLE);
-  const [activeTask, setActiveTask] = useState<Thread>();
   const [incidentTask, setIncidentTask] = useState<Task | null>(null);
   const [testCaseStatusData, setTestCaseStatusData] =
     useState<TestCaseResolutionStatus>();
   const [isLoading, setIsLoading] = useState(true);
   const { testCase: testCaseData, testCasePermission } = useTestCaseStore();
 
-  const { fqn: decodedFqn, dimensionKey } = useRequiredParams<{
+  const { dimensionKey } = useRequiredParams<{
     fqn: string;
     dimensionKey?: string;
   }>();
   const {
-    setActiveThread,
-    entityThread,
-    getFeedData,
     testCaseResolutionStatus,
     updateTestCaseIncidentStatus,
   } = useActivityFeedProvider();
@@ -199,33 +188,16 @@ const IncidentManagerPageHeader = ({
     }
   };
 
-  useEffect(() => {
-    if (decodedFqn) {
-      setIsLoading(true);
-      getFeedData(
-        undefined,
-        undefined,
-        ThreadType.Task,
-        EntityType.TEST_CASE,
-        decodedFqn
-      ).finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
-    }
-  }, [decodedFqn]);
+  const incidentStateId = useMemo(() => {
+    const payload = incidentTask?.payload as TestCaseResolutionPayload | undefined;
 
-  useEffect(() => {
-    const openTask = entityThread.find(
-      (thread) => thread.task?.status === ThreadTaskStatus.Open
-    );
-    setActiveTask(openTask);
-    setActiveThread(openTask);
-  }, [entityThread]);
+    return payload?.testCaseResolutionStatusId;
+  }, [incidentTask]);
 
   useEffect(() => {
     const status = last(testCaseResolutionStatus);
 
-    if (status?.stateId === activeTask?.task?.testCaseResolutionStatusId) {
+    if (status?.stateId === incidentStateId) {
       if (
         status?.testCaseResolutionStatusType ===
         TestCaseResolutionStatusTypes.Resolved
@@ -236,12 +208,17 @@ const IncidentManagerPageHeader = ({
         setTestCaseStatusData(status);
       }
     }
-  }, [testCaseResolutionStatus]);
+  }, [testCaseResolutionStatus, incidentStateId, fetchTaskCount]);
 
   useEffect(() => {
     if (testCaseData?.incidentId) {
-      fetchTestCaseResolution(testCaseData.incidentId);
-      fetchIncidentTask(testCaseData.incidentId);
+      setIsLoading(true);
+      Promise.allSettled([
+        fetchTestCaseResolution(testCaseData.incidentId),
+        fetchIncidentTask(testCaseData.incidentId),
+      ]).finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
   }, [testCaseData]);
 
@@ -297,11 +274,6 @@ const IncidentManagerPageHeader = ({
       ? {
           path: getNewTaskDetailPath(incidentTask),
           label: `#${getTaskDisplayId(incidentTask.taskId)}`,
-        }
-      : activeTask
-      ? {
-          path: getOldTaskDetailPath(activeTask),
-          label: `#${activeTask?.task?.id}`,
         }
       : null;
 
@@ -373,7 +345,6 @@ const IncidentManagerPageHeader = ({
   }, [
     testCaseStatusData,
     isLoading,
-    activeTask,
     incidentTask,
     hasEditStatusPermission,
   ]);

@@ -39,7 +39,6 @@ import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.jdbi.v3.core.transaction.TransactionIsolationLevel;
 import org.openmetadata.schema.configuration.WorkflowSettings;
-import org.openmetadata.schema.entity.feed.Thread;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.WorkflowInstance;
@@ -56,7 +55,6 @@ import org.openmetadata.service.governance.workflows.flowable.sql.SqlMapper;
 import org.openmetadata.service.governance.workflows.flowable.sql.UnlockExecutionSql;
 import org.openmetadata.service.governance.workflows.flowable.sql.UnlockJobSql;
 import org.openmetadata.service.jdbi3.CollectionDAO;
-import org.openmetadata.service.jdbi3.FeedRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.SystemRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
@@ -74,12 +72,6 @@ public class WorkflowHandler {
   private static WorkflowHandler instance;
   @Getter private static volatile boolean initialized = false;
   private final boolean isMigrationContext;
-
-  private enum WorkflowTaskKind {
-    TASK_ENTITY,
-    LEGACY_THREAD,
-    UNKNOWN
-  }
 
   private WorkflowHandler(OpenMetadataApplicationConfig config, boolean isMigrationContext) {
     this.isMigrationContext = isMigrationContext;
@@ -665,6 +657,15 @@ public class WorkflowHandler {
   }
 
   public boolean resolveTask(UUID customTaskId, Map<String, Object> variables) {
+    return resolveTaskInternal(customTaskId, variables, false);
+  }
+
+  public boolean resolveLegacyThreadTask(UUID customTaskId, Map<String, Object> variables) {
+    return resolveTaskInternal(customTaskId, variables, true);
+  }
+
+  private boolean resolveTaskInternal(
+      UUID customTaskId, Map<String, Object> variables, boolean legacyThreadTask) {
     TaskService taskService = processEngine.getTaskService();
     LOG.debug("[WorkflowTask] RESOLVE: customTaskId='{}' variables={}", customTaskId, variables);
     try {
@@ -695,18 +696,10 @@ public class WorkflowHandler {
             LOG.debug(
                 "[WorkflowTask] SUCCESS: Multi-approval task '{}' recorded vote, waiting for more votes",
                 customTaskId);
-            // Update entity to remove the task from the current voter's feed based on backing
-            // entity type (new Task entity or legacy Thread entity).
-            WorkflowTaskKind taskKind = resolveWorkflowTaskKind(customTaskId);
-            if (taskKind == WorkflowTaskKind.TASK_ENTITY) {
-              removeTaskFromVoterFeedForTaskEntity(task, customTaskId, variables);
-            } else if (taskKind == WorkflowTaskKind.LEGACY_THREAD) {
-              removeTaskFromVoterFeed(task, customTaskId, variables);
+            if (legacyThreadTask) {
+              removeTaskFromVoterFeedForLegacyThread(task, customTaskId, variables);
             } else {
-              LOG.warn(
-                  "[WorkflowTask] Could not resolve backing entity kind for customTaskId='{}'. "
-                      + "Skipping voter feed update.",
-                  customTaskId);
+              removeTaskFromVoterFeedForTaskEntity(task, customTaskId, variables);
             }
           }
         } else {
@@ -745,7 +738,7 @@ public class WorkflowHandler {
     }
   }
 
-  private void removeTaskFromVoterFeed(
+  private void removeTaskFromVoterFeedForLegacyThread(
       Task flowableTask, UUID customTaskId, Map<String, Object> variables) {
     try {
       // Extract the current user from variables
@@ -759,10 +752,10 @@ public class WorkflowHandler {
           "[WorkflowTask] Removing task '{}' from feed for user '{}'", customTaskId, currentUser);
 
       // Get the FeedRepository to work with Thread entities
-      FeedRepository feedRepository = Entity.getFeedRepository();
+      org.openmetadata.service.jdbi3.FeedRepository feedRepository = Entity.getFeedRepository();
 
       // Find the Thread entity by the customTaskId
-      Thread taskThread = null;
+      org.openmetadata.schema.entity.feed.Thread taskThread = null;
       try {
         taskThread = feedRepository.get(customTaskId);
       } catch (Exception e) {
@@ -804,7 +797,7 @@ public class WorkflowHandler {
           taskThread.withUpdatedBy(currentUser).withUpdatedAt(System.currentTimeMillis());
 
           // Persist the changes
-          Thread finalTaskThread = taskThread;
+          org.openmetadata.schema.entity.feed.Thread finalTaskThread = taskThread;
           Entity.getJdbi()
               .useHandle(
                   handle -> {
@@ -858,64 +851,6 @@ public class WorkflowHandler {
     }
 
     return null;
-  }
-
-  private WorkflowTaskKind resolveWorkflowTaskKind(UUID customTaskId) {
-    if (isTaskEntity(customTaskId)) {
-      return WorkflowTaskKind.TASK_ENTITY;
-    }
-    if (isLegacyThreadTask(customTaskId)) {
-      return WorkflowTaskKind.LEGACY_THREAD;
-    }
-    return WorkflowTaskKind.UNKNOWN;
-  }
-
-  private boolean isLegacyThreadTask(UUID customTaskId) {
-    try {
-      FeedRepository feedRepository = Entity.getFeedRepository();
-      Thread thread = feedRepository.get(customTaskId);
-      return thread != null && thread.getTask() != null;
-    } catch (Exception e) {
-      LOG.debug("Could not find legacy Thread task with ID '{}': {}", customTaskId, e.getMessage());
-      return false;
-    }
-  }
-
-  /**
-   * Check if a customTaskId refers to a Task entity (new system) or Thread entity (legacy).
-   *
-   * <p>This method checks if there's a Task entity with the given ID. If found, it's a new Task
-   * entity; otherwise, it's assumed to be a legacy Thread entity.
-   *
-   * @param customTaskId The task ID to check
-   * @return true if this is a Task entity, false if it's a Thread entity
-   */
-  public boolean isTaskEntity(UUID customTaskId) {
-    try {
-      TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
-      org.openmetadata.schema.entity.tasks.Task task =
-          taskRepository.find(customTaskId, Include.NON_DELETED);
-      return task != null;
-    } catch (Exception e) {
-      LOG.debug("Could not find Task entity with ID '{}': {}", customTaskId, e.getMessage());
-      return false;
-    }
-  }
-
-  /**
-   * Get the Task entity by customTaskId.
-   *
-   * @param customTaskId The task ID
-   * @return The Task entity, or null if not found
-   */
-  public org.openmetadata.schema.entity.tasks.Task getTaskEntity(UUID customTaskId) {
-    try {
-      TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
-      return taskRepository.find(customTaskId, Include.NON_DELETED);
-    } catch (Exception e) {
-      LOG.debug("Could not find Task entity with ID '{}': {}", customTaskId, e.getMessage());
-      return null;
-    }
   }
 
   /**

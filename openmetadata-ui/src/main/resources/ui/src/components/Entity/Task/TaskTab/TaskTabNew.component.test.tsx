@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { EntityType } from '../../../../enums/entity.enum';
@@ -224,6 +224,17 @@ jest.mock('../../../../hooks/useApplicationStore', () => ({
     },
   })),
 }));
+
+jest.mock('../../../../utils/TaskFormSchemaUtils', () => {
+  const actual = jest.requireActual('../../../../utils/TaskFormSchemaUtils');
+
+  return {
+    ...actual,
+    getResolvedTaskFormSchema: jest.fn().mockImplementation((taskType, taskCategory) =>
+      Promise.resolve(actual.getDefaultTaskFormSchema(taskType, taskCategory))
+    ),
+  };
+});
 
 jest.mock('../../../../context/PermissionProvider/PermissionProvider', () => ({
   usePermissionProvider: jest.fn().mockImplementation(() => ({
@@ -609,6 +620,23 @@ describe('TaskTabNew Component', () => {
     ).toHaveTextContent('label.re-assign');
   });
 
+  it('should resolve task form schema for approval tasks as well', async () => {
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_APPROVAL_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    await waitFor(() => {
+      expect(getResolvedTaskFormSchema).toHaveBeenCalledWith(
+        MOCK_APPROVAL_TASK.type,
+        MOCK_APPROVAL_TASK.category
+      );
+    });
+  });
+
   it('should handle approve action for recognizer feedback', async () => {
     const {
       useApplicationStore,
@@ -805,11 +833,11 @@ describe('TaskTabNew Component', () => {
 
   it('should display the task information for approval tasks with suggestion data', async () => {
     const {
-      isTagsTask,
-      isDescriptionTask,
+      isTagsTaskType,
+      isDescriptionTaskType,
     } = require('../../../../utils/TasksUtils');
-    isTagsTask.mockReturnValue(false);
-    isDescriptionTask.mockReturnValue(false);
+    isTagsTaskType.mockReturnValue(false);
+    isDescriptionTaskType.mockReturnValue(false);
 
     await act(async () => {
       render(<TaskTabNew {...mockProps} task={MOCK_APPROVAL_TASK} />, {

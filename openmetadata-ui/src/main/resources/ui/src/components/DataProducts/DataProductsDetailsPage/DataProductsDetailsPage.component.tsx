@@ -49,7 +49,6 @@ import {
   ChangeDescription,
   DataProduct,
 } from '../../../generated/entity/domains/dataProduct';
-import { Thread } from '../../../generated/entity/feed/thread';
 import { Operation } from '../../../generated/entity/policies/policy';
 import { PageType } from '../../../generated/system/ui/page';
 import { ContractExecutionStatus } from '../../../generated/type/contractExecutionStatus';
@@ -61,7 +60,10 @@ import { FeedCounts } from '../../../interface/feed.interface';
 import { QueryFilterInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
 import { getContractByEntityId } from '../../../rest/contractAPI';
 import { getDataProductPortsView } from '../../../rest/dataProductAPI';
-import { getActiveAnnouncement } from '../../../rest/feedsAPI';
+import {
+  AnnouncementEntity,
+  getActiveAnnouncements,
+} from '../../../rest/announcementsAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import {
   getEntityDeleteMessage,
@@ -160,7 +162,8 @@ const DataProductsDetailsPage = ({
   );
   const [isAnnouncementDrawerOpen, setIsAnnouncementDrawerOpen] =
     useState<boolean>(false);
-  const [activeAnnouncement, setActiveAnnouncement] = useState<Thread>();
+  const [activeAnnouncement, setActiveAnnouncement] =
+    useState<AnnouncementEntity>();
   const [dataContract, setDataContract] = useState<DataContract>();
   const [inputPortsCount, setInputPortsCount] = useState(0);
   const [outputPortsCount, setOutputPortsCount] = useState(0);
@@ -187,7 +190,7 @@ const DataProductsDetailsPage = ({
 
   const fetchActiveAnnouncement = async () => {
     try {
-      const announcements = await getActiveAnnouncement(
+      const announcements = await getActiveAnnouncements(
         getEntityFeedLink(
           EntityType.DATA_PRODUCT,
           dataProduct.fullyQualifiedName ?? ''

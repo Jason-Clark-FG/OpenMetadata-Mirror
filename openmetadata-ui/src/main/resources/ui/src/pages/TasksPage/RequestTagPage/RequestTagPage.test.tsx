@@ -75,6 +75,12 @@ jest.mock(
   '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component',
   () => jest.fn().mockImplementation(() => <div>TitleBreadcrumb.component</div>)
 );
+jest.mock('../shared/TaskPayloadSchemaFields', () =>
+  jest.fn().mockImplementation(() => <div>TagSuggestion.component</div>)
+);
+jest.mock('../../../rest/taskFormSchemasAPI', () => ({
+  resolveTaskFormSchema: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock('../../../rest/tasksAPI', () => ({
   createTask: jest.fn().mockResolvedValue({}),
   TaskCategory: { MetadataUpdate: 'MetadataUpdate' },
@@ -85,9 +91,6 @@ jest.mock(
   '../../../components/ExploreV1/ExploreSearchCard/ExploreSearchCard',
   () =>
     jest.fn().mockImplementation(() => <div>ExploreSearchCard.component</div>)
-);
-jest.mock('../shared/TagSuggestion', () =>
-  jest.fn().mockImplementation(() => <div>TagSuggestion.component</div>)
 );
 jest.mock('../../../hooks/useFqn', () => ({
   useFqn: jest
@@ -150,7 +153,9 @@ describe('RequestTagPage', () => {
       assignees: ['sample_data'],
       payload: {
         fieldPath: 'columns."address.street_name"',
+        currentTags: [],
         tagsToAdd: [],
+        tagsToRemove: [],
         operation: 'Add',
       },
     });

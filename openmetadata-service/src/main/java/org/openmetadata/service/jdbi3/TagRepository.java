@@ -825,7 +825,7 @@ public class TagRepository extends EntityRepository<Tag> {
 
       WorkflowHandler workflowHandler = WorkflowHandler.getInstance();
       boolean workflowSuccess =
-          workflowHandler.resolveTask(
+          workflowHandler.resolveLegacyThreadTask(
               taskId, workflowHandler.transformToNodeVariables(taskId, variables));
 
       if (!workflowSuccess) {

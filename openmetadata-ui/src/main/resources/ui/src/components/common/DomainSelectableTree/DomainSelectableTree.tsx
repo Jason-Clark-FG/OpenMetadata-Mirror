@@ -38,6 +38,7 @@ import { Domain } from '../../../generated/entity/domains/domain';
 import type { EntityReference } from '../../../generated/type/entityReference';
 import { useDomainStore } from '../../../hooks/useDomainStore';
 import {
+  getDomainByName,
   getDomainChildrenPaginated,
   searchDomains,
 } from '../../../rest/domainAPI';
@@ -457,8 +458,21 @@ const DomainSelectablTree: FC<DomainSelectableTreeProps> = ({
           setIsLoading(true);
           const encodedValue = getEncodedFqn(escapeESReservedCharacters(value));
           const results: Domain[] = await searchDomains(encodedValue);
+          let combinedData = [...results];
 
-          const combinedData = [...results];
+          if (combinedData.length === 0) {
+            try {
+              const exactDomain = await getDomainByName(value, {
+                fields: 'parent,childrenCount',
+              });
+
+              if (exactDomain?.fullyQualifiedName) {
+                combinedData = [exactDomain];
+              }
+            } catch {
+              // Keep the empty result set when the exact lookup misses as well.
+            }
+          }
 
           // Ensure initialDomains are included
           initialDomains?.forEach((selectedDomain) => {

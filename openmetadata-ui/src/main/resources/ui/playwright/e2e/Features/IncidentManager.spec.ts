@@ -24,9 +24,10 @@ import {
   getApiContext,
   redirectToHomePage,
 } from '../../utils/common';
-import { addOwner, waitForAllLoadersToDisappear } from '../../utils/entity';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   acknowledgeTask,
+  addAssigneeFromPopoverWidget,
   assignIncident,
   triggerTestSuitePipelineAndWaitForSuccess,
   visitProfilerTab,
@@ -68,6 +69,38 @@ const openIncidentTaskTab = async (page: Page, waitForTaskPanel = false) => {
       timeout: 30_000,
     });
   }
+};
+
+const waitForIncidentTask = async (page: Page, testCaseFqn?: string) => {
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get('/api/v1/tasks', {
+          params: {
+            category: 'Incident',
+            limit: 100,
+            fields: 'about,payload,assignees',
+          },
+        });
+
+        if (!response.ok()) {
+          return false;
+        }
+
+        const body = await response.json();
+
+        return (body.data ?? []).some(
+          (task: { about?: { fullyQualifiedName?: string } }) =>
+            task.about?.fullyQualifiedName === testCaseFqn
+        );
+      },
+      {
+        message: `Wait for incident task for ${testCaseFqn}`,
+        timeout: 60_000,
+        intervals: [1_000, 2_000, 5_000],
+      }
+    )
+    .toBe(true);
 };
 
 const isVisible = async (locator: Locator) =>
@@ -276,6 +309,34 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await user.create(apiContext);
     }
 
+    const taskFormSchemaResponse = await apiContext.get(
+      '/api/v1/taskFormSchemas/name/TestCaseResolution'
+    );
+    const taskFormSchema = await taskFormSchemaResponse.json();
+    const updateTaskFormSchemaResponse = await apiContext.put(
+      '/api/v1/taskFormSchemas',
+      {
+        data: {
+          ...taskFormSchema,
+          formSchema: {
+            ...(taskFormSchema.formSchema ?? {}),
+            required: [],
+          },
+        },
+      }
+    );
+
+    expect(updateTaskFormSchemaResponse.ok()).toBe(true);
+
+    const updatedTaskFormSchemaResponse = await apiContext.get(
+      '/api/v1/taskFormSchemas/name/TestCaseResolution'
+    );
+    const updatedTaskFormSchema = await updatedTaskFormSchemaResponse.json();
+
+    expect(updatedTaskFormSchema.formSchema?.required ?? []).not.toContain(
+      'rootCause'
+    );
+
     for (let i = 0; i < 3; i++) {
       await table1.createTestCase(apiContext, {
         parameterValues: [
@@ -331,6 +392,7 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
   }) => {
     const testCase = table1.testCasesResponseData[0];
     const testCaseName = testCase?.['name'];
+    const testCaseFqn = testCase?.['fullyQualifiedName'];
     let actorPage = ownerPage;
     const assignee = {
       name: user1.data.email.split('@')[0],
@@ -348,19 +410,42 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await redirectToHomePage(actorPage);
       const loggedInUserResponse = await loggedInUserRequest;
       const loggedInUser = await loggedInUserResponse.json();
+      const { apiContext, afterAction } = await getApiContext(adminPage);
 
-      await redirectToHomePage(adminPage);
+      try {
+        await table1.setOwner(apiContext, {
+          id: loggedInUser.id,
+          type: 'user',
+        });
+
+        await expect
+          .poll(
+            async () => {
+              const tableResponse = await apiContext.get(
+                `/api/v1/tables/name/${encodeURIComponent(
+                  table1.entityResponseData.fullyQualifiedName ?? ''
+                )}?fields=owners`
+              );
+              const table = await tableResponse.json();
+
+              return (
+                table.owners?.some(
+                  (owner: { id: string }) => owner.id === loggedInUser.id
+                ) ?? false
+              );
+            },
+            {
+              timeout: 30_000,
+              intervals: [1_000, 2_000, 5_000],
+            }
+          )
+          .toBe(true);
+      } finally {
+        await afterAction();
+      }
 
       await table1.visitEntityPage(adminPage);
       await waitForAllLoadersToDisappear(adminPage);
-
-      await addOwner({
-        page: adminPage,
-        owner: loggedInUser.displayName,
-        type: 'Users',
-        endpoint: EntityTypeEndpoint.Table,
-        dataTestId: 'data-assets-header',
-      });
     });
 
     /**
@@ -380,11 +465,11 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
      * @description Assigns incident to a specific user and confirms state update.
      */
     await test.step('Assign incident to user', async () => {
-      await assignIncident({
+      await waitForIncidentTask(actorPage, testCaseFqn);
+      await openIncidentTaskTab(actorPage, true);
+      await addAssigneeFromPopoverWidget({
         page: actorPage,
-        testCaseName,
         user: assignee,
-        direct: true,
       });
     });
 
@@ -399,16 +484,10 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       };
       actorPage = await browser.newPage();
       await user1.login(actorPage);
-      await sidebarClick(actorPage, SidebarItem.INCIDENT_MANAGER);
-      await actorPage.getByTestId(`test-case-${testCaseName}`).waitFor();
-
-      const testCaseResponse = actorPage.waitForResponse(
-        '/api/v1/dataQuality/testCases/name/*?fields=*'
-      );
-      await actorPage.click(`[data-testid="test-case-${testCaseName}"]`);
-
-      await testCaseResponse;
-      await expect(actorPage.getByTestId('entity-page-header')).toBeVisible();
+      await waitForIncidentTask(actorPage, testCaseFqn);
+      await visitProfilerTab(actorPage, table1);
+      await actorPage.click(`[data-testid="${testCaseName}"] >> text=${testCaseName}`);
+      await waitForAllLoadersToDisappear(actorPage);
       await openIncidentTaskTab(actorPage, true);
       await reassignIncidentTask(actorPage, assignee1);
     });

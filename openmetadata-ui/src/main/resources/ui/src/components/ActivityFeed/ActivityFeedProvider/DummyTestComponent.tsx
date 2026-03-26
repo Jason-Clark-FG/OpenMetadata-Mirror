@@ -22,7 +22,7 @@ import { useActivityFeedProvider } from './ActivityFeedProvider';
 
 export const DummyChildrenComponent = () => {
   const { t } = useTranslation();
-  const { postFeed, getFeedData, deleteFeed, loading } =
+  const { postFeed, getTaskData, deleteFeed, loading } =
     useActivityFeedProvider();
   const handlePostFeed = () => {
     postFeed('New Post Feed added', '123');
@@ -33,10 +33,9 @@ export const DummyChildrenComponent = () => {
   };
 
   useEffect(() => {
-    getFeedData(
+    getTaskData(
       FeedFilter.OWNER_OR_FOLLOWS,
       undefined,
-      ThreadType.Task,
       EntityType.USER,
       'admin',
       'open'
@@ -61,13 +60,12 @@ export const DummyChildrenComponent = () => {
 
 export const DummyChildrenTaskCloseComponent = () => {
   const { t } = useTranslation();
-  const { getFeedData } = useActivityFeedProvider();
+  const { getTaskData } = useActivityFeedProvider();
 
   useEffect(() => {
-    getFeedData(
+    getTaskData(
       FeedFilter.OWNER_OR_FOLLOWS,
       'after-234',
-      ThreadType.Task,
       EntityType.USER,
       'admin',
       'closed'
@@ -89,6 +87,23 @@ export const DummyChildrenEntityComponent = () => {
       EntityType.TABLE,
       'admin',
       'open'
+    );
+  }, []);
+
+  return <p>{t('label.children')}</p>;
+};
+
+export const DummyChildrenMentionsComponent = () => {
+  const { t } = useTranslation();
+  const { getFeedData } = useActivityFeedProvider();
+
+  useEffect(() => {
+    getFeedData(
+      FeedFilter.MENTIONS,
+      undefined,
+      ThreadType.Conversation,
+      EntityType.USER,
+      'admin'
     );
   }, []);
 
@@ -126,6 +141,29 @@ export const DummyActivityFeedComponent = () => {
   return (
     <div data-testid="activity-feed">
       <span data-testid="activity-count">{activityEvents.length}</span>
+    </div>
+  );
+};
+
+export const DummyEntityActivityFeedComponent = () => {
+  const { t } = useTranslation();
+  const { fetchEntityActivity, activityEvents, isActivityLoading } =
+    useActivityFeedProvider();
+
+  useEffect(() => {
+    fetchEntityActivity(EntityType.TABLE, 'service.db.schema.table', {
+      days: 7,
+      limit: 20,
+    });
+  }, []);
+
+  if (isActivityLoading) {
+    return <p data-testid="entity-activity-loading">{t('label.loading')}</p>;
+  }
+
+  return (
+    <div data-testid="entity-activity-feed">
+      <span data-testid="entity-activity-count">{activityEvents.length}</span>
     </div>
   );
 };

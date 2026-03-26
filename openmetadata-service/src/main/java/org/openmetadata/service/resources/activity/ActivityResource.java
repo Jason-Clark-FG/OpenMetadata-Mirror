@@ -22,7 +22,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.ws.rs.Consumes;
@@ -44,6 +43,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.activity.ActivityEvent;
 import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.ReactionType;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
@@ -128,10 +128,12 @@ public class ActivityResource {
 
     if (entityType != null && entityId != null) {
       // Filter by specific entity
-      events = activityStreamRepository.listByEntity(entityType, entityId, afterTimestamp, limit);
+      events =
+          activityStreamRepository.listByEntity(
+              entityType, entityId, domainIds, afterTimestamp, limit);
     } else if (actorId != null) {
       // Filter by actor
-      events = activityStreamRepository.listByActor(actorId, afterTimestamp, limit);
+      events = activityStreamRepository.listByActor(actorId, domainIds, afterTimestamp, limit);
     } else if (!nullOrEmpty(domainIds)) {
       // Filter by domains
       events = activityStreamRepository.listByDomains(domainIds, afterTimestamp, limit);
@@ -164,6 +166,7 @@ public class ActivityResource {
           String entityType,
       @Parameter(description = "Entity ID (UUID)", required = true) @PathParam("entityId")
           UUID entityId,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("30")
           @Min(1)
@@ -178,8 +181,10 @@ public class ActivityResource {
           int limit) {
 
     long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
     List<ActivityEvent> events =
-        activityStreamRepository.listByEntity(entityType, entityId, afterTimestamp, limit);
+        activityStreamRepository.listByEntity(
+            entityType, entityId, domainIds, afterTimestamp, limit);
 
     return new ResultList<>(events, null, null, events.size());
   }
@@ -205,6 +210,7 @@ public class ActivityResource {
           String entityType,
       @Parameter(description = "Entity fully qualified name", required = true) @PathParam("fqn")
           String fqn,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("30")
           @Min(1)
@@ -224,9 +230,11 @@ public class ActivityResource {
     org.openmetadata.schema.EntityInterface entity =
         Entity.getEntityByName(entityType, fqn, "", null);
     UUID entityId = entity.getId();
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
 
     List<ActivityEvent> events =
-        activityStreamRepository.listByEntity(entityType, entityId, afterTimestamp, limit);
+        activityStreamRepository.listByEntity(
+            entityType, entityId, domainIds, afterTimestamp, limit);
 
     return new ResultList<>(events, null, null, events.size());
   }
@@ -248,6 +256,7 @@ public class ActivityResource {
       })
   public ResultList<ActivityEvent> getMyFeed(
       @Context SecurityContext securityContext,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("7")
           @Min(1)
@@ -266,10 +275,11 @@ public class ActivityResource {
     String userName = securityContext.getUserPrincipal().getName();
     EntityReference userRef = Entity.getEntityReferenceByName(Entity.USER, userName, null);
     List<String> teamIds = getTeamIds(userName);
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
 
     List<ActivityEvent> events =
         activityStreamRepository.listByOwners(
-            userRef.getId().toString(), teamIds, afterTimestamp, limit);
+            userRef.getId().toString(), teamIds, domainIds, afterTimestamp, limit);
 
     return new ResultList<>(events, null, null, events.size());
   }
@@ -295,6 +305,7 @@ public class ActivityResource {
       @Context SecurityContext securityContext,
       @Parameter(description = "EntityLink string", required = true) @QueryParam("entityLink")
           String entityLink,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("30")
           @Min(1)
@@ -309,8 +320,9 @@ public class ActivityResource {
           int limit) {
 
     long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
     List<ActivityEvent> events =
-        activityStreamRepository.listByAbout(entityLink, afterTimestamp, limit);
+        activityStreamRepository.listByAbout(entityLink, domainIds, afterTimestamp, limit);
 
     return new ResultList<>(events, null, null, events.size());
   }
@@ -333,6 +345,7 @@ public class ActivityResource {
   public ResultList<ActivityEvent> getUserActivity(
       @Context SecurityContext securityContext,
       @Parameter(description = "User ID", required = true) @PathParam("userId") UUID userId,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("30")
           @Min(1)
@@ -347,8 +360,9 @@ public class ActivityResource {
           int limit) {
 
     long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
     List<ActivityEvent> events =
-        activityStreamRepository.listByActor(userId, afterTimestamp, limit);
+        activityStreamRepository.listByActor(userId, domainIds, afterTimestamp, limit);
 
     return new ResultList<>(events, null, null, events.size());
   }
@@ -370,6 +384,7 @@ public class ActivityResource {
       })
   public int getActivityCount(
       @Context SecurityContext securityContext,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
       @Parameter(description = "Number of days to look back")
           @DefaultValue("7")
           @Min(1)
@@ -378,7 +393,8 @@ public class ActivityResource {
           int days) {
 
     long afterTimestamp = Instant.now().minus(days, ChronoUnit.DAYS).toEpochMilli();
-    return activityStreamRepository.count(afterTimestamp);
+    List<UUID> domainIds = getEffectiveDomainsByFqn(securityContext, domain);
+    return activityStreamRepository.count(domainIds, afterTimestamp);
   }
 
   @PUT
@@ -451,7 +467,8 @@ public class ActivityResource {
                     schema = @Schema(implementation = ActivityEvent.class)))
       })
   public ActivityEvent insertForTesting(
-      @Context SecurityContext securityContext, @Valid ActivityEvent event) {
+      @Context SecurityContext securityContext, ActivityEvent event) {
+    authorizer.authorizeAdmin(securityContext);
     activityStreamRepository.insert(event);
     return event;
   }
@@ -511,6 +528,18 @@ public class ActivityResource {
     }
 
     return requestedDomains;
+  }
+
+  private List<UUID> getEffectiveDomainsByFqn(
+      SecurityContext securityContext, String domainFqn) {
+    if (nullOrEmpty(domainFqn)) {
+      return getEffectiveDomains(securityContext, null);
+    }
+
+    EntityReference domainRef =
+        Entity.getEntityReferenceByName(Entity.DOMAIN, domainFqn, Include.NON_DELETED);
+
+    return getEffectiveDomains(securityContext, domainRef.getId().toString());
   }
 
   /** Schema class for OpenAPI documentation. */

@@ -303,9 +303,11 @@ public class UserApprovalTask implements NodeInterface {
         for (Object candidate : candidates) {
           if (candidate instanceof Map) {
             Map<String, Object> candidateMap = (Map<String, Object>) candidate;
-            String type = (String) candidateMap.get("type");
-            String fqn = (String) candidateMap.get("fullyQualifiedName");
-            if (fqn != null) {
+            Object typeObj = candidateMap.get("type");
+            Object fqnObj = candidateMap.get("fullyQualifiedName");
+            String type = typeObj instanceof String value ? value : null;
+            String fqn = fqnObj instanceof String value ? value : null;
+            if (fqn != null && type != null) {
               if ("user".equals(type)) {
                 users.add(fqn);
               } else if ("team".equals(type)) {

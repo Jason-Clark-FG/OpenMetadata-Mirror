@@ -185,6 +185,36 @@ public class TaskService extends EntityServiceBase<Task> {
     return deserializeListResponse(responseStr);
   }
 
+  public ListResponse<Task> listVisible() throws OpenMetadataException {
+    return listVisible(null, null, null, null);
+  }
+
+  public ListResponse<Task> listVisible(TaskEntityStatus status) throws OpenMetadataException {
+    return listVisible(status, null, null, null);
+  }
+
+  public ListResponse<Task> listVisible(
+      TaskEntityStatus status, String statusGroup, String domain, String fields)
+      throws OpenMetadataException {
+    String path = basePath + "/visible";
+    RequestOptions.Builder optionsBuilder = RequestOptions.builder();
+    if (status != null) {
+      optionsBuilder.queryParam("status", status.value());
+    }
+    if (statusGroup != null) {
+      optionsBuilder.queryParam("statusGroup", statusGroup);
+    }
+    if (domain != null) {
+      optionsBuilder.queryParam("domain", domain);
+    }
+    if (fields != null) {
+      optionsBuilder.queryParam("fields", fields);
+    }
+    String responseStr =
+        httpClient.executeForString(HttpMethod.GET, path, null, optionsBuilder.build());
+    return deserializeListResponse(responseStr);
+  }
+
   // ==================== Comment Methods ====================
 
   /**

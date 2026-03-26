@@ -27,6 +27,7 @@ import org.openmetadata.schema.entity.feed.FormSchema;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
 import org.openmetadata.schema.entity.feed.UiSchema;
 import org.openmetadata.schema.type.EntityHistory;
+import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
 
@@ -58,13 +59,18 @@ public class TaskFormSchemaResourceIT extends BaseEntityIT<TaskFormSchema, TaskF
         .withAdditionalProperty("properties", properties);
   }
 
+  private String uniqueTaskType(String seed) {
+    return "TestType_" + Integer.toUnsignedString(seed.hashCode(), 16);
+  }
+
   @Override
   protected TaskFormSchema createMinimalRequest(TestNamespace ns) {
+    String name = ns.prefix("form-schema");
     return new TaskFormSchema()
         .withId(UUID.randomUUID())
-        .withName(ns.prefix("form-schema"))
+        .withName(name)
         .withDescription("Test form schema")
-        .withTaskType("TestType")
+        .withTaskType(uniqueTaskType(name))
         .withTaskCategory("MetadataUpdate")
         .withFormSchema(buildFormSchema());
   }
@@ -75,7 +81,7 @@ public class TaskFormSchemaResourceIT extends BaseEntityIT<TaskFormSchema, TaskF
         .withId(UUID.randomUUID())
         .withName(name)
         .withDescription("Test form schema")
-        .withTaskType("TestType")
+        .withTaskType(uniqueTaskType(name))
         .withTaskCategory("MetadataUpdate")
         .withFormSchema(buildFormSchema());
   }
@@ -170,14 +176,14 @@ public class TaskFormSchemaResourceIT extends BaseEntityIT<TaskFormSchema, TaskF
             .withId(UUID.randomUUID())
             .withName(ns.prefix("ui-schema"))
             .withDescription("Schema with UI config")
-            .withTaskType("DescriptionSuggestion")
+            .withTaskType(uniqueTaskType(ns.prefix("ui-schema-type")))
             .withTaskCategory("MetadataUpdate")
             .withFormSchema(buildFormSchema())
             .withUiSchema(uiSchema);
 
     TaskFormSchema created = createEntity(request);
     assertNotNull(created.getUiSchema());
-    assertEquals("DescriptionSuggestion", created.getTaskType());
+    assertEquals(request.getTaskType(), created.getTaskType());
   }
 
   @Test
@@ -262,5 +268,43 @@ public class TaskFormSchemaResourceIT extends BaseEntityIT<TaskFormSchema, TaskF
     EntityHistory history = getVersionHistory(created.getId());
     assertNotNull(history);
     assertTrue(history.getVersions().size() >= 2);
+  }
+
+  @Test
+  void testListFormSchemasByTaskCategory(TestNamespace ns) {
+    createEntity(
+        new TaskFormSchema()
+            .withId(UUID.randomUUID())
+            .withName(ns.prefix("approval-schema"))
+            .withTaskType(uniqueTaskType(ns.prefix("approval-schema-type")))
+            .withTaskCategory("Approval")
+            .withFormSchema(buildFormSchema()));
+    createEntity(
+        new TaskFormSchema()
+            .withId(UUID.randomUUID())
+            .withName(ns.prefix("metadata-schema"))
+            .withTaskType(uniqueTaskType(ns.prefix("metadata-schema-type")))
+            .withTaskCategory("MetadataUpdate")
+            .withFormSchema(buildFormSchema()));
+
+    ListResponse<TaskFormSchema> approvalSchemas =
+        listEntities(new ListParams().setLimit(100).addQueryParam("taskCategory", "Approval"));
+
+    assertTrue(
+        approvalSchemas.getData().stream()
+            .allMatch(schema -> "Approval".equals(schema.getTaskCategory())));
+  }
+
+  @Test
+  void testRejectsInvalidFormSchema(TestNamespace ns) {
+    TaskFormSchema request =
+        new TaskFormSchema()
+            .withId(UUID.randomUUID())
+            .withName(ns.prefix("invalid-form-schema"))
+            .withTaskType("CustomTask")
+            .withTaskCategory("Custom")
+            .withFormSchema(new FormSchema().withAdditionalProperty("type", "array"));
+
+    assertThrows(InvalidRequestException.class, () -> createEntity(request));
   }
 }

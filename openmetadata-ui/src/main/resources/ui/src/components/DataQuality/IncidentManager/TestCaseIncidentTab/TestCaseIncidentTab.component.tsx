@@ -19,7 +19,6 @@ import { ReactComponent as CheckIcon } from '../../../../assets/svg/ic-check.svg
 import { ReactComponent as TaskIcon } from '../../../../assets/svg/ic-task-new.svg';
 import { observerOptions } from '../../../../constants/Mydata.constants';
 import { EntityType } from '../../../../enums/entity.enum';
-import { ThreadType } from '../../../../generated/api/feed/createThread';
 import { useElementInView } from '../../../../hooks/useElementInView';
 import { useFqn } from '../../../../hooks/useFqn';
 import { useTestCaseStore } from '../../../../pages/IncidentManager/IncidentManagerDetailPage/useTestCase.store';
@@ -39,7 +38,7 @@ const TestCaseIncidentTab = () => {
   const owners = useMemo(() => testCase?.owners, [testCase]);
 
   const {
-    getFeedData,
+    getTaskData,
     loading,
     entityPaging,
     tasks,
@@ -55,15 +54,14 @@ const TestCaseIncidentTab = () => {
 
   const handleFeedFetchFromFeedList = useCallback(
     (after?: string) => {
-      getFeedData(
+      getTaskData(
         undefined,
         after,
-        ThreadType.Task,
         EntityType.TEST_CASE,
         decodedFqn
       );
     },
-    [decodedFqn, getFeedData]
+    [decodedFqn, getTaskData]
   );
 
   useEffect(() => {

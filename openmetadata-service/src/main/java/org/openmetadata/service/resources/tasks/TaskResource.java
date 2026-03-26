@@ -73,6 +73,7 @@ import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
@@ -98,6 +99,7 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
   static final String FIELDS =
       "assignees,reviewers,watchers,about,domains,comments,createdBy,payload";
   private static final String COUNT_VIEW_ALL = "all";
+  private static final String COUNT_VIEW_VISIBLE = "visible";
   private static final String COUNT_VIEW_ASSIGNED = "assigned";
   private static final String COUNT_VIEW_OWNED = "owned";
   private static final String COUNT_VIEW_CREATED = "created";
@@ -220,7 +222,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Filter by assignee FQN") @QueryParam("assignee") String assignee,
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
       @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
-      @Parameter(description = "Count view: assigned, owned, created, mentioned, entity, or all")
+      @Parameter(
+              description =
+                  "Count view: visible, assigned, owned, created, mentioned, entity, or all")
           @QueryParam("view")
           String view,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
@@ -239,22 +243,18 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
             domain,
             view);
 
-    ListFilter openFilter = copyCountFilter(baseFilter);
-    openFilter.addQueryParam("taskStatusGroup", "open");
-
-    ListFilter closedFilter = copyCountFilter(baseFilter);
-    closedFilter.addQueryParam("taskStatusGroup", "closed");
-
-    int openCount = repository.getDao().listCount(openFilter);
-    int completedCount = repository.getDao().listCount(closedFilter);
-    int totalCount = repository.getDao().listCount(baseFilter);
+    CollectionDAO.TaskDAO.TaskCountSummary countSummary =
+        repository
+            .getDaoCollection()
+            .taskDAO()
+            .getTaskCountSummary(baseFilter.getCondition(), baseFilter.getQueryParams());
 
     TaskCount response =
         new TaskCount()
-            .withOpen(openCount)
-            .withCompleted(completedCount)
-            .withInProgress(0)
-            .withTotal(totalCount);
+            .withOpen(countSummary.getOpen())
+            .withCompleted(countSummary.getCompleted())
+            .withInProgress(countSummary.getInProgress())
+            .withTotal(countSummary.getTotal());
 
     return Response.ok(response).build();
   }
@@ -306,6 +306,58 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
           Include include) {
     ListFilter filter = buildTaskListFilter(include, status, statusGroup, domain);
     filter.addQueryParam("assigneeIds", getCurrentUserAssigneeIds(securityContext));
+
+    return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
+  }
+
+  @GET
+  @Path("/visible")
+  @Operation(
+      operationId = "listMyVisibleTasks",
+      summary = "List tasks visible to the current user",
+      description =
+          "Get tasks visible to the current user. "
+              + "This includes tasks assigned to the user or their teams, "
+              + "and tasks about entities owned by the user or their teams.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "List of visible tasks",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TaskList.class)))
+      })
+  public ResultList<Task> listMyVisibleTasks(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Fields to include in response", schema = @Schema(type = "string"))
+          @QueryParam("fields")
+          String fieldsParam,
+      @Parameter(description = "Filter by task status") @QueryParam("status")
+          TaskEntityStatus status,
+      @Parameter(
+              description =
+                  "Filter by status group: 'open' for open tasks, 'closed' for terminal tasks")
+          @QueryParam("statusGroup")
+          String statusGroup,
+      @Parameter(description = "Filter by domain FQN") @QueryParam("domain") String domain,
+      @Parameter(description = "Limit the number results", schema = @Schema(type = "integer"))
+          @DefaultValue("10")
+          @QueryParam("limit")
+          @Min(0)
+          @Max(1000000)
+          int limitParam,
+      @Parameter(description = "Returns list of tasks before this cursor") @QueryParam("before")
+          String before,
+      @Parameter(description = "Returns list of tasks after this cursor") @QueryParam("after")
+          String after,
+      @Parameter(description = "Include deleted tasks")
+          @QueryParam("include")
+          @DefaultValue("non-deleted")
+          Include include) {
+    ListFilter filter = buildTaskListFilter(include, status, statusGroup, domain);
+    addCurrentUserVisibleFilters(filter, uriInfo, securityContext);
 
     return listInternal(uriInfo, securityContext, fieldsParam, filter, limitParam, before, after);
   }
@@ -761,13 +813,26 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
 
     String normalizedView = view == null ? null : view.trim().toLowerCase(Locale.ROOT);
 
-    if (nullOrEmpty(normalizedView) || COUNT_VIEW_ALL.equals(normalizedView)) {
+    if (nullOrEmpty(normalizedView)) {
       applyLegacyCountFilters(filter, assignee, createdBy, aboutEntity, mentionedUser);
 
       return filter;
     }
 
     switch (normalizedView) {
+      case COUNT_VIEW_ALL, COUNT_VIEW_VISIBLE -> {
+        boolean hasLegacyUserFilter =
+            assignee != null || createdBy != null || mentionedUser != null;
+
+        if (hasLegacyUserFilter) {
+          applyLegacyCountFilters(filter, assignee, createdBy, aboutEntity, mentionedUser);
+        } else {
+          addCurrentUserVisibleFilters(filter, uriInfo, securityContext);
+          if (aboutEntity != null) {
+            filter.addQueryParam("aboutEntity", aboutEntity);
+          }
+        }
+      }
       case COUNT_VIEW_ASSIGNED -> filter.addQueryParam(
           "assigneeIds", getCurrentUserAssigneeIds(securityContext));
       case COUNT_VIEW_OWNED -> filter.addQueryParam(
@@ -809,11 +874,10 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
   }
 
-  private ListFilter copyCountFilter(ListFilter source) {
-    ListFilter copy = new ListFilter(Include.NON_DELETED);
-    source.getQueryParams().forEach(copy::addQueryParam);
-
-    return copy;
+  private void addCurrentUserVisibleFilters(
+      ListFilter filter, UriInfo uriInfo, SecurityContext securityContext) {
+    filter.addQueryParam("visibleAssigneeIds", getCurrentUserAssigneeIds(securityContext));
+    filter.addQueryParam("visibleOwnedByIds", getCurrentUserOwnedIds(uriInfo, securityContext));
   }
 
   private String getCurrentUserAssigneeIds(SecurityContext securityContext) {

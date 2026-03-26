@@ -68,6 +68,7 @@ import {
   listMyAssignedTasks,
   listMyCreatedTasks,
   listMyOwnedTasks,
+  listMyVisibleTasks,
   listTasks,
   Task,
   TaskEntityType,
@@ -200,11 +201,10 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     []
   );
 
-  const getFeedData = useCallback(
+  const getTaskData = useCallback(
     async (
       filterType?: FeedFilter,
       after?: string,
-      type?: ThreadType,
       entityType?: EntityType,
       fqn?: string,
       taskStatusGroup?: TaskStatusGroup,
@@ -213,7 +213,6 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       try {
         setLoading(true);
         const feedFilterType = filterType ?? FeedFilter.ALL;
-        let userId = undefined;
         const domain =
           activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
         const taskFields = 'assignees,createdBy,about,comments,payload';
@@ -221,102 +220,21 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
           entityType === EntityType.USER &&
           Boolean(fqn) &&
           [currentUser?.fullyQualifiedName, currentUser?.name].includes(fqn);
+        let taskResponse;
 
-        if (entityType === EntityType.USER) {
-          userId = user;
-        } else if (feedFilterType !== FeedFilter.ALL) {
-          userId = currentUser?.id;
-        }
-
-        // Use tasksAPI for Task type, feedsAPI for everything else
-        if (type === ThreadType.Task) {
-          let taskResponse;
-
-          if (isCurrentUserEntity) {
-            if (feedFilterType === FeedFilter.ASSIGNED_BY) {
-              taskResponse = await listMyCreatedTasks({
-                statusGroup: taskStatusGroup,
-                after,
-                limit,
-                domain,
-                fields: taskFields,
-              });
-            } else if (feedFilterType === FeedFilter.ASSIGNED_TO) {
-              taskResponse = await listMyAssignedTasks({
-                statusGroup: taskStatusGroup,
-                after,
-                limit,
-                domain,
-                fields: taskFields,
-              });
-            } else if (!after) {
-              const [assignedTasks, ownedTasks] = await Promise.all([
-                listMyAssignedTasks({
-                  statusGroup: taskStatusGroup,
-                  limit,
-                  domain,
-                  fields: taskFields,
-                }),
-                listMyOwnedTasks({
-                  statusGroup: taskStatusGroup,
-                  limit,
-                  domain,
-                  fields: taskFields,
-                }),
-              ]);
-
-              const mergedTasks = [
-                ...assignedTasks.data,
-                ...ownedTasks.data.filter(
-                  (ownedTask) =>
-                    !assignedTasks.data.some(
-                      (assignedTask) => assignedTask.id === ownedTask.id
-                    )
-                ),
-              ];
-
-              taskResponse = {
-                data: mergedTasks,
-                paging: assignedTasks.paging,
-              };
-            } else {
-              taskResponse = await listMyAssignedTasks({
-                statusGroup: taskStatusGroup,
-                after,
-                limit,
-                domain,
-                fields: taskFields,
-              });
-            }
-          } else if (entityType === EntityType.USER) {
-            const assigneeFqn =
-              fqn || currentUser?.fullyQualifiedName || currentUser?.name;
-            taskResponse = await listTasks({
-              statusGroup: taskStatusGroup,
-              assignee:
-                feedFilterType === FeedFilter.ASSIGNED_BY
-                  ? undefined
-                  : assigneeFqn,
-              createdBy:
-                feedFilterType === FeedFilter.ASSIGNED_BY
-                  ? assigneeFqn
-                  : undefined,
-              aboutEntity: undefined,
-              after,
-              limit,
-              domain,
-              fields: taskFields,
-            });
-          } else if (entityType && fqn) {
-            taskResponse = await listTasks({
-              statusGroup: taskStatusGroup,
-              aboutEntity: fqn,
-              after,
-              limit,
-              domain,
-              fields: taskFields,
-            });
-          } else if (feedFilterType === FeedFilter.ASSIGNED_BY) {
+        if (feedFilterType === FeedFilter.MENTIONS) {
+          const userFqn = currentUser?.fullyQualifiedName ?? currentUser?.name;
+          taskResponse = await listTasks({
+            mentionedUser: userFqn,
+            aboutEntity:
+              entityType !== EntityType.USER && fqn ? fqn : undefined,
+            after,
+            limit,
+            domain,
+            fields: taskFields,
+          });
+        } else if (isCurrentUserEntity) {
+          if (feedFilterType === FeedFilter.ASSIGNED_BY) {
             taskResponse = await listMyCreatedTasks({
               statusGroup: taskStatusGroup,
               after,
@@ -332,38 +250,8 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
               domain,
               fields: taskFields,
             });
-          } else if (!after) {
-            const [assignedTasks, ownedTasks] = await Promise.all([
-              listMyAssignedTasks({
-                statusGroup: taskStatusGroup,
-                limit,
-                domain,
-                fields: taskFields,
-              }),
-              listMyOwnedTasks({
-                statusGroup: taskStatusGroup,
-                limit,
-                domain,
-                fields: taskFields,
-              }),
-            ]);
-
-            const mergedTasks = [
-              ...assignedTasks.data,
-              ...ownedTasks.data.filter(
-                (ownedTask) =>
-                  !assignedTasks.data.some(
-                    (assignedTask) => assignedTask.id === ownedTask.id
-                  )
-              ),
-            ];
-
-            taskResponse = {
-              data: mergedTasks,
-              paging: assignedTasks.paging,
-            };
           } else {
-            taskResponse = await listMyAssignedTasks({
+            taskResponse = await listMyVisibleTasks({
               statusGroup: taskStatusGroup,
               after,
               limit,
@@ -371,49 +259,107 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
               fields: taskFields,
             });
           }
-
-          // Sort tasks by createdAt descending (newest first)
-          const sortedTasks = orderBy(
-            taskResponse.data,
-            ['createdAt'],
-            ['desc']
-          );
-
-          setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
-          setEntityPaging(taskResponse.paging);
-        } else if (feedFilterType === FeedFilter.MENTIONS) {
-          // For mentions, fetch tasks where user was mentioned in comments
-          const userFqn = currentUser?.fullyQualifiedName ?? currentUser?.name;
-          const { data: taskData, paging: taskPaging } = await listTasks({
-            mentionedUser: userFqn,
-            aboutEntity:
-              entityType !== EntityType.USER && fqn ? fqn : undefined,
+        } else if (entityType === EntityType.USER) {
+          const assigneeFqn =
+            fqn || currentUser?.fullyQualifiedName || currentUser?.name;
+          taskResponse = await listTasks({
+            statusGroup: taskStatusGroup,
+            assignee:
+              feedFilterType === FeedFilter.ASSIGNED_BY ? undefined : assigneeFqn,
+            createdBy:
+              feedFilterType === FeedFilter.ASSIGNED_BY ? assigneeFqn : undefined,
             after,
             limit,
             domain,
             fields: taskFields,
           });
-
-          // Sort tasks by createdAt descending (newest first)
-          const sortedTasks = orderBy(taskData, ['createdAt'], ['desc']);
-
-          setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
-          setEntityPaging(taskPaging);
-        } else {
-          const { data, paging } = await getAllFeeds(
-            entityType !== EntityType.USER && fqn
-              ? getEntityFeedLink(entityType, fqn)
-              : undefined,
+        } else if (entityType && fqn) {
+          taskResponse = await listTasks({
+            statusGroup: taskStatusGroup,
+            aboutEntity: fqn,
             after,
-            type,
-            feedFilterType,
-            undefined,
-            userId,
-            limit
-          );
-          setEntityThread((prev) => (after ? [...prev, ...data] : [...data]));
-          setEntityPaging(paging);
+            limit,
+            domain,
+            fields: taskFields,
+          });
+        } else if (feedFilterType === FeedFilter.ASSIGNED_BY) {
+          taskResponse = await listMyCreatedTasks({
+            statusGroup: taskStatusGroup,
+            after,
+            limit,
+            domain,
+            fields: taskFields,
+          });
+        } else if (feedFilterType === FeedFilter.ASSIGNED_TO) {
+          taskResponse = await listMyAssignedTasks({
+            statusGroup: taskStatusGroup,
+            after,
+            limit,
+            domain,
+            fields: taskFields,
+          });
+        } else {
+          taskResponse = await listMyVisibleTasks({
+            statusGroup: taskStatusGroup,
+            after,
+            limit,
+            domain,
+            fields: taskFields,
+          });
         }
+
+        const sortedTasks = orderBy(taskResponse.data, ['createdAt'], ['desc']);
+
+        setTasks((prev) => (after ? [...prev, ...sortedTasks] : sortedTasks));
+        setEntityPaging(taskResponse.paging);
+      } catch (err) {
+        showErrorToast(
+          err as AxiosError,
+          t('server.entity-fetch-error', {
+            entity: t('label.task-plural'),
+          })
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentUser, activeDomain]
+  );
+
+  const getFeedData = useCallback(
+    async (
+      filterType?: FeedFilter,
+      after?: string,
+      type?: ThreadType,
+      entityType?: EntityType,
+      fqn?: string,
+      taskStatusGroup?: TaskStatusGroup,
+      limit?: number
+    ) => {
+      try {
+        setLoading(true);
+        const feedFilterType = filterType ?? FeedFilter.ALL;
+        let userId = undefined;
+
+        if (entityType === EntityType.USER) {
+          userId = user;
+        } else if (feedFilterType !== FeedFilter.ALL) {
+          userId = currentUser?.id;
+        }
+
+        const { data, paging } = await getAllFeeds(
+          entityType !== EntityType.USER && fqn
+            ? getEntityFeedLink(entityType, fqn)
+            : undefined,
+          after,
+          type,
+          feedFilterType,
+          undefined,
+          userId,
+          limit
+        );
+        setEntityThread((prev) => (after ? [...prev, ...data] : [...data]));
+        setEntityPaging(paging);
       } catch (err) {
         showErrorToast(
           err as AxiosError,
@@ -425,7 +371,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setLoading(false);
       }
     },
-    [currentUser, user, activeDomain]
+    [currentUser, user, getTaskData]
   );
 
   // Here value is the post message and id can be thread id or post id.
@@ -804,7 +750,9 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     async (params?: { days?: number; limit?: number }) => {
       setIsActivityLoading(true);
       try {
-        const { data } = await getMyActivityFeed(params);
+        const domain =
+          activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
+        const { data } = await getMyActivityFeed({ ...params, domain });
         setActivityEvents(data);
       } catch (err) {
         showErrorToast(err as AxiosError);
@@ -812,7 +760,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setIsActivityLoading(false);
       }
     },
-    []
+    [activeDomain]
   );
 
   const fetchEntityActivityHandler = useCallback(
@@ -823,7 +771,12 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     ) => {
       setIsActivityLoading(true);
       try {
-        const { data } = await getEntityActivityByFqn(entityType, fqn, params);
+        const domain =
+          activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
+        const { data } = await getEntityActivityByFqn(entityType, fqn, {
+          ...params,
+          domain,
+        });
         setActivityEvents(data);
       } catch (err) {
         showErrorToast(err as AxiosError);
@@ -831,14 +784,16 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setIsActivityLoading(false);
       }
     },
-    []
+    [activeDomain]
   );
 
   const fetchUserActivityHandler = useCallback(
     async (userId: string, params?: { days?: number; limit?: number }) => {
       setIsActivityLoading(true);
       try {
-        const { data } = await getUserActivity(userId, params);
+        const domain =
+          activeDomain !== DEFAULT_DOMAIN_VALUE ? activeDomain : undefined;
+        const { data } = await getUserActivity(userId, { ...params, domain });
         setActivityEvents(data);
       } catch (err) {
         showErrorToast(err as AxiosError);
@@ -846,7 +801,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
         setIsActivityLoading(false);
       }
     },
-    []
+    [activeDomain]
   );
 
   const activityFeedContextValues = useMemo(() => {
@@ -867,6 +822,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
       updateFeed,
       updateReactions,
       getFeedData,
+      getTaskData,
       showDrawer,
       showTaskDrawer,
       showActivityDrawer,
@@ -909,6 +865,7 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
     updateFeed,
     updateReactions,
     getFeedData,
+    getTaskData,
     showDrawer,
     showTaskDrawer,
     showActivityDrawer,

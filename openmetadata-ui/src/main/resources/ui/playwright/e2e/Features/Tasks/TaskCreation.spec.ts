@@ -81,9 +81,7 @@ test.describe('Task Creation - Request Description', () => {
     await requestDescBtn.click();
 
     // Wait for task form page to load (navigates to a separate page, not a modal)
-    await page.waitForSelector('[data-testid="form-container"]', {
-      state: 'visible',
-    });
+    await expect(page.getByTestId('form-container')).toBeVisible();
 
     // Verify title contains description request info
     const titleField = page.locator('#title');
@@ -107,9 +105,6 @@ test.describe('Task Creation - Request Description', () => {
     await submitBtn.click();
     await taskResponse;
 
-    // Should navigate back to entity page with activity feed
-    await page.waitForLoadState('networkidle');
-
     // Verify task appears in activity feed
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     await expect(taskCard).toBeVisible({ timeout: 10000 });
@@ -122,7 +117,6 @@ test.describe('Task Creation - Request Description', () => {
     const columnsTab = page.getByRole('tab', { name: /schema/i });
     if (await columnsTab.isVisible()) {
       await columnsTab.click();
-      await page.waitForLoadState('networkidle');
     }
 
     // Find column row and click request description within that row
@@ -141,9 +135,7 @@ test.describe('Task Creation - Request Description', () => {
       await columnRequestDesc.click();
 
       // Wait for task form page to load
-      await page.waitForSelector('[data-testid="form-container"]', {
-        state: 'visible',
-      });
+      await expect(page.getByTestId('form-container')).toBeVisible();
 
       // Verify this is a column-level task by checking the about field references a column
       const titleField = page.locator('#title');
@@ -156,7 +148,9 @@ test.describe('Task Creation - Request Description', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await page.waitForLoadState('networkidle');
+      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+        timeout: 10000,
+      });
     }
   });
 
@@ -170,9 +164,7 @@ test.describe('Task Creation - Request Description', () => {
     await requestDescBtn.click();
 
     // Wait for task form page to load
-    await page.waitForSelector('[data-testid="form-container"]', {
-      state: 'visible',
-    });
+    await expect(page.getByTestId('form-container')).toBeVisible();
 
     // Assignee field - search and select user
     const assigneeInput = page.locator(
@@ -181,16 +173,11 @@ test.describe('Task Creation - Request Description', () => {
     await assigneeInput.click();
 
     // Search for user
-    const userSearchResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/search/query') &&
-        response.url().includes('user_search_index')
-    );
-    await assigneeInput.fill(ownerUser.responseData.name);
-    await userSearchResponse;
+    await assigneeInput.pressSequentially(ownerUser.responseData.name);
 
     // Click on user in dropdown
     const userOption = page.getByTestId(ownerUser.responseData.name);
+    await expect(userOption).toBeVisible();
     await userOption.click();
 
     // Submit
@@ -201,7 +188,9 @@ test.describe('Task Creation - Request Description', () => {
     await submitBtn.click();
     await taskResponse;
 
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('should prevent task creation without assignee', async ({ page }) => {
@@ -211,9 +200,7 @@ test.describe('Task Creation - Request Description', () => {
     await requestDescBtn.click();
 
     // Wait for task form page to load
-    await page.waitForSelector('[data-testid="form-container"]', {
-      state: 'visible',
-    });
+    await expect(page.getByTestId('form-container')).toBeVisible();
 
     // Try to submit without assignee
     const submitBtn = page.getByTestId('submit-btn');
@@ -274,9 +261,7 @@ test.describe('Task Creation - Request Tags', () => {
       await requestTagsBtn.click();
 
       // Wait for task form page to load
-      await page.waitForSelector('[data-testid="form-container"]', {
-        state: 'visible',
-      });
+      await expect(page.getByTestId('form-container')).toBeVisible();
 
       // Verify title contains tag info
       const titleField = page.locator('#title');
@@ -289,7 +274,9 @@ test.describe('Task Creation - Request Tags', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await page.waitForLoadState('networkidle');
+      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+        timeout: 10000,
+      });
     }
   });
 });
@@ -345,9 +332,7 @@ test.describe('Task Creation - Suggest Description', () => {
       await requestDescBtn.click();
 
       // Wait for task form page to load
-      await page.waitForSelector('[data-testid="form-container"]', {
-        state: 'visible',
-      });
+      await expect(page.getByTestId('form-container')).toBeVisible();
 
       // Enter suggested description in the rich text editor
       const descriptionEditor = page.locator('.toastui-editor-contents');
@@ -361,8 +346,6 @@ test.describe('Task Creation - Suggest Description', () => {
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await submitBtn.click();
       await taskResponse;
-
-      await page.waitForLoadState('networkidle');
 
       // Verify task appears in activity feed
       const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -422,9 +405,7 @@ test.describe('Task Creation - Suggest Tags', () => {
       await requestTagsBtn.click();
 
       // Wait for task form page to load
-      await page.waitForSelector('[data-testid="form-container"]', {
-        state: 'visible',
-      });
+      await expect(page.getByTestId('form-container')).toBeVisible();
 
       // Add suggested tags using the tag selector
       const tagsInput = page.locator(
@@ -434,19 +415,12 @@ test.describe('Task Creation - Suggest Tags', () => {
         await tagsInput.click();
 
         // Type tag name
-        const tagSearchResponse = page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/search/query') &&
-            response.url().includes('tag_search_index')
-        );
-        await tagsInput.fill('PII');
-        await tagSearchResponse;
+        await tagsInput.pressSequentially('PII');
 
         // Select from dropdown
         const tagOption = page.getByTestId('tag-PII.Sensitive').first();
-        if (await tagOption.isVisible()) {
-          await tagOption.click();
-        }
+        await expect(tagOption).toBeVisible();
+        await tagOption.click();
 
         // Close the dropdown by pressing Escape
         await page.keyboard.press('Escape');
@@ -458,7 +432,9 @@ test.describe('Task Creation - Suggest Tags', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await page.waitForLoadState('networkidle');
+      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+        timeout: 10000,
+      });
     }
   });
 });

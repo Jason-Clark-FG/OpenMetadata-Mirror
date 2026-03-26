@@ -27,16 +27,15 @@ import {
 import { EntityTabs } from '../../enums/entity.enum';
 import { FeedFilter } from '../../enums/mydata.enum';
 import { NotificationTabsKey } from '../../enums/notification.enum';
-import { ThreadType } from '../../generated/api/feed/createThread';
 import { Post, Thread } from '../../generated/entity/feed/thread';
-import {
-  Task as TaskEntity,
-  TaskStatus as TaskEntityStatus,
-} from '../../generated/entity/tasks/task';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useDomainStore } from '../../hooks/useDomainStore';
 import { getFeedsWithFilter } from '../../rest/feedsAPI';
-import { listMyAssignedTasks } from '../../rest/tasksAPI';
+import {
+  listMyAssignedTasks,
+  Task as TaskEntity,
+  TaskEntityStatus,
+} from '../../rest/tasksAPI';
 import { getEntityFQN, getEntityType } from '../../utils/FeedUtils';
 import { getUserPath } from '../../utils/RouterUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
@@ -45,12 +44,24 @@ import './notification-box.less';
 import { NotificationBoxProp } from './NotificationBox.interface';
 import { tabsInfo } from './NotificationBox.utils';
 import NotificationFeedCard from './NotificationFeedCard.component';
+import { MentionNotification } from './NotificationFeedCard.interface';
 
-type NotificationItem = Thread | TaskEntity;
+type NotificationItem = MentionNotification | TaskEntity;
 
 const isTaskNotification = (
   notification: NotificationItem
 ): notification is TaskEntity => 'taskId' in notification;
+
+const toMentionNotification = (thread: Thread): MentionNotification => ({
+  id: thread.id,
+  about: thread.about,
+  createdBy: thread.createdBy,
+  entityRef: thread.entityRef,
+  message: thread.message,
+  posts: thread.posts,
+  reactions: thread.reactions,
+  threadTs: thread.threadTs,
+});
 
 const NotificationBox = ({
   activeTab,
@@ -81,7 +92,6 @@ const NotificationBox = ({
             createdBy={feed.createdBy?.name ?? ''}
             entityFQN={feed.about?.fullyQualifiedName ?? ''}
             entityType={feed.about?.type ?? ''}
-            feedType={ThreadType.Task}
             key={`${feed.createdBy?.name ?? ''} ${feed.id}`}
             taskEntity={feed}
             timestamp={feed.createdAt}
@@ -102,11 +112,9 @@ const NotificationBox = ({
 
       let actualUser = mainFeed.from;
       let actualTimestamp = mainFeed.postTs;
-      let feedType = feed.type || ThreadType.Conversation;
-      const isConversationFeed = feed.type === ThreadType.Conversation;
 
       if (
-        activeTab === ThreadType.Conversation &&
+        activeTab === NotificationTabsKey.CONVERSATION &&
         feed.posts &&
         feed.posts.length > 0
       ) {
@@ -120,7 +128,6 @@ const NotificationBox = ({
         if (mentionPost?.postTs !== undefined) {
           actualUser = mentionPost.from;
           actualTimestamp = mentionPost.postTs;
-          feedType = ThreadType.Conversation;
         }
       }
 
@@ -129,10 +136,8 @@ const NotificationBox = ({
           createdBy={actualUser}
           entityFQN={entityFQN as string}
           entityType={entityType as string}
-          feedType={feedType}
-          isConversationFeed={isConversationFeed}
           key={`${actualUser} ${mainFeed.id}`}
-          task={feed}
+          mentionNotification={toMentionNotification(feed)}
           timestamp={actualTimestamp}
         />
       );

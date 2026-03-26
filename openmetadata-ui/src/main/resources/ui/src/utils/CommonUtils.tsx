@@ -512,7 +512,11 @@ export const getFeedCounts = async (
     // Fetch activity events, task counts in parallel
     // Activity events from new activity API replaces conversation count
     const [activityRes, taskCounts] = await Promise.all([
-      getEntityActivityByFqn(entityType, entityFQN, { days: 30, limit: 100 }),
+      getEntityActivityByFqn(entityType, entityFQN, {
+        days: 30,
+        limit: 100,
+        domain,
+      }),
       getTaskCounts({ aboutEntity: entityFQN, domain }),
     ]);
 

@@ -168,30 +168,6 @@ export const updateTask = (
   return APIClient.put(`/feed/tasks/${taskId}/${operation}`, taskDetail);
 };
 
-export const getActiveAnnouncement = async (entityLink?: string) => {
-  const params: {
-    type: ThreadType;
-    activeAnnouncement: boolean;
-    entityLink?: string;
-  } = {
-    type: ThreadType.Announcement,
-    activeAnnouncement: true,
-  };
-
-  if (entityLink) {
-    params.entityLink = entityLink;
-  }
-
-  const response = await APIClient.get<{ data: Thread[]; paging: Paging }>(
-    '/feed',
-    {
-      params,
-    }
-  );
-
-  return response.data;
-};
-
 export const deleteThread = async (threadId: string) => {
   const response = await APIClient.delete<Thread>(`/feed/${threadId}`);
 
@@ -223,7 +199,7 @@ export const getActivityEvents = async (params?: ListActivityParams) => {
 export const getEntityActivityById = async (
   entityType: string,
   entityId: string,
-  params?: { days?: number; limit?: number }
+  params?: { days?: number; limit?: number; domain?: string }
 ) => {
   const response = await APIClient.get<{
     data: ActivityEvent[];
@@ -236,7 +212,7 @@ export const getEntityActivityById = async (
 export const getEntityActivityByFqn = async (
   entityType: string,
   fqn: string,
-  params?: { days?: number; limit?: number }
+  params?: { days?: number; limit?: number; domain?: string }
 ) => {
   const response = await APIClient.get<{
     data: ActivityEvent[];
@@ -248,7 +224,7 @@ export const getEntityActivityByFqn = async (
 
 export const getUserActivity = async (
   userId: string,
-  params?: { days?: number; limit?: number }
+  params?: { days?: number; limit?: number; domain?: string }
 ) => {
   const response = await APIClient.get<{
     data: ActivityEvent[];
@@ -261,6 +237,7 @@ export const getUserActivity = async (
 export const getMyActivityFeed = async (params?: {
   days?: number;
   limit?: number;
+  domain?: string;
 }) => {
   const response = await APIClient.get<{
     data: ActivityEvent[];
@@ -272,7 +249,7 @@ export const getMyActivityFeed = async (params?: {
 
 export const getActivityByEntityLink = async (
   entityLink: string,
-  params?: { days?: number; limit?: number }
+  params?: { days?: number; limit?: number; domain?: string }
 ) => {
   const response = await APIClient.get<{
     data: ActivityEvent[];
@@ -282,7 +259,7 @@ export const getActivityByEntityLink = async (
   return response.data;
 };
 
-export const getActivityCount = async (params?: { days?: number }) => {
+export const getActivityCount = async (params?: { days?: number; domain?: string }) => {
   const response = await APIClient.get<number>(`${ACTIVITY_BASE_URL}/count`, {
     params,
   });
