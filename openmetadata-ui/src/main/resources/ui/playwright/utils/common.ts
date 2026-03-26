@@ -118,7 +118,7 @@ export const createNewPage = async (browser: Browser) => {
 
 export const getDefaultAdminAPIContext = async (browser: Browser) => {
   const context = await browser.newContext({
-    storageState: 'playwright/.auth/user.json',
+    storageState: 'playwright/.auth/admin.json',
   });
 
   const page = await context.newPage();

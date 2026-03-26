@@ -703,23 +703,7 @@ export const getLineageCSVData = async (page: Page) => {
 export const verifyExportLineageCSV = async (
   page: Page,
   currentEntity: EntityClass,
-  entities: readonly [
-    TableClass,
-    ContainerClass,
-    TopicClass,
-    DashboardClass,
-    MlModelClass,
-    PipelineClass,
-    StoredProcedureClass,
-    SearchIndexClass,
-    DashboardDataModelClass,
-    ApiEndpointClass,
-    MetricClass,
-    DirectoryClass,
-    FileClass,
-    SpreadsheetClass,
-    WorksheetClass
-  ],
+  entities: EntityClass[],
   pipeline: PipelineClass
 ) => {
   const parsedData = await getLineageCSVData(page);

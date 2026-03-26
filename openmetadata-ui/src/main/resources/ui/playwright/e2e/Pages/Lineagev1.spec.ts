@@ -1,10 +1,11 @@
-import { expect } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import { get, startCase } from 'lodash';
 import { ApiEndpointClass } from '../../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../../support/entity/ContainerClass';
 import { DashboardClass } from '../../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../../support/entity/DashboardDataModelClass';
 import { DirectoryClass } from '../../support/entity/DirectoryClass';
+import { EntityClass } from '../../support/entity/EntityClass';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { FileClass } from '../../support/entity/FileClass';
 import { MetricClass } from '../../support/entity/MetricClass';
@@ -16,14 +17,17 @@ import { StoredProcedureClass } from '../../support/entity/StoredProcedureClass'
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
 import { WorksheetClass } from '../../support/entity/WorksheetClass';
+import { performAdminLogin } from '../../utils/admin';
 import {
   getApiContext,
   getDefaultAdminAPIContext,
+  getEntityTypeSearchIndexMapping,
   redirectToHomePage,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   applyPipelineFromModal,
+  clickEdgeBetweenNodes,
   clickLineageNode,
   connectEdgeBetweenNodes,
   connectEdgeBetweenNodesViaAPI,
@@ -39,25 +43,43 @@ import {
 } from '../../utils/lineage';
 import { test } from '../fixtures/pages';
 
-test.describe('Lineage Creation', () => {
-  const allEntities = {
-    table: TableClass,
-    container: ContainerClass,
-    topic: TopicClass,
-    dashboard: DashboardClass,
-    mlmodel: MlModelClass,
-    pipeline: PipelineClass,
-    storedProcedure: StoredProcedureClass,
-    searchIndex: SearchIndexClass,
-    dataModel: DashboardDataModelClass,
-    apiEndpoint: ApiEndpointClass,
-    metric: MetricClass,
-    directory: DirectoryClass,
-    file: FileClass,
-    spreadsheet: SpreadsheetClass,
-    worksheet: WorksheetClass,
-  };
+// Contains list of entity supported
+const allEntities = {
+  table: TableClass,
+  container: ContainerClass,
+  topic: TopicClass,
+  dashboard: DashboardClass,
+  mlmodel: MlModelClass,
+  pipeline: PipelineClass,
+  storedProcedure: StoredProcedureClass,
+  searchIndex: SearchIndexClass,
+  dataModel: DashboardDataModelClass,
+  apiEndpoint: ApiEndpointClass,
+  metric: MetricClass,
+  directory: DirectoryClass,
+  file: FileClass,
+  spreadsheet: SpreadsheetClass,
+  worksheet: WorksheetClass,
+};
 
+type EntityClassUnion =
+  | TableClass
+  | ContainerClass
+  | TopicClass
+  | DashboardClass
+  | MlModelClass
+  | PipelineClass
+  | StoredProcedureClass
+  | SearchIndexClass
+  | DashboardDataModelClass
+  | ApiEndpointClass
+  | MetricClass
+  | DirectoryClass
+  | FileClass
+  | SpreadsheetClass
+  | WorksheetClass;
+
+test.describe('Lineage Creation', () => {
   Object.entries(allEntities).forEach(([key, EntityClass]) => {
     const lineageEntity = new EntityClass();
 
@@ -199,15 +221,213 @@ test.describe('Lineage Creation', () => {
 test.describe('Lineage Edit mode', () => {});
 
 test.describe('Lineage Filters', () => {
-  const table = new TableClass();
-  const topic = new TopicClass();
+  const entities = Object.values(allEntities).map(
+    (EntityClass) => new EntityClass()
+  );
+
+  test.beforeAll(async ({ browser }) => {
+    const { apiContext } = await getDefaultAdminAPIContext(browser);
+
+    await Promise.all(entities.map((entity) => entity.create(apiContext)));
+
+    const [mainEntity, ...restEntity] = entities;
+
+    for (const entity of restEntity) {
+      await connectEdgeBetweenNodesViaAPI(
+        apiContext,
+        {
+          id: mainEntity.entityResponseData.id,
+          type: getEntityTypeSearchIndexMapping(mainEntity.type),
+        },
+        {
+          id: entity.entityResponseData.id,
+          type: getEntityTypeSearchIndexMapping(entity.type),
+        }
+      );
+    }
+  });
 
   test.beforeEach(async ({ page }) => {
-    await table.visitEntityPage(page);
+    await entities[0].visitEntityPage(page);
     await visitLineageTab(page);
   });
 
-  test('Verify filter panel toggle', async ({ page }) => {
+  const filterConfigs = [
+    {
+      filterName: 'Domains',
+      filterTestId: 'Domains',
+      setupMetadata: async (
+        apiContext: APIRequestContext,
+        entitiesToPatch: EntityClass[]
+      ) => {
+        for (const entity of entitiesToPatch) {
+          await entity.patch({
+            apiContext,
+            patchData: [
+              {
+                op: 'add',
+                value: {
+                  type: 'domain',
+                  id: EntityDataClass.domain1.responseData.id,
+                },
+                path: '/domains/0',
+              },
+            ],
+          });
+        }
+      },
+      filterValue: EntityDataClass.domain1.responseData.displayName,
+    },
+    {
+      filterName: 'Owners',
+      filterTestId: 'Owners',
+      setupMetadata: async (
+        apiContext: APIRequestContext,
+        entitiesToPatch: EntityClass[]
+      ) => {
+        for (const entity of entitiesToPatch) {
+          await entity.patch({
+            apiContext,
+            patchData: [
+              {
+                op: 'add',
+                value: {
+                  type: 'user',
+                  id: EntityDataClass.user1.responseData.id,
+                },
+                path: '/owners/0',
+              },
+            ],
+          });
+        }
+      },
+      filterValue: EntityDataClass.user1.responseData.displayName,
+    },
+    {
+      filterName: 'Tag',
+      filterTestId: 'Tag',
+      setupMetadata: async (
+        apiContext: APIRequestContext,
+        entitiesToPatch: EntityClass[]
+      ) => {
+        for (const entity of entitiesToPatch) {
+          await entity.patch({
+            apiContext,
+            patchData: [
+              {
+                op: 'add',
+                value: [
+                  {
+                    tagFQN:
+                      EntityDataClass.tag1.responseData.fullyQualifiedName,
+                    source: 'Classification',
+                    labelType: 'Manual',
+                    state: 'Confirmed',
+                  },
+                ],
+                path: '/tags',
+              },
+            ],
+          });
+        }
+      },
+      filterValue: EntityDataClass.tag1.responseData.displayName,
+    },
+    {
+      filterName: 'Tier',
+      filterTestId: 'Tier',
+      setupMetadata: async (
+        apiContext: APIRequestContext,
+        entitiesToPatch: EntityClass[]
+      ) => {
+        for (const entity of entitiesToPatch) {
+          await entity.patch({
+            apiContext,
+            patchData: [
+              {
+                op: 'add',
+                value: [
+                  {
+                    tagFQN:
+                      EntityDataClass.tierTag1.responseData.fullyQualifiedName,
+                    source: 'Classification',
+                    labelType: 'Manual',
+                    state: 'Confirmed',
+                  },
+                ],
+                path: '/tags',
+              },
+            ],
+          });
+        }
+      },
+      filterValue: EntityDataClass.tierTag1.responseData.displayName,
+    },
+  ];
+
+  filterConfigs.forEach(
+    ({ filterName, filterTestId, setupMetadata, filterValue }) => {
+      test(`Verify lineage ${filterName} filter with partial metadata assignment`, async ({
+        page,
+      }) => {
+        const { apiContext, afterAction } = await getApiContext(page);
+
+        const [_mainEntity, ...restEntity] = entities;
+
+        const entitiesToShow: EntityClassUnion[] = [];
+        const entitiesToHide: EntityClassUnion[] = [];
+
+        restEntity.forEach((entity, index) => {
+          if (index % 2 === 0) {
+            entitiesToShow.push(entity);
+          } else {
+            entitiesToHide.push(entity);
+          }
+        });
+
+        await setupMetadata(apiContext, entitiesToShow);
+
+        await page.reload();
+        await waitForAllLoadersToDisappear(page);
+
+        await page.getByTestId('filters-button').click();
+        await page.getByTestId(`search-dropdown-${filterTestId}`).click();
+
+        await page.getByTitle(filterValue).click();
+
+        const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+        await page.getByRole('button', { name: 'Update' }).click();
+        await lineageRes;
+
+        await expect(
+          page.getByTestId(`search-dropdown-${filterTestId}`)
+        ).toHaveText(filterValue);
+
+        await rearrangeNodes(page);
+        await performZoomOut(page);
+
+        for (const entity of entitiesToShow) {
+          await expect(
+            page.getByTestId(
+              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            )
+          ).toBeVisible();
+        }
+
+        for (const entity of entitiesToHide) {
+          await expect(
+            page.getByTestId(
+              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            )
+          ).not.toBeVisible();
+        }
+
+        await afterAction();
+      });
+    }
+  );
+
+  test('Verify lineage filter panel toggle', async ({ page }) => {
     const filterBtn = page.locator('[aria-label="Filters"]');
 
     await filterBtn.click();
@@ -219,67 +439,85 @@ test.describe('Lineage Filters', () => {
     await expect(page.locator('.m-t-sm')).not.toBeVisible();
   });
 
-  test('Verify owner filter selection', async ({ page }) => {
-    await page.locator('[aria-label="Filters"]').click();
-
-    await page.getByTestId('search-dropdown-Owners').click();
-
-    await expect(
-      page.getByTitle(EntityDataClass.user1.responseData.name)
-    ).toBeVisible();
-
-    await page.getByTitle(EntityDataClass.user1.responseData.name).click();
-
-    const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
-    await page.getByRole('button', { name: 'Update' }).click();
-    await lineageRes;
-
-    const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
-    await expect(page.getByTestId(`lineage-node-${topicFqn}`)).toBeVisible();
-  });
-
-  test('Verify service filter selection', async ({ page }) => {
+  test('Verify lineage service filter selection', async ({ page }) => {
     await page.locator('[aria-label="Filters"]').click();
     await page.getByTestId('search-dropdown-Service').click();
 
-    const serviceName = get(table, 'entityResponseData.service.name', '');
+    const entityToTest = entities[3];
+    const entitiesToHide = entities.filter((_, index) => index !== 3);
+
+    const serviceName = get(
+      entityToTest,
+      'entityResponseData.service.name',
+      ''
+    );
     await page.getByTitle(serviceName).click();
 
     const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
     await page.getByRole('button', { name: 'Update' }).click();
     await lineageRes;
 
+    await expect(page.getByTestId('search-dropdown-Service')).toHaveText(
+      serviceName
+    );
+
+    await expect(
+      page.getByTestId(
+        `lineage-node-${entityToTest.entityResponseData.fullyQualifiedName}`
+      )
+    ).toBeVisible();
+
+    for (const entity of entitiesToHide) {
+      await expect(
+        page.getByTestId(
+          `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+        )
+      ).not.toBeVisible();
+    }
+
     await waitForAllLoadersToDisappear(page);
   });
 
-  test('Verify clear all filters', async ({ page }) => {
+  test('Verify lineage clear all filters', async ({ page }) => {
     await page.locator('[aria-label="Filters"]').click();
 
     await page.getByTestId('search-dropdown-Owners').click();
     await page.getByTitle(EntityDataClass.user1.responseData.name).click();
+
+    const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+    await page.getByRole('button', { name: 'Update' }).click();
+    await lineageRes;
+
+    await expect(page.getByTestId('search-dropdown-Owners')).toHaveText(
+      EntityDataClass.user1.responseData.name
+    );
+
+    await page.getByTestId('search-dropdown-Owners').click();
 
     const clearAllBtn = page.getByRole('button', { name: /clear/i });
     await expect(clearAllBtn).toBeEnabled();
 
     await clearAllBtn.click();
 
-    await page.getByTestId('search-dropdown-Owners').click();
-    await page.waitForTimeout(300);
+    await expect(page.getByTestId('search-dropdown-Owners')).not.toHaveText(
+      EntityDataClass.user1.responseData.name
+    );
   });
 
   test('Verify LineageSearchSelect in lineage mode', async ({ page }) => {
     const searchSelect = page.getByTestId('search-entity-select');
     await expect(searchSelect).toBeVisible();
+    const topicEntity = entities[1];
 
     await searchSelect.click();
     await page.fill(
       '[data-testid="search-entity-select"] .ant-select-selection-search-input',
-      topic.entity.name
+      topicEntity.entity.name
     );
 
     await page.waitForRequest('/api/v1/search/query?*');
 
-    const topicFqn = get(topic, 'entityResponseData.fullyQualifiedName');
+    const topicFqn = get(topicEntity, 'entityResponseData.fullyQualifiedName');
     await page.getByTestId(`node-suggestion-${topicFqn}`).click();
 
     const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
