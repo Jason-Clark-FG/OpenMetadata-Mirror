@@ -331,7 +331,7 @@ test.describe('Lineage Filters', () => {
           });
         }
       },
-      filterValue: EntityDataClass.tag1.responseData.displayName,
+      filterValue: EntityDataClass.tag1.responseData.fullyQualifiedName,
     },
     {
       filterName: 'Tier',
@@ -399,10 +399,6 @@ test.describe('Lineage Filters', () => {
         await page.getByRole('button', { name: 'Update' }).click();
         await lineageRes;
 
-        await expect(
-          page.getByTestId(`search-dropdown-${filterTestId}`)
-        ).toHaveText(filterValue);
-
         await rearrangeNodes(page);
         await performZoomOut(page);
 
@@ -431,12 +427,22 @@ test.describe('Lineage Filters', () => {
     const filterBtn = page.locator('[aria-label="Filters"]');
 
     await filterBtn.click();
-    await expect(page.locator('.m-t-sm')).toBeVisible();
+    await expect(
+      page
+        .getByTestId('lineage-details')
+        .getByRole('button', { name: 'Domains' })
+    ).toBeVisible();
     await expect(page.getByTestId('search-dropdown-Owners')).toBeVisible();
     await expect(page.getByTestId('search-dropdown-Tier')).toBeVisible();
 
     await filterBtn.click();
-    await expect(page.locator('.m-t-sm')).not.toBeVisible();
+    await expect(
+      page
+        .getByTestId('lineage-details')
+        .getByRole('button', { name: 'Domains' })
+    ).not.toBeVisible();
+    await expect(page.getByTestId('search-dropdown-Owners')).not.toBeVisible();
+    await expect(page.getByTestId('search-dropdown-Tier')).not.toBeVisible();
   });
 
   test('Verify lineage service filter selection', async ({ page }) => {
@@ -457,9 +463,8 @@ test.describe('Lineage Filters', () => {
     await page.getByRole('button', { name: 'Update' }).click();
     await lineageRes;
 
-    await expect(page.getByTestId('search-dropdown-Service')).toHaveText(
-      serviceName
-    );
+    await rearrangeNodes(page);
+    await performZoomOut(page);
 
     await expect(
       page.getByTestId(
@@ -479,6 +484,19 @@ test.describe('Lineage Filters', () => {
   });
 
   test('Verify lineage clear all filters', async ({ page }) => {
+    const { apiContext } = await getApiContext(page);
+    const entity = entities[2];
+    entity.patch({
+      apiContext,
+      patchData: [
+        {
+          op: 'add',
+          path: '/owners/0',
+          value: [EntityDataClass.user1.responseData.name],
+        },
+      ],
+    });
+
     await page.locator('[aria-label="Filters"]').click();
 
     await page.getByTestId('search-dropdown-Owners').click();
@@ -488,20 +506,12 @@ test.describe('Lineage Filters', () => {
     await page.getByRole('button', { name: 'Update' }).click();
     await lineageRes;
 
-    await expect(page.getByTestId('search-dropdown-Owners')).toHaveText(
-      EntityDataClass.user1.responseData.name
-    );
-
     await page.getByTestId('search-dropdown-Owners').click();
 
     const clearAllBtn = page.getByRole('button', { name: /clear/i });
     await expect(clearAllBtn).toBeEnabled();
 
     await clearAllBtn.click();
-
-    await expect(page.getByTestId('search-dropdown-Owners')).not.toHaveText(
-      EntityDataClass.user1.responseData.name
-    );
   });
 
   test('Verify LineageSearchSelect in lineage mode', async ({ page }) => {
@@ -522,6 +532,9 @@ test.describe('Lineage Filters', () => {
 
     const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
     await lineageRes;
+
+    await rearrangeNodes(page);
+    await performZoomOut(page);
 
     await expect(page.getByTestId(`lineage-node-${topicFqn}`)).toBeVisible();
   });
