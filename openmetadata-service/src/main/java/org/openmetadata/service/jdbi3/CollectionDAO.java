@@ -9938,11 +9938,11 @@ public interface CollectionDAO {
 
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO mcp_execution_entity(json) VALUES (:json) AS new_data ON DUPLICATE KEY UPDATE json = new_data.json",
+            "INSERT INTO <table>(json) VALUES (:json) AS new_data ON DUPLICATE KEY UPDATE json = new_data.json",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO mcp_execution_entity(json) VALUES (:json::jsonb) ON CONFLICT (id) DO UPDATE SET json = EXCLUDED.json",
+            "INSERT INTO <table>(json) VALUES (:json::jsonb) ON CONFLICT (id) DO UPDATE SET json = EXCLUDED.json",
         connectionType = POSTGRES)
     void insertWithoutExtension(
         @Define("table") String table,
@@ -9952,11 +9952,11 @@ public interface CollectionDAO {
 
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO mcp_execution_entity(json) VALUES (:json) AS new_data ON DUPLICATE KEY UPDATE json = new_data.json",
+            "INSERT INTO <table>(json) VALUES (:json) AS new_data ON DUPLICATE KEY UPDATE json = new_data.json",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
         value =
-            "INSERT INTO mcp_execution_entity(json) VALUES (:json::jsonb) ON CONFLICT (id) DO UPDATE SET json = EXCLUDED.json",
+            "INSERT INTO <table>(json) VALUES (:json::jsonb) ON CONFLICT (id) DO UPDATE SET json = EXCLUDED.json",
         connectionType = POSTGRES)
     void insert(
         @Define("table") String table,
@@ -9966,24 +9966,32 @@ public interface CollectionDAO {
         @Bind("json") String json);
 
     @ConnectionAwareSqlUpdate(
-        value =
-            "DELETE FROM mcp_execution_entity WHERE serverId = :serverId AND timestamp = :timestamp",
+        value = "DELETE FROM <table> WHERE serverId = :serverId AND timestamp = :timestamp",
         connectionType = MYSQL)
     @ConnectionAwareSqlUpdate(
-        value =
-            "DELETE FROM mcp_execution_entity WHERE serverId = :serverId AND timestamp = :timestamp",
+        value = "DELETE FROM <table> WHERE serverId = :serverId AND timestamp = :timestamp",
         connectionType = POSTGRES)
     void deleteAtTimestamp(
+        @Define("table") String table,
         @Bind("serverId") String serverId,
         @Bind("extension") String extension,
         @Bind("timestamp") Long timestamp);
 
     @SqlQuery(
-        "SELECT json FROM mcp_execution_entity WHERE serverId = :serverId ORDER BY timestamp DESC LIMIT :limit")
-    List<String> listByServerId(@Bind("serverId") String serverId, @Bind("limit") int limit);
+        "SELECT json FROM <table> WHERE serverId = :serverId ORDER BY timestamp DESC LIMIT :limit")
+    List<String> listByServerId(
+        @Define("table") String table, @Bind("serverId") String serverId, @Bind("limit") int limit);
 
-    @SqlQuery("SELECT count(*) FROM mcp_execution_entity <cond>")
-    int listCount(@Define("cond") String condition);
+    @SqlQuery("SELECT count(*) FROM <table> <cond>")
+    int listCount(@Define("table") String table, @Define("cond") String condition);
+
+    @ConnectionAwareSqlUpdate(
+        value = "DELETE FROM <table> WHERE serverId = :serverId",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value = "DELETE FROM <table> WHERE serverId = :serverId",
+        connectionType = POSTGRES)
+    void deleteByServerId(@Define("table") String table, @Bind("serverId") String serverId);
   }
 
   interface LLMServiceDAO extends EntityDAO<org.openmetadata.schema.entity.services.LLMService> {

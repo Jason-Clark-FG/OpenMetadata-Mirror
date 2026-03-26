@@ -480,7 +480,7 @@ public class McpServiceResource
   @PATCH
   @Path("/name/{fqn}")
   @Operation(
-      operationId = "patchMcpService",
+      operationId = "patchMcpServiceByFQN",
       summary = "Update an MCP service using name.",
       description = "Update an existing MCP service using JsonPatch.",
       externalDocs =

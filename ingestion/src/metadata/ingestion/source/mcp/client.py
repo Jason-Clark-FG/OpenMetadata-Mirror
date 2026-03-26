@@ -82,6 +82,7 @@ class StdioTransport:
         self._responses: Dict[int, Dict] = {}
         self._response_events: Dict[int, threading.Event] = {}
         self._reader_thread: Optional[threading.Thread] = None
+        self._stderr_thread: Optional[threading.Thread] = None
         self._running = False
 
     def _get_next_id(self) -> int:

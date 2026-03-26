@@ -13,6 +13,7 @@
 
 package org.openmetadata.service.jdbi3;
 
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.ai.McpServer;
 import org.openmetadata.schema.type.change.ChangeSource;
@@ -62,6 +63,14 @@ public class McpServerRepository extends EntityRepository<McpServer> {
   public void storeRelationships(McpServer mcpServer) {
     // Store relationship to AI Applications that use this server
     // Relationships are stored as part of the JSON entity
+  }
+
+  @Override
+  protected void deleteChildren(UUID id, boolean hardDelete, String updatedBy) {
+    super.deleteChildren(id, hardDelete, updatedBy);
+    McpExecutionRepository executionRepo =
+        (McpExecutionRepository) Entity.getEntityTimeSeriesRepository(Entity.MCP_EXECUTION);
+    executionRepo.deleteByServerId(id);
   }
 
   @Override

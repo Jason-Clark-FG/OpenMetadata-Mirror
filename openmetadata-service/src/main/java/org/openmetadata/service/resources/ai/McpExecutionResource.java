@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -100,7 +101,9 @@ public class McpExecutionResource
               schema = @Schema(type = "number"))
           @QueryParam("endTs")
           Long endTs,
-      @Parameter(description = "Limit the number of executions returned") @QueryParam("limit")
+      @Parameter(description = "Limit the number of executions returned")
+          @DefaultValue("10")
+          @QueryParam("limit")
           int limitParam) {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.VIEW_ALL);

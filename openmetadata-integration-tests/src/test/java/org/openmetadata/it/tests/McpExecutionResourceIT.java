@@ -497,17 +497,13 @@ public class McpExecutionResourceIT {
   }
 
   private void deleteExecutionByTimestamp(UUID serverId, Long timestamp) throws Exception {
-    try {
-      SdkClients.adminClient()
-          .getHttpClient()
-          .executeForString(
-              HttpMethod.DELETE,
-              "/v1/mcpExecutions/" + serverId + "/" + timestamp,
-              null,
-              RequestOptions.builder().build());
-    } catch (Exception e) {
-      // Ignore exceptions for deletion
-    }
+    SdkClients.adminClient()
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.DELETE,
+            "/v1/mcpExecutions/" + serverId + "/" + timestamp,
+            null,
+            RequestOptions.builder().build());
   }
 
   private void deleteExecutionById(String id, boolean hardDelete) throws Exception {

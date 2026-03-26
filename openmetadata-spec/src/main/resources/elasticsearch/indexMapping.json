@@ -541,7 +541,7 @@
       "all",
       "service"
     ],
-    "childAliases": []
+    "childAliases": ["mcpServer"]
   },
   "aiAgent": {
     "indexName": "ai_agent_search_index",
@@ -578,6 +578,7 @@
     "indexMappingFile": "/elasticsearch/%s/mcp_server_index_mapping.json",
     "alias": "mcpServer",
     "parentAliases": [
+      "mcpService",
       "all"
     ],
     "childAliases": [

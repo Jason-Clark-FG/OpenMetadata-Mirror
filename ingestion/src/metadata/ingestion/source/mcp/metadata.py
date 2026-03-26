@@ -18,6 +18,7 @@ for AI governance in OpenMetadata.
 import re
 import traceback
 from typing import Any, Dict, Iterable, List, Optional
+from uuid import uuid4
 
 from metadata.generated.schema.api.ai.createMcpServer import CreateMcpServerRequest
 from metadata.generated.schema.entity.ai.mcpServer import (
@@ -337,6 +338,8 @@ class McpSource(Source):
         sanitized = re.sub(r"[^a-zA-Z0-9_-]", "_", name)
         sanitized = re.sub(r"_+", "_", sanitized)
         sanitized = sanitized.strip("_")
+        if not sanitized:
+            sanitized = f"mcp_server_{uuid4().hex[:8]}"
         return sanitized[:256] if len(sanitized) > 256 else sanitized
 
     def _convert_tools(self, tools: List[Dict[str, Any]]) -> List[McpTool]:

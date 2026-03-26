@@ -49,4 +49,9 @@ public class McpExecutionRepository extends EntityTimeSeriesRepository<McpExecut
   public void deleteExecutionData(java.util.UUID serverId, Long timestamp) {
     timeSeriesDao.deleteAtTimestamp(serverId.toString(), null, timestamp);
   }
+
+  public void deleteByServerId(java.util.UUID serverId) {
+    ((CollectionDAO.McpExecutionDAO) timeSeriesDao)
+        .deleteByServerId(timeSeriesDao.getTimeSeriesTableName(), serverId.toString());
+  }
 }
