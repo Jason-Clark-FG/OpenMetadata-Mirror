@@ -24,6 +24,77 @@ import { settingClick } from '../../utils/sidebar';
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
+/**
+ * Installs the Search Indexing Application from the marketplace.
+ * Shared by the "Install application" step and the self-healing guard
+ * that recovers from a previous retry leaving the app uninstalled.
+ */
+const installSearchIndexApplication = async (page: Page) => {
+  const getMarketPlaceResponse = page.waitForResponse(
+    '/api/v1/apps/marketplace?limit=15'
+  );
+  await page.click('[data-testid="add-application"]');
+
+  const response = await getMarketPlaceResponse;
+
+  expect(response.status()).toBe(200);
+
+  // Paginate through marketplace pages until the card is found.
+  let cardFound = await page
+    .locator('[data-testid="search-indexing-application-card"]')
+    .isVisible();
+
+  while (!cardFound) {
+    const nextButton = page.locator('[data-testid="next"]');
+    const isNextButtonDisabled = await nextButton.isDisabled();
+
+    if (isNextButtonDisabled) {
+      throw new Error(
+        'search-indexing-application-card not found in marketplace and next button is disabled'
+      );
+    }
+
+    const nextPageResponse = page.waitForResponse('/api/v1/apps/marketplace*');
+    await nextButton.click();
+    await nextPageResponse;
+
+    cardFound = await page
+      .locator('[data-testid="search-indexing-application-card"]')
+      .isVisible();
+  }
+
+  await page.click(
+    '[data-testid="search-indexing-application-card"] [data-testid="config-btn"]'
+  );
+  await page.click('[data-testid="install-application"]');
+  await page.click('[data-testid="save-button"]');
+  await page.click('[data-testid="submit-btn"]');
+  await page.getByTestId('schedular-card-container').waitFor();
+  await page
+    .getByTestId('schedular-card-container')
+    .getByText('On Demand')
+    .click();
+
+  await expect(page.locator('[data-testid="cron-type"]')).not.toBeVisible();
+
+  const installApplicationResponse = page.waitForResponse('api/v1/apps');
+  const getApplications = page.waitForRequest(
+    (request) =>
+      request.url().includes('/api/v1/apps?limit') &&
+      request.method() === 'GET'
+  );
+  await page.click('[data-testid="deploy-button"]');
+  await installApplicationResponse;
+
+  await toastNotification(page, 'Application installed successfully');
+
+  await getApplications;
+
+  await expect(
+    page.getByTestId('search-indexing-application-card')
+  ).toBeVisible();
+};
+
 const verifyLastExecutionStatus = async (page: Page) => {
   const { apiContext } = await getApiContext(page);
 
@@ -78,6 +149,16 @@ test.describe('Search Index Application', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await test.step('Visit Application page', async () => {
       await redirectToHomePage(page);
       await settingClick(page, GlobalSettingOptions.APPLICATIONS);
+
+      // Self-heal: if a previous retry left the app uninstalled, reinstall it before proceeding.
+      const isInstalled = await page
+        .locator('[data-testid="search-indexing-application-card"]')
+        .isVisible();
+
+      if (!isInstalled) {
+        await installSearchIndexApplication(page);
+        await settingClick(page, GlobalSettingOptions.APPLICATIONS);
+      }
     });
 
     await test.step('Verify last execution run', async () => {
@@ -190,74 +271,7 @@ test.describe('Search Index Application', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     });
 
     await test.step('Install application', async () => {
-      // Verify response status code
-      const getMarketPlaceResponse = page.waitForResponse(
-        '/api/v1/apps/marketplace?limit=15'
-      );
-      await page.click('[data-testid="add-application"]');
-
-      const response = await getMarketPlaceResponse;
-
-      expect(response.status()).toBe(200);
-
-      // Check if search-indexing-application-card is visible, if not paginate through pages
-      let cardFound = await page
-        .locator('[data-testid="search-indexing-application-card"]')
-        .isVisible();
-
-      while (!cardFound) {
-        const nextButton = page.locator('[data-testid="next"]');
-        const isNextButtonDisabled = await nextButton.isDisabled();
-
-        if (isNextButtonDisabled) {
-          throw new Error(
-            'search-indexing-application-card not found in marketplace and next button is disabled'
-          );
-        }
-
-        // Click next page and wait for response
-        const nextPageResponse = page.waitForResponse(
-          '/api/v1/apps/marketplace*'
-        );
-        await nextButton.click();
-        await nextPageResponse;
-
-        // Check if card is now visible
-        cardFound = await page
-          .locator('[data-testid="search-indexing-application-card"]')
-          .isVisible();
-      }
-
-      await page.click(
-        '[data-testid="search-indexing-application-card"] [data-testid="config-btn"]'
-      );
-      await page.click('[data-testid="install-application"]');
-      await page.click('[data-testid="save-button"]');
-      await page.click('[data-testid="submit-btn"]');
-      await page.getByTestId('schedular-card-container').waitFor();
-      await page
-        .getByTestId('schedular-card-container')
-        .getByText('On Demand')
-        .click();
-
-      await expect(page.locator('[data-testid="cron-type"]')).not.toBeVisible();
-
-      const installApplicationResponse = page.waitForResponse('api/v1/apps');
-      const getApplications = page.waitForRequest(
-        (request) =>
-          request.url().includes('/api/v1/apps?limit') &&
-          request.method() === 'GET'
-      );
-      await page.click('[data-testid="deploy-button"]');
-      await installApplicationResponse;
-
-      await toastNotification(page, 'Application installed successfully');
-
-      await getApplications;
-
-      await expect(
-        page.getByTestId('search-indexing-application-card')
-      ).toBeVisible();
+      await installSearchIndexApplication(page);
     });
 
     if (process.env.PLAYWRIGHT_IS_OSS) {
