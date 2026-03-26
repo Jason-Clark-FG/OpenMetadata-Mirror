@@ -68,7 +68,7 @@ const SignInPage = () => {
 
   const { handleLogin } = useBasicAuth();
 
-  const isPostLogout = useMemo(() => {
+  const [isPostLogout] = useState(() => {
     const flag = sessionStorage.getItem('om_explicit_logout');
     if (flag) {
       sessionStorage.removeItem('om_explicit_logout');
@@ -77,7 +77,7 @@ const SignInPage = () => {
     }
 
     return false;
-  }, []);
+  });
 
   const handleSignIn = useCallback(() => {
     onLoginHandler && onLoginHandler();
