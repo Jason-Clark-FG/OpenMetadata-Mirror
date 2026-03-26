@@ -42,8 +42,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
       children,
       iconLeading: _iconLeading,
       ...props
-    }: Record<string, unknown>) =>
-      React.createElement('span', props, children),
+    }: Record<string, unknown>) => React.createElement('span', props, children),
     Button: ({
       children,
       iconLeading: _iconLeading,
@@ -85,18 +84,12 @@ jest.mock('../../../common/ExpandableCard/ExpandableCard', () => ({
 }));
 
 jest.mock('../../../common/IconButtons/EditIconButton', () => ({
-  EditIconButton: ({
-    children,
-    ...props
-  }: Record<string, unknown>) => {
+  EditIconButton: ({ children, ...props }: Record<string, unknown>) => {
     const React = require('react');
 
     return React.createElement('button', props, children);
   },
-  PlusIconButton: ({
-    children,
-    ...props
-  }: Record<string, unknown>) => {
+  PlusIconButton: ({ children, ...props }: Record<string, unknown>) => {
     const React = require('react');
 
     return React.createElement('button', props, children);

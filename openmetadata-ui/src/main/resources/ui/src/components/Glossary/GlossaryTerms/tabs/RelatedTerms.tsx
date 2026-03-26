@@ -287,7 +287,14 @@ const TermsRow: React.FC<TermsRowProps> = ({
         onTermsChange(rowId, toTermItems(updated));
       }
     },
-    [preloadedTerms, searchedTerms, selectedTerms, rowId, onTermsChange, toTermItems]
+    [
+      preloadedTerms,
+      searchedTerms,
+      selectedTerms,
+      rowId,
+      onTermsChange,
+      toTermItems,
+    ]
   );
 
   const handleItemCleared = useCallback(
