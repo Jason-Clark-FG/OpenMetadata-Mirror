@@ -16,7 +16,6 @@ package org.openmetadata.service.resources.filters;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerRequestFilter;
 import jakarta.ws.rs.ext.Provider;
-import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.service.util.RequestEntityCache;
 
