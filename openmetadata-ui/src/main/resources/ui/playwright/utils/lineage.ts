@@ -17,14 +17,19 @@ import { ApiEndpointClass } from '../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../support/entity/ContainerClass';
 import { DashboardClass } from '../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../support/entity/DashboardDataModelClass';
+import { DirectoryClass } from '../support/entity/DirectoryClass';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { EntityClass } from '../support/entity/EntityClass';
+import { FileClass } from '../support/entity/FileClass';
 import { MetricClass } from '../support/entity/MetricClass';
 import { MlModelClass } from '../support/entity/MlModelClass';
 import { PipelineClass } from '../support/entity/PipelineClass';
 import { SearchIndexClass } from '../support/entity/SearchIndexClass';
+import { SpreadsheetClass } from '../support/entity/SpreadsheetClass';
+import { StoredProcedureClass } from '../support/entity/StoredProcedureClass';
 import { TableClass } from '../support/entity/TableClass';
 import { TopicClass } from '../support/entity/TopicClass';
+import { WorksheetClass } from '../support/entity/WorksheetClass';
 import {
   clickOutside,
   getApiContext,
@@ -697,14 +702,20 @@ export const verifyExportLineageCSV = async (
   currentEntity: EntityClass,
   entities: readonly [
     TableClass,
-    DashboardClass,
-    TopicClass,
-    MlModelClass,
     ContainerClass,
+    TopicClass,
+    DashboardClass,
+    MlModelClass,
+    PipelineClass,
+    StoredProcedureClass,
     SearchIndexClass,
+    DashboardDataModelClass,
     ApiEndpointClass,
     MetricClass,
-    DashboardDataModelClass
+    DirectoryClass,
+    FileClass,
+    SpreadsheetClass,
+    WorksheetClass
   ],
   pipeline: PipelineClass
 ) => {

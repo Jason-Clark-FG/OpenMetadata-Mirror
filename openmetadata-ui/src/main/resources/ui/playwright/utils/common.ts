@@ -116,6 +116,17 @@ export const createNewPage = async (browser: Browser) => {
   return { page, apiContext, afterAction };
 };
 
+export const getDefaultAdminAPIContext = async (browser: Browser) => {
+  const context = await browser.newContext({
+    storageState: 'playwright/.auth/user.json',
+  });
+
+  const page = await context.newPage();
+  await redirectToHomePage(page);
+
+  return getApiContext(page);
+};
+
 /**
  * Retrieves the API context for the given page.
  * @param page The Playwright page object.
