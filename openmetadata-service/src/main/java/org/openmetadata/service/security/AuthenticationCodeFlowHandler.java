@@ -2,8 +2,6 @@ package org.openmetadata.service.security;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
-import static org.openmetadata.service.security.JwtFilter.EMAIL_CLAIM_KEY;
-import static org.openmetadata.service.security.JwtFilter.USERNAME_CLAIM_KEY;
 import static org.openmetadata.service.security.SecurityUtil.findEmailFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.findTeamsFromClaims;
 import static org.openmetadata.service.security.SecurityUtil.findUserNameFromClaims;
@@ -904,18 +902,9 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     return token.split("\\.").length == 3;
   }
 
+  // Delegate to SecurityUtil which has the stronger validation (rejects unrecognized keys)
   public static void validatePrincipalClaimsMapping(Map<String, String> mapping) {
-    if (!nullOrEmpty(mapping)) {
-      String username = mapping.get(USERNAME_CLAIM_KEY);
-      String email = mapping.get(EMAIL_CLAIM_KEY);
-
-      // Validate that both username and email are present
-      if (nullOrEmpty(username) || nullOrEmpty(email)) {
-        throw new IllegalArgumentException(
-            "Invalid JWT Principal Claims Mapping. Both username and email should be present");
-      }
-    }
-    // If emtpy, jwtPrincipalClaims will be used so no need to validate
+    SecurityUtil.validatePrincipalClaimsMapping(mapping);
   }
 
   private HTTPResponse executeTokenHttpRequest(TokenRequest request) throws IOException {

@@ -438,14 +438,12 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       boolean shouldBeAdmin = getAdminPrincipals().contains(username);
       boolean needsUpdate = false;
 
-      LOG.info(
-          "SAML login - Username: {}, Email: {}, DisplayName: {}, Should be admin: {}, Current admin status: {}",
+      LOG.debug(
+          "SAML login - Username: {}, Email: {}, Should be admin: {}, Current admin status: {}",
           username,
           email,
-          displayName,
           shouldBeAdmin,
           existingUser.getIsAdmin());
-      LOG.info("Admin principals list: {}", getAdminPrincipals());
 
       if (nullOrEmpty(displayName)) {
         LOG.warn(
@@ -455,14 +453,14 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
       }
 
       if (shouldBeAdmin && !Boolean.TRUE.equals(existingUser.getIsAdmin())) {
-        LOG.info("Updating user {} to admin based on adminPrincipals", username);
+        LOG.debug("Updating user {} to admin based on adminPrincipals", username);
         existingUser.setIsAdmin(true);
         needsUpdate = true;
       }
 
       // Update display name only if user doesn't already have one set
       if (!nullOrEmpty(displayName) && nullOrEmpty(existingUser.getDisplayName())) {
-        LOG.info("Setting display name for user {} to '{}'", username, displayName);
+        LOG.debug("Setting display name for user {} to '{}'", username, displayName);
         existingUser.setDisplayName(displayName);
         needsUpdate = true;
       }
@@ -477,15 +475,9 @@ public class SamlAuthServletHandler implements AuthServeletHandler {
 
       return existingUser;
     } catch (Exception e) {
-      LOG.info("User not found, creating new user: {}", username);
+      LOG.debug("User not found, creating new user: {}", username);
       if (authConfig.getEnableSelfSignup()) {
         boolean isAdmin = getAdminPrincipals().contains(username);
-        LOG.info(
-            "Creating new user - Username: {}, DisplayName: {}, Should be admin: {}",
-            username,
-            displayName,
-            isAdmin);
-        LOG.info("Admin principals list: {}", getAdminPrincipals());
         User newUser =
             UserUtil.user(username, email.split("@")[1], username)
                 .withIsAdmin(isAdmin)
