@@ -10,6 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+@import (reference) '../../../styles/variables.less';
+
 .marketplace-search-bar {
   margin-bottom: 8px;
   position: relative;
@@ -23,7 +25,7 @@
     padding: 8px 0;
 
     &:not(:last-child) {
-      border-bottom: 1px solid #eaecf0;
+      border-bottom: 1px solid @border-color-1;
     }
 
     .search-result-section-title {
@@ -31,7 +33,7 @@
       padding: 4px 16px 8px;
       font-size: 12px;
       font-weight: 600;
-      color: #667085;
+      color: @grey-500;
       text-transform: uppercase;
     }
   }
@@ -44,7 +46,7 @@
     cursor: pointer;
 
     &:hover {
-      background: #f9fafb;
+      background: @grey-50;
     }
 
     .search-result-icon {
