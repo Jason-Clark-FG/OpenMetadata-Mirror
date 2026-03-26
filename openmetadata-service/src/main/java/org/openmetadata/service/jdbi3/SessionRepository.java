@@ -30,7 +30,12 @@ public class SessionRepository {
   public List<UserSession> findSessionsToExpire(long now, int limit) {
     return dao.getUserSessionDAO()
         .findSessionsToExpire(
-            List.of(SessionStatus.ACTIVE.name(), SessionStatus.REFRESHING.name()), now, limit);
+            List.of(
+                SessionStatus.ACTIVE.name(),
+                SessionStatus.REFRESHING.name(),
+                SessionStatus.PENDING.name()),
+            now,
+            limit);
   }
 
   public List<UserSession> findSessionsToPrune(long cutoff, int limit) {

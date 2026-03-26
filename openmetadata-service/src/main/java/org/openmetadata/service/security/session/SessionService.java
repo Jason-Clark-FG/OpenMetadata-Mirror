@@ -236,7 +236,8 @@ public class SessionService implements Managed {
 
     UserSession current = maybeSession.get();
 
-    while (current != null) {
+    int maxAttempts = 5;
+    for (int attempt = 0; attempt < maxAttempts && current != null; attempt++) {
       long now = now();
       if (current.isExpired(now)
           || current.getStatus() == SessionStatus.REVOKED
@@ -360,7 +361,10 @@ public class SessionService implements Managed {
       cache.invalidate(sessionId);
       return Optional.empty();
     }
-    LOG.error("Failed to revoke session {} after {} attempts", sessionId, SESSION_LIMIT_RETRIES);
+    LOG.error(
+        "Failed to revoke session {}... after {} attempts",
+        truncateId(sessionId),
+        SESSION_LIMIT_RETRIES);
     cache.put(current.getId(), current);
     return Optional.of(current);
   }
@@ -504,7 +508,12 @@ public class SessionService implements Managed {
     if (nullOrEmpty(value)) {
       return null;
     }
-    return Fernet.getInstance().encryptIfApplies(value);
+    try {
+      return Fernet.getInstance().encryptIfApplies(value);
+    } catch (Exception e) {
+      LOG.warn("Fernet encryption unavailable, storing token without encryption");
+      return value;
+    }
   }
 
   private int getIdleTimeoutSeconds() {
@@ -531,5 +540,12 @@ public class SessionService implements Managed {
 
   private long now() {
     return System.currentTimeMillis();
+  }
+
+  static String truncateId(String sessionId) {
+    if (sessionId == null || sessionId.length() <= 8) {
+      return sessionId;
+    }
+    return sessionId.substring(0, 8) + "...";
   }
 }
