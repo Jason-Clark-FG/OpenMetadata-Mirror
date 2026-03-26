@@ -169,27 +169,25 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
       UUID glossaryTermId, int limit, int offset, String parent) {
     GlossaryTerm term = get(null, glossaryTermId, getFields("id,fullyQualifiedName"));
 
-    if (parent != null
-        && !parent.isEmpty()
-        && !FullyQualifiedName.isParent(term.getFullyQualifiedName(), parent)) {
-      return new ResultList<>(new ArrayList<>(), null, null, 0);
-    }
-
     if (inheritedFieldEntitySearch == null) {
       LOG.warn("Search is unavailable for glossary term assets. Returning empty list.");
       return new ResultList<>(new ArrayList<>(), null, null, 0);
     }
 
+    String fqn = term.getFullyQualifiedName();
+    boolean useParentScope =
+        parent != null && !parent.isEmpty() && FullyQualifiedName.isParent(fqn, parent);
+
     InheritedFieldQuery query =
-        InheritedFieldQuery.forGlossaryTerm(term.getFullyQualifiedName(), offset, limit);
+        useParentScope
+            ? InheritedFieldQuery.forGlossaryTermChildren(parent, offset, limit)
+            : InheritedFieldQuery.forGlossaryTerm(fqn, offset, limit);
 
     InheritedFieldResult result =
         inheritedFieldEntitySearch.getEntitiesForField(
             query,
             () -> {
-              LOG.warn(
-                  "Search fallback for glossary term {} assets. Returning empty list.",
-                  term.getFullyQualifiedName());
+              LOG.warn("Search fallback for glossary term {} assets. Returning empty list.", fqn);
               return new InheritedFieldResult(new ArrayList<>(), 0);
             });
 
