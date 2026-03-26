@@ -153,6 +153,11 @@ export const getEntityTypeSearchIndexMapping = (entityType: string) => {
     SearchIndex: 'searchIndex',
     ApiEndpoint: 'apiEndpoint',
     Metric: 'metric',
+    StoredProcedure: 'storedProcedure',
+    Directory: 'directory',
+    File: 'file',
+    Spreadsheet: 'spreadsheet',
+    Worksheet: 'worksheet',
     [DASHBOARD_DATA_MODEL]: 'dashboardDataModel',
   };
 

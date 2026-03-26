@@ -89,11 +89,13 @@ test.describe('Lineage Creation', () => {
       await lineageEntity.visitEntityPage(page);
       await visitLineageTab(page);
       await editLineageClick(page);
+      await performZoomOut(page);
 
       await test.step('should create lineage with normal edge', async () => {
         for (const entity of entities) {
           await connectEdgeBetweenNodes(page, lineageEntity, entity);
           await rearrangeNodes(page);
+          await performZoomOut(page);
         }
 
         const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
