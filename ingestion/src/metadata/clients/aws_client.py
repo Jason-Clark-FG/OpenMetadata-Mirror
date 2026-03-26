@@ -43,6 +43,7 @@ class AWSServices(Enum):
     REDSHIFT = "redshift"
     REDSHIFT_SERVERLESS = "redshift-serverless"
     LAKE_FORMATION = "lakeformation"
+    MWAA = "mwaa"
 
 
 class AWSAssumeRoleException(Exception):
@@ -253,3 +254,6 @@ class AWSClient:
 
     def get_redshift_serverless_client(self):
         return self.get_client(AWSServices.REDSHIFT_SERVERLESS.value)
+
+    def get_mwaa_client(self):
+        return self.get_client(AWSServices.MWAA.value)
