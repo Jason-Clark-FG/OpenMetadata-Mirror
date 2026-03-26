@@ -433,11 +433,18 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
             content = @Content(mediaType = "application/json"))
       })
   public Response getAllGlossaryTermsWithAssetsCount(
-      @Context UriInfo uriInfo, @Context SecurityContext securityContext) {
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(
+              description =
+                  "Filter by parent glossary or glossary term FQN. "
+                      + "When provided, only returns asset counts for children whose FQN starts with this value.")
+          @QueryParam("parent")
+          String parent) {
     OperationContext operationContext =
         new OperationContext(entityType, MetadataOperation.VIEW_ALL);
     authorizer.authorize(securityContext, operationContext, getResourceContext());
-    java.util.Map<String, Integer> result = repository.getAllGlossaryTermsWithAssetsCount();
+    java.util.Map<String, Integer> result = repository.getAllGlossaryTermsWithAssetsCount(parent);
     return Response.ok(result).build();
   }
 
@@ -866,8 +873,14 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
           @DefaultValue("0")
           @Min(0)
           @QueryParam("offset")
-          int offset) {
-    return Response.ok(repository.getGlossaryTermAssets(id, limit, offset)).build();
+          int offset,
+      @Parameter(
+              description =
+                  "Filter by parent glossary or glossary term FQN. "
+                      + "When provided, only returns assets for children whose FQN starts with this value.")
+          @QueryParam("parent")
+          String parent) {
+    return Response.ok(repository.getGlossaryTermAssets(id, limit, offset, parent)).build();
   }
 
   @GET
@@ -908,8 +921,14 @@ public class GlossaryTermResource extends EntityResource<GlossaryTerm, GlossaryT
           @DefaultValue("0")
           @Min(0)
           @QueryParam("offset")
-          int offset) {
-    return Response.ok(repository.getGlossaryTermAssetsByName(fqn, limit, offset)).build();
+          int offset,
+      @Parameter(
+              description =
+                  "Filter by parent glossary or glossary term FQN. "
+                      + "When provided, only returns assets for children whose FQN starts with this value.")
+          @QueryParam("parent")
+          String parent) {
+    return Response.ok(repository.getGlossaryTermAssetsByName(fqn, limit, offset, parent)).build();
   }
 
   @PUT

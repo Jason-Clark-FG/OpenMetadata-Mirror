@@ -166,8 +166,14 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   }
 
   public ResultList<EntityReference> getGlossaryTermAssets(
-      UUID glossaryTermId, int limit, int offset) {
+      UUID glossaryTermId, int limit, int offset, String parent) {
     GlossaryTerm term = get(null, glossaryTermId, getFields("id,fullyQualifiedName"));
+
+    if (parent != null
+        && !parent.isEmpty()
+        && !FullyQualifiedName.isParent(term.getFullyQualifiedName(), parent)) {
+      return new ResultList<>(new ArrayList<>(), null, null, 0);
+    }
 
     if (inheritedFieldEntitySearch == null) {
       LOG.warn("Search is unavailable for glossary term assets. Returning empty list.");
@@ -191,12 +197,12 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
   }
 
   public ResultList<EntityReference> getGlossaryTermAssetsByName(
-      String termName, int limit, int offset) {
+      String termName, int limit, int offset, String parent) {
     GlossaryTerm term = getByName(null, termName, getFields("id,fullyQualifiedName"));
-    return getGlossaryTermAssets(term.getId(), limit, offset);
+    return getGlossaryTermAssets(term.getId(), limit, offset, parent);
   }
 
-  public Map<String, Integer> getAllGlossaryTermsWithAssetsCount() {
+  public Map<String, Integer> getAllGlossaryTermsWithAssetsCount(String parent) {
     if (inheritedFieldEntitySearch == null) {
       LOG.warn("Search unavailable for glossary term asset counts");
       return new HashMap<>();
@@ -204,6 +210,14 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
     List<GlossaryTerm> allGlossaryTerms =
         listAll(getFields("fullyQualifiedName"), new ListFilter(null));
+
+    if (parent != null && !parent.isEmpty()) {
+      allGlossaryTerms =
+          allGlossaryTerms.stream()
+              .filter(term -> FullyQualifiedName.isParent(term.getFullyQualifiedName(), parent))
+              .collect(Collectors.toList());
+    }
+
     Map<String, Integer> glossaryTermAssetCounts = new HashMap<>();
 
     for (GlossaryTerm term : allGlossaryTerms) {
