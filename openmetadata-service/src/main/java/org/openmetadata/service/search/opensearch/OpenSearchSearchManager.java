@@ -946,8 +946,7 @@ public class OpenSearchSearchManager implements SearchManagementClient {
 
         if (jsonObject.containsKey("_source")) {
           JsonValue sourceValue = jsonObject.get("_source");
-          if (sourceValue instanceof JsonObject) {
-            JsonObject sourceObject = (JsonObject) sourceValue;
+          if (sourceValue instanceof JsonObject sourceObject) {
             if (sourceObject.containsKey("include")) {
               JsonArray includesArray = sourceObject.getJsonArray("include");
               includes = new String[includesArray.size()];

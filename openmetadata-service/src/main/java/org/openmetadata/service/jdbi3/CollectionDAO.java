@@ -4943,7 +4943,7 @@ public interface CollectionDAO {
           requiresFqnHash ? FullyQualifiedName.buildHash(targetFQNPrefix) : targetFQNPrefix;
       Map<String, List<TagLabel>> resultSet = new LinkedHashMap<>();
       List<Pair<String, TagLabel>> tags =
-          getTagsInternalByPrefix(new String[] {targetFQNPrefixHash, postfix});
+          getTagsInternalByPrefix(targetFQNPrefixHash, postfix);
       tags.forEach(
           pair -> {
             String targetHash = pair.getLeft();
@@ -6119,7 +6119,7 @@ public interface CollectionDAO {
     }
 
     /** Usage details with entity ID for batch operations */
-    public static class UsageDetailsWithId {
+    class UsageDetailsWithId {
       private final String entityId;
       private final UsageDetails usageDetails;
 

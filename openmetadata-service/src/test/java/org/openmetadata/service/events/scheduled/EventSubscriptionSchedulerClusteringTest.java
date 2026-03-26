@@ -14,6 +14,7 @@
 package org.openmetadata.service.events.scheduled;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openmetadata.service.util.TestUtils.simulateWork;
@@ -196,14 +197,10 @@ class EventSubscriptionSchedulerClusteringTest {
     assertNotNull(sched2);
 
     // They should have different instance IDs
-    assertFalse(
-        sched1.getSchedulerInstanceId().equals(sched2.getSchedulerInstanceId()),
-        "Scheduler instances should have different IDs");
+    assertNotEquals(sched1.getSchedulerInstanceId(), sched2.getSchedulerInstanceId(), "Scheduler instances should have different IDs");
 
     // And different scheduler names
-    assertFalse(
-        sched1.getSchedulerName().equals(sched2.getSchedulerName()),
-        "Scheduler instances should have different names");
+    assertNotEquals(sched1.getSchedulerName(), sched2.getSchedulerName(), "Scheduler instances should have different names");
 
     LOG.info(
         "Scheduler 1: name={}, instanceId={}",

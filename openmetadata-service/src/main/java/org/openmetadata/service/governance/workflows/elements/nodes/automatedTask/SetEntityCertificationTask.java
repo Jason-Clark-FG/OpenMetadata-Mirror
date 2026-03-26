@@ -41,7 +41,6 @@ public class SetEntityCertificationTask implements NodeInterface {
     ServiceTask setEntityCertification =
         getSetEntityCertificationServiceTask(
             subProcessId,
-            (CertificationConfiguration.CertificationEnum)
                 nodeDefinition.getConfig().getCertification(),
             JsonUtils.pojoToJson(nodeDefinition.getInputNamespaceMap()));
 

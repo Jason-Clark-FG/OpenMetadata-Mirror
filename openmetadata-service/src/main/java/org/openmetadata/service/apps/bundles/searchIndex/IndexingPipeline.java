@@ -239,10 +239,10 @@ public class IndexingPipeline implements AutoCloseable {
         try {
           if (!EntityReader.TIME_SERIES_ENTITIES.contains(entityType)) {
             searchIndexSink.write(
-                (java.util.List<EntityInterface>) entities.getData(), contextData);
+                    entities.getData(), contextData);
           } else {
             searchIndexSink.write(
-                (java.util.List<EntityTimeSeriesInterface>) entities.getData(), contextData);
+                    entities.getData(), contextData);
           }
 
           StepStats entityStats = new StepStats();

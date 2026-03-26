@@ -543,7 +543,7 @@ class DistributedJobStatsAggregatorTest {
     assertEquals(23, stats.getVectorStats().getTotalRecords());
 
     StepStats tableStats =
-        (StepStats) stats.getEntityStats().getAdditionalProperties().get("table");
+            stats.getEntityStats().getAdditionalProperties().get("table");
     assertEquals(Integer.MAX_VALUE, tableStats.getTotalRecords());
     assertEquals(Integer.MAX_VALUE, tableStats.getSuccessRecords());
 

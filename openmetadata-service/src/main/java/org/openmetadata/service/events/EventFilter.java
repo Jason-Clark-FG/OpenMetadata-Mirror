@@ -97,7 +97,7 @@ public class EventFilter implements ContainerResponseFilter {
               if (JwtFilter.EXCLUDED_ENDPOINTS.stream()
                   .noneMatch(endpoint -> uriInfo.getPath().contains(endpoint))) {
                 ParallelStreamUtil.runAsync(
-                    (Callable<Void>) () -> eventHandler.process(requestContext, responseContext),
+                        () -> eventHandler.process(requestContext, responseContext),
                     forkJoinPool);
               }
             });

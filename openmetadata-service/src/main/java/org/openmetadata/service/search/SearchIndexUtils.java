@@ -214,7 +214,7 @@ public final class SearchIndexUtils {
                           s -> {
                             switch (s.getValueType()) {
                               case NUMBER -> nodeData.put(
-                                  dimensions.get(0), String.valueOf((JsonNumber) s));
+                                  dimensions.get(0), String.valueOf(s));
                               default -> nodeData.put(
                                   dimensions.get(0), ((JsonString) s).getString());
                             }
@@ -468,12 +468,10 @@ public final class SearchIndexUtils {
     if (value instanceof Number || value instanceof Boolean) {
       return value.toString();
     }
-    if (value instanceof List) {
-      List<?> list = (List<?>) value;
+    if (value instanceof List<?> list) {
       return list.stream().map(SearchIndexUtils::flattenValue).collect(Collectors.joining(" "));
     }
-    if (value instanceof Map) {
-      Map<?, ?> map = (Map<?, ?>) value;
+    if (value instanceof Map<?, ?> map) {
       return flattenMapValue(map);
     }
     return value.toString();

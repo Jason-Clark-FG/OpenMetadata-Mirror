@@ -1165,7 +1165,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
         // Queue for batch processing instead of immediate persist
         pendingEntityOperations.add(
             new PendingEntityOperation(
-                entity, (EntityInterface) original, csvRecord, type, !isUpdate));
+                entity, original, csvRecord, type, !isUpdate));
         pendingEntityFQNs.add(entity.getFullyQualifiedName());
         responseStatus = isUpdate ? Response.Status.OK : Response.Status.CREATED;
       } else {
@@ -1440,13 +1440,13 @@ public abstract class EntityCsv<T extends EntityInterface> {
   protected <E extends EntityInterface> E getEntityWithDependencyResolution(
       String entityType, String fqn, String fields, Include include) {
     try {
-      return (E) Entity.getEntityByName(entityType, fqn, fields, include);
+      return Entity.getEntityByName(entityType, fqn, fields, include);
     } catch (EntityNotFoundException ex) {
       if (!importResult.getDryRun() && hasPendingEntity(entityType, fqn)) {
         LOG.info("Found pending {} {}, flushing all pending entities", entityType, fqn);
         flushPendingEntityOperations(); // Only flush when specific entity is pending
         // Retry after flush
-        return (E) Entity.getEntityByName(entityType, fqn, fields, include);
+        return Entity.getEntityByName(entityType, fqn, fields, include);
       }
       // Re-throw the original exception so callers can handle appropriately
       throw ex;

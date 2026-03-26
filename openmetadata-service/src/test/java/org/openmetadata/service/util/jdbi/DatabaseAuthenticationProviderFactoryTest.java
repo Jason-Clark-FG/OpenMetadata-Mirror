@@ -1,6 +1,7 @@
 package org.openmetadata.service.util.jdbi;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
@@ -16,9 +17,7 @@ class DatabaseAuthenticationProviderFactoryTest {
     Optional<DatabaseAuthenticationProvider> provider =
         DatabaseAuthenticationProviderFactory.get(jdbcURL);
     assertTrue(provider.isPresent(), "Expected AzureDatabaseAuthenticationProvider to be present");
-    assertTrue(
-        provider.get() instanceof AzureDatabaseAuthenticationProvider,
-        "Expected instance of AzureDatabaseAuthenticationProvider");
+    assertInstanceOf(AzureDatabaseAuthenticationProvider.class, provider.get(), "Expected instance of AzureDatabaseAuthenticationProvider");
   }
 
   @Test
@@ -37,9 +36,7 @@ class DatabaseAuthenticationProviderFactoryTest {
     Optional<DatabaseAuthenticationProvider> provider =
         DatabaseAuthenticationProviderFactory.get(jdbcURL);
     assertTrue(provider.isPresent(), "Expected AwsRdsDatabaseAuthenticationProvider to be present");
-    assertTrue(
-        provider.get() instanceof AwsRdsDatabaseAuthenticationProvider,
-        "Expected instance of AwsRdsDatabaseAuthenticationProvider");
+    assertInstanceOf(AwsRdsDatabaseAuthenticationProvider.class, provider.get(), "Expected instance of AwsRdsDatabaseAuthenticationProvider");
   }
 
   @Test

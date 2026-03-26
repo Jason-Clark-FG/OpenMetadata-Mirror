@@ -41,8 +41,8 @@ public class Auth0ValidatorTest {
 
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
-    assertTrue(result != null);
-    assertTrue(result.getField() != null);
+    assertNotNull(result);
+    assertNotNull(result.getField());
     assertTrue(result.getError().contains("Domain validation failed"));
   }
 
@@ -57,8 +57,8 @@ public class Auth0ValidatorTest {
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
     // Should fail - either on domain validation or public key URLs
-    assertTrue(result != null);
-    assertTrue(result.getField() != null);
+    assertNotNull(result);
+    assertNotNull(result.getField());
   }
 
   @Test
@@ -91,7 +91,7 @@ public class Auth0ValidatorTest {
 
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
-    assertTrue(result != null);
+    assertNotNull(result);
     assertTrue(
         result.getError().contains("Auth0 domain") || result.getError().contains("discoveryUri"));
   }
@@ -113,8 +113,8 @@ public class Auth0ValidatorTest {
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
     // Should fail on network calls
-    assertTrue(result != null);
-    assertTrue(result.getField() != null);
+    assertNotNull(result);
+    assertNotNull(result.getField());
   }
 
   @Test
@@ -134,7 +134,7 @@ public class Auth0ValidatorTest {
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
     // Should fail due to missing or invalid credentials
-    assertTrue(result != null);
+    assertNotNull(result);
   }
 
   @Test
@@ -150,8 +150,8 @@ public class Auth0ValidatorTest {
 
     FieldError result = validator.validateAuth0Configuration(authConfig, oidcConfig);
 
-    assertTrue(result != null);
-    assertTrue(result.getField() != null);
+    assertNotNull(result);
+    assertNotNull(result.getField());
   }
 
   @Test
@@ -197,7 +197,7 @@ public class Auth0ValidatorTest {
                   ValidationHttpUtil.postForm(
                       anyString(),
                       anyString(),
-                      (Map<String, String>) org.mockito.ArgumentMatchers.any()))
+                          org.mockito.ArgumentMatchers.any()))
           .thenReturn(tokenErrorResponse);
       mockedHttp
           .when(() -> ValidationHttpUtil.postForm(anyString(), anyString()))

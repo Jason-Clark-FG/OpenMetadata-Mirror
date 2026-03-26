@@ -6031,7 +6031,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     private boolean entityChanged = false;
     private boolean versionChanged = false;
     @Getter protected ChangeDescription incrementalChangeDescription = null;
-    private ChangeSource changeSource;
+    private final ChangeSource changeSource;
     private final boolean useOptimisticLocking;
     @Setter private Set<String> patchedFields;
     private final List<Runnable> deferredReactOperations = new ArrayList<>();
@@ -7738,9 +7738,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       // Also check incrementalChangeDescription - this captures the name change
       // even when renameProcessed prevents it from being in the main changeDescription
       if (incChangeDesc != null && incChangeDesc.getFieldsUpdated() != null) {
-        if (incChangeDesc.getFieldsUpdated().stream().anyMatch(fc -> "name".equals(fc.getName()))) {
-          return true;
-        }
+        return incChangeDesc.getFieldsUpdated().stream().anyMatch(fc -> "name".equals(fc.getName()));
       }
 
       return false;
@@ -9761,7 +9759,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
 
       List<T> changedEntities =
-          changedUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> (T) e).toList();
+          changedUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> e).toList();
       if (!changedEntities.isEmpty()) {
         try (var ignored = phase("setInheritedFields")) {
           // Only changed entities need inheritance hydration for downstream side effects.
@@ -9817,7 +9815,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
             succeededUpdaters.stream()
                 .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
                 .map(EntityUpdater::getUpdated)
-                .map(e -> (T) e)
+                .map(e -> e)
                 .toList();
         if (!fallbackChanged.isEmpty()) {
           try (var ignored = phase("invalidateCacheBulk")) {

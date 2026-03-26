@@ -167,7 +167,7 @@ Align EventSubscriptionScheduler with AppScheduler by enabling Quartz clustering
 // EventSubscriptionScheduler.java - Modified to use AppScheduler's clustered instance
 public class EventSubscriptionScheduler {
     private static EventSubscriptionScheduler instance;
-    private static volatile boolean initialized = false;
+    private static final boolean initialized = false;
     
     // Reuse the existing clustered scheduler instead of creating a new one
     private final Scheduler alertsScheduler;

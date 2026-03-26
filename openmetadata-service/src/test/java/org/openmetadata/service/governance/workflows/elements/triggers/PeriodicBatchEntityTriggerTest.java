@@ -70,7 +70,7 @@ class PeriodicBatchEntityTriggerTest {
     assertNotNull(callActivity, "CallActivity should exist in the process");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
     assertNotNull(loopChars, "Loop characteristics should be set");
 
     assertEquals(
@@ -91,7 +91,7 @@ class PeriodicBatchEntityTriggerTest {
     assertNotNull(callActivity, "CallActivity should exist");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
 
     assertEquals(
         "${numberOfEntities}",

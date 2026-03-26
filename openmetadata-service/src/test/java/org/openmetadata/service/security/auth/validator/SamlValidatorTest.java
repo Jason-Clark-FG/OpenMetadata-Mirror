@@ -1,6 +1,7 @@
 package org.openmetadata.service.security.auth.validator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -928,7 +929,7 @@ class SamlValidatorTest {
                     "-----BEGIN CERTIFICATE-----broken-----END CERTIFICATE-----",
                     "SP X509 certificate"));
 
-    assertTrue(exception.getCause() instanceof CertificateException);
+    assertInstanceOf(CertificateException.class, exception.getCause());
   }
 
   @Test
@@ -991,7 +992,7 @@ class SamlValidatorTest {
                     cert,
                     samlConfig));
 
-    assertTrue(exception.getCause() instanceof CertificateException);
+    assertInstanceOf(CertificateException.class, exception.getCause());
   }
 
   @Test
@@ -1014,7 +1015,7 @@ class SamlValidatorTest {
                     cert,
                     samlConfig));
 
-    assertTrue(exception.getCause() instanceof CertificateException);
+    assertInstanceOf(CertificateException.class, exception.getCause());
   }
 
   @Test
@@ -1101,7 +1102,7 @@ class SamlValidatorTest {
   @SuppressWarnings("unchecked")
   private <T> T invokePrivate(String methodName, Class<?> parameterType, Object argument)
       throws Exception {
-    return (T) invokePrivate(methodName, new Class<?>[] {parameterType}, argument);
+    return invokePrivate(methodName, new Class<?>[] {parameterType}, argument);
   }
 
   @SuppressWarnings("unchecked")

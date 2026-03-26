@@ -69,7 +69,7 @@ import org.openmetadata.service.util.RestUtil;
 public class TestCaseResolutionStatusResource
     extends EntityTimeSeriesResource<TestCaseResolutionStatus, TestCaseResolutionStatusRepository> {
   public static final String COLLECTION_PATH = "/v1/dataQuality/testCases/testCaseIncidentStatus";
-  private TestCaseResolutionStatusMapper mapper = new TestCaseResolutionStatusMapper();
+  private final TestCaseResolutionStatusMapper mapper = new TestCaseResolutionStatusMapper();
 
   public TestCaseResolutionStatusResource(Authorizer authorizer) {
     super(Entity.TEST_CASE_RESOLUTION_STATUS, authorizer);

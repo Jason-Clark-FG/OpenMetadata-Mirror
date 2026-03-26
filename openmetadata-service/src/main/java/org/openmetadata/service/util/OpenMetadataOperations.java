@@ -214,9 +214,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
               .fields()
               .forEachRemaining(
                   entry -> {
-                    if (!columns.contains(entry.getKey())) {
-                      columns.add(entry.getKey());
-                    }
+                    columns.add(entry.getKey());
                     row.add(entry.getValue().toString());
                   });
         }
@@ -864,7 +862,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
     JWTTokenGenerator.getInstance()
         .init(
-            SecurityConfigurationManager.getInstance()
+            SecurityConfigurationManager
                 .getCurrentAuthConfig()
                 .getTokenValidationAlgorithm(),
             config.getJwtTokenConfiguration());
@@ -2494,7 +2492,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
       JWTTokenGenerator.getInstance()
           .init(
-              SecurityConfigurationManager.getInstance()
+              SecurityConfigurationManager
                   .getCurrentAuthConfig()
                   .getTokenValidationAlgorithm(),
               config.getJwtTokenConfiguration());

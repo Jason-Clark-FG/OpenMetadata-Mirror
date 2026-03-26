@@ -128,7 +128,7 @@ public class ElasticSearchClient implements SearchClient {
       };
 
   // Add this field to the class
-  private NLQService nlqService;
+  private final NLQService nlqService;
 
   public ElasticSearchClient(ElasticSearchConfiguration config) {
     this(config, null);

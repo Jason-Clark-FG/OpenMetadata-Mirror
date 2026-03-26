@@ -47,7 +47,7 @@ public class UnifiedAuthTest {
 
     // Verify
     assertNotNull(handler);
-    assertTrue(handler instanceof BasicAuthServletHandler);
+    assertInstanceOf(BasicAuthServletHandler.class, handler);
   }
 
   @Test
@@ -62,7 +62,7 @@ public class UnifiedAuthTest {
 
     // Verify
     assertNotNull(handler);
-    assertTrue(handler instanceof LdapAuthServletHandler);
+    assertInstanceOf(LdapAuthServletHandler.class, handler);
   }
 
   @Test
@@ -105,13 +105,13 @@ public class UnifiedAuthTest {
     SecurityConfigurationManager.getInstance().setCurrentAuthConfig(mockAuthConfig);
 
     AuthServeletHandler handler1 = AuthServeletHandlerFactory.getHandler(mockConfig);
-    assertTrue(handler1 instanceof BasicAuthServletHandler);
+    assertInstanceOf(BasicAuthServletHandler.class, handler1);
 
     // Switch to LDAP
     when(mockAuthConfig.getProvider()).thenReturn(AuthProvider.LDAP);
     SecurityConfigurationManager.getInstance().setCurrentAuthConfig(mockAuthConfig);
 
     AuthServeletHandler handler2 = AuthServeletHandlerFactory.getHandler(mockConfig);
-    assertTrue(handler2 instanceof LdapAuthServletHandler);
+    assertInstanceOf(LdapAuthServletHandler.class, handler2);
   }
 }

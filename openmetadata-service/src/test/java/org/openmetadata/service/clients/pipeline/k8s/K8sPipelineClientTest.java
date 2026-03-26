@@ -16,7 +16,9 @@ package org.openmetadata.service.clients.pipeline.k8s;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -989,7 +991,7 @@ class K8sPipelineClientTest {
     PipelineServiceClientResponse response = clientWithOMJob.deployPipeline(pipeline, testService);
 
     assertEquals(200, response.getCode());
-    assertTrue(Boolean.TRUE.equals(pipeline.getDeployed()));
+    assertEquals(Boolean.TRUE, pipeline.getDeployed());
     ArgumentCaptor<Object> cronOMJobCaptor = ArgumentCaptor.forClass(Object.class);
     verify(customObjectsApi)
         .createNamespacedCustomObject(
@@ -1169,7 +1171,7 @@ class K8sPipelineClientTest {
     PipelineServiceClientResponse response = clientWithOMJob.toggleIngestion(pipeline);
 
     assertEquals(200, response.getCode());
-    assertFalse(Boolean.TRUE.equals(pipeline.getEnabled()));
+    assertNotEquals(Boolean.TRUE, pipeline.getEnabled());
     assertEquals(false, originalSpec.get("suspend"));
 
     ArgumentCaptor<Object> cronOMJobCaptor = ArgumentCaptor.forClass(Object.class);
@@ -1282,7 +1284,7 @@ class K8sPipelineClientTest {
 
       String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
 
-      assertEquals(null, token);
+      assertNull(token);
     }
   }
 
@@ -1300,7 +1302,7 @@ class K8sPipelineClientTest {
 
       String token = invokePrivate(client, "getIngestionBotToken", new Class<?>[0]);
 
-      assertEquals(null, token);
+      assertNull(token);
     }
   }
 
@@ -1334,7 +1336,7 @@ class K8sPipelineClientTest {
       assertEquals(AuthProvider.OPENMETADATA, connection.getAuthProvider());
       assertEquals(
           "ingestion-token",
-          ((OpenMetadataJWTClientConfig) connection.getSecurityConfig()).getJwtToken());
+          connection.getSecurityConfig().getJwtToken());
     }
   }
 

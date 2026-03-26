@@ -2,6 +2,7 @@ package org.openmetadata.service.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -1646,7 +1647,7 @@ class SearchRepositoryBehaviorTest {
                     "upstreamEntityRelationship.docId.keyword",
                     "00000000-0000-0000-0000-000000000001-00000000-0000-0000-0000-000000000002")),
             any(org.apache.commons.lang3.tuple.Pair.class));
-    assertTrue(repository.createReindexHandler() instanceof RecreateWithEmbeddings);
+    assertInstanceOf(RecreateWithEmbeddings.class, repository.createReindexHandler());
   }
 
   @Test

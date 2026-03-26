@@ -14,6 +14,7 @@
 package org.openmetadata.service.governance.workflows.elements;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,7 +58,7 @@ class TriggerFactoryTest {
     TriggerInterface trigger = TriggerFactory.createTrigger(workflow);
 
     assertNotNull(trigger);
-    assertTrue(trigger instanceof PeriodicBatchEntityTrigger);
+    assertInstanceOf(PeriodicBatchEntityTrigger.class, trigger);
 
     // Verify single execution mode by checking the BPMN model
     BpmnModel model = new BpmnModel();
@@ -68,7 +69,7 @@ class TriggerFactoryTest {
     assertNotNull(callActivity, "CallActivity should exist");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
     assertNotNull(loopChars, "Loop characteristics should exist");
     assertEquals("1", loopChars.getLoopCardinality(), "Cardinality should be 1 for batch mode");
   }
@@ -80,7 +81,7 @@ class TriggerFactoryTest {
     TriggerInterface trigger = TriggerFactory.createTrigger(workflow);
 
     assertNotNull(trigger);
-    assertTrue(trigger instanceof PeriodicBatchEntityTrigger);
+    assertInstanceOf(PeriodicBatchEntityTrigger.class, trigger);
 
     BpmnModel model = new BpmnModel();
     trigger.addToWorkflow(model);
@@ -89,7 +90,7 @@ class TriggerFactoryTest {
     assertNotNull(callActivity, "CallActivity should exist");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
     assertNotNull(loopChars, "Loop characteristics should exist");
     assertEquals(
         "${numberOfEntities}",
@@ -112,7 +113,7 @@ class TriggerFactoryTest {
     assertNotNull(callActivity, "CallActivity should exist");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
     assertEquals(
         "${numberOfEntities}",
         loopChars.getLoopCardinality(),
@@ -134,7 +135,7 @@ class TriggerFactoryTest {
     assertNotNull(callActivity, "CallActivity should exist");
 
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
     assertEquals(
         "${numberOfEntities}",
         loopChars.getLoopCardinality(),
@@ -152,7 +153,7 @@ class TriggerFactoryTest {
 
     CallActivity callActivity = findCallActivity(model);
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
 
     // If ANY sink has batchMode=true, should use single execution
     assertEquals(
@@ -173,7 +174,7 @@ class TriggerFactoryTest {
 
     CallActivity callActivity = findCallActivity(model);
     MultiInstanceLoopCharacteristics loopChars =
-        (MultiInstanceLoopCharacteristics) callActivity.getLoopCharacteristics();
+            callActivity.getLoopCharacteristics();
 
     assertEquals(
         "1",

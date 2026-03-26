@@ -624,7 +624,7 @@ public class S3LogStorageTest {
       config.put("config", invalidConfig);
 
       IOException exception = assertThrows(IOException.class, () -> storage.initialize(config));
-      assertTrue(exception.getCause() instanceof IllegalArgumentException);
+      assertInstanceOf(IllegalArgumentException.class, exception.getCause());
       assertTrue(exception.getCause().getMessage().contains("AWS credentials not configured"));
     }
   }

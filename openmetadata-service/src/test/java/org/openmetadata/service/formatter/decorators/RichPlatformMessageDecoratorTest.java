@@ -343,7 +343,7 @@ class RichPlatformMessageDecoratorTest {
 
   private static TestCaseRepository mockTestCaseRepository(TestCase testCase) {
     TestCaseRepository repository = mock(TestCaseRepository.class);
-    when(repository.getFields("*")).thenReturn((EntityUtil.Fields) null);
+    when(repository.getFields("*")).thenReturn(null);
     when(repository.getByName(
             isNull(),
             eq(testCase.getFullyQualifiedName()),

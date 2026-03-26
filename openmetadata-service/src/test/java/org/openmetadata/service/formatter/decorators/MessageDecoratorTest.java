@@ -436,7 +436,7 @@ class MessageDecoratorTest {
                 new TestCaseResult().withResult("Row count failed").withSampleData("sample rows"))
             .withTestCaseStatus(TestCaseStatus.Failed);
 
-    when(repository.getFields("*")).thenReturn((EntityUtil.Fields) null);
+    when(repository.getFields("*")).thenReturn(null);
     when(repository.getByName(isNull(), eq(fqn), any(), eq(Include.NON_DELETED), eq(false)))
         .thenReturn(testCase);
 

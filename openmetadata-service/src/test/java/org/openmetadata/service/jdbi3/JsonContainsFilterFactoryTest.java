@@ -141,6 +141,6 @@ class JsonContainsFilterFactoryTest {
     customizer.apply(nullStatement, null);
 
     // Assert - should use the custom ifNull value
-    verify(nullStatement).define(eq(annotation.value()), (Object) eq("other_condition = 1"));
+    verify(nullStatement).define(eq(annotation.value()), eq("other_condition = 1"));
   }
 }

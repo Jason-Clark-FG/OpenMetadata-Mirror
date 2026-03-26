@@ -967,7 +967,7 @@ public class SearchIndexExecutor implements AutoCloseable {
                 recordLimit);
             break;
           }
-          if (endCursor != null && hasReachedEndCursor(keysetCursor, endCursor)) {
+          if (hasReachedEndCursor(keysetCursor, endCursor)) {
             LOG.debug("Reader for {} reached end cursor at processed={}", entityType, processed);
             break;
           }
@@ -1165,9 +1165,7 @@ public class SearchIndexExecutor implements AutoCloseable {
         if (metrics != null) {
           metrics.updateQueueFillRatio(fillPercent);
         }
-        if (fillPercent > 90) {
-          return true;
-        }
+        return fillPercent > 90;
       }
     }
     return false;

@@ -688,7 +688,7 @@ public class RdfIndexApp extends AbstractNativeApplication {
     }
 
     StepStats entityStats =
-        (StepStats) stats.getEntityStats().getAdditionalProperties().get(entityType);
+            stats.getEntityStats().getAdditionalProperties().get(entityType);
     if (entityStats != null) {
       entityStats.withSuccessRecords(
           entityStats.getSuccessRecords() + currentEntityStats.getSuccessRecords());
@@ -699,11 +699,11 @@ public class RdfIndexApp extends AbstractNativeApplication {
     StepStats jobStats = stats.getJobStats();
     int totalSuccess =
         stats.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(s -> ((StepStats) s).getSuccessRecords())
+            .mapToInt(s -> s.getSuccessRecords())
             .sum();
     int totalFailed =
         stats.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(s -> ((StepStats) s).getFailedRecords())
+            .mapToInt(s -> s.getFailedRecords())
             .sum();
 
     jobStats.withSuccessRecords(totalSuccess).withFailedRecords(totalFailed);

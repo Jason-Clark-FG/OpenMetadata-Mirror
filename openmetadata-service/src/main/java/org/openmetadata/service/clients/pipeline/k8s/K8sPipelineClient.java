@@ -241,7 +241,7 @@ public class K8sPipelineClient extends PipelineServiceClient {
   // K8s API clients
   private BatchV1Api batchApi;
   private CoreV1Api coreApi;
-  private CustomObjectsApi customObjectsApi;
+  private final CustomObjectsApi customObjectsApi;
 
   // Configuration
   private final K8sPipelineClientConfig k8sConfig;

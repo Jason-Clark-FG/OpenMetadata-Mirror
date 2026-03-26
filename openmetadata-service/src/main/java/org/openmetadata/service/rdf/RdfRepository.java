@@ -482,12 +482,11 @@ public class RdfRepository {
 
         storageService.executeSparqlUpdate(deleteQuery);
 
-        StringBuilder insertQuery = new StringBuilder();
-        insertQuery.append("INSERT DATA { GRAPH <").append(KNOWLEDGE_GRAPH).append("> { ");
-        insertQuery.append(triples);
-        insertQuery.append(" } }");
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
+                triples +
+                " } }";
 
-        storageService.executeSparqlUpdate(insertQuery.toString());
+        storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Added lineage with details from {}/{} to {}/{}", fromType, fromId, toType, toId);
       }
     } catch (Exception e) {
@@ -1697,12 +1696,11 @@ public class RdfRepository {
       String triples = writer.toString();
 
       if (!triples.isEmpty()) {
-        StringBuilder insertQuery = new StringBuilder();
-        insertQuery.append("INSERT DATA { GRAPH <").append(KNOWLEDGE_GRAPH).append("> { ");
-        insertQuery.append(triples);
-        insertQuery.append(" } }");
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
+                triples +
+                " } }";
 
-        storageService.executeSparqlUpdate(insertQuery.toString());
+        storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Added glossary term relation {} -> {} ({})", fromTermId, toTermId, relationType);
       }
     } catch (Exception e) {
@@ -1853,12 +1851,11 @@ public class RdfRepository {
       LOG.debug("Generated N-Triples:\n{}", triples);
 
       if (!triples.isEmpty()) {
-        StringBuilder insertQuery = new StringBuilder();
-        insertQuery.append("INSERT DATA { GRAPH <").append(KNOWLEDGE_GRAPH).append("> { ");
-        insertQuery.append(triples);
-        insertQuery.append(" } }");
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
+                triples +
+                " } }";
 
-        storageService.executeSparqlUpdate(insertQuery.toString());
+        storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Bulk added {} glossary term relations to RDF store", relations.size());
       }
     } catch (Exception e) {
@@ -2007,7 +2004,6 @@ public class RdfRepository {
 
     try {
       org.openmetadata.schema.entity.data.Glossary glossary =
-          (org.openmetadata.schema.entity.data.Glossary)
               Entity.getEntity("glossary", glossaryId, "*", null);
 
       String glossaryUri = config.getBaseUri().toString() + "glossary/" + glossaryId;

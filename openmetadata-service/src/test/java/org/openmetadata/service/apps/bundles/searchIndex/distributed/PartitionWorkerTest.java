@@ -15,6 +15,7 @@ package org.openmetadata.service.apps.bundles.searchIndex.distributed;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -265,7 +266,7 @@ class PartitionWorkerTest {
     PartitionWorker.BatchResult result3 = new PartitionWorker.BatchResult(100, 10, 0, null);
 
     assertEquals(result1, result2);
-    assertFalse(result1.equals(result3));
+    assertNotEquals(result1, result3);
   }
 
   @Test
@@ -275,7 +276,7 @@ class PartitionWorkerTest {
     PartitionWorker.PartitionResult result3 = new PartitionWorker.PartitionResult(1000, 50, true);
 
     assertEquals(result1, result2);
-    assertFalse(result1.equals(result3));
+    assertNotEquals(result1, result3);
   }
 
   @Test

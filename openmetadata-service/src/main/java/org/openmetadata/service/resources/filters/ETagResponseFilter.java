@@ -35,9 +35,8 @@ public class ETagResponseFilter implements ContainerResponseFilter {
     try (var ignored = RequestLatencyContext.phase("etagGeneration")) {
       if ("GET".equals(requestContext.getMethod())
           && responseContext.getStatus() == Response.Status.OK.getStatusCode()
-          && responseContext.getEntity() instanceof EntityInterface) {
+          && responseContext.getEntity() instanceof EntityInterface entity) {
 
-        EntityInterface entity = (EntityInterface) responseContext.getEntity();
         String etag = EntityETag.generateETag(entity);
         responseContext.getHeaders().add("ETag", etag);
       }

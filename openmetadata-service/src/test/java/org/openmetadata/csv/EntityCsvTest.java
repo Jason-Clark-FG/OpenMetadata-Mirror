@@ -3,6 +3,7 @@ package org.openmetadata.csv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -543,7 +544,6 @@ public class EntityCsvTest {
     String tableConfig = "{\"columns\":[\"name\",\"value\"]}";
     @SuppressWarnings("unchecked")
     Map<String, Object> tableValue =
-        (Map<String, Object>)
             invokePrivate(
                 tableCsv,
                 "parseTableType",
@@ -587,7 +587,7 @@ public class EntityCsvTest {
                 new CsvHeader().withName("required").withRequired(true),
                 new CsvHeader().withName("optional").withRequired(false)));
     EntityCsv.resetRequiredColumns(headers, List.of("required"));
-    assertFalse(Boolean.TRUE.equals(headers.get(0).getRequired()));
+    assertNotEquals(Boolean.TRUE, headers.get(0).getRequired());
 
     assertTrue(EntityCsv.invalidBoolean(1, "maybe").contains("maybe"));
     assertTrue(new TestCsv().failed("boom", CsvErrorType.PARSER_FAILURE).contains("boom"));

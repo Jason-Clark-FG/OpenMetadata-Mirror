@@ -76,7 +76,7 @@ class OpenMetadataConnectionBuilderTest {
       assertInstanceOf(OpenMetadataJWTClientConfig.class, connection.getSecurityConfig());
       assertEquals(
           "jwt-token",
-          ((OpenMetadataJWTClientConfig) connection.getSecurityConfig()).getJwtToken());
+          connection.getSecurityConfig().getJwtToken());
       assertInstanceOf(ValidateSSLClientConfig.class, connection.getSslConfig());
       assertEquals(
           "/tmp/ca.pem", ((ValidateSSLClientConfig) connection.getSslConfig()).getCaCertificate());
@@ -115,7 +115,7 @@ class OpenMetadataConnectionBuilderTest {
 
       assertEquals(
           "fallback-token",
-          ((OpenMetadataJWTClientConfig) connection.getSecurityConfig()).getJwtToken());
+          connection.getSecurityConfig().getJwtToken());
       assertNull(connection.getSslConfig());
     }
   }

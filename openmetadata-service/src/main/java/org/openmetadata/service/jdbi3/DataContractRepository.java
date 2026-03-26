@@ -711,11 +711,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
     if (binaryTypes.contains(type1) && binaryTypes.contains(type2)) {
       return true;
     }
-    if (complexTypes.contains(type1) && complexTypes.contains(type2)) {
-      return true;
-    }
-
-    return false;
+    return complexTypes.contains(type1) && complexTypes.contains(type2);
   }
 
   /**

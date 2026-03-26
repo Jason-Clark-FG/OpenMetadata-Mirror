@@ -14,7 +14,9 @@
 package org.openmetadata.service.audit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -72,8 +74,8 @@ class AuditLogConsumerTest {
 
     // Verify it can be parsed (this tests the format expected by the consumer)
     assertNotNull(json);
-    assertEquals(true, json.contains("timestamp"));
-    assertEquals(true, json.contains("currentOffset"));
+    assertTrue(json.contains("timestamp"));
+    assertTrue(json.contains("currentOffset"));
   }
 
   @Test
@@ -152,7 +154,7 @@ class AuditLogConsumerTest {
 
     // Offset should have advanced
     assertEquals(3L, lastSuccessfulOffset);
-    assertEquals(true, lastSuccessfulOffset > currentOffset);
+    assertTrue(lastSuccessfulOffset > currentOffset);
   }
 
   @Test
@@ -192,7 +194,7 @@ class AuditLogConsumerTest {
 
     // Should stop if processed < batchSize
     boolean shouldContinue = processedInBatch >= batchSize;
-    assertEquals(false, shouldContinue);
+    assertFalse(shouldContinue);
   }
 
   @Test
@@ -203,7 +205,7 @@ class AuditLogConsumerTest {
 
     // Should continue if processed >= batchSize
     boolean shouldContinue = processedInBatch >= batchSize;
-    assertEquals(true, shouldContinue);
+    assertTrue(shouldContinue);
   }
 
   private ChangeEvent createChangeEvent(String userName) {

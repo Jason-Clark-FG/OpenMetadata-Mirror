@@ -1,5 +1,6 @@
 package org.openmetadata.service.secrets.masker;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.AfterAll;
@@ -23,6 +24,6 @@ public class EntityMaskerFactoryTest {
   @Test
   void testInitWithPasswordEntityMasker() {
     CONFIG.setMaskPasswordsAPI(true);
-    assertTrue(EntityMaskerFactory.createEntityMasker() instanceof PasswordEntityMasker);
+    assertInstanceOf(PasswordEntityMasker.class, EntityMaskerFactory.createEntityMasker());
   }
 }

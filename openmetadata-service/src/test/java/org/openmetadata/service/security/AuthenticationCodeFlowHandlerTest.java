@@ -2,6 +2,7 @@ package org.openmetadata.service.security;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -611,7 +612,7 @@ class AuthenticationCodeFlowHandlerTest {
   @Test
   void isJwtRecognizesThreePartTokens() {
     assertTrue(AuthenticationCodeFlowHandler.isJWT("a.b.c"));
-    assertTrue(!AuthenticationCodeFlowHandler.isJWT("a.b"));
+    assertFalse(AuthenticationCodeFlowHandler.isJWT("a.b"));
   }
 
   @Test
@@ -1154,8 +1155,8 @@ class AuthenticationCodeFlowHandlerTest {
               Map.of());
 
       assertEquals(persistedUser, user);
-      assertTrue(Boolean.TRUE.equals(draftUser.getIsAdmin()));
-      assertTrue(Boolean.TRUE.equals(draftUser.getIsEmailVerified()));
+      assertEquals(Boolean.TRUE, draftUser.getIsAdmin());
+      assertEquals(Boolean.TRUE, draftUser.getIsEmailVerified());
     }
   }
 
@@ -1228,7 +1229,7 @@ class AuthenticationCodeFlowHandlerTest {
               Map.of("groups", List.of("analytics", "platform")));
 
       assertEquals(existingUser, user);
-      assertTrue(Boolean.TRUE.equals(existingUser.getIsAdmin()));
+      assertEquals(Boolean.TRUE, existingUser.getIsAdmin());
       userUtil.verify(() -> UserUtil.addOrUpdateUser(existingUser));
     }
   }
