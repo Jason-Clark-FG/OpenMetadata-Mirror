@@ -187,12 +187,10 @@ test.describe('Glossary Term Details Operations', () => {
         .getByTestId('edit-button')
         .click();
 
-      // Remove the related term by clicking the close icon on the tag
-      // Use a more robust selector that doesn't rely on FQN in attribute
-      await page.locator('.ant-tag-close-icon').first().click();
+      await page.locator('[data-testid^="remove-row-"]').first().click();
 
       const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');
-      await page.getByTestId('saveAssociatedTag').click();
+      await page.getByTestId('save-related-terms').click();
       await saveRes;
 
       // Verify related term is removed
@@ -241,11 +239,10 @@ test.describe('Glossary Term Details Operations', () => {
         .getByTestId('edit-button')
         .click();
 
-      // Use a more robust selector
-      await page.locator('.ant-tag-close-icon').first().click();
+      await page.locator('[data-testid^="remove-row-"]').first().click();
 
       const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');
-      await page.getByTestId('saveAssociatedTag').click();
+      await page.getByTestId('save-related-terms').click();
       await saveRes;
     } finally {
       await glossaryTerm1.delete(apiContext);
