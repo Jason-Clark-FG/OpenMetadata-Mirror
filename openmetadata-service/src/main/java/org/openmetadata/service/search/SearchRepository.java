@@ -847,11 +847,9 @@ public class SearchRepository {
         }
       } catch (Exception ie) {
         LOG.error(
-            "Issue in Creating entities document for entityType [{}]. Reason[{}], Cause[{}], Stack [{}]",
+            "Issue creating entities document for entityType [{}]",
             entityType,
-            ie.getMessage(),
-            ie.getCause(),
-            ExceptionUtils.getStackTrace(ie));
+            ie);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
