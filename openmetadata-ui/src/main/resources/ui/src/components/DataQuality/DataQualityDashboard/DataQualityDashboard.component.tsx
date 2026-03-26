@@ -245,7 +245,7 @@ const DataQualityDashboard = ({
   const fetchTagOptions = async (query = WILD_CARD_CHAR) => {
     const response = await searchQuery({
       searchIndex: SearchIndex.TAG,
-      query: `*${query}*`,
+      query: query === WILD_CARD_CHAR ? query : `*${query}*`,
       filters: 'disabled:false AND !classification.name:Tier',
       pageSize: PAGE_SIZE_BASE,
     });
@@ -297,7 +297,7 @@ const DataQualityDashboard = ({
   const fetchGlossaryTermOptions = async (query = WILD_CARD_CHAR) => {
     const response = await searchQuery({
       searchIndex: SearchIndex.GLOSSARY_TERM,
-      query: `*${query}*`,
+      query: query === WILD_CARD_CHAR ? query : `*${query}*`,
       pageSize: PAGE_SIZE_BASE,
     });
     const hits = response.hits.hits;

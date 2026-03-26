@@ -14,14 +14,7 @@ import { ReactComponent as SkippedIcon } from '../assets/svg/ic-aborted.svg';
 import { ReactComponent as FailedIcon } from '../assets/svg/ic-fail.svg';
 import { ReactComponent as SuccessIcon } from '../assets/svg/ic-successful.svg';
 import { StatusData } from '../components/DataQuality/ChartWidgets/StatusCardWidget/StatusCardWidget.interface';
-import { DEFAULT_SELECTED_RANGE } from '../constants/profiler.constant';
 import { DataQualityDimensions } from '../generated/tests/testDefinition';
-import {
-  getCurrentMillis,
-  getEndOfDayInMillis,
-  getEpochMillisForPastDays,
-  getStartOfDayInMillis,
-} from '../utils/date-time/DateTimeUtils';
 
 export const TEST_CASE_STATUS_ICON = {
   Aborted: SkippedIcon,
@@ -90,9 +83,3 @@ export const DQ_FILTER_KEYS = {
   GLOSSARY_TERMS: 'glossaryTerms',
 } as const;
 
-export const DEFAULT_RANGE_DATA = {
-  startTs: getStartOfDayInMillis(
-    getEpochMillisForPastDays(DEFAULT_SELECTED_RANGE.days)
-  ),
-  endTs: getEndOfDayInMillis(getCurrentMillis()),
-};
