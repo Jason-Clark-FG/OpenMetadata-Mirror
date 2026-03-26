@@ -107,11 +107,21 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await database.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Database Schema Tables normal pagination', async ({
       page,
     }) => {
       await page.goto(`/databaseSchema/${schemaFqn}?pageSize=15`);
-      await testPaginationNavigation(page, '/api/v1/tables', 'table');
+      await testPaginationNavigation(
+        page,
+        '/api/v1/tables',
+        '[data-testid="databaseSchema-tables"]'
+      );
     });
 
     test('should test Database Schema Tables complete flow with search', async ({
@@ -126,7 +136,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'schema',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="databaseSchema-tables"]',
       });
     });
   });
@@ -161,9 +171,20 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await database.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test pagination on Table columns', async ({ page }) => {
       await page.goto(`/table/${tableFqn}?pageSize=15`);
-      await testPaginationNavigation(page, '/columns', 'table', false);
+      await testPaginationNavigation(
+        page,
+        '/columns',
+        '[data-testid="entity-table"]',
+        false
+      );
     });
     test('should test Table columns complete flow with search', async ({
       page,
@@ -177,7 +198,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/columns/search',
         searchTestTerm: 'pw',
         searchParamName: 'columnSearch',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="entity-table"]',
       });
     });
   });
@@ -204,11 +225,21 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await database.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test pagination on Service Databases page', async ({
       page,
     }) => {
       await page.goto(`/service/databaseServices/${databaseFqn}/databases`);
-      await testPaginationNavigation(page, '/api/v1/databases', 'table');
+      await testPaginationNavigation(
+        page,
+        '/api/v1/databases',
+        '[data-testid="service-children-table"]'
+      );
 
       const responsePromise = page.waitForResponse((response) =>
         response
@@ -220,7 +251,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await page.getByTestId('insights').click();
       const response = await responsePromise;
       expect(response.status()).toBe(200);
-      await page.waitForSelector('.ant-skeleton-active', {
+      await page.locator('.ant-skeleton-active').first().waitFor({
         state: 'detached',
       });
 
@@ -231,7 +262,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       const response2 = await databaseResponsePromise;
       expect(response2.status()).toBe(200);
       await waitForAllLoadersToDisappear(page);
-      await page.waitForSelector('[data-testid="table-container"]', {
+      await page.getByTestId('table-container').waitFor({
         state: 'visible',
       });
 
@@ -253,7 +284,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'schema',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="service-children-table"]',
       });
     });
   });
@@ -275,6 +306,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await tag.create(apiContext);
       }
 
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await classification.delete(apiContext);
       await afterAction();
     });
 
@@ -412,9 +449,19 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await apiCollection.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test API Collection normal pagination', async ({ page }) => {
       await page.goto(`/apiCollection/${apiCollectionFqn}?pageSize=15`);
-      await testPaginationNavigation(page, '/api/v1/apiEndpoints', 'table');
+      await testPaginationNavigation(
+        page,
+        '/api/v1/apiEndpoints',
+        '[data-testid="databaseSchema-tables"]'
+      );
     });
 
     test('should test API Collection complete flow with search', async ({
@@ -428,7 +475,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         normalApiPattern: '/api/v1/apiEndpoints',
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="databaseSchema-tables"]',
       });
     });
   });
@@ -459,13 +506,23 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await database.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Stored Procedures normal pagination', async ({
       page,
     }) => {
       await page.goto(
         `/databaseSchema/${schemaFqn}/stored_procedure?pageSize=15`
       );
-      await testPaginationNavigation(page, '/api/v1/storedProcedures', 'table');
+      await testPaginationNavigation(
+        page,
+        '/api/v1/storedProcedures',
+        '[data-testid="stored-procedure-table"]'
+      );
       const responsePromise = page.waitForResponse((response) =>
         response.url().includes('/api/v1/tables')
       );
@@ -494,7 +551,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'schema',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="stored-procedure-table"]',
         deleteBtnTestId: 'show-deleted-stored-procedure',
       });
     });
@@ -523,9 +580,19 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await database.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Database Schemas normal pagination', async ({ page }) => {
       await page.goto(`/database/${databaseFqn}?pageSize=15`);
-      await testPaginationNavigation(page, '/api/v1/databaseSchemas', 'table');
+      await testPaginationNavigation(
+        page,
+        '/api/v1/databaseSchemas',
+        '[data-testid="database-databaseSchemas"]'
+      );
     });
 
     test('should test Database Schemas complete flow with search', async ({
@@ -540,7 +607,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'schema',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="database-databaseSchemas"]',
       });
     });
   });
@@ -578,6 +645,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await dashboardService.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Data Models normal pagination', async ({ page }) => {
       await page.goto(
         `/service/dashboardServices/${serviceFqn}/data-model?pageSize=15`
@@ -585,7 +658,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await testPaginationNavigation(
         page,
         '/api/v1/dashboard/datamodels',
-        'table'
+        '[data-testid="data-models-table"]'
       );
       const responsePromise = page.waitForResponse((response) =>
         response.url().includes('/api/v1/dashboard/datamodels')
@@ -615,7 +688,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'dataModel',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="data-models-table"]',
       });
     });
   });
@@ -643,6 +716,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await driveService.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Directories normal pagination', async ({ page }) => {
       await page.goto(
         `/service/driveServices/${serviceFqn}/directories?pageSize=15`
@@ -650,7 +729,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await testPaginationNavigation(
         page,
         '/api/v1/drives/directories',
-        'table'
+        '[data-testid="service-children-table"]'
       );
     });
 
@@ -666,7 +745,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         searchApiPattern: '/api/v1/search/query',
         searchTestTerm: 'pw',
         searchParamName: 'schema',
-        waitForLoadSelector: 'table',
+        waitForLoadSelector: '[data-testid="service-children-table"]',
       });
     });
   });
@@ -702,6 +781,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await afterAction();
     });
 
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await driveService.delete(apiContext);
+      await afterAction();
+    });
+
     test('should test Files normal pagination', async ({ page }) => {
       await page.goto(`/service/driveServices/${serviceFqn}/files?pageSize=15`);
       await testPaginationNavigation(page, '/api/v1/drives/files', 'table');
@@ -727,7 +812,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       test.slow(true);
 
       await page.goto(`/service/driveServices/${serviceFqn}/files?pageSize=15`);
-      await page.waitForSelector('table', { state: 'visible' });
+      await page.locator('table').first().waitFor({ state: 'visible' });
 
       let paginationText = page.locator('[data-testid="page-indicator"]');
       await expect(paginationText).toBeVisible();
@@ -743,7 +828,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       );
       await nextButton.click();
       await filesResponsePromise;
-      await page.waitForSelector('table', { state: 'visible' });
+      await page.locator('table').first().waitFor({ state: 'visible' });
 
       paginationTextContent = await paginationText.textContent();
       expect(paginationTextContent).toMatch(/2\s*of\s*\d+/);
@@ -767,7 +852,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await page.getByTestId('files').click();
       const filesTabResponse = await filesTabResponsePromise;
       expect(filesTabResponse.status()).toBe(200);
-      await page.waitForSelector('table', { state: 'visible' });
+      await page.locator('table').first().waitFor({ state: 'visible' });
 
       paginationText = page.locator('[data-testid="page-indicator"]');
       await expect(paginationText).toBeVisible();
@@ -781,7 +866,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await nextButton.click();
       const filesPage2Response = await filesPage2Promise;
       expect(filesPage2Response.status()).toBe(200);
-      await page.waitForSelector('table', { state: 'visible' });
+      await page.locator('table').first().waitFor({ state: 'visible' });
 
       paginationTextContent = await paginationText.textContent();
       expect(paginationTextContent).toMatch(/2\s*of\s*\d+/);
@@ -809,7 +894,7 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       expect(reloadSpreadsheetsUrl).not.toContain('before=');
       expect(reloadSpreadsheetsUrl).not.toContain('after=');
 
-      await page.waitForSelector('table', { state: 'visible' });
+      await page.locator('table').first().waitFor({ state: 'visible' });
 
       paginationText = page.locator('[data-testid="page-indicator"]');
       await expect(paginationText).toBeVisible();
@@ -839,6 +924,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         });
       }
 
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await driveService.delete(apiContext);
       await afterAction();
     });
 
@@ -892,6 +983,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await role.create(apiContext, [policy.responseData.id!]);
       }
 
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await policy.delete(apiContext);
       await afterAction();
     });
 
@@ -965,6 +1062,12 @@ test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       await dashboardService.create(apiContext, customChildDashboards);
       serviceFqn = dashboardService.entityResponseData.fullyQualifiedName!;
 
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await dashboardService.delete(apiContext);
       await afterAction();
     });
 

@@ -17,7 +17,7 @@ import ButtonGroup from 'antd/lib/button/button-group';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
-import { cloneDeep, isEmpty, isEqual, toString } from 'lodash';
+import { isEmpty, isEqual, toString } from 'lodash';
 import { useSnackbar } from 'notistack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -71,7 +71,6 @@ import {
   getTabLabelMapFromTabs,
 } from '../../../utils/CustomizePage/CustomizePageUtils';
 import domainClassBase from '../../../utils/Domain/DomainClassBase';
-import { getDomainContainerStyles } from '../../../utils/DomainPageStyles';
 import {
   getQueryFilterForDataProducts,
   getQueryFilterForDomain,
@@ -104,13 +103,13 @@ import { useFormDrawerWithRef } from '../../common/atoms/drawer';
 import type { BreadcrumbItem } from '../../common/atoms/navigation/useBreadcrumbs';
 import { useBreadcrumbs } from '../../common/atoms/navigation/useBreadcrumbs';
 
-import { DRAWER_HEADER_STYLING } from '../../../constants/DomainsListPage.constants';
+import { Avatar } from '@openmetadata/ui-core-components';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { FeedCounts } from '../../../interface/feed.interface';
+import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { withActivityFeed } from '../../AppRouter/withActivityFeed';
 import { CoverImage } from '../../common/CoverImage/CoverImage.component';
 import DeleteWidgetModal from '../../common/DeleteWidget/DeleteWidgetModal';
-import { EntityAvatar } from '../../common/EntityAvatar/EntityAvatar';
 import AnnouncementCard from '../../common/EntityPageInfos/AnnouncementCard/AnnouncementCard';
 import AnnouncementDrawer from '../../common/EntityPageInfos/AnnouncementDrawer/AnnouncementDrawer';
 import { AlignRightIconButton } from '../../common/IconButtons/EditIconButton';
@@ -343,12 +342,8 @@ const DomainDetails = ({
     closeDrawer: closeDataProductDrawer,
   } = useFormDrawerWithRef({
     title: t('label.add-entity', { entity: t('label.data-product') }),
-    anchor: 'right',
     width: 670,
     closeOnEscape: false,
-    header: {
-      sx: DRAWER_HEADER_STYLING,
-    },
     onCancel: () => {
       dataProductForm.resetFields();
     },
@@ -490,12 +485,8 @@ const DomainDetails = ({
     closeDrawer: closeSubDomainDrawer,
   } = useFormDrawerWithRef({
     title: t('label.add-entity', { entity: t('label.sub-domain') }),
-    anchor: 'right',
     width: 670,
     closeOnEscape: false,
-    header: {
-      sx: DRAWER_HEADER_STYLING,
-    },
     onCancel: () => {
       subDomainForm.resetFields();
     },
@@ -659,9 +650,8 @@ const DomainDetails = ({
 
   const onNameSave = async (obj: { name: string; displayName?: string }) => {
     const { name: newName, displayName } = obj;
-    let updatedDetails = cloneDeep(domain);
 
-    updatedDetails = {
+    const updatedDetails = {
       ...domain,
       displayName: displayName?.trim(),
       name: newName?.trim(),
@@ -678,7 +668,7 @@ const DomainDetails = ({
           : newName.trim();
         navigate(getDomainDetailsPath(newFqn, activeTab));
       }
-    } catch (error) {
+    } catch {
       setIsNameEditing(false);
     }
   };
@@ -866,21 +856,10 @@ const DomainDetails = ({
 
   const iconData = useMemo(() => {
     return (
-      <EntityAvatar
+      <Avatar
         className="entity-header-avatar"
-        entity={{
-          ...domain,
-          entityType: 'domain',
-          parent: isSubDomain ? { type: 'domain' } : undefined,
-        }}
-        size={isTreeView ? 60 : 91}
-        sx={{
-          borderRadius: '5px',
-          border: '2px solid',
-          borderColor: theme.palette.allShades.white,
-          marginTop: isTreeView ? 0 : '-25px',
-          marginRight: 2,
-        }}
+        size={isTreeView ? 'md' : '2xl'}
+        {...getEntityAvatarProps({ ...domain, entityType: 'domain' })}
       />
     );
   }, [domain, isSubDomain, theme, isTreeView]);
@@ -1137,14 +1116,12 @@ const DomainDetails = ({
   return (
     <>
       {breadcrumbs}
-      <Box
-        className={isTreeView ? 'domain-tree-view-variant' : ''}
-        sx={{
-          ...getDomainContainerStyles(theme),
-          ...(isTreeView && { border: 'none' }),
-        }}>
+      <div
+        className={classNames('domain-page-container', {
+          'domain-tree-view-variant': isTreeView,
+        })}>
         {content}
-      </Box>
+      </div>
     </>
   );
 };
