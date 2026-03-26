@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 
 import java.util.Set;
@@ -101,6 +100,7 @@ class RequestEntityCacheTest {
     thread.join();
 
     assertNull(fromOtherThread.get());
-    assertNotNull(RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class));
+    assertNotNull(
+        RequestEntityCache.getById(Entity.TABLE, id, fields, includes, true, Table.class));
   }
 }

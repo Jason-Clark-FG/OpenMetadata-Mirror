@@ -138,8 +138,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     }
 
     distributedExecutor.setAppContext(appId, appStartTime);
-    distributedExecutor.execute(
-        searchIndexSink, recreateContext, config.recreateIndex(), config);
+    distributedExecutor.execute(searchIndexSink, recreateContext, config.recreateIndex(), config);
 
     monitorDistributedJob(distributedJob.getId());
 

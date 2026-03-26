@@ -45,10 +45,10 @@ class ColumnFilterMatcherTest {
                         .withToColumn("service.db.schema.orders.customer_id")));
     ColumnMetadataCache cache = new ColumnMetadataCache();
 
-    assertFalse(cache.matchesFilter(
+    assertFalse(
+        cache.matchesFilter(
             "service.db.schema.customers.customer_id",
-            new ColumnFilterCriteria(
-                    FilterType.TAG, "Sensitive")));
+            new ColumnFilterCriteria(FilterType.TAG, "Sensitive")));
 
     cache.loadColumnMetadata(
         Set.of("service.db.schema.customers.customer_id", "service.db.schema.orders.customer_id"),

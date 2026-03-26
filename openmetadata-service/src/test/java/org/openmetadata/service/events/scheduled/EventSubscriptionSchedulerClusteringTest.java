@@ -197,10 +197,16 @@ class EventSubscriptionSchedulerClusteringTest {
     assertNotNull(sched2);
 
     // They should have different instance IDs
-    assertNotEquals(sched1.getSchedulerInstanceId(), sched2.getSchedulerInstanceId(), "Scheduler instances should have different IDs");
+    assertNotEquals(
+        sched1.getSchedulerInstanceId(),
+        sched2.getSchedulerInstanceId(),
+        "Scheduler instances should have different IDs");
 
     // And different scheduler names
-    assertNotEquals(sched1.getSchedulerName(), sched2.getSchedulerName(), "Scheduler instances should have different names");
+    assertNotEquals(
+        sched1.getSchedulerName(),
+        sched2.getSchedulerName(),
+        "Scheduler instances should have different names");
 
     LOG.info(
         "Scheduler 1: name={}, instanceId={}",

@@ -389,7 +389,8 @@ public abstract class EntityCsv<T extends EntityInterface> {
     return getOwners(printer, csvRecord, fieldNumber, EntityCsv::invalidReviewer);
   }
 
-  public List<EntityReference> getDomains(CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
+  public List<EntityReference> getDomains(
+      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber) {
     if (!processRecord) {
       return null;
     }
@@ -739,7 +740,11 @@ public abstract class EntityCsv<T extends EntityInterface> {
   }
 
   private Map<String, Long> parseTimeInterval(
-      CSVPrinter printer, CSVRecord csvRecord, int fieldNumber, String fieldName, Object fieldValue) {
+      CSVPrinter printer,
+      CSVRecord csvRecord,
+      int fieldNumber,
+      String fieldName,
+      Object fieldValue) {
     List<String> timestampValues = fieldToEntities(fieldValue.toString());
     Map<String, Long> timestampMap = new HashMap<>();
     if (timestampValues.size() == 2) {
@@ -1164,8 +1169,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
         }
         // Queue for batch processing instead of immediate persist
         pendingEntityOperations.add(
-            new PendingEntityOperation(
-                entity, original, csvRecord, type, !isUpdate));
+            new PendingEntityOperation(entity, original, csvRecord, type, !isUpdate));
         pendingEntityFQNs.add(entity.getFullyQualifiedName());
         responseStatus = isUpdate ? Response.Status.OK : Response.Status.CREATED;
       } else {

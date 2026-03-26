@@ -50,7 +50,6 @@ import org.openmetadata.service.apps.bundles.changeEvent.msteams.TeamsMessage;
 import org.openmetadata.service.apps.bundles.changeEvent.slack.SlackMessage;
 import org.openmetadata.service.events.subscription.AlertsRuleEvaluator;
 import org.openmetadata.service.jdbi3.TestCaseRepository;
-import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FeedUtils;
 
 class RichPlatformMessageDecoratorTest {

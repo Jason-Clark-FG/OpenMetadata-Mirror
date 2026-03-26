@@ -55,7 +55,6 @@ import org.openmetadata.schema.type.ThreadType;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.events.subscription.AlertsRuleEvaluator;
 import org.openmetadata.service.jdbi3.TestCaseRepository;
-import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FeedUtils;
 
 class MessageDecoratorTest {

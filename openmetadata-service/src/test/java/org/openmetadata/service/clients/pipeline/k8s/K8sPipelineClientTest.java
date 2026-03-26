@@ -1334,9 +1334,7 @@ class K8sPipelineClientTest {
 
       assertEquals("http://localhost:8585/api", connection.getHostPort());
       assertEquals(AuthProvider.OPENMETADATA, connection.getAuthProvider());
-      assertEquals(
-          "ingestion-token",
-          connection.getSecurityConfig().getJwtToken());
+      assertEquals("ingestion-token", connection.getSecurityConfig().getJwtToken());
     }
   }
 

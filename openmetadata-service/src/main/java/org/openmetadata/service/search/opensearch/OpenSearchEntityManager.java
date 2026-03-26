@@ -1558,8 +1558,7 @@ public class OpenSearchEntityManager implements EntityManagementClient {
                 .withIncludeSourceFields(
                     SearchUtils.getRequiredEntityRelationshipFields(includeSourceFields));
         SearchEntityRelationshipResult tableER =
-            Entity.getSearchRepository().getSearchClient()
-                .searchEntityRelationship(request);
+            Entity.getSearchRepository().getSearchClient().searchEntityRelationship(request);
         Map.Entry<String, NodeInformation> tableNode =
             tableER.getNodes().entrySet().stream()
                 .filter(e -> fqn.toString().equals(e.getKey()))

@@ -19,7 +19,6 @@ import static org.openmetadata.service.Entity.INGESTION_PIPELINE;
 
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;

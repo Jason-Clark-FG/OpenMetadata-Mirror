@@ -65,7 +65,8 @@ public class DefaultLogStorage implements LogStorageInterface {
   }
 
   @Override
-  public Map<String, Object> getLogs(String pipelineFQN, UUID runId, String afterCursor, int limit) {
+  public Map<String, Object> getLogs(
+      String pipelineFQN, UUID runId, String afterCursor, int limit) {
     try {
       // Note: The default implementation through pipeline service client (Airflow/Argo)
       // doesn't support fetching logs by specific runId - it always returns the latest logs

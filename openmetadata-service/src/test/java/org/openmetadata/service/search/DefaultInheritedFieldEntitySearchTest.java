@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;

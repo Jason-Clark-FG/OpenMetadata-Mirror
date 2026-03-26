@@ -44,7 +44,7 @@ public class SamlValidator {
       }
 
       FieldError idpValidation = validateIdpConnectivity(samlConfig);
-      return idpValidation;// Success - SAML configuration validated
+      return idpValidation; // Success - SAML configuration validated
     } catch (Exception e) {
       LOG.error("SAML validation failed", e);
       return ValidationErrorBuilder.createFieldError(
@@ -290,8 +290,8 @@ public class SamlValidator {
       String samlRequest = createTestSamlRequest(samlConfig);
 
       // Build URL with SAML request parameter (HTTP-Redirect binding)
-      String urlWithParams = ssoUrl + (ssoUrl.contains("?") ? "&" : "?") +
-              "SAMLRequest=" + samlRequest;
+      String urlWithParams =
+          ssoUrl + (ssoUrl.contains("?") ? "&" : "?") + "SAMLRequest=" + samlRequest;
 
       URL url = new URL(urlWithParams);
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();

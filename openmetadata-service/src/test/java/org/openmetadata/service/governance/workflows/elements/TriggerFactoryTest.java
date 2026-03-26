@@ -16,7 +16,6 @@ package org.openmetadata.service.governance.workflows.elements;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,8 +67,7 @@ class TriggerFactoryTest {
     CallActivity callActivity = findCallActivity(model);
     assertNotNull(callActivity, "CallActivity should exist");
 
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
     assertNotNull(loopChars, "Loop characteristics should exist");
     assertEquals("1", loopChars.getLoopCardinality(), "Cardinality should be 1 for batch mode");
   }
@@ -89,8 +87,7 @@ class TriggerFactoryTest {
     CallActivity callActivity = findCallActivity(model);
     assertNotNull(callActivity, "CallActivity should exist");
 
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
     assertNotNull(loopChars, "Loop characteristics should exist");
     assertEquals(
         "${numberOfEntities}",
@@ -112,8 +109,7 @@ class TriggerFactoryTest {
     CallActivity callActivity = findCallActivity(model);
     assertNotNull(callActivity, "CallActivity should exist");
 
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
     assertEquals(
         "${numberOfEntities}",
         loopChars.getLoopCardinality(),
@@ -134,8 +130,7 @@ class TriggerFactoryTest {
     CallActivity callActivity = findCallActivity(model);
     assertNotNull(callActivity, "CallActivity should exist");
 
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
     assertEquals(
         "${numberOfEntities}",
         loopChars.getLoopCardinality(),
@@ -152,8 +147,7 @@ class TriggerFactoryTest {
     trigger.addToWorkflow(model);
 
     CallActivity callActivity = findCallActivity(model);
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
 
     // If ANY sink has batchMode=true, should use single execution
     assertEquals(
@@ -173,8 +167,7 @@ class TriggerFactoryTest {
     trigger.addToWorkflow(model);
 
     CallActivity callActivity = findCallActivity(model);
-    MultiInstanceLoopCharacteristics loopChars =
-            callActivity.getLoopCharacteristics();
+    MultiInstanceLoopCharacteristics loopChars = callActivity.getLoopCharacteristics();
 
     assertEquals(
         "1",

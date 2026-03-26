@@ -1,14 +1,13 @@
 package org.openmetadata.service.secrets.masker;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.entity.services.ServiceType;
 import org.openmetadata.schema.services.connections.database.MysqlConnection;
 import org.openmetadata.service.exception.EntityMaskException;
-
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PasswordEntityMaskerTest extends TestEntityMasker {
   public PasswordEntityMaskerTest() {

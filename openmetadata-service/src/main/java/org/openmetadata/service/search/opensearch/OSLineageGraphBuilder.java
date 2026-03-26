@@ -1281,7 +1281,8 @@ public class OSLineageGraphBuilder
    * Estimates graph size using sampling and fanout calculation.
    */
   @Override
-  public int estimateGraphSize(org.openmetadata.service.search.lineage.LineageQueryContext context) {
+  public int estimateGraphSize(
+      org.openmetadata.service.search.lineage.LineageQueryContext context) {
     SearchLineageRequest request = context.getRequest();
 
     // Start with root node

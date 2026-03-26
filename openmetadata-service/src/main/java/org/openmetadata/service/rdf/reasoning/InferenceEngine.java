@@ -74,38 +74,43 @@ public class InferenceEngine {
 
     // Transitive upstream/downstream relationships
 
-    String rulesBuilder = String.format(
-            "[transitiveUpstream: (?a <%supstream> ?b) (?b <%supstream> ?c) -> (?a <%supstream> ?c)]%n",
-            om, om, om) +
-            String.format(
-                    "[transitiveDownstream: (?a <%sdownstream> ?b) (?b <%sdownstream> ?c) -> (?a <%sdownstream> ?c)]%n",
-                    om, om, om) +
+    String rulesBuilder =
+        String.format(
+                "[transitiveUpstream: (?a <%supstream> ?b) (?b <%supstream> ?c) -> (?a <%supstream> ?c)]%n",
+                om, om, om)
+            + String.format(
+                "[transitiveDownstream: (?a <%sdownstream> ?b) (?b <%sdownstream> ?c) -> (?a <%sdownstream> ?c)]%n",
+                om, om, om)
+            +
 
             // Inverse relationships
             String.format(
-                    "[inverseUpstream: (?a <%supstream> ?b) -> (?b <%sdownstream> ?a)]%n", om, om) +
-            String.format(
-                    "[inverseDownstream: (?a <%sdownstream> ?b) -> (?b <%supstream> ?a)]%n", om, om) +
-            String.format("[inverseUses: (?a <%suses> ?b) -> (?b <%susedBy> ?a)]%n", om, om) +
-            String.format("[inverseOwns: (?a <%sowns> ?b) -> (?b <%sownedBy> ?a)]%n", om, om) +
+                "[inverseUpstream: (?a <%supstream> ?b) -> (?b <%sdownstream> ?a)]%n", om, om)
+            + String.format(
+                "[inverseDownstream: (?a <%sdownstream> ?b) -> (?b <%supstream> ?a)]%n", om, om)
+            + String.format("[inverseUses: (?a <%suses> ?b) -> (?b <%susedBy> ?a)]%n", om, om)
+            + String.format("[inverseOwns: (?a <%sowns> ?b) -> (?b <%sownedBy> ?a)]%n", om, om)
+            +
 
             // Domain membership inheritance
             String.format(
-                    "[domainInheritance: (?parent <%sinDomain> ?domain) (?child <%sbelongsTo> ?parent) -> (?child <%sinDomain> ?domain)]%n",
-                    om, om, om) +
+                "[domainInheritance: (?parent <%sinDomain> ?domain) (?child <%sbelongsTo> ?parent) -> (?child <%sinDomain> ?domain)]%n",
+                om, om, om)
+            +
 
             // Glossary term inheritance
             String.format(
-                    "[glossaryInheritance: (?table <%shasGlossaryTerm> ?term) (?column <%sbelongsTo> ?table) -> (?column <%shasGlossaryTerm> ?term)]%n",
-                    om, om, om) +
+                "[glossaryInheritance: (?table <%shasGlossaryTerm> ?term) (?column <%sbelongsTo> ?table) -> (?column <%shasGlossaryTerm> ?term)]%n",
+                om, om, om)
+            +
 
             // Service type inference
             String.format(
-                    "[serviceTypeInference: (?service <%shasDatabase> ?db) -> (?service <%stype> <%sDatabaseService>)]%n",
-                    om, rdf, om) +
-            String.format(
-                    "[serviceTypeInference2: (?service <%shasPipeline> ?pipeline) -> (?service <%stype> <%sPipelineService>)]%n",
-                    om, rdf, om);
+                "[serviceTypeInference: (?service <%shasDatabase> ?db) -> (?service <%stype> <%sDatabaseService>)]%n",
+                om, rdf, om)
+            + String.format(
+                "[serviceTypeInference2: (?service <%shasPipeline> ?pipeline) -> (?service <%stype> <%sPipelineService>)]%n",
+                om, rdf, om);
 
     return Rule.parseRules(rulesBuilder);
   }

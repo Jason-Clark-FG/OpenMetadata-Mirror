@@ -47,7 +47,7 @@ public class CognitoAuthValidator {
       }
 
       FieldError publicKeyValidation = validatePublicKeyUrls(authConfig, cognitoDetails);
-      return publicKeyValidation;// Success - Cognito public client validated
+      return publicKeyValidation; // Success - Cognito public client validated
     } catch (Exception e) {
       LOG.error("Cognito public client validation failed", e);
       return ValidationErrorBuilder.createFieldError(
@@ -85,7 +85,7 @@ public class CognitoAuthValidator {
               oidcConfig.getId(),
               oidcConfig.getSecret(),
               oidcConfig.getCallbackUrl());
-      return credentialsValidation;// Success - Cognito confidential client validated
+      return credentialsValidation; // Success - Cognito confidential client validated
     } catch (Exception e) {
       LOG.error("Cognito confidential client validation failed", e);
       return ValidationErrorBuilder.createFieldError(
@@ -319,12 +319,15 @@ public class CognitoAuthValidator {
       // Build auth URL exactly as done in AuthenticationCodeFlowHandler
       // Build query parameters similar to buildLoginParams in AuthenticationCodeFlowHandler
 
-      String authUrl = authorizationEndpoint + "?response_type=code" +
-              "&client_id=" + clientId +
-              "&redirect_uri=" +
-              java.net.URLEncoder.encode(redirectUri, StandardCharsets.UTF_8) +
-              "&scope=openid%20email%20profile" +
-              "&response_mode=query";
+      String authUrl =
+          authorizationEndpoint
+              + "?response_type=code"
+              + "&client_id="
+              + clientId
+              + "&redirect_uri="
+              + java.net.URLEncoder.encode(redirectUri, StandardCharsets.UTF_8)
+              + "&scope=openid%20email%20profile"
+              + "&response_mode=query";
       LOG.debug("Testing client ID with auth URL: {}", authUrl);
 
       try {

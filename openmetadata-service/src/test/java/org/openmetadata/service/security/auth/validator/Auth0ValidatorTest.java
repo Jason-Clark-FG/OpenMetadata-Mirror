@@ -8,7 +8,6 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -195,9 +194,7 @@ public class Auth0ValidatorTest {
           .when(
               () ->
                   ValidationHttpUtil.postForm(
-                      anyString(),
-                      anyString(),
-                          org.mockito.ArgumentMatchers.any()))
+                      anyString(), anyString(), org.mockito.ArgumentMatchers.any()))
           .thenReturn(tokenErrorResponse);
       mockedHttp
           .when(() -> ValidationHttpUtil.postForm(anyString(), anyString()))

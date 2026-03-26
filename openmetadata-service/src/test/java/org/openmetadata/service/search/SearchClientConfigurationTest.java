@@ -107,7 +107,10 @@ class SearchClientConfigurationTest {
     config.setAws(awsConfig);
 
     assertDoesNotThrow(() -> validateConfiguration(config));
-    assertNotEquals(Boolean.TRUE, config.getAws().getEnabled(), "IAM auth should be disabled by default for backward compatibility");
+    assertNotEquals(
+        Boolean.TRUE,
+        config.getAws().getEnabled(),
+        "IAM auth should be disabled by default for backward compatibility");
   }
 
   @Test

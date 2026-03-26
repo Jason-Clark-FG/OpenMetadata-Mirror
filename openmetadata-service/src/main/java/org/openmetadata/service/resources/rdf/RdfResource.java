@@ -141,15 +141,14 @@ public class RdfResource {
       })
   public Response debugGlossaryRelations(@Context SecurityContext securityContext) {
     authorizer.authorizeAdmin(securityContext);
-      if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
-        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-            .entity("{\"error\": \"RDF service not enabled\"}")
-            .build();
-      }
+    if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+          .entity("{\"error\": \"RDF service not enabled\"}")
+          .build();
+    }
 
-      String result = getRdfRepository().debugGlossaryTermRelations();
-      return Response.ok(result, MediaType.APPLICATION_JSON).build();
-
+    String result = getRdfRepository().debugGlossaryTermRelations();
+    return Response.ok(result, MediaType.APPLICATION_JSON).build();
   }
 
   @GET

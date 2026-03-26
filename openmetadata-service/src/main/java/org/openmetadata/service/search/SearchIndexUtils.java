@@ -213,8 +213,7 @@ public final class SearchIndexUtils {
                       val.ifPresentOrElse(
                           s -> {
                             switch (s.getValueType()) {
-                              case NUMBER -> nodeData.put(
-                                  dimensions.get(0), String.valueOf(s));
+                              case NUMBER -> nodeData.put(dimensions.get(0), String.valueOf(s));
                               default -> nodeData.put(
                                   dimensions.get(0), ((JsonString) s).getString());
                             }

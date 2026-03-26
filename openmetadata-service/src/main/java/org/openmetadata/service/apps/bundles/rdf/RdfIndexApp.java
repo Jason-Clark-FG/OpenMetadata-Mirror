@@ -687,8 +687,7 @@ public class RdfIndexApp extends AbstractNativeApplication {
       return;
     }
 
-    StepStats entityStats =
-            stats.getEntityStats().getAdditionalProperties().get(entityType);
+    StepStats entityStats = stats.getEntityStats().getAdditionalProperties().get(entityType);
     if (entityStats != null) {
       entityStats.withSuccessRecords(
           entityStats.getSuccessRecords() + currentEntityStats.getSuccessRecords());

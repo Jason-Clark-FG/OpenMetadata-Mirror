@@ -244,7 +244,7 @@ public class RecognizerFeedbackRepository {
       }
 
       org.openmetadata.schema.EntityInterface entity =
-              repository.getByName(null, entityFQN, repository.getFields("tags"));
+          repository.getByName(null, entityFQN, repository.getFields("tags"));
 
       List<TagLabel> tagsToCheck = null;
 
@@ -322,7 +322,7 @@ public class RecognizerFeedbackRepository {
       }
 
       org.openmetadata.schema.EntityInterface entity =
-              repository.getByName(null, entityFQN, repository.getFields("tags"));
+          repository.getByName(null, entityFQN, repository.getFields("tags"));
 
       List<TagLabel> tagsToCheck = null;
 
@@ -405,7 +405,7 @@ public class RecognizerFeedbackRepository {
       }
 
       org.openmetadata.schema.EntityInterface entity =
-              repository.getByName(null, entityFQN, repository.getFields("tags"));
+          repository.getByName(null, entityFQN, repository.getFields("tags"));
 
       org.openmetadata.schema.EntityInterface originalEntity =
           JsonUtils.readValue(JsonUtils.pojoToJson(entity), entity.getClass());

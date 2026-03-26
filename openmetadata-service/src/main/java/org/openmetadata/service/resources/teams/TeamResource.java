@@ -786,7 +786,8 @@ public class TeamResource extends EntityResource<Team, TeamRepository> {
           @DefaultValue("true")
           @QueryParam("dryRun")
           boolean dryRun,
-      String csv) throws IOException {
+      String csv)
+      throws IOException {
     return importCsvInternal(uriInfo, securityContext, name, csv, dryRun, false);
   }
 

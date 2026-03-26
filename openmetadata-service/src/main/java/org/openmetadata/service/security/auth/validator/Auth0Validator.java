@@ -49,7 +49,7 @@ public class Auth0Validator {
       }
 
       FieldError publicKeyValidation = validatePublicKeyUrls(authConfig, authority);
-      return publicKeyValidation;// Success - Auth0 public client validated
+      return publicKeyValidation; // Success - Auth0 public client validated
     } catch (Exception e) {
       LOG.error("Auth0 public client validation failed", e);
       return ValidationErrorBuilder.createFieldError(
@@ -84,7 +84,7 @@ public class Auth0Validator {
       FieldError credentialsValidation =
           validateClientCredentials(
               auth0Domain, oidcConfig.getId(), oidcConfig.getSecret(), oidcConfig.getCallbackUrl());
-      return credentialsValidation;// Success - Auth0 confidential client validated
+      return credentialsValidation; // Success - Auth0 confidential client validated
     } catch (Exception e) {
       LOG.error("Auth0 confidential client validation failed", e);
       return ValidationErrorBuilder.createFieldError(

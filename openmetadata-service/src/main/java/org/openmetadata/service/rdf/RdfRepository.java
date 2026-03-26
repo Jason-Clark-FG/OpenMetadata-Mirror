@@ -482,9 +482,7 @@ public class RdfRepository {
 
         storageService.executeSparqlUpdate(deleteQuery);
 
-        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
-                triples +
-                " } }";
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " + triples + " } }";
 
         storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Added lineage with details from {}/{} to {}/{}", fromType, fromId, toType, toId);
@@ -1696,9 +1694,7 @@ public class RdfRepository {
       String triples = writer.toString();
 
       if (!triples.isEmpty()) {
-        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
-                triples +
-                " } }";
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " + triples + " } }";
 
         storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Added glossary term relation {} -> {} ({})", fromTermId, toTermId, relationType);
@@ -1851,9 +1847,7 @@ public class RdfRepository {
       LOG.debug("Generated N-Triples:\n{}", triples);
 
       if (!triples.isEmpty()) {
-        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " +
-                triples +
-                " } }";
+        String insertQuery = "INSERT DATA { GRAPH <" + KNOWLEDGE_GRAPH + "> { " + triples + " } }";
 
         storageService.executeSparqlUpdate(insertQuery);
         LOG.debug("Bulk added {} glossary term relations to RDF store", relations.size());
@@ -2004,7 +1998,7 @@ public class RdfRepository {
 
     try {
       org.openmetadata.schema.entity.data.Glossary glossary =
-              Entity.getEntity("glossary", glossaryId, "*", null);
+          Entity.getEntity("glossary", glossaryId, "*", null);
 
       String glossaryUri = config.getBaseUri().toString() + "glossary/" + glossaryId;
       Resource glossaryResource = model.createResource(glossaryUri);

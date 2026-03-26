@@ -1302,9 +1302,7 @@ public class FeedRepository {
             && !original.getChatbot().getQuery().equals(updated.getChatbot().getQuery()))
         || (original.getTask() != null
             && (original.getTask().getAssignees().size() != updated.getTask().getAssignees().size()
-                || !new HashSet<>(original
-            .getTask()
-            .getAssignees())
+                || !new HashSet<>(original.getTask().getAssignees())
                     .containsAll(updated.getTask().getAssignees())));
   }
 

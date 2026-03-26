@@ -1,6 +1,8 @@
 package org.openmetadata.service.notifications.template.handlebars.helpers;
 
 import com.github.jknack.handlebars.Handlebars;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 import org.openmetadata.service.notifications.template.handlebars.HandlebarsHelper;
@@ -30,11 +32,7 @@ public class HasFieldInChangesHelper implements HandlebarsHelper {
         getName(),
         (context, options) -> {
           // Context should be ChangeGroups from groupEventChanges helper
-          if (!(context instanceof ChangeGroups(
-                  List<org.openmetadata.schema.type.FieldChange> updates,
-                  List<org.openmetadata.schema.type.FieldChange> adds,
-                  List<org.openmetadata.schema.type.FieldChange> deletes
-          ))) {
+          if (!(context instanceof ChangeGroups groups)) {
             return false;
           }
 
@@ -46,8 +44,8 @@ public class HasFieldInChangesHelper implements HandlebarsHelper {
           String fieldName = options.param(0).toString();
 
           // Search for field name in all three lists: updates, adds, deletes
-          return Stream.of(updates, adds, deletes)
-              .flatMap(list -> list.stream())
+          return Stream.of(groups.updates(), groups.adds(), groups.deletes())
+              .flatMap(Collection::stream)
               .anyMatch(fieldChange -> fieldName.equals(fieldChange.getName()));
         });
   }

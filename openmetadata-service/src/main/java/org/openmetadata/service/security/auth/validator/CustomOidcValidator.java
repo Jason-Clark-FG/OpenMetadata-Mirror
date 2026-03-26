@@ -64,7 +64,7 @@ public class CustomOidcValidator {
       }
 
       FieldError flowValidation = validateAuthorizationFlow(endpoints, authConfig);
-      return flowValidation;// Success - Custom OIDC public client validated
+      return flowValidation; // Success - Custom OIDC public client validated
 
     } catch (Exception e) {
       LOG.error("Custom OIDC public client validation failed", e);
@@ -117,7 +117,7 @@ public class CustomOidcValidator {
           validateClientCredentialsWithTokenExchange(
               endpoints.tokenEndpoint, oidcConfig.getId(), oidcConfig.getSecret(), oidcConfig);
 
-      return credentialsValidation;// Success - Custom OIDC confidential client validated
+      return credentialsValidation; // Success - Custom OIDC confidential client validated
 
     } catch (Exception e) {
       LOG.error("Custom OIDC confidential client validation failed", e);

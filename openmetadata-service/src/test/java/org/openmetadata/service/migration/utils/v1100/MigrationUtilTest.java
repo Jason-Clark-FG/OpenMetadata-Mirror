@@ -108,8 +108,9 @@ class MigrationUtilTest {
         .filter(sql -> sql.contains("data_contract_entity"))
         .forEach(
             sql ->
-                    assertTrue(sql.contains(
-                            "WHEN JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.status')) = 'Active'")));
+                assertTrue(
+                    sql.contains(
+                        "WHEN JSON_UNQUOTE(JSON_EXTRACT(t.json, '$.status')) = 'Active'")));
   }
 
   @Test

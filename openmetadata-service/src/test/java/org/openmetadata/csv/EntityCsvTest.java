@@ -544,14 +544,14 @@ public class EntityCsvTest {
     String tableConfig = "{\"columns\":[\"name\",\"value\"]}";
     @SuppressWarnings("unchecked")
     Map<String, Object> tableValue =
-            invokePrivate(
-                tableCsv,
-                "parseTableType",
-                csvRecord,
-                0,
-                "matrix",
-                "alpha,beta|gamma,delta",
-                tableConfig);
+        invokePrivate(
+            tableCsv,
+            "parseTableType",
+            csvRecord,
+            0,
+            "matrix",
+            "alpha,beta|gamma,delta",
+            tableConfig);
     assertEquals(Set.of("name", "value"), tableValue.get("columns"));
     @SuppressWarnings("unchecked")
     List<Map<String, String>> rows = (List<Map<String, String>>) tableValue.get("rows");

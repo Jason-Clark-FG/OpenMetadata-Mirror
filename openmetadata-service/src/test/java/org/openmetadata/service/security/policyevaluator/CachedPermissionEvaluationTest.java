@@ -171,7 +171,8 @@ public class CachedPermissionEvaluationTest {
             subjectContext.getPolicies(List.of(resourceOwnerTeam.getEntityReference())));
 
     // With owner should have more policies
-    assertTrue(withOwner.size() > withoutOwner.size(), "Resource owner should add additional policies");
+    assertTrue(
+        withOwner.size() > withoutOwner.size(), "Resource owner should add additional policies");
 
     // Without owner policies should be prefix of with owner
     for (int i = 0; i < withoutOwner.size(); i++) {

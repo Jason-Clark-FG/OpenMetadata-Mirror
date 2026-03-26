@@ -14,7 +14,6 @@
 package org.openmetadata.service.secrets.converter;
 
 import org.openmetadata.schema.entity.automations.TestSparkEngineConnectionRequest;
-import org.openmetadata.schema.utils.JsonUtils;
 
 /** Converter class to get a `TestSparkEngineConnectionRequest` object. */
 public class TestSparkEngineConnectionRequestClassConverter extends ClassConverter {

@@ -862,9 +862,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
     JWTTokenGenerator.getInstance()
         .init(
-            SecurityConfigurationManager
-                .getCurrentAuthConfig()
-                .getTokenValidationAlgorithm(),
+            SecurityConfigurationManager.getCurrentAuthConfig().getTokenValidationAlgorithm(),
             config.getJwtTokenConfiguration());
 
     AppMarketPlaceMapper mapper = new AppMarketPlaceMapper(pipelineServiceClient);
@@ -2492,9 +2490,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
       JWTTokenGenerator.getInstance()
           .init(
-              SecurityConfigurationManager
-                  .getCurrentAuthConfig()
-                  .getTokenValidationAlgorithm(),
+              SecurityConfigurationManager.getCurrentAuthConfig().getTokenValidationAlgorithm(),
               config.getJwtTokenConfiguration());
 
       initOrganization();

@@ -13,7 +13,6 @@
 package org.openmetadata.service.monitoring;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +41,7 @@ public class EventMonitorFactoryTest {
   @Test
   void testIsCreatedItCloudwatchEventMonitor() {
     config.setEventMonitor(EventMonitorProvider.CLOUDWATCH);
-    assertInstanceOf(CloudwatchEventMonitor.class, EventMonitorFactory.createEventMonitor(config, CLUSTER_NAME));
+    assertInstanceOf(
+        CloudwatchEventMonitor.class, EventMonitorFactory.createEventMonitor(config, CLUSTER_NAME));
   }
 }

@@ -610,7 +610,6 @@ public interface CollectionDAO {
     default Class<DatabaseService> getEntityClass() {
       return DatabaseService.class;
     }
-
   }
 
   interface MetadataServiceDAO extends EntityDAO<MetadataService> {
@@ -623,7 +622,6 @@ public interface CollectionDAO {
     default Class<MetadataService> getEntityClass() {
       return MetadataService.class;
     }
-
   }
 
   interface TestConnectionDefinitionDAO extends EntityDAO<TestConnectionDefinition> {
@@ -636,7 +634,6 @@ public interface CollectionDAO {
     default Class<TestConnectionDefinition> getEntityClass() {
       return TestConnectionDefinition.class;
     }
-
   }
 
   interface StorageServiceDAO extends EntityDAO<StorageService> {
@@ -649,7 +646,6 @@ public interface CollectionDAO {
     default Class<StorageService> getEntityClass() {
       return StorageService.class;
     }
-
   }
 
   interface ContainerDAO extends EntityDAO<Container> {
@@ -4942,8 +4938,7 @@ public interface CollectionDAO {
       String targetFQNPrefixHash =
           requiresFqnHash ? FullyQualifiedName.buildHash(targetFQNPrefix) : targetFQNPrefix;
       Map<String, List<TagLabel>> resultSet = new LinkedHashMap<>();
-      List<Pair<String, TagLabel>> tags =
-          getTagsInternalByPrefix(targetFQNPrefixHash, postfix);
+      List<Pair<String, TagLabel>> tags = getTagsInternalByPrefix(targetFQNPrefixHash, postfix);
       tags.forEach(
           pair -> {
             String targetHash = pair.getLeft();

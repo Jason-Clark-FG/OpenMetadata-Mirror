@@ -7738,7 +7738,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
       // Also check incrementalChangeDescription - this captures the name change
       // even when renameProcessed prevents it from being in the main changeDescription
       if (incChangeDesc != null && incChangeDesc.getFieldsUpdated() != null) {
-        return incChangeDesc.getFieldsUpdated().stream().anyMatch(fc -> "name".equals(fc.getName()));
+        return incChangeDesc.getFieldsUpdated().stream()
+            .anyMatch(fc -> "name".equals(fc.getName()));
       }
 
       return false;

@@ -453,7 +453,8 @@ public class SubscriptionUtil {
       SubscriptionDestination.SubscriptionType type,
       String entityType,
       UUID id) {
-    return new HashSet<>(buildReceiversListFromActions(
+    return new HashSet<>(
+        buildReceiversListFromActions(
             action, category, type, Entity.getCollectionDAO(), id, entityType));
   }
 

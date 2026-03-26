@@ -20,8 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.openmetadata.schema.EntityInterface;
-import org.openmetadata.schema.EntityTimeSeriesInterface;
 import org.openmetadata.schema.system.IndexingError;
 import org.openmetadata.schema.system.Stats;
 import org.openmetadata.schema.system.StepStats;
@@ -238,11 +236,9 @@ public class IndexingPipeline implements AutoCloseable {
 
         try {
           if (!EntityReader.TIME_SERIES_ENTITIES.contains(entityType)) {
-            searchIndexSink.write(
-                    entities.getData(), contextData);
+            searchIndexSink.write(entities.getData(), contextData);
           } else {
-            searchIndexSink.write(
-                    entities.getData(), contextData);
+            searchIndexSink.write(entities.getData(), contextData);
           }
 
           StepStats entityStats = new StepStats();

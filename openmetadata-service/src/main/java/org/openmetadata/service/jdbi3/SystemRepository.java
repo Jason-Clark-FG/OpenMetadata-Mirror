@@ -1641,7 +1641,7 @@ public class SystemRepository {
       // without affecting production settings
       SamlValidator samlValidator = new SamlValidator();
       FieldError result = samlValidator.validateSamlConfiguration(null, samlConfig);
-      return result;// No errors - validation passed
+      return result; // No errors - validation passed
     } catch (Exception e) {
       String fieldPath = determineFieldPathFromError("saml", e.getMessage());
       return ValidationErrorBuilder.createFieldError(
