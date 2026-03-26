@@ -224,12 +224,12 @@ export const getQueryFilterToExcludeDomainTerms = (
 ): QueryFilterInterface => {
   const mustTerm: QueryFieldInterface[] = parentFqn
     ? [
-      {
-        term: {
-          'domains.fullyQualifiedName': parentFqn,
+        {
+          term: {
+            'domains.fullyQualifiedName': parentFqn,
+          },
         },
-      },
-    ]
+      ]
     : [];
 
   return {
@@ -468,10 +468,10 @@ export const convertDomainsToTreeOptions = (
       selectable: !multiple,
       children: hasChildren
         ? convertDomainsToTreeOptions(
-          domainOption?.children as EntityReference[],
-          level + 1,
-          multiple
-        )
+            domainOption?.children as EntityReference[],
+            level + 1,
+            multiple
+          )
         : undefined,
     };
   });
@@ -543,160 +543,160 @@ export const getDomainDetailTabs = ({
     ...(isVersionsView
       ? []
       : [
-        {
-          label: (
-            <TabsLabel
-              count={subDomainsCount ?? 0}
-              id={EntityTabs.SUBDOMAINS}
-              isActive={activeTab === EntityTabs.SUBDOMAINS}
-              name={get(
-                labelMap,
-                EntityTabs.SUBDOMAINS,
-                t('label.sub-domain-plural')
-              )}
-            />
-          ),
-          key: EntityTabs.SUBDOMAINS,
-          children: (
-            <SubDomainsTable
-              domainFqn={domain.fullyQualifiedName ?? ''}
-              permissions={domainPermission}
-              subDomainsCount={subDomainsCount}
-              onAddSubDomain={() => setShowAddSubDomainModal(true)}
-              onDeleteSubDomain={onDeleteSubDomain}
-            />
-          ),
-        },
-        {
-          label: (
-            <TabsLabel
-              count={dataProductsCount ?? 0}
-              id={EntityTabs.DATA_PRODUCTS}
-              isActive={activeTab === EntityTabs.DATA_PRODUCTS}
-              name={get(
-                labelMap,
-                EntityTabs.DATA_PRODUCTS,
-                t('label.data-product-plural')
-              )}
-            />
-          ),
-          key: EntityTabs.DATA_PRODUCTS,
-          children: (
-            <DataProductsTab
-              domainFqn={domain.fullyQualifiedName}
-              permissions={domainPermission}
-              ref={dataProductsTabRef}
-              onAddDataProduct={onAddDataProduct}
-            />
-          ),
-        },
-        {
-          label: (
-            <TabsLabel
-              count={feedCount?.totalCount ?? 0}
-              id={EntityTabs.ACTIVITY_FEED}
-              isActive={activeTab === EntityTabs.ACTIVITY_FEED}
-              name={get(
-                labelMap,
-                EntityTabs.ACTIVITY_FEED,
-                t('label.activity-feed-and-task-plural')
-              )}
-            />
-          ),
-          key: EntityTabs.ACTIVITY_FEED,
-          children: (
-            <ActivityFeedTab
-              refetchFeed
-              entityFeedTotalCount={feedCount?.totalCount ?? 0}
-              entityType={EntityType.DOMAIN}
-              feedCount={feedCount}
-              layoutType={ActivityFeedLayoutType.THREE_PANEL}
-              owners={domain.owners}
-              urlFqn={domain.fullyQualifiedName}
-              onFeedUpdate={onFeedUpdate ?? noop}
-              onUpdateEntityDetails={noop}
-            />
-          ),
-        },
-        {
-          label: (
-            <TabsLabel
-              count={assetCount ?? 0}
-              id={EntityTabs.ASSETS}
-              isActive={activeTab === EntityTabs.ASSETS}
-              name={get(labelMap, EntityTabs.ASSETS, t('label.asset-plural'))}
-            />
-          ),
-          key: EntityTabs.ASSETS,
-          children: (
-            <ResizablePanels
-              className="h-full domain-height-with-resizable-panel"
-              firstPanel={{
-                wrapInCard: false,
-                className: 'domain-resizable-panel-container',
-                children: (
-                  <AssetsTabs
-                    assetCount={assetCount}
-                    entityFqn={domain.fullyQualifiedName}
-                    isSummaryPanelOpen={false}
-                    permissions={domainPermission}
-                    queryFilter={queryFilter}
-                    ref={assetTabRef}
-                    type={AssetsOfEntity.DOMAIN}
-                    onAddAsset={() => setAssetModalVisible(true)}
-                    onAssetClick={handleAssetClick}
-                    onRemoveAsset={handleAssetSave}
-                  />
-                ),
-                minWidth: 800,
-                flex: 0.67,
-              }}
-              hideSecondPanel={!previewAsset}
-              pageTitle={t('label.domain')}
-              secondPanel={{
-                wrapInCard: false,
-                children: previewAsset && (
-                  <EntitySummaryPanel
-                    entityDetails={previewAsset}
-                    handleClosePanel={() => setPreviewAsset(undefined)}
-                  />
-                ),
-                minWidth: 400,
-                flex: 0.33,
-                className:
-                  'entity-summary-resizable-right-panel-container domain-resizable-panel-container',
-              }}
-            />
-          ),
-        },
-        {
-          label: (
-            <TabsLabel
-              id={EntityTabs.CUSTOM_PROPERTIES}
-              name={get(
-                labelMap,
-                EntityTabs.CUSTOM_PROPERTIES,
-                t('label.custom-property-plural')
-              )}
-            />
-          ),
-          key: EntityTabs.CUSTOM_PROPERTIES,
-          children: (
-            <CustomPropertyTable<EntityType.DOMAIN>
-              className="p-lg"
-              entityType={EntityType.DOMAIN}
-              hasEditAccess={getPrioritizedEditPermission(
-                domainPermission,
-                Operation.EditCustomFields
-              )}
-              hasPermission={getPrioritizedViewPermission(
-                domainPermission,
-                Operation.ViewCustomFields
-              )}
-            />
-          ),
-        },
-      ]),
+          {
+            label: (
+              <TabsLabel
+                count={subDomainsCount ?? 0}
+                id={EntityTabs.SUBDOMAINS}
+                isActive={activeTab === EntityTabs.SUBDOMAINS}
+                name={get(
+                  labelMap,
+                  EntityTabs.SUBDOMAINS,
+                  t('label.sub-domain-plural')
+                )}
+              />
+            ),
+            key: EntityTabs.SUBDOMAINS,
+            children: (
+              <SubDomainsTable
+                domainFqn={domain.fullyQualifiedName ?? ''}
+                permissions={domainPermission}
+                subDomainsCount={subDomainsCount}
+                onAddSubDomain={() => setShowAddSubDomainModal(true)}
+                onDeleteSubDomain={onDeleteSubDomain}
+              />
+            ),
+          },
+          {
+            label: (
+              <TabsLabel
+                count={dataProductsCount ?? 0}
+                id={EntityTabs.DATA_PRODUCTS}
+                isActive={activeTab === EntityTabs.DATA_PRODUCTS}
+                name={get(
+                  labelMap,
+                  EntityTabs.DATA_PRODUCTS,
+                  t('label.data-product-plural')
+                )}
+              />
+            ),
+            key: EntityTabs.DATA_PRODUCTS,
+            children: (
+              <DataProductsTab
+                domainFqn={domain.fullyQualifiedName}
+                permissions={domainPermission}
+                ref={dataProductsTabRef}
+                onAddDataProduct={onAddDataProduct}
+              />
+            ),
+          },
+          {
+            label: (
+              <TabsLabel
+                count={feedCount?.totalCount ?? 0}
+                id={EntityTabs.ACTIVITY_FEED}
+                isActive={activeTab === EntityTabs.ACTIVITY_FEED}
+                name={get(
+                  labelMap,
+                  EntityTabs.ACTIVITY_FEED,
+                  t('label.activity-feed-and-task-plural')
+                )}
+              />
+            ),
+            key: EntityTabs.ACTIVITY_FEED,
+            children: (
+              <ActivityFeedTab
+                refetchFeed
+                entityFeedTotalCount={feedCount?.totalCount ?? 0}
+                entityType={EntityType.DOMAIN}
+                feedCount={feedCount}
+                layoutType={ActivityFeedLayoutType.THREE_PANEL}
+                owners={domain.owners}
+                urlFqn={domain.fullyQualifiedName}
+                onFeedUpdate={onFeedUpdate ?? noop}
+                onUpdateEntityDetails={noop}
+              />
+            ),
+          },
+          {
+            label: (
+              <TabsLabel
+                count={assetCount ?? 0}
+                id={EntityTabs.ASSETS}
+                isActive={activeTab === EntityTabs.ASSETS}
+                name={get(labelMap, EntityTabs.ASSETS, t('label.asset-plural'))}
+              />
+            ),
+            key: EntityTabs.ASSETS,
+            children: (
+              <ResizablePanels
+                className="h-full domain-height-with-resizable-panel"
+                firstPanel={{
+                  wrapInCard: false,
+                  className: 'domain-resizable-panel-container',
+                  children: (
+                    <AssetsTabs
+                      assetCount={assetCount}
+                      entityFqn={domain.fullyQualifiedName}
+                      isSummaryPanelOpen={false}
+                      permissions={domainPermission}
+                      queryFilter={queryFilter}
+                      ref={assetTabRef}
+                      type={AssetsOfEntity.DOMAIN}
+                      onAddAsset={() => setAssetModalVisible(true)}
+                      onAssetClick={handleAssetClick}
+                      onRemoveAsset={handleAssetSave}
+                    />
+                  ),
+                  minWidth: 800,
+                  flex: 0.67,
+                }}
+                hideSecondPanel={!previewAsset}
+                pageTitle={t('label.domain')}
+                secondPanel={{
+                  wrapInCard: false,
+                  children: previewAsset && (
+                    <EntitySummaryPanel
+                      entityDetails={previewAsset}
+                      handleClosePanel={() => setPreviewAsset(undefined)}
+                    />
+                  ),
+                  minWidth: 400,
+                  flex: 0.33,
+                  className:
+                    'entity-summary-resizable-right-panel-container domain-resizable-panel-container',
+                }}
+              />
+            ),
+          },
+          {
+            label: (
+              <TabsLabel
+                id={EntityTabs.CUSTOM_PROPERTIES}
+                name={get(
+                  labelMap,
+                  EntityTabs.CUSTOM_PROPERTIES,
+                  t('label.custom-property-plural')
+                )}
+              />
+            ),
+            key: EntityTabs.CUSTOM_PROPERTIES,
+            children: (
+              <CustomPropertyTable<EntityType.DOMAIN>
+                className="p-lg"
+                entityType={EntityType.DOMAIN}
+                hasEditAccess={getPrioritizedEditPermission(
+                  domainPermission,
+                  Operation.EditCustomFields
+                )}
+                hasPermission={getPrioritizedViewPermission(
+                  domainPermission,
+                  Operation.ViewCustomFields
+                )}
+              />
+            ),
+          },
+        ]),
   ];
 };
 

@@ -38,7 +38,7 @@ import Loader from '../../common/Loader/Loader';
 import AddDomainForm from '../../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../../Domain/DomainPage.interface';
 import MarketplaceItemCard from '../MarketplaceItemCard/MarketplaceItemCard.component';
-import '../marketplace-widget-shared.less'
+import '../marketplace-widget-shared.less';
 
 const DISPLAY_COUNT = 3;
 
@@ -188,7 +188,7 @@ const MarketplaceDomainsWidget = ({
             as="h5"
             className="marketplace-widget-title tw:text-text-primary tw:m-0"
             size="text-md"
-            weight='semibold'>
+            weight="semibold">
             {t('label.new')} {t('label.domain-plural')}
           </Typography>
           <Typography as="span" className="tw:text-xs tw:text-text-tertiary">
