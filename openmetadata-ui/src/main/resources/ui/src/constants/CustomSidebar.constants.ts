@@ -16,11 +16,11 @@ import {
   NavItemType,
 } from '@openmetadata/ui-core-components';
 import {
+  Building02,
   Cube01,
   Globe01,
   Home02,
   Settings01,
-  ShoppingBag01,
 } from '@untitledui/icons';
 import { t } from '../utils/i18next/LocalUtil';
 import { ROUTES } from './constants';
@@ -38,7 +38,7 @@ export const MARKETPLACE_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: t('label.data-marketplace'),
       href: ROUTES.DATA_MARKETPLACE,
-      icon: ShoppingBag01,
+      icon: Building02,
     },
     {
       label: t('label.data-product-plural'),
