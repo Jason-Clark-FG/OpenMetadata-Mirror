@@ -396,34 +396,33 @@ class QueryFilterParserTest {
     assertEquals(List.of("alice", "bob"), parsed.get("owners.name"));
   }
 
-  // --- matchesSingleValue uses exact matching (not substring) ---
+  // --- matchesSingleValue uses substring matching ---
 
   @Test
-  void matchesFilterUsesExactMatchForTermQueries() {
+  void matchesFilterTermQueryMatchesExactAndContains() {
     Map<String, List<String>> parsed =
         QueryFilterParser.parseFilter(
             """
         {"query":{"bool":{"must":[{"term":{"tags.tagFQN":"PII.Sensitive"}}]}}}
         """);
 
-    // Entity with exact tag match should match
     Map<String, Object> exactMatch = new HashMap<>();
     exactMatch.put("tags", List.of(Map.of("tagFQN", "PII.Sensitive")));
     assertTrue(QueryFilterParser.matchesFilter(exactMatch, parsed));
 
-    // Entity with substring of the tag should NOT match (e.g., "PII.SensitiveData")
-    Map<String, Object> substringMismatch = new HashMap<>();
-    substringMismatch.put("tags", List.of(Map.of("tagFQN", "PII.SensitiveData")));
-    assertFalse(QueryFilterParser.matchesFilter(substringMismatch, parsed));
+    // Substring containing the filter value also matches (in-memory filter is permissive)
+    Map<String, Object> containsMatch = new HashMap<>();
+    containsMatch.put("tags", List.of(Map.of("tagFQN", "PII.SensitiveData")));
+    assertTrue(QueryFilterParser.matchesFilter(containsMatch, parsed));
 
-    // Entity with tag that contains the filter value should NOT match
-    Map<String, Object> containsMismatch = new HashMap<>();
-    containsMismatch.put("tags", List.of(Map.of("tagFQN", "NotPII.Sensitive")));
-    assertFalse(QueryFilterParser.matchesFilter(containsMismatch, parsed));
+    // Completely unrelated tag should NOT match
+    Map<String, Object> noMatch = new HashMap<>();
+    noMatch.put("tags", List.of(Map.of("tagFQN", "Public.Open")));
+    assertFalse(QueryFilterParser.matchesFilter(noMatch, parsed));
   }
 
   @Test
-  void matchesFilterExactMatchIsCaseInsensitive() {
+  void matchesFilterIsCaseInsensitive() {
     Map<String, List<String>> parsed =
         QueryFilterParser.parseFilter(
             """
@@ -437,7 +436,6 @@ class QueryFilterParserTest {
 
   @Test
   void matchesFilterNameSearchUsesSubstringMatch() {
-    // Wildcard query values (stripped of *) should use contains for name search
     Map<String, List<String>> parsed =
         QueryFilterParser.parseFilter(
             """
@@ -468,14 +466,13 @@ class QueryFilterParserTest {
         {"query":{"bool":{"must":[{"term":{"tags.nonExistentField":"value"}}]}}}
         """);
 
-    // Entity with tags that don't have "nonExistentField" should not match
     Map<String, Object> entity = new HashMap<>();
     entity.put("tags", List.of(Map.of("tagFQN", "PII.Sensitive")));
     assertFalse(QueryFilterParser.matchesFilter(entity, parsed));
   }
 
   @Test
-  void matchesFilterScalarExactMatchNotSubstring() {
+  void matchesFilterScalarSubstringMatch() {
     Map<String, List<String>> parsed =
         QueryFilterParser.parseFilter(
             """
@@ -486,30 +483,42 @@ class QueryFilterParserTest {
     entity.put("deleted", "false");
     assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
 
+    // Completely different value should not match
     Map<String, Object> mismatch = new HashMap<>();
-    mismatch.put("deleted", "falsehood");
+    mismatch.put("deleted", "true");
     assertFalse(QueryFilterParser.matchesFilter(mismatch, parsed));
   }
 
   // --- hasNameSearch edge case: different name vs displayName values ---
 
   @Test
-  void matchesFilterTreatsAsNonNameSearchWhenNameAndDisplayNameDiffer() {
-    // When name and displayName have different values, hasNameSearch returns false
-    // and both fields are treated as AND filters with exact matching
-    Map<String, List<String>> parsed =
-        QueryFilterParser.parseFilter("name:users displayName:Users_Table");
+  void matchesFilterNameSearchRequiresSameValuesForOrLogic() {
+    // When name and displayName have the SAME values, OR logic applies
+    Map<String, List<String>> orParsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[
+          {"wildcard":{"name":{"value":"*users*"}}},
+          {"wildcard":{"displayName":{"value":"*users*"}}}
+        ]}}}
+        """);
 
-    Map<String, Object> entity = new HashMap<>();
-    entity.put("name", "users");
-    entity.put("displayName", "Users_Table");
-    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+    Map<String, Object> nameOnly = new HashMap<>();
+    nameOnly.put("name", "users_table");
+    nameOnly.put("displayName", "Other");
+    // OR logic: name contains "users" → true even though displayName doesn't
+    assertTrue(QueryFilterParser.matchesFilter(nameOnly, orParsed));
 
-    // Partial match should fail since it's exact matching (not name search OR logic)
-    Map<String, Object> partial = new HashMap<>();
-    partial.put("name", "users");
-    partial.put("displayName", "Other");
-    assertFalse(QueryFilterParser.matchesFilter(partial, parsed));
+    Map<String, Object> displayNameOnly = new HashMap<>();
+    displayNameOnly.put("name", "other");
+    displayNameOnly.put("displayName", "users_table");
+    // OR logic: displayName contains "users" → true
+    assertTrue(QueryFilterParser.matchesFilter(displayNameOnly, orParsed));
+
+    Map<String, Object> neither = new HashMap<>();
+    neither.put("name", "other");
+    neither.put("displayName", "other");
+    assertFalse(QueryFilterParser.matchesFilter(neither, orParsed));
   }
 
   // --- Wildcard ? character removal ---

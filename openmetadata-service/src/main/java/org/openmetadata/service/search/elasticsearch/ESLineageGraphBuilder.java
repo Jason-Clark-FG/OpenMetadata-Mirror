@@ -1337,9 +1337,12 @@ public class ESLineageGraphBuilder
    * through non-matching intermediate nodes.
    */
   private boolean hasNodeLevelFilters(String queryFilter) {
-    // All filters (tag, tier, domain, service, owner, name) are indexed in ES and work directly.
-    // Path preservation is not needed for any node-level filters.
-    return false;
+    if (nullOrEmpty(queryFilter)) {
+      return false;
+    }
+    // If getStructuralFilterOnly returns null, the filter contains node-level fields
+    // that require unfiltered BFS + in-memory post-filter with path preservation.
+    return getStructuralFilterOnly(queryFilter) == null;
   }
 
   /**

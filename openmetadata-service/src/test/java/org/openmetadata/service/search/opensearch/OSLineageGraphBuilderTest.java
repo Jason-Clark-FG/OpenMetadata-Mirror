@@ -510,6 +510,12 @@ class OSLineageGraphBuilderTest {
       stubOsClientSearch();
       when(hitsMetadata.hits()).thenReturn(List.of());
 
+      // getDepthWiseEntityCounts calls searchResponse.hits().total().value()
+      os.org.opensearch.client.opensearch.core.search.TotalHits totalHits =
+          Mockito.mock(os.org.opensearch.client.opensearch.core.search.TotalHits.class);
+      when(totalHits.value()).thenReturn(0L);
+      when(hitsMetadata.total()).thenReturn(totalHits);
+
       OSLineageGraphBuilder builder = new OSLineageGraphBuilder(esClient);
 
       LineagePaginationInfo result =

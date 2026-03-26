@@ -403,8 +403,8 @@ public class QueryFilterParser {
   }
 
   /**
-   * Checks if a single value matches any of the required values using exact matching.
-   * This matches ES term query semantics (case-insensitive exact match).
+   * Checks if a single value matches any of the required values.
+   * Uses case-insensitive substring matching to align with ES analyzed query behavior.
    */
   private static boolean matchesSingleValue(Object value, List<String> requiredValues) {
     if (value == null) {
@@ -420,9 +420,10 @@ public class QueryFilterParser {
       String tagFQN = (String) map.get("tagFQN");
 
       for (String required : requiredValues) {
-        if ((displayName != null && displayName.equalsIgnoreCase(required))
-            || (name != null && name.equalsIgnoreCase(required))
-            || (tagFQN != null && tagFQN.equalsIgnoreCase(required))) {
+        String requiredLower = required.toLowerCase();
+        if ((displayName != null && displayName.toLowerCase().contains(requiredLower))
+            || (name != null && name.toLowerCase().contains(requiredLower))
+            || (tagFQN != null && tagFQN.toLowerCase().contains(requiredLower))) {
           return true;
         }
       }
@@ -431,25 +432,6 @@ public class QueryFilterParser {
       valueStr = value.toString();
     }
 
-    for (String required : requiredValues) {
-      if (valueStr.equalsIgnoreCase(required)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Checks if a single value contains any of the required values (substring match).
-   * Used for name/displayName wildcard search where contains semantics are needed.
-   */
-  private static boolean matchesSingleValueContains(Object value, List<String> requiredValues) {
-    if (value == null) {
-      return false;
-    }
-
-    String valueStr = value.toString();
     for (String required : requiredValues) {
       if (valueStr.toLowerCase().contains(required.toLowerCase())) {
         return true;
@@ -486,14 +468,13 @@ public class QueryFilterParser {
       return false;
     }
 
-    // Name search uses substring matching (wildcard-derived values)
     Object nameValue = getNestedFieldValue(entityMap, "name");
-    if (nameValue != null && matchesSingleValueContains(nameValue, searchTerms)) {
+    if (matchesAnyValue(nameValue, searchTerms)) {
       return true;
     }
 
     Object displayNameValue = getNestedFieldValue(entityMap, "displayName");
-    if (displayNameValue != null && matchesSingleValueContains(displayNameValue, searchTerms)) {
+    if (matchesAnyValue(displayNameValue, searchTerms)) {
       return true;
     }
 
