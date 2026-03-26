@@ -611,8 +611,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     if (client.getConfiguration().isWithState()) {
       String requestState = session.getState();
       if (CommonHelper.isBlank(requestState)) {
-        getErrorMessage(resp, new TechnicalException("Missing state parameter"));
-        return;
+        throw new TechnicalException("Missing state parameter in session");
       }
 
       State responseState = successResponse.getState();
@@ -670,7 +669,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
         if (!MessageDigest.isEqual(
             expectedNonce.getBytes(StandardCharsets.UTF_8),
             tokenNonce.getBytes(StandardCharsets.UTF_8))) {
-          throw new BadJWTException("Unexpected JWT nonce (nonce) claim: " + tokenNonce);
+          throw new BadJWTException("Unexpected JWT nonce (nonce) claim");
         }
       } else {
         throw new TechnicalException("Missing nonce parameter from session.");
@@ -924,10 +923,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     client.getConfiguration().configureHttpRequest(tokenHttpRequest);
 
     HTTPResponse httpResponse = tokenHttpRequest.send();
-    LOG.debug(
-        "Token response: status={}, content={}",
-        httpResponse.getStatusCode(),
-        httpResponse.getContent());
+    LOG.debug("Token response: status={}", httpResponse.getStatusCode());
 
     return httpResponse;
   }
@@ -952,7 +948,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
     String pkceVerifier = null;
 
     if (client.getConfiguration().isWithState()) {
-      state = new State(CommonHelper.randomString(10)).getValue();
+      state = new State(CommonHelper.randomString(32)).getValue();
       params.put(OidcConfiguration.STATE, state);
     }
 

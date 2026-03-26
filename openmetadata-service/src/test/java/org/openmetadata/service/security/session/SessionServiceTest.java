@@ -92,13 +92,17 @@ class SessionServiceTest {
   @Test
   void activatePendingSession_promotesPendingSessionAndEncryptsTokens() {
     long now = System.currentTimeMillis();
+    String pendingId = validSessionId('p');
     UserSession pendingSession =
         UserSession.builder()
-            .id("pending-session")
+            .id(pendingId)
+            .type(SessionType.AUTH)
+            .provider("okta")
             .status(SessionStatus.PENDING)
             .state("state")
             .nonce("nonce")
             .pkceVerifier("pkce")
+            .redirectUri("https://example.com/auth/callback")
             .version(0L)
             .expiresAt(now + 1_000)
             .idleExpiresAt(now + 1_000)
@@ -120,14 +124,60 @@ class SessionServiceTest {
 
     assertEquals(SessionStatus.ACTIVE, activated.getStatus());
     assertEquals(user.getId().toString(), activated.getUserId());
-    assertNull(activated.getState());
-    assertNull(activated.getNonce());
-    assertNull(activated.getPkceVerifier());
     assertTrue(activated.getExpiresAt() > now + 60_000);
     assertNotEquals("om-refresh", activated.getOmRefreshToken());
     assertNotEquals("provider-refresh", activated.getProviderRefreshToken());
     assertEquals("om-refresh", sessionService.decryptOmRefreshToken(activated));
     assertEquals("provider-refresh", sessionService.decryptProviderRefreshToken(activated));
+  }
+
+  @Test
+  void activatePendingSession_issuesNewSessionId_preventingSessionFixation() {
+    long now = System.currentTimeMillis();
+    String pendingId = validSessionId('f');
+    UserSession pendingSession =
+        UserSession.builder()
+            .id(pendingId)
+            .type(SessionType.AUTH)
+            .provider("okta")
+            .status(SessionStatus.PENDING)
+            .state("state")
+            .nonce("nonce")
+            .pkceVerifier("pkce")
+            .redirectUri("https://example.com/auth/callback")
+            .version(0L)
+            .expiresAt(now + 600_000)
+            .idleExpiresAt(now + 600_000)
+            .build();
+    User user = new User().withId(UUID.randomUUID()).withName("user").withEmail("user@example.com");
+    when(repository.updateIfVersion(any(UserSession.class), eq(0L))).thenReturn(true);
+    when(repository.findByUserIdAndStatus(eq(user.getId().toString()), eq(SessionStatus.ACTIVE)))
+        .thenReturn(List.of());
+
+    UserSession activated =
+        sessionService
+            .activatePendingSession(
+                request, response, pendingSession, user, "om-refresh", "provider-refresh")
+            .orElseThrow();
+
+    // Session fixation defense: the activated session MUST have a different ID than the pending one
+    assertNotEquals(
+        pendingId,
+        activated.getId(),
+        "Session ID must be regenerated on activation to prevent session fixation");
+    assertEquals(SessionStatus.ACTIVE, activated.getStatus());
+
+    // Verify the old pending session was expired in the database
+    ArgumentCaptor<UserSession> expiredCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).updateIfVersion(expiredCaptor.capture(), eq(0L));
+    assertEquals(SessionStatus.EXPIRED, expiredCaptor.getValue().getStatus());
+    assertEquals(pendingId, expiredCaptor.getValue().getId());
+
+    // Verify a new session was created in the database
+    ArgumentCaptor<UserSession> createdCaptor = ArgumentCaptor.forClass(UserSession.class);
+    verify(repository).create(createdCaptor.capture());
+    assertNotEquals(pendingId, createdCaptor.getValue().getId());
+    assertEquals(SessionStatus.ACTIVE, createdCaptor.getValue().getStatus());
   }
 
   @Test

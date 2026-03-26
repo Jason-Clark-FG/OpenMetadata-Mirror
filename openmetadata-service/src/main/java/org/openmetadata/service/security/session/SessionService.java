@@ -158,32 +158,47 @@ public class SessionService implements Managed {
       String providerRefreshToken) {
     long now = System.currentTimeMillis();
     long expectedVersion = safeVersion(pendingSession);
-    UserSession updated =
+
+    // Expire the pending session to prevent reuse (session fixation defense)
+    UserSession expired =
         pendingSession.toBuilder()
+            .status(SessionStatus.EXPIRED)
+            .version(expectedVersion + 1)
+            .build();
+    if (!repository.updateIfVersion(expired, expectedVersion)) {
+      LOG.warn("Failed to expire pending session during activation, concurrent modification");
+      return repository.findById(pendingSession.getId());
+    }
+    cache.invalidate(pendingSession.getId());
+
+    // Issue a brand-new session ID for the authenticated session.
+    // This prevents session fixation: the pre-auth cookie value is discarded.
+    String newSessionId = SessionIdGenerator.newSessionId();
+    UserSession activated =
+        UserSession.builder()
+            .id(newSessionId)
+            .type(pendingSession.getType())
+            .provider(pendingSession.getProvider())
             .status(SessionStatus.ACTIVE)
             .userId(user.getId().toString())
             .username(user.getName())
             .email(user.getEmail())
             .omRefreshToken(encryptIfPresent(omRefreshToken))
             .providerRefreshToken(encryptIfPresent(providerRefreshToken))
-            .state(null)
-            .nonce(null)
-            .pkceVerifier(null)
-            .refreshLeaseUntil(null)
+            .redirectUri(pendingSession.getRedirectUri())
             .lastAccessedAt(now)
+            .createdAt(now)
             .updatedAt(now)
             .expiresAt(now + TimeUnit.SECONDS.toMillis(DEFAULT_ABSOLUTE_TIMEOUT_SECONDS))
             .idleExpiresAt(now + TimeUnit.SECONDS.toMillis(getIdleTimeoutSeconds()))
-            .version(expectedVersion + 1)
+            .version(0L)
             .build();
-    if (!repository.updateIfVersion(updated, expectedVersion)) {
-      return repository.findById(updated.getId());
-    }
-    cache.put(updated.getId(), updated);
-    applySessionLimit(user.getId().toString(), updated.getId());
+    repository.create(activated);
+    cache.put(activated.getId(), activated);
+    applySessionLimit(user.getId().toString(), activated.getId());
     SessionCookieUtil.writeSessionCookie(
-        request, response, authConfig, updated.getId(), getIdleTimeoutSeconds());
-    return Optional.of(updated);
+        request, response, authConfig, activated.getId(), getIdleTimeoutSeconds());
+    return Optional.of(activated);
   }
 
   public Optional<UserSession> getSession(jakarta.servlet.http.HttpServletRequest request) {

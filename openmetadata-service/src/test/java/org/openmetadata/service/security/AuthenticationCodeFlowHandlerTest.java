@@ -197,6 +197,48 @@ class AuthenticationCodeFlowHandlerTest {
   }
 
   @Test
+  void validateStateIfRequired_blankStateInSession_throwsTechnicalException() throws Exception {
+    when(oidcClient.getConfiguration()).thenReturn(oidcConfiguration);
+    when(oidcConfiguration.isWithState()).thenReturn(true);
+
+    AuthenticationCodeFlowHandler handler =
+        createHandlerWithMockedInternals(sessionService, oidcClient);
+
+    UserSession pendingSession = UserSession.builder().id("test-session").state("").build();
+
+    com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse successResponse =
+        new com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse(
+            java.net.URI.create("https://example.com/callback"),
+            new com.nimbusds.oauth2.sdk.AuthorizationCode("test-code"),
+            null,
+            null,
+            new com.nimbusds.oauth2.sdk.id.State("attacker-state"),
+            null,
+            null);
+
+    Method validateMethod =
+        AuthenticationCodeFlowHandler.class.getDeclaredMethod(
+            "validateStateIfRequired",
+            UserSession.class,
+            HttpServletResponse.class,
+            com.nimbusds.openid.connect.sdk.AuthenticationSuccessResponse.class);
+    validateMethod.setAccessible(true);
+
+    TechnicalException thrown =
+        assertThrows(
+            TechnicalException.class,
+            () -> {
+              try {
+                validateMethod.invoke(handler, pendingSession, response, successResponse);
+              } catch (java.lang.reflect.InvocationTargetException e) {
+                throw e.getCause();
+              }
+            });
+
+    assertTrue(thrown.getMessage().contains("Missing state parameter"));
+  }
+
+  @Test
   void isMcpState_returnsFlase_whenCheckerIsNull() {
     AuthenticationCodeFlowHandler.setMcpStateChecker(null);
 
