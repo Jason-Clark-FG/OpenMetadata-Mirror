@@ -108,13 +108,15 @@ export const validateLeftSidebarWithHiddenItems = async (
 
         continue;
       }
-      hiddenItems.includes(item)
-        ? await expect(
-            page.getByTestId('left-sidebar').getByTestId(`app-bar-item-${item}`)
-          ).not.toBeVisible()
-        : await expect(
-            page.getByTestId('left-sidebar').getByTestId(`app-bar-item-${item}`)
-          ).toBeVisible();
+      if (hiddenItems.includes(item)) {
+        await expect(
+          page.getByTestId('left-sidebar').getByTestId(`app-bar-item-${item}`)
+        ).not.toBeVisible();
+      } else {
+        await expect(
+          page.getByTestId('left-sidebar').getByTestId(`app-bar-item-${item}`)
+        ).toBeVisible();
+      }
     }
   }
 };

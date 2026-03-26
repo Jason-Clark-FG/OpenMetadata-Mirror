@@ -22,15 +22,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { INITIAL_PAGING_VALUE } from '../../../constants/constants';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
-import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../generated/entity/domains/domain';
 import { useMarketplaceRecentSearches } from '../../../hooks/useMarketplaceRecentSearches';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getDataProductIconByUrl } from '../../../utils/DataProductUtils';
 import { getDomainIcon } from '../../../utils/DomainUtils';
+import { getDomainDetailsPath } from '../../../utils/RouterUtils';
 import { getEncodedFqn } from '../../../utils/StringsUtils';
 import './marketplace-search-bar.less';
 

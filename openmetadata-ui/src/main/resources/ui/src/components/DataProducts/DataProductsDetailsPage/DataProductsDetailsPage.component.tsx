@@ -32,7 +32,6 @@ import { ROUTES } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -58,6 +57,7 @@ import { Style } from '../../../generated/type/tagLabel';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useFqn } from '../../../hooks/useFqn';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { FeedCounts } from '../../../interface/feed.interface';
 import { QueryFilterInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
 import { getContractByEntityId } from '../../../rest/contractAPI';

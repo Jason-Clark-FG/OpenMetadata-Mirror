@@ -16,8 +16,6 @@ import { compare } from 'fast-json-patch';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
-import { getDomainPath } from '../../../utils/RouterUtils';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../enums/common.enum';
@@ -26,6 +24,7 @@ import { Domain } from '../../../generated/entity/domains/domain';
 import { Operation } from '../../../generated/entity/policies/policy';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useFqn } from '../../../hooks/useFqn';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import {
   addFollower,
   getDomainByName,
@@ -35,6 +34,7 @@ import {
 } from '../../../rest/domainAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { checkPermission } from '../../../utils/PermissionsUtils';
+import { getDomainPath } from '../../../utils/RouterUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../common/Loader/Loader';

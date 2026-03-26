@@ -13,8 +13,8 @@
 
 import { useDomainListing } from '../../../components/common/atoms/domain/compositions/useDomainListing';
 import { ListingData } from '../../../components/common/atoms/shared/types';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { Domain } from '../../../generated/entity/domains/domain';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 
 export const useDomainListingData = (): ListingData<Domain> => {
   const { domainBasePath } = useMarketplaceStore();

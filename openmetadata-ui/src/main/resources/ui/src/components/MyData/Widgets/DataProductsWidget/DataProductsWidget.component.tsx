@@ -30,7 +30,6 @@ import {
   getSortOrder,
 } from '../../../../constants/Widgets.constant';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../../../enums/common.enum';
-import { EntityType } from '../../../../enums/entity.enum';
 import { SearchIndex } from '../../../../enums/search.enum';
 import { DataProduct } from '../../../../generated/entity/domains/dataProduct';
 import {

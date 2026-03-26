@@ -13,12 +13,12 @@
 import { expect } from '@playwright/test';
 import { DataProduct } from '../../support/domain/DataProduct';
 import { Domain } from '../../support/domain/Domain';
-import { test } from '../fixtures/pages';
 import { performAdminLogin } from '../../utils/admin';
 import {
   navigateToMarketplace,
   searchMarketplace,
 } from '../../utils/dataMarketplace';
+import { test } from '../fixtures/pages';
 
 const domain1 = new Domain();
 const domain2 = new Domain();

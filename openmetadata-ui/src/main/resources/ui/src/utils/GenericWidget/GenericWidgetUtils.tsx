@@ -24,6 +24,8 @@ import ModelTab from '../../components/Dashboard/DataModel/DataModels/ModelTab/M
 import { DatabaseSchemaTable } from '../../components/Database/DatabaseSchema/DatabaseSchemaTable/DatabaseSchemaTable';
 import SchemaTable from '../../components/Database/SchemaTable/SchemaTable.component';
 import { StoredProcedureCodeCard } from '../../components/Database/StoredProcedureCodeCard/StoredProcedureCodeCard';
+import MarketplaceDataProductsWidget from '../../components/DataMarketplace/MarketplaceDataProductsWidget/MarketplaceDataProductsWidget.component';
+import MarketplaceDomainsWidget from '../../components/DataMarketplace/MarketplaceDomainsWidget/MarketplaceDomainsWidget.component';
 import DataProductsContainer from '../../components/DataProducts/DataProductsContainer/DataProductsContainer.component';
 import { EntityUnion } from '../../components/Explore/ExplorePage.interface';
 import GlossaryTermTab from '../../components/Glossary/GlossaryTermTab/GlossaryTermTab.component';
@@ -43,8 +45,6 @@ import {
 } from '../../enums/CustomizeDetailPage.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { EntityReference, TagSource } from '../../generated/tests/testCase';
-import MarketplaceDataProductsWidget from '../../components/DataMarketplace/MarketplaceDataProductsWidget/MarketplaceDataProductsWidget.component';
-import MarketplaceDomainsWidget from '../../components/DataMarketplace/MarketplaceDomainsWidget/MarketplaceDomainsWidget.component';
 import APIEndpointsTab from '../../pages/APICollectionPage/APIEndpointsTab';
 import SchemaTablesTab from '../../pages/DatabaseSchemaPage/SchemaTablesTab';
 import SearchIndexFieldsTab from '../../pages/SearchIndexDetailsPage/SearchIndexFieldsTab/SearchIndexFieldsTab';

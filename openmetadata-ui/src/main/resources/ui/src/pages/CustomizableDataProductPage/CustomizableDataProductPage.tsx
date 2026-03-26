@@ -22,11 +22,11 @@ import { CustomizablePageHeader } from '../../components/MyData/CustomizableComp
 import { CustomizeMyDataProps } from '../../components/MyData/CustomizableComponents/CustomizeMyData/CustomizeMyData.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { DE_ACTIVE_COLOR } from '../../constants/constants';
-import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { EntityType } from '../../enums/entity.enum';
 import { DataProduct } from '../../generated/entity/domains/dataProduct';
 import { Page } from '../../generated/system/ui/page';
 import { PageType } from '../../generated/system/ui/uiCustomization';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { getDummyDataByPage } from '../../utils/CustomizePage/CustomizePageUtils';
 import { getEntityName } from '../../utils/EntityUtils';
 import { useCustomizeStore } from '../CustomizablePage/CustomizeStore';

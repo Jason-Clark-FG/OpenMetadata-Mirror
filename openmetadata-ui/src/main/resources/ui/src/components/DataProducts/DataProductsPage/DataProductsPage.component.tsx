@@ -19,13 +19,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { QueryVote } from '../../../components/Database/TableQueries/TableQueries.interface';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityType, TabSpecificField } from '../../../enums/entity.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { EntityHistory } from '../../../generated/type/entityHistory';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useFqn } from '../../../hooks/useFqn';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import {
   addFollower,
   deleteDataProduct,

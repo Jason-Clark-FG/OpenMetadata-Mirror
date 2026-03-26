@@ -12,7 +12,6 @@
  */
 
 import { isUndefined } from 'lodash';
-import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { ServiceTypes } from 'Models';
 import QueryString from 'qs';
 import {
@@ -48,6 +47,7 @@ import { EntityAction, EntityTabs, EntityType } from '../enums/entity.enum';
 import { ServiceAgentSubTabs } from '../enums/service.enum';
 import { ProfilerDashboardType } from '../enums/table.enum';
 import { PipelineType } from '../generated/api/services/ingestionPipelines/createIngestionPipeline';
+import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { DataQualityPageTabs } from '../pages/DataQuality/DataQualityPage.interface';
 import { TestCasePageTabs } from '../pages/IncidentManager/IncidentManager.interface';
 import { getPartialNameFromFQN } from './CommonUtils';

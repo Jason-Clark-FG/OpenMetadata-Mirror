@@ -19,10 +19,10 @@ import {
   DATAPRODUCT_DEFAULT_QUICK_FILTERS,
   DATAPRODUCT_FILTERS,
 } from '../../../constants/DataProduct.constants';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { TagSource } from '../../../generated/type/tagLabel';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../utils/IconUtils';
 import { useListingData } from '../../common/atoms/compositions/useListingData';

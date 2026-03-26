@@ -39,7 +39,6 @@ import { FQN_SEPARATOR_CHAR } from '../../../constants/char.constants';
 import { ERROR_MESSAGE, ROUTES } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { EntityField } from '../../../constants/Feeds.constants';
-import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -57,6 +56,7 @@ import { PageType } from '../../../generated/system/ui/page';
 import { Style } from '../../../generated/type/tagLabel';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
+import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
 import {
   addDataProducts,
   patchDataProduct,
