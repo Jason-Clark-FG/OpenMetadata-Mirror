@@ -36,10 +36,7 @@ import PageHeader from '../../../components/PageHeader/PageHeader.component';
 import SearchDropdown from '../../../components/SearchDropdown/SearchDropdown';
 import { SearchDropdownOption } from '../../../components/SearchDropdown/SearchDropdown.interface';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
-import {
-  PAGE_SIZE_BASE,
-  ROUTES,
-} from '../../../constants/constants';
+import { PAGE_SIZE_BASE, ROUTES } from '../../../constants/constants';
 import { PROFILER_FILTER_RANGE } from '../../../constants/profiler.constant';
 import { SearchIndex } from '../../../enums/search.enum';
 import { Tag } from '../../../generated/entity/classification/tag';
@@ -248,7 +245,7 @@ const DataQualityDashboard = ({
   const fetchTagOptions = async (query = WILD_CARD_CHAR) => {
     const response = await searchQuery({
       searchIndex: SearchIndex.TAG,
-      query: query,
+      query: `*${query}*`,
       filters: 'disabled:false AND !classification.name:Tier',
       pageSize: PAGE_SIZE_BASE,
     });
@@ -300,7 +297,7 @@ const DataQualityDashboard = ({
   const fetchGlossaryTermOptions = async (query = WILD_CARD_CHAR) => {
     const response = await searchQuery({
       searchIndex: SearchIndex.GLOSSARY_TERM,
-      query: query,
+      query: `*${query}*`,
       pageSize: PAGE_SIZE_BASE,
     });
     const hits = response.hits.hits;
@@ -535,23 +532,20 @@ const DataQualityDashboard = ({
         showFilterBar && hasVisibleFilters
           ? 'tw:justify-between'
           : 'tw:justify-end'
-      )}
-    >
+      )}>
       {showFilterBar && hasVisibleFilters && (
         <div className="tw:flex tw:items-center tw:gap-4 tw:w-full">
           {showOwnerFilter && (
             <Tooltip
               isDisabled={selectedOwnerKeys.length === 0}
               placement="top"
-              title={getSelectedOptionLabelString(selectedOwnerKeys, true)}
-            >
+              title={getSelectedOptionLabelString(selectedOwnerKeys, true)}>
               <TooltipTrigger>
                 <UserTeamSelectableList
                   hasPermission
                   owner={selectedOwnerFilter}
                   popoverProps={{ placement: 'bottomLeft' }}
-                  onUpdate={handleOwnerChange}
-                >
+                  onUpdate={handleOwnerChange}>
                   <div
                     className="tw:flex tw:items-center tw:gap-1  tw:rounded-md quick-filter-dropdown-trigger-btn"
                     data-testid="search-dropdown-owner"
@@ -559,8 +553,7 @@ const DataQualityDashboard = ({
                       selectedOwnerKeys.length > 0
                         ? getSelectedOptionLabelString(selectedOwnerKeys, true)
                         : undefined
-                    }
-                  >
+                    }>
                     <div className="tw:flex tw:items-center tw:gap-0">
                       <span>{t('label.owner')}</span>
                       {selectedOwnerKeys.length > 0 && (
@@ -618,8 +611,7 @@ const DataQualityDashboard = ({
         className={classNames(
           { 'tw:mr-1': !showFilterBar },
           'tw:flex tw:shrink-0 tw:items-center tw:gap-4'
-        )}
-      >
+        )}>
         <span className="data-insight-label-text text-xs tw:whitespace-nowrap">
           {`${formatDate(chartFilter.startTs, true)} - ${formatDate(
             chartFilter.endTs,
@@ -803,8 +795,7 @@ const DataQualityDashboard = ({
     return (
       <div
         className={classNames('data-quality-governance-layout', className)}
-        data-testid="dq-dashboard-container"
-      >
+        data-testid="dq-dashboard-container">
         <div className="data-quality-governance-filter-bar">
           {filterBarContent}
         </div>
@@ -819,8 +810,7 @@ const DataQualityDashboard = ({
     <Grid
       className={classNames('m-b-md', className)}
       data-testid="dq-dashboard-container"
-      rowGap="6"
-    >
+      rowGap="6">
       <Grid.Item span={24}>{filterBarContent}</Grid.Item>
       {chartCards}
     </Grid>
