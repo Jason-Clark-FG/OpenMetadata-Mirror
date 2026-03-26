@@ -124,6 +124,18 @@ describe('GlossaryTermClassBase', () => {
 
       expect(childProps.hiddenFilters).toContain('glossaryTerms');
     });
+
+    it('DQ tab passes className as data-quality-governance-tab-wrapper', () => {
+      const tabs = instance.getGlossaryTermDetailPageTabs(mockProps);
+      const dqTab = tabs.find((t) => t.key === EntityTabs.DATA_OBSERVABILITY);
+      const childProps = (
+        dqTab?.children as React.ReactElement<{
+          className?: string;
+        }>
+      ).props;
+
+      expect(childProps.className).toBe('data-quality-governance-tab-wrapper');
+    });
   });
 
   describe('getGlossaryTermDetailPageTabsIds', () => {

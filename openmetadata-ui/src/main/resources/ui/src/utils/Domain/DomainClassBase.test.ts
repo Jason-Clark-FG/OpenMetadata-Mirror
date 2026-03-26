@@ -106,6 +106,17 @@ describe('DomainClassBase', () => {
 
       expect(childProps.initialFilters).toBeUndefined();
     });
+
+    it('DQ tab passes className as data-quality-governance-tab-wrapper tw:mt-2', () => {
+      const tabs = instance.getDomainDetailPageTabs(mockProps);
+      const childProps = (
+        tabs.at(-1)?.children as ReturnType<typeof createElement>
+      ).props;
+
+      expect(childProps.className).toBe(
+        'data-quality-governance-tab-wrapper tw:mt-2'
+      );
+    });
   });
 
   describe('getDomainDetailPageTabsIds', () => {

@@ -19,11 +19,25 @@ import { Tag } from '../generated/entity/classification/tag';
 import { searchQuery } from '../rest/searchAPI';
 import tagClassBase, { TagClassBase } from './TagClassBase';
 
-jest.mock('../rest/searchAPI');
+jest.mock('../rest/searchAPI', () => ({
+  searchQuery: jest.fn(),
+}));
 
 jest.mock('./StringsUtils', () => ({
   getEncodedFqn: jest.fn().mockReturnValue('test'),
   escapeESReservedCharacters: jest.fn().mockReturnValue('test'),
+}));
+
+jest.mock('./SearchUtils', () => ({
+  getTermQuery: jest.fn((params: Record<string, string>) => ({
+    query: {
+      bool: {
+        must: Object.entries(params).map(([key, value]) => ({
+          term: { [key]: value },
+        })),
+      },
+    },
+  })),
 }));
 
 jest.mock('./CustomizePage/CustomizePageUtils', () => ({
@@ -45,6 +59,7 @@ jest.mock('../components/DataAssets/OwnerLabelV2/OwnerLabelV2', () => ({
 jest.mock('./i18next/LocalUtil', () => ({
   __esModule: true,
   default: { t: jest.fn((key: string) => key) },
+  t: jest.fn((key: string) => key),
 }));
 
 const mockSearchResponse = (fqn: string) => ({

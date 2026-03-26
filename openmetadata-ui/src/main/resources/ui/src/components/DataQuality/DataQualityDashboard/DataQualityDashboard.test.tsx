@@ -140,18 +140,27 @@ jest.mock(
 );
 
 jest.mock('../../../components/SearchDropdown/SearchDropdown', () =>
-  jest.fn().mockImplementation(({ label, onChange, selectedKeys }) => (
-    <div>
-      <button
-        data-testid={`search-dropdown-${label}`}
-        onClick={() => onChange([{ key: 'tag1', label: 'Tag 1' }])}>
-        {label} SearchDropdown
-      </button>
-      {selectedKeys
-        .map((option: SearchDropdownOption) => option.label)
-        .join(', ')}
-    </div>
-  ))
+  jest
+    .fn()
+    .mockImplementation(({ label, onChange, onSearch, selectedKeys }) => (
+      <div>
+        <button
+          data-testid={`search-dropdown-${label}`}
+          onClick={() => onChange([{ key: 'tag1', label: 'Tag 1' }])}>
+          {label} SearchDropdown
+        </button>
+        {onSearch && (
+          <button
+            data-testid={`search-dropdown-search-${label}`}
+            onClick={() => onSearch('pii')}>
+            Search {label}
+          </button>
+        )}
+        {selectedKeys
+          .map((option: SearchDropdownOption) => option.label)
+          .join(', ')}
+      </div>
+    ))
 );
 jest.mock('../../../utils/AdvancedSearchUtils', () => {
   return {
@@ -1266,6 +1275,63 @@ describe('DataQualityDashboard', () => {
             }),
           })
         );
+      });
+    });
+  });
+
+  describe('wildcard query fix in fetchTagOptions and fetchGlossaryTermOptions', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('calls searchQuery with bare wildcard (*) on mount — not triple-star (***)', async () => {
+      render(<DataQualityDashboard />, { wrapper: MemoryRouter });
+
+      await waitFor(() => {
+        expect(mockSearchQuery).toHaveBeenCalled();
+      });
+
+      const wildcardCalls = mockSearchQuery.mock.calls.filter(
+        (args: unknown[]) => (args[0] as Record<string, unknown>).query === '*'
+      );
+      const tripleStarCalls = mockSearchQuery.mock.calls.filter(
+        (args: unknown[]) =>
+          (args[0] as Record<string, unknown>).query === '***'
+      );
+
+      expect(wildcardCalls.length).toBeGreaterThanOrEqual(2); // tags + glossaryTerms
+      expect(tripleStarCalls).toHaveLength(0);
+    });
+
+    it('calls searchQuery with *text* when tag search text is non-empty', async () => {
+      render(<DataQualityDashboard />, { wrapper: MemoryRouter });
+
+      fireEvent.click(screen.getByTestId('search-dropdown-search-label.tag'));
+
+      await waitFor(() => {
+        const wrappedCalls = mockSearchQuery.mock.calls.filter(
+          (args: unknown[]) =>
+            (args[0] as Record<string, unknown>).query === '*pii*'
+        );
+
+        expect(wrappedCalls.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('calls searchQuery with *text* when glossary term search text is non-empty', async () => {
+      render(<DataQualityDashboard />, { wrapper: MemoryRouter });
+
+      fireEvent.click(
+        screen.getByTestId('search-dropdown-search-label.glossary-term')
+      );
+
+      await waitFor(() => {
+        const wrappedCalls = mockSearchQuery.mock.calls.filter(
+          (args: unknown[]) =>
+            (args[0] as Record<string, unknown>).query === '*pii*'
+        );
+
+        expect(wrappedCalls.length).toBeGreaterThanOrEqual(1);
       });
     });
   });
