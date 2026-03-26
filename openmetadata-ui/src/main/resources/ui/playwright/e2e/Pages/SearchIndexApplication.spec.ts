@@ -80,8 +80,7 @@ const installSearchIndexApplication = async (page: Page) => {
   const installApplicationResponse = page.waitForResponse('api/v1/apps');
   const getApplications = page.waitForRequest(
     (request) =>
-      request.url().includes('/api/v1/apps?limit') &&
-      request.method() === 'GET'
+      request.url().includes('/api/v1/apps?limit') && request.method() === 'GET'
   );
   await page.click('[data-testid="deploy-button"]');
   await installApplicationResponse;
