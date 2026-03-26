@@ -20,7 +20,7 @@ class MatillionConnectionClassConverterTest {
     MatillionETLAuth etlAuth = new MatillionETLAuth().withHostPort("https://matillion.example.com");
 
     MatillionConnection input = new MatillionConnection().withConnection(etlAuth);
-    Object rawInput = JsonUtils.convertValue(JsonUtils.pojoToJson(input), Object.class);
+    Object rawInput = JsonUtils.readValue(JsonUtils.pojoToJson(input), Object.class);
 
     MatillionConnection result = (MatillionConnection) converter.convert(rawInput);
 
@@ -34,7 +34,7 @@ class MatillionConnectionClassConverterTest {
         new MatillionDPCAuth().withClientId("client-id").withClientSecret("secret");
 
     MatillionConnection input = new MatillionConnection().withConnection(dpcAuth);
-    Object rawInput = JsonUtils.convertValue(JsonUtils.pojoToJson(input), Object.class);
+    Object rawInput = JsonUtils.readValue(JsonUtils.pojoToJson(input), Object.class);
 
     MatillionConnection result = (MatillionConnection) converter.convert(rawInput);
 
@@ -45,7 +45,7 @@ class MatillionConnectionClassConverterTest {
   @Test
   void testNullConnectionDoesNotThrow() {
     MatillionConnection input = new MatillionConnection();
-    Object rawInput = JsonUtils.convertValue(JsonUtils.pojoToJson(input), Object.class);
+    Object rawInput = JsonUtils.readValue(JsonUtils.pojoToJson(input), Object.class);
 
     MatillionConnection result = (MatillionConnection) converter.convert(rawInput);
 
