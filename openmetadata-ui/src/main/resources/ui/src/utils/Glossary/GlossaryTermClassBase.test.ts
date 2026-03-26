@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import React from 'react';
 import { EntityTabs } from '../../enums/entity.enum';
 import glossaryTermClassBase, {
   GlossaryTermClassBase,
@@ -83,8 +84,13 @@ describe('GlossaryTermClassBase', () => {
     it('DQ tab passes isGovernanceView as true', () => {
       const tabs = instance.getGlossaryTermDetailPageTabs(mockProps);
       const dqTab = tabs.find((t) => t.key === EntityTabs.DATA_OBSERVABILITY);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const childProps = (dqTab?.children as any).props;
+      const childProps = (
+        dqTab?.children as React.ReactElement<{
+          isGovernanceView: boolean;
+          hiddenFilters: string[];
+          initialFilters?: Record<string, string[]>;
+        }>
+      ).props;
 
       expect(childProps.isGovernanceView).toBe(true);
     });
@@ -92,8 +98,13 @@ describe('GlossaryTermClassBase', () => {
     it('DQ tab passes glossaryTerm.fqn as initialFilters.glossaryTerms', () => {
       const tabs = instance.getGlossaryTermDetailPageTabs(mockProps);
       const dqTab = tabs.find((t) => t.key === EntityTabs.DATA_OBSERVABILITY);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const childProps = (dqTab?.children as any).props;
+      const childProps = (
+        dqTab?.children as React.ReactElement<{
+          isGovernanceView: boolean;
+          hiddenFilters: string[];
+          initialFilters?: Record<string, string[]>;
+        }>
+      ).props;
 
       expect(childProps.initialFilters?.glossaryTerms).toEqual([
         'Finance.Revenue',
@@ -103,8 +114,13 @@ describe('GlossaryTermClassBase', () => {
     it('DQ tab hides glossaryTerms filter', () => {
       const tabs = instance.getGlossaryTermDetailPageTabs(mockProps);
       const dqTab = tabs.find((t) => t.key === EntityTabs.DATA_OBSERVABILITY);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const childProps = (dqTab?.children as any).props;
+      const childProps = (
+        dqTab?.children as React.ReactElement<{
+          isGovernanceView: boolean;
+          hiddenFilters: string[];
+          initialFilters?: Record<string, string[]>;
+        }>
+      ).props;
 
       expect(childProps.hiddenFilters).toContain('glossaryTerms');
     });
