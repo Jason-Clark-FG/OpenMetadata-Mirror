@@ -141,4 +141,51 @@ public class LineageCacheKeyTest {
   public void testNullRequestThrowsException() {
     assertThrows(IllegalArgumentException.class, () -> LineageCacheKey.fromRequest(null));
   }
+
+  @Test
+  public void testEntityCountCacheKeyDifferentFromSize() {
+    LineageCacheKey key1 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 0, 10, 1);
+    LineageCacheKey key2 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 10, 10, 1);
+
+    assertNotEquals(key1, key2);
+  }
+
+  @Test
+  public void testEntityCountCacheKeyDifferentNodeDepth() {
+    LineageCacheKey key1 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 0, 10, 1);
+    LineageCacheKey key2 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 0, 10, 2);
+
+    assertNotEquals(key1, key2);
+  }
+
+  @Test
+  public void testEntityCountCacheKeySameParams() {
+    LineageCacheKey key1 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 0, 10, 1);
+    LineageCacheKey key2 =
+        new LineageCacheKey(
+            "table1", 0, 3, "", "", Boolean.FALSE, "downstream", Boolean.FALSE, 0, 10, 1);
+
+    assertEquals(key1, key2);
+    assertEquals(key1.hashCode(), key2.hashCode());
+  }
+
+  @Test
+  public void testFromRequestDefaultsPaginationFields() {
+    SearchLineageRequest request = new SearchLineageRequest().withFqn("table1");
+    LineageCacheKey key = LineageCacheKey.fromRequest(request);
+
+    assertEquals(0, key.getFrom());
+    assertEquals(0, key.getSize());
+    assertEquals(0, key.getNodeDepth());
+  }
 }

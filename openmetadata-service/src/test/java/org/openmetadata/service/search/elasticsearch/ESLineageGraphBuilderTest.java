@@ -499,4 +499,161 @@ class ESLineageGraphBuilderTest {
       assertEquals(0, result.getMaxDownstreamDepth());
     }
   }
+
+  @Test
+  void getLineagePaginationInfo_noQueryFilter_callsDepthWiseEntityCounts() throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<EsUtils> esUtilsMock = mockStatic(EsUtils.class)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubEsUtilsGetSearchRequest(esUtilsMock);
+      stubEsClientSearch();
+      when(hitsMetadata.hits()).thenReturn(List.of());
+
+      ESLineageGraphBuilder builder = new ESLineageGraphBuilder(esClient);
+
+      // null queryFilter exercises the else branch (getDepthWiseEntityCounts)
+      LineagePaginationInfo result =
+          builder.getLineagePaginationInfo(ROOT_FQN, 2, 2, null, false, "table");
+
+      assertNotNull(result);
+      assertNotNull(result.getUpstreamDepthInfo());
+      assertNotNull(result.getDownstreamDepthInfo());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void getLineagePaginationInfo_withNodeFilter_downstreamEntities_exercisesFilteredCounts()
+      throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<EsUtils> esUtilsMock = mockStatic(EsUtils.class)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubEsUtilsGetSearchRequest(esUtilsMock);
+
+      Hit<JsonData> mockHit = (Hit<JsonData>) Mockito.mock(Hit.class);
+      JsonData mockJsonData = Mockito.mock(JsonData.class);
+      when(mockHit.source()).thenReturn(mockJsonData);
+
+      Map<String, Object> downstreamDoc = new HashMap<>();
+      downstreamDoc.put("fullyQualifiedName", DOWNSTREAM_FQN);
+      downstreamDoc.put("entityType", "table");
+
+      esUtilsMock.when(() -> EsUtils.jsonDataToMap(any(JsonData.class))).thenReturn(downstreamDoc);
+
+      stubEsClientSearch();
+      // First call returns one hit (downstream entity at depth 1), second returns empty
+      when(hitsMetadata.hits()).thenReturn(List.of(mockHit), List.of());
+
+      Map<String, Object> matchingResult = new HashMap<>();
+      matchingResult.put(DOWNSTREAM_FQN, downstreamDoc);
+
+      esUtilsMock
+          .when(
+              () ->
+                  EsUtils.searchEntitiesByKey(
+                      any(ElasticsearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      anySet(),
+                      anyInt(),
+                      anyInt(),
+                      anyList(),
+                      anyString()))
+          .thenReturn(matchingResult);
+
+      ESLineageGraphBuilder builder = new ESLineageGraphBuilder(esClient);
+      String queryFilter =
+          "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"entityType\":\"table\"}}]}}}";
+
+      // Downstream direction — BFS discovers entities via fullyQualifiedName field
+      LineagePaginationInfo result =
+          builder.getLineagePaginationInfo(ROOT_FQN, 0, 1, queryFilter, false, "table");
+
+      assertNotNull(result);
+      assertNotNull(result.getDownstreamDepthInfo());
+      assertTrue(result.getTotalDownstreamEntities() >= 1);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void searchLineageByEntityCount_noFilter_exercisesUnfilteredPagination() throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<EsUtils> esUtilsMock = mockStatic(EsUtils.class);
+        MockedStatic<LineageUtil> lineageUtilMock =
+            mockStatic(LineageUtil.class, Mockito.CALLS_REAL_METHODS)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubEsUtilsGetSearchRequest(esUtilsMock);
+
+      Map<String, Object> rootDoc = new HashMap<>();
+      rootDoc.put("fullyQualifiedName", ROOT_FQN);
+      rootDoc.put("entityType", "table");
+
+      esUtilsMock
+          .when(
+              () ->
+                  EsUtils.searchEntityByKey(
+                      any(ElasticsearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      any(),
+                      anyList()))
+          .thenReturn(rootDoc);
+
+      Hit<JsonData> mockHit = (Hit<JsonData>) Mockito.mock(Hit.class);
+      JsonData mockJsonData = Mockito.mock(JsonData.class);
+      when(mockHit.source()).thenReturn(mockJsonData);
+
+      Map<String, Object> downstreamDoc = new HashMap<>();
+      downstreamDoc.put("fullyQualifiedName", DOWNSTREAM_FQN);
+      downstreamDoc.put("entityType", "table");
+      downstreamDoc.put("id", java.util.UUID.randomUUID().toString());
+
+      esUtilsMock.when(() -> EsUtils.jsonDataToMap(any(JsonData.class))).thenReturn(downstreamDoc);
+
+      stubEsClientSearch();
+      when(hitsMetadata.hits()).thenReturn(List.of(mockHit), List.of());
+
+      esUtilsMock
+          .when(
+              () ->
+                  EsUtils.searchEntityByKey(
+                      any(ElasticsearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      anyString(),
+                      anyList()))
+          .thenReturn(downstreamDoc);
+
+      lineageUtilMock
+          .when(() -> LineageUtil.replaceWithEntityLevelTagsBatch(anyList()))
+          .then(invocation -> null);
+
+      ESLineageGraphBuilder builder = new ESLineageGraphBuilder(esClient);
+
+      // No queryFilter, no columnFilter — exercises the unfiltered pagination path
+      EntityCountLineageRequest request =
+          new EntityCountLineageRequest()
+              .withFqn(ROOT_FQN)
+              .withDirection(LineageDirection.DOWNSTREAM)
+              .withMaxDepth(1)
+              .withNodeDepth(1)
+              .withIncludeDeleted(false)
+              .withFrom(0)
+              .withSize(50)
+              .withIncludeSourceFields(Set.of())
+              .withIsConnectedVia(false);
+
+      SearchLineageResult result = builder.searchLineageByEntityCount(request);
+
+      assertNotNull(result);
+      assertNotNull(result.getNodes());
+    }
+  }
 }

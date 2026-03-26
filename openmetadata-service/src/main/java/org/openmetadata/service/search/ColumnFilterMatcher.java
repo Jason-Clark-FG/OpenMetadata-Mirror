@@ -310,10 +310,6 @@ public class ColumnFilterMatcher {
           return null;
         }
 
-        if (filterValue.isEmpty()) {
-          return null;
-        }
-
         return new FilterCriteria(filterType, filterValue);
       }
     }

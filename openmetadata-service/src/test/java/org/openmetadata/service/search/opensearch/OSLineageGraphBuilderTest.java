@@ -499,4 +499,157 @@ class OSLineageGraphBuilderTest {
       assertEquals(0, result.getMaxDownstreamDepth());
     }
   }
+
+  @Test
+  void getLineagePaginationInfo_noQueryFilter_callsDepthWiseEntityCounts() throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<OsUtils> osUtilsMock = mockStatic(OsUtils.class)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubOsUtilsGetSearchRequest(osUtilsMock);
+      stubOsClientSearch();
+      when(hitsMetadata.hits()).thenReturn(List.of());
+
+      OSLineageGraphBuilder builder = new OSLineageGraphBuilder(esClient);
+
+      LineagePaginationInfo result =
+          builder.getLineagePaginationInfo(ROOT_FQN, 2, 2, null, false, "table");
+
+      assertNotNull(result);
+      assertNotNull(result.getUpstreamDepthInfo());
+      assertNotNull(result.getDownstreamDepthInfo());
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void getLineagePaginationInfo_withNodeFilter_downstreamEntities_exercisesFilteredCounts()
+      throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<OsUtils> osUtilsMock = mockStatic(OsUtils.class)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubOsUtilsGetSearchRequest(osUtilsMock);
+
+      Hit<JsonData> mockHit = (Hit<JsonData>) Mockito.mock(Hit.class);
+      JsonData mockJsonData = Mockito.mock(JsonData.class);
+      when(mockHit.source()).thenReturn(mockJsonData);
+
+      Map<String, Object> downstreamDoc = new HashMap<>();
+      downstreamDoc.put("fullyQualifiedName", DOWNSTREAM_FQN);
+      downstreamDoc.put("entityType", "table");
+
+      osUtilsMock.when(() -> OsUtils.jsonDataToMap(any(JsonData.class))).thenReturn(downstreamDoc);
+
+      stubOsClientSearch();
+      when(hitsMetadata.hits()).thenReturn(List.of(mockHit), List.of());
+
+      Map<String, Object> matchingResult = new HashMap<>();
+      matchingResult.put(DOWNSTREAM_FQN, downstreamDoc);
+
+      osUtilsMock
+          .when(
+              () ->
+                  OsUtils.searchEntitiesByKey(
+                      any(OpenSearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      anySet(),
+                      anyInt(),
+                      anyInt(),
+                      anyList(),
+                      anyString()))
+          .thenReturn(matchingResult);
+
+      OSLineageGraphBuilder builder = new OSLineageGraphBuilder(esClient);
+      String queryFilter =
+          "{\"query\":{\"bool\":{\"must\":[{\"term\":{\"entityType\":\"table\"}}]}}}";
+
+      LineagePaginationInfo result =
+          builder.getLineagePaginationInfo(ROOT_FQN, 0, 1, queryFilter, false, "table");
+
+      assertNotNull(result);
+      assertNotNull(result.getDownstreamDepthInfo());
+      assertTrue(result.getTotalDownstreamEntities() >= 1);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  void searchLineageByEntityCount_noFilter_exercisesUnfilteredPagination() throws IOException {
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<OsUtils> osUtilsMock = mockStatic(OsUtils.class);
+        MockedStatic<LineageUtil> lineageUtilMock =
+            mockStatic(LineageUtil.class, Mockito.CALLS_REAL_METHODS)) {
+
+      entityMock.when(Entity::getSearchRepository).thenReturn(searchRepository);
+      stubOsUtilsGetSearchRequest(osUtilsMock);
+
+      Map<String, Object> rootDoc = new HashMap<>();
+      rootDoc.put("fullyQualifiedName", ROOT_FQN);
+      rootDoc.put("entityType", "table");
+
+      osUtilsMock
+          .when(
+              () ->
+                  OsUtils.searchEntityByKey(
+                      any(OpenSearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      any(),
+                      anyList()))
+          .thenReturn(rootDoc);
+
+      Hit<JsonData> mockHit = (Hit<JsonData>) Mockito.mock(Hit.class);
+      JsonData mockJsonData = Mockito.mock(JsonData.class);
+      when(mockHit.source()).thenReturn(mockJsonData);
+
+      Map<String, Object> downstreamDoc = new HashMap<>();
+      downstreamDoc.put("fullyQualifiedName", DOWNSTREAM_FQN);
+      downstreamDoc.put("entityType", "table");
+      downstreamDoc.put("id", java.util.UUID.randomUUID().toString());
+
+      osUtilsMock.when(() -> OsUtils.jsonDataToMap(any(JsonData.class))).thenReturn(downstreamDoc);
+
+      stubOsClientSearch();
+      when(hitsMetadata.hits()).thenReturn(List.of(mockHit), List.of());
+
+      osUtilsMock
+          .when(
+              () ->
+                  OsUtils.searchEntityByKey(
+                      any(OpenSearchClient.class),
+                      any(),
+                      anyString(),
+                      anyString(),
+                      anyString(),
+                      anyList()))
+          .thenReturn(downstreamDoc);
+
+      lineageUtilMock
+          .when(() -> LineageUtil.replaceWithEntityLevelTagsBatch(anyList()))
+          .then(invocation -> null);
+
+      OSLineageGraphBuilder builder = new OSLineageGraphBuilder(esClient);
+
+      EntityCountLineageRequest request =
+          new EntityCountLineageRequest()
+              .withFqn(ROOT_FQN)
+              .withDirection(LineageDirection.DOWNSTREAM)
+              .withMaxDepth(1)
+              .withNodeDepth(1)
+              .withIncludeDeleted(false)
+              .withFrom(0)
+              .withSize(50)
+              .withIncludeSourceFields(Set.of())
+              .withIsConnectedVia(false);
+
+      SearchLineageResult result = builder.searchLineageByEntityCount(request);
+
+      assertNotNull(result);
+      assertNotNull(result.getNodes());
+    }
+  }
 }

@@ -204,12 +204,14 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       return unfilteredResult;
     }
 
-    // Find matching nodes by applying filter in-memory
+    // Parse the query filter once for all nodes
+    Map<String, List<String>> parsedFilter = QueryFilterParser.parseFilter(queryFilter);
+
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(request.getFqn()); // Always include root
 
     for (Map.Entry<String, NodeInformation> entry : unfilteredResult.getNodes().entrySet()) {
-      if (matchesNodeFilter(entry.getValue(), queryFilter)) {
+      if (matchesNodeFilter(entry.getValue(), parsedFilter)) {
         matchingNodes.add(entry.getKey());
       }
     }
@@ -220,8 +222,28 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
   }
 
   /**
+   * Checks if a node matches the pre-parsed filter criteria (in-memory).
+   *
+   * @param node The node to check
+   * @param parsedFilter Pre-parsed filter (field -> values)
+   * @return true if the node matches the filter, false otherwise
+   */
+  protected boolean matchesNodeFilter(
+      NodeInformation node, Map<String, List<String>> parsedFilter) {
+    if (node == null
+        || node.getEntity() == null
+        || parsedFilter == null
+        || parsedFilter.isEmpty()) {
+      return false;
+    }
+
+    Map<String, Object> entityMap = JsonUtils.getMap(node.getEntity());
+    return QueryFilterParser.matchesFilter(entityMap, parsedFilter);
+  }
+
+  /**
    * Checks if a node matches the filter criteria (in-memory).
-   * Parses ES Query DSL or query strings and matches against entity fields.
+   * Convenience method that parses the query filter string.
    *
    * @param node The node to check
    * @param queryFilter The query filter (ES Query DSL JSON or simple query string)
@@ -231,14 +253,7 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
     if (node == null || node.getEntity() == null || nullOrEmpty(queryFilter)) {
       return false;
     }
-
-    Map<String, Object> entityMap = JsonUtils.getMap(node.getEntity());
-
-    // Parse the query filter to extract field-value pairs
-    Map<String, List<String>> parsedFilter = QueryFilterParser.parseFilter(queryFilter);
-
-    // Match entity against parsed filter
-    return QueryFilterParser.matchesFilter(entityMap, parsedFilter);
+    return matchesNodeFilter(node, QueryFilterParser.parseFilter(queryFilter));
   }
 
   protected SearchLineageResult applyInMemoryFiltersWithPathPreservationForEntityCount(
@@ -253,11 +268,14 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       return unfilteredResult;
     }
 
+    // Parse the query filter once for all nodes
+    Map<String, List<String>> parsedFilter = QueryFilterParser.parseFilter(queryFilter);
+
     Set<String> matchingNodes = new HashSet<>();
     matchingNodes.add(request.getFqn());
 
     for (Map.Entry<String, NodeInformation> entry : unfilteredResult.getNodes().entrySet()) {
-      if (matchesNodeFilter(entry.getValue(), queryFilter)) {
+      if (matchesNodeFilter(entry.getValue(), parsedFilter)) {
         matchingNodes.add(entry.getKey());
       }
     }

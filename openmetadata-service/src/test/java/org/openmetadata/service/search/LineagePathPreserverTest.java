@@ -426,6 +426,128 @@ class LineagePathPreserverTest {
     assertEquals(Set.of(ROOT), filtered.getNodes().keySet());
   }
 
+  // --- Edge case: cycle detection ---
+
+  @Test
+  void tracePathToRootHandlesCycleWithoutInfiniteLoop() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put("A", node("A"));
+    nodes.put("B", node("B"));
+
+    // Create a cycle: ROOT -> A -> B -> A (cycle between A and B)
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("e1", edge(ROOT, "A", null));
+    downstreamEdges.put("e2", edge("A", "B", null));
+    downstreamEdges.put("e3", edge("B", "A", null));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    // Should not hang or throw — the visitedNodes set prevents infinite recursion
+    SearchLineageResult preserved =
+        LineagePathPreserver.preservePathsWithEdges(result, ROOT, Set.of("B"));
+
+    assertTrue(preserved.getNodes().containsKey(ROOT));
+    assertTrue(preserved.getNodes().containsKey("B"));
+  }
+
+  // --- Edge case: diamond-shaped graph ---
+
+  @Test
+  void preservePathsWithEdgesHandlesDiamondTopology() {
+    // Diamond: ROOT -> A -> C, ROOT -> B -> C
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put("A", node("A"));
+    nodes.put("B", node("B"));
+    nodes.put("C", node("C"));
+
+    Map<String, EsLineageData> downstreamEdges = new HashMap<>();
+    downstreamEdges.put("e1", edge(ROOT, "A", null));
+    downstreamEdges.put("e2", edge(ROOT, "B", null));
+    downstreamEdges.put("e3", edge("A", "C", null));
+    downstreamEdges.put("e4", edge("B", "C", null));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(new HashMap<>());
+    result.setDownstreamEdges(downstreamEdges);
+
+    SearchLineageResult preserved =
+        LineagePathPreserver.preservePathsWithEdges(result, ROOT, Set.of("C"));
+
+    // All nodes should be preserved (root, A, B as intermediate, C as match)
+    assertTrue(preserved.getNodes().containsKey(ROOT));
+    assertTrue(preserved.getNodes().containsKey("C"));
+    // At least one intermediate path node (A or B) should be preserved
+    assertTrue(preserved.getNodes().containsKey("A") || preserved.getNodes().containsKey("B"));
+  }
+
+  // --- Edge case: no edges match column filter ---
+
+  @Test
+  void filterByColumnsReturnsOnlyRootWhenNoEdgesMatch() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT, node(ROOT));
+    nodes.put("other", node("other"));
+
+    Map<String, EsLineageData> upstream = new HashMap<>();
+    upstream.put(
+        "e1",
+        edge(
+            ROOT,
+            "other",
+            new ColumnLineage().withFromColumns(List.of(ROOT + ".id")).withToColumn("other.id")));
+
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(nodes);
+    result.setUpstreamEdges(upstream);
+    result.setDownstreamEdges(new HashMap<>());
+
+    SearchLineageResult filtered =
+        LineagePathPreserver.filterByColumns(result, "columnName:nonexistent", ROOT);
+
+    assertEquals(Set.of(ROOT), filtered.getNodes().keySet());
+  }
+
+  // --- Edge case: null guards on preservePathsWithEdges ---
+
+  @Test
+  void preservePathsWithEdgesReturnsOriginalForNullMatchingNodes() {
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(new HashMap<>());
+    SearchLineageResult out = LineagePathPreserver.preservePathsWithEdges(result, ROOT, null);
+    assertSame(result, out);
+  }
+
+  @Test
+  void preservePathsWithEdgesReturnsOriginalForNullNodes() {
+    SearchLineageResult result = new SearchLineageResult();
+    SearchLineageResult out =
+        LineagePathPreserver.preservePathsWithEdges(result, ROOT, Set.of("x"));
+    assertSame(result, out);
+  }
+
+  // --- Edge case: preservePaths null guards ---
+
+  @Test
+  void preservePathsReturnsOriginalForNullAllNodes() {
+    SearchLineageResult result = new SearchLineageResult();
+    result.setNodes(new HashMap<>());
+    SearchLineageResult out = LineagePathPreserver.preservePaths(result, ROOT, null);
+    assertSame(result, out);
+  }
+
+  @Test
+  void preservePathsReturnsOriginalForNullResultNodes() {
+    SearchLineageResult result = new SearchLineageResult();
+    SearchLineageResult out = LineagePathPreserver.preservePaths(result, ROOT, new HashMap<>());
+    assertSame(result, out);
+  }
+
   private SearchLineageResult lineageResultWithChain() {
     Map<String, NodeInformation> nodes = new HashMap<>();
     nodes.put(ROOT, node(ROOT));

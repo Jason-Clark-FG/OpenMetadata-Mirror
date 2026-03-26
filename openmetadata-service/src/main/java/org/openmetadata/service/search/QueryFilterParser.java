@@ -22,12 +22,6 @@ public class QueryFilterParser {
   private QueryFilterParser() {}
 
   /**
-   * Parses a query filter and extracts field-value pairs for in-memory matching.
-   *
-   * @param queryFilter The query filter string (JSON DSL or query string)
-   * @return Map of field names to values
-   */
-  /**
    * Parses a query filter into separate clauses preserving AND semantics.
    * Each must clause becomes a separate map so multiple terms on the same field
    * (e.g., two tags.tagFQN terms) are evaluated independently.
@@ -373,8 +367,8 @@ public class QueryFilterParser {
           }
         }
 
-        // Return the list if we extracted values, otherwise return the original list
-        current = extractedValues.isEmpty() ? list : extractedValues;
+        // Return extracted values, or null if field not found in any list item
+        current = extractedValues.isEmpty() ? null : extractedValues;
       } else {
         return null;
       }
@@ -409,7 +403,8 @@ public class QueryFilterParser {
   }
 
   /**
-   * Checks if a single value matches any of the required values.
+   * Checks if a single value matches any of the required values using exact matching.
+   * This matches ES term query semantics (case-insensitive exact match).
    */
   private static boolean matchesSingleValue(Object value, List<String> requiredValues) {
     if (value == null) {
@@ -418,7 +413,6 @@ public class QueryFilterParser {
 
     String valueStr;
     if (value instanceof Map) {
-      // For objects like owner, domain - check common fields
       @SuppressWarnings("unchecked")
       Map<String, Object> map = (Map<String, Object>) value;
       String displayName = (String) map.get("displayName");
@@ -426,10 +420,9 @@ public class QueryFilterParser {
       String tagFQN = (String) map.get("tagFQN");
 
       for (String required : requiredValues) {
-        String requiredLower = required.toLowerCase();
-        if ((displayName != null && displayName.toLowerCase().contains(requiredLower))
-            || (name != null && name.toLowerCase().contains(requiredLower))
-            || (tagFQN != null && tagFQN.toLowerCase().contains(requiredLower))) {
+        if ((displayName != null && displayName.equalsIgnoreCase(required))
+            || (name != null && name.equalsIgnoreCase(required))
+            || (tagFQN != null && tagFQN.equalsIgnoreCase(required))) {
           return true;
         }
       }
@@ -438,7 +431,25 @@ public class QueryFilterParser {
       valueStr = value.toString();
     }
 
-    // Simple string matching
+    for (String required : requiredValues) {
+      if (valueStr.equalsIgnoreCase(required)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if a single value contains any of the required values (substring match).
+   * Used for name/displayName wildcard search where contains semantics are needed.
+   */
+  private static boolean matchesSingleValueContains(Object value, List<String> requiredValues) {
+    if (value == null) {
+      return false;
+    }
+
+    String valueStr = value.toString();
     for (String required : requiredValues) {
       if (valueStr.toLowerCase().contains(required.toLowerCase())) {
         return true;
@@ -475,15 +486,14 @@ public class QueryFilterParser {
       return false;
     }
 
-    // Check name field
+    // Name search uses substring matching (wildcard-derived values)
     Object nameValue = getNestedFieldValue(entityMap, "name");
-    if (matchesAnyValue(nameValue, searchTerms)) {
+    if (nameValue != null && matchesSingleValueContains(nameValue, searchTerms)) {
       return true;
     }
 
-    // Check displayName field
     Object displayNameValue = getNestedFieldValue(entityMap, "displayName");
-    if (matchesAnyValue(displayNameValue, searchTerms)) {
+    if (displayNameValue != null && matchesSingleValueContains(displayNameValue, searchTerms)) {
       return true;
     }
 

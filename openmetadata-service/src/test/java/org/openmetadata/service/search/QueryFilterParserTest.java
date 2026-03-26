@@ -395,4 +395,171 @@ class QueryFilterParserTest {
 
     assertEquals(List.of("alice", "bob"), parsed.get("owners.name"));
   }
+
+  // --- matchesSingleValue uses exact matching (not substring) ---
+
+  @Test
+  void matchesFilterUsesExactMatchForTermQueries() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[{"term":{"tags.tagFQN":"PII.Sensitive"}}]}}}
+        """);
+
+    // Entity with exact tag match should match
+    Map<String, Object> exactMatch = new HashMap<>();
+    exactMatch.put("tags", List.of(Map.of("tagFQN", "PII.Sensitive")));
+    assertTrue(QueryFilterParser.matchesFilter(exactMatch, parsed));
+
+    // Entity with substring of the tag should NOT match (e.g., "PII.SensitiveData")
+    Map<String, Object> substringMismatch = new HashMap<>();
+    substringMismatch.put("tags", List.of(Map.of("tagFQN", "PII.SensitiveData")));
+    assertFalse(QueryFilterParser.matchesFilter(substringMismatch, parsed));
+
+    // Entity with tag that contains the filter value should NOT match
+    Map<String, Object> containsMismatch = new HashMap<>();
+    containsMismatch.put("tags", List.of(Map.of("tagFQN", "NotPII.Sensitive")));
+    assertFalse(QueryFilterParser.matchesFilter(containsMismatch, parsed));
+  }
+
+  @Test
+  void matchesFilterExactMatchIsCaseInsensitive() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[{"term":{"tags.tagFQN":"Tier.Tier1"}}]}}}
+        """);
+
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("tags", List.of(Map.of("tagFQN", "tier.tier1")));
+    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+  }
+
+  @Test
+  void matchesFilterNameSearchUsesSubstringMatch() {
+    // Wildcard query values (stripped of *) should use contains for name search
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[
+          {"wildcard":{"name":{"value":"*table*"}}},
+          {"wildcard":{"displayName":{"value":"*table*"}}}
+        ]}}}
+        """);
+
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("name", "my_table_v2");
+    entity.put("displayName", "My Table V2");
+    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+
+    Map<String, Object> noMatch = new HashMap<>();
+    noMatch.put("name", "my_view");
+    noMatch.put("displayName", "My View");
+    assertFalse(QueryFilterParser.matchesFilter(noMatch, parsed));
+  }
+
+  // --- getNestedFieldValue returns null on empty extraction ---
+
+  @Test
+  void matchesFilterReturnsNullForMissingNestedField() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[{"term":{"tags.nonExistentField":"value"}}]}}}
+        """);
+
+    // Entity with tags that don't have "nonExistentField" should not match
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("tags", List.of(Map.of("tagFQN", "PII.Sensitive")));
+    assertFalse(QueryFilterParser.matchesFilter(entity, parsed));
+  }
+
+  @Test
+  void matchesFilterScalarExactMatchNotSubstring() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"query":{"bool":{"must":[{"term":{"deleted":"false"}}]}}}
+        """);
+
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("deleted", "false");
+    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+
+    Map<String, Object> mismatch = new HashMap<>();
+    mismatch.put("deleted", "falsehood");
+    assertFalse(QueryFilterParser.matchesFilter(mismatch, parsed));
+  }
+
+  // --- hasNameSearch edge case: different name vs displayName values ---
+
+  @Test
+  void matchesFilterTreatsAsNonNameSearchWhenNameAndDisplayNameDiffer() {
+    // When name and displayName have different values, hasNameSearch returns false
+    // and both fields are treated as AND filters with exact matching
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter("name:users displayName:Users_Table");
+
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("name", "users");
+    entity.put("displayName", "Users_Table");
+    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+
+    // Partial match should fail since it's exact matching (not name search OR logic)
+    Map<String, Object> partial = new HashMap<>();
+    partial.put("name", "users");
+    partial.put("displayName", "Other");
+    assertFalse(QueryFilterParser.matchesFilter(partial, parsed));
+  }
+
+  // --- Wildcard ? character removal ---
+
+  @Test
+  void parseFilterStripsQuestionMarkFromWildcard() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"wildcard": {"name": {"value": "tabl?"}}}
+        """);
+
+    assertEquals(List.of("tabl"), parsed.get("name"));
+  }
+
+  // --- 3+ level nested field extraction ---
+
+  @Test
+  void matchesFilterHandlesThreeLevelNesting() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"term": {"service.connection.type": "MySQL"}}
+        """);
+
+    Map<String, Object> entity = new HashMap<>();
+    entity.put("service", Map.of("connection", Map.of("type", "MySQL")));
+    assertTrue(QueryFilterParser.matchesFilter(entity, parsed));
+
+    Map<String, Object> mismatch = new HashMap<>();
+    mismatch.put("service", Map.of("connection", Map.of("type", "Postgres")));
+    assertFalse(QueryFilterParser.matchesFilter(mismatch, parsed));
+  }
+
+  // --- matchesFilter with Map values containing null fields ---
+
+  @Test
+  void matchesFilterHandlesMapWithNullSubFields() {
+    Map<String, List<String>> parsed =
+        QueryFilterParser.parseFilter(
+            """
+        {"term": {"owners.displayName": "Alice"}}
+        """);
+
+    // Map with null displayName should not match
+    Map<String, Object> entity = new HashMap<>();
+    Map<String, Object> ownerWithNullName = new HashMap<>();
+    ownerWithNullName.put("displayName", null);
+    ownerWithNullName.put("name", "alice_user");
+    entity.put("owners", List.of(ownerWithNullName));
+    assertFalse(QueryFilterParser.matchesFilter(entity, parsed));
+  }
 }

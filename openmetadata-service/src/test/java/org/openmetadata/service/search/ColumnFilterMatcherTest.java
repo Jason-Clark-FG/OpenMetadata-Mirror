@@ -555,6 +555,48 @@ class ColumnFilterMatcherTest {
     assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "tag:PII", cache));
   }
 
+  // --- matchesColumnName case insensitive matching ---
+
+  @Test
+  void matchesColumnFilterIsCaseInsensitive() {
+    EsLineageData edge = new EsLineageData();
+    edge.setColumns(
+        List.of(
+            new ColumnLineage()
+                .withFromColumns(List.of("svc.db.schema.t1.CUSTOMER_ID"))
+                .withToColumn("svc.db.schema.t2.customer_id")));
+
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:customer_id"));
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:CUSTOMER_ID"));
+  }
+
+  // --- matchesColumnName with single-part FQN (no dots) ---
+
+  @Test
+  void matchesColumnFilterWithSinglePartColumnName() {
+    EsLineageData edge = new EsLineageData();
+    edge.setColumns(
+        List.of(new ColumnLineage().withFromColumns(List.of("email")).withToColumn("email_dest")));
+
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "columnName:email"));
+  }
+
+  // --- normalizeFilterType(null) ---
+
+  @Test
+  void matchesColumnFilterWithNullTypeDefaultsToAny() {
+    // When filter has no colon, parseColumnFilter returns FilterCriteria("any", value)
+    // "any" normalizes to "column"
+    EsLineageData edge = new EsLineageData();
+    edge.setColumns(
+        List.of(
+            new ColumnLineage()
+                .withFromColumns(List.of("svc.db.schema.t1.name"))
+                .withToColumn("svc.db.schema.t2.name")));
+
+    assertTrue(ColumnFilterMatcher.matchesColumnFilter(edge, "name"));
+  }
+
   private static Map<String, Object> doc(String fullyQualifiedName, Map<String, Object> column) {
     return Map.of("fullyQualifiedName", fullyQualifiedName, "columns", List.of(column));
   }

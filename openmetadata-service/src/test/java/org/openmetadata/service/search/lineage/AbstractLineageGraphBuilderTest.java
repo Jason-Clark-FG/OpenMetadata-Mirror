@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +17,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmetadata.schema.api.lineage.EntityCountLineageRequest;
 import org.openmetadata.schema.api.lineage.EsLineageData;
+import org.openmetadata.schema.api.lineage.LineageDirection;
 import org.openmetadata.schema.api.lineage.RelationshipRef;
+import org.openmetadata.schema.api.lineage.SearchLineageRequest;
 import org.openmetadata.schema.api.lineage.SearchLineageResult;
 import org.openmetadata.schema.type.lineage.NodeInformation;
+import org.openmetadata.service.search.QueryFilterParser;
 
 class AbstractLineageGraphBuilderTest {
 
@@ -556,6 +561,171 @@ class AbstractLineageGraphBuilderTest {
     assertTrue(out.getNodes().containsKey("svc.db.schema.depth2_match"));
     // Table view strips intermediate nodes that don't match the filter
     assertFalse(out.getNodes().containsKey("svc.db.schema.depth1"));
+  }
+
+  @Test
+  void matchesNodeFilterWithParsedFilterAvoidsDuplicateParsing() {
+    NodeInformation node =
+        new NodeInformation()
+            .withEntity(
+                Map.of("tags", List.of(Map.of("tagFQN", "PII.Sensitive")), "name", "customers"));
+
+    Map<String, java.util.List<String>> parsedFilter =
+        QueryFilterParser.parseFilter("{\"term\": {\"tags.tagFQN.keyword\": \"PII.Sensitive\"}}");
+
+    // Pre-parsed filter overload should give the same result as string overload
+    assertTrue(builder.matchesNodeFilter(node, parsedFilter));
+
+    Map<String, java.util.List<String>> nonMatchingFilter =
+        QueryFilterParser.parseFilter("{\"term\": {\"tags.tagFQN.keyword\": \"NonExistent\"}}");
+    assertFalse(builder.matchesNodeFilter(node, nonMatchingFilter));
+  }
+
+  @Test
+  void matchesNodeFilterWithParsedFilterHandlesNullAndEmpty() {
+    NodeInformation node = new NodeInformation().withEntity(Map.of("name", "test"));
+
+    assertFalse(builder.matchesNodeFilter(node, (Map<String, java.util.List<String>>) null));
+    assertFalse(builder.matchesNodeFilter(node, new HashMap<String, java.util.List<String>>()));
+    assertFalse(builder.matchesNodeFilter(null, QueryFilterParser.parseFilter("name:test")));
+  }
+
+  // --- paginateList tests ---
+
+  @Test
+  void paginateListReturnsEmptyForNullList() {
+    assertEquals(new ArrayList<>(), builder.paginateList(null, 0, 10));
+  }
+
+  @Test
+  void paginateListReturnsEmptyForEmptyList() {
+    assertEquals(new ArrayList<>(), builder.paginateList(new ArrayList<>(), 0, 10));
+  }
+
+  @Test
+  void paginateListReturnsEmptyWhenFromExceedsList() {
+    assertEquals(new ArrayList<>(), builder.paginateList(List.of("a", "b"), 5, 10));
+  }
+
+  @Test
+  void paginateListReturnsCorrectSublist() {
+    List<String> result = builder.paginateList(List.of("a", "b", "c", "d", "e"), 1, 2);
+    assertEquals(List.of("b", "c"), result);
+  }
+
+  @Test
+  void paginateListClampsToEndOfList() {
+    List<String> result = builder.paginateList(List.of("a", "b", "c"), 1, 100);
+    assertEquals(List.of("b", "c"), result);
+  }
+
+  @Test
+  void paginateListFromZeroSizeEqualsListSize() {
+    List<String> result = builder.paginateList(List.of("a", "b", "c"), 0, 3);
+    assertEquals(List.of("a", "b", "c"), result);
+  }
+
+  // --- calculateCurrentDepth tests ---
+
+  @Test
+  void calculateCurrentDepthReturnsZeroForNullDirection() {
+    SearchLineageRequest request = new SearchLineageRequest().withUpstreamDepth(5);
+    assertEquals(0, builder.calculateCurrentDepth(request, 3));
+  }
+
+  @Test
+  void calculateCurrentDepthComputesUpstreamDepth() {
+    SearchLineageRequest request =
+        new SearchLineageRequest().withDirection(LineageDirection.UPSTREAM).withUpstreamDepth(5);
+    // currentDepth = configuredMaxDepth - remainingDepth = 5 - 3 = 2
+    assertEquals(2, builder.calculateCurrentDepth(request, 3));
+  }
+
+  @Test
+  void calculateCurrentDepthComputesDownstreamDepth() {
+    SearchLineageRequest request =
+        new SearchLineageRequest()
+            .withDirection(LineageDirection.DOWNSTREAM)
+            .withDownstreamDepth(5);
+    // currentDepth = (downstreamDepth + 1) - remainingDepth = 6 - 3 = 3
+    assertEquals(3, builder.calculateCurrentDepth(request, 3));
+  }
+
+  // --- validateLayerParameters tests ---
+
+  @Test
+  void validateLayerParametersAcceptsValidParams() {
+    SearchLineageRequest request = new SearchLineageRequest().withLayerFrom(0).withLayerSize(10);
+    builder.validateLayerParameters(request);
+  }
+
+  @Test
+  void validateLayerParametersThrowsForNegativeLayerFrom() {
+    SearchLineageRequest request = new SearchLineageRequest().withLayerFrom(-1).withLayerSize(10);
+    assertThrows(IllegalArgumentException.class, () -> builder.validateLayerParameters(request));
+  }
+
+  @Test
+  void validateLayerParametersThrowsForNegativeLayerSize() {
+    SearchLineageRequest request = new SearchLineageRequest().withLayerFrom(0).withLayerSize(-1);
+    assertThrows(IllegalArgumentException.class, () -> builder.validateLayerParameters(request));
+  }
+
+  // --- applyInMemoryFiltersWithPathPreservation (SearchLineageRequest variant) ---
+
+  @Test
+  void applyInMemoryFiltersWithPathPreservationReturnsNullForNullResult() {
+    SearchLineageRequest request =
+        new SearchLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter("{\"term\":{\"tags.tagFQN\":\"PII\"}}");
+    assertNull(builder.applyInMemoryFiltersWithPathPreservation(null, request));
+  }
+
+  @Test
+  void applyInMemoryFiltersWithPathPreservationReturnsUnfilteredForEmptyFilter() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT_FQN, nodeAtDepth(0));
+    nodes.put("svc.db.schema.other", nodeAtDepth(1));
+    SearchLineageResult result = resultWithNodes(nodes);
+
+    SearchLineageRequest request = new SearchLineageRequest().withFqn(ROOT_FQN);
+    SearchLineageResult out = builder.applyInMemoryFiltersWithPathPreservation(result, request);
+    assertEquals(2, out.getNodes().size());
+  }
+
+  @Test
+  void applyInMemoryFiltersWithPathPreservationKeepsMatchingNodesAndPaths() {
+    Map<String, NodeInformation> nodes = new HashMap<>();
+    nodes.put(ROOT_FQN, nodeAtDepth(0));
+    nodes.put(
+        "svc.db.schema.mid",
+        new NodeInformation()
+            .withEntity(Map.of("tags", List.of(Map.of("tagFQN", "Internal"))))
+            .withNodeDepth(1));
+    nodes.put(
+        "svc.db.schema.leaf",
+        new NodeInformation()
+            .withEntity(Map.of("tags", List.of(Map.of("tagFQN", "PII.Sensitive"))))
+            .withNodeDepth(2));
+
+    SearchLineageResult result = resultWithNodes(nodes);
+    // Add downstream edges: root -> mid -> leaf
+    Map<String, EsLineageData> downEdges = new HashMap<>();
+    downEdges.put("e1", edge(ROOT_FQN, "svc.db.schema.mid"));
+    downEdges.put("e2", edge("svc.db.schema.mid", "svc.db.schema.leaf"));
+    result.setDownstreamEdges(downEdges);
+
+    SearchLineageRequest request =
+        new SearchLineageRequest()
+            .withFqn(ROOT_FQN)
+            .withQueryFilter("{\"term\":{\"tags.tagFQN\":\"PII.Sensitive\"}}");
+    SearchLineageResult out = builder.applyInMemoryFiltersWithPathPreservation(result, request);
+
+    // Root + leaf (match) + mid (intermediate path)
+    assertTrue(out.getNodes().containsKey(ROOT_FQN));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.leaf"));
+    assertTrue(out.getNodes().containsKey("svc.db.schema.mid"));
   }
 
   private NodeInformation nodeWithEntity(String fqn, Map<String, Object> entity) {

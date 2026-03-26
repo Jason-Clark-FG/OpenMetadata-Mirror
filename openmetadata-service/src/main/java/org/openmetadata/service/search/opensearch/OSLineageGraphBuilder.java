@@ -40,6 +40,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.search.ColumnFilterMatcher;
 import org.openmetadata.service.search.ColumnMetadataCache;
 import org.openmetadata.service.search.LineagePathPreserver;
+import org.openmetadata.service.search.QueryFilterParser;
 import org.openmetadata.service.util.FullyQualifiedName;
 import org.openmetadata.service.util.LineageUtil;
 import os.org.opensearch.client.json.JsonData;
@@ -363,11 +364,15 @@ public class OSLineageGraphBuilder
     // First, fetch and add the root entity with proper paging counts
     addRootEntityWithPagingCounts(lineageRequest, result, false);
 
+    // Deep copy to avoid mutating the caller's request object
+    SearchLineageRequest internalRequest =
+        JsonUtils.deepCopy(lineageRequest, SearchLineageRequest.class);
+
     // Then fetch upstream lineage if upstreamDepth > 0
-    if (lineageRequest.getUpstreamDepth() > 0) {
+    if (internalRequest.getUpstreamDepth() > 0) {
       SearchLineageResult upstreamLineage =
           getUpstreamLineage(
-              lineageRequest
+              internalRequest
                   .withDirection(LineageDirection.UPSTREAM)
                   .withDirectionValue(
                       getLineageDirection(
@@ -384,10 +389,10 @@ public class OSLineageGraphBuilder
     }
 
     // Then fetch downstream lineage if downstreamDepth > 0
-    if (lineageRequest.getDownstreamDepth() > 0) {
+    if (internalRequest.getDownstreamDepth() > 0) {
       SearchLineageResult downstreamLineage =
           getDownstreamLineage(
-              lineageRequest
+              internalRequest
                   .withDirection(LineageDirection.DOWNSTREAM)
                   .withDirectionValue(
                       getLineageDirection(
@@ -482,13 +487,17 @@ public class OSLineageGraphBuilder
     // First, fetch and add the root entity with proper paging counts
     addRootEntityWithPagingCounts(lineageRequest, result, true);
 
+    // Deep copy to avoid mutating the caller's request object
+    SearchLineageRequest internalRequest =
+        JsonUtils.deepCopy(lineageRequest, SearchLineageRequest.class);
+
     // Based on direction, fetch only the requested lineage direction
     if (lineageRequest.getDirection() == null
         || lineageRequest.getDirection().equals(LineageDirection.UPSTREAM)) {
       if (lineageRequest.getUpstreamDepth() > 0) {
         SearchLineageResult upstreamLineage =
             getUpstreamLineage(
-                lineageRequest
+                internalRequest
                     .withDirection(LineageDirection.UPSTREAM)
                     .withDirectionValue(
                         getLineageDirection(
@@ -506,7 +515,7 @@ public class OSLineageGraphBuilder
       if (lineageRequest.getDownstreamDepth() > 0) {
         SearchLineageResult downstreamLineage =
             getDownstreamLineage(
-                lineageRequest
+                internalRequest
                     .withDirection(LineageDirection.DOWNSTREAM)
                     .withDirectionValue(
                         getLineageDirection(
@@ -905,17 +914,8 @@ public class OSLineageGraphBuilder
       return java.util.Optional.empty();
     }
 
-    // Create cache key from EntityCountLineageRequest
     org.openmetadata.service.search.lineage.LineageCacheKey cacheKey =
-        new org.openmetadata.service.search.lineage.LineageCacheKey(
-            request.getFqn() != null ? request.getFqn() : "",
-            request.getDirection() == LineageDirection.UPSTREAM ? request.getMaxDepth() : 0,
-            request.getDirection() == LineageDirection.DOWNSTREAM ? request.getMaxDepth() : 0,
-            request.getQueryFilter() != null ? request.getQueryFilter() : "",
-            request.getColumnFilter() != null ? request.getColumnFilter() : "",
-            request.getPreservePaths() != null ? request.getPreservePaths() : Boolean.FALSE,
-            request.getDirection() != null ? request.getDirection().value() : "",
-            request.getIsConnectedVia() != null ? request.getIsConnectedVia() : Boolean.FALSE);
+        buildEntityCountCacheKey(request);
 
     return cache.get(cacheKey);
   }
@@ -935,20 +935,27 @@ public class OSLineageGraphBuilder
       return;
     }
 
-    // Create cache key
     org.openmetadata.service.search.lineage.LineageCacheKey cacheKey =
-        new org.openmetadata.service.search.lineage.LineageCacheKey(
-            request.getFqn() != null ? request.getFqn() : "",
-            request.getDirection() == LineageDirection.UPSTREAM ? request.getMaxDepth() : 0,
-            request.getDirection() == LineageDirection.DOWNSTREAM ? request.getMaxDepth() : 0,
-            request.getQueryFilter() != null ? request.getQueryFilter() : "",
-            request.getColumnFilter() != null ? request.getColumnFilter() : "",
-            request.getPreservePaths() != null ? request.getPreservePaths() : Boolean.FALSE,
-            request.getDirection() != null ? request.getDirection().value() : "",
-            request.getIsConnectedVia() != null ? request.getIsConnectedVia() : Boolean.FALSE);
+        buildEntityCountCacheKey(request);
 
     cache.put(cacheKey, result);
     LOG.debug("Cached entity count result: {} nodes for '{}'", nodeCount, request.getFqn());
+  }
+
+  private org.openmetadata.service.search.lineage.LineageCacheKey buildEntityCountCacheKey(
+      EntityCountLineageRequest request) {
+    return new org.openmetadata.service.search.lineage.LineageCacheKey(
+        request.getFqn() != null ? request.getFqn() : "",
+        request.getDirection() == LineageDirection.UPSTREAM ? request.getMaxDepth() : 0,
+        request.getDirection() == LineageDirection.DOWNSTREAM ? request.getMaxDepth() : 0,
+        request.getQueryFilter() != null ? request.getQueryFilter() : "",
+        request.getColumnFilter() != null ? request.getColumnFilter() : "",
+        request.getPreservePaths() != null ? request.getPreservePaths() : Boolean.FALSE,
+        request.getDirection() != null ? request.getDirection().value() : "",
+        request.getIsConnectedVia() != null ? request.getIsConnectedVia() : Boolean.FALSE,
+        request.getFrom() != null ? request.getFrom() : 0,
+        request.getSize() != null ? request.getSize() : 0,
+        request.getNodeDepth() != null ? request.getNodeDepth() : 0);
   }
 
   private Map<Integer, Integer> getDepthWiseEntityCounts(
@@ -1287,23 +1294,38 @@ public class OSLineageGraphBuilder
    * for path-preserving filter logic.
    */
   private String getStructuralFilterOnly(String queryFilter) {
-    // For now, structural filters are limited to 'deleted' field
-    // Node-level filters will be applied in post-processing
     if (nullOrEmpty(queryFilter)) {
       return null;
     }
 
-    // If query contains only structural filters, return as-is
-    // Otherwise, return null to fetch unfiltered and apply filters later
-    if (queryFilter.contains("deleted")
-        && !queryFilter.contains("owner")
-        && !queryFilter.contains("tag")
-        && !queryFilter.contains("domain")
-        && !queryFilter.contains("service")) {
-      return queryFilter;
+    Map<String, List<String>> parsedFields = QueryFilterParser.parseFilter(queryFilter);
+    if (parsedFields.isEmpty()) {
+      return null;
     }
 
-    return null;
+    Set<String> NODE_LEVEL_FIELDS =
+        Set.of(
+            "owner",
+            "owners",
+            "tag",
+            "tags",
+            "domain",
+            "service",
+            "tier",
+            "name",
+            "displayName",
+            "owners.displayName",
+            "tags.tagFQN",
+            "domain.displayName");
+
+    for (String fieldName : parsedFields.keySet()) {
+      String baseField = fieldName.contains(".") ? fieldName.split("\\.")[0] : fieldName;
+      if (NODE_LEVEL_FIELDS.contains(fieldName) || NODE_LEVEL_FIELDS.contains(baseField)) {
+        return null;
+      }
+    }
+
+    return queryFilter;
   }
 
   /**
