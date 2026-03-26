@@ -56,6 +56,7 @@ interface AutocompleteContextValue {
   onInputChange: (value: string) => void;
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
   maxVisibleItems?: number;
+  isAtMax: boolean;
 }
 
 const AutocompleteContext = createContext<AutocompleteContextValue>({
@@ -65,6 +66,7 @@ const AutocompleteContext = createContext<AutocompleteContextValue>({
   onRemove: () => {},
   onInputChange: () => {},
   maxVisibleItems: undefined,
+  isAtMax: false,
 });
 
 interface AutocompleteTriggerProps extends AriaGroupProps {
@@ -95,24 +97,26 @@ export interface AutocompleteProps
   filterOption?: (item: SelectItemType, filterText: string) => boolean;
   onSearchChange?: (value: string) => void;
   maxVisibleItems?: number;
+  multiple?: boolean;
 }
 
 const renderChipIcon = (item: SelectItemType) => {
   if (item.avatarUrl) {
-    return <Avatar size="xs" src={item.avatarUrl} alt={item.label} />;
+    return <Avatar alt={item.label} size="xs" src={item.avatarUrl} />;
   }
   const Icon = item.icon;
   if (isReactComponent(Icon)) {
     return (
       <Icon
-        className="tw:size-4 tw:shrink-0 tw:text-fg-quaternary"
         aria-hidden="true"
+        className="tw:size-4 tw:shrink-0 tw:text-fg-quaternary"
       />
     );
   }
   if (isValidElement(Icon)) {
     return Icon;
   }
+
   return null;
 };
 
@@ -140,9 +144,17 @@ const InnerAutocomplete = ({
       case 'Backspace':
       case 'ArrowLeft':
         focusManager?.focusPrevious({ wrap: false, tabbable: false });
+
         break;
       case 'ArrowRight':
         focusManager?.focusNext({ wrap: false, tabbable: false });
+
+        break;
+      case 'ArrowDown':
+        if (comboBoxStateContext && !comboBoxStateContext.isOpen) {
+          comboBoxStateContext.open();
+        }
+
         break;
     }
   };
@@ -157,7 +169,9 @@ const InnerAutocomplete = ({
     event: KeyboardEvent<HTMLButtonElement>,
     value: Key,
   ) => {
-    if (event.key === 'Tab') return;
+    if (event.key === 'Tab') {
+      return;
+    }
 
     event.preventDefault();
 
@@ -173,21 +187,25 @@ const InnerAutocomplete = ({
           focusManager?.focusPrevious({ wrap: false, tabbable: false });
         }
         context.onRemove(new Set([value]));
+
         break;
       case 'ArrowLeft':
         focusManager?.focusPrevious({ wrap: false, tabbable: false });
+
         break;
       case 'ArrowRight':
         focusManager?.focusNext({ wrap: false, tabbable: false });
+
         break;
       case 'Escape':
         comboBoxStateContext?.close();
+
         break;
     }
   };
 
   const isSelectionEmpty = context?.selectedItems?.length === 0;
-  const { maxVisibleItems } = context;
+  const { maxVisibleItems, isAtMax } = context;
   const allSelected = context?.selectedItems ?? [];
   const visibleSelected =
     maxVisibleItems === undefined
@@ -206,16 +224,16 @@ const InnerAutocomplete = ({
             context.renderTag(item, () => context.onRemove(new Set([item.id])))
           ) : (
             <BadgeWithButton
-              type="modern"
               color="gray"
+              isDisabled={isDisabled}
               key={item.id}
               size="lg"
-              isDisabled={isDisabled}
+              type="modern"
               onButtonClick={() => context.onRemove(new Set([item.id]))}
               onButtonKeyDown={(e) => handleTagKeyDown(e, item.id)}>
               {renderChipIcon(item)}
               <div className="tw:min-w-0 tw:max-w-40">
-                <Typography as="p" ellipsis weight="medium">
+                <Typography ellipsis as="p" weight="medium">
                   {item.label}
                 </Typography>
               </div>
@@ -224,7 +242,7 @@ const InnerAutocomplete = ({
         )}
 
       {overflowCount > 0 && (
-        <Badge type="modern" color="gray" size="lg">
+        <Badge color="gray" size="lg" type="modern">
           +{overflowCount}
         </Badge>
       )}
@@ -233,12 +251,13 @@ const InnerAutocomplete = ({
         className={cx(
           'tw:relative tw:flex tw:min-w-[20%] tw:flex-1 tw:flex-row tw:items-center',
           !isSelectionEmpty && 'tw:ml-0.5',
+          isAtMax && 'tw:hidden',
         )}>
         <AriaInput
+          className="tw:w-full tw:flex-[1_0_0] tw:appearance-none tw:bg-transparent tw:text-sm tw:text-ellipsis tw:text-primary tw:caret-alpha-black/90 tw:outline-none tw:placeholder:text-placeholder tw:focus:outline-hidden tw:disabled:cursor-not-allowed tw:disabled:text-disabled tw:disabled:placeholder:text-disabled"
           placeholder={placeholder}
           onKeyDown={handleInputKeyDown}
           onMouseDown={handleInputMouseDown}
-          className="tw:w-full tw:flex-[1_0_0] tw:appearance-none tw:bg-transparent tw:text-md tw:text-ellipsis tw:text-primary tw:caret-alpha-black/90 tw:outline-none tw:placeholder:text-placeholder tw:focus:outline-hidden tw:disabled:cursor-not-allowed tw:disabled:text-disabled tw:disabled:placeholder:text-disabled"
         />
       </div>
     </div>
@@ -256,7 +275,6 @@ const AutocompleteTrigger = ({
   return (
     <AriaGroup
       {...otherProps}
-      isInvalid={isInvalid}
       className={({ isFocusWithin, isDisabled }) =>
         cx(
           'tw:relative tw:flex tw:w-full tw:items-center tw:gap-2 tw:rounded-lg tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-primary tw:outline-hidden tw:transition tw:duration-100 tw:ease-linear tw:ring-inset',
@@ -266,13 +284,14 @@ const AutocompleteTrigger = ({
           isFocusWithin && isInvalid && 'tw:ring-2 tw:ring-error',
           sizes[size].root,
         )
-      }>
+      }
+      isInvalid={isInvalid}>
       {({ isDisabled }) => (
         <>
           {Icon && (
             <Icon className="tw:pointer-events-none tw:size-5 tw:shrink-0 tw:text-fg-quaternary" />
           )}
-          <FocusScope contain={false} autoFocus={false} restoreFocus={false}>
+          <FocusScope autoFocus={false} contain={false} restoreFocus={false}>
             <InnerAutocomplete
               isDisabled={isDisabled}
               placeholder={placeholder}
@@ -294,6 +313,7 @@ export const AutocompleteBase = ({
   label,
   tooltip,
   hint,
+  isInvalid,
   selectedItems,
   onItemCleared,
   onItemInserted,
@@ -301,6 +321,7 @@ export const AutocompleteBase = ({
   popoverClassName,
   renderTag,
   filterOption,
+  multiple = true,
   onSearchChange,
   maxVisibleItems,
   name: _name,
@@ -327,8 +348,13 @@ export const AutocompleteBase = ({
 
   const visibleItems = useMemo(() => {
     return allItems.filter((item) => {
-      if (selectedKeys.includes(item.id)) return false;
-      if (filterOption) return filterOption(item, filterText);
+      if (selectedKeys.includes(item.id)) {
+        return false;
+      }
+      if (filterOption) {
+        return filterOption(item, filterText);
+      }
+
       return contains(item.label || item.supportingText || '', filterText);
     });
   }, [allItems, filterText, selectedKeys, filterOption, contains]);
@@ -341,7 +367,9 @@ export const AutocompleteBase = ({
   const onRemove = useCallback(
     (keys: Set<Key>) => {
       const key = keys.values().next().value;
-      if (!key) return;
+      if (!key) {
+        return;
+      }
       setInternalSelected((prev) => prev.filter((item) => item.id !== key));
       onItemCleared?.(key);
       setFilterText('');
@@ -349,10 +377,19 @@ export const AutocompleteBase = ({
     [onItemCleared],
   );
 
+  const isAtMax = !multiple && internalSelected.length >= 1;
+
   const onSelectionChange = (id: Key | null) => {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
+    if (isAtMax) {
+      return;
+    }
     const item = itemMap.get(id as string);
-    if (!item) return;
+    if (!item) {
+      return;
+    }
     if (!selectedKeys.includes(id as string)) {
       setInternalSelected((prev) => [...prev, item]);
       onItemInserted?.(id);
@@ -360,16 +397,21 @@ export const AutocompleteBase = ({
     setFilterText('');
   };
 
-  const onInputChange = (value: string) => {
-    setFilterText(value);
-    onSearchChange?.(value);
-  };
+  const onInputChange = useCallback(
+    (value: string) => {
+      setFilterText(value);
+      onSearchChange?.(value);
+    },
+    [onSearchChange],
+  );
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const [popoverWidth, setPopoverWidth] = useState('');
 
   const onResize = useCallback(() => {
-    if (!triggerRef.current) return;
+    if (!triggerRef.current) {
+      return;
+    }
     const rect = triggerRef.current.getBoundingClientRect();
     setPopoverWidth(rect.width + 'px');
   }, [triggerRef]);
@@ -387,6 +429,7 @@ export const AutocompleteBase = ({
       onRemove,
       renderTag,
       maxVisibleItems,
+      isAtMax,
     }),
     [
       selectedKeys,
@@ -395,6 +438,7 @@ export const AutocompleteBase = ({
       onRemove,
       renderTag,
       maxVisibleItems,
+      isAtMax,
     ],
   );
 
@@ -403,11 +447,11 @@ export const AutocompleteBase = ({
       <AutocompleteContext.Provider value={autocompleteContextValue}>
         <AriaComboBox
           allowsEmptyCollection
-          menuTrigger="focus"
-          items={visibleItems}
-          onInputChange={onInputChange}
           inputValue={filterText}
+          items={visibleItems}
+          menuTrigger="input"
           selectedKey={null}
+          onInputChange={onInputChange}
           onSelectionChange={onSelectionChange}
           {...props}>
           {(state) => (
@@ -418,30 +462,30 @@ export const AutocompleteBase = ({
                 </Label>
               )}
 
-              <div ref={triggerRef} className="tw:relative tw:w-full">
+              <div className="tw:relative tw:w-full" ref={triggerRef}>
                 <AutocompleteTrigger
-                  size="sm"
-                  isInvalid={state.isInvalid}
+                  isInvalid={isInvalid}
                   placeholder={placeholder}
                   placeholderIcon={props.placeholderIcon}
+                  size="sm"
                   onFocus={onResize}
                   onPointerEnter={onResize}
                 />
               </div>
 
               <Popover
+                className={popoverClassName}
                 size="md"
-                triggerRef={triggerRef}
                 style={{ width: popoverWidth }}
-                className={popoverClassName}>
+                triggerRef={triggerRef}>
                 <AriaListBox
-                  selectionMode="multiple"
-                  className="tw:size-full tw:outline-hidden">
+                  className="tw:size-full tw:outline-hidden"
+                  selectionMode="multiple">
                   {children}
                 </AriaListBox>
               </Popover>
 
-              {hint && <HintText isInvalid={state.isInvalid}>{hint}</HintText>}
+              {hint && <HintText isInvalid={isInvalid}>{hint}</HintText>}
             </div>
           )}
         </AriaComboBox>
