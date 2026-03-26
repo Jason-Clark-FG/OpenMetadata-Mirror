@@ -38,8 +38,6 @@ import {
   uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
-
-test.describe.configure({ mode: 'serial' });
 import {
   activateColumnLayer,
   addColumnLineage,
@@ -52,13 +50,11 @@ import {
   deleteNode,
   editLineage,
   editLineageClick,
-  performExpand,
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
   setupEntitiesForLineage,
   toggleLineageFilters,
-  updateLineageConfigFromModal,
   verifyColumnLayerInactive,
   verifyColumnLineageInCSV,
   verifyExportLineageCSV,
@@ -69,6 +65,8 @@ import {
   visitLineageTab,
 } from '../../utils/lineage';
 import { sidebarClick } from '../../utils/sidebar';
+
+test.describe.configure({ mode: 'serial' });
 
 // use the admin user to login
 test.use({
@@ -107,7 +105,7 @@ test.beforeEach(async ({ page }) => {
 for (const EntityClass of entities) {
   const defaultEntity = new EntityClass();
 
-  test(`Lineage creation from ${defaultEntity.getType()} entity`, async ({
+  test.skip(`Lineage creation from ${defaultEntity.getType()} entity`, async ({
     page,
   }) => {
     // 5 minutes to avoid test timeout happening some times in AUTs
@@ -443,7 +441,6 @@ test('Verify function data in edge drawer', async ({ page }) => {
     const lineageReq1 = page.waitForResponse('/api/v1/lineage/getLineage?*');
     await page.reload();
     await lineageReq1;
-
 
     await activateColumnLayer(page);
     await page

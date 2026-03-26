@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import {
   DATA_CONSUMER_RULES,
   DATA_STEWARD_RULES,
@@ -636,12 +636,12 @@ test.describe('User Profile Feed Interactions', () => {
     const userDetailsResponse = page.waitForResponse(
       (response) =>
         response.url().includes('/api/v1/users/name/') &&
-        response.status() === 200
+        response.request().method() === 'GET'
     );
 
     await userNameElement.click();
-    await userDetailsResponse;
-
+    const userData = await userDetailsResponse;
+    expect(userData.status()).toBe(200);
     // redirecting on new page
 
     // Verify we navigated to the correct user's profile
@@ -1252,7 +1252,9 @@ test.describe('User Profile Persona Interactions', () => {
         `Your Default Persona changed to ${persona1.responseData.displayName}`
       );
 
-      await adminPage.locator('.default-persona-text [data-testid="tag-chip"]').waitFor();
+      await adminPage
+        .locator('.default-persona-text [data-testid="tag-chip"]')
+        .waitFor();
     });
 
     // Test clicking on default persona chip to navigate to persona page

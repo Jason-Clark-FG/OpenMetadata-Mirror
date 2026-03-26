@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, test as base, Browser, Page } from '@playwright/test';
+import { Browser, expect, Page, test as base } from '@playwright/test';
 import { redirectToHomePage } from '../../utils/common';
 
 const test = base.extend<{ germanLocalePage: Page }>({
@@ -44,7 +44,9 @@ test.describe('Language Override Tests', () => {
 
     // navigate(0) triggers a full page reload when language changes
     await germanLocalePage.waitForLoadState('load');
-    await germanLocalePage.getByTestId('language-selector-button').waitFor({ state: 'visible' });
+    await germanLocalePage
+      .getByTestId('language-selector-button')
+      .waitFor({ state: 'visible' });
 
     await germanLocalePage.locator('[data-testid="dropdown-profile"]').click();
     await germanLocalePage

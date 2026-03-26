@@ -16,8 +16,8 @@ import { Page } from 'playwright';
 import { EXPECTED_BUCKETS } from '../constant/explore';
 import { TableClass } from '../support/entity/TableClass';
 import { getApiContext, redirectToExplorePage } from './common';
-import { openEntitySummaryPanel } from './entityPanel';
 import { waitForAllLoadersToDisappear } from './entity';
+import { openEntitySummaryPanel } from './entityPanel';
 
 export interface Bucket {
   key: string;
@@ -360,19 +360,32 @@ export const verifyEntitiesAreSorted = async (page: Page) => {
   expect(entityNames).toEqual(sortedEntityNames);
 };
 
-export const navigateToExploreAndSelectEntity = async (
-  page: Page,
-  entityName: string,
-  endpoint?: string,
-  fullyQualifiedName?: string
-) => {
+export const navigateToExploreAndSelectEntity = async ({
+  page,
+  entityName,
+  endpoint,
+  fullyQualifiedName,
+  exploreTab,
+}: {
+  page: Page;
+  entityName: string;
+  endpoint?: string;
+  fullyQualifiedName?: string;
+  exploreTab?: string;
+}) => {
   await redirectToExplorePage(page);
 
   await expect(page.locator('[data-testid="loader"]')).toHaveCount(0, {
     timeout: 30000,
   });
 
-  await openEntitySummaryPanel(page, entityName, endpoint, fullyQualifiedName);
+  await openEntitySummaryPanel({
+    page,
+    entityName,
+    endpoint,
+    fullyQualifiedName,
+    exploreTab,
+  });
 };
 
 export const getFlatColumnCountOfTable = (

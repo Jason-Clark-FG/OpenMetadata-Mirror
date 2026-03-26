@@ -223,6 +223,20 @@ const mockTestCases: TestCase[] = [
   } as TestCase,
 ];
 
+const payloadPartial = (testCases: TestCase[]) => ({
+  selectAll: false,
+  includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+  excludeIds: [] as string[],
+  testCases,
+});
+
+const payloadEmpty = () => ({
+  selectAll: false,
+  includeIds: [] as string[],
+  excludeIds: [] as string[],
+  testCases: [] as TestCase[],
+});
+
 const renderWithRouter = (props: AddTestCaseModalProps) => {
   return render(
     <MemoryRouter>
@@ -233,6 +247,7 @@ const renderWithRouter = (props: AddTestCaseModalProps) => {
 
 describe('AddTestCaseList', () => {
   beforeEach(() => {
+    jest.useRealTimers();
     jest.clearAllMocks();
     mockGetListTestCaseBySearch.mockResolvedValue({
       data: [],
@@ -240,6 +255,10 @@ describe('AddTestCaseList', () => {
         total: 0,
       },
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('renders the component with initial state', async () => {
@@ -307,7 +326,11 @@ describe('AddTestCaseList', () => {
       expect(loader).toBeInTheDocument();
     });
 
-    expect(mockProps.onSubmit).toHaveBeenCalledWith([]);
+    expect(mockProps.onSubmit).toHaveBeenCalledWith({
+      selectAll: false,
+      includeIds: [],
+      excludeIds: [],
+    });
   });
 
   it('does not render submit and cancel buttons when showButton is false', async () => {
@@ -686,12 +709,10 @@ describe('AddTestCaseList', () => {
         expect(mockSearchQuery).toHaveBeenCalledWith(
           expect.objectContaining({
             query: '*table_search_term*',
-            searchIndex: 'table_search_index',
+            searchIndex: 'table',
           })
         );
       });
-
-      jest.useRealTimers();
     });
   });
 
@@ -727,7 +748,9 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
-        expect(onChange).toHaveBeenCalledWith([mockTestCases[0]]);
+        expect(onChange).toHaveBeenCalledWith(
+          payloadPartial([mockTestCases[0]])
+        );
       });
 
       const checkbox = screen.getByTestId('checkbox-test_case_1');
@@ -761,7 +784,7 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
-        expect(onChange).toHaveBeenLastCalledWith([]);
+        expect(onChange).toHaveBeenLastCalledWith(payloadEmpty());
       });
 
       const checkbox = screen.getByTestId('checkbox-test_case_1');
@@ -799,10 +822,9 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
-        expect(onChange).toHaveBeenLastCalledWith([
-          mockTestCases[0],
-          mockTestCases[1],
-        ]);
+        expect(onChange).toHaveBeenLastCalledWith(
+          payloadPartial([mockTestCases[0], mockTestCases[1]])
+        );
       });
     });
 
@@ -967,7 +989,16 @@ describe('AddTestCaseList', () => {
 
       await act(async () => {
         fireEvent.click(testCaseCard1 as Element);
+      });
+      await act(async () => {
         fireEvent.click(testCaseCard2 as Element);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('checkbox-test_case_2')).toHaveProperty(
+          'checked',
+          true
+        );
       });
 
       const submitBtn = screen.getByTestId('submit');
@@ -977,10 +1008,12 @@ describe('AddTestCaseList', () => {
       });
 
       await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalledWith([
-          mockTestCases[0],
-          mockTestCases[1],
-        ]);
+        expect(onSubmit).toHaveBeenCalledWith({
+          selectAll: false,
+          includeIds: expect.arrayContaining(['test-case-1', 'test-case-2']),
+          excludeIds: [],
+        });
+        expect(onSubmit.mock.calls[0][0].includeIds).toHaveLength(2);
       });
     });
 
@@ -1122,7 +1155,7 @@ describe('AddTestCaseList', () => {
     expect(screen.queryByTestId('select-all-test-cases')).toBeNull();
   });
 
-  it('shows selected count in select all button when items are selected', async () => {
+  it('select-all checkbox selects all loaded rows', async () => {
     mockGetListTestCaseBySearch.mockResolvedValue({
       data: mockTestCases,
       paging: { total: 3 },
@@ -1136,14 +1169,17 @@ describe('AddTestCaseList', () => {
       expect(screen.getByTestId('select-all-test-cases')).toBeInTheDocument();
     });
 
-    const selectAllButton = screen.getByTestId('select-all-test-cases');
+    expect(screen.getByText('label.select-all (3)')).toBeInTheDocument();
 
-    expect(selectAllButton.textContent).not.toContain('(3)');
-
-    fireEvent.click(selectAllButton);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     await waitFor(() => {
-      expect(selectAllButton.textContent).toContain('(3)');
+      expect(screen.getByTestId('checkbox-test_case_3')).toHaveProperty(
+        'checked',
+        true
+      );
     });
   });
 
@@ -1166,10 +1202,12 @@ describe('AddTestCaseList', () => {
       expect(screen.getByTestId('select-all-test-cases')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith(mockTestCases);
+      expect(onChange).toHaveBeenCalledWith(payloadPartial(mockTestCases));
     });
 
     expect(screen.getByTestId('checkbox-test_case_1')).toHaveProperty(
@@ -1209,13 +1247,15 @@ describe('AddTestCaseList', () => {
     fireEvent.click(card1 as Element);
 
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith([mockTestCases[0]]);
+      expect(onChange).toHaveBeenCalledWith(payloadPartial([mockTestCases[0]]));
     });
 
-    fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     await waitFor(() => {
-      expect(onChange).toHaveBeenLastCalledWith(mockTestCases);
+      expect(onChange).toHaveBeenLastCalledWith(payloadPartial(mockTestCases));
     });
 
     expect(screen.getByTestId('checkbox-test_case_1')).toHaveProperty(
@@ -1251,18 +1291,22 @@ describe('AddTestCaseList', () => {
       expect(screen.getByTestId('select-all-test-cases')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith(mockTestCases);
+      expect(onChange).toHaveBeenCalledWith(payloadPartial(mockTestCases));
     });
 
     onChange.mockClear();
 
-    fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith([]);
+      expect(onChange).toHaveBeenCalledWith(payloadEmpty());
     });
 
     expect(screen.getByTestId('checkbox-test_case_1')).toHaveProperty(
@@ -1298,9 +1342,82 @@ describe('AddTestCaseList', () => {
       expect(screen.getByTestId('select-all-test-cases')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith(mockTestCases);
+    expect(onChange).toHaveBeenCalledWith(payloadPartial(mockTestCases));
+  });
+
+  it('shows select all total link when loaded count is less than total and all loaded are selected', async () => {
+    mockGetListTestCaseBySearch.mockResolvedValue({
+      data: mockTestCases.slice(0, 2),
+      paging: { total: 45 },
+    });
+
+    await act(async () => {
+      renderWithRouter({ ...mockProps });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByTestId('select-all-total-test-cases')
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('select-all-total-test-cases')).toBeVisible();
+    });
+
+    expect(screen.getByTestId('select-all-total-test-cases')).toHaveTextContent(
+      'label.select-all-count-test-cases'
+    );
+  });
+
+  it('calls onChange with selectAll when select all total link is clicked', async () => {
+    mockGetListTestCaseBySearch.mockResolvedValue({
+      data: mockTestCases.slice(0, 2),
+      paging: { total: 10 },
+    });
+
+    const onChange = jest.fn();
+
+    await act(async () => {
+      renderWithRouter({ ...mockProps, onChange });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('test_case_1')).toBeInTheDocument();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-test-cases'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('select-all-total-test-cases')).toBeVisible();
+    });
+
+    onChange.mockClear();
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-all-total-test-cases'));
+    });
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith({
+        selectAll: true,
+        includeIds: [],
+        excludeIds: [],
+        testCases: [],
+      });
+    });
   });
 });

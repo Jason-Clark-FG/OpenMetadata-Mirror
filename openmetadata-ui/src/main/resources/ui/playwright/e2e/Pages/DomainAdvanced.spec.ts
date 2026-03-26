@@ -36,9 +36,9 @@ import {
   selectDomain,
   setupAssetsForDomain,
 } from '../../utils/domain';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
 import { performUserLogin } from '../../utils/user';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const test = base.extend<{
   page: Page;
@@ -508,7 +508,6 @@ test.describe('Domain Description Editing', () => {
       await page.getByTestId('save').click();
       await saveRes;
 
-
       await expect(
         page.locator('.om-block-editor[contenteditable="false"]')
       ).toContainText('Updated domain description via UI');
@@ -539,7 +538,6 @@ test.describe('Domain Description Editing', () => {
       const saveRes = page.waitForResponse('/api/v1/dataProducts/*');
       await page.getByTestId('save').click();
       await saveRes;
-
 
       await expect(
         page.locator('.om-block-editor[contenteditable="false"]')

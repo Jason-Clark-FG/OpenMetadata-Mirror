@@ -32,7 +32,12 @@ import {
   toastNotification,
   uuid,
 } from '../../../utils/common';
+import {
+  ObservabilityFeature,
+  selectAddObservabilityFeature,
+} from '../../../utils/dataQuality';
 import { getCurrentMillis } from '../../../utils/dateTime';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { sidebarClick } from '../../../utils/sidebar';
 import {
   deleteTestCase,
@@ -40,11 +45,6 @@ import {
   visitDataQualityTab,
 } from '../../../utils/testCases';
 import { test } from '../../fixtures/pages';
-import {
-  ObservabilityFeature,
-  selectAddObservabilityFeature,
-} from '../../../utils/dataQuality';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 const table1 = new TableClass();
 const table2 = new TableClass();
@@ -191,7 +191,10 @@ test.describe(
           NEW_TABLE_TEST_CASE.name
         );
         await page.click('[id="root\\/testType"]');
-        await page.locator(`text=${NEW_TABLE_TEST_CASE.label}`).first().waitFor();
+        await page
+          .locator(`text=${NEW_TABLE_TEST_CASE.label}`)
+          .first()
+          .waitFor();
         await page.click(`[data-testid="${NEW_TABLE_TEST_CASE.type}"]`);
         await page.fill(
           '#testCaseFormV1_params_columnName',
@@ -456,9 +459,7 @@ test.describe(
 
         await page.getByTestId(NEW_COLUMN_TEST_CASE.name).waitFor();
 
-        await expect(
-          page.getByTestId(NEW_COLUMN_TEST_CASE.name)
-        ).toBeVisible();
+        await expect(page.getByTestId(NEW_COLUMN_TEST_CASE.name)).toBeVisible();
       });
 
       await test.step('Edit', async () => {

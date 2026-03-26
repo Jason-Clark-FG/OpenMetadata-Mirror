@@ -15,8 +15,8 @@ import { SidebarItem } from '../../constant/sidebar';
 import { ClassificationClass } from '../../support/tag/ClassificationClass';
 import { TagClass } from '../../support/tag/TagClass';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
-import { sidebarClick } from '../../utils/sidebar';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { sidebarClick } from '../../utils/sidebar';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -77,9 +77,7 @@ test('Should render all classification detail sections after loading', async ({
   await expect(page.getByTestId('description-container')).toBeVisible();
   await expect(page.getByTestId('table')).toBeVisible();
   await expect(page.getByTestId('table')).toContainText(tag1.data.name);
-  await expect(
-    page.getByTestId('classification-owner-name')
-  ).toBeVisible();
+  await expect(page.getByTestId('classification-owner-name')).toBeVisible();
 });
 
 test('Should render correct content when switching between classifications', async ({

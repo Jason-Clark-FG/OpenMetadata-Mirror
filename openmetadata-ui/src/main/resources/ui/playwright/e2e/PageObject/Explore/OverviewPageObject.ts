@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Locator, Page, expect } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import type { RightPanelPageObject } from './RightPanelPageObject';
 
 /**
@@ -409,7 +409,8 @@ export class OverviewPageObject extends RightPanelBase {
           {
             timeout: 120000,
             intervals: [500, 1000, 2000],
-            message: 'Timed out waiting for owner search input to become visible',
+            message:
+              'Timed out waiting for owner search input to become visible',
           }
         )
         .toBe(true);
