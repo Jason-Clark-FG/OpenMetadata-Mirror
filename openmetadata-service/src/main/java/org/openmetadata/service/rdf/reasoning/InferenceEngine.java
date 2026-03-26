@@ -7,7 +7,6 @@ import org.apache.jena.rdf.model.*;
 import org.apache.jena.reasoner.*;
 import org.apache.jena.reasoner.rulesys.GenericRuleReasoner;
 import org.apache.jena.reasoner.rulesys.Rule;
-import org.apache.jena.vocabulary.RDFS;
 
 @Slf4j
 public class InferenceEngine {

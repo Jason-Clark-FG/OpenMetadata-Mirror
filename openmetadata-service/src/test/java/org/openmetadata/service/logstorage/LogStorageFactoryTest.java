@@ -14,7 +14,6 @@
 package org.openmetadata.service.logstorage;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
