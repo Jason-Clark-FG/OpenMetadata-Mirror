@@ -106,6 +106,12 @@ test.describe('Lineage Creation', () => {
         });
 
         await waitForAllLoadersToDisappear(page);
+        await page
+          .getByTestId(
+            `lineage-node-${lineageEntity.entityResponseData.fullyQualifiedName}`
+          )
+          .waitFor();
+        await rearrangeNodes(page);
         await performZoomOut(page);
 
         for (const entity of entities) {
@@ -121,6 +127,11 @@ test.describe('Lineage Creation', () => {
             'entityResponseData.fullyQualifiedName',
             ''
           );
+          const entityName = get(
+            entity,
+            'entityResponseData.displayName',
+            get(entity, 'entityResponseData.name', '')
+          );
 
           await clickLineageNode(page, toNodeFqn);
 
@@ -128,7 +139,7 @@ test.describe('Lineage Creation', () => {
             page
               .locator('.lineage-entity-panel')
               .getByTestId('entity-header-title')
-          ).toHaveText(get(entity, 'entityResponseData.displayName', ''));
+          ).toHaveText(entityName);
 
           await page.getByTestId('drawer-close-icon').click();
 

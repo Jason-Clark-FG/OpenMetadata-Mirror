@@ -281,7 +281,10 @@ export const connectEdgeBetweenNodes = async (
 
 export const verifyNodePresent = async (page: Page, node: EntityClass) => {
   const nodeFqn = get(node, 'entityResponseData.fullyQualifiedName');
-  const name = get(node, 'entityResponseData.displayName') ?? '';
+  const name =
+    get(node, 'entityResponseData.displayName') ??
+    get(node, 'entityResponseData.name') ??
+    '';
   const lineageNode = page.locator(`[data-testid="lineage-node-${nodeFqn}"]`);
 
   await lineageNode.waitFor({ state: 'attached' });

@@ -153,7 +153,7 @@ export const getEntityTypeSearchIndexMapping = (entityType: string) => {
     SearchIndex: 'searchIndex',
     ApiEndpoint: 'apiEndpoint',
     Metric: 'metric',
-    StoredProcedure: 'storedProcedure',
+    ['Store Procedure']: 'storedProcedure',
     Directory: 'directory',
     File: 'file',
     Spreadsheet: 'spreadsheet',
