@@ -627,7 +627,7 @@ class ESLineageGraphBuilderTest {
                       any(),
                       anyString(),
                       anyString(),
-                      anyString(),
+                      any(),
                       anyList()))
           .thenReturn(downstreamDoc);
 

@@ -290,7 +290,7 @@ class AbstractLineageGraphBuilderTest {
         new NodeInformation()
             .withEntity(Map.of("name", "test", "tags", List.of(Map.of("tagFQN", "PII"))));
     assertFalse(builder.matchesNodeFilter(node, ""));
-    assertFalse(builder.matchesNodeFilter(node, null));
+    assertFalse(builder.matchesNodeFilter(node, (String) null));
   }
 
   @Test

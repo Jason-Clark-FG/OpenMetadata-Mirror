@@ -624,7 +624,7 @@ class OSLineageGraphBuilderTest {
                       any(),
                       anyString(),
                       anyString(),
-                      anyString(),
+                      any(),
                       anyList()))
           .thenReturn(downstreamDoc);
 
