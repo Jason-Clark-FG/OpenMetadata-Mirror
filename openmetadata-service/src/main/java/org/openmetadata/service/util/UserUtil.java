@@ -73,8 +73,8 @@ public final class UserUtil {
 
   public static void addUsers(
       AuthProvider authProvider, Set<String> adminUsers, String domain, Boolean isAdmin) {
-    try {
-      for (String keyValue : adminUsers) {
+    for (String keyValue : adminUsers) {
+      try {
         String userName = "";
         String password = "";
         if (keyValue.contains(":")) {
@@ -86,9 +86,9 @@ public final class UserUtil {
           password = getPassword(userName);
         }
         createOrUpdateUser(authProvider, userName, password, domain, isAdmin);
+      } catch (Exception ex) {
+        LOG.error("[BootstrapUser] Encountered Exception while bootstrapping admin user", ex);
       }
-    } catch (Exception ex) {
-      LOG.error("[BootstrapUser] Encountered Exception while bootstrapping admin user", ex);
     }
   }
 
@@ -103,8 +103,7 @@ public final class UserUtil {
 
       // Fetch Original User, is available
       User originalUser = userRepository.getByName(null, username, new Fields(fieldList));
-      if (Boolean.FALSE.equals(originalUser.getIsBot())
-          && Boolean.TRUE.equals(originalUser.getIsAdmin())) {
+      if (Boolean.FALSE.equals(originalUser.getIsBot())) {
         updatedUser = originalUser;
 
         // Update Auth Mechanism if not present, and send mail to the user
@@ -262,6 +261,8 @@ public final class UserUtil {
     List<EntityReference> currentTeams = user.getTeams();
     if (currentTeams == null) {
       currentTeams = new ArrayList<>();
+    } else {
+      currentTeams = new ArrayList<>(currentTeams);
     }
 
     boolean anyTeamAssigned = false;
@@ -441,25 +442,28 @@ public final class UserUtil {
   public static boolean reSyncUserRolesFromToken(
       UriInfo uriInfo, User user, Set<String> rolesFromToken) {
     boolean syncUser = false;
+    Set<String> mutableRolesFromToken =
+        rolesFromToken == null ? new HashSet<>() : new HashSet<>(rolesFromToken);
 
     User updatedUser = JsonUtils.deepCopy(user, User.class);
     // Check if Admin User
-    if (rolesFromToken.contains(ADMIN_ROLE)) {
+    if (mutableRolesFromToken.contains(ADMIN_ROLE)) {
       if (Boolean.FALSE.equals(user.getIsAdmin())) {
         syncUser = true;
         updatedUser.setIsAdmin(true);
       }
 
       // Remove the Admin Role from the list
-      rolesFromToken.remove(ADMIN_ROLE);
+      mutableRolesFromToken.remove(ADMIN_ROLE);
     }
 
     Set<String> rolesFromUser = getRoleListFromUser(user);
 
     // Check if roles are different
-    if (!nullOrEmpty(rolesFromToken) && isRolesSyncNeeded(rolesFromToken, rolesFromUser)) {
+    if (!nullOrEmpty(mutableRolesFromToken)
+        && isRolesSyncNeeded(mutableRolesFromToken, rolesFromUser)) {
       syncUser = true;
-      List<EntityReference> rolesReferenceFromToken = validateAndGetRolesRef(rolesFromToken);
+      List<EntityReference> rolesReferenceFromToken = validateAndGetRolesRef(mutableRolesFromToken);
       updatedUser.setRoles(rolesReferenceFromToken);
     }
 
@@ -472,6 +476,7 @@ public final class UserUtil {
 
       // Set the updated roles to the original user
       user.setRoles(updatedUser.getRoles());
+      user.setIsAdmin(updatedUser.getIsAdmin());
     }
 
     return syncUser;
