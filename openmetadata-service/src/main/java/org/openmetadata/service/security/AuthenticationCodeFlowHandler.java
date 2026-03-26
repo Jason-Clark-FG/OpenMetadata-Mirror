@@ -76,10 +76,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.api.configuration.MCPConfiguration;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
 import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.JWTAuthMechanism;
 import org.openmetadata.schema.auth.ServiceTokenType;
+import org.openmetadata.schema.entity.teams.Role;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.security.client.OidcClientConfig;
 import org.openmetadata.schema.type.Include;
@@ -89,6 +91,7 @@ import org.openmetadata.service.audit.AuditLogRepository;
 import org.openmetadata.service.auth.JwtResponse;
 import org.openmetadata.service.exception.AuthenticationException;
 import org.openmetadata.service.exception.EntityNotFoundException;
+import org.openmetadata.service.security.auth.SecurityConfigurationManager;
 import org.openmetadata.service.security.jwt.JWTTokenGenerator;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.session.SessionRefreshInProgressException;
@@ -132,6 +135,25 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
   private AuthenticationConfiguration authenticationConfiguration;
   private AuthorizerConfiguration authorizerConfiguration;
   private final SessionService sessionService;
+
+  private static volatile java.util.function.Predicate<String> mcpStateChecker;
+
+  public static void setMcpStateChecker(java.util.function.Predicate<String> checker) {
+    mcpStateChecker = checker;
+  }
+
+  public static boolean isMcpState(String state) {
+    java.util.function.Predicate<String> checker = mcpStateChecker;
+    if (checker == null || state == null) {
+      return false;
+    }
+    try {
+      return checker.test(state);
+    } catch (Exception e) {
+      LOG.debug("MCP state check failed: {}", e.getMessage());
+      return false;
+    }
+  }
 
   public AuthenticationCodeFlowHandler(
       AuthenticationConfiguration authenticationConfiguration,
@@ -233,6 +255,21 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       // Disable PKCE
       configuration.setDisablePkce(clientConfig.getDisablePkce());
 
+      try {
+        MCPConfiguration mcpConfig = SecurityConfigurationManager.getCurrentMcpConfig();
+        if (mcpConfig != null) {
+          if (mcpConfig.getConnectTimeout() != null) {
+            configuration.setConnectTimeout(mcpConfig.getConnectTimeout());
+          }
+          if (mcpConfig.getReadTimeout() != null) {
+            configuration.setReadTimeout(mcpConfig.getReadTimeout());
+          }
+        }
+      } catch (Exception e) {
+        LOG.warn(
+            "Failed to configure OIDC client HTTP timeouts from MCP config: {}", e.getMessage());
+      }
+
       // Add Custom Params
       if (clientConfig.getCustomParams() != null) {
         for (int j = 1; j <= 5; ++j) {
@@ -273,7 +310,23 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
   // Login
   public void handleLogin(HttpServletRequest req, HttpServletResponse resp) {
     try {
-      String redirectUri = requireRedirectUri(req.getParameter(REDIRECT_URI_KEY));
+      String requestedRedirectUri = req.getParameter(REDIRECT_URI_KEY);
+
+      // Determine the redirect URI to store in the pending session based on the flow:
+      // 1. MCP OAuth flow: requestedRedirectUri contains /mcp/callback
+      //    - MCP handles its own final redirect
+      // 2. Web login flow: any other redirect URI
+      String redirectUri;
+      String expectedMcpCallback = serverUrl + "/mcp/callback";
+      if (requestedRedirectUri != null && requestedRedirectUri.equals(expectedMcpCallback)) {
+        redirectUri = requestedRedirectUri;
+        LOG.debug(
+            "MCP OAuth flow detected - using registered callback URL, final redirect: {}",
+            redirectUri);
+      } else {
+        redirectUri = requireRedirectUri(requestedRedirectUri);
+      }
+
       Optional<UserSession> activeSession = sessionService.getActiveSession(req, resp);
       if (activeSession.isPresent()) {
         User user = getSessionUser(activeSession.get());
@@ -370,8 +423,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
       String userName = findUserNameFromClaims(claimsMapping, claimsOrder, claims);
       String email = findEmailFromClaims(claimsMapping, claimsOrder, claims, principalDomain);
-      String displayName = SecurityUtil.extractDisplayNameFromClaims(claims);
-      User user = getOrCreateOidcUser(userName, email, displayName, claims);
+      User user = getOrCreateOidcUser(userName, email, claims);
 
       Entity.getUserRepository().updateUserLastLoginTime(user, System.currentTimeMillis());
       if (Entity.getAuditLogRepository() != null) {
@@ -532,7 +584,10 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       UserSession session, OidcCredentials oidcCredentials, String computedCallbackUrl)
       throws URISyntaxException {
     if (oidcCredentials.getCode() != null) {
-      LOG.debug("Initiating Token Request for User Session: {} ", session.getId());
+      LOG.debug(
+          "Initiating Token Request - Session: {}, redirect_uri: {}",
+          session.getId(),
+          computedCallbackUrl);
       CodeVerifier verifier =
           nullOrEmpty(session.getPkceVerifier())
               ? null
@@ -738,8 +793,7 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
             requireRedirectUri(targetRedirectUri), accessToken, user.getEmail(), user.getName()));
   }
 
-  private User getOrCreateOidcUser(
-      String userName, String email, String displayName, Map<String, Object> claims) {
+  private User getOrCreateOidcUser(String userName, String email, Map<String, Object> claims) {
     // Extract teams from claims if configured (supports array claims like groups)
     List<String> teamsFromClaim = findTeamsFromClaims(teamClaimMapping, claims);
 
@@ -751,25 +805,16 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
       boolean shouldBeAdmin = getAdminPrincipals().contains(userName);
       boolean needsUpdate = false;
 
-      LOG.info(
-          "OIDC login - Username: {}, Email: {}, DisplayName: {}, Should be admin: {}, Current admin status: {}",
+      LOG.debug(
+          "OIDC login - Username: {}, Email: {}, Should be admin: {}, Current admin status: {}",
           userName,
           email,
-          displayName,
           shouldBeAdmin,
           user.getIsAdmin());
-      LOG.info("Admin principals list: {}", getAdminPrincipals());
 
       if (shouldBeAdmin && !Boolean.TRUE.equals(user.getIsAdmin())) {
-        LOG.info("Updating user {} to admin based on adminPrincipals", userName);
+        LOG.debug("Updating user {} to admin based on adminPrincipals", userName);
         user.setIsAdmin(true);
-        needsUpdate = true;
-      }
-
-      // Update display name only if user doesn't already have one set
-      if (!nullOrEmpty(displayName) && nullOrEmpty(user.getDisplayName())) {
-        LOG.info("Setting display name for user {} to '{}'", userName, displayName);
-        user.setDisplayName(displayName);
         needsUpdate = true;
       }
 
@@ -788,20 +833,36 @@ public class AuthenticationCodeFlowHandler implements AuthServeletHandler {
 
     if (authenticationConfiguration.getEnableSelfSignup()) {
       boolean isAdmin = getAdminPrincipals().contains(userName);
-      LOG.info(
-          "Creating new OIDC user - Username: {}, DisplayName: {}, Should be admin: {}",
-          userName,
-          displayName,
-          isAdmin);
-      LOG.info("Admin principals list: {}", getAdminPrincipals());
+      LOG.debug("Creating new OIDC user - Username: {}, isAdmin: {}", userName, isAdmin);
 
       String domain = email.split("@")[1];
+
+      // Validate email domain against allowed registration domains
+      Set<String> allowedDomains = authorizerConfiguration.getAllowedEmailRegistrationDomains();
+      if (allowedDomains != null
+          && !allowedDomains.contains("all")
+          && !allowedDomains.contains(domain)) {
+        LOG.warn(
+            "SECURITY: Blocked OAuth signup for disallowed domain: {} (user: {})", domain, email);
+        throw new AuthenticationException("Email domain not allowed for self-signup: " + domain);
+      }
+
       User newUser =
           UserUtil.user(userName, domain, userName).withIsAdmin(isAdmin).withIsEmailVerified(true);
 
-      // Set display name if provided from SSO claims
-      if (!nullOrEmpty(displayName)) {
-        newUser.withDisplayName(displayName);
+      // Assign default role if configured
+      String defaultRoleName = authorizerConfiguration.getDefaultOAuthRole();
+      if (defaultRoleName != null && !defaultRoleName.isEmpty()) {
+        try {
+          Role defaultRole =
+              Entity.getEntityByName(Entity.ROLE, defaultRoleName, "", Include.NON_DELETED);
+          newUser.setRoles(List.of(defaultRole.getEntityReference()));
+          LOG.debug("Assigned default OAuth role '{}' to new user: {}", defaultRoleName, userName);
+        } catch (EntityNotFoundException ex) {
+          LOG.error(
+              "Default OAuth role '{}' not found. User will be created without roles.",
+              defaultRoleName);
+        }
       }
 
       // Assign teams from claims if provided

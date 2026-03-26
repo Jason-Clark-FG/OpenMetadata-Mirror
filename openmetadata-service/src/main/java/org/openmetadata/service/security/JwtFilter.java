@@ -33,6 +33,7 @@ import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.Priority;
 import jakarta.ws.rs.Priorities;
 import jakarta.ws.rs.container.ContainerRequestContext;
@@ -60,6 +61,7 @@ import org.openmetadata.schema.api.security.AuthorizerConfiguration;
 import org.openmetadata.schema.auth.LogoutRequest;
 import org.openmetadata.schema.auth.ServiceTokenType;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
+import org.openmetadata.service.monitoring.RequestLatencyContext;
 import org.openmetadata.service.security.auth.BotTokenCache;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.UserTokenCache;
@@ -156,8 +158,8 @@ public class JwtFilter implements ContainerRequestFilter {
       return;
     }
 
+    Timer.Sample authSample = RequestLatencyContext.startAuthOperation();
     ImpersonationContext.clear();
-    // Extract token from the header
     String tokenFromHeader = extractToken(requestContext.getHeaders());
     LOG.debug("Authorization header present: {}", !nullOrEmpty(tokenFromHeader));
 
@@ -170,19 +172,14 @@ public class JwtFilter implements ContainerRequestFilter {
               jwtPrincipalClaimsMapping, jwtPrincipalClaims, claims, principalDomain);
       boolean isBotUser = isBot(claims);
 
-      // Check for impersonation header - authorization will be checked later
       String impersonateUser = requestContext.getHeaderString("X-Impersonate-User");
       String impersonatedBy = null;
 
       if (impersonateUser != null && !impersonateUser.isEmpty()) {
-        // Only bots can impersonate
         if (!isBotUser) {
           throw new AuthorizationException("Only bot users can impersonate other users");
         }
-
-        // Set impersonatedBy to the bot's name
         impersonatedBy = userName;
-        // Switch userName to the target user for SecurityContext
         userName = impersonateUser;
       }
 
@@ -209,6 +206,8 @@ public class JwtFilter implements ContainerRequestFilter {
     } catch (Throwable t) {
       ImpersonationContext.clear();
       throw t;
+    } finally {
+      RequestLatencyContext.endAuthOperation(authSample);
     }
   }
 
@@ -314,11 +313,10 @@ public class JwtFilter implements ContainerRequestFilter {
 
   private void validatePersonalAccessToken(
       Map<String, Claim> claims, String tokenFromHeader, String userName) {
-    Claim tokenType = claims.get(TOKEN_TYPE);
+    Claim tokenTypeClaim = claims.get(TOKEN_TYPE);
+    String tokenType = tokenTypeClaim == null ? StringUtils.EMPTY : tokenTypeClaim.asString();
     if (claims.containsKey(TOKEN_TYPE)
-        && ServiceTokenType.PERSONAL_ACCESS
-            .value()
-            .equals(tokenType == null ? StringUtils.EMPTY : tokenType.asString())) {
+        && ServiceTokenType.PERSONAL_ACCESS.value().equals(tokenType)) {
       Set<String> userTokens = UserTokenCache.getToken(userName);
       if (userTokens != null && userTokens.contains(tokenFromHeader)) {
         return;
