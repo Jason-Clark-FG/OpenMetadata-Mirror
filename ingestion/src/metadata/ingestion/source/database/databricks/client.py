@@ -30,8 +30,8 @@ from metadata.generated.schema.entity.services.connections.pipeline.databricksPi
 )
 from metadata.ingestion.ometa.client import APIError
 from metadata.ingestion.source.database.databricks.queries import (
-    DATABRICKS_GET_COLUMN_LINEAGE_FOR_JOB,
-    DATABRICKS_GET_TABLE_LINEAGE_FOR_JOB,
+    DATABRICKS_GET_COLUMN_LINEAGE,
+    DATABRICKS_GET_TABLE_LINEAGE,
 )
 from metadata.utils.constants import QUERY_WITH_DBT, QUERY_WITH_OM_VERSION
 from metadata.utils.helpers import datetime_to_ts
@@ -101,15 +101,13 @@ class DatabricksClient:
             with self.engine.connect() as connection:
                 test_table_lineage = connection.execute(
                     text(
-                        DATABRICKS_GET_TABLE_LINEAGE_FOR_JOB.format(
-                            lookback_days=lookback_days
-                        )
+                        DATABRICKS_GET_TABLE_LINEAGE.format(lookback_days=lookback_days)
                         + " LIMIT 1"
                     )
                 )
                 test_column_lineage = connection.execute(
                     text(
-                        DATABRICKS_GET_COLUMN_LINEAGE_FOR_JOB.format(
+                        DATABRICKS_GET_COLUMN_LINEAGE.format(
                             lookback_days=lookback_days
                         )
                         + " LIMIT 1"
@@ -344,11 +342,11 @@ class DatabricksClient:
         lookback_days = getattr(self.config, "lineageLookBackDays", 90)
         logger.info(f"Caching table lineage (lookback: {lookback_days} days)")
         table_lineage = self.run_lineage_query(
-            DATABRICKS_GET_TABLE_LINEAGE_FOR_JOB.format(lookback_days=lookback_days)
+            DATABRICKS_GET_TABLE_LINEAGE.format(lookback_days=lookback_days)
         )
         for row in table_lineage or []:
             try:
-                self.entity_table_lineage[row.job_id].append(
+                self.entity_table_lineage[row.entity_id].append(
                     {
                         "source_table_full_name": row.source_table_full_name,
                         "target_table_full_name": row.target_table_full_name,
@@ -363,7 +361,7 @@ class DatabricksClient:
 
         logger.info(f"Caching column lineage (lookback: {lookback_days} days)")
         column_lineage = self.run_lineage_query(
-            DATABRICKS_GET_COLUMN_LINEAGE_FOR_JOB.format(lookback_days=lookback_days)
+            DATABRICKS_GET_COLUMN_LINEAGE.format(lookback_days=lookback_days)
         )
         for row in column_lineage or []:
             try:
@@ -376,7 +374,7 @@ class DatabricksClient:
                     row.target_column_name,
                 )
 
-                self.entity_column_lineage[row.job_id][table_key].append(column_pair)
+                self.entity_column_lineage[row.entity_id][table_key].append(column_pair)
 
             except Exception as exc:
                 logger.debug(
