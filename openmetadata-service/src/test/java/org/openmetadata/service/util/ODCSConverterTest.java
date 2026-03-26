@@ -521,6 +521,7 @@ class ODCSConverterTest {
     assertEquals(ODCSDataContract.OdcsStatus.DRAFT, getODCSStatus(EntityStatus.DRAFT));
     assertEquals(ODCSDataContract.OdcsStatus.ACTIVE, getODCSStatus(EntityStatus.APPROVED));
     assertEquals(ODCSDataContract.OdcsStatus.DEPRECATED, getODCSStatus(EntityStatus.DEPRECATED));
+    assertEquals(ODCSDataContract.OdcsStatus.DEPRECATED, getODCSStatus(EntityStatus.ARCHIVED));
   }
 
   @Test
