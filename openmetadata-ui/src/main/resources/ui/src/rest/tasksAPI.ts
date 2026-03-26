@@ -188,6 +188,7 @@ export interface ResolveTask {
   resolutionType: TaskResolutionType;
   comment?: string;
   newValue?: string;
+  payload?: TaskPayload;
 }
 
 const BASE_URL = '/tasks';

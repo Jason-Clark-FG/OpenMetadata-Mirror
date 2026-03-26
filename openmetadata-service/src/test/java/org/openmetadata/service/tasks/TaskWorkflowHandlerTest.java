@@ -122,7 +122,7 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
 
-      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
 
       assertSame(refreshedTask, result);
       verify(taskRepository, never()).resolveTask(any(), any(TaskResolution.class), anyString());
@@ -161,7 +161,7 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
 
-      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
 
       assertSame(refreshedTask, result);
       verify(taskRepository).resolveTask(eq(task), any(TaskResolution.class), eq("alice"));
@@ -199,7 +199,7 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(storedTask);
 
-      TaskWorkflowHandler.getInstance().resolveTask(task, true, null, "alice");
+      TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
 
       verify(taskRepository)
           .resolveTask(

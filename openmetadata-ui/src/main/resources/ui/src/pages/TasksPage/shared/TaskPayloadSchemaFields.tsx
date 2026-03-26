@@ -12,7 +12,7 @@
  *  limitations under the License.
  */
 
-import { Checkbox, Form, Input, InputNumber, Select, Typography } from 'antd';
+import { Checkbox, Form, Input, InputNumber, Select, Tag, Typography } from 'antd';
 import { uniqBy } from 'lodash';
 import { useMemo } from 'react';
 import { TagLabel } from '../../../generated/type/tagLabel';
@@ -33,7 +33,8 @@ interface TaskPayloadSchemaFieldsProps {
   payload: TaskPayload;
   schema?: JsonSchemaObject;
   uiSchema?: JsonSchemaObject;
-  onChange: (payload: TaskPayload) => void;
+  mode?: 'edit' | 'read';
+  onChange?: (payload: TaskPayload) => void;
 }
 
 const HIDDEN_WIDGET = 'hidden';
@@ -42,6 +43,7 @@ const TaskPayloadSchemaFields = ({
   payload,
   schema,
   uiSchema,
+  mode = 'edit',
   onChange,
 }: TaskPayloadSchemaFieldsProps) => {
   const properties = useMemo(
@@ -112,10 +114,56 @@ const TaskPayloadSchemaFields = ({
   };
 
   const updateField = (fieldName: string, value: unknown) =>
-    onChange({
+    onChange?.({
       ...payload,
       [fieldName]: value,
     });
+
+  const stringifyValue = (value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    return JSON.stringify(value, null, 2);
+  };
+
+  const renderReadOnlyText = (label: string, value: unknown, description?: string) => (
+    <Form.Item key={label} label={`${label}:`}>
+      <Typography.Paragraph className="m-b-0 whitespace-pre-wrap">
+        {stringifyValue(value)}
+      </Typography.Paragraph>
+      {description ? (
+        <Typography.Paragraph className="m-b-0 m-t-xs text-grey-muted">
+          {description}
+        </Typography.Paragraph>
+      ) : null}
+    </Form.Item>
+  );
+
+  const renderReadOnlyTags = (
+    label: string,
+    value: TagLabel[],
+    description?: string
+  ) => (
+    <Form.Item key={label} label={`${label}:`}>
+      <div className="d-flex flex-wrap gap-2">
+        {value.length ? (
+          value.map((tag) => <Tag key={tag.tagFQN}>{tag.tagFQN}</Tag>)
+        ) : (
+          <Typography.Text className="text-grey-muted">-</Typography.Text>
+        )}
+      </div>
+      {description ? (
+        <Typography.Paragraph className="m-b-0 m-t-xs text-grey-muted">
+          {description}
+        </Typography.Paragraph>
+      ) : null}
+    </Form.Item>
+  );
 
   return (
     <>
@@ -130,6 +178,22 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (widget === 'descriptionTabs') {
+          if (mode === 'read') {
+            return (
+              <div key={fieldName}>
+                {renderReadOnlyText(
+                  `${label} (${'Current'})`,
+                  payload.currentDescription,
+                  description
+                )}
+                {renderReadOnlyText(
+                  `${label} (${'Suggested'})`,
+                  payload.newDescription ?? payload.suggestedValue
+                )}
+              </div>
+            );
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <DescriptionTabs
@@ -148,12 +212,22 @@ const TaskPayloadSchemaFields = ({
 
         if (widget === 'tagsTabs') {
           const currentTags = (payload.currentTags as TagLabel[] | undefined) ?? [];
+          const suggestedTags = getSuggestedTags();
+
+          if (mode === 'read') {
+            return (
+              <div key={fieldName}>
+                {renderReadOnlyTags(`${label} (${'Current'})`, currentTags, description)}
+                {renderReadOnlyTags(`${label} (${'Suggested'})`, suggestedTags)}
+              </div>
+            );
+          }
 
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <TagsTabs
                 tags={currentTags}
-                value={getSuggestedTags()}
+                value={suggestedTags}
                 onChange={(newTags) => {
                   const currentTagFqns = new Set(currentTags.map((tag) => tag.tagFQN));
                   const newTagFqns = new Set(newTags.map((tag) => tag.tagFQN));
@@ -179,6 +253,14 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (widget === 'tagSelector') {
+          if (mode === 'read') {
+            return renderReadOnlyTags(
+              label,
+              ((payload[fieldName] as TagLabel[] | undefined) ?? []).filter(Boolean),
+              description
+            );
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <TagSuggestion
@@ -195,6 +277,10 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (fieldSchema?.enum?.length) {
+          if (mode === 'read') {
+            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <Select
@@ -210,6 +296,10 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (fieldSchema?.type === 'number') {
+          if (mode === 'read') {
+            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <InputNumber
@@ -222,6 +312,14 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (fieldSchema?.type === 'boolean') {
+          if (mode === 'read') {
+            return renderReadOnlyText(
+              label,
+              Boolean(getFieldValue(fieldName, false)),
+              description
+            );
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`} valuePropName="checked">
               <Checkbox
@@ -234,6 +332,10 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (widget === 'textarea') {
+          if (mode === 'read') {
+            return renderReadOnlyText(label, getFieldValue(fieldName, ''), description);
+          }
+
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <Input.TextArea
@@ -243,6 +345,37 @@ const TaskPayloadSchemaFields = ({
               />
             </Form.Item>
           );
+        }
+
+        if (fieldSchema?.type === 'object' || fieldSchema?.type === 'array') {
+          if (mode === 'read') {
+            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+          }
+
+          return (
+            <Form.Item key={fieldName} label={`${label}:`}>
+              <Input.TextArea
+                autoSize={{ minRows: 4, maxRows: 12 }}
+                value={stringifyValue(getFieldValue(fieldName, fieldSchema?.type === 'array' ? [] : {}))}
+                onChange={(event) => {
+                  try {
+                    updateField(fieldName, JSON.parse(event.target.value));
+                  } catch {
+                    updateField(fieldName, event.target.value);
+                  }
+                }}
+              />
+              {description ? (
+                <Typography.Paragraph className="m-b-0 m-t-xs text-grey-muted">
+                  {description}
+                </Typography.Paragraph>
+              ) : null}
+            </Form.Item>
+          );
+        }
+
+        if (mode === 'read') {
+          return renderReadOnlyText(label, getFieldValue(fieldName, ''), description);
         }
 
         return (

@@ -253,4 +253,61 @@ describe('TaskPayloadSchemaFields', () => {
       approved: true,
     });
   });
+
+  it('renders read-only schema values without invoking change handlers', () => {
+    const onChange = jest.fn();
+    const schema: JsonSchemaObject = {
+      type: 'object',
+      properties: {
+        reviewNotes: { title: 'Review Notes', type: 'string' },
+        tagsToAdd: { title: 'Suggested Tags', type: 'array' },
+      },
+    };
+
+    render(
+      <TaskPayloadSchemaFields
+        mode="read"
+        payload={{
+          reviewNotes: 'Reviewed and approved',
+          tagsToAdd: [PERSONAL_TAG],
+        }}
+        schema={schema}
+        uiSchema={{ tagsToAdd: { 'ui:widget': 'tagSelector' } }}
+        onChange={onChange}
+      />
+    );
+
+    expect(screen.getByText('Reviewed and approved')).toBeInTheDocument();
+    expect(screen.getByText(PERSONAL_TAG.tagFQN)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('supports editing object payload fields through JSON text areas', () => {
+    const onChange = jest.fn();
+    const schema: JsonSchemaObject = {
+      type: 'object',
+      properties: {
+        metadataChange: { title: 'Metadata Change', type: 'object' },
+      },
+    };
+
+    render(
+      <TaskPayloadSchemaFields
+        payload={{
+          metadataChange: { path: 'description', value: 'old' },
+        }}
+        schema={schema}
+        uiSchema={{}}
+        onChange={onChange}
+      />
+    );
+
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: { value: '{"path":"description","value":"new"}' },
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      metadataChange: { path: 'description', value: 'new' },
+    });
+  });
 });

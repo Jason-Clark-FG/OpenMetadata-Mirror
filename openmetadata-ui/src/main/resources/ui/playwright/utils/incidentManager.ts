@@ -122,31 +122,18 @@ export const assignIncident = async (data: {
   await expect
     .poll(
       async () => {
-        const response = await page.request.get(
-          '/api/v1/dataQuality/testCases/testCaseIncidentStatus/search/list',
-          {
-            params: {
-              latest: true,
-              include: 'non-deleted',
-              limit: 50,
-              offset: 0,
-            },
-          }
-        );
+        const incidentRow = page
+          .getByRole('row', { name: new RegExp(testCaseName, 'i') })
+          .first();
+        const incidentLink = page.getByRole('link', { name: testCaseName }).first();
 
-        if (!response.ok()) {
-          return false;
-        }
-
-        const body = await response.json();
-
-        return (body.data ?? []).some(
-          (incident: { testCaseReference?: { name?: string } }) =>
-            incident.testCaseReference?.name === testCaseName
+        return (
+          (await incidentRow.isVisible().catch(() => false)) ||
+          (await incidentLink.isVisible().catch(() => false))
         );
       },
       {
-        message: `Wait for incident ${testCaseName} to be searchable in Incident Manager`,
+        message: `Wait for incident ${testCaseName} to appear in Incident Manager`,
         timeout: 60_000,
         intervals: [1_000, 2_000, 5_000],
       }

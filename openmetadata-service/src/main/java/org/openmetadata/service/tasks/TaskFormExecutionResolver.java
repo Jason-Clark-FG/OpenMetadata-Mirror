@@ -14,6 +14,7 @@
 
 package org.openmetadata.service.tasks;
 
+import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
@@ -50,11 +51,35 @@ public final class TaskFormExecutionResolver {
       String addTagsField,
       String removeTagsField) {}
 
+  public enum ActionType {
+    SET_DESCRIPTION,
+    MERGE_TAGS,
+    REPLACE_OWNERS,
+    APPLY_TIER,
+    REPLACE_DOMAINS,
+    PATCH_ENTITY_FIELD,
+    APPLY_SUGGESTION
+  }
+
+  public record TaskExecutionAction(
+      ActionType actionType,
+      String fieldPathField,
+      String valueField,
+      String currentTagsField,
+      String addTagsField,
+      String removeTagsField,
+      String payloadField,
+      String entityField,
+      Object staticValue) {}
+
+  public record TaskExecutionPlan(
+      List<TaskExecutionAction> approveActions, List<TaskExecutionAction> rejectActions) {}
+
   private TaskFormExecutionResolver() {}
 
   public static TaskExecutionBinding resolve(Task task) {
     TaskExecutionBinding defaults = defaultBinding(task);
-    if (task.getType() == null || task.getCategory() == null) {
+    if (task == null || task.getType() == null) {
       return defaults;
     }
 
@@ -63,12 +88,41 @@ public final class TaskFormExecutionResolver {
           (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
 
       return schemaRepository
-          .resolve(task.getType().value(), task.getCategory().value())
+          .resolve(
+              task.getType().value(),
+              task.getCategory() != null ? task.getCategory().value() : null,
+              task.getPayload())
           .map(schema -> merge(defaults, fromSchema(schema)))
           .orElse(defaults);
     } catch (Exception e) {
       LOG.debug(
           "Falling back to default task execution binding for task '{}' due to schema resolution error: {}",
+          task.getId(),
+          e.getMessage());
+      return defaults;
+    }
+  }
+
+  public static TaskExecutionPlan resolveExecutionPlan(Task task) {
+    TaskExecutionPlan defaults = defaultExecutionPlan(task);
+    if (task == null || task.getType() == null) {
+      return defaults;
+    }
+
+    try {
+      TaskFormSchemaRepository schemaRepository =
+          (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
+
+      return schemaRepository
+          .resolve(
+              task.getType().value(),
+              task.getCategory() != null ? task.getCategory().value() : null,
+              task.getPayload())
+          .map(schema -> merge(defaults, fromExecutionSchema(schema)))
+          .orElse(defaults);
+    } catch (Exception e) {
+      LOG.debug(
+          "Falling back to default task execution plan for task '{}' due to schema resolution error: {}",
           task.getId(),
           e.getMessage());
       return defaults;
@@ -100,6 +154,22 @@ public final class TaskFormExecutionResolver {
         stringValue(rawHandlerConfig.get("currentTagsField")),
         stringValue(rawHandlerConfig.get("addTagsField")),
         stringValue(rawHandlerConfig.get("removeTagsField")));
+  }
+
+  static TaskExecutionPlan fromExecutionSchema(TaskFormSchema schema) {
+    if (schema == null || schema.getUiSchema() == null) {
+      return null;
+    }
+
+    Map<String, Object> uiSchema = JsonUtils.readOrConvertValue(schema.getUiSchema(), Map.class);
+    Object executionConfigObject = uiSchema.get("ui:execution");
+    if (!(executionConfigObject instanceof Map<?, ?> rawExecutionConfig)) {
+      return null;
+    }
+
+    return new TaskExecutionPlan(
+        parseActions(rawExecutionConfig.get("approve")),
+        parseActions(rawExecutionConfig.get("reject")));
   }
 
   private static TaskExecutionBinding defaultBinding(Task task) {
@@ -151,6 +221,93 @@ public final class TaskFormExecutionResolver {
     };
   }
 
+  private static TaskExecutionPlan defaultExecutionPlan(Task task) {
+    if (task == null || task.getType() == null) {
+      return new TaskExecutionPlan(List.of(), List.of());
+    }
+
+    TaskExecutionBinding binding = defaultBinding(task);
+
+    return switch (binding.handlerType()) {
+      case DESCRIPTION_UPDATE -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.SET_DESCRIPTION,
+                  binding.fieldPathField(),
+                  binding.valueField(),
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null)),
+          List.of());
+      case TAG_UPDATE -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.MERGE_TAGS,
+                  binding.fieldPathField(),
+                  null,
+                  binding.currentTagsField(),
+                  binding.addTagsField(),
+                  binding.removeTagsField(),
+                  null,
+                  null,
+                  null)),
+          List.of());
+      case OWNERSHIP_UPDATE -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.REPLACE_OWNERS,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  "newOwners",
+                  null,
+                  null)),
+          List.of());
+      case TIER_UPDATE -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.APPLY_TIER, null, null, null, null, null, "newTier", null, null)),
+          List.of());
+      case DOMAIN_UPDATE -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.REPLACE_DOMAINS,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  "newDomain",
+                  null,
+                  null)),
+          List.of());
+      case APPROVAL -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.PATCH_ENTITY_FIELD,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  "entityStatus",
+                  "Approved")),
+          List.of());
+      case SUGGESTION -> new TaskExecutionPlan(
+          List.of(
+              new TaskExecutionAction(
+                  ActionType.APPLY_SUGGESTION, null, null, null, null, null, null, null, null)),
+          List.of());
+      default -> new TaskExecutionPlan(List.of(), List.of());
+    };
+  }
+
   private static TaskExecutionBinding merge(
       TaskExecutionBinding defaults, TaskExecutionBinding configured) {
     if (configured == null) {
@@ -173,6 +330,18 @@ public final class TaskFormExecutionResolver {
         configured.removeTagsField() != null
             ? configured.removeTagsField()
             : defaults.removeTagsField());
+  }
+
+  private static TaskExecutionPlan merge(TaskExecutionPlan defaults, TaskExecutionPlan configured) {
+    if (configured == null) {
+      return defaults;
+    }
+
+    return new TaskExecutionPlan(
+        configured.approveActions() != null
+            ? configured.approveActions()
+            : defaults.approveActions(),
+        configured.rejectActions() != null ? configured.rejectActions() : defaults.rejectActions());
   }
 
   private static boolean hasFeedbackPayload(Task task) {
@@ -199,6 +368,37 @@ public final class TaskFormExecutionResolver {
     }
   }
 
+  private static List<TaskExecutionAction> parseActions(Object configObject) {
+    if (!(configObject instanceof Map<?, ?> configMap)) {
+      return null;
+    }
+
+    Object actionsObject = configMap.get("actions");
+    if (!(actionsObject instanceof List<?> rawActions)) {
+      return null;
+    }
+
+    return rawActions.stream()
+        .filter(Map.class::isInstance)
+        .map(Map.class::cast)
+        .map(TaskFormExecutionResolver::parseAction)
+        .filter(action -> action.actionType() != null)
+        .toList();
+  }
+
+  private static TaskExecutionAction parseAction(Map<?, ?> rawAction) {
+    return new TaskExecutionAction(
+        parseActionType(stringValue(rawAction.get("type"))),
+        stringValue(rawAction.get("fieldPathField")),
+        stringValue(rawAction.get("valueField")),
+        stringValue(rawAction.get("currentTagsField")),
+        stringValue(rawAction.get("addTagsField")),
+        stringValue(rawAction.get("removeTagsField")),
+        stringValue(rawAction.get("payloadField")),
+        stringValue(rawAction.get("entityField")),
+        rawAction.get("value"));
+  }
+
   private static HandlerType parseHandlerType(String value) {
     if (value == null) {
       return null;
@@ -215,6 +415,23 @@ public final class TaskFormExecutionResolver {
       case "feedbackApproval" -> HandlerType.FEEDBACK_APPROVAL;
       case "suggestion" -> HandlerType.SUGGESTION;
       case "custom" -> HandlerType.CUSTOM;
+      default -> null;
+    };
+  }
+
+  private static ActionType parseActionType(String value) {
+    if (value == null) {
+      return null;
+    }
+
+    return switch (value.trim()) {
+      case "setDescription" -> ActionType.SET_DESCRIPTION;
+      case "mergeTags" -> ActionType.MERGE_TAGS;
+      case "replaceOwners" -> ActionType.REPLACE_OWNERS;
+      case "applyTier" -> ActionType.APPLY_TIER;
+      case "replaceDomains" -> ActionType.REPLACE_DOMAINS;
+      case "patchEntityField" -> ActionType.PATCH_ENTITY_FIELD;
+      case "applySuggestion" -> ActionType.APPLY_SUGGESTION;
       default -> null;
     };
   }

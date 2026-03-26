@@ -92,6 +92,12 @@ describe('TestCaseIssueTab', () => {
     expect(await screen.findByTestId('closed-task')).toBeInTheDocument();
     expect(await screen.findByText('TaskListV1')).toBeInTheDocument();
     expect(await screen.findByText('TaskTab')).toBeInTheDocument();
+    expect(mockUseActivityFeedProviderValue.getTaskData).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      'testCase',
+      'sample_data.ecommerce_db.shopify.dim_address.table_column_count_between'
+    );
   });
 
   it('Should render loader', async () => {

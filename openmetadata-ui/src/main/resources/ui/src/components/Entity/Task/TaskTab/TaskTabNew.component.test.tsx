@@ -129,7 +129,7 @@ const MOCK_INCIDENT_TASK: Task = {
   id: 'incident-8b5076bb-8284-46b0-b00d-5e43a184ba9b',
   taskId: 'TASK-00005',
   name: 'TestCaseResolution-dim.shop',
-  category: TaskCategory.Request,
+  category: TaskCategory.Incident,
   type: TaskEntityType.TestCaseResolution,
   status: TaskEntityStatus.Open,
   priority: TaskPriority.Medium,
@@ -158,6 +158,44 @@ const MOCK_INCIDENT_TASK: Task = {
   payload: {
     field: 'testCaseStatus',
     testCaseResolutionStatusId: 'resolution-status-id',
+  } as Task['payload'],
+  comments: [],
+  commentCount: 0,
+};
+
+const MOCK_CUSTOM_TASK: Task = {
+  id: 'custom-task-8b5076bb-8284-46b0-b00d-5e43a184ba9b',
+  taskId: 'TASK-00006',
+  name: 'CustomTask-dim.shop-description',
+  category: TaskCategory.Custom,
+  type: TaskEntityType.CustomTask,
+  status: TaskEntityStatus.Open,
+  priority: TaskPriority.Medium,
+  about: {
+    id: 'table-id-3',
+    type: 'table',
+    name: 'dim.shop',
+    fullyQualifiedName: 'sample_data.ecommerce_db.shopify."dim.shop"',
+  },
+  createdBy: {
+    id: 'admin-user-id',
+    type: 'user',
+    name: 'admin',
+    displayName: 'Admin User',
+  },
+  assignees: [
+    {
+      id: 'test-user-id',
+      type: 'user',
+      name: 'test-user',
+      displayName: 'Test User',
+      deleted: false,
+    },
+  ],
+  payload: {
+    targetField: 'description',
+    proposedText: 'Custom description proposal',
+    reviewNotes: 'Needs final verification',
   } as Task['payload'],
   comments: [],
   commentCount: 0,
@@ -379,11 +417,33 @@ const mockProps = {
 describe('TaskTabNew Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    const { useAuth } = require('../../../../hooks/authHooks');
+    const {
+      useApplicationStore,
+    } = require('../../../../hooks/useApplicationStore');
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
     const {
       isTagsTaskType,
       isDescriptionTaskType,
       isRecognizerFeedbackTask,
     } = require('../../../../utils/TasksUtils');
+    const actualTaskFormSchemaUtils = jest.requireActual(
+      '../../../../utils/TaskFormSchemaUtils'
+    );
+
+    useAuth.mockReturnValue({ isAdminUser: false });
+    useApplicationStore.mockReturnValue({
+      currentUser: {
+        id: 'test-user-id',
+        name: 'test-user',
+        teams: [],
+      },
+    });
+    getResolvedTaskFormSchema.mockImplementation((taskType, taskCategory) =>
+      Promise.resolve(
+        actualTaskFormSchemaUtils.getDefaultTaskFormSchema(taskType, taskCategory)
+      )
+    );
     isTagsTaskType.mockReturnValue(true);
     isDescriptionTaskType.mockReturnValue(false);
     isRecognizerFeedbackTask.mockReturnValue(false);
@@ -465,17 +525,18 @@ describe('TaskTabNew Component', () => {
     expect(screen.getByText('Assignees')).toBeInTheDocument();
   });
 
-  it('should render TagsTask for tag-related tasks', async () => {
+  it('should render schema-driven tag payload details for tag-related tasks', async () => {
     await act(async () => {
       render(<TaskTabNew {...mockProps} />, {
         wrapper: MemoryRouter,
       });
     });
 
-    expect(screen.getByText('TagsTask')).toBeInTheDocument();
+    expect(screen.getByTestId('task-payload-details')).toBeInTheDocument();
+    expect(screen.getByText('PersonalData.SpecialCategory')).toBeInTheDocument();
   });
 
-  it('should render DescriptionTaskFromTask for description tasks', async () => {
+  it('should render schema-driven description payload details for description tasks', async () => {
     const {
       isTagsTaskType,
       isDescriptionTaskType,
@@ -499,7 +560,9 @@ describe('TaskTabNew Component', () => {
       });
     });
 
-    expect(screen.getByText('DescriptionTaskFromTask')).toBeInTheDocument();
+    expect(screen.getByTestId('task-payload-details')).toBeInTheDocument();
+    expect(screen.getByText('Old description')).toBeInTheDocument();
+    expect(screen.getByText('New description')).toBeInTheDocument();
   });
 
   it('should render FeedbackApprovalTask for recognizer feedback approval tasks', async () => {
@@ -851,5 +914,98 @@ describe('TaskTabNew Component', () => {
     expect(screen.getByTestId('entity-link')).toHaveTextContent('entityName');
     expect(screen.getByText('label.created-by')).toBeInTheDocument();
     expect(screen.getByText('label.assignee-plural')).toBeInTheDocument();
+  });
+
+  it('renders schema-driven payload details for custom tasks', async () => {
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+
+    getResolvedTaskFormSchema.mockResolvedValueOnce({
+      name: 'CustomTask',
+      taskType: TaskEntityType.CustomTask,
+      taskCategory: TaskCategory.Custom,
+      formSchema: {
+        type: 'object',
+        properties: {
+          targetField: { type: 'string', title: 'Target Field' },
+          proposedText: { type: 'string', title: 'Proposed Text' },
+          reviewNotes: { type: 'string', title: 'Review Notes' },
+        },
+      },
+      uiSchema: {
+        'ui:handler': {
+          type: 'descriptionUpdate',
+          fieldPathField: 'targetField',
+          valueField: 'proposedText',
+        },
+        'ui:resolution': {
+          mode: 'payload',
+        },
+        targetField: { 'ui:widget': 'hidden' },
+        reviewNotes: { 'ui:widget': 'textarea' },
+      },
+    });
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_CUSTOM_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(screen.getByTestId('task-payload-details')).toBeInTheDocument();
+    expect(screen.getByText('Custom description proposal')).toBeInTheDocument();
+    expect(screen.getByText('Needs final verification')).toBeInTheDocument();
+  });
+
+  it('submits schema-driven payload when resolving a custom task', async () => {
+    const { useAuth } = require('../../../../hooks/authHooks');
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const { resolveTask } = require('../../../../rest/tasksAPI');
+
+    useAuth.mockReturnValue({ isAdminUser: true });
+    getResolvedTaskFormSchema.mockResolvedValueOnce({
+      name: 'CustomTask',
+      taskType: TaskEntityType.CustomTask,
+      taskCategory: TaskCategory.Custom,
+      formSchema: {
+        type: 'object',
+        properties: {
+          targetField: { type: 'string', title: 'Target Field' },
+          proposedText: { type: 'string', title: 'Proposed Text' },
+          reviewNotes: { type: 'string', title: 'Review Notes' },
+        },
+      },
+      uiSchema: {
+        'ui:handler': {
+          type: 'descriptionUpdate',
+          fieldPathField: 'targetField',
+          valueField: 'proposedText',
+        },
+        'ui:resolution': {
+          mode: 'payload',
+        },
+      },
+    });
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_CUSTOM_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('edit-accept-task-action-primary'));
+    });
+
+    await waitFor(() => {
+      expect(resolveTask).toHaveBeenCalledWith(MOCK_CUSTOM_TASK.id, {
+        resolutionType: 'Approved',
+        newValue: undefined,
+        payload: {
+          targetField: 'description',
+          proposedText: 'Custom description proposal',
+          reviewNotes: 'Needs final verification',
+        },
+      });
+    });
   });
 });

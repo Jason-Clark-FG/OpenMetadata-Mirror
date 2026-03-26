@@ -20,7 +20,6 @@ import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { resetTokenFromBotPage } from '../../utils/bot';
 import {
-  descriptionBox,
   getApiContext,
   redirectToHomePage,
 } from '../../utils/common';
@@ -72,35 +71,51 @@ const openIncidentTaskTab = async (page: Page, waitForTaskPanel = false) => {
 };
 
 const waitForIncidentTask = async (page: Page, testCaseFqn?: string) => {
-  await expect
-    .poll(
-      async () => {
-        const response = await page.request.get('/api/v1/tasks', {
-          params: {
-            category: 'Incident',
-            limit: 100,
-            fields: 'about,payload,assignees',
-          },
-        });
+  const { apiContext, afterAction } = await getApiContext(page);
 
-        if (!response.ok()) {
-          return false;
+  try {
+    await expect
+      .poll(
+        async () => {
+          const response = await apiContext.get('/api/v1/tasks', {
+            params: {
+              category: 'Incident',
+              limit: 100,
+              fields: 'about,payload,assignees',
+            },
+          });
+
+          if (!response.ok()) {
+            return false;
+          }
+
+          const body = await response.json();
+
+          return (body.data ?? []).some(
+            (task: {
+              about?: { fullyQualifiedName?: string };
+              payload?: {
+                testCaseResult?: { fullyQualifiedName?: string };
+                testCaseReference?: { fullyQualifiedName?: string };
+              };
+            }) =>
+              task.about?.fullyQualifiedName === testCaseFqn ||
+              task.payload?.testCaseResult?.fullyQualifiedName ===
+                testCaseFqn ||
+              task.payload?.testCaseReference?.fullyQualifiedName ===
+                testCaseFqn
+          );
+        },
+        {
+          message: `Wait for incident task for ${testCaseFqn}`,
+          timeout: 60_000,
+          intervals: [1_000, 2_000, 5_000],
         }
-
-        const body = await response.json();
-
-        return (body.data ?? []).some(
-          (task: { about?: { fullyQualifiedName?: string } }) =>
-            task.about?.fullyQualifiedName === testCaseFqn
-        );
-      },
-      {
-        message: `Wait for incident task for ${testCaseFqn}`,
-        timeout: 60_000,
-        intervals: [1_000, 2_000, 5_000],
-      }
-    )
-    .toBe(true);
+      )
+      .toBe(true);
+  } finally {
+    await afterAction();
+  }
 };
 
 const isVisible = async (locator: Locator) =>
@@ -203,19 +218,14 @@ const reassignIncidentTask = async (
   const assigneeSelect = reassignModal.getByTestId('select-assignee');
   const assigneeSelector = assigneeSelect.locator('.ant-select-selector');
   const assigneeInput = assigneeSelect.locator('input').last();
-  const searchUserResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === 'GET' &&
-      response.url().includes('/api/v1/search/query') &&
-      response.url().includes('user_search_index')
-  );
+  const assigneeOption = page.getByTestId(assignee.name.toLowerCase());
 
   await expect(assigneeSelector).toBeVisible();
   await assigneeSelector.click();
   await assigneeInput.fill(assignee.displayName);
-  await searchUserResponse;
+  await expect(assigneeOption).toBeVisible({ timeout: 30_000 });
 
-  await page.click(`[data-testid="${assignee.name.toLowerCase()}"]`);
+  await assigneeOption.click();
 
   const updateAssignee = page.waitForResponse(
     '/api/v1/dataQuality/testCases/testCaseIncidentStatus'
@@ -235,13 +245,16 @@ const reassignIncidentTask = async (
 const openIncidentResolveDialog = async (page: Page) => {
   const primaryActionButton = page.getByTestId('incident-task-action-primary');
   const actionTrigger = page.getByTestId('incident-task-action-trigger');
-  const resolveModalField = page.locator('#testCaseFailureReason');
+  const resolveModal = page.locator('.ant-modal .ant-modal-content').last();
+  const modalTextareas = resolveModal.locator('textarea');
 
-  if (await isVisible(resolveModalField)) {
-    return;
+  if (await isVisible(resolveModal)) {
+    return resolveModal;
   }
 
-  if ((await primaryActionButton.textContent())?.includes('Resolve')) {
+  const primaryActionText = (await primaryActionButton.textContent())?.trim() ?? '';
+
+  if (primaryActionText.includes('Resolve')) {
     await primaryActionButton.click();
   } else {
     await expect(actionTrigger).toBeVisible();
@@ -249,26 +262,31 @@ const openIncidentResolveDialog = async (page: Page) => {
     await actionTrigger.click();
 
     const resolveMenuItem = page
-      .locator('.task-action-dropdown')
-      .last()
-      .getByTestId('task-action-menu-item-resolve');
+      .locator('[data-testid="task-action-menu-item-resolve"]:visible')
+      .last();
 
     await expect(resolveMenuItem).toBeVisible();
     await resolveMenuItem.click();
 
-    try {
-      await expect(resolveModalField).toBeVisible({ timeout: 3_000 });
-    } catch {
+    if (!(await isVisible(resolveModal))) {
       await expect
         .poll(async () => (await primaryActionButton.textContent())?.trim(), {
-          timeout: 3_000,
+          timeout: 5_000,
         })
         .toContain('Resolve');
+      await page.keyboard.press('Escape').catch(() => undefined);
       await primaryActionButton.click();
     }
   }
 
-  await expect(resolveModalField).toBeVisible({ timeout: 10_000 });
+  await expect(resolveModal).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(modalTextareas.first()).toBeVisible({
+    timeout: 10_000,
+  });
+
+  return resolveModal;
 };
 
 test.describe.configure({ mode: 'serial' });
@@ -592,16 +610,14 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await testCaseResponse;
       await expect(actorPage.getByTestId('entity-page-header')).toBeVisible();
       await openIncidentTaskTab(actorPage, true);
-      await openIncidentResolveDialog(actorPage);
-      await actorPage.click('#testCaseFailureReason');
-      await actorPage.click('[title="Missing Data"]');
-      await actorPage.click(descriptionBox);
-      await actorPage.fill(descriptionBox, 'test');
+      const resolveModal = await openIncidentResolveDialog(actorPage);
+      await resolveModal.locator('textarea').nth(0).fill('Missing Data');
+      await resolveModal.locator('textarea').nth(1).fill('test');
 
       const updateIncident = actorPage.waitForResponse(
         '/api/v1/dataQuality/testCases/testCaseIncidentStatus'
       );
-      await actorPage.click('.ant-modal-footer >> text=Save');
+      await resolveModal.getByRole('button', { name: 'Save' }).click();
       await updateIncident;
     });
   });

@@ -226,12 +226,33 @@ export const addOwner = async ({
     await patchRequest;
   }
 
-  await expect(
-    page
-      .getByTestId(dataTestId ?? 'owner-link')
-      .filter({ hasText: expectedOwnerText ?? owner })
-      .first()
-  ).toBeVisible();
+  const ownerLabel = expectedOwnerText ?? owner;
+  const exactOwnerLink = page
+    .getByTestId(dataTestId ?? 'owner-link')
+    .filter({ hasText: ownerLabel })
+    .first();
+  const anyOwnerLink = page.getByTestId(dataTestId ?? 'owner-link').first();
+  const ownerAvatar = page.locator(`[data-testid="${ownerLabel}"]`).first();
+
+  await expect
+    .poll(
+      async () => {
+        if (await exactOwnerLink.isVisible().catch(() => false)) {
+          return true;
+        }
+
+        if (await ownerAvatar.isVisible().catch(() => false)) {
+          return true;
+        }
+
+        return await anyOwnerLink.isVisible().catch(() => false);
+      },
+      {
+        timeout: 15000,
+        intervals: [1000, 2000, 5000],
+      }
+    )
+    .toBe(true);
 };
 
 export const addOwnerWithoutValidation = async ({

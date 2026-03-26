@@ -109,16 +109,11 @@ export const createDescriptionTask = async (
       '[data-testid="select-assignee"] > .ant-select-selector #assignees'
     );
     await assigneeField.click();
-
-    const userSearchResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${value.assignee}**&index=user%2Cteam*`
-    );
-
     await assigneeField.fill(value.assignee);
-    await userSearchResponse;
 
     // select value from dropdown
     const dropdownValue = page.getByTestId(value.assignee);
+    await expect(dropdownValue).toBeVisible();
     await dropdownValue.hover();
     await dropdownValue.click();
     await clickOutside(page);
@@ -162,15 +157,11 @@ export const createTagTask = async (
       '[data-testid="select-assignee"] > .ant-select-selector #assignees'
     );
     await assigneeField.click();
-
-    const userSearchResponse = page.waitForResponse(
-      `/api/v1/search/query?q=*${value.assignee}**&index=user%2Cteam*`
-    );
     await assigneeField.fill(value.assignee);
-    await userSearchResponse;
 
     // select value from dropdown
     const dropdownValue = page.getByTestId(value.assignee);
+    await expect(dropdownValue).toBeVisible();
     await dropdownValue.hover();
     await dropdownValue.click();
     await clickOutside(page);

@@ -1641,26 +1641,19 @@ export const selectDomainFromNavbar = async (
     state: 'visible',
   });
   const searchBar = domainTree.getByTestId('searchbar');
-  const domainOption = domainTree
-    .locator('.ant-select-tree-title, .ant-select-tree-node-content-wrapper')
-    .filter({ hasText: domain.displayName ?? domain.name })
-    .first();
-  const searchTerm = domain.name ?? domain.displayName;
+  const searchTerm = domain.displayName ?? domain.name;
+  const domainOption = page.getByTestId(`tag-${domain.fullyQualifiedName}`);
 
   await expect
     .poll(
       async () => {
-        const searchDomainRes = page
-          .waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/search/query') &&
-              response.url().includes('index=domain')
-          )
-          .catch(() => undefined);
+        if (!(await domainTree.isVisible().catch(() => false))) {
+          await page.getByTestId('domain-dropdown').click();
+          await domainTree.waitFor({ state: 'visible' });
+        }
 
         await searchBar.fill('');
         await searchBar.fill(searchTerm);
-        await searchDomainRes;
 
         return await domainOption.isVisible().catch(() => false);
       },

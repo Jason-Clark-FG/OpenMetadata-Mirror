@@ -25,6 +25,7 @@ import {
   getEditableTaskPayload,
   getTaskFormHandlerConfig,
   getTaskResolutionNewValue,
+  shouldRequireTaskResolutionValue,
 } from './TaskFormSchemaUtils';
 
 describe('TaskFormSchemaUtils', () => {
@@ -69,13 +70,17 @@ describe('TaskFormSchemaUtils', () => {
     });
   });
 
-  it('returns undefined for unsupported schema bindings', () => {
+  it('returns the default approval schema', () => {
     const schema = getDefaultTaskFormSchema(
       TaskEntityType.RequestApproval,
       TaskCategory.Approval
     );
 
-    expect(schema).toBeUndefined();
+    expect(schema?.taskType).toBe(TaskEntityType.RequestApproval);
+    expect(schema?.uiSchema?.['ui:handler']).toEqual({
+      type: 'approval',
+      permission: 'EDIT_ALL',
+    });
   });
 
   it('applies explicit schema defaults without overwriting existing payload values', () => {
@@ -382,5 +387,35 @@ describe('TaskFormSchemaUtils', () => {
         },
       ])
     );
+  });
+
+  it('treats payload-mode resolutions as payload-driven instead of requiring newValue', () => {
+    const task = {
+      id: 'task-id',
+      taskId: 'TASK-00007',
+      name: 'custom-payload-resolution',
+      category: TaskCategory.Custom,
+      type: TaskEntityType.CustomTask,
+      status: TaskEntityStatus.Open,
+      priority: TaskPriority.Medium,
+      payload: {},
+    } as Task;
+
+    const uiSchema = {
+      'ui:resolution': {
+        mode: 'payload',
+      },
+    };
+
+    expect(
+      getTaskResolutionNewValue(
+        task,
+        {
+          proposedText: 'Schema-driven payload',
+        },
+        uiSchema
+      )
+    ).toBeUndefined();
+    expect(shouldRequireTaskResolutionValue(uiSchema)).toBe(false);
   });
 });

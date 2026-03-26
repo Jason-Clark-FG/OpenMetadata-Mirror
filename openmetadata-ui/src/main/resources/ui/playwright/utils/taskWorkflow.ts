@@ -228,20 +228,10 @@ export const selectAssignee = async (page: Page, assigneeName: string) => {
   const assigneeInput = page.locator(
     '[data-testid="select-assignee"] .ant-select-selection-search input'
   );
+  const assigneeOption = page.getByTestId(assigneeName).first();
 
   await assigneeInput.click();
-
-  const userSearchResponse = page.waitForResponse(
-    (response) =>
-      response.url().includes('/api/v1/search/query') &&
-      (response.url().includes('user_search_index') ||
-        response.url().includes('team_search_index'))
-  );
-
   await assigneeInput.fill(assigneeName);
-  await userSearchResponse;
-
-  const assigneeOption = page.getByTestId(assigneeName).first();
   await expect(assigneeOption).toBeVisible();
   await assigneeOption.click();
   await clickOutside(page);

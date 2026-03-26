@@ -17,11 +17,14 @@ import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.Entity.TASK_FORM_SCHEMA;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
+import org.openmetadata.schema.type.SuggestionPayload;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.tasks.TaskFormSchemaValidator;
@@ -138,15 +141,35 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
   }
 
   public Optional<TaskFormSchema> resolve(String taskType, String taskCategory) {
+    return resolve(taskType, taskCategory, null);
+  }
+
+  public Optional<TaskFormSchema> resolve(String taskType, String taskCategory, Object payload) {
     if (taskType == null || taskType.isBlank()) {
       return Optional.empty();
     }
 
-    String cacheKey = taskType + "::" + (taskCategory == null ? "" : taskCategory);
-    return schemaCache.computeIfAbsent(cacheKey, key -> resolveUncached(taskType, taskCategory));
+    String cacheKey =
+        taskType
+            + "::"
+            + (taskCategory == null ? "" : taskCategory)
+            + "::"
+            + getSuggestionSchemaName(payload).orElse("");
+    return schemaCache.computeIfAbsent(
+        cacheKey, key -> resolveUncached(taskType, taskCategory, payload));
   }
 
   private Optional<TaskFormSchema> resolveUncached(String taskType, String taskCategory) {
+    return resolveUncached(taskType, taskCategory, null);
+  }
+
+  private Optional<TaskFormSchema> resolveUncached(
+      String taskType, String taskCategory, Object payload) {
+    Optional<TaskFormSchema> directMatch = resolveSuggestionSchema(taskType, taskCategory, payload);
+    if (directMatch.isPresent()) {
+      return directMatch;
+    }
+
     ListFilter filter = new ListFilter(NON_DELETED);
     filter.addQueryParam("taskFormType", taskType);
     if (taskCategory != null && !taskCategory.isBlank()) {
@@ -158,6 +181,12 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
       return Optional.empty();
     }
     if (matches.size() > 1) {
+      Optional<TaskFormSchema> discriminated = disambiguateMatch(taskType, matches, payload);
+      if (discriminated.isPresent()) {
+        return discriminated;
+      }
+    }
+    if (matches.size() > 1) {
       throw new IllegalArgumentException(
           String.format(
               "Multiple task form schemas found for taskType='%s' and taskCategory='%s'",
@@ -166,14 +195,132 @@ public class TaskFormSchemaRepository extends EntityRepository<TaskFormSchema> {
     return Optional.of(matches.get(0));
   }
 
+  private Optional<TaskFormSchema> resolveSuggestionSchema(
+      String taskType, String taskCategory, Object payload) {
+    if (!"Suggestion".equals(taskType)) {
+      return Optional.empty();
+    }
+
+    Optional<String> suggestionSchemaName = getSuggestionSchemaName(payload);
+    if (suggestionSchemaName.isEmpty()) {
+      return Optional.empty();
+    }
+
+    TaskFormSchema schema = findByNameOrNull(suggestionSchemaName.get(), NON_DELETED);
+    if (schema == null) {
+      return Optional.empty();
+    }
+
+    boolean typeMatches = taskType.equals(schema.getTaskType());
+    boolean categoryMatches =
+        taskCategory == null
+            || taskCategory.isBlank()
+            || taskCategory.equals(schema.getTaskCategory());
+
+    return typeMatches && categoryMatches ? Optional.of(schema) : Optional.empty();
+  }
+
   private void validateUniqueTaskSchemaBinding(TaskFormSchema schema) {
+    List<TaskFormSchema> matches =
+        listByTaskBinding(schema.getTaskType(), schema.getTaskCategory());
+
+    if (matches.size() > 1) {
+      boolean updatingExistingVariant =
+          matches.stream().anyMatch(existing -> existing.getId().equals(schema.getId()));
+      if (updatingExistingVariant) {
+        return;
+      }
+    }
+
     Optional<TaskFormSchema> existing =
-        resolveUncached(schema.getTaskType(), schema.getTaskCategory());
+        resolveUncached(schema.getTaskType(), schema.getTaskCategory(), null);
     if (existing.isPresent() && !existing.get().getId().equals(schema.getId())) {
       throw new IllegalArgumentException(
           String.format(
               "A task form schema already exists for taskType='%s' and taskCategory='%s'",
               schema.getTaskType(), schema.getTaskCategory()));
     }
+  }
+
+  private List<TaskFormSchema> listByTaskBinding(String taskType, String taskCategory) {
+    ListFilter filter = new ListFilter(NON_DELETED);
+    filter.addQueryParam("taskFormType", taskType);
+    if (taskCategory != null && !taskCategory.isBlank()) {
+      filter.addQueryParam("taskFormCategory", taskCategory);
+    }
+    return listAll(getFields(""), filter);
+  }
+
+  private Optional<TaskFormSchema> disambiguateMatch(
+      String taskType, List<TaskFormSchema> matches, Object payload) {
+    if (!"Suggestion".equals(taskType)) {
+      return Optional.empty();
+    }
+
+    Optional<String> suggestionSchemaName = getSuggestionSchemaName(payload);
+    if (suggestionSchemaName.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return matches.stream()
+        .filter(
+            schema ->
+                suggestionSchemaName.get().equals(schema.getName())
+                    || suggestionSchemaName.get().equals(schema.getFullyQualifiedName()))
+        .findFirst();
+  }
+
+  private Optional<String> getSuggestionSchemaName(Object payload) {
+    if (payload == null) {
+      return Optional.empty();
+    }
+
+    Optional<String> rawSuggestionType = getRawSuggestionType(payload);
+    if (rawSuggestionType.isPresent()) {
+      return mapSuggestionTypeToSchema(rawSuggestionType.get());
+    }
+
+    SuggestionPayload suggestionPayload;
+    if (payload instanceof SuggestionPayload typedPayload) {
+      suggestionPayload = typedPayload;
+    } else {
+      try {
+        suggestionPayload = JsonUtils.convertValue(payload, SuggestionPayload.class);
+      } catch (Exception ignored) {
+        return Optional.empty();
+      }
+    }
+
+    if (suggestionPayload.getSuggestionType() == null) {
+      return Optional.empty();
+    }
+
+    return mapSuggestionTypeToSchema(suggestionPayload.getSuggestionType().value());
+  }
+
+  private Optional<String> getRawSuggestionType(Object payload) {
+    try {
+      Map<String, Object> payloadMap = JsonUtils.getMap(payload);
+      Object suggestionType = payloadMap.get("suggestionType");
+      if (suggestionType != null) {
+        return Optional.of(String.valueOf(suggestionType));
+      }
+    } catch (Exception ignored) {
+      // Fall back to typed conversion below.
+    }
+
+    return Optional.empty();
+  }
+
+  private Optional<String> mapSuggestionTypeToSchema(String suggestionType) {
+    if (suggestionType == null || suggestionType.isBlank()) {
+      return Optional.empty();
+    }
+
+    return switch (suggestionType.trim().toLowerCase(Locale.ROOT)) {
+      case "description" -> Optional.of("DescriptionSuggestion");
+      case "tag" -> Optional.of("TagSuggestion");
+      default -> Optional.empty();
+    };
   }
 }

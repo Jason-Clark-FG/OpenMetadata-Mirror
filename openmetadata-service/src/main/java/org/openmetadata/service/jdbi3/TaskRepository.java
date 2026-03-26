@@ -621,14 +621,17 @@ public class TaskRepository extends EntityRepository<Task> {
   }
 
   private void validatePayloadAgainstFormSchema(Task task) {
-    if (task.getType() == null || task.getCategory() == null) {
+    if (task.getType() == null) {
       return;
     }
 
     TaskFormSchemaRepository schemaRepository =
         (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
     schemaRepository
-        .resolve(task.getType().value(), task.getCategory().value())
+        .resolve(
+            task.getType().value(),
+            task.getCategory() != null ? task.getCategory().value() : null,
+            task.getPayload())
         .ifPresent(
             schema ->
                 TaskFormSchemaValidator.validatePayload(schema.getFormSchema(), task.getPayload()));
@@ -646,8 +649,35 @@ public class TaskRepository extends EntityRepository<Task> {
    * @param user The user resolving the task
    * @return The updated task, or null if still waiting for more approvals
    */
-  public Task resolveTaskWithWorkflow(Task task, boolean approved, String newValue, String user) {
-    return TaskWorkflowHandler.getInstance().resolveTask(task, approved, newValue, user);
+  public Task resolveTaskWithWorkflow(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
+    validateResolutionPayloadAgainstFormSchema(task, resolvedPayload, newValue);
+    return TaskWorkflowHandler.getInstance()
+        .resolveTask(task, approved, newValue, resolvedPayload, user);
+  }
+
+  private void validateResolutionPayloadAgainstFormSchema(
+      Task task, Object resolvedPayload, String newValue) {
+    if (task.getType() == null) {
+      return;
+    }
+
+    if (resolvedPayload == null && newValue == null) {
+      return;
+    }
+
+    TaskFormSchemaRepository schemaRepository =
+        (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
+    schemaRepository
+        .resolve(
+            task.getType().value(),
+            task.getCategory() != null ? task.getCategory().value() : null,
+            resolvedPayload != null ? resolvedPayload : task.getPayload())
+        .ifPresent(
+            schema ->
+                TaskFormSchemaValidator.validatePayload(
+                    schema.getFormSchema(),
+                    TaskWorkflowHandler.mergeResolutionPayload(task, resolvedPayload, newValue)));
   }
 
   /**

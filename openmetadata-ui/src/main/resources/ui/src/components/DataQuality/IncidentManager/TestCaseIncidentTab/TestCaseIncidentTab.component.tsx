@@ -65,6 +65,12 @@ const TestCaseIncidentTab = () => {
   );
 
   useEffect(() => {
+    if (decodedFqn) {
+      handleFeedFetchFromFeedList();
+    }
+  }, [decodedFqn, handleFeedFetchFromFeedList]);
+
+  useEffect(() => {
     if (decodedFqn && isInView && entityPaging.after && !loading) {
       handleFeedFetchFromFeedList(entityPaging.after);
     }

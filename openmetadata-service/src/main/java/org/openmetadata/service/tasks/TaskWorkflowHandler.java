@@ -19,30 +19,29 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
-import org.openmetadata.schema.type.DomainUpdatePayload;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
-import org.openmetadata.schema.type.OwnershipUpdatePayload;
 import org.openmetadata.schema.type.TagLabel;
-import org.openmetadata.schema.type.TagUpdatePayload;
 import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskResolution;
 import org.openmetadata.schema.type.TaskResolutionType;
-import org.openmetadata.schema.type.TierUpdatePayload;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
+import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionAction;
 import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionBinding;
+import org.openmetadata.service.tasks.TaskFormExecutionResolver.TaskExecutionPlan;
 import org.openmetadata.service.util.EntityFieldUtils;
 import org.openmetadata.service.util.FieldPathUtils;
 
@@ -90,7 +89,8 @@ public class TaskWorkflowHandler {
    * @return The updated task. Workflow-managed tasks may remain open while waiting for more
    *     approvals.
    */
-  public Task resolveTask(Task task, boolean approved, String newValue, String user) {
+  public Task resolveTask(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
     UUID taskId = task.getId();
     LOG.info(
         "[TaskWorkflowHandler] Resolving task: id='{}', approved={}, user='{}'",
@@ -103,16 +103,17 @@ public class TaskWorkflowHandler {
     boolean isWorkflowManaged = isWorkflowManaged(task);
 
     if (isWorkflowManaged) {
-      return resolveWorkflowTask(task, approved, newValue, user);
+      return resolveWorkflowTask(task, approved, newValue, resolvedPayload, user);
     } else {
-      return resolveStandaloneTask(task, approved, newValue, user);
+      return resolveStandaloneTask(task, approved, newValue, resolvedPayload, user);
     }
   }
 
   /**
    * Resolve a task that is managed by a Flowable workflow.
    */
-  private Task resolveWorkflowTask(Task task, boolean approved, String newValue, String user) {
+  private Task resolveWorkflowTask(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
     UUID taskId = task.getId();
     WorkflowHandler workflowHandler = WorkflowHandler.getInstance();
 
@@ -122,6 +123,9 @@ public class TaskWorkflowHandler {
     variables.put(UPDATED_BY_VARIABLE, user);
     if (newValue != null) {
       variables.put("newValue", newValue);
+    }
+    if (resolvedPayload != null) {
+      variables.put("payload", resolvedPayload);
     }
 
     // Resolve in Flowable workflow
@@ -133,31 +137,34 @@ public class TaskWorkflowHandler {
       LOG.warn(
           "[TaskWorkflowHandler] Workflow resolution failed for task '{}', applying directly",
           taskId);
-      return resolveStandaloneTask(task, approved, newValue, user);
+      return resolveStandaloneTask(task, approved, newValue, resolvedPayload, user);
     }
 
     // Check if multi-approval task is still waiting for more votes
     if (workflowHandler.isTaskStillOpen(taskId)) {
       LOG.info("[TaskWorkflowHandler] Task '{}' still open, waiting for more approvals", taskId);
+      persistEditedWorkflowPayload(task, resolvedPayload, newValue, user);
       updateTaskVotes(task, user, approved);
       return refreshTask(taskId);
     }
 
     // Task threshold met, apply resolution
-    return applyTaskResolution(task, approved, newValue, user);
+    return applyTaskResolution(task, approved, newValue, resolvedPayload, user);
   }
 
   /**
    * Resolve a standalone task (not managed by a workflow).
    */
-  private Task resolveStandaloneTask(Task task, boolean approved, String newValue, String user) {
-    return applyTaskResolution(task, approved, newValue, user);
+  private Task resolveStandaloneTask(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
+    return applyTaskResolution(task, approved, newValue, resolvedPayload, user);
   }
 
   /**
    * Apply the task resolution: update entity and mark task as resolved.
    */
-  private Task applyTaskResolution(Task task, boolean approved, String newValue, String user) {
+  private Task applyTaskResolution(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
     UUID taskId = task.getId();
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
 
@@ -176,12 +183,11 @@ public class TaskWorkflowHandler {
     }
 
     // Apply entity changes based on task type
-    if (approved && task.getAbout() != null) {
-      applyEntityChanges(task, newValue, user);
+    if (task.getAbout() != null) {
+      applyEntityChanges(task, approved, newValue, resolvedPayload, user);
     } else {
       LOG.info(
-          "[TaskWorkflowHandler] Skipping entity changes: approved={}, aboutPresent={}",
-          approved,
+          "[TaskWorkflowHandler] Skipping entity changes: aboutPresent={}",
           task.getAbout() != null);
     }
 
@@ -209,6 +215,51 @@ public class TaskWorkflowHandler {
         resolutionType);
 
     return refreshTask(taskId, task);
+  }
+
+  public static Object mergeResolutionPayload(Task task, Object resolvedPayload, String newValue) {
+    if (task == null) {
+      return resolvedPayload;
+    }
+
+    Map<String, Object> mergedPayload = new LinkedHashMap<>();
+    if (task.getPayload() != null) {
+      mergedPayload.putAll(
+          JsonUtils.convertValue(task.getPayload(), new TypeReference<Map<String, Object>>() {}));
+    }
+    if (resolvedPayload != null) {
+      mergedPayload.putAll(
+          JsonUtils.convertValue(resolvedPayload, new TypeReference<Map<String, Object>>() {}));
+    }
+
+    TaskExecutionBinding binding = TaskFormExecutionResolver.resolve(task);
+    if (newValue != null
+        && binding.valueField() != null
+        && !mergedPayload.containsKey(binding.valueField())) {
+      mergedPayload.put(binding.valueField(), newValue);
+    }
+
+    return mergedPayload;
+  }
+
+  private void persistEditedWorkflowPayload(
+      Task task, Object resolvedPayload, String newValue, String user) {
+    if (resolvedPayload == null && newValue == null) {
+      return;
+    }
+
+    try {
+      TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+      task.setPayload(mergeResolutionPayload(task, resolvedPayload, newValue));
+      task.setUpdatedBy(user);
+      task.setUpdatedAt(System.currentTimeMillis());
+      taskRepository.createOrUpdate(null, task, user);
+    } catch (Exception e) {
+      LOG.warn(
+          "[TaskWorkflowHandler] Failed to persist edited payload for workflow task '{}': {}",
+          task.getId(),
+          e.getMessage());
+    }
   }
 
   /**
@@ -275,10 +326,13 @@ public class TaskWorkflowHandler {
   /**
    * Apply changes to the entity based on task type and payload.
    */
-  private void applyEntityChanges(Task task, String newValue, String user) {
+  private void applyEntityChanges(
+      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
     TaskEntityType taskType = task.getType();
     EntityReference aboutRef = task.getAbout();
     TaskExecutionBinding binding = TaskFormExecutionResolver.resolve(task);
+    TaskExecutionPlan executionPlan = TaskFormExecutionResolver.resolveExecutionPlan(task);
+    Object effectivePayload = mergeResolutionPayload(task, resolvedPayload, newValue);
 
     LOG.info(
         "[TaskWorkflowHandler] applyEntityChanges called: taskId='{}', taskType={}, newValue='{}', aboutRef={}",
@@ -298,43 +352,59 @@ public class TaskWorkflowHandler {
       EntityInterface entity = Entity.getEntity(aboutRef, "*", Include.ALL);
       EntityRepository<?> repository = Entity.getEntityRepository(aboutRef.getType());
 
-      switch (binding.handlerType()) {
-        case APPROVAL -> applyGlossaryApproval(entity, repository, user);
-        case DESCRIPTION_UPDATE -> applyDescriptionUpdate(
-            task, entity, repository, user, newValue, binding);
-        case TAG_UPDATE -> applyTagUpdate(task, entity, repository, user, newValue, binding);
-        case OWNERSHIP_UPDATE -> applyOwnershipUpdate(task, entity, repository, user);
-        case TIER_UPDATE -> applyTierUpdate(task, entity, repository, user);
-        case DOMAIN_UPDATE -> applyDomainUpdate(task, entity, repository, user);
-        case SUGGESTION -> applySuggestion(task, entity, repository, user);
-        default -> LOG.debug("No entity changes for task type: {}", taskType);
+      List<TaskExecutionAction> actions =
+          approved ? executionPlan.approveActions() : executionPlan.rejectActions();
+      if (actions == null || actions.isEmpty()) {
+        if (binding.handlerType() == TaskFormExecutionResolver.HandlerType.SUGGESTION) {
+          applySuggestion(task, effectivePayload, entity, repository, user);
+        } else {
+          LOG.debug("No entity changes configured for task type: {}", taskType);
+        }
+
+        return;
       }
+
+      executeConfiguredActions(actions, task, entity, repository, user, effectivePayload, newValue);
     } catch (Exception e) {
       LOG.error(
           "[TaskWorkflowHandler] Failed to apply entity changes for task '{}'", task.getId(), e);
     }
   }
 
-  private void applyGlossaryApproval(
-      EntityInterface entity, EntityRepository<?> repository, String user) {
-    // Set entity status to Approved
-    try {
-      EntityFieldUtils.setEntityField(
-          entity, entity.getEntityReference().getType(), user, "entityStatus", "Approved", true);
-      LOG.info("[TaskWorkflowHandler] Applied GlossaryApproval for entity '{}'", entity.getName());
-    } catch (Exception e) {
-      LOG.error("[TaskWorkflowHandler] Failed to apply GlossaryApproval", e);
+  private void executeConfiguredActions(
+      List<TaskExecutionAction> actions,
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      Object payload,
+      String newValue) {
+    for (TaskExecutionAction action : actions) {
+      switch (action.actionType()) {
+        case SET_DESCRIPTION -> applyDescriptionAction(
+            task, entity, repository, user, newValue, payload, action);
+        case MERGE_TAGS -> applyMergeTagsAction(
+            task, entity, repository, user, newValue, payload, action);
+        case REPLACE_OWNERS -> applyReplaceOwnersAction(
+            task, entity, repository, user, payload, action);
+        case APPLY_TIER -> applyApplyTierAction(task, entity, repository, user, payload, action);
+        case REPLACE_DOMAINS -> applyReplaceDomainsAction(
+            task, entity, repository, user, payload, action);
+        case PATCH_ENTITY_FIELD -> applyPatchEntityFieldAction(task, entity, user, payload, action);
+        case APPLY_SUGGESTION -> applySuggestion(task, payload, entity, repository, user);
+        default -> LOG.debug("Unsupported task execution action '{}'", action.actionType());
+      }
     }
   }
 
-  private void applyDescriptionUpdate(
+  private void applyDescriptionAction(
       Task task,
       EntityInterface entity,
       EntityRepository<?> repository,
       String user,
       String newValue,
-      TaskExecutionBinding binding) {
-    Object payload = task.getPayload();
+      Object payload,
+      TaskExecutionAction action) {
 
     LOG.info(
         "[TaskWorkflowHandler] applyDescriptionUpdate: taskId='{}', entity='{}'",
@@ -348,12 +418,12 @@ public class TaskWorkflowHandler {
 
       if (payload != null) {
         JsonNode payloadNode = JsonUtils.valueToTree(payload);
-        fieldPath = readPayloadString(payloadNode, binding.fieldPathField(), "fieldPath");
+        fieldPath = readPayloadString(payloadNode, action.fieldPathField(), "fieldPath");
         if (fieldPath == null || fieldPath.isEmpty()) {
           fieldPath = payloadNode.path("field").asText(null);
         }
         if (newDescription == null || newDescription.isEmpty()) {
-          newDescription = readPayloadString(payloadNode, binding.valueField(), "suggestedValue");
+          newDescription = readPayloadString(payloadNode, action.valueField(), "suggestedValue");
         }
       }
 
@@ -385,15 +455,14 @@ public class TaskWorkflowHandler {
     }
   }
 
-  private void applyTagUpdate(
+  private void applyMergeTagsAction(
       Task task,
       EntityInterface entity,
       EntityRepository<?> repository,
       String user,
       String newValue,
-      TaskExecutionBinding binding) {
-    Object payload = task.getPayload();
-
+      Object payload,
+      TaskExecutionAction action) {
     try {
       String targetFqn = entity.getFullyQualifiedName();
       List<TagLabel> tagsToAdd = null;
@@ -402,20 +471,14 @@ public class TaskWorkflowHandler {
       // Try to get tags from payload first (new format with tagsToAdd/tagsToRemove)
       if (payload != null) {
         JsonNode payloadNode = JsonUtils.valueToTree(payload);
-        String fieldPath = readPayloadString(payloadNode, binding.fieldPathField(), "fieldPath");
+        String fieldPath = readPayloadString(payloadNode, action.fieldPathField(), "fieldPath");
         if (fieldPath != null && !fieldPath.isEmpty()) {
           targetFqn = resolveTagTargetFqn(entity, fieldPath);
         }
 
         tagsToAdd =
-            readTagLabels(payloadNode, binding.addTagsField(), "tagsToAdd", "suggestedValue");
-        tagsToRemove = readTagLabels(payloadNode, binding.removeTagsField(), "tagsToRemove", null);
-
-        if (tagsToAdd == null && tagsToRemove == null) {
-          TagUpdatePayload tagPayload = JsonUtils.convertValue(payload, TagUpdatePayload.class);
-          tagsToAdd = tagPayload.getTagsToAdd();
-          tagsToRemove = tagPayload.getTagsToRemove();
-        }
+            readTagLabels(payloadNode, action.addTagsField(), "tagsToAdd", "suggestedValue");
+        tagsToRemove = readTagLabels(payloadNode, action.removeTagsField(), "tagsToRemove", null);
       }
 
       // If newValue is provided (from resolution), parse it as the final tags to apply
@@ -531,19 +594,21 @@ public class TaskWorkflowHandler {
     return null;
   }
 
-  private void applyOwnershipUpdate(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    Object payload = task.getPayload();
+  private void applyReplaceOwnersAction(
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      Object payload,
+      TaskExecutionAction action) {
     if (payload == null) {
       LOG.warn("[TaskWorkflowHandler] No payload for OwnershipUpdate task '{}'", task.getId());
       return;
     }
 
     try {
-      OwnershipUpdatePayload ownerPayload =
-          JsonUtils.convertValue(payload, OwnershipUpdatePayload.class);
-
-      List<EntityReference> newOwners = ownerPayload.getNewOwners();
+      List<EntityReference> newOwners =
+          readEntityReferences(payload, action.payloadField(), "newOwners");
       if (newOwners == null || newOwners.isEmpty()) {
         LOG.warn("[TaskWorkflowHandler] No new owners specified in OwnershipUpdate payload");
         return;
@@ -566,18 +631,20 @@ public class TaskWorkflowHandler {
     }
   }
 
-  private void applyTierUpdate(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    Object payload = task.getPayload();
+  private void applyApplyTierAction(
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      Object payload,
+      TaskExecutionAction action) {
     if (payload == null) {
       LOG.warn("[TaskWorkflowHandler] No payload for TierUpdate task '{}'", task.getId());
       return;
     }
 
     try {
-      TierUpdatePayload tierPayload = JsonUtils.convertValue(payload, TierUpdatePayload.class);
-
-      TagLabel newTier = tierPayload.getNewTier();
+      TagLabel newTier = readTagLabel(payload, action.payloadField(), "newTier");
       if (newTier == null) {
         LOG.warn("[TaskWorkflowHandler] No new tier specified in TierUpdate payload");
         return;
@@ -594,26 +661,28 @@ public class TaskWorkflowHandler {
     }
   }
 
-  private void applyDomainUpdate(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    Object payload = task.getPayload();
+  private void applyReplaceDomainsAction(
+      Task task,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user,
+      Object payload,
+      TaskExecutionAction action) {
     if (payload == null) {
       LOG.warn("[TaskWorkflowHandler] No payload for DomainUpdate task '{}'", task.getId());
       return;
     }
 
     try {
-      DomainUpdatePayload domainPayload =
-          JsonUtils.convertValue(payload, DomainUpdatePayload.class);
-
-      EntityReference newDomain = domainPayload.getNewDomain();
-      if (newDomain == null) {
+      List<EntityReference> newDomains =
+          readEntityReferences(payload, action.payloadField(), "newDomain");
+      if (newDomains == null || newDomains.isEmpty()) {
         LOG.warn("[TaskWorkflowHandler] No new domain specified in DomainUpdate payload");
         return;
       }
 
       String originalJson = JsonUtils.pojoToJson(entity);
-      entity.setDomains(List.of(newDomain));
+      entity.setDomains(newDomains);
       String updatedJson = JsonUtils.pojoToJson(entity);
 
       jakarta.json.JsonPatch patch = JsonUtils.getJsonPatch(originalJson, updatedJson);
@@ -622,16 +691,49 @@ public class TaskWorkflowHandler {
         LOG.info(
             "[TaskWorkflowHandler] Applied DomainUpdate for entity '{}': domain={}",
             entity.getName(),
-            newDomain.getFullyQualifiedName());
+            newDomains.get(0).getFullyQualifiedName());
       }
     } catch (Exception e) {
       LOG.error("[TaskWorkflowHandler] Failed to apply DomainUpdate: {}", e.getMessage(), e);
     }
   }
 
+  private void applyPatchEntityFieldAction(
+      Task task, EntityInterface entity, String user, Object payload, TaskExecutionAction action) {
+    if (action.entityField() == null) {
+      LOG.warn(
+          "[TaskWorkflowHandler] Missing entity field binding for patchEntityField action on task '{}'",
+          task.getId());
+      return;
+    }
+
+    try {
+      Object value =
+          action.payloadField() != null
+              ? readPayloadObject(payload, action.payloadField(), null)
+              : action.staticValue();
+      EntityFieldUtils.setEntityField(
+          entity,
+          entity.getEntityReference().getType(),
+          user,
+          action.entityField(),
+          value == null ? null : String.valueOf(value),
+          true);
+    } catch (Exception e) {
+      LOG.error(
+          "[TaskWorkflowHandler] Failed to apply patchEntityField action for task '{}': {}",
+          task.getId(),
+          e.getMessage(),
+          e);
+    }
+  }
+
   private void applySuggestion(
-      Task task, EntityInterface entity, EntityRepository<?> repository, String user) {
-    Object payload = task.getPayload();
+      Task task,
+      Object payload,
+      EntityInterface entity,
+      EntityRepository<?> repository,
+      String user) {
     if (payload == null) return;
 
     try {
@@ -701,6 +803,54 @@ public class TaskWorkflowHandler {
     if (patch != null && !patch.toJsonArray().isEmpty()) {
       repository.patch(null, entity.getId(), user, patch, null, null);
     }
+  }
+
+  private List<EntityReference> readEntityReferences(
+      Object payload, String preferredField, String fallbackField) {
+    JsonNode payloadNode = JsonUtils.valueToTree(payload);
+    JsonNode node = preferredField != null ? payloadNode.get(preferredField) : null;
+    if (node == null && fallbackField != null) {
+      node = payloadNode.get(fallbackField);
+    }
+
+    if (node == null || node.isNull()) {
+      return null;
+    }
+
+    if (node.isArray()) {
+      return JsonUtils.convertValue(node, new TypeReference<List<EntityReference>>() {});
+    }
+
+    EntityReference entityReference = JsonUtils.convertValue(node, EntityReference.class);
+    return entityReference == null ? null : List.of(entityReference);
+  }
+
+  private TagLabel readTagLabel(Object payload, String preferredField, String fallbackField) {
+    JsonNode payloadNode = JsonUtils.valueToTree(payload);
+    JsonNode node = preferredField != null ? payloadNode.get(preferredField) : null;
+    if (node == null && fallbackField != null) {
+      node = payloadNode.get(fallbackField);
+    }
+
+    if (node == null || node.isNull()) {
+      return null;
+    }
+
+    return JsonUtils.convertValue(node, TagLabel.class);
+  }
+
+  private Object readPayloadObject(Object payload, String preferredField, String fallbackField) {
+    JsonNode payloadNode = JsonUtils.valueToTree(payload);
+    JsonNode node = preferredField != null ? payloadNode.get(preferredField) : null;
+    if (node == null && fallbackField != null) {
+      node = payloadNode.get(fallbackField);
+    }
+
+    if (node == null || node.isNull()) {
+      return null;
+    }
+
+    return JsonUtils.convertValue(node, Object.class);
   }
 
   /**

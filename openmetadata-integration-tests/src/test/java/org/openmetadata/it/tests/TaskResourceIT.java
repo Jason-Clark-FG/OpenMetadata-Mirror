@@ -22,6 +22,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.openmetadata.it.bootstrap.SharedEntities;
 import org.openmetadata.it.factories.APIServiceTestFactory;
 import org.openmetadata.it.factories.ContainerServiceTestFactory;
@@ -40,7 +41,9 @@ import org.openmetadata.schema.api.data.CreateDashboard;
 import org.openmetadata.schema.api.data.CreatePipeline;
 import org.openmetadata.schema.api.data.CreateTopic;
 import org.openmetadata.schema.api.domains.CreateDomain;
+import org.openmetadata.schema.api.tasks.BulkTaskOperation;
 import org.openmetadata.schema.api.tasks.CreateTask;
+import org.openmetadata.schema.api.tasks.Payload;
 import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.api.teams.CreateUser;
@@ -55,6 +58,7 @@ import org.openmetadata.schema.entity.data.Topic;
 import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.feed.FormSchema;
 import org.openmetadata.schema.entity.feed.TaskFormSchema;
+import org.openmetadata.schema.entity.feed.UiSchema;
 import org.openmetadata.schema.entity.services.ApiService;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
@@ -65,6 +69,9 @@ import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.Role;
 import org.openmetadata.schema.type.APIRequestMethod;
 import org.openmetadata.schema.type.APISchema;
+import org.openmetadata.schema.type.BulkTaskOperationParams;
+import org.openmetadata.schema.type.BulkTaskOperationResult;
+import org.openmetadata.schema.type.BulkTaskOperationType;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.ColumnDataType;
 import org.openmetadata.schema.type.ContainerDataModel;
@@ -80,11 +87,13 @@ import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.sdk.client.OpenMetadataClient;
 import org.openmetadata.sdk.exceptions.ForbiddenException;
 import org.openmetadata.sdk.exceptions.InvalidRequestException;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
+import org.openmetadata.sdk.network.HttpMethod;
 
 /**
  * Integration tests for Task entity operations.
@@ -279,11 +288,10 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   }
 
   @Test
+  @ResourceLock("task-form-schema-custom-task-custom")
   void testCreateTaskValidatesPayloadAgainstTaskFormSchema(TestNamespace ns) {
-    TaskFormSchema schema =
+    TaskFormSchema schemaOverride =
         new TaskFormSchema()
-            .withId(UUID.randomUUID())
-            .withName(ns.prefix("custom-task-form"))
             .withTaskType(TaskEntityType.CustomTask.value())
             .withTaskCategory(TaskCategory.Custom.value())
             .withFormSchema(
@@ -292,30 +300,212 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
                     .withAdditionalProperty("required", List.of("reviewNotes"))
                     .withAdditionalProperty(
                         "properties", Map.of("reviewNotes", Map.of("type", "string"))));
-    SdkClients.adminClient().taskFormSchemas().create(schema);
+    TaskFormSchemaOverrideContext schemaOverrideContext =
+        overrideTaskFormSchema(schemaOverride, ns);
 
-    CreateTask invalidRequest =
-        new CreateTask()
-            .withName(ns.prefix("invalid-custom-task"))
-            .withCategory(TaskCategory.Custom)
-            .withType(TaskEntityType.CustomTask)
-            .withPayload(Map.of("approved", true));
+    try {
+      CreateTask invalidRequest =
+          new CreateTask()
+              .withName(ns.prefix("invalid-custom-task"))
+              .withCategory(TaskCategory.Custom)
+              .withType(TaskEntityType.CustomTask)
+              .withPayload(Map.of("approved", true));
 
-    assertThrows(
-        InvalidRequestException.class,
-        () -> SdkClients.adminClient().tasks().create(invalidRequest));
+      assertThrows(
+          InvalidRequestException.class,
+          () -> SdkClients.adminClient().tasks().create(invalidRequest));
 
-    CreateTask validRequest =
-        new CreateTask()
-            .withName(ns.prefix("valid-custom-task"))
-            .withCategory(TaskCategory.Custom)
-            .withType(TaskEntityType.CustomTask)
-            .withPayload(Map.of("reviewNotes", "ready for approval"));
+      CreateTask validRequest =
+          new CreateTask()
+              .withName(ns.prefix("valid-custom-task"))
+              .withCategory(TaskCategory.Custom)
+              .withType(TaskEntityType.CustomTask)
+              .withPayload(Map.of("reviewNotes", "ready for approval"));
 
-    Task task = SdkClients.adminClient().tasks().create(validRequest);
+      Task task = SdkClients.adminClient().tasks().create(validRequest);
 
-    assertNotNull(task);
-    assertEquals("ready for approval", ((Map<?, ?>) task.getPayload()).get("reviewNotes"));
+      assertNotNull(task);
+      assertEquals("ready for approval", ((Map<?, ?>) task.getPayload()).get("reviewNotes"));
+    } finally {
+      restoreTaskFormSchema(schemaOverrideContext);
+    }
+  }
+
+  @Test
+  @ResourceLock("task-form-schema-custom-task-custom")
+  void testResolveTaskUsesSchemaDrivenPayloadAndExecution(TestNamespace ns) {
+    TaskFormSchema schemaOverride =
+        new TaskFormSchema()
+            .withTaskType(TaskEntityType.CustomTask.value())
+            .withTaskCategory(TaskCategory.Custom.value())
+            .withFormSchema(
+                new FormSchema()
+                    .withAdditionalProperty("type", "object")
+                    .withAdditionalProperty("required", List.of("targetField", "proposedText"))
+                    .withAdditionalProperty(
+                        "properties",
+                        Map.of(
+                            "targetField", Map.of("type", "string"),
+                            "proposedText", Map.of("type", "string"),
+                            "reviewNotes", Map.of("type", "string"))))
+            .withUiSchema(
+                new UiSchema()
+                    .withAdditionalProperty(
+                        "ui:handler",
+                        Map.of(
+                            "type",
+                            "custom",
+                            "permission",
+                            "EDIT_DESCRIPTION",
+                            "fieldPathField",
+                            "targetField",
+                            "valueField",
+                            "proposedText"))
+                    .withAdditionalProperty("ui:resolution", Map.of("mode", "payload"))
+                    .withAdditionalProperty(
+                        "ui:execution",
+                        Map.of(
+                            "approve",
+                            Map.of(
+                                "actions",
+                                List.of(
+                                    Map.of(
+                                        "type",
+                                        "setDescription",
+                                        "fieldPathField",
+                                        "targetField",
+                                        "valueField",
+                                        "proposedText"))),
+                            "reject",
+                            Map.of("actions", List.of()))));
+    TaskFormSchemaOverrideContext schemaOverrideContext =
+        overrideTaskFormSchema(schemaOverride, ns);
+
+    try {
+      DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+      DatabaseSchema dbSchema = DatabaseSchemaTestFactory.createSimple(ns, service);
+      Table table = TableTestFactory.createSimple(ns, dbSchema.getFullyQualifiedName());
+
+      Task task =
+          SdkClients.adminClient()
+              .tasks()
+              .create(
+                  new CreateTask()
+                      .withName(ns.prefix("custom-resolution-task"))
+                      .withCategory(TaskCategory.Custom)
+                      .withType(TaskEntityType.CustomTask)
+                      .withAbout(table.getFullyQualifiedName())
+                      .withAboutType("table")
+                      .withPayload(
+                          Map.of(
+                              "targetField",
+                              "description",
+                              "proposedText",
+                              "Initial schema text")));
+
+      ResolveTask resolveRequest =
+          new ResolveTask()
+              .withResolutionType(TaskResolutionType.Approved)
+              .withPayload(
+                  new Payload()
+                      .withAdditionalProperty("targetField", "description")
+                      .withAdditionalProperty("proposedText", "Schema-driven description update")
+                      .withAdditionalProperty("reviewNotes", "approved from configurable form"));
+
+      Task resolvedTask =
+          SdkClients.adminClient().tasks().resolve(task.getId().toString(), resolveRequest);
+      Table updatedTable =
+          SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName());
+
+      assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+      assertEquals("Schema-driven description update", updatedTable.getDescription());
+    } finally {
+      restoreTaskFormSchema(schemaOverrideContext);
+    }
+  }
+
+  @Test
+  @ResourceLock("task-form-schema-custom-task-custom")
+  void testResolveTaskValidatesResolutionPayloadAgainstTaskFormSchema(TestNamespace ns) {
+    TaskFormSchema schemaOverride =
+        new TaskFormSchema()
+            .withTaskType(TaskEntityType.CustomTask.value())
+            .withTaskCategory(TaskCategory.Custom.value())
+            .withFormSchema(
+                new FormSchema()
+                    .withAdditionalProperty("type", "object")
+                    .withAdditionalProperty("required", List.of("targetField", "proposedText"))
+                    .withAdditionalProperty(
+                        "properties",
+                        Map.of(
+                            "targetField", Map.of("type", "string"),
+                            "proposedText", Map.of("type", "string"))))
+            .withUiSchema(
+                new UiSchema()
+                    .withAdditionalProperty(
+                        "ui:handler",
+                        Map.of(
+                            "type",
+                            "custom",
+                            "permission",
+                            "EDIT_DESCRIPTION",
+                            "fieldPathField",
+                            "targetField",
+                            "valueField",
+                            "proposedText"))
+                    .withAdditionalProperty(
+                        "ui:execution",
+                        Map.of(
+                            "approve",
+                            Map.of(
+                                "actions",
+                                List.of(
+                                    Map.of(
+                                        "type",
+                                        "setDescription",
+                                        "fieldPathField",
+                                        "targetField",
+                                        "valueField",
+                                        "proposedText"))))));
+    TaskFormSchemaOverrideContext schemaOverrideContext =
+        overrideTaskFormSchema(schemaOverride, ns);
+
+    try {
+      DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+      DatabaseSchema dbSchema = DatabaseSchemaTestFactory.createSimple(ns, service);
+      Table table = TableTestFactory.createSimple(ns, dbSchema.getFullyQualifiedName());
+
+      Task task =
+          SdkClients.adminClient()
+              .tasks()
+              .create(
+                  new CreateTask()
+                      .withName(ns.prefix("custom-resolution-invalid"))
+                      .withCategory(TaskCategory.Custom)
+                      .withType(TaskEntityType.CustomTask)
+                      .withAbout(table.getFullyQualifiedName())
+                      .withAboutType("table")
+                      .withPayload(
+                          Map.of(
+                              "targetField",
+                              "description",
+                              "proposedText",
+                              "Initial schema text")));
+
+      ResolveTask invalidResolve =
+          new ResolveTask()
+              .withResolutionType(TaskResolutionType.Approved)
+              .withPayload(
+                  new Payload()
+                      .withAdditionalProperty("targetField", "description")
+                      .withAdditionalProperty("proposedText", 42));
+
+      assertThrows(
+          InvalidRequestException.class,
+          () -> SdkClients.adminClient().tasks().resolve(task.getId().toString(), invalidResolve));
+    } finally {
+      restoreTaskFormSchema(schemaOverrideContext);
+    }
   }
 
   @Test
@@ -2996,5 +3186,258 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
         .withType(TaskEntityType.DescriptionUpdate)
         .withAbout(table.getFullyQualifiedName())
         .withAboutType("table");
+  }
+
+  private TaskFormSchemaOverrideContext overrideTaskFormSchema(
+      TaskFormSchema schemaOverride, TestNamespace ns) {
+    List<TaskFormSchema> schemas =
+        SdkClients.adminClient()
+            .taskFormSchemas()
+            .list(
+                new ListParams()
+                    .addQueryParam("taskType", schemaOverride.getTaskType())
+                    .addQueryParam("taskCategory", schemaOverride.getTaskCategory())
+                    .withLimit(1))
+            .getData();
+
+    if (schemas != null && !schemas.isEmpty()) {
+      TaskFormSchema existingSchema = schemas.get(0);
+      TaskFormSchema originalSchema =
+          JsonUtils.readValue(JsonUtils.pojoToJson(existingSchema), TaskFormSchema.class);
+      TaskFormSchema updatedSchema =
+          JsonUtils.readValue(JsonUtils.pojoToJson(existingSchema), TaskFormSchema.class);
+
+      updatedSchema.setFormSchema(schemaOverride.getFormSchema());
+      updatedSchema.setUiSchema(schemaOverride.getUiSchema());
+
+      SdkClients.adminClient()
+          .taskFormSchemas()
+          .update(existingSchema.getId().toString(), updatedSchema);
+
+      return new TaskFormSchemaOverrideContext(originalSchema, null);
+    }
+
+    TaskFormSchema createdSchema =
+        SdkClients.adminClient()
+            .taskFormSchemas()
+            .create(
+                JsonUtils.readValue(
+                    JsonUtils.pojoToJson(
+                        schemaOverride
+                            .withId(UUID.randomUUID())
+                            .withName(ns.prefix("custom-task-form-override"))),
+                    TaskFormSchema.class));
+
+    return new TaskFormSchemaOverrideContext(null, createdSchema.getId().toString());
+  }
+
+  private void restoreTaskFormSchema(TaskFormSchemaOverrideContext context) {
+    if (context.originalSchema != null) {
+      SdkClients.adminClient()
+          .taskFormSchemas()
+          .update(context.originalSchema.getId().toString(), context.originalSchema);
+    } else if (context.createdSchemaId != null) {
+      SdkClients.adminClient()
+          .taskFormSchemas()
+          .delete(context.createdSchemaId, Map.of("hardDelete", "true", "recursive", "true"));
+    }
+  }
+
+  private record TaskFormSchemaOverrideContext(
+      TaskFormSchema originalSchema, String createdSchemaId) {}
+
+  @Test
+  void testApplySuggestionEndpointUsesSuggestionSpecificSchemaResolution(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    String suggestedDescription = "Suggested description from apply endpoint";
+    Map<String, Object> rawSuggestionPayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "description",
+            "suggestedValue", suggestedDescription,
+            "source", "Agent",
+            "confidence", 85.0);
+
+    Task task =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks",
+                Map.of(
+                    "name", ns.prefix("apply-suggestion"),
+                    "description", "Apply suggestion endpoint should work",
+                    "category", TaskCategory.MetadataUpdate.value(),
+                    "type", TaskEntityType.Suggestion.value(),
+                    "about", table.getFullyQualifiedName(),
+                    "aboutType", "table",
+                    "payload", rawSuggestionPayload),
+                Task.class);
+
+    Task appliedTask =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.PUT,
+                "/v1/tasks/" + task.getId() + "/suggestion/apply",
+                null,
+                Task.class);
+
+    assertEquals(TaskEntityStatus.Approved, appliedTask.getStatus());
+
+    Table updatedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "description");
+    assertEquals(suggestedDescription, updatedTable.getDescription());
+  }
+
+  @Test
+  void testBulkApproveSuggestionTasksHandlesGenericPayloads(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createWithColumns(ns, schema.getFullyQualifiedName());
+    Map<String, Object> taskOnePayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "columns::id::description",
+            "suggestedValue", "Column id description",
+            "source", "Agent",
+            "confidence", 90.0);
+    Map<String, Object> taskTwoPayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "columns::name::description",
+            "suggestedValue", "Column name description",
+            "source", "Agent",
+            "confidence", 88.0);
+
+    Task taskOne =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks",
+                Map.of(
+                    "name", ns.prefix("bulk-approve-suggestion-1"),
+                    "description", "Approve suggestion one",
+                    "category", TaskCategory.MetadataUpdate.value(),
+                    "type", TaskEntityType.Suggestion.value(),
+                    "about", table.getFullyQualifiedName(),
+                    "aboutType", "table",
+                    "payload", taskOnePayload),
+                Task.class);
+
+    Task taskTwo =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks",
+                Map.of(
+                    "name", ns.prefix("bulk-approve-suggestion-2"),
+                    "description", "Approve suggestion two",
+                    "category", TaskCategory.MetadataUpdate.value(),
+                    "type", TaskEntityType.Suggestion.value(),
+                    "about", table.getFullyQualifiedName(),
+                    "aboutType", "table",
+                    "payload", taskTwoPayload),
+                Task.class);
+
+    BulkTaskOperationResult result =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks/bulk",
+                new BulkTaskOperation()
+                    .withTaskIds(List.of(taskOne.getId().toString(), taskTwo.getId().toString()))
+                    .withOperation(BulkTaskOperationType.Approve)
+                    .withParams(
+                        new BulkTaskOperationParams().withComment("Bulk approve suggestions")),
+                BulkTaskOperationResult.class);
+
+    assertEquals(2, result.getSuccessful());
+    assertEquals(0, result.getFailed());
+
+    Task updatedTaskOne = SdkClients.adminClient().tasks().get(taskOne.getId().toString());
+    Task updatedTaskTwo = SdkClients.adminClient().tasks().get(taskTwo.getId().toString());
+    assertEquals(TaskEntityStatus.Approved, updatedTaskOne.getStatus());
+    assertEquals(TaskEntityStatus.Approved, updatedTaskTwo.getStatus());
+  }
+
+  @Test
+  void testBulkRejectSuggestionTasksHandlesGenericPayloads(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+    Map<String, Object> taskOnePayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "description",
+            "suggestedValue", "Not good 1",
+            "source", "Agent",
+            "confidence", 10.0);
+    Map<String, Object> taskTwoPayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "description",
+            "suggestedValue", "Not good 2",
+            "source", "Agent",
+            "confidence", 15.0);
+
+    Task taskOne =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks",
+                Map.of(
+                    "name", ns.prefix("bulk-reject-suggestion-1"),
+                    "description", "Reject suggestion one",
+                    "category", TaskCategory.MetadataUpdate.value(),
+                    "type", TaskEntityType.Suggestion.value(),
+                    "about", table.getFullyQualifiedName(),
+                    "aboutType", "table",
+                    "payload", taskOnePayload),
+                Task.class);
+
+    Task taskTwo =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks",
+                Map.of(
+                    "name", ns.prefix("bulk-reject-suggestion-2"),
+                    "description", "Reject suggestion two",
+                    "category", TaskCategory.MetadataUpdate.value(),
+                    "type", TaskEntityType.Suggestion.value(),
+                    "about", table.getFullyQualifiedName(),
+                    "aboutType", "table",
+                    "payload", taskTwoPayload),
+                Task.class);
+
+    BulkTaskOperationResult result =
+        SdkClients.adminClient()
+            .getHttpClient()
+            .execute(
+                HttpMethod.POST,
+                "/v1/tasks/bulk",
+                new BulkTaskOperation()
+                    .withTaskIds(List.of(taskOne.getId().toString(), taskTwo.getId().toString()))
+                    .withOperation(BulkTaskOperationType.Reject)
+                    .withParams(
+                        new BulkTaskOperationParams().withComment("Bulk reject suggestions")),
+                BulkTaskOperationResult.class);
+
+    assertEquals(2, result.getSuccessful());
+    assertEquals(0, result.getFailed());
+
+    Task updatedTaskOne = SdkClients.adminClient().tasks().get(taskOne.getId().toString());
+    Task updatedTaskTwo = SdkClients.adminClient().tasks().get(taskTwo.getId().toString());
+    assertEquals(TaskEntityStatus.Rejected, updatedTaskOne.getStatus());
+    assertEquals(TaskEntityStatus.Rejected, updatedTaskTwo.getStatus());
   }
 }

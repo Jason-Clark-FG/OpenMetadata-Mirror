@@ -519,15 +519,20 @@ test.describe('Activity Feed - Entity Page', () => {
     await openResponse;
     await page.waitForLoadState('networkidle');
 
+    await taskFilterButton.click();
+    await expect(page.locator('.task-filter-container').getByText(/mention/i)).toBeVisible();
+
     const mentionsResponse = page.waitForResponse((response) => {
       if (
         response.request().method() !== 'GET' ||
-        !response.url().includes('/api/v1/tasks')
+        !response.url().includes('/api/v1/feed')
       ) {
         return false;
       }
 
-      return new URL(response.url()).searchParams.has('mentionedUser');
+      const requestUrl = new URL(response.url());
+
+      return requestUrl.searchParams.get('filterType') === 'MENTIONS';
     });
 
     await page.locator('.task-filter-container').getByText(/mention/i).click();

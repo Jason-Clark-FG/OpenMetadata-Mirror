@@ -13,6 +13,7 @@
  */
 
 import test, { expect } from '@playwright/test';
+import { AdminClass } from '../../support/user/AdminClass';
 import { getApiContext, redirectToHomePage, toastNotification, uuid } from '../../utils/common';
 
 const TASK_FORM_SETTINGS_ROUTE = '/settings/governance/task-forms';
@@ -21,12 +22,14 @@ test.use({ storageState: 'playwright/.auth/admin.json' });
 
 test.describe.serial('Task Form Settings', () => {
   test('creates and updates a task form schema from settings', async ({ page }) => {
+    const admin = new AdminClass();
     const schemaName = `PlaywrightTaskForm${uuid()}`;
     const taskType = `PlaywrightType${uuid()}`;
     const updatedDisplayName = `Playwright Display ${uuid()}`;
     let schemaId: string | undefined;
 
     try {
+      await admin.login(page);
       await redirectToHomePage(page);
 
       const listResponse = page.waitForResponse(

@@ -64,7 +64,6 @@ import org.openmetadata.schema.type.BulkTaskOperationType;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
-import org.openmetadata.schema.type.SuggestionPayload;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
@@ -84,7 +83,6 @@ import org.openmetadata.service.resources.EntityResource;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
-import org.openmetadata.service.tasks.SuggestionHandler;
 import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
@@ -781,8 +779,10 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
         resolveTask.getResolutionType() == TaskResolutionType.Approved
             || resolveTask.getResolutionType() == TaskResolutionType.AutoApproved;
     String newValue = resolveTask.getNewValue();
+    Object resolvedPayload = resolveTask.getPayload();
 
-    Task resolvedTask = repository.resolveTaskWithWorkflow(task, approved, newValue, userName);
+    Task resolvedTask =
+        repository.resolveTaskWithWorkflow(task, approved, newValue, resolvedPayload, userName);
     return Response.ok(resolvedTask).build();
   }
 
@@ -1017,30 +1017,14 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       throw new IllegalArgumentException("Task is not a suggestion task. Type: " + task.getType());
     }
 
-    // Convert payload to SuggestionPayload if it's a generic map (from JSON deserialization)
-    Object payload = task.getPayload();
-    if (payload != null && !(payload instanceof SuggestionPayload)) {
-      try {
-        SuggestionPayload suggestionPayload =
-            org.openmetadata.schema.utils.JsonUtils.convertValue(payload, SuggestionPayload.class);
-        task.setPayload(suggestionPayload);
-      } catch (Exception e) {
-        throw new IllegalArgumentException(
-            "Task payload cannot be converted to SuggestionPayload: " + e.getMessage());
-      }
-    }
-
     if (task.getPayload() == null) {
       throw new IllegalArgumentException("Task does not have a payload");
     }
 
     repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
 
-    SuggestionHandler suggestionHandler = new SuggestionHandler();
-    suggestionHandler.approveSuggestion(task, userName, comment);
-
-    repository.storeEntity(task, true);
-    return Response.ok(task).build();
+    Task resolvedTask = repository.resolveTaskWithWorkflow(task, true, null, null, userName);
+    return Response.ok(resolvedTask).build();
   }
 
   // ========================= Bulk Operations Endpoint =========================
@@ -1079,6 +1063,10 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       result.setTaskId(taskIdStr);
 
       try {
+        if (taskIdStr == null || taskIdStr.isBlank()) {
+          throw new IllegalArgumentException("Task ID must not be empty");
+        }
+
         UUID taskId;
         try {
           taskId = UUID.fromString(taskIdStr);
@@ -1129,24 +1117,18 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     switch (operation) {
       case Approve -> {
         repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
-        if (task.getType() == TaskEntityType.Suggestion
-            && task.getPayload() instanceof SuggestionPayload) {
-          SuggestionHandler suggestionHandler = new SuggestionHandler();
-          suggestionHandler.approveSuggestion(task, userName, comment);
-          repository.storeEntity(task, true);
+        if (task.getType() == TaskEntityType.Suggestion && task.getPayload() != null) {
+          repository.resolveTaskWithWorkflow(task, true, null, null, userName);
         } else {
-          repository.resolveTaskWithWorkflow(task, true, null, userName);
+          repository.resolveTaskWithWorkflow(task, true, null, null, userName);
         }
       }
       case Reject -> {
         repository.checkPermissionsForResolveTask(authorizer, task, false, securityContext);
-        if (task.getType() == TaskEntityType.Suggestion
-            && task.getPayload() instanceof SuggestionPayload) {
-          SuggestionHandler suggestionHandler = new SuggestionHandler();
-          suggestionHandler.rejectSuggestion(task, userName, comment);
-          repository.storeEntity(task, true);
+        if (task.getType() == TaskEntityType.Suggestion && task.getPayload() != null) {
+          repository.resolveTaskWithWorkflow(task, false, null, null, userName);
         } else {
-          repository.resolveTaskWithWorkflow(task, false, null, userName);
+          repository.resolveTaskWithWorkflow(task, false, null, null, userName);
         }
       }
       case Assign -> {

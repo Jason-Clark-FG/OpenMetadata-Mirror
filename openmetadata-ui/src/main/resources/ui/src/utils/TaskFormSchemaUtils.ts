@@ -51,6 +51,8 @@ export type TaskFormHandlerConfig = {
   rejectedValue?: string;
 };
 
+const taskFormSchemaCache = new Map<string, Promise<TaskFormSchema | undefined>>();
+
 const descriptionUpdateSchema: TaskFormSchema = {
   name: 'DescriptionUpdate',
   displayName: 'Description Update',
@@ -82,6 +84,20 @@ const descriptionUpdateSchema: TaskFormSchema = {
     'ui:resolution': {
       mode: 'field',
       valueField: 'newDescription',
+    },
+    'ui:execution': {
+      approve: {
+        actions: [
+          {
+            type: 'setDescription',
+            fieldPathField: 'fieldPath',
+            valueField: 'newDescription',
+          },
+        ],
+      },
+      reject: {
+        actions: [],
+      },
     },
     'ui:order': [
       'newDescription',
@@ -149,6 +165,22 @@ const tagUpdateSchema: TaskFormSchema = {
       addField: 'tagsToAdd',
       removeField: 'tagsToRemove',
     },
+    'ui:execution': {
+      approve: {
+        actions: [
+          {
+            type: 'mergeTags',
+            fieldPathField: 'fieldPath',
+            currentTagsField: 'currentTags',
+            addTagsField: 'tagsToAdd',
+            removeTagsField: 'tagsToRemove',
+          },
+        ],
+      },
+      reject: {
+        actions: [],
+      },
+    },
     'ui:order': [
       'tagsToAdd',
       'fieldPath',
@@ -165,6 +197,171 @@ const tagUpdateSchema: TaskFormSchema = {
     source: { 'ui:widget': 'hidden' },
     confidence: { 'ui:widget': 'hidden' },
     tagsToAdd: { 'ui:widget': 'tagsTabs' },
+  },
+};
+
+const approvalSchema: TaskFormSchema = {
+  name: 'Approval',
+  displayName: 'Approval',
+  taskType: TaskEntityType.RequestApproval,
+  taskCategory: TaskCategory.Approval,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      comment: { type: 'string', title: 'Comment' },
+    },
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'approval',
+      permission: 'EDIT_ALL',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
+    comment: { 'ui:widget': 'textarea' },
+  },
+};
+
+const incidentResolutionSchema: TaskFormSchema = {
+  name: 'IncidentResolution',
+  displayName: 'Incident Resolution',
+  taskType: TaskEntityType.TestCaseResolution,
+  taskCategory: TaskCategory.Incident,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      rootCause: { type: 'string', title: 'Root Cause' },
+      resolution: { type: 'string', title: 'Resolution' },
+    },
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'incident',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
+    rootCause: { 'ui:widget': 'textarea' },
+    resolution: { 'ui:widget': 'textarea' },
+  },
+};
+
+const ownershipUpdateSchema: TaskFormSchema = {
+  name: 'OwnershipUpdate',
+  displayName: 'Ownership Update',
+  taskType: TaskEntityType.OwnershipUpdate,
+  taskCategory: TaskCategory.MetadataUpdate,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      currentOwners: { type: 'array', title: 'Current Owners', items: { type: 'object' } },
+      newOwners: { type: 'array', title: 'New Owners', items: { type: 'object' } },
+    },
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'ownershipUpdate',
+      permission: 'EDIT_OWNERS',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
+    'ui:execution': {
+      approve: {
+        actions: [{ type: 'replaceOwners', payloadField: 'newOwners' }],
+      },
+      reject: { actions: [] },
+    },
+    currentOwners: { 'ui:widget': 'hidden' },
+    newOwners: { 'ui:widget': 'textarea' },
+  },
+};
+
+const tierUpdateSchema: TaskFormSchema = {
+  name: 'TierUpdate',
+  displayName: 'Tier Update',
+  taskType: TaskEntityType.TierUpdate,
+  taskCategory: TaskCategory.MetadataUpdate,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      currentTier: { type: 'object', title: 'Current Tier' },
+      newTier: { type: 'object', title: 'New Tier' },
+    },
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'tierUpdate',
+      permission: 'EDIT_TIER',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
+    'ui:execution': {
+      approve: {
+        actions: [{ type: 'applyTier', payloadField: 'newTier' }],
+      },
+      reject: { actions: [] },
+    },
+    currentTier: { 'ui:widget': 'hidden' },
+    newTier: { 'ui:widget': 'textarea' },
+  },
+};
+
+const domainUpdateSchema: TaskFormSchema = {
+  name: 'DomainUpdate',
+  displayName: 'Domain Update',
+  taskType: TaskEntityType.DomainUpdate,
+  taskCategory: TaskCategory.MetadataUpdate,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      currentDomain: { type: 'object', title: 'Current Domain' },
+      newDomain: { type: 'object', title: 'New Domain' },
+    },
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'domainUpdate',
+      permission: 'EDIT_ALL',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
+    'ui:execution': {
+      approve: {
+        actions: [{ type: 'replaceDomains', payloadField: 'newDomain' }],
+      },
+      reject: { actions: [] },
+    },
+    currentDomain: { 'ui:widget': 'hidden' },
+    newDomain: { 'ui:widget': 'textarea' },
+  },
+};
+
+const customTaskSchema: TaskFormSchema = {
+  name: 'CustomTask',
+  displayName: 'Custom Task',
+  taskType: TaskEntityType.CustomTask,
+  taskCategory: TaskCategory.Custom,
+  formSchema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {},
+  },
+  uiSchema: {
+    'ui:handler': {
+      type: 'custom',
+    },
+    'ui:resolution': {
+      mode: 'payload',
+    },
   },
 };
 
@@ -186,6 +383,61 @@ export const getDefaultTaskFormSchema = (
     return tagUpdateSchema;
   }
 
+  if (
+    [TaskEntityType.GlossaryApproval, TaskEntityType.RequestApproval].includes(
+      taskType
+    ) &&
+    taskCategory === TaskCategory.Approval
+  ) {
+    return {
+      ...approvalSchema,
+      taskType,
+      name: taskType,
+      fullyQualifiedName: taskType,
+      displayName: taskType,
+    };
+  }
+
+  if (
+    [TaskEntityType.TestCaseResolution, TaskEntityType.IncidentResolution].includes(
+      taskType
+    ) &&
+    taskCategory === TaskCategory.Incident
+  ) {
+    return {
+      ...incidentResolutionSchema,
+      taskType,
+      name: taskType,
+      fullyQualifiedName: taskType,
+      displayName: taskType,
+    };
+  }
+
+  if (
+    taskType === TaskEntityType.OwnershipUpdate &&
+    taskCategory === TaskCategory.MetadataUpdate
+  ) {
+    return ownershipUpdateSchema;
+  }
+
+  if (
+    taskType === TaskEntityType.TierUpdate &&
+    taskCategory === TaskCategory.MetadataUpdate
+  ) {
+    return tierUpdateSchema;
+  }
+
+  if (
+    taskType === TaskEntityType.DomainUpdate &&
+    taskCategory === TaskCategory.MetadataUpdate
+  ) {
+    return domainUpdateSchema;
+  }
+
+  if (taskType === TaskEntityType.CustomTask && taskCategory === TaskCategory.Custom) {
+    return customTaskSchema;
+  }
+
   return undefined;
 };
 
@@ -193,13 +445,26 @@ export const getResolvedTaskFormSchema = async (
   taskType: TaskEntityType,
   taskCategory: TaskCategory
 ) => {
-  try {
-    const resolvedSchema = await resolveTaskFormSchema(taskType, taskCategory);
+  const cacheKey = `${taskType}::${taskCategory}`;
+  const existing = taskFormSchemaCache.get(cacheKey);
 
-    return resolvedSchema ?? getDefaultTaskFormSchema(taskType, taskCategory);
-  } catch {
-    return getDefaultTaskFormSchema(taskType, taskCategory);
+  if (existing) {
+    return cloneDeep(await existing);
   }
+
+  const resolverPromise = (async () => {
+    try {
+      const resolvedSchema = await resolveTaskFormSchema(taskType, taskCategory);
+
+      return resolvedSchema ?? getDefaultTaskFormSchema(taskType, taskCategory);
+    } catch {
+      return getDefaultTaskFormSchema(taskType, taskCategory);
+    }
+  })();
+
+  taskFormSchemaCache.set(cacheKey, resolverPromise);
+
+  return cloneDeep(await resolverPromise);
 };
 
 const DEFAULT_APPROVAL_VALUES = {
@@ -292,7 +557,7 @@ export const getTaskFormHandlerConfig = (
 };
 
 type TaskResolutionConfig = {
-  mode?: 'field' | 'tagMerge';
+  mode?: 'field' | 'tagMerge' | 'payload';
   valueField?: string;
   currentField?: string;
   addField?: string;
@@ -476,6 +741,10 @@ export const getTaskResolutionNewValue = (
 ) => {
   const resolutionConfig = getResolutionConfig(uiSchema);
 
+  if (resolutionConfig.mode === 'payload') {
+    return undefined;
+  }
+
   if (resolutionConfig.mode === 'field') {
     return String(
       payload[resolutionConfig.valueField ?? 'newDescription'] ??
@@ -531,4 +800,10 @@ export const getTaskResolutionNewValue = (
   }
 
   return undefined;
+};
+
+export const shouldRequireTaskResolutionValue = (uiSchema?: JsonSchemaObject) => {
+  const resolutionConfig = getResolutionConfig(uiSchema);
+
+  return resolutionConfig.mode === 'field' || resolutionConfig.mode === 'tagMerge';
 };

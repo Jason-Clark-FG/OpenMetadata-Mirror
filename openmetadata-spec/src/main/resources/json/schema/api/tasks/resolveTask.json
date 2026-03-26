@@ -17,6 +17,11 @@
     "newValue": {
       "description": "New value to apply (for update tasks).",
       "type": "string"
+    },
+    "payload": {
+      "description": "Schema-driven resolution payload used for configurable task forms.",
+      "type": "object",
+      "additionalProperties": true
     }
   },
   "required": ["resolutionType"],
