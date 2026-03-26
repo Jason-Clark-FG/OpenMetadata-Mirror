@@ -578,7 +578,6 @@ public class S3LogStorage implements LogStorageInterface {
   @Override
   public List<UUID> listRuns(String pipelineFQN, int limit) throws IOException {
     String keyPrefix = buildKeyPrefix(pipelineFQN);
-    List<UUID> runIds = new ArrayList<>();
     Set<UUID> uniqueRunIds = new HashSet<>();
 
     Timer.Sample s3Sample = null;
@@ -623,7 +622,7 @@ public class S3LogStorage implements LogStorageInterface {
         }
       }
 
-      runIds.addAll(uniqueRunIds);
+      List<UUID> runIds = new ArrayList<>(uniqueRunIds);
 
       runIds.sort(Collections.reverseOrder());
 
@@ -1576,8 +1575,8 @@ public class S3LogStorage implements LogStorageInterface {
         if (lines.size() > maxCapacity) {
           // Remove oldest lines to stay within capacity
           int excess = lines.size() - maxCapacity;
-          for (int i = 0; i < excess; i++) {
-            lines.remove(0);
+          if (excess > 0) {
+            lines.subList(0, excess).clear();
           }
         }
       }

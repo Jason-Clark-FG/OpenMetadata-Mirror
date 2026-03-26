@@ -1656,11 +1656,9 @@ public class DataContractRepository extends EntityRepository<DataContract> {
 
       // Add entity's own semantics (not inherited)
       if (merged.getSemantics() != null) {
-        for (SemanticsRule entityRule : merged.getSemantics()) {
-          // Keep the inherited flag as-is from the entity rule (should be false/null for native
-          // rules)
-          mergedSemantics.add(entityRule);
-        }
+        // Keep the inherited flag as-is from the entity rule (should be false/null for native
+        // rules)
+        mergedSemantics.addAll(merged.getSemantics());
       }
 
       merged.setSemantics(mergedSemantics);

@@ -453,11 +453,8 @@ public class SubscriptionUtil {
       SubscriptionDestination.SubscriptionType type,
       String entityType,
       UUID id) {
-    Set<String> result = new HashSet<>();
-    result.addAll(
-        buildReceiversListFromActions(
+    return new HashSet<>(buildReceiversListFromActions(
             action, category, type, Entity.getCollectionDAO(), id, entityType));
-    return result;
   }
 
   public static List<Invocation.Builder> getTargetsForWebhookAlert(

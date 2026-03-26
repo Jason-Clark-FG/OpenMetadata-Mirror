@@ -4704,7 +4704,7 @@ public interface CollectionDAO {
         bindMap.put("beforeAfterId", id);
       }
       // Add filter params
-      filter.getQueryParams().forEach(bindMap::put);
+      bindMap.putAll(filter.getQueryParams());
       return bindMap;
     }
 
@@ -6888,8 +6888,8 @@ public interface CollectionDAO {
 
       if (enabled != null) {
         String enabledValue = Boolean.parseBoolean(enabled) ? "TRUE" : "FALSE";
-        mysqlCondition.append("AND enabled=" + enabledValue + " ");
-        psqlCondition.append("AND enabled=" + enabledValue + " ");
+        mysqlCondition.append("AND enabled=").append(enabledValue).append(" ");
+        psqlCondition.append("AND enabled=").append(enabledValue).append(" ");
       }
 
       return listBefore(
@@ -6957,8 +6957,8 @@ public interface CollectionDAO {
 
       if (enabled != null) {
         String enabledValue = Boolean.parseBoolean(enabled) ? "TRUE" : "FALSE";
-        mysqlCondition.append("AND enabled=" + enabledValue + " ");
-        psqlCondition.append("AND enabled=" + enabledValue + " ");
+        mysqlCondition.append("AND enabled=").append(enabledValue).append(" ");
+        psqlCondition.append("AND enabled=").append(enabledValue).append(" ");
       }
 
       return listAfter(

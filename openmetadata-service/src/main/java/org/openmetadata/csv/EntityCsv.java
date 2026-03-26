@@ -938,7 +938,6 @@ public abstract class EntityCsv<T extends EntityInterface> {
 
   private List<CSVRecord> convertToCSVRecords(List<List<String>> fixedRows, List<String> headers)
       throws IOException {
-    List<CSVRecord> finalRecords = new ArrayList<>();
     StringWriter stringWriter = new StringWriter();
 
     CSVPrinter csvPrinter =
@@ -953,7 +952,7 @@ public abstract class EntityCsv<T extends EntityInterface> {
     // Parse CSV again with headers
     Reader in = new StringReader(stringWriter.toString());
     CSVParser parser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(in);
-    finalRecords.addAll(parser.getRecords());
+    List<CSVRecord> finalRecords = new ArrayList<>(parser.getRecords());
 
     return finalRecords;
   }

@@ -895,21 +895,25 @@ public class SamlValidator {
           String supportedFormats = "";
 
           if (supportsSaml11) {
+            StringBuilder supportedFormatsBuilder = new StringBuilder();
             for (String format : azureSaml11Formats) {
-              supportedFormats += format + ", ";
+              supportedFormatsBuilder.append(format).append(", ");
               if (nameId.equals(format)) {
                 isSupported = true;
               }
             }
+            supportedFormats = supportedFormatsBuilder.toString();
           }
 
           if (supportsSaml20) {
+            StringBuilder supportedFormatsBuilder = new StringBuilder(supportedFormats);
             for (String format : azureSaml20Formats) {
-              supportedFormats += format + ", ";
+              supportedFormatsBuilder.append(format).append(", ");
               if (nameId.equals(format)) {
                 isSupported = true;
               }
             }
+            supportedFormats = supportedFormatsBuilder.toString();
           }
 
           // Azure AD most commonly uses SAML 1.1 emailAddress
