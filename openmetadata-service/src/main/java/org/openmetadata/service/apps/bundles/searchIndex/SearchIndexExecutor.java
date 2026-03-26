@@ -30,7 +30,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -1420,13 +1419,10 @@ public class SearchIndexExecutor implements AutoCloseable {
   }
 
   private void updateColumnStatsFromSink(Stats jobDataStats) {
-    StepStats columnStats = null;
-    if (searchIndexSink instanceof OpenSearchBulkSink opensearchBulkSink) {
-      columnStats = opensearchBulkSink.getColumnStats();
-    } else if (searchIndexSink instanceof ElasticSearchBulkSink elasticSearchBulkSink) {
-      columnStats = elasticSearchBulkSink.getColumnStats();
+    if (searchIndexSink == null || jobDataStats == null || jobDataStats.getEntityStats() == null) {
+      return;
     }
-
+    StepStats columnStats = searchIndexSink.getColumnStats();
     if (columnStats != null && columnStats.getTotalRecords() > 0) {
       StepStats existingColumnStats =
           jobDataStats.getEntityStats().getAdditionalProperties().get(Entity.TABLE_COLUMN);
@@ -1542,13 +1538,15 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
 
     int totalSuccess =
-        statsObj.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(StepStats::getSuccessRecords)
+        statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
+            .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+            .mapToInt(e -> e.getValue().getSuccessRecords())
             .sum();
 
     int totalFailed =
-        statsObj.getEntityStats().getAdditionalProperties().values().stream()
-            .mapToInt(StepStats::getFailedRecords)
+        statsObj.getEntityStats().getAdditionalProperties().entrySet().stream()
+            .filter(e -> !Entity.TABLE_COLUMN.equals(e.getKey()))
+            .mapToInt(e -> e.getValue().getFailedRecords())
             .sum();
 
     jobStats.withSuccessRecords(totalSuccess).withFailedRecords(totalFailed);
@@ -1566,16 +1564,7 @@ public class SearchIndexExecutor implements AutoCloseable {
   }
 
   private Set<String> getAll() {
-    Set<String> entityAvailableForIndex =
-        Entity.getEntityList().stream()
-            .filter(t -> searchRepository.getEntityIndexMap().containsKey(t))
-            .collect(Collectors.toSet());
-    Set<String> entities = new HashSet<>(entityAvailableForIndex);
-    entities.addAll(
-        TIME_SERIES_ENTITIES.stream()
-            .filter(t -> searchRepository.getEntityIndexMap().containsKey(t))
-            .collect(Collectors.toSet()));
-    return entities;
+    return new HashSet<>(searchRepository.getEntityIndexMap().keySet());
   }
 
   private ReindexContext reCreateIndexes(Set<String> entities) {
@@ -1612,6 +1601,7 @@ public class SearchIndexExecutor implements AutoCloseable {
     }
 
     syncSinkStatsFromBulkSink();
+    updateColumnStatsFromSink(stats.get());
 
     Stats currentStats = stats.get();
     if (currentStats != null) {
