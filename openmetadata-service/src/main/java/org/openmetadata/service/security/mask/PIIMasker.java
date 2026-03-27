@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.openmetadata.schema.entity.data.Container;
 import org.openmetadata.schema.entity.data.Query;
 import org.openmetadata.schema.entity.data.SearchIndex;
 import org.openmetadata.schema.entity.data.Table;
@@ -47,7 +48,8 @@ public class PIIMasker {
     /* Private constructor for Utility class */
   }
 
-  public static TableData maskSampleData(TableData sampleData, Table table, List<Column> columns) {
+  public static TableData maskSampleData(
+      TableData sampleData, Object entity, List<Column> columns) {
     // If we don't have sample data, there's nothing to do
     if (sampleData == null) {
       return null;
@@ -55,8 +57,16 @@ public class PIIMasker {
 
     List<Integer> columnsPositionToBeMasked;
 
-    // If the table itself is marked as PII, mask all the sample data
-    if (hasPiiSensitiveTag(table)) {
+    // Check if the entity itself is marked as PII
+    boolean entityHasPiiTag = false;
+    if (entity instanceof Table) {
+      entityHasPiiTag = hasPiiSensitiveTag((Table) entity);
+    } else if (entity instanceof Container) {
+      entityHasPiiTag = hasPiiSensitiveTag((Container) entity);
+    }
+
+    // If the entity itself is marked as PII, mask all the sample data
+    if (entityHasPiiTag) {
       columnsPositionToBeMasked =
           IntStream.range(0, columns.size()).boxed().collect(Collectors.toList());
     } else {
@@ -93,6 +103,16 @@ public class PIIMasker {
     TableData sampleData = maskSampleData(table.getSampleData(), table, table.getColumns());
     table.setSampleData(sampleData);
     return table;
+  }
+
+  public static Container getSampleData(Container container) {
+    if (container.getDataModel() != null && container.getDataModel().getColumns() != null) {
+      TableData sampleData =
+          maskSampleData(
+              container.getSampleData(), container, container.getDataModel().getColumns());
+      container.setSampleData(sampleData);
+    }
+    return container;
   }
 
   /*
@@ -287,6 +307,12 @@ public class PIIMasker {
 
   private static boolean hasPiiSensitiveTag(Table table) {
     return table.getTags().stream().map(TagLabel::getTagFQN).anyMatch(SENSITIVE_PII_TAG::equals);
+  }
+
+  private static boolean hasPiiSensitiveTag(Container container) {
+    return container.getTags().stream()
+        .map(TagLabel::getTagFQN)
+        .anyMatch(SENSITIVE_PII_TAG::equals);
   }
 
   private static boolean hasPiiSensitiveTag(SearchIndex searchIndex) {

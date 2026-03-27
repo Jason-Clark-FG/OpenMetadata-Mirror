@@ -33,6 +33,7 @@ import org.openmetadata.schema.type.ContainerFileFormat;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
+import org.openmetadata.schema.type.TableData;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.schema.type.TaskType;
 import org.openmetadata.schema.type.change.ChangeSource;
@@ -43,13 +44,16 @@ import org.openmetadata.service.jdbi3.FeedRepository.TaskWorkflow;
 import org.openmetadata.service.jdbi3.FeedRepository.ThreadContext;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.resources.storages.ContainerResource;
+import org.openmetadata.service.security.mask.PIIMasker;
 import org.openmetadata.service.util.EntityUtil;
+import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 public class ContainerRepository extends EntityRepository<Container> {
   private static final String CONTAINER_UPDATE_FIELDS = "dataModel";
   private static final String CONTAINER_PATCH_FIELDS = "dataModel";
+  public static final String CONTAINER_SAMPLE_DATA_EXTENSION = "container.sampleData";
 
   public ContainerRepository() {
     super(
@@ -499,6 +503,67 @@ public class ContainerRepository extends EntityRepository<Container> {
               "Failed to fetch children for container [%s]: %s", parentFQN, e.getMessage()),
           e);
     }
+  }
+
+  public Container addSampleData(UUID containerId, TableData tableData) {
+    Container container = find(containerId, NON_DELETED);
+
+    if (container.getDataModel() != null && container.getDataModel().getColumns() != null) {
+      for (String columnName : tableData.getColumns()) {
+        validateColumn(container.getDataModel().getColumns(), columnName);
+      }
+    }
+
+    for (List<Object> row : tableData.getRows()) {
+      if (row.size() != tableData.getColumns().size()) {
+        throw new IllegalArgumentException(
+            String.format(
+                "Number of columns is %d but row has %d sample values",
+                tableData.getColumns().size(), row.size()));
+      }
+    }
+
+    daoCollection
+        .entityExtensionDAO()
+        .insert(
+            containerId,
+            CONTAINER_SAMPLE_DATA_EXTENSION,
+            "tableData",
+            JsonUtils.pojoToJson(tableData));
+    setFieldsInternal(container, Fields.EMPTY_FIELDS);
+    return container.withSampleData(tableData);
+  }
+
+  public Container getSampleData(UUID containerId, boolean authorizePII) {
+    Container container = find(containerId, NON_DELETED);
+    TableData sampleData =
+        JsonUtils.readValue(
+            daoCollection
+                .entityExtensionDAO()
+                .getExtension(container.getId(), CONTAINER_SAMPLE_DATA_EXTENSION),
+            TableData.class);
+    container.setSampleData(sampleData);
+    setFieldsInternal(container, Fields.EMPTY_FIELDS);
+
+    if (!authorizePII && container.getDataModel() != null) {
+      populateEntityFieldTags(
+          entityType,
+          container.getDataModel().getColumns(),
+          container.getFullyQualifiedName(),
+          true);
+      container.setTags(getTags(container));
+      return PIIMasker.getSampleData(container);
+    }
+
+    return container;
+  }
+
+  @Transaction
+  public Container deleteSampleData(UUID containerId) {
+    Container container = find(containerId, NON_DELETED);
+    daoCollection.entityExtensionDAO().delete(containerId, CONTAINER_SAMPLE_DATA_EXTENSION);
+    setFieldsInternal(container, Fields.EMPTY_FIELDS);
+    return container;
   }
 
   static class DataModelDescriptionTaskWorkflow extends DescriptionTaskWorkflow {

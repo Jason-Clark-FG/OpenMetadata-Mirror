@@ -8235,16 +8235,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  // Validate if a given column exists in the table
-  public static void validateColumn(Table table, String columnName) {
-    validateColumn(table, columnName, Boolean.TRUE);
+  public static void validateColumn(List<Column> columns, String columnName) {
+    validateColumn(columns, columnName, Boolean.TRUE);
   }
 
-  // Validate if a given column exists in the table with optional case sensitivity
-  public static void validateColumn(Table table, String columnName, Boolean caseSensitive) {
+  public static void validateColumn(
+      List<Column> columns, String columnName, Boolean caseSensitive) {
+    if (columns == null) {
+      throw new IllegalArgumentException("Columns list cannot be null");
+    }
     if (Boolean.FALSE.equals(caseSensitive)) {
       boolean validColumn =
-          table.getColumns().stream()
+          columns.stream()
               .filter(Objects::nonNull)
               .anyMatch(col -> col.getName().equalsIgnoreCase(columnName));
       if (!validColumn && !columnName.equalsIgnoreCase("all")) {
@@ -8252,13 +8254,21 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     } else {
       boolean validColumn =
-          table.getColumns().stream()
+          columns.stream()
               .filter(Objects::nonNull)
               .anyMatch(col -> col.getName().equals(columnName));
       if (!validColumn && !columnName.equalsIgnoreCase("all")) {
         throw new IllegalArgumentException("Invalid column name " + columnName);
       }
     }
+  }
+
+  public static void validateColumn(Table table, String columnName) {
+    validateColumn(table, columnName, Boolean.TRUE);
+  }
+
+  public static void validateColumn(Table table, String columnName, Boolean caseSensitive) {
+    validateColumn(table.getColumns(), columnName, caseSensitive);
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
