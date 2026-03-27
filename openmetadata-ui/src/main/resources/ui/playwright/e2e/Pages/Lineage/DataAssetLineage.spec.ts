@@ -1,0 +1,390 @@
+import { expect } from '@playwright/test';
+import { get, startCase } from 'lodash';
+import { ApiEndpointClass } from '../../../support/entity/ApiEndpointClass';
+import { ContainerClass } from '../../../support/entity/ContainerClass';
+import { DashboardClass } from '../../../support/entity/DashboardClass';
+import { DashboardDataModelClass } from '../../../support/entity/DashboardDataModelClass';
+import { DirectoryClass } from '../../../support/entity/DirectoryClass';
+import { FileClass } from '../../../support/entity/FileClass';
+import { MetricClass } from '../../../support/entity/MetricClass';
+import { MlModelClass } from '../../../support/entity/MlModelClass';
+import { PipelineClass } from '../../../support/entity/PipelineClass';
+import { SearchIndexClass } from '../../../support/entity/SearchIndexClass';
+import { SpreadsheetClass } from '../../../support/entity/SpreadsheetClass';
+import { StoredProcedureClass } from '../../../support/entity/StoredProcedureClass';
+import { TableClass } from '../../../support/entity/TableClass';
+import { TopicClass } from '../../../support/entity/TopicClass';
+import { WorksheetClass } from '../../../support/entity/WorksheetClass';
+import {
+  getApiContext,
+  getDefaultAdminAPIContext,
+  redirectToHomePage,
+} from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
+import {
+  activateColumnLayer,
+  addColumnLineage,
+  addPipelineBetweenNodes,
+  applyPipelineFromModal,
+  clickLineageNode,
+  connectEdgeBetweenNodes,
+  deleteEdge,
+  deleteNode,
+  editLineage,
+  editLineageClick,
+  performZoomOut,
+  rearrangeNodes,
+  removeColumnLineage,
+  verifyColumnLineageInCSV,
+  verifyExportLineageCSV,
+  verifyExportLineagePNG,
+  verifyNodePresent,
+  verifyPlatformLineageForEntity,
+  visitLineageTab,
+} from '../../../utils/lineage';
+import { test } from '../../fixtures/pages';
+
+// Contains list of entity supported
+const allEntities = {
+  table: TableClass,
+  container: ContainerClass,
+  topic: TopicClass,
+  dashboard: DashboardClass,
+  mlmodel: MlModelClass,
+  pipeline: PipelineClass,
+  storedProcedure: StoredProcedureClass,
+  searchIndex: SearchIndexClass,
+  dataModel: DashboardDataModelClass,
+  apiEndpoint: ApiEndpointClass,
+  metric: MetricClass,
+  directory: DirectoryClass,
+  file: FileClass,
+  spreadsheet: SpreadsheetClass,
+  worksheet: WorksheetClass,
+};
+
+const columnLevelEntities = {
+  table: TableClass,
+  container: ContainerClass,
+  topic: TopicClass,
+  apiEndpoint: ApiEndpointClass,
+  dashboard: DashboardClass,
+};
+
+type EntityClassUnion =
+  | TableClass
+  | ContainerClass
+  | TopicClass
+  | DashboardClass
+  | MlModelClass
+  | PipelineClass
+  | StoredProcedureClass
+  | SearchIndexClass
+  | DashboardDataModelClass
+  | ApiEndpointClass
+  | MetricClass
+  | DirectoryClass
+  | FileClass
+  | SpreadsheetClass
+  | WorksheetClass;
+
+test.describe('Data asset lineage', () => {
+  const pipeline = new PipelineClass();
+  const entities: EntityClassUnion[] = [];
+
+  test.beforeAll(
+    'setup lineage creation with other entity creation',
+    async ({ browser }) => {
+      const { apiContext } = await getDefaultAdminAPIContext(browser);
+
+      Object.values(allEntities).forEach((EntityClass) => {
+        const lineageEntity = new EntityClass();
+
+        entities.push(lineageEntity);
+      });
+
+      try {
+        await pipeline.create(apiContext);
+        await Promise.all(entities.map((entity) => entity.create(apiContext)));
+      } catch (error) {
+        console.error('Error creating entities:', error);
+      }
+    }
+  );
+
+  Object.entries(allEntities).forEach(([key, EntityClass]) => {
+    const lineageEntity = new EntityClass();
+
+    test.beforeEach(async ({ page }) => {
+      await redirectToHomePage(page);
+      const { apiContext } = await getApiContext(page);
+      await lineageEntity.create(apiContext);
+
+      await lineageEntity.visitEntityPage(page);
+      await visitLineageTab(page);
+      await editLineageClick(page);
+    });
+
+    test(`verify create lineage for entity - ${startCase(key)}`, async ({
+      page,
+    }) => {
+      // 7 minute timeout
+      test.setTimeout(7 * 60 * 1000);
+
+      await test.step('should create lineage with normal edge', async () => {
+        for (const entity of entities) {
+          await connectEdgeBetweenNodes(page, lineageEntity, entity);
+          await rearrangeNodes(page);
+          await performZoomOut(page);
+        }
+
+        const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+        await page.reload();
+        await lineageRes;
+        await page.getByTestId('edit-lineage').waitFor({
+          state: 'visible',
+        });
+
+        await waitForAllLoadersToDisappear(page);
+        await page
+          .getByTestId(
+            `lineage-node-${lineageEntity.entityResponseData.fullyQualifiedName}`
+          )
+          .waitFor();
+        await rearrangeNodes(page);
+        await performZoomOut(page);
+
+        for (const entity of entities) {
+          await verifyNodePresent(page, entity);
+        }
+
+        // Check the Entity Drawer
+        await performZoomOut(page);
+
+        for (const entity of entities) {
+          const toNodeFqn = get(
+            entity,
+            'entityResponseData.fullyQualifiedName',
+            ''
+          );
+          const entityName = get(
+            entity,
+            'entityResponseData.displayName',
+            get(entity, 'entityResponseData.name', '')
+          );
+
+          await clickLineageNode(page, toNodeFqn);
+
+          await expect(
+            page
+              .locator('.lineage-entity-panel')
+              .getByTestId('entity-header-title')
+          ).toHaveText(entityName);
+
+          await page.getByTestId('drawer-close-icon').click();
+
+          // Panel should not be visible after closing it
+          await expect(page.locator('.lineage-entity-panel')).not.toBeVisible();
+        }
+      });
+
+      await test.step('should create lineage with edge having pipeline', async () => {
+        await editLineage(page);
+
+        await page.getByTestId('fit-screen').click();
+        await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
+        await performZoomOut(page, 8);
+        await waitForAllLoadersToDisappear(page);
+
+        const fromNodeFqn = get(
+          lineageEntity,
+          'entityResponseData.fullyQualifiedName',
+          ''
+        );
+
+        await clickLineageNode(page, fromNodeFqn);
+
+        for (const entity of entities) {
+          await applyPipelineFromModal(page, lineageEntity, entity, pipeline);
+        }
+      });
+
+      await test.step('Verify Lineage Export CSV', async () => {
+        await editLineageClick(page);
+        await waitForAllLoadersToDisappear(page);
+        await performZoomOut(page);
+        await verifyExportLineageCSV(page, lineageEntity, entities, pipeline);
+      });
+
+      await test.step('Verify Lineage Export PNG', async () => {
+        await verifyExportLineagePNG(page);
+      });
+
+      await test.step('Remove lineage between nodes for the entity', async () => {
+        await editLineage(page);
+        await page.getByTestId('fit-screen').click();
+        await page.getByRole('menuitem', { name: 'Fit to screen' }).click();
+        await waitForAllLoadersToDisappear(page);
+
+        await performZoomOut(page);
+
+        for (const entity of entities) {
+          await deleteEdge(page, lineageEntity, entity);
+        }
+      });
+    });
+  });
+});
+
+test.describe('Column Level Lineage', () => {
+  const entities: Map<string, EntityClassUnion> = new Map();
+
+  test.beforeAll(
+    'setup lineage creation with other entity creation',
+    async ({ browser }) => {
+      const { apiContext } = await getDefaultAdminAPIContext(browser);
+
+      Object.entries(columnLevelEntities).forEach(([key, EntityClass]) => {
+        const lineageEntity = new EntityClass();
+
+        entities.set(key, lineageEntity);
+      });
+
+      try {
+        await Promise.all(
+          Array.from(entities.values()).map((entity) =>
+            entity.create(apiContext)
+          )
+        );
+      } catch (error) {
+        console.error('Error creating entities:', error);
+      }
+    }
+  );
+
+  test.beforeEach(async ({ page }) => {
+    await redirectToHomePage(page);
+  });
+
+  Object.entries(columnLevelEntities).forEach(([key, EntityClassSource]) => {
+    const sourceEntity = new EntityClassSource();
+    const entityKeys = Object.keys(columnLevelEntities);
+    entityKeys.forEach((targetKey) => {
+      const targetEntity = entities.get(targetKey);
+      if (targetEntity) {
+        test(`Verify column lineage between ${key} and ${targetKey}`, async ({
+          page,
+        }) => {
+          const { apiContext, afterAction } = await getApiContext(page);
+
+          await Promise.all([
+            sourceEntity.create(apiContext),
+            targetEntity?.create(apiContext),
+          ]);
+
+          const sourceCol = get(
+            sourceEntity,
+            'entityResponseData.columns[0].fullyQualifiedName',
+            ''
+          );
+          const targetCol = get(
+            targetEntity,
+            'entityResponseData.columns[0].fullyQualifiedName',
+            ''
+          );
+
+          await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
+          await activateColumnLayer(page);
+
+          // Add column lineage
+          await addColumnLineage(page, sourceCol, targetCol);
+
+          // Verify column lineage
+          await redirectToHomePage(page);
+          await sourceEntity.visitEntityPage(page);
+          await visitLineageTab(page);
+          await verifyColumnLineageInCSV(
+            page,
+            sourceEntity,
+            targetEntity,
+            sourceCol,
+            targetCol
+          );
+
+          await verifyPlatformLineageForEntity(
+            page,
+            sourceEntity.entityResponseData.fullyQualifiedName ?? '',
+            targetEntity.entityResponseData.fullyQualifiedName ?? ''
+          );
+
+          await sourceEntity.visitEntityPage(page);
+          await visitLineageTab(page);
+          await activateColumnLayer(page);
+          await editLineageClick(page);
+
+          await removeColumnLineage(page, sourceCol, targetCol);
+          await editLineageClick(page);
+
+          await deleteNode(page, targetEntity);
+          await sourceEntity.delete(apiContext);
+          await targetEntity.delete(apiContext);
+
+          await afterAction();
+        });
+      }
+    });
+  });
+});
+
+test.describe('Lineage Settings modal', () => {
+  const table = new TableClass();
+
+  test.beforeEach(async ({ page }) => {
+    await table.visitEntityPage(page);
+    await visitLineageTab(page);
+  });
+
+  test('Verify opening config modal', async ({ page }) => {
+    await page.getByTestId('lineage-config').click();
+
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+
+    await expect(page.getByLabel(/upstream/i)).toBeVisible();
+    await expect(page.getByLabel(/downstream/i)).toBeVisible();
+  });
+
+  test('Verify updating depth configuration', async ({ page }) => {
+    await page.getByTestId('lineage-config').click();
+
+    await page.getByLabel(/upstream/i).fill('5');
+    await page.getByLabel(/downstream/i).fill('4');
+
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+
+    await page.reload();
+    await waitForAllLoadersToDisappear(page);
+
+    await page.getByTestId('lineage-config').click();
+
+    await expect(page.getByLabel(/upstream/i)).toHaveValue('5');
+    await expect(page.getByLabel(/downstream/i)).toHaveValue('4');
+  });
+
+  test('Verify validation for invalid depth', async ({ page }) => {
+    await page.getByTestId('lineage-config').click();
+
+    await page.getByLabel(/upstream/i).fill('-1');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.getByText(/cannot be less than/i)).toBeVisible();
+
+    await expect(page.locator('[role="dialog"]')).toBeVisible();
+
+    await page.getByLabel(/upstream/i).fill('3');
+    await page.getByRole('button', { name: /save/i }).click();
+
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+  });
+});
