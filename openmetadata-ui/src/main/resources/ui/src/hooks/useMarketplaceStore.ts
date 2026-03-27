@@ -12,11 +12,7 @@
  */
 
 import { create } from 'zustand';
-
-const DOMAIN_BASE_PATH = '/domain';
-const DATA_PRODUCT_BASE_PATH = '/dataProduct';
-const MARKETPLACE_DOMAIN_BASE_PATH = '/data-marketplace/domains';
-const MARKETPLACE_DATA_PRODUCT_BASE_PATH = '/data-marketplace/data-products';
+import { ROUTES } from '../constants/constants';
 
 interface MarketplaceStore {
   isMarketplace: boolean;
@@ -27,16 +23,18 @@ interface MarketplaceStore {
 
 export const useMarketplaceStore = create<MarketplaceStore>()((set) => ({
   isMarketplace: false,
-  domainBasePath: DOMAIN_BASE_PATH,
-  dataProductBasePath: DATA_PRODUCT_BASE_PATH,
+  domainBasePath: ROUTES.DOMAIN,
+  dataProductBasePath: ROUTES.DATA_PRODUCT,
 
   setMarketplaceContext: (enabled: boolean) => {
     set({
       isMarketplace: enabled,
-      domainBasePath: enabled ? MARKETPLACE_DOMAIN_BASE_PATH : DOMAIN_BASE_PATH,
+      domainBasePath: enabled
+        ? `${ROUTES.DATA_MARKETPLACE}/domains`
+        : ROUTES.DOMAIN,
       dataProductBasePath: enabled
-        ? MARKETPLACE_DATA_PRODUCT_BASE_PATH
-        : DATA_PRODUCT_BASE_PATH,
+        ? `${ROUTES.DATA_MARKETPLACE}/data-products`
+        : ROUTES.DATA_PRODUCT,
     });
   },
 }));

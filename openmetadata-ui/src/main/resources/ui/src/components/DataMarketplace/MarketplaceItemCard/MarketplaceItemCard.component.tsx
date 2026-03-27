@@ -33,13 +33,15 @@ const MarketplaceItemCard = ({
 }: MarketplaceItemCardProps) => {
   return (
     <Card
-      className="tw:flex tw:items-center tw:gap-3 tw:p-3 tw:cursor-pointer tw:flex-1 tw:min-w-[235px] tw:max-w-[calc((100%-24px)/3)] tw:shadow-xs"
+      isClickable
+      className="tw:flex tw:items-center tw:gap-3 tw:p-3 tw:flex-1 tw:min-w-[235px] tw:max-w-[calc((100%-24px)/3)] tw:shadow-xs"
       data-testid={dataTestId}
       role="button"
       tabIndex={0}
       onClick={onClick}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
           onClick();
         }
       }}>
