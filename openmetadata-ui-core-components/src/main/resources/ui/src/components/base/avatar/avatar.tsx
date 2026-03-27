@@ -49,6 +49,7 @@ export interface AvatarProps {
    * @default false
    */
   focusable?: boolean;
+  style?: CSSProperties;
 }
 
 const styles = {
@@ -102,6 +103,7 @@ export const Avatar = ({
   verified,
   focusable = false,
   className,
+  style,
 }: AvatarProps) => {
   const [isFailed, setIsFailed] = useState(false);
 
@@ -175,7 +177,8 @@ export const Avatar = ({
         contrastBorder && 'tw:outline tw:outline-avatar-contrast-border',
         styles[size].root,
         className
-      )}>
+      )}
+      style={style}>
       {renderMainContent()}
       {renderBadgeContent()}
     </div>
