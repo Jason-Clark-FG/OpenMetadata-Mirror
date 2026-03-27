@@ -67,10 +67,10 @@ public class RollbackEntityTask implements NodeInterface {
     Map<String, String> inputNamespaceMap = new HashMap<>();
     if (nodeDefinition.getInputNamespaceMap() != null) {
       @SuppressWarnings("unchecked")
-      Map<String, String> converted =
+      Map<String, String> definedNamespaceMap =
           JsonUtils.convertValue(nodeDefinition.getInputNamespaceMap(), Map.class);
-      if (converted != null) {
-        inputNamespaceMap.putAll(converted);
+      if (definedNamespaceMap != null) {
+        inputNamespaceMap.putAll(definedNamespaceMap);
       }
     }
     inputNamespaceMap.putIfAbsent(ENTITY_LIST_VARIABLE, GLOBAL_NAMESPACE);

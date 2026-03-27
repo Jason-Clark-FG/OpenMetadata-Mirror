@@ -6,6 +6,9 @@ import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARI
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -57,37 +60,76 @@ public class DataCompletenessImpl implements JavaDelegate {
       Map<String, Object> entityResults = new LinkedHashMap<>();
       DataCompletenessResult lastResult = null;
 
+      Retry retry =
+          Retry.of(
+              "data-completeness",
+              RetryConfig.custom()
+                  .maxAttempts(3)
+                  .waitDuration(Duration.ofMillis(500))
+                  .retryExceptions(Exception.class)
+                  .build());
+
+      List<String> failedEntities = new ArrayList<>();
+
       for (String entityLinkStr : entityList) {
-        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-        Map<String, Object> entityMap = JsonUtils.getMap(entity);
-        DataCompletenessResult result =
-            calculateCompleteness(entityMap, fieldsToCheck, qualityBands);
-        lastResult = result;
+        try {
+          DataCompletenessResult result =
+              Retry.decorateSupplier(
+                      retry,
+                      () -> {
+                        MessageParser.EntityLink entityLink =
+                            MessageParser.EntityLink.parse(entityLinkStr);
+                        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+                        return calculateCompleteness(
+                            JsonUtils.getMap(entity), fieldsToCheck, qualityBands);
+                      })
+                  .get();
+          lastResult = result;
 
-        entitiesByBand
-            .computeIfAbsent(result.qualityBand, k -> new ArrayList<>())
-            .add(entityLinkStr);
-        entityResults.put(
-            entityLinkStr,
-            Map.of(
-                "score", result.score,
-                "band", result.qualityBand,
-                "missingFields", result.missingFields,
-                "filledFields", result.filledFields));
+          entitiesByBand
+              .computeIfAbsent(result.qualityBand, k -> new ArrayList<>())
+              .add(entityLinkStr);
+          entityResults.put(
+              entityLinkStr,
+              Map.of(
+                  "score",
+                  result.score,
+                  "band",
+                  result.qualityBand,
+                  "missingFieldsCount",
+                  result.missingFields.size(),
+                  "filledFieldsCount",
+                  result.filledFields.size()));
 
-        LOG.info(
-            "[WorkflowNode][DataCompleteness] entity='{}' score={}% band='{}' filled={}/{}",
-            entityLinkStr,
-            result.score,
-            result.qualityBand,
-            result.filledFieldsCount,
-            result.totalFieldsCount);
+          LOG.debug(
+              "[WorkflowNode][DataCompleteness] entity='{}' score={}% band='{}' filled={}/{}",
+              entityLinkStr,
+              result.score,
+              result.qualityBand,
+              result.filledFieldsCount,
+              result.totalFieldsCount);
+        } catch (Exception e) {
+          failedEntities.add(entityLinkStr);
+          LOG.error(
+              "[WorkflowNode][DataCompleteness] Failed entity '{}' after retries: {}",
+              entityLinkStr,
+              e.getMessage(),
+              e);
+        }
       }
 
-      // Per-band entity lists — ALL bands stored, empty or not (Phase 2 inclusive gateway ready)
-      for (var entry : entitiesByBand.entrySet()) {
-        varHandler.setNodeVariable(entry.getKey() + "_" + ENTITY_LIST_VARIABLE, entry.getValue());
+      if (!failedEntities.isEmpty()) {
+        varHandler.setNodeVariable("failedEntities", failedEntities);
+        LOG.warn(
+            "[WorkflowNode][DataCompleteness] {}/{} entities failed processing",
+            failedEntities.size(),
+            entityList.size());
+      }
+
+      // Per-band entity lists — ALL bands stored, empty or not (inclusive gateway ready)
+      for (QualityBand band : qualityBands) {
+        List<String> bandEntities = entitiesByBand.getOrDefault(band.getName(), List.of());
+        varHandler.setNodeVariable(band.getName() + "_" + ENTITY_LIST_VARIABLE, bandEntities);
       }
 
       // Priority band = highest minimumScore band that has entities
@@ -98,6 +140,12 @@ public class DataCompletenessImpl implements JavaDelegate {
               .filter(entitiesByBand::containsKey)
               .findFirst()
               .orElse("undefined");
+
+      LOG.info(
+          "[WorkflowNode][DataCompleteness] Processed {} entities, priorityBand='{}', bands={}",
+          entityList.size(),
+          priorityBand,
+          entitiesByBand.keySet());
 
       // Backward compat: standard entityList for Phase 1 exclusive gateway routing
       varHandler.setNodeVariable(
@@ -130,8 +178,9 @@ public class DataCompletenessImpl implements JavaDelegate {
     if (fields.size() <= 50) {
       varHandler.setNodeVariable(varName, fields);
     } else {
-      varHandler.setNodeVariable(
-          varName, fields.subList(0, 50) + " [+" + (fields.size() - 50) + " more]");
+      List<String> truncated = new ArrayList<>(fields.subList(0, 50));
+      truncated.add("[+" + (fields.size() - 50) + " more]");
+      varHandler.setNodeVariable(varName, truncated);
     }
   }
 

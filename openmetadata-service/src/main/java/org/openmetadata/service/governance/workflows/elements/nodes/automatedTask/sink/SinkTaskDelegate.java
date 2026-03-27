@@ -19,6 +19,9 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RU
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import com.google.common.collect.Lists;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -259,11 +262,28 @@ public class SinkTaskDelegate implements JavaDelegate {
     List<String> syncedEntities = new ArrayList<>();
     List<SinkResult.SinkError> errors = new ArrayList<>();
 
+    Retry retry =
+        Retry.of(
+            "sink-list-write",
+            RetryConfig.custom()
+                .maxAttempts(3)
+                .waitDuration(Duration.ofMillis(500))
+                .retryExceptions(Exception.class)
+                .build());
+
     for (String entityLinkStr : entityList) {
+      MessageParser.EntityLink entityLink = null;
       try {
-        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-        SinkResult entityResult = sinkProvider.write(context, entity);
+        entityLink = MessageParser.EntityLink.parse(entityLinkStr);
+        final MessageParser.EntityLink finalLink = entityLink;
+        SinkResult entityResult =
+            Retry.decorateSupplier(
+                    retry,
+                    () -> {
+                      EntityInterface entity = Entity.getEntity(finalLink, "*", Include.ALL);
+                      return sinkProvider.write(context, entity);
+                    })
+                .get();
         syncedCount += entityResult.getSyncedCount();
         failedCount += entityResult.getFailedCount();
         if (entityResult.getSyncedEntities() != null) {
@@ -275,9 +295,10 @@ public class SinkTaskDelegate implements JavaDelegate {
       } catch (Exception e) {
         LOG.error("[{}] Failed to process entity: {}", context.getWorkflowName(), entityLinkStr, e);
         failedCount++;
+        String entityFqn = entityLink != null ? entityLink.getEntityFQN() : entityLinkStr;
         errors.add(
             SinkResult.SinkError.builder()
-                .entityFqn(entityLinkStr)
+                .entityFqn(entityFqn)
                 .errorMessage("Failed to process entity: " + e.getMessage())
                 .cause(e)
                 .build());

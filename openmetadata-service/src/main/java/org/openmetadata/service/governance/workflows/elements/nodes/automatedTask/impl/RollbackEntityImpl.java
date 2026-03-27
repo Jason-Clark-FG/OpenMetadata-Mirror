@@ -5,7 +5,11 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_INSTANCE_EXECUTION_ID_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,19 +25,13 @@ import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.resources.feeds.MessageParser;
 
 @Slf4j
 public class RollbackEntityImpl implements JavaDelegate {
-  private Workflow workflow;
   private Expression inputNamespaceMapExpr;
-
-  @Deprecated
-  @SuppressWarnings("unused")
-  private org.flowable.common.engine.api.delegate.Expression rollbackToStatus;
 
   @Override
   public void execute(DelegateExecution execution) {
@@ -56,12 +54,54 @@ public class RollbackEntityImpl implements JavaDelegate {
       if (updatedBy == null || updatedBy.isEmpty()) {
         updatedBy = "governance-bot";
       }
+      final String resolvedUpdatedBy = updatedBy;
 
       List<String> entityList =
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
+
+      Retry retry =
+          Retry.of(
+              "rollback-entity",
+              RetryConfig.custom()
+                  .maxAttempts(3)
+                  .waitDuration(Duration.ofMillis(500))
+                  .retryExceptions(Exception.class)
+                  .build());
+
+      List<String> failedEntities = new ArrayList<>();
+      Map<String, String> entityErrors = new LinkedHashMap<>();
+
       for (String entityLinkStr : entityList) {
-        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        rollbackEntity(entityLink, updatedBy, workflowInstanceExecutionId);
+        try {
+          Retry.decorateRunnable(
+                  retry,
+                  () -> {
+                    MessageParser.EntityLink entityLink =
+                        MessageParser.EntityLink.parse(entityLinkStr);
+                    rollbackEntity(entityLink, resolvedUpdatedBy, workflowInstanceExecutionId);
+                  })
+              .run();
+        } catch (Exception e) {
+          failedEntities.add(entityLinkStr);
+          entityErrors.put(entityLinkStr, e.getMessage());
+          LOG.error(
+              "[RollbackEntity] Failed entity '{}' after retries: {}",
+              entityLinkStr,
+              e.getMessage(),
+              e);
+        }
+      }
+
+      if (!failedEntities.isEmpty()) {
+        varHandler.setNodeVariable("failedEntities", failedEntities);
+        varHandler.setNodeVariable("entityErrors", entityErrors);
+        int total = entityList.size();
+        int failed = failedEntities.size();
+        String processingStatus = (failed == total) ? "failure" : "partial_success";
+        varHandler.setNodeVariable("processingStatus", processingStatus);
+        LOG.warn("[RollbackEntity] {}: {}/{} entities failed", processingStatus, failed, total);
+        varHandler.setGlobalVariable(
+            EXCEPTION_VARIABLE, String.format("%d/%d entities failed", failed, total));
       }
 
     } catch (BpmnError e) {
@@ -87,7 +127,7 @@ public class RollbackEntityImpl implements JavaDelegate {
 
     EntityRepository<?> repository = Entity.getEntityRepository(entityType);
 
-    Double previousVersion = getPreviousApprovedVersion(currentEntity, repository);
+    Double previousVersion = getPreviousRollbackTargetVersion(currentEntity, repository);
     if (previousVersion == null) {
       LOG.warn(
           "[RollbackEntity] No previous approved version found for entity: {} ({})",
@@ -113,7 +153,7 @@ public class RollbackEntityImpl implements JavaDelegate {
         previousVersion);
   }
 
-  private Double getPreviousApprovedVersion(
+  private Double getPreviousRollbackTargetVersion(
       EntityInterface entity, EntityRepository<?> repository) {
     try {
       UUID entityId = entity.getId();
@@ -128,120 +168,84 @@ public class RollbackEntityImpl implements JavaDelegate {
           } else {
             versionJson = JsonUtils.pojoToJson(versionObj);
           }
-
           EntityInterface versionEntity = JsonUtils.readValue(versionJson, entity.getClass());
           Double versionNumber = versionEntity.getVersion();
-
           if (versionNumber < currentVersion) {
             versionNumbers.add(versionNumber);
           }
         } catch (Exception e) {
           LOG.warn("Could not parse version: {}", e.getMessage());
-          continue;
         }
       }
-
       versionNumbers.sort((v1, v2) -> Double.compare(v2, v1));
+
+      Double approvedVersion = null;
+      Double draftVersion = null;
+      Double deprecatedVersion = null;
 
       for (Double versionNumber : versionNumbers) {
         try {
           EntityInterface fullVersionEntity =
               repository.getVersion(entityId, versionNumber.toString());
-
-          try {
-            java.lang.reflect.Method getStatusMethod =
-                fullVersionEntity.getClass().getMethod("getEntityStatus");
-            Object statusObj = getStatusMethod.invoke(fullVersionEntity);
-            LOG.debug(
-                "[RollbackEntity] Checking {} version {} - Status: {}",
-                fullVersionEntity.getClass().getSimpleName(),
-                versionNumber,
-                statusObj != null ? statusObj.toString() : "null");
-          } catch (NoSuchMethodException e) {
-            LOG.debug(
-                "[RollbackEntity] {} version {} - No entityStatus field",
-                fullVersionEntity.getClass().getSimpleName(),
-                versionNumber);
-          } catch (Exception e) {
-            LOG.debug(
-                "[RollbackEntity] Could not get status for {} version {}",
-                fullVersionEntity.getClass().getSimpleName(),
-                versionNumber);
-          }
-
-          String status = getRollbackStatus(fullVersionEntity);
-          if (status != null) {
-            LOG.info(
-                "[RollbackEntity] Found {} version {} for entity: {} ({})",
-                status,
-                versionNumber,
-                entity.getName(),
-                entityId);
-            return versionNumber;
-          } else {
-            LOG.debug(
-                "[RollbackEntity] Skipping version {} - not in Approved/Rejected status",
-                versionNumber);
+          EntityStatus status = getEntityStatus(fullVersionEntity);
+          if (status == EntityStatus.APPROVED && approvedVersion == null) {
+            approvedVersion = versionNumber;
+          } else if (status == EntityStatus.DRAFT && draftVersion == null) {
+            draftVersion = versionNumber;
+          } else if (status == EntityStatus.DEPRECATED && deprecatedVersion == null) {
+            deprecatedVersion = versionNumber;
           }
         } catch (Exception e) {
           LOG.warn("Could not load version {}: {}", versionNumber, e.getMessage());
-          continue;
         }
       }
 
+      if (approvedVersion != null) {
+        LOG.info(
+            "[RollbackEntity] Found APPROVED version {} for entity: {} ({})",
+            approvedVersion,
+            entity.getName(),
+            entityId);
+        return approvedVersion;
+      }
+      if (draftVersion != null) {
+        LOG.info(
+            "[RollbackEntity] No APPROVED version found, falling back to DRAFT version {} for entity: {} ({})",
+            draftVersion,
+            entity.getName(),
+            entityId);
+        return draftVersion;
+      }
+      if (deprecatedVersion != null) {
+        LOG.info(
+            "[RollbackEntity] No APPROVED/DRAFT version found, falling back to DEPRECATED version {} for entity: {} ({})",
+            deprecatedVersion,
+            entity.getName(),
+            entityId);
+        return deprecatedVersion;
+      }
+
       LOG.warn(
-          "[RollbackEntity] No approved or rejected version found in history for entity: {} ({})",
+          "[RollbackEntity] No approved, draft, or deprecated version found in history for entity: {} ({})",
           entity.getName(),
           entityId);
       return null;
     } catch (Exception e) {
-      LOG.error("Error finding previous approved or rejected version", e);
+      LOG.error("Error finding previous rollback target version", e);
       return null;
     }
   }
 
-  private String getRollbackStatus(EntityInterface entity) {
+  private EntityStatus getEntityStatus(EntityInterface entity) {
     try {
       java.lang.reflect.Method getStatusMethod = entity.getClass().getMethod("getEntityStatus");
       Object statusObj = getStatusMethod.invoke(entity);
-
-      if (statusObj == null) {
-        LOG.warn(
-            "[RollbackEntity] Status is null for {} version {}",
-            entity.getClass().getSimpleName(),
-            entity.getVersion());
-        return null;
-      }
-
       if (statusObj instanceof EntityStatus status) {
-        LOG.debug(
-            "[RollbackEntity] Checking status: '{}' for version {}", status, entity.getVersion());
-
-        if (status == EntityStatus.APPROVED) {
-          return "Approved";
-        } else if (status == EntityStatus.REJECTED) {
-          return "Rejected";
-        }
-
-        LOG.debug(
-            "[RollbackEntity] Skipping version {} with status '{}' - not a rollback target",
-            entity.getVersion(),
-            status);
-
-        return null;
+        return status;
       }
-
-      LOG.warn(
-          "[RollbackEntity] Unexpected status type for {}: {}",
-          entity.getClass().getSimpleName(),
-          statusObj.getClass().getName());
       return null;
-
     } catch (NoSuchMethodException e) {
-      LOG.debug(
-          "[RollbackEntity] Entity type {} doesn't have entityStatus field, treating as approved",
-          entity.getClass().getSimpleName());
-      return "Approved";
+      return EntityStatus.APPROVED;
     } catch (Exception e) {
       LOG.error(
           "[RollbackEntity] Error checking entity status for {}",
