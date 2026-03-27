@@ -166,7 +166,7 @@ const MUIGlossaryTagSuggestion: FC<MUIGlossaryTagSuggestionProps> = ({
             children: [
               {
                 id: `${glossary.name}-loading`,
-                label: 'Loading...',
+                label: `${t('label.loading')}...`,
                 value: `${glossary.name}-loading`,
                 children: [],
                 isLeaf: true,

@@ -77,7 +77,7 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
   const searchAndExpandGlossaryTerm = async (
     page: Page,
     glossaryName: string,
-    termDisplayName: string
+    _termDisplayName: string
   ) => {
     // Type in the glossary terms field to search
     const glossaryField = page.getByTestId('glossary-terms');

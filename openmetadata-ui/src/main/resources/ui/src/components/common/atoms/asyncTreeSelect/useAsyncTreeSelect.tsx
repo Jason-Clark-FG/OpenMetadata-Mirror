@@ -31,7 +31,7 @@ export interface UseAsyncTreeSelectReturn<T> {
   selectedNodes: Map<string, TreeNode<T>>;
   selectedData: TreeNode<T>[];
   isNodeSelected: (nodeId: string) => boolean;
-  toggleNodeSelection: (node: TreeNode<T>) => void;
+  toggleNodeSelection: (node: TreeNode<T>, parentNode?: TreeNode<T>) => void;
   clearSelection: () => void;
   selectAll: () => void;
   removeLastSelectedOption: () => void;
@@ -39,7 +39,7 @@ export interface UseAsyncTreeSelectReturn<T> {
   // Expansion
   expandedNodes: Set<string>;
   isNodeExpanded: (nodeId: string) => boolean;
-  toggleNodeExpansion: (nodeId: string, parentNode?: TreeNode<T>) => void;
+  toggleNodeExpansion: (nodeId: string) => void;
   expandAll: () => void;
   collapseAll: () => void;
 

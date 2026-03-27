@@ -27,11 +27,8 @@ public class GlossaryTermIndex implements SearchIndex {
       @SuppressWarnings("unchecked")
       Map<String, Object> glossaryMap = (Map<String, Object>) doc.get("glossary");
       Glossary glossary =
-          Entity.getEntity(
-              Entity.GLOSSARY,
-              glossaryTerm.getGlossary().getId(),
-              "mutuallyExclusive",
-              Include.NON_DELETED);
+          Entity.getEntityOrNull(
+              glossaryTerm.getGlossary(), "mutuallyExclusive", Include.NON_DELETED);
       if (glossary != null && glossary.getMutuallyExclusive() != null) {
         glossaryMap.put("mutuallyExclusive", glossary.getMutuallyExclusive());
       }

@@ -3,6 +3,8 @@ package org.openmetadata.service.search.indexes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 
 import java.util.HashMap;
@@ -39,11 +41,12 @@ class GlossaryTermIndexTest {
   @Test
   void testBuildSearchIndexDocInternal_enrichesGlossaryMutuallyExclusive() {
     UUID glossaryId = UUID.randomUUID();
+    EntityReference glossaryRef = new EntityReference().withId(glossaryId).withType("glossary");
 
     GlossaryTerm glossaryTerm = new GlossaryTerm();
     glossaryTerm.setName("testTerm");
     glossaryTerm.setFullyQualifiedName("testGlossary.testTerm");
-    glossaryTerm.setGlossary(new EntityReference().withId(glossaryId).withType("glossary"));
+    glossaryTerm.setGlossary(glossaryRef);
 
     Glossary glossary = new Glossary();
     glossary.setName("testGlossary");
@@ -52,7 +55,8 @@ class GlossaryTermIndexTest {
     entityStaticMock
         .when(
             () ->
-                Entity.getEntity("glossary", glossaryId, "mutuallyExclusive", Include.NON_DELETED))
+                Entity.getEntityOrNull(
+                    any(EntityReference.class), eq("mutuallyExclusive"), eq(Include.NON_DELETED)))
         .thenReturn(glossary);
 
     GlossaryTermIndex index = Mockito.spy(new GlossaryTermIndex(glossaryTerm));
@@ -94,11 +98,12 @@ class GlossaryTermIndexTest {
   @Test
   void testBuildSearchIndexDocInternal_glossaryWithNullMutuallyExclusive() {
     UUID glossaryId = UUID.randomUUID();
+    EntityReference glossaryRef = new EntityReference().withId(glossaryId).withType("glossary");
 
     GlossaryTerm glossaryTerm = new GlossaryTerm();
     glossaryTerm.setName("testTerm");
     glossaryTerm.setFullyQualifiedName("testGlossary.testTerm");
-    glossaryTerm.setGlossary(new EntityReference().withId(glossaryId).withType("glossary"));
+    glossaryTerm.setGlossary(glossaryRef);
 
     Glossary glossary = new Glossary();
     glossary.setName("testGlossary");
@@ -107,7 +112,8 @@ class GlossaryTermIndexTest {
     entityStaticMock
         .when(
             () ->
-                Entity.getEntity("glossary", glossaryId, "mutuallyExclusive", Include.NON_DELETED))
+                Entity.getEntityOrNull(
+                    any(EntityReference.class), eq("mutuallyExclusive"), eq(Include.NON_DELETED)))
         .thenReturn(glossary);
 
     GlossaryTermIndex index = Mockito.spy(new GlossaryTermIndex(glossaryTerm));
