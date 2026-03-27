@@ -324,6 +324,7 @@ const TermsRow: React.FC<TermsRowProps> = ({
       </div>
       <div className="tw:flex-1" data-testid={`term-autocomplete-${rowId}`}>
         <Autocomplete
+          filterOption={() => true}
           items={dropdownItems}
           maxVisibleItems={3}
           placeholder={t('label.add-entity', {

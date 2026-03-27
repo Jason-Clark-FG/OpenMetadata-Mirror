@@ -1190,9 +1190,12 @@ export const addRelatedTerms = async (
     .locator('input');
 
   for (const term of relatedTerms) {
-    const entityName = get(term, 'responseData.name');
-    await autocompleteInput.fill(entityName);
-    await page.getByRole('option', { name: entityName }).click();
+    const entityDisplayName =
+      get(term, 'responseData.displayName') || get(term, 'responseData.name');
+    const searchRes = page.waitForResponse('**/api/v1/glossaryTerms/search*');
+    await autocompleteInput.fill(entityDisplayName);
+    await searchRes;
+    await page.getByRole('option', { name: entityDisplayName }).click();
   }
 
   const saveRes = page.waitForResponse('/api/v1/glossaryTerms/*');

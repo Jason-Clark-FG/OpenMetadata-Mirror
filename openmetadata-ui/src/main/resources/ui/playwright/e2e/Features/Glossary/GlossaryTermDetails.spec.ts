@@ -233,6 +233,9 @@ test.describe('Glossary Term Details Operations', () => {
 
       await expect(page.getByTestId(term1Name)).toBeVisible();
 
+      // Move mouse away to dismiss any tooltip that may be overlapping the edit button
+      await page.mouse.move(0, 0);
+
       // Clean up: remove the related term from term2's page - use edit button since term exists
       await page
         .getByTestId('related-term-container')
