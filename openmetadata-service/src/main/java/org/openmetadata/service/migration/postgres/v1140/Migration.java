@@ -1,9 +1,9 @@
-package org.openmetadata.service.migration.postgres.v1130;
+package org.openmetadata.service.migration.postgres.v1140;
 
 import lombok.SneakyThrows;
 import org.openmetadata.service.migration.api.MigrationProcessImpl;
 import org.openmetadata.service.migration.utils.MigrationFile;
-import org.openmetadata.service.migration.utils.v1130.MigrationUtil;
+import org.openmetadata.service.migration.utils.v1140.MigrationUtil;
 
 public class Migration extends MigrationProcessImpl {
 
@@ -14,6 +14,6 @@ public class Migration extends MigrationProcessImpl {
   @Override
   @SneakyThrows
   public void runDataMigration() {
-    MigrationUtil.updateOwnerChartFormulas();
+    MigrationUtil.migrateWorkflowInputNamespaceMap();
   }
 }
