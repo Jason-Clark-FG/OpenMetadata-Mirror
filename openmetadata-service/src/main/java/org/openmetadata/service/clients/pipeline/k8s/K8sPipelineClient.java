@@ -989,7 +989,7 @@ public class K8sPipelineClient extends PipelineServiceClient {
 
       String message = String.format(K8S_AVAILABLE_FORMAT, namespace, serviceAccount);
 
-      return buildHealthyStatus(getKubernetesVersion()).withPlatform(message);
+      return buildHealthyStatus(getKubernetesVersion()).withReason(message);
 
     } catch (ApiException e) {
       String error =
