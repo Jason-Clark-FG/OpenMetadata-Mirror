@@ -16,6 +16,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { TopicClass } from '../../../support/entity/TopicClass';
 import { WorksheetClass } from '../../../support/entity/WorksheetClass';
 import {
+  clickOutside,
   getApiContext,
   getDefaultAdminAPIContext,
   redirectToHomePage,
@@ -35,6 +36,7 @@ import {
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
+  toggleLineageFilters,
   verifyColumnLineageInCSV,
   verifyExportLineageCSV,
   verifyExportLineagePNG,
@@ -333,6 +335,102 @@ test.describe('Column Level Lineage', () => {
         });
       }
     });
+  });
+
+  test('Verify column layer is applied on entering edit mode', async ({
+    page,
+  }) => {
+    const { apiContext, afterAction } = await getApiContext(page);
+    const table = new TableClass();
+
+    await table.create(apiContext);
+
+    try {
+      await table.visitEntityPage(page);
+      await visitLineageTab(page);
+
+      const columnLayerBtn = page.locator(
+        '[data-testid="lineage-layer-column-btn"]'
+      );
+
+      await test.step('Verify column layer is inactive initially', async () => {
+        await page.click('[data-testid="lineage-layer-btn"]');
+
+        await expect(columnLayerBtn).not.toHaveClass(/Mui-selected/);
+
+        await clickOutside(page);
+      });
+
+      await test.step('Enter edit mode and verify column layer is active', async () => {
+        await editLineageClick(page);
+
+        await page.click('[data-testid="lineage-layer-btn"]');
+
+        await expect(columnLayerBtn).toHaveClass(/Mui-selected/);
+
+        await clickOutside(page);
+      });
+    } finally {
+      await table.delete(apiContext);
+      await afterAction();
+    }
+  });
+
+  test('Verify there is no traced nodes and columns on exiting edit mode', async ({
+    page,
+  }) => {
+    const { apiContext, afterAction } = await getApiContext(page);
+    const table = new TableClass();
+
+    await table.create(apiContext);
+
+    try {
+      await table.visitEntityPage(page);
+      await visitLineageTab(page);
+
+      const tableFqn = get(table, 'entityResponseData.fullyQualifiedName', '');
+      const tableNode = page.getByTestId(`lineage-node-${tableFqn}`);
+      const firstColumnName = get(
+        table,
+        'entityResponseData.columns[0].fullyQualifiedName'
+      );
+      const firstColumn = page.getByTestId(`column-${firstColumnName}`);
+
+      await test.step('Verify node tracing is cleared on exiting edit mode', async () => {
+        await editLineageClick(page);
+
+        await expect(tableNode).not.toHaveClass(/custom-node-header-active/);
+
+        await tableNode.click({ position: { x: 5, y: 5 } });
+
+        await expect(tableNode).toHaveClass(/custom-node-header-active/);
+
+        await editLineageClick(page);
+
+        await expect(tableNode).not.toHaveClass(/custom-node-header-active/);
+      });
+
+      await test.step('Verify column tracing is cleared on exiting edit mode', async () => {
+        await editLineageClick(page);
+
+        await firstColumn.click();
+
+        await expect(firstColumn).toHaveClass(
+          /custom-node-header-column-tracing/
+        );
+
+        await editLineageClick(page);
+
+        await toggleLineageFilters(page, tableFqn);
+
+        await expect(firstColumn).not.toHaveClass(
+          /custom-node-header-column-tracing/
+        );
+      });
+    } finally {
+      await table.delete(apiContext);
+      await afterAction();
+    }
   });
 });
 
