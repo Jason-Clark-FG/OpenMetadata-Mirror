@@ -192,25 +192,48 @@
     z-index: 999;
   }
 
-  // EntitySummaryPanel overlay
-  .knowledge-graph-entity-panel {
+  .knowledge-graph-action-buttons {
     position: absolute;
-    top: 72px;
+    bottom: 16px;
     right: 16px;
-    width: 400px;
-    max-height: calc(100% - 150px);
+    z-index: 1000;
+    display: inline-flex;
     background: @white;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    z-index: 100;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
 
-    .entity-summary-panel-container {
-      height: 100%;
-      overflow-y: auto;
+    .kg-control-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      border-right: 1px solid rgba(0, 0, 0, 0.12);
+      cursor: pointer;
+      padding: 0;
+      color: rgba(0, 0, 0, 0.54);
+      transition: background-color 0.15s ease;
+
+      &:last-child {
+        border-right: none;
+      }
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.04);
+      }
+
+      &:focus-visible {
+        outline: 2px solid #1976d2;
+        outline-offset: -2px;
+      }
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
     }
   }
 

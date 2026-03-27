@@ -22,24 +22,24 @@ import {
 } from '@antv/g6';
 import { ReactNode as AntVReactNode } from '@antv/g6-extension-react';
 import {
-  Button,
   Card,
   Divider,
+  SlideoutMenu,
   Slider,
   Tabs,
   Tooltip,
+  TooltipTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
-import {
-  Maximize01,
-  RefreshCw01,
-  Target01,
-  ZoomIn,
-  ZoomOut,
-} from '@untitledui/icons';
 import { isArray } from 'lodash';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ReactComponent as ExitFullScreenIcon } from '../../assets/svg/ic-exit-fullscreen.svg';
+import { ReactComponent as FitScreenIcon } from '../../assets/svg/ic-fit-screen.svg';
+import { ReactComponent as FullscreenIcon } from '../../assets/svg/ic-fullscreen.svg';
+import { ReactComponent as ZoomInIcon } from '../../assets/svg/ic-zoom-in.svg';
+import { ReactComponent as ZoomOutIcon } from '../../assets/svg/ic-zoom-out.svg';
+import { ReactComponent as RefreshIcon } from '../../assets/svg/reload.svg';
 import { EntityType } from '../../enums/entity.enum';
 import { getEntityGraphData } from '../../rest/rdfAPI';
 import { getEntityLinkFromType } from '../../utils/EntityUtils';
@@ -82,6 +82,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const [selectedDepth, setSelectedDepth] = useState(depth);
   const [layout, setLayout] = useState<KnowledgeGraphLayout>('dagre');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const fetchGraphData = useCallback(async () => {
     if (!entity?.id) {
@@ -148,6 +149,15 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   };
 
   useEffect(() => {
+    const onFullscreenChange = () =>
+      setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+
+    return () =>
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  useEffect(() => {
     if (!containerRef.current || !graphData || loading) {
       return;
     }
@@ -163,7 +173,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       ) ?? 0;
 
     const dagreNodesep = NODE_HEIGHT + 48;
-    const dagreRanksep = NODE_WIDTH + Math.max(100, maxEdgeLabelLen * 8);
+    const dagreRanksep = NODE_WIDTH + Math.max(300, maxEdgeLabelLen * 8);
 
     const focusNodeId = entity?.id
       ? (g6Data.nodes ?? []).find(
@@ -426,22 +436,38 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       <Card className="knowledge-graph-canvas" ref={containerRef} />
 
       {selectedNode?.fullyQualifiedName && (
-        <div className="knowledge-graph-entity-panel">
-          <EntitySummaryPanel
-            entityDetails={{
-              details: {
-                id:
-                  ENTITY_UUID_REGEX.exec(selectedNode.id)?.[1] ??
-                  selectedNode.id,
-                fullyQualifiedName: selectedNode.fullyQualifiedName,
-                entityType: selectedNode.type as EntityType,
-                name: selectedNode.name ?? selectedNode.label,
-                displayName: selectedNode.label,
-              } as SearchSourceDetails,
-            }}
-            handleClosePanel={() => setSelectedNode(null)}
-          />
-        </div>
+        <SlideoutMenu
+          isDismissable
+          isOpen
+          className="tw:z-1100"
+          dialogClassName="tw:gap-0 tw:items-stretch tw:min-h-0 tw:overflow-hidden tw:p-0"
+          width={576}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setSelectedNode(null);
+            }
+          }}>
+          {({ close }) => (
+            <EntitySummaryPanel
+              isSideDrawer
+              entityDetails={{
+                details: {
+                  id:
+                    ENTITY_UUID_REGEX.exec(selectedNode.id)?.[1] ??
+                    selectedNode.id,
+                  fullyQualifiedName: selectedNode.fullyQualifiedName,
+                  entityType: selectedNode.type as EntityType,
+                  name: selectedNode.name ?? selectedNode.label,
+                  displayName: selectedNode.label,
+                } as SearchSourceDetails,
+              }}
+              handleClosePanel={() => {
+                setSelectedNode(null);
+                close();
+              }}
+            />
+          )}
+        </SlideoutMenu>
       )}
     </>
   );
@@ -519,54 +545,58 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
               onChange={handleDepthChange}
             />
           </div>
-          <Divider orientation="vertical" />
-          <div className="tw:flex tw:gap-1">
-            <Tooltip title={t('label.zoom-in')}>
-              <Button
-                color="secondary"
-                iconLeading={ZoomIn}
-                size="sm"
-                onPress={handleZoomIn}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.zoom-out')}>
-              <Button
-                color="secondary"
-                iconLeading={ZoomOut}
-                size="sm"
-                onPress={handleZoomOut}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.fit-to-screen')}>
-              <Button
-                color="secondary"
-                iconLeading={Target01}
-                size="sm"
-                onPress={handleFit}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.fullscreen')}>
-              <Button
-                color="secondary"
-                iconLeading={Maximize01}
-                size="sm"
-                onPress={handleFullscreen}
-              />
-            </Tooltip>
-            <Tooltip title={t('label.refresh')}>
-              <Button
-                color="secondary"
-                iconLeading={RefreshCw01}
-                isLoading={loading}
-                size="sm"
-                onPress={fetchGraphData}
-              />
-            </Tooltip>
-          </div>
         </Card.Content>
       </Card>
 
       {graphContent}
+
+      <div className="knowledge-graph-action-buttons">
+        <Tooltip title={t('label.zoom-in')}>
+          <TooltipTrigger
+            className="kg-control-btn"
+            data-testid="zoom-in"
+            onPress={handleZoomIn}>
+            <ZoomInIcon />
+          </TooltipTrigger>
+        </Tooltip>
+        <Tooltip title={t('label.zoom-out')}>
+          <TooltipTrigger
+            className="kg-control-btn"
+            data-testid="zoom-out"
+            onPress={handleZoomOut}>
+            <ZoomOutIcon />
+          </TooltipTrigger>
+        </Tooltip>
+        <Tooltip title={t('label.fit-to-screen')}>
+          <TooltipTrigger
+            className="kg-control-btn"
+            data-testid="fit-screen"
+            onPress={handleFit}>
+            <FitScreenIcon />
+          </TooltipTrigger>
+        </Tooltip>
+        <Tooltip
+          title={
+            isFullscreen
+              ? t('label.exit-full-screen')
+              : t('label.full-screen-view')
+          }>
+          <TooltipTrigger
+            className="kg-control-btn"
+            data-testid={isFullscreen ? 'exit-full-screen' : 'full-screen'}
+            onPress={handleFullscreen}>
+            {isFullscreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
+          </TooltipTrigger>
+        </Tooltip>
+        <Tooltip title={t('label.refresh')}>
+          <TooltipTrigger
+            className="kg-control-btn"
+            data-testid="refresh"
+            onPress={() => void fetchGraphData()}>
+            <RefreshIcon />
+          </TooltipTrigger>
+        </Tooltip>
+      </div>
     </div>
   );
 };

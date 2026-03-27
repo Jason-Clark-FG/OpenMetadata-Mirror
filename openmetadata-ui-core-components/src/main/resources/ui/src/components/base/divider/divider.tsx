@@ -31,7 +31,7 @@ export const Divider = ({
 }: DividerProps) => {
   if (orientation === 'vertical') {
     return (
-      <hr
+      <div
         {...props}
         aria-orientation="vertical"
         className={cx(
@@ -44,7 +44,7 @@ export const Divider = ({
 
   if (!label) {
     return (
-      <hr
+      <div
         {...props}
         aria-orientation="horizontal"
         className={cx(
@@ -56,7 +56,7 @@ export const Divider = ({
   }
 
   return (
-    <hr
+    <div
       {...props}
       aria-orientation="horizontal"
       className={cx('tw:flex tw:items-center tw:w-full tw:gap-2', className)}>
@@ -69,7 +69,7 @@ export const Divider = ({
       {labelAlign !== 'end' && (
         <div className="tw:h-px tw:flex-1 tw:bg-border-secondary" />
       )}
-    </hr>
+    </div>
   );
 };
 
