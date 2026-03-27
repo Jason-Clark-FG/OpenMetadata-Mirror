@@ -119,6 +119,9 @@ export default defineConfig({
         '@react-types/shared',
         '@internationalized/date',
         'tailwindcss-react-aria-components',
+        'motion/react',
+        'motion',
+        '@untitledui/file-icons',
       ],
       output: {
         entryFileNames: (chunkInfo) => {
