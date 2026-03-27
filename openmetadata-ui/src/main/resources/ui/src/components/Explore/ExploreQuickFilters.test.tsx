@@ -300,6 +300,35 @@ describe('ExploreQuickFilters component', () => {
 
       expect(mockUseCustomLocation).toHaveBeenCalled();
     });
+
+    it('should pass search query text to getAggregationOptions', async () => {
+      mockUseCustomLocation.mockReturnValue({
+        search: '?search=pets',
+      });
+      mockGetAggregationOptions.mockResolvedValue(mockAdvancedFieldDefaultOptions);
+
+      render(<ExploreQuickFilters {...mockProps} aggregations={undefined} />);
+
+      const initialButton = screen.getByTestId('onGetInitialOptions-database.name');
+
+      await act(async () => {
+        userEvent.click(initialButton);
+      });
+
+      await waitFor(() => {
+        expect(getAggregationOptions).toHaveBeenCalledWith(
+          SearchIndex.TABLE,
+          'database.name',
+          '',
+          expect.any(String),
+          false,
+          false,
+          undefined,
+          false,
+          'pets'
+        );
+      });
+    });
   });
 
   describe('Options fetching - Aggregations', () => {
@@ -320,7 +349,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           undefined,
-          false
+          false,
+          ''
         );
       });
 
@@ -354,7 +384,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           undefined,
-          false
+          false,
+          ''
         );
       });
     });
@@ -389,7 +420,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           50,
-          false
+          false,
+          ''
         );
       });
     });
@@ -541,7 +573,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           undefined,
-          false
+          false,
+          ''
         );
       });
     });
@@ -588,7 +621,8 @@ describe('ExploreQuickFilters component', () => {
           true,
           false,
           undefined,
-          false
+          false,
+          ''
         );
       });
     });
@@ -616,7 +650,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           undefined,
-          true
+          true,
+          ''
         );
       });
     });
@@ -769,7 +804,8 @@ describe('ExploreQuickFilters component', () => {
           expect.anything(),
           expect.anything(),
           undefined,
-          expect.anything()
+          expect.anything(),
+          expect.any(String)
         );
       });
     });
@@ -803,7 +839,8 @@ describe('ExploreQuickFilters component', () => {
           false,
           false,
           undefined,
-          false
+          false,
+          ''
         );
       });
     });
