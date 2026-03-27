@@ -68,9 +68,11 @@ public class McpServerRepository extends EntityRepository<McpServer> {
   @Override
   protected void deleteChildren(UUID id, boolean hardDelete, String updatedBy) {
     super.deleteChildren(id, hardDelete, updatedBy);
-    McpExecutionRepository executionRepo =
-        (McpExecutionRepository) Entity.getEntityTimeSeriesRepository(Entity.MCP_EXECUTION);
-    executionRepo.deleteByServerId(id);
+    if (hardDelete) {
+      McpExecutionRepository executionRepo =
+          (McpExecutionRepository) Entity.getEntityTimeSeriesRepository(Entity.MCP_EXECUTION);
+      executionRepo.deleteByServerId(id);
+    }
   }
 
   @Override
