@@ -16,8 +16,8 @@ import { Domain } from '../../../support/domain/Domain';
 import { Glossary } from '../../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../../support/glossary/GlossaryTerm';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
-import { sidebarClick } from '../../../utils/sidebar';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
+import { sidebarClick } from '../../../utils/sidebar';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -34,7 +34,10 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
     );
 
     // Fill name field - use pattern from existing specs
-    await page.getByTestId('name').locator('input').fill(`test-dp-${Date.now()}`);
+    await page
+      .getByTestId('name')
+      .locator('input')
+      .fill(`test-dp-${Date.now()}`);
 
     // Fill description field - use contenteditable pattern
     const descriptionEditor = page.locator('[contenteditable="true"]').first();
@@ -88,10 +91,10 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
     await searchGlossary;
 
     await waitForAllLoadersToDisappear(page);
- 
+
     // Click on the expand icon - navigate up to find TreeItem icon container
     const expandIcon = page
-    .getByRole('tooltip')
+      .getByRole('tooltip')
       .locator('.MuiSvgIcon-root')
       .first();
     await expandIcon.click();
@@ -515,7 +518,9 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         // Clean up the created data product
         await apiContext.delete(
-          `/api/v1/dataProducts/name/${encodeURIComponent(responseBody.fullyQualifiedName)}?hardDelete=true`
+          `/api/v1/dataProducts/name/${encodeURIComponent(
+            responseBody.fullyQualifiedName
+          )}?hardDelete=true`
         );
       } finally {
         await glossary.delete(apiContext);
@@ -566,11 +571,11 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await waitForAllLoadersToDisappear(page);
         const expandIcon = page
-        .getByRole('tooltip')
+          .getByRole('tooltip')
           .locator('.MuiSvgIcon-root')
           .first();
         await expandIcon.click();
-    
+
         // Wait for children to load
         await waitForAllLoadersToDisappear(page);
 
