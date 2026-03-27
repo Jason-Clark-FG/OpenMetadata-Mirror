@@ -56,7 +56,7 @@ interface AutocompleteContextValue {
   onInputChange: (value: string) => void;
   renderTag?: (item: SelectItemType, onRemove: () => void) => ReactNode;
   maxVisibleItems?: number;
-  isAtMax: boolean;
+  multiple: boolean;
 }
 
 const AutocompleteContext = createContext<AutocompleteContextValue>({
@@ -66,7 +66,7 @@ const AutocompleteContext = createContext<AutocompleteContextValue>({
   onRemove: () => {},
   onInputChange: () => {},
   maxVisibleItems: undefined,
-  isAtMax: false,
+  multiple: true,
 });
 
 interface AutocompleteTriggerProps extends AriaGroupProps {
@@ -204,7 +204,7 @@ const InnerAutocomplete = ({
   };
 
   const isSelectionEmpty = context?.selectedItems?.length === 0;
-  const { maxVisibleItems, isAtMax } = context;
+  const { maxVisibleItems, multiple } = context;
   const allSelected = context?.selectedItems ?? [];
   const visibleSelected =
     maxVisibleItems === undefined
@@ -250,7 +250,7 @@ const InnerAutocomplete = ({
         className={cx(
           'tw:relative tw:flex tw:min-w-[20%] tw:flex-1 tw:flex-row tw:items-center',
           !isSelectionEmpty && 'tw:ml-0.5',
-          isAtMax && 'tw:hidden'
+          !multiple && !isSelectionEmpty && 'tw:hidden'
         )}>
         <AriaInput
           className="tw:w-full tw:flex-[1_0_0] tw:appearance-none tw:bg-transparent tw:text-sm tw:text-ellipsis tw:text-primary tw:caret-alpha-black/90 tw:outline-none tw:placeholder:text-placeholder tw:focus:outline-hidden tw:disabled:cursor-not-allowed tw:disabled:text-disabled tw:disabled:placeholder:text-disabled"
@@ -376,13 +376,11 @@ export const AutocompleteBase = ({
     [onItemCleared]
   );
 
-  const isAtMax = !multiple && internalSelected.length >= 1;
-
   const onSelectionChange = (id: Key | null) => {
     if (!id) {
       return;
     }
-    if (isAtMax) {
+    if (!multiple && internalSelected.length >= 1) {
       return;
     }
     const item = itemMap.get(id as string);
@@ -428,7 +426,7 @@ export const AutocompleteBase = ({
       onRemove,
       renderTag,
       maxVisibleItems,
-      isAtMax,
+      multiple,
     }),
     [
       selectedKeys,
@@ -437,7 +435,7 @@ export const AutocompleteBase = ({
       onRemove,
       renderTag,
       maxVisibleItems,
-      isAtMax,
+      multiple,
     ]
   );
 
