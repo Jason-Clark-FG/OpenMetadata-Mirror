@@ -46,6 +46,7 @@ from metadata.utils.filters import (
     filter_by_table,
     validate_regex,
 )
+from metadata.utils.fqn import split
 
 FIELDS = ["tableProfilerConfig", "columns", "customMetrics", "tags"]
 CONTAINER_FIELDS = ["dataModel", "tags"]
@@ -373,7 +374,7 @@ class StorageFetcherStrategy(FetcherStrategy):
         if not bucket_filter_pattern:
             return False
 
-        fqn_parts = container.fullyQualifiedName.root.split(".")
+        fqn_parts = split(container.fullyQualifiedName.root)
         if len(fqn_parts) >= 2:
             bucket_name = fqn_parts[1]
         else:

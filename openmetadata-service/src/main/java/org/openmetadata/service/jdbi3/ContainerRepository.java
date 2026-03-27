@@ -79,6 +79,10 @@ public class ContainerRepository extends EntityRepository<Container> {
         fields.contains(FIELD_PARENT) ? getContainerParent(container) : container.getParent());
     container.setChildren(
         fields.contains("children") ? getChildren(container) : container.getChildren());
+    container.setSampleData(
+        fields.contains("sampleData")
+            ? getSampleDataInternal(container.getId())
+            : container.getSampleData());
     if (container.getDataModel() != null) {
       populateDataModelColumnTags(
           fields.contains(FIELD_TAGS),
@@ -505,6 +509,19 @@ public class ContainerRepository extends EntityRepository<Container> {
     }
   }
 
+  private TableData getSampleDataInternal(UUID containerId) {
+    try {
+      String json =
+          daoCollection
+              .entityExtensionDAO()
+              .getExtension(containerId, CONTAINER_SAMPLE_DATA_EXTENSION);
+      return json != null ? JsonUtils.readValue(json, TableData.class) : null;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  @Transaction
   public Container addSampleData(UUID containerId, TableData tableData) {
     Container container = find(containerId, NON_DELETED);
 

@@ -310,9 +310,10 @@ public class PIIMasker {
   }
 
   private static boolean hasPiiSensitiveTag(Container container) {
-    return container.getTags().stream()
-        .map(TagLabel::getTagFQN)
-        .anyMatch(SENSITIVE_PII_TAG::equals);
+    return container.getTags() != null
+        && container.getTags().stream()
+            .map(TagLabel::getTagFQN)
+            .anyMatch(SENSITIVE_PII_TAG::equals);
   }
 
   private static boolean hasPiiSensitiveTag(SearchIndex searchIndex) {
