@@ -46,6 +46,5 @@ export interface NodeConfiguration {
 }
 
 export interface InputNamespaceMap {
-    entityList?:    string;
-    relatedEntity?: string;
+    entityList: string;
 }

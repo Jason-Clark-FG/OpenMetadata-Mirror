@@ -216,8 +216,8 @@ export interface EntityReference {
 
 export interface InputNamespaceMap {
     entityList?:    string;
-    relatedEntity?: string;
     updatedBy?:     string;
+    relatedEntity?: string;
 }
 
 /**
