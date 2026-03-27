@@ -61,7 +61,7 @@ public class RollbackEntityImpl implements JavaDelegate {
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
       for (String entityLinkStr : entityList) {
         MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        rollbackEntity(execution, entityLink, updatedBy, workflowInstanceExecutionId);
+        rollbackEntity(entityLink, updatedBy, workflowInstanceExecutionId);
       }
 
     } catch (BpmnError e) {
@@ -74,10 +74,7 @@ public class RollbackEntityImpl implements JavaDelegate {
   }
 
   private void rollbackEntity(
-      DelegateExecution execution,
-      MessageParser.EntityLink entityLink,
-      String updatedBy,
-      String workflowInstanceExecutionId) {
+      MessageParser.EntityLink entityLink, String updatedBy, String workflowInstanceExecutionId) {
     EntityInterface currentEntity = Entity.getEntity(entityLink, "*", Include.ALL);
     String entityType = currentEntity.getEntityReference().getType();
     UUID entityId = currentEntity.getId();
@@ -108,12 +105,6 @@ public class RollbackEntityImpl implements JavaDelegate {
         previousVersion);
 
     restoreToPreviousVersion(repository, currentEntity, previousEntity, updatedBy);
-
-    execution.setVariable("rollbackAction", "rollback");
-    execution.setVariable("rollbackFromVersion", currentEntity.getVersion());
-    execution.setVariable("rollbackToVersion", previousVersion);
-    execution.setVariable("rollbackEntityId", entityId.toString());
-    execution.setVariable("rollbackEntityType", entityType);
 
     LOG.info(
         "[RollbackEntity] Successfully rolled back entity: {} ({}) to version {}",

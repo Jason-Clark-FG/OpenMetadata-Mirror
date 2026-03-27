@@ -718,7 +718,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> inputNamespace = new HashMap<>();
     inputNamespace.put("entityList", "global");
     checkNode.put("inputNamespaceMap", inputNamespace);
-    checkNode.put("output", List.of("result", "entityList", "falseEntityList"));
+    checkNode.put("output", List.of("result", "entityList", "false_entityList"));
     checkNode.put("branches", List.of("true", "false"));
 
     Map<String, Object> endNode = new HashMap<>();
@@ -2114,7 +2114,7 @@ public class WorkflowDefinitionResourceIT {
                   "output": [
                     "result",
                     "entityList",
-                    "falseEntityList"
+                    "false_entityList"
                   ],
                   "branches": [
                     "true",
@@ -3608,7 +3608,7 @@ public class WorkflowDefinitionResourceIT {
                   "inputNamespaceMap": {
                     "entityList": "global"
                   },
-                  "output": ["result", "entityList", "falseEntityList"],
+                  "output": ["result", "entityList", "false_entityList"],
                   "branches": ["true", "false"]
                 },
                 {
@@ -4558,7 +4558,7 @@ public class WorkflowDefinitionResourceIT {
                   "inputNamespaceMap": {
                     "entityList": "global"
                   },
-                  "output": ["result", "entityList", "falseEntityList"]
+                  "output": ["result", "entityList", "false_entityList"]
                 },
                 {
                   "name": "end",
@@ -4696,7 +4696,7 @@ public class WorkflowDefinitionResourceIT {
                   "inputNamespaceMap": {
                     "entityList": "global"
                   },
-                  "output": ["result", "entityList", "falseEntityList"]
+                  "output": ["result", "entityList", "false_entityList"]
                 },
                 {
                   "name": "endTrue",
