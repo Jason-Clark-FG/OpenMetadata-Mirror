@@ -42,6 +42,57 @@ import { useAuthProvider } from '../../Auth/AuthProviders/AuthProvider';
 import SSOConfigurationFormRJSF from './SSOConfigurationForm';
 import { SSOConfigurationFormProps } from './SSOConfigurationForm.interface';
 
+jest.mock('@openmetadata/ui-core-components', () => ({
+  Avatar: ({ children }: { children?: React.ReactNode }) => (
+    <span data-testid="avatar">{children}</span>
+  ),
+  Button: ({
+    children,
+    onClick,
+  }: {
+    children?: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <button data-testid="core-button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  Card: ({
+    children,
+    className,
+  }: {
+    children?: React.ReactNode;
+    className?: string;
+  }) => (
+    <div className={className} data-testid="core-card">
+      {children}
+    </div>
+  ),
+  Typography: ({
+    children,
+    as: Tag = 'span',
+  }: {
+    children?: React.ReactNode;
+    as?: React.ElementType;
+  }) => <Tag data-testid="core-typography">{children}</Tag>,
+  FileUploadDropZone: ({
+    children,
+    onDropFiles,
+  }: {
+    children?: (openFilePicker: () => void) => React.ReactNode;
+    onDropFiles?: (files: FileList) => void;
+  }) => (
+    <div data-testid="file-upload-drop-zone">
+      {children?.(() => {})}
+      <input
+        data-testid="file-upload-input"
+        type="file"
+        onChange={(e) => e.target.files && onDropFiles?.(e.target.files)}
+      />
+    </div>
+  ),
+}));
+
 // Mock dependencies
 jest.mock('../../../utils/ToastUtils', () => ({
   showErrorToast: jest.fn(),
