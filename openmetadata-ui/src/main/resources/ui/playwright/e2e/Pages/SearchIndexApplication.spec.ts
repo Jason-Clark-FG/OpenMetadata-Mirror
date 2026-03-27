@@ -63,12 +63,19 @@ const installSearchIndexApplication = async (page: Page) => {
       .isVisible();
   }
 
-  await page.click(
-    '[data-testid="search-indexing-application-card"] [data-testid="config-btn"]'
-  );
-  await page.click('[data-testid="install-application"]');
-  await page.click('[data-testid="save-button"]');
-  await page.click('[data-testid="submit-btn"]');
+  await page
+    .getByTestId('search-indexing-application-card')
+    .getByTestId('config-btn')
+    .click();
+
+  await page.getByTestId('install-application').waitFor({ state: 'visible' });
+  await page.getByTestId('install-application').click();
+
+  await page.getByTestId('save-button').waitFor({ state: 'visible' });
+  await page.getByTestId('save-button').click();
+
+  await page.getByTestId('submit-btn').waitFor({ state: 'visible' });
+  await page.getByTestId('submit-btn').click();
   await page.getByTestId('schedular-card-container').waitFor();
   await page
     .getByTestId('schedular-card-container')
@@ -147,17 +154,31 @@ test.describe('Search Index Application', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
     await test.step('Visit Application page', async () => {
       await redirectToHomePage(page);
-      await settingClick(page, GlobalSettingOptions.APPLICATIONS);
 
-      // Self-heal: if a previous retry left the app uninstalled, reinstall it before proceeding.
-      const isInstalled = await page
-        .locator('[data-testid="search-indexing-application-card"]')
-        .isVisible();
+      // If a previous retry left the app uninstalled, reinstall via API.
+      const { apiContext } = await getApiContext(page);
+      const appCheckResponse = await apiContext.get(
+        '/api/v1/apps/name/SearchIndexingApplication'
+      );
 
-      if (!isInstalled) {
-        await installSearchIndexApplication(page);
-        await settingClick(page, GlobalSettingOptions.APPLICATIONS);
+      if (appCheckResponse.status() === 404) {
+        // appConfiguration must be passed so the Configuration tab renders in the UI.
+        const marketplaceResponse = await apiContext.get(
+          '/api/v1/apps/marketplace/name/SearchIndexingApplication'
+        );
+        const { appConfiguration } = await marketplaceResponse.json();
+
+        await apiContext.post('/api/v1/apps', {
+          data: {
+            name: 'SearchIndexingApplication',
+            displayName: 'Search Indexing',
+            appConfiguration,
+            appSchedule: { scheduleTimeline: 'None' },
+          },
+        });
       }
+
+      await settingClick(page, GlobalSettingOptions.APPLICATIONS);
     });
 
     await test.step('Verify last execution run', async () => {
