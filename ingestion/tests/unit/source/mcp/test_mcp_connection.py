@@ -259,7 +259,7 @@ class TestDiscoverFromDirectConfig:
                     name="secure-server",
                     transport=TransportType.SSE,
                     url="http://localhost:8080",
-                    apiKey="test-api-key-67890",
+                    apiKey="test-key",  # NOSONAR
                 ),
             ],
         )
@@ -267,7 +267,7 @@ class TestDiscoverFromDirectConfig:
         servers = manager.discover_servers()
 
         assert len(servers) == 1
-        assert servers[0].api_key == "test-api-key-67890"
+        assert servers[0].api_key == "test-key"
 
     def test_handles_empty_servers_list(self):
         connection = McpConnection(

@@ -412,3 +412,57 @@ CREATE INDEX IF NOT EXISTS llm_service_type_index ON llm_service_entity(serviceT
 CREATE INDEX IF NOT EXISTS llm_service_deleted_index ON llm_service_entity(deleted);
 
 COMMENT ON TABLE llm_service_entity IS 'LLM Service entities';
+
+-- Create mcp_service_entity table
+CREATE TABLE IF NOT EXISTS mcp_service_entity (
+    id VARCHAR(36) GENERATED ALWAYS AS ((json ->> 'id'::text)) STORED NOT NULL,
+    name VARCHAR(256) GENERATED ALWAYS AS ((json ->> 'name'::text)) STORED NOT NULL,
+    serviceType VARCHAR(256) GENERATED ALWAYS AS ((json ->> 'serviceType'::text)) STORED NOT NULL,
+    json JSONB NOT NULL,
+    updatedAt BIGINT GENERATED ALWAYS AS (((json ->> 'updatedAt'::text))::bigint) STORED NOT NULL,
+    updatedBy VARCHAR(256) GENERATED ALWAYS AS ((json ->> 'updatedBy'::text)) STORED NOT NULL,
+    impersonatedBy VARCHAR(256) GENERATED ALWAYS AS (json->>'impersonatedBy') STORED,
+    deleted BOOLEAN GENERATED ALWAYS AS (((json ->> 'deleted'::text))::boolean) STORED,
+    nameHash VARCHAR(256) NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (nameHash)
+);
+
+CREATE INDEX IF NOT EXISTS mcp_service_name_index ON mcp_service_entity(name);
+CREATE INDEX IF NOT EXISTS mcp_service_type_index ON mcp_service_entity(serviceType);
+CREATE INDEX IF NOT EXISTS mcp_service_deleted_index ON mcp_service_entity(deleted);
+
+COMMENT ON TABLE mcp_service_entity IS 'MCP Service entities';
+
+-- Create mcp_server_entity table
+CREATE TABLE IF NOT EXISTS mcp_server_entity (
+    id VARCHAR(36) GENERATED ALWAYS AS (json->>'id') STORED NOT NULL,
+    name VARCHAR(256) GENERATED ALWAYS AS (json->>'name') STORED NOT NULL,
+    fqnHash VARCHAR(768) NOT NULL,
+    json JSONB NOT NULL,
+    updatedAt BIGINT GENERATED ALWAYS AS ((json->>'updatedAt')::bigint) STORED NOT NULL,
+    updatedBy VARCHAR(256) GENERATED ALWAYS AS (json->>'updatedBy') STORED NOT NULL,
+    impersonatedBy VARCHAR(256) GENERATED ALWAYS AS (json->>'impersonatedBy') STORED,
+    deleted BOOLEAN GENERATED ALWAYS AS ((json->>'deleted')::boolean) STORED,
+    PRIMARY KEY (id),
+    UNIQUE (fqnHash)
+);
+
+CREATE INDEX IF NOT EXISTS mcp_server_name_index ON mcp_server_entity(name);
+CREATE INDEX IF NOT EXISTS mcp_server_deleted_index ON mcp_server_entity(deleted);
+
+COMMENT ON TABLE mcp_server_entity IS 'MCP Server entities';
+
+-- Create mcp_execution_entity table
+CREATE TABLE IF NOT EXISTS mcp_execution_entity (
+    id VARCHAR(36) GENERATED ALWAYS AS (json->>'id') STORED NOT NULL,
+    serverId VARCHAR(36) GENERATED ALWAYS AS (json->>'serverId') STORED NOT NULL,
+    json JSONB NOT NULL,
+    timestamp BIGINT GENERATED ALWAYS AS ((json->>'timestamp')::bigint) STORED NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS mcp_execution_server_index ON mcp_execution_entity(serverId);
+CREATE INDEX IF NOT EXISTS mcp_execution_timestamp_index ON mcp_execution_entity(timestamp);
+
+COMMENT ON TABLE mcp_execution_entity IS 'MCP Execution logs';

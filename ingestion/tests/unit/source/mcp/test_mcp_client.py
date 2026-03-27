@@ -52,17 +52,17 @@ class TestMcpServerInfo:
             transport="SSE",
             command="npx",
             args=["-y", "server-package"],
-            env={"API_KEY": "secret"},
+            env={"MY_VAR": "test-value"},
             url="http://localhost:8080",
-            api_key="test-api-key-12345",
+            api_key="test-key",  # NOSONAR
         )
         assert server.name == "my-server"
         assert server.transport == "SSE"
         assert server.command == "npx"
         assert server.args == ["-y", "server-package"]
-        assert server.env == {"API_KEY": "secret"}
+        assert server.env == {"MY_VAR": "test-value"}
         assert server.url == "http://localhost:8080"
-        assert server.api_key == "test-api-key-12345"
+        assert server.api_key == "test-key"  # NOSONAR
 
 
 class TestStdioTransport:
@@ -108,11 +108,11 @@ class TestHttpTransport:
     def test_initialization(self):
         transport = HttpTransport(
             url="http://localhost:8080/",
-            api_key="test-api-key-12345",
+            api_key="test-key",  # NOSONAR
             timeout=30,
         )
         assert transport.url == "http://localhost:8080"
-        assert transport.api_key == "test-api-key-12345"
+        assert transport.api_key == "test-key"
         assert transport.timeout == 30
 
     def test_url_trailing_slash_removed(self):
@@ -121,11 +121,11 @@ class TestHttpTransport:
 
     def test_connect_sets_headers(self):
         transport = HttpTransport(
-            url="http://localhost:8080", api_key="test-api-key-12345"
+            url="http://localhost:8080", api_key="test-key"  # NOSONAR
         )
         transport.connect()
         assert "Authorization" in transport.session.headers
-        assert transport.session.headers["Authorization"] == "Bearer test-api-key-12345"
+        assert transport.session.headers["Authorization"] == "Bearer test-key"
         assert transport.session.headers["Content-Type"] == "application/json"
 
     @patch("requests.Session.post")

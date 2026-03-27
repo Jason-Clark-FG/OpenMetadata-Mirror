@@ -35,6 +35,7 @@ from metadata.generated.schema.entity.services.connections.mcp.mcpConnection imp
     TransportType,
 )
 from metadata.generated.schema.entity.services.mcpService import (
+    McpConnection as McpServiceConnection,
     McpService,
     McpServiceType,
 )
@@ -74,17 +75,19 @@ class TestMcpServiceAPI:
         service_request = CreateMcpServiceRequest(
             name=EntityName(self.service_name),
             serviceType=McpServiceType.Mcp,
-            connection=McpConnection(
-                type=McpType.Mcp,
-                discoveryMethod=DiscoveryMethod.DirectConnection,
-                servers=[
-                    McpServerConfig(
-                        name="test-server",
-                        transport=TransportType.Stdio,
-                        command="echo",
-                        args=["test"],
-                    ),
-                ],
+            connection=McpServiceConnection(
+                config=McpConnection(
+                    type=McpType.Mcp,
+                    discoveryMethod=DiscoveryMethod.DirectConnection,
+                    servers=[
+                        McpServerConfig(
+                            name="test-server",
+                            transport=TransportType.Stdio,
+                            command="echo",
+                            args=["test"],
+                        ),
+                    ],
+                )
             ),
         )
 
@@ -99,16 +102,18 @@ class TestMcpServiceAPI:
         service_request = CreateMcpServiceRequest(
             name=EntityName(self.service_name),
             serviceType=McpServiceType.Mcp,
-            connection=McpConnection(
-                type=McpType.Mcp,
-                discoveryMethod=DiscoveryMethod.DirectConnection,
-                servers=[
-                    McpServerConfig(
-                        name="test-server",
-                        transport=TransportType.SSE,
-                        url="http://localhost:8080",
-                    ),
-                ],
+            connection=McpServiceConnection(
+                config=McpConnection(
+                    type=McpType.Mcp,
+                    discoveryMethod=DiscoveryMethod.DirectConnection,
+                    servers=[
+                        McpServerConfig(
+                            name="test-server",
+                            transport=TransportType.SSE,
+                            url="http://localhost:8080",
+                        ),
+                    ],
+                )
             ),
         )
 
@@ -127,10 +132,12 @@ class TestMcpServiceAPI:
         service_request = CreateMcpServiceRequest(
             name=EntityName(self.service_name),
             serviceType=McpServiceType.Mcp,
-            connection=McpConnection(
-                type=McpType.Mcp,
-                discoveryMethod=DiscoveryMethod.DirectConnection,
-                servers=[],
+            connection=McpServiceConnection(
+                config=McpConnection(
+                    type=McpType.Mcp,
+                    discoveryMethod=DiscoveryMethod.DirectConnection,
+                    servers=[],
+                )
             ),
         )
 
@@ -255,20 +262,22 @@ class TestMcpIngestionWorkflow:
         service_request = CreateMcpServiceRequest(
             name=EntityName(self.service_name),
             serviceType=McpServiceType.Mcp,
-            connection=McpConnection(
-                type=McpType.Mcp,
-                discoveryMethod=DiscoveryMethod.DirectConnection,
-                servers=[
-                    McpServerConfig(
-                        name="mock-server",
-                        transport=TransportType.Stdio,
-                        command="echo",
-                        args=["test"],
-                    ),
-                ],
-                fetchTools=True,
-                fetchResources=True,
-                fetchPrompts=True,
+            connection=McpServiceConnection(
+                config=McpConnection(
+                    type=McpType.Mcp,
+                    discoveryMethod=DiscoveryMethod.DirectConnection,
+                    servers=[
+                        McpServerConfig(
+                            name="mock-server",
+                            transport=TransportType.Stdio,
+                            command="echo",
+                            args=["test"],
+                        ),
+                    ],
+                    fetchTools=True,
+                    fetchResources=True,
+                    fetchPrompts=True,
+                )
             ),
         )
 
@@ -319,20 +328,22 @@ class TestMcpE2EWithRealServer:
         service_request = CreateMcpServiceRequest(
             name=EntityName(self.service_name),
             serviceType=McpServiceType.Mcp,
-            connection=McpConnection(
-                type=McpType.Mcp,
-                discoveryMethod=DiscoveryMethod.DirectConnection,
-                servers=[
-                    McpServerConfig(
-                        name="memory-server",
-                        transport=TransportType.Stdio,
-                        command="npx",
-                        args=["-y", "@modelcontextprotocol/server-memory"],
-                    ),
-                ],
-                fetchTools=True,
-                fetchResources=True,
-                fetchPrompts=True,
+            connection=McpServiceConnection(
+                config=McpConnection(
+                    type=McpType.Mcp,
+                    discoveryMethod=DiscoveryMethod.DirectConnection,
+                    servers=[
+                        McpServerConfig(
+                            name="memory-server",
+                            transport=TransportType.Stdio,
+                            command="npx",
+                            args=["-y", "@modelcontextprotocol/server-memory"],
+                        ),
+                    ],
+                    fetchTools=True,
+                    fetchResources=True,
+                    fetchPrompts=True,
+                )
             ),
         )
 

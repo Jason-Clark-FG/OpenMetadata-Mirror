@@ -673,7 +673,9 @@ public class SettingsCache {
         }
         default -> {
           fetchedSettings = Entity.getSystemRepository().getConfigWithKey(settingsName);
-          LOG.info("Loaded Setting {}", fetchedSettings.getConfigType());
+          if (fetchedSettings != null) {
+            LOG.info("Loaded Setting {}", fetchedSettings.getConfigType());
+          }
         }
       }
       return fetchedSettings;
