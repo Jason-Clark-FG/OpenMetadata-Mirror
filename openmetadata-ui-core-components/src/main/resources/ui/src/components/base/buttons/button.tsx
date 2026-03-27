@@ -1,3 +1,5 @@
+import { cx, sortCx } from '@/utils/cx';
+import { isReactComponent } from '@/utils/is-react-component';
 import type {
   AnchorHTMLAttributes,
   ButtonHTMLAttributes,
@@ -5,14 +7,12 @@ import type {
   FC,
   ReactNode,
 } from 'react';
-import React, { isValidElement } from 'react';
+import { isValidElement } from 'react';
 import type {
   ButtonProps as AriaButtonProps,
   LinkProps as AriaLinkProps,
 } from 'react-aria-components';
 import { Button as AriaButton, Link as AriaLink } from 'react-aria-components';
-import { cx, sortCx } from '@/utils/cx';
-import { isReactComponent } from '@/utils/is-react-component';
 
 export const styles = sortCx({
   common: {
@@ -84,7 +84,7 @@ export const styles = sortCx({
     },
     'link-gray': {
       root: [
-        'tw:justify-normal tw:rounded tw:p-0! tw:text-tertiary tw:hover:text-tertiary_hover',
+        'tw:justify-normal tw:rounded tw:p-0! tw:text-tertiary tw:outline-none',
         // Inner text underline
         'tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current',
         // Icon styles
@@ -93,7 +93,7 @@ export const styles = sortCx({
     },
     'link-color': {
       root: [
-        'tw:justify-normal tw:rounded tw:p-0! tw:text-brand-secondary tw:hover:text-brand-secondary_hover',
+        'tw:justify-normal tw:rounded tw:p-0! tw:text-brand-secondary tw:outline-none',
         // Inner text underline
         'tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current',
         // Icon styles
@@ -129,7 +129,7 @@ export const styles = sortCx({
     },
     'link-destructive': {
       root: [
-        'tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-error tw:hover:text-error-primary_hover',
+        'tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-errortw:outline-none',
         // Inner text underline
         'tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current',
         // Icon styles

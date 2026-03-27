@@ -105,6 +105,7 @@ export * from './application/date-picker/date-picker';
 export * from './application/date-picker/date-range-picker';
 export * from './application/date-picker/range-calendar';
 export * from './application/date-picker/range-preset';
+export * from './application/file-upload/file-upload-base';
 export * from './application/modals/modal';
 export * from './application/pagination/pagination';
 export * from './application/pagination/pagination-base';

@@ -12,7 +12,13 @@
  */
 
 import { removeSession } from '@analytics/session-utils';
-import { UploadOutlined } from '@ant-design/icons';
+import {
+  Avatar,
+  Button as CoreButton,
+  Card as CoreCard,
+  Typography as CoreTypography,
+  FileUploadDropZone,
+} from '@openmetadata/ui-core-components';
 import Form, { IChangeEvent } from '@rjsf/core';
 import {
   CustomValidator,
@@ -24,9 +30,11 @@ import {
 import validator from '@rjsf/validator-ajv8';
 import { Button, Card, Typography } from 'antd';
 import { AxiosError } from 'axios';
+import classNames from 'classnames';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Check, X } from '@untitledui/icons';
 import { compare } from 'fast-json-patch';
 import {
   AuthenticationConfiguration,
@@ -98,6 +106,54 @@ import {
 import SsoConfigurationFormArrayFieldTemplate from './SsoConfigurationFormArrayFieldTemplate';
 import SsoRolesSelectField from './SsoRolesSelectField';
 
+interface MetadataUploadStatusCardProps {
+  status: 'success' | 'error';
+  fileName: string;
+  onChangeFile: () => void;
+}
+
+const MetadataUploadStatusCard = ({
+  status,
+  fileName,
+  onChangeFile,
+}: MetadataUploadStatusCardProps) => {
+  const { t } = useTranslation();
+  const isSuccess = status === 'success';
+
+  return (
+    <CoreCard className="tw:flex tw:items-center tw:justify-between tw:p-3 tw:bg-gray-blue-50">
+      <div className="tw:flex tw:items-center tw:gap-2">
+        <Avatar
+          className={classNames('tw:text-white', {
+            'tw:bg-green-700': isSuccess,
+            'tw:bg-red-700': !isSuccess,
+          })}
+          placeholderIcon={isSuccess ? Check : X}
+          size="xs"
+        />
+        <CoreTypography
+          className="tw:text-gray-700"
+          size="text-sm"
+          weight="medium">
+          {t(
+            isSuccess
+              ? 'message.metadata-xml-file-parsed-success'
+              : 'message.metadata-xml-file-parsed-error',
+            { fileName }
+          )}
+        </CoreTypography>
+      </div>
+      <CoreButton
+        color="link-color"
+        data-testid="change-metadata-xml-btn"
+        size="sm"
+        onClick={onChangeFile}>
+        {t('label.change-entity', { entity: t('label.file') })}
+      </CoreButton>
+    </CoreCard>
+  );
+};
+
 const widgets = {
   SelectWidget: SelectWidget,
   LdapRoleMappingWidget: LdapRoleMappingWidget,
@@ -129,8 +185,12 @@ const SSOConfigurationFormRJSF = ({
   const [modalSaveLoading, setModalSaveLoading] = useState<boolean>(false);
   const [isModalSave, setIsModalSave] = useState<boolean>(false);
   const [errorClearTrigger, setErrorClearTrigger] = useState<number>(0);
+  const [metadataUploadStatus, setMetadataUploadStatus] = useState<
+    'success' | 'error' | null
+  >(null);
+  const [metadataUploadFileName, setMetadataUploadFileName] =
+    useState<string>('');
   const fieldErrorsRef = useRef<ErrorSchema>({});
-  const metadataFileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper function to setup configuration state - extracted to avoid redundancy
   const setupConfigurationState = useCallback(
@@ -253,8 +313,8 @@ const SSOConfigurationFormRJSF = ({
   }, []);
 
   const handleMetadataFileUpload = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
+    (files: FileList) => {
+      const file = files[0];
       if (!file) {
         return;
       }
@@ -287,21 +347,14 @@ const SSOConfigurationFormRJSF = ({
             };
           });
 
-          showSuccessToast(t('message.metadata-xml-parsed-successfully'));
-        } catch (error) {
-          showErrorToast(
-            error instanceof Error
-              ? error.message
-              : t('message.metadata-xml-parse-failed')
-          );
+          setMetadataUploadFileName(file.name);
+          setMetadataUploadStatus('success');
+        } catch {
+          setMetadataUploadFileName(file.name);
+          setMetadataUploadStatus('error');
         }
       };
       reader.readAsText(file);
-
-      // Reset file input so re-uploading the same file triggers onChange
-      if (metadataFileInputRef.current) {
-        metadataFileInputRef.current.value = '';
-      }
     },
     [t]
   );
@@ -905,8 +958,7 @@ const SSOConfigurationFormRJSF = ({
     return (
       <Card
         className="sso-provider-selection flex-col"
-        data-testid="sso-configuration-form-card"
-      >
+        data-testid="sso-configuration-form-card">
         <ProviderSelector
           selectedProvider={currentProvider as AuthProvider}
           onProviderSelect={handleProviderSelect}
@@ -920,28 +972,42 @@ const SSOConfigurationFormRJSF = ({
   const formContent = (
     <>
       {isEditMode && showForm && isSamlProvider && (
-        <>
-          <input
-            accept=".xml,application/xml,text/xml"
-            data-testid="saml-metadata-file-input"
-            ref={metadataFileInputRef}
-            style={{ display: 'none' }}
-            type="file"
-            onChange={handleMetadataFileUpload}
-          />
-          <div className="m-b-md">
-            <Button
-              data-testid="upload-metadata-xml-btn"
-              icon={<UploadOutlined />}
-              onClick={() => metadataFileInputRef.current?.click()}
-            >
-              {t('label.upload-idp-metadata-xml')}
-            </Button>
-            <Typography.Text className="m-l-sm text-grey-muted text-xs">
-              {t('message.upload-idp-metadata-xml-description')}
-            </Typography.Text>
-          </div>
-        </>
+        <div className="m-b-md">
+          {metadataUploadStatus === null && (
+            <FileUploadDropZone
+              accept=".xml,application/xml,text/xml"
+              allowsMultiple={false}
+              className="tw:bg-gray-blue-50"
+              onDropFiles={handleMetadataFileUpload}>
+              {(openFilePicker) => (
+                <div className="tw:flex tw:flex-col tw:gap-1 tw:items-center">
+                  <div className="tw:flex tw:items-center tw:gap-1 tw:flex-wrap tw:justify-center tw:max-w-55">
+                    <CoreTypography as="p" className="tw:m-0">
+                      {t('label.click-to')}{' '}
+                      <CoreButton
+                        color="link-color"
+                        size="md"
+                        onPress={openFilePicker}>
+                        {t('label.upload-lowercase')}
+                      </CoreButton>{' '}
+                      {t('label.or-drag-and-drop-a-xml-file-here')}
+                    </CoreTypography>
+                  </div>
+                  <CoreTypography className="tw:text-gray-700" size="text-xs">
+                    {t('message.upload-saml-metadata-xml-description')}
+                  </CoreTypography>
+                </div>
+              )}
+            </FileUploadDropZone>
+          )}
+          {metadataUploadStatus !== null && (
+            <MetadataUploadStatusCard
+              fileName={metadataUploadFileName}
+              status={metadataUploadStatus}
+              onChangeFile={() => setMetadataUploadStatus(null)}
+            />
+          )}
+        </div>
       )}
       {isEditMode && showForm && (
         <Form
@@ -1010,8 +1076,7 @@ const SSOConfigurationFormRJSF = ({
                       className="cancel-sso-configuration text-md"
                       data-testid="cancel-sso-configuration"
                       type="link"
-                      onClick={handleCancelClick}
-                    >
+                      onClick={handleCancelClick}>
                       {t('label.cancel')}
                     </Button>
                     <Button
@@ -1020,8 +1085,7 @@ const SSOConfigurationFormRJSF = ({
                       disabled={isLoading}
                       loading={isLoading}
                       type="primary"
-                      onClick={handleSave}
-                    >
+                      onClick={handleSave}>
                       {t('label.save')}
                     </Button>
                   </div>
@@ -1051,8 +1115,7 @@ const SSOConfigurationFormRJSF = ({
   const wrappedFormContent = (
     <Card
       className="sso-configuration-form-card flex-col p-0"
-      data-testid="sso-configuration-form-card"
-    >
+      data-testid="sso-configuration-form-card">
       {/* SSO Provider Header */}
       {currentProvider && (
         <div className="sso-provider-form-header flex items-center justify-between">
@@ -1075,8 +1138,7 @@ const SSOConfigurationFormRJSF = ({
             <Button
               data-testid="change-provider-button"
               type="link"
-              onClick={onChangeProvider}
-            >
+              onClick={onChangeProvider}>
               {t('label.change-provider')}
             </Button>
           )}
@@ -1113,8 +1175,7 @@ const SSOConfigurationFormRJSF = ({
                     className="cancel-sso-configuration text-md"
                     data-testid="cancel-sso-configuration"
                     type="link"
-                    onClick={handleCancelClick}
-                  >
+                    onClick={handleCancelClick}>
                     {t('label.cancel')}
                   </Button>
                   <Button
@@ -1123,8 +1184,7 @@ const SSOConfigurationFormRJSF = ({
                     disabled={isLoading}
                     loading={isLoading}
                     type="primary"
-                    onClick={handleSave}
-                  >
+                    onClick={handleSave}>
                     {t('label.save')}
                   </Button>
                 </div>

@@ -1,6 +1,6 @@
-import { type FC, type ReactNode, useState } from 'react';
-import { User01 } from '@untitledui/icons';
 import { cx } from '@/utils/cx';
+import { User01 } from '@untitledui/icons';
+import { type FC, type ReactNode, useState } from 'react';
 import { AvatarOnlineIndicator, VerifiedTick } from './base-components';
 
 type AvatarSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
@@ -128,9 +128,7 @@ export const Avatar = ({
 
     if (PlaceholderIcon) {
       return (
-        <PlaceholderIcon
-          className={cx('tw:text-fg-quaternary', styles[size].icon)}
-        />
+        <PlaceholderIcon className={cx('tw:text-current', styles[size].icon)} />
       );
     }
 
