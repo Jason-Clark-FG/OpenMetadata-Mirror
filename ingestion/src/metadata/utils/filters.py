@@ -15,6 +15,7 @@ Most of these methods are applying the same logic,
 but assigning specific names helps better follow the
 code.
 """
+
 import re
 from typing import List, Optional
 

@@ -16,6 +16,7 @@ Requires:
 - Running OpenMetadata server (localhost:8585)
 - Optionally a running MCP server for full E2E tests
 """
+
 import json
 import tempfile
 from unittest.mock import MagicMock, patch
@@ -198,9 +199,7 @@ class TestMcpConnectionManagerIntegration:
             }
         }
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config_content, f)
             config_path = f.name
 
