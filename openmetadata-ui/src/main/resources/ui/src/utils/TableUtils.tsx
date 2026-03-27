@@ -397,53 +397,30 @@ export const getColumnDataTypeIcon = ({
 
 const entityIconMapping: Record<string, SvgComponent> = {
   [SearchIndex.DATABASE]: DatabaseIcon,
-  [EntityType.DATABASE]: DatabaseIcon,
   [SearchIndex.DATABASE_SERVICE]: DatabaseIcon,
-  [EntityType.DATABASE_SERVICE]: DatabaseIcon,
   [SearchIndex.DATABASE_SCHEMA]: SchemaIcon,
-  [EntityType.DATABASE_SCHEMA]: SchemaIcon,
   [SearchIndex.TOPIC]: TopicIcon,
-  [EntityType.TOPIC]: TopicIcon,
   [EntityType.MESSAGING_SERVICE]: TopicIcon,
-  [SearchIndex.MESSAGING_SERVICE]: TopicIcon,
   [SearchIndex.DASHBOARD]: DashboardIcon,
-  [EntityType.DASHBOARD]: DashboardIcon,
   [EntityType.DASHBOARD_SERVICE]: DashboardIcon,
-  [SearchIndex.DASHBOARD_SERVICE]: DashboardIcon,
   [SearchIndex.MLMODEL]: MlModelIcon,
-  [EntityType.MLMODEL]: MlModelIcon,
   [EntityType.MLMODEL_SERVICE]: MlModelIcon,
-  [SearchIndex.ML_MODEL_SERVICE]: MlModelIcon,
   [SearchIndex.PIPELINE]: PipelineIcon,
-  [EntityType.PIPELINE]: PipelineIcon,
   [EntityType.PIPELINE_SERVICE]: PipelineIcon,
-  [SearchIndex.PIPELINE_SERVICE]: PipelineIcon,
   [SearchIndex.CONTAINER]: ContainerIcon,
-  [EntityType.CONTAINER]: ContainerIcon,
   [EntityType.STORAGE_SERVICE]: ContainerIcon,
-  [SearchIndex.STORAGE_SERVICE]: ContainerIcon,
   [SearchIndex.DASHBOARD_DATA_MODEL]: IconDataModel,
-  [EntityType.DASHBOARD_DATA_MODEL]: IconDataModel,
   [SearchIndex.STORED_PROCEDURE]: IconStoredProcedure,
-  [EntityType.STORED_PROCEDURE]: IconStoredProcedure,
   [EntityType.CLASSIFICATION]: ClassificationIcon,
   [SearchIndex.TAG]: TagIcon,
-  [EntityType.TAG]: TagIcon,
   [SearchIndex.GLOSSARY]: GlossaryIcon,
-  [EntityType.GLOSSARY]: GlossaryIcon,
   [SearchIndex.GLOSSARY_TERM]: GlossaryTermIcon,
-  [EntityType.GLOSSARY_TERM]: GlossaryTermIcon,
   [SearchIndex.DOMAIN]: DomainIcon,
-  [EntityType.DOMAIN]: DomainIcon,
   [SearchIndex.CHART]: ChartIcon,
-  [EntityType.CHART]: ChartIcon,
   [SearchIndex.TABLE]: TableIcon,
-  [EntityType.TABLE]: TableIcon,
   [SearchIndex.COLUMN]: ColumnIcon,
-  [EntityType.TABLE_COLUMN]: ColumnIcon,
   [EntityType.METADATA_SERVICE]: MetadataServiceIcon,
   [SearchIndex.DATA_PRODUCT]: DataProductIcon,
-  [EntityType.DATA_PRODUCT]: DataProductIcon,
   [EntityType.TEST_CASE]: IconTestCase,
   [EntityType.TEST_SUITE]: IconTestSuite,
   [EntityType.DATA_CONTRACT]: DataQualityIcon,
@@ -455,9 +432,7 @@ const entityIconMapping: Record<string, SvgComponent> = {
   [EntityType.POLICY]: PolicyIcon,
   [EntityType.EVENT_SUBSCRIPTION]: AlertIcon,
   [EntityType.USER]: UserIcon,
-  [SearchIndex.USER]: UserIcon,
   [EntityType.INGESTION_PIPELINE]: PipelineIcon,
-  [SearchIndex.INGESTION_PIPELINE]: PipelineIcon,
   [EntityType.ALERT]: AlertIcon,
   [EntityType.KPI]: KPIIcon,
   ['tagCategory']: ClassificationIcon,
@@ -469,26 +444,16 @@ const entityIconMapping: Record<string, SvgComponent> = {
   ['automator']: AutomatorBotIcon,
   ['notification']: NotificationIcon,
   [EntityType.API_ENDPOINT]: APIEndpointIcon,
-  [SearchIndex.API_ENDPOINT_INDEX]: APIEndpointIcon,
   [EntityType.METRIC]: MetricIcon,
-  [SearchIndex.METRIC_SEARCH_INDEX]: MetricIcon,
   [EntityType.API_SERVICE]: APIServiceIcon,
-  [SearchIndex.API_SERVICE_INDEX]: APIServiceIcon,
   [EntityType.API_COLLECTION]: APICollectionIcon,
-  [SearchIndex.API_COLLECTION_INDEX]: APICollectionIcon,
   ['location']: LocationIcon,
   [EntityType.QUERY]: QueryIcon,
-  [SearchIndex.QUERY]: QueryIcon,
   [EntityType.DIRECTORY]: DirectoryIcon,
-  [SearchIndex.DIRECTORY_SEARCH_INDEX]: DirectoryIcon,
   [EntityType.FILE]: FileIcon,
-  [SearchIndex.FILE_SEARCH_INDEX]: FileIcon,
   [EntityType.SPREADSHEET]: SpreadsheetIcon,
-  [SearchIndex.SPREADSHEET_SEARCH_INDEX]: SpreadsheetIcon,
   [EntityType.WORKSHEET]: WorksheetIcon,
-  [SearchIndex.WORKSHEET_SEARCH_INDEX]: WorksheetIcon,
   [EntityType.DRIVE_SERVICE]: DriveServiceIcon,
-  [SearchIndex.DRIVE_SERVICE]: DriveServiceIcon,
 };
 
 export const getEntityIcon = (
@@ -597,9 +562,9 @@ export const generateEntityLink = (fqn: string, includeColumn = false) => {
     const columnName = getPartialNameFromTableFQN(fqn, [FqnPart.NestedColumn]);
 
     return EntityLink.getTableEntityLink(tableFqn, columnName);
-  } else {
-    return EntityLink.getTableEntityLink(fqn);
   }
+
+  return EntityLink.getTableEntityLink(fqn);
 };
 
 export function getTableExpandableConfig<T>(
