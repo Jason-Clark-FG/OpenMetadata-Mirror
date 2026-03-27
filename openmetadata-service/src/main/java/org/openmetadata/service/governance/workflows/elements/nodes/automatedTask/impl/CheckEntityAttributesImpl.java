@@ -36,7 +36,8 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
       String rules = (String) rulesExpr.getValue(execution);
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
       List<String> trueEntityList = new ArrayList<>();
       List<String> falseEntityList = new ArrayList<>();
 
@@ -71,19 +72,5 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 }

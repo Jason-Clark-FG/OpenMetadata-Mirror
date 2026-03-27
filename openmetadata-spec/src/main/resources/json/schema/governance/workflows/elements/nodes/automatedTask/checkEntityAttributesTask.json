@@ -58,18 +58,17 @@
       "type": "object",
       "properties": {
         "entityList": {
-          "type": "string"
-        },
-        "relatedEntity": {
-          "type": "string"
+          "type": "string",
+          "default": "global"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": ["entityList"]
     },
     "output": {
       "type": "array",
       "items": { "type": "string" },
-      "default": ["entityList", "falseEntityList"],
+      "default": ["entityList", "false_entityList"],
       "additionalItems": false
     },
     "branches": {

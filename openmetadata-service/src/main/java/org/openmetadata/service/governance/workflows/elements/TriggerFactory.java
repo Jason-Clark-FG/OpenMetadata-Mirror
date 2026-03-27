@@ -1,10 +1,15 @@
 package org.openmetadata.service.governance.workflows.elements;
 
+import java.util.Map;
 import org.openmetadata.schema.governance.workflows.TriggerType;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.governance.workflows.elements.NodeSubType;
+import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
+import org.openmetadata.schema.governance.workflows.elements.nodes.automatedTask.SinkTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.triggers.EventBasedEntityTriggerDefinition;
 import org.openmetadata.schema.governance.workflows.elements.triggers.NoOpTriggerDefinition;
 import org.openmetadata.schema.governance.workflows.elements.triggers.PeriodicBatchEntityTriggerDefinition;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.governance.workflows.elements.triggers.EventBasedEntityTrigger;
 import org.openmetadata.service.governance.workflows.elements.triggers.NoOpTrigger;
 import org.openmetadata.service.governance.workflows.elements.triggers.PeriodicBatchEntityTrigger;
@@ -24,9 +29,44 @@ public class TriggerFactory {
           workflow.getName(),
           triggerWorkflowId,
           (PeriodicBatchEntityTriggerDefinition) workflow.getTrigger(),
-          false,
+          hasBatchModeNodes(workflow),
           workflow.getFullyQualifiedName());
     };
+  }
+
+  /**
+   * Check if the workflow contains any nodes with batchMode enabled. When batch mode is detected,
+   * the trigger creates a single workflow execution per batch instead of N parallel executions (one
+   * per entity), preventing race conditions from parallel commits in batch sinks (e.g., Git sync).
+   *
+   * <p>Per the schema, batchMode defaults to true when not explicitly set.
+   */
+  private static boolean hasBatchModeNodes(WorkflowDefinition workflow) {
+    if (workflow.getNodes() == null) {
+      return false;
+    }
+    for (WorkflowNodeDefinitionInterface node : workflow.getNodes()) {
+      if (node.getNodeSubType() == NodeSubType.SINK_TASK) {
+        if (node instanceof SinkTaskDefinition sinkTask) {
+          if (sinkTask.getConfig() != null) {
+            Boolean batchMode = sinkTask.getConfig().getBatchMode();
+            if (batchMode == null || batchMode) {
+              return true;
+            }
+          }
+        } else {
+          Object config = node.getConfig();
+          if (config != null) {
+            Map<String, Object> configMap = JsonUtils.getMap(config);
+            Object batchMode = configMap.get("batchMode");
+            if (batchMode == null || Boolean.TRUE.equals(batchMode)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
   }
 
   public static String getTriggerWorkflowId(String workflowFQN) {

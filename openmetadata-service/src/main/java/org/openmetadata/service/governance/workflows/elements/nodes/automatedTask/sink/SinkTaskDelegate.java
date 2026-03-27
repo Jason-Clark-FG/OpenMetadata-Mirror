@@ -13,7 +13,6 @@
 
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.sink;
 
-import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
@@ -86,7 +85,8 @@ public class SinkTaskDelegate implements JavaDelegate {
       Map<String, String> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
 
       // Get the sink provider from registry
       sinkProvider =
@@ -291,19 +291,5 @@ public class SinkTaskDelegate implements JavaDelegate {
         .syncedEntities(syncedEntities.isEmpty() ? null : syncedEntities)
         .errors(errors.isEmpty() ? null : errors)
         .build();
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 }
