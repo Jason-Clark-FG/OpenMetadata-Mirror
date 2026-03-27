@@ -15,6 +15,7 @@ import traceback
 from copy import deepcopy
 from typing import Optional, Type, cast
 
+from metadata.generated.schema.entity.data.container import Container
 from metadata.generated.schema.entity.data.database import Database
 from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.services.connections.database.bigQueryConnection import (
@@ -27,6 +28,9 @@ from metadata.generated.schema.entity.services.ingestionPipelines.status import 
 from metadata.generated.schema.entity.services.serviceType import ServiceType
 from metadata.generated.schema.metadataIngestion.databaseServiceAutoClassificationPipeline import (
     DatabaseServiceAutoClassificationPipeline,
+)
+from metadata.generated.schema.metadataIngestion.storageServiceAutoClassificationPipeline import (
+    StorageServiceAutoClassificationPipeline,
 )
 from metadata.generated.schema.metadataIngestion.workflow import (
     OpenMetadataWorkflowConfig,
@@ -74,18 +78,25 @@ class SamplerProcessor(Processor):
         self.config = config
         self.metadata = metadata
 
-        self.source_config: DatabaseServiceAutoClassificationPipeline = cast(
-            DatabaseServiceAutoClassificationPipeline,
-            self.config.source.sourceConfig.config,
-        )  # Used to satisfy type checked
+        self.source_config = self.config.source.sourceConfig.config
+
         # We still rely on the orm-processor. We should decouple this in the future
         self.profiler_config = profiler_config_class.model_validate(
             self.config.processor.model_dump().get("config")
         )
 
         self._interface_type: str = config.source.type.lower()
+
+        # Determine service type based on configuration
+        if isinstance(self.source_config, StorageServiceAutoClassificationPipeline):
+            self.service_type = ServiceType.Storage
+        elif isinstance(self.source_config, DatabaseServiceAutoClassificationPipeline):
+            self.service_type = ServiceType.Database
+        else:
+            self.service_type = ServiceType.Database
+
         self.sampler_class = import_sampler_class(
-            ServiceType.Database, source_type=self._interface_type
+            self.service_type, source_type=self._interface_type
         )
 
     @property
@@ -94,67 +105,108 @@ class SamplerProcessor(Processor):
 
     def _run(self, record: ProfilerSourceAndEntity) -> Either[SamplerResponse]:
         """Fetch the sample data and pass it down the pipeline"""
-        if not record.entity.columns:
-            logger.warning(
-                "Skipping sampler for table '%s': no columns found",
-                record.entity.fullyQualifiedName.root,
-            )
-            return Either()
+        entity = record.entity
 
-        try:
-            entity = cast(Table, record.entity)
-            schema_entity, database_entity, _ = get_context_entities(
-                entity=entity, metadata=self.metadata
-            )
-
-            if database_entity is None:
-                return Either(
-                    left=StackTraceError(
-                        name=record.entity.fullyQualifiedName.root,
-                        error=(
-                            f"Could not fetch database entity for [{record.entity.fullyQualifiedName.root}] "
-                            f"from Search Indexes. The search index may not be available or the entity "
-                            f"has not been indexed yet. Please ensure the Elasticsearch index is properly "
-                            f"configured and try reindexing."
-                        ),
-                        stackTrace=traceback.format_exc(),
-                    )
+        # Check for columns based on entity type
+        if isinstance(entity, Table):
+            if not entity.columns:
+                logger.warning(
+                    "Skipping sampler for table '%s': no columns found",
+                    entity.fullyQualifiedName.root,
                 )
+                return Either()
+            return self._run_for_table(entity, record)
 
-            service_conn_config = self._copy_service_config(
-                self.config, database_entity
-            )
-
-            sampler_interface: SamplerInterface = self.sampler_class.create(
-                service_connection_config=service_conn_config,
-                ometa_client=self.metadata,
-                entity=entity,
-                schema_entity=schema_entity,
-                database_entity=database_entity,
-                table_config=get_config_for_table(entity, self.profiler_config),
-                default_sample_config=SampleConfig(),
-                default_sample_data_count=self.source_config.sampleDataCount,
-            )
-            sample_data = SampleData(
-                data=sampler_interface.generate_sample_data(),
-                store=self.source_config.storeSampleData,
-            )
-            sampler_interface.close()
-            return Either(
-                right=SamplerResponse(
-                    entity=entity,
-                    sample_data=sample_data,
+        if isinstance(entity, Container):
+            if not entity.dataModel or not entity.dataModel.columns:
+                logger.warning(
+                    "Skipping sampler for container '%s': no columns found",
+                    entity.fullyQualifiedName.root,
                 )
-            )
+                return Either()
+            return self._run_for_container(entity, record)
 
-        except Exception as exc:
+        return Either(
+            left=StackTraceError(
+                name=record.entity.fullyQualifiedName.root,
+                error=f"Unsupported entity type {type(entity).__name__} for sampling",
+                stackTrace=traceback.format_exc(),
+            )
+        )
+
+    def _run_for_table(
+        self, entity: Table, record: ProfilerSourceAndEntity
+    ) -> Either[SamplerResponse]:
+        """Process Table entity for sampling"""
+        schema_entity, database_entity, _ = get_context_entities(
+            entity=entity, metadata=self.metadata
+        )
+
+        if database_entity is None:
             return Either(
                 left=StackTraceError(
                     name=record.entity.fullyQualifiedName.root,
-                    error=f"Unexpected exception processing entity {record.entity.fullyQualifiedName.root}: {exc}",
+                    error=(
+                        f"Could not fetch database entity for [{record.entity.fullyQualifiedName.root}] "
+                        f"from Search Indexes. The search index may not be available or the entity "
+                        f"has not been indexed yet. Please ensure the Elasticsearch index is properly "
+                        f"configured and try reindexing."
+                    ),
                     stackTrace=traceback.format_exc(),
                 )
             )
+
+        service_conn_config = self._copy_service_config(self.config, database_entity)
+
+        sampler_interface: SamplerInterface = self.sampler_class.create(
+            service_connection_config=service_conn_config,
+            ometa_client=self.metadata,
+            entity=entity,
+            schema_entity=schema_entity,
+            database_entity=database_entity,
+            table_config=get_config_for_table(entity, self.profiler_config),
+            default_sample_config=SampleConfig(),
+            default_sample_data_count=self.source_config.sampleDataCount,
+        )
+        sample_data = SampleData(
+            data=sampler_interface.generate_sample_data(),
+            store=self.source_config.storeSampleData,
+        )
+        sampler_interface.close()
+        return Either(
+            right=SamplerResponse(
+                entity=entity,
+                sample_data=sample_data,
+            )
+        )
+
+    def _run_for_container(
+        self, entity: Container, record: ProfilerSourceAndEntity
+    ) -> Either[SamplerResponse]:
+        """Process Container entity for sampling"""
+        service_conn_config = self._copy_service_config(self.config, None)
+
+        sampler_interface: SamplerInterface = self.sampler_class.create(
+            service_connection_config=service_conn_config,
+            ometa_client=self.metadata,
+            entity=entity,
+            schema_entity=None,
+            database_entity=None,
+            table_config=None,
+            default_sample_config=SampleConfig(),
+            default_sample_data_count=self.source_config.sampleDataCount,
+        )
+        sample_data = SampleData(
+            data=sampler_interface.generate_sample_data(),
+            store=self.source_config.storeSampleData,
+        )
+        sampler_interface.close()
+        return Either(
+            right=SamplerResponse(
+                entity=entity,
+                sample_data=sample_data,
+            )
+        )
 
     @classmethod
     def create(
