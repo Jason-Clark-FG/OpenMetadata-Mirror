@@ -28,6 +28,7 @@ from metadata.generated.schema.entity.automations.workflow import (
     Workflow as AutomationWorkflow,
 )
 from metadata.generated.schema.entity.automations.workflow import WorkflowStatus
+from metadata.generated.schema.entity.data.container import Container
 from metadata.generated.schema.entity.data.table import Column, Table, TableConstraint
 from metadata.generated.schema.entity.services.connections.testConnectionResult import (
     TestConnectionResult,
@@ -52,6 +53,7 @@ from metadata.ingestion.ometa.mixins.patch_mixin_utils import (
     PatchPath,
 )
 from metadata.ingestion.ometa.utils import model_str
+from metadata.pii.types import ClassifiableEntityType
 from metadata.utils.deprecation import deprecated
 from metadata.utils.logger import get_log_name, ometa_logger
 
@@ -448,7 +450,7 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
 
     def patch_column_tags(
         self,
-        table: Table,
+        table: ClassifiableEntityType,
         column_tags: List[ColumnTag],
         operation: Union[
             PatchOperation.ADD, PatchOperation.REMOVE
@@ -457,28 +459,51 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
         """Given an Entity ID, JSON PATCH the tag of the column
 
         Args
-            entity_id: ID
-            tag_label: TagLabel to add or remove
-            column_name: column to update
+            table: Classifiable entity (Table or Container) to update
+            column_tags: List of ColumnTag to add or remove
             operation: Patch Operation to add or remove
         Returns
             Updated Entity
         """
-        instance: Optional[Table] = self._fetch_entity_if_exists(
-            entity=Table, entity_id=table.id, fields=["tags", "columns"]
+        entity_type = type(table)
+        fields = (
+            ["tags", "columns"] if isinstance(table, Table) else ["tags", "dataModel"]
+        )
+
+        instance = self._fetch_entity_if_exists(
+            entity=entity_type, entity_id=table.id, fields=fields
         )
 
         if not instance:
             return None
 
-        # Make sure we run the patch against the last updated data from the API
-        table.columns = instance.columns
+        if isinstance(table, Table):
+            table.columns = instance.columns
+            destination = table.model_copy(deep=True)
+            for column_tag in column_tags or []:
+                update_column_tags(destination.columns, column_tag, operation)
+        elif isinstance(table, Container):
+            if table.dataModel is not None and instance.dataModel is not None:
+                table.dataModel.columns = instance.dataModel.columns
+                destination = table.model_copy(deep=True)
+                for column_tag in column_tags or []:
+                    update_column_tags(
+                        destination.dataModel.columns, column_tag, operation
+                    )
+            else:
+                logger.debug(
+                    f"Container {table.fullyQualifiedName.root} has no dataModel, skipping column tag patch"
+                )
+                return None
+        else:
+            logger.warning(
+                f"Unsupported entity type for column tag patching: {entity_type.__name__}"
+            )
+            return None
 
-        destination = table.model_copy(deep=True)
-        for column_tag in column_tags or []:
-            update_column_tags(destination.columns, column_tag, operation)
-
-        patched_entity = self.patch(entity=Table, source=table, destination=destination)
+        patched_entity = self.patch(
+            entity=entity_type, source=table, destination=destination
+        )
         if patched_entity is None:
             logger.debug(
                 f"Empty PATCH result. Either everything is up to date or the "
