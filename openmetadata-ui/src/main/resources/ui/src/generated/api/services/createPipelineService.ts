@@ -122,11 +122,7 @@ export interface ConfigObject {
      *
      * Matillion Auth Configuration
      */
-<<<<<<< HEAD
-    connection?: AirflowConnection;
-=======
     connection?: ConnectionClass;
->>>>>>> 90f8aef3c0 (Update generated TypeScript types)
     /**
      * Pipeline Service Management/UI URI.
      *
@@ -718,11 +714,7 @@ export interface AzureCredentials {
  *
  * Matillion Data Productivity Cloud Auth Config.
  */
-<<<<<<< HEAD
-export interface AirflowConnection {
-=======
 export interface ConnectionClass {
->>>>>>> 90f8aef3c0 (Update generated TypeScript types)
     /**
      * Airflow REST API version.
      */
