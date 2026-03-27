@@ -14,7 +14,7 @@
 @import (reference) '../../styles/variables.less';
 
 .knowledge-graph-container {
-  height: 100%;
+  height: calc(100vh - @om-navbar-height - 280px); // 280 for  DataAsset header
   position: relative;
   border-radius: 12px;
 
@@ -118,8 +118,9 @@
   }
 
   .knowledge-graph-canvas {
-    height: calc(100vh - 250px);
-    min-height: 600px;
+    height: calc(
+      100vh - @om-navbar-height - 280px
+    ); // 280 for  DataAsset header
     border-radius: 12px;
     background: #ffffff;
     background-image: radial-gradient(circle, #e8e8e8 1px, transparent 1px);
