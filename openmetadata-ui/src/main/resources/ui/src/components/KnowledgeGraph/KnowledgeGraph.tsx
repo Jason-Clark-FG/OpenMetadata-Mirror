@@ -62,7 +62,6 @@ import {
   KnowledgeGraphProps,
 } from './KnowledgeGraph.interface';
 import './KnowledgeGraph.style.less';
-import KnowledgeGraphNodeDetails from './KnowledgeGraphNodeDetails';
 
 register(ExtensionCategory.NODE, 'react-node', AntVReactNode);
 
@@ -426,40 +425,24 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     <>
       <Card className="knowledge-graph-canvas" ref={containerRef} />
 
-      {selectedNode &&
-        (selectedNode.fullyQualifiedName ? (
-          <div className="knowledge-graph-entity-panel">
-            <EntitySummaryPanel
-              entityDetails={{
-                details: {
-                  id:
-                    ENTITY_UUID_REGEX.exec(selectedNode.id)?.[1] ??
-                    selectedNode.id,
-                  fullyQualifiedName: selectedNode.fullyQualifiedName,
-                  entityType: selectedNode.type as EntityType,
-                  name: selectedNode.name ?? selectedNode.label,
-                  displayName: selectedNode.label,
-                } as SearchSourceDetails,
-              }}
-              handleClosePanel={() => setSelectedNode(null)}
-            />
-          </div>
-        ) : (
-          <KnowledgeGraphNodeDetails
-            node={selectedNode}
-            onClose={() => setSelectedNode(null)}
-            onNavigate={(nodeId) => {
-              const entityIdMatch = ENTITY_UUID_REGEX.exec(nodeId);
-              if (entityIdMatch) {
-                window.open(
-                  `/${selectedNode.type}/${entityIdMatch[1]}`,
-                  '_blank',
-                  'noopener,noreferrer'
-                );
-              }
+      {selectedNode?.fullyQualifiedName && (
+        <div className="knowledge-graph-entity-panel">
+          <EntitySummaryPanel
+            entityDetails={{
+              details: {
+                id:
+                  ENTITY_UUID_REGEX.exec(selectedNode.id)?.[1] ??
+                  selectedNode.id,
+                fullyQualifiedName: selectedNode.fullyQualifiedName,
+                entityType: selectedNode.type as EntityType,
+                name: selectedNode.name ?? selectedNode.label,
+                displayName: selectedNode.label,
+              } as SearchSourceDetails,
             }}
+            handleClosePanel={() => setSelectedNode(null)}
           />
-        ))}
+        </div>
+      )}
     </>
   );
 

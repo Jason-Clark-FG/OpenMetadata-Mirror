@@ -277,17 +277,48 @@ export const transformToG6Format = (data: GraphData | null): G6GraphData => {
     };
   });
 
-  const directionSet = new Set(data.edges.map((e) => `${e.from}→${e.to}`));
+  // Group edges by directed pair and merge parallel same-direction edges into one.
+  // This eliminates overlap when multiple relationships exist in the same direction
+  // between the same two nodes, reducing clutter to at most one edge per direction.
+  const edgeGroups = new Map<string, typeof data.edges>();
+  data.edges.forEach((edge) => {
+    const key = `${edge.from}→${edge.to}`;
+    edgeGroups.set(key, [...(edgeGroups.get(key) ?? []), edge]);
+  });
 
-  const edges: G6EdgeData[] = data.edges.map((edge, index) => {
-    const isBidirectional = directionSet.has(`${edge.to}→${edge.from}`);
-    let curveOffset: number | undefined;
-    let edgeType: string | undefined;
+  type MergedEdge = (typeof data.edges)[number] & {
+    mergedLabels?: string[];
+  };
 
-    if (isBidirectional) {
-      curveOffset = 40;
-      edgeType = 'quadratic';
+  const mergedEdges: MergedEdge[] = [...edgeGroups.values()].map((group) => {
+    if (group.length === 1) {
+      return group[0];
     }
+
+    const labels = group.map((e) => e.label);
+
+    return {
+      ...group[0],
+      label: labels.join(' · '),
+      mergedLabels: labels,
+    };
+  });
+
+  const directionSet = new Set(mergedEdges.map((e) => `${e.from}→${e.to}`));
+
+  const edges: G6EdgeData[] = mergedEdges.map((edge, index) => {
+    const isBidirectional = directionSet.has(`${edge.to}→${edge.from}`);
+    // G6 computes curveOffset perpendicular to travel direction, so both
+    // edges in a bidirectional pair share the same positive value —
+    // the reversed travel direction automatically curves them to opposite
+    // visual sides. A larger offset (60) ensures paths are visually distinct.
+    const curveOffset: number | undefined = isBidirectional ? 60 : undefined;
+    // For bidirectional edges, anchor the label near the source node (0.25)
+    // so each label sits at a physically different location (one near node A,
+    // the other near node B) instead of both crowding the centre.
+    const labelPlacement: number | undefined = isBidirectional
+      ? 0.35
+      : undefined;
 
     const sourceColor = nodeColorMap.get(edge.to) ?? {
       main: '#595959',
@@ -298,8 +329,10 @@ export const transformToG6Format = (data: GraphData | null): G6GraphData => {
       id: `edge-${index}`,
       source: edge.from,
       target: edge.to,
-      ...(edgeType ? { type: edgeType } : {}),
-      data: { label: edge.label } as Record<string, unknown>,
+      data: {
+        label: edge.label,
+        ...(edge.mergedLabels ? { mergedLabels: edge.mergedLabels } : {}),
+      } as Record<string, unknown>,
       style: {
         labelText: edge.label,
         labelFontSize: 11,
@@ -313,6 +346,7 @@ export const transformToG6Format = (data: GraphData | null): G6GraphData => {
         labelPadding: [3, 6],
         labelZIndex: 100,
         ...(curveOffset === undefined ? {} : { curveOffset }),
+        ...(labelPlacement === undefined ? {} : { labelPlacement }),
       },
     };
   });
