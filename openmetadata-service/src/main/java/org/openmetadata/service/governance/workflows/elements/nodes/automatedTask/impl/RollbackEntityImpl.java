@@ -1,6 +1,5 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
-import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_INSTANCE_EXECUTION_ID_VARIABLE;
@@ -58,7 +57,8 @@ public class RollbackEntityImpl implements JavaDelegate {
         updatedBy = "governance-bot";
       }
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
       for (String entityLinkStr : entityList) {
         MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
         rollbackEntity(execution, entityLink, updatedBy, workflowInstanceExecutionId);
@@ -120,20 +120,6 @@ public class RollbackEntityImpl implements JavaDelegate {
         currentEntity.getName(),
         entityId,
         previousVersion);
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 
   private Double getPreviousApprovedVersion(

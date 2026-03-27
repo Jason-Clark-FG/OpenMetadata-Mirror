@@ -189,6 +189,7 @@ public class MigrationUtil {
           String subType = subTypeNode != null ? subTypeNode.asText() : "";
           if (BATCH_NODE_SUBTYPES.contains(subType)) {
             JsonNode migratedNode = addEntityListToNamespaceMap(nodeElement);
+            migratedNode = migrateInputArray(migratedNode);
             newNodes.add(migratedNode);
             if (migratedNode != nodeElement) {
               nodesChanged = true;
@@ -233,6 +234,41 @@ public class MigrationUtil {
 
     ObjectNode result = ((ObjectNode) nodeObj).deepCopy();
     result.set("inputNamespaceMap", newInputNamespaceMap);
+    return result;
+  }
+
+  private static JsonNode migrateInputArray(JsonNode nodeObj) {
+    JsonNode inputNode = nodeObj.get("input");
+    if (inputNode == null || !inputNode.isArray()) {
+      return nodeObj;
+    }
+
+    boolean needsChange = false;
+    for (JsonNode item : inputNode) {
+      if ("relatedEntity".equals(item.asText())) {
+        needsChange = true;
+        break;
+      }
+    }
+    if (!needsChange) {
+      return nodeObj;
+    }
+
+    ArrayNode newInput = MAPPER.createArrayNode();
+    boolean addedEntityList = false;
+    for (JsonNode item : inputNode) {
+      if ("relatedEntity".equals(item.asText())) {
+        if (!addedEntityList) {
+          newInput.add("entityList");
+          addedEntityList = true;
+        }
+      } else {
+        newInput.add(item);
+      }
+    }
+
+    ObjectNode result = ((ObjectNode) nodeObj).deepCopy();
+    result.set("input", newInput);
     return result;
   }
 }

@@ -49,7 +49,8 @@ public class DataCompletenessImpl implements JavaDelegate {
         qualityBands.add(band);
       }
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
 
       // Per-band entity lists and per-entity results
       Map<String, List<String>> entitiesByBand = new LinkedHashMap<>();
@@ -132,20 +133,6 @@ public class DataCompletenessImpl implements JavaDelegate {
       varHandler.setNodeVariable(
           varName, fields.subList(0, 50) + " [+" + (fields.size() - 50) + " more]");
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 
   private DataCompletenessResult calculateCompleteness(

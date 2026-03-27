@@ -38,7 +38,8 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       Map<String, String> inputNamespaceMap =
           JsonUtils.readOrConvertValue(inputNamespaceMapExpr.getValue(execution), Map.class);
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
       List<String> trueEntityList = new ArrayList<>();
       List<String> falseEntityList = new ArrayList<>();
 
@@ -61,20 +62,6 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, String> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 
   private boolean checkChangeDescription(DelegateExecution execution, String entityLinkStr) {

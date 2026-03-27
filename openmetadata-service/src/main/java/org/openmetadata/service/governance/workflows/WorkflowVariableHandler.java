@@ -1,8 +1,11 @@
 package org.openmetadata.service.governance.workflows;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FAILURE_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.delegate.DelegateExecution;
@@ -111,6 +114,20 @@ public class WorkflowVariableHandler {
         varValue,
         namespace);
     setNamespacedVariable(namespace, varName, varValue);
+  }
+
+  @SuppressWarnings("unchecked")
+  public static List<String> getEntityList(
+      Map<String, ?> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    String entityListNamespace = (String) inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object entityListObj =
+          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (entityListObj instanceof List) {
+        return (List<String>) entityListObj;
+      }
+    }
+    return List.of();
   }
 
   public void setFailure(boolean failure) {

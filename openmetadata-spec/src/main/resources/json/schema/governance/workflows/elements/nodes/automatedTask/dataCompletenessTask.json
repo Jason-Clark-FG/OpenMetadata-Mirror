@@ -89,24 +89,20 @@
     "input": {
       "type": "array",
       "items": { "type": "string" },
-      "default": ["relatedEntity", "entityList"],
+      "default": ["entityList"],
       "additionalItems": false,
       "minItems": 1
     },
     "inputNamespaceMap": {
       "type": "object",
       "properties": {
-        "relatedEntity": {
-          "type": "string",
-          "default": "global"
-        },
         "entityList": {
           "type": "string",
           "default": "global"
         }
       },
       "additionalProperties": false,
-      "required": ["relatedEntity"]
+      "required": ["entityList"]
     },
     "output": {
       "title": "Output Variables",

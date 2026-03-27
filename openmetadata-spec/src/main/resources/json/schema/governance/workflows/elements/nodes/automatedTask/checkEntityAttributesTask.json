@@ -58,13 +58,12 @@
       "type": "object",
       "properties": {
         "entityList": {
-          "type": "string"
-        },
-        "relatedEntity": {
-          "type": "string"
+          "type": "string",
+          "default": "global"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": ["entityList"]
     },
     "output": {
       "type": "array",

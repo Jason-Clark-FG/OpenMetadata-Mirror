@@ -2086,7 +2086,6 @@ public class WorkflowDefinitionResourceIT {
                   "filters": {}
                 },
                 "output": [
-                  "relatedEntity",
                   "entityList",
                   "updatedBy"
                 ]
@@ -2332,7 +2331,7 @@ public class WorkflowDefinitionResourceIT {
       Map<String, Object> trigger = new HashMap<>();
       trigger.put("type", "periodicBatchEntity");
       trigger.put("config", triggerConfig);
-      trigger.put("output", List.of("relatedEntity", "entityList", "updatedBy"));
+      trigger.put("output", List.of("entityList", "updatedBy"));
 
       Map<String, Object> multiEntityRequest = new HashMap<>();
       multiEntityRequest.put("name", "EntityFilterWF");
@@ -2418,7 +2417,7 @@ public class WorkflowDefinitionResourceIT {
       Map<String, Object> singleEntityTrigger = new HashMap<>();
       singleEntityTrigger.put("type", "periodicBatchEntity");
       singleEntityTrigger.put("config", singleEntityTriggerConfig);
-      singleEntityTrigger.put("output", List.of("relatedEntity", "entityList", "updatedBy"));
+      singleEntityTrigger.put("output", List.of("entityList", "updatedBy"));
 
       Map<String, Object> updateSetFieldConfig = new HashMap<>();
       updateSetFieldConfig.put("fieldName", "description");
@@ -2602,7 +2601,7 @@ public class WorkflowDefinitionResourceIT {
                  "batchSize": 100,
                  "filters": {}
                },
-               "output": ["relatedEntity", "entityList", "updatedBy"]
+               "output": ["entityList", "updatedBy"]
              },
              "nodes": [
                {"type": "startEvent", "subType": "startEvent", "name": "start", "displayName": "start"},
@@ -2839,7 +2838,6 @@ public class WorkflowDefinitionResourceIT {
               }
             },
             "output": [
-              "relatedEntity",
               "entityList",
               "updatedBy"
             ]
@@ -3078,7 +3076,7 @@ public class WorkflowDefinitionResourceIT {
                     "table": "{\\\"!\\\": [{\\\"in\\\": [\\\"production\\\", {\\\"var\\\": \\\"name\\\"}]}]}"
                   }
                 },
-                "output": ["relatedEntity", "entityList", "updatedBy"]
+                "output": ["entityList", "updatedBy"]
               },
               "nodes": [
                 {
@@ -3952,7 +3950,7 @@ public class WorkflowDefinitionResourceIT {
                   "entityTypes": ["glossaryTerm"],
                   "events": ["Created"]
                 },
-                "output": ["relatedEntity", "entityList", "updatedBy"]
+                "output": ["entityList", "relatedEntity", "updatedBy"]
               },
               "nodes": [
                 {
@@ -4999,7 +4997,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new LinkedHashMap<>();
     trigger.put("type", "periodicBatchEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "entityList", "updatedBy"));
+    trigger.put("output", List.of("entityList", "updatedBy"));
 
     // ---- nodes ----
     Map<String, Object> startNode = new LinkedHashMap<>();
@@ -5233,7 +5231,7 @@ public class WorkflowDefinitionResourceIT {
                           "exclude": ["reviewers"],
                           "filter": {}
                         },
-                        "output": ["relatedEntity", "entityList", "updatedBy"]
+                        "output": ["entityList", "relatedEntity", "updatedBy"]
                       },
                       "nodes": [
                         {
@@ -5751,7 +5749,7 @@ public class WorkflowDefinitionResourceIT {
                   "exclude": ["reviewers"],
                   "filter": {}
                 },
-                "output": ["relatedEntity", "entityList", "updatedBy"]
+                "output": ["entityList", "relatedEntity", "updatedBy"]
               },
               "nodes": [
                 {
@@ -6075,7 +6073,7 @@ public class WorkflowDefinitionResourceIT {
                   "exclude": ["reviewers"],
                   "filter": {}
                 },
-                "output": ["relatedEntity", "updatedBy"]
+                "output": ["entityList", "relatedEntity", "updatedBy"]
               },
               "nodes": [
                 {
@@ -6422,7 +6420,7 @@ public class WorkflowDefinitionResourceIT {
                 "apiEndpoint": "{\\"query\\":{\\"match\\":{\\"description\\":\\"workflow\\"}}}"
               }
             },
-            "output": ["relatedEntity", "entityList", "updatedBy"]
+            "output": ["entityList", "updatedBy"]
           },
           "nodes": [
             {
@@ -6835,7 +6833,7 @@ public class WorkflowDefinitionResourceIT {
               "batchSize": 100,
               "filters": {}
             },
-            "output": ["relatedEntity", "entityList", "updatedBy"]
+            "output": ["entityList", "updatedBy"]
           },
           "nodes": [
             {
@@ -7252,7 +7250,7 @@ public class WorkflowDefinitionResourceIT {
                   "exclude": ["reviewers"],
                   "filter": {}
                 },
-                "output": ["relatedEntity", "updatedBy"]
+                "output": ["entityList", "relatedEntity", "updatedBy"]
               },
               "nodes": [
                 {
@@ -7641,7 +7639,7 @@ public class WorkflowDefinitionResourceIT {
                   "exclude": ["reviewers"],
                   "filter": {}
                 },
-                "output": ["relatedEntity", "updatedBy"]
+                "output": ["entityList", "relatedEntity", "updatedBy"]
               },
               "nodes": [
                 {
@@ -7968,7 +7966,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new HashMap<>();
     trigger.put("type", "eventBasedEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+    trigger.put("output", List.of("entityList", "relatedEntity", "updatedBy"));
 
     Map<String, Object> startNode = new HashMap<>();
     startNode.put("name", "start");
@@ -8193,7 +8191,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new HashMap<>();
     trigger.put("type", "eventBasedEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+    trigger.put("output", List.of("entityList", "relatedEntity", "updatedBy"));
 
     Map<String, Object> startNode = new HashMap<>();
     startNode.put("name", "start");
@@ -8423,7 +8421,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new HashMap<>();
     trigger.put("type", "eventBasedEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+    trigger.put("output", List.of("entityList", "relatedEntity", "updatedBy"));
 
     // Create approval workflow
     Map<String, Object> startNode = new HashMap<>();
@@ -8615,7 +8613,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new HashMap<>();
     trigger.put("type", "eventBasedEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+    trigger.put("output", List.of("entityList", "relatedEntity", "updatedBy"));
 
     // Create approval workflow that should trigger for all table creations
     Map<String, Object> startNode = new HashMap<>();
@@ -8845,7 +8843,7 @@ public class WorkflowDefinitionResourceIT {
     Map<String, Object> trigger = new HashMap<>();
     trigger.put("type", "eventBasedEntity");
     trigger.put("config", triggerConfig);
-    trigger.put("output", List.of("relatedEntity", "updatedBy"));
+    trigger.put("output", List.of("entityList", "relatedEntity", "updatedBy"));
 
     // Create approval workflow
     Map<String, Object> startNode = new HashMap<>();
@@ -9160,7 +9158,7 @@ public class WorkflowDefinitionResourceIT {
               "events": ["Updated"],
               "entityTypes": ["databaseSchema"]
             },
-            "output": ["relatedEntity", "entityList", "updatedBy"]
+            "output": ["entityList", "relatedEntity", "updatedBy"]
           },
           "nodes": [
             {
@@ -9610,7 +9608,7 @@ public class WorkflowDefinitionResourceIT {
               "exclude": [],
               "filter": {}
             },
-            "output": ["relatedEntity", "entityList", "updatedBy"]
+            "output": ["entityList", "relatedEntity", "updatedBy"]
           },
           "nodes": [
             {

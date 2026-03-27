@@ -1,6 +1,5 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
-import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
@@ -52,7 +51,8 @@ public class SetEntityAttributeImpl implements JavaDelegate {
               .map(ns -> (String) varHandler.getNamespacedVariable(ns, UPDATED_BY_VARIABLE))
               .orElse(null);
 
-      List<String> entityList = getEntityList(inputNamespaceMap, varHandler);
+      List<String> entityList =
+          WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
       for (String entityLinkStr : entityList) {
         MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
         String entityType = entityLink.getEntityType();
@@ -73,19 +73,5 @@ public class SetEntityAttributeImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
-  }
-
-  @SuppressWarnings("unchecked")
-  private List<String> getEntityList(
-      Map<String, Object> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    String entityListNamespace = (String) inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
-    if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
-      }
-    }
-    return List.of();
   }
 }
