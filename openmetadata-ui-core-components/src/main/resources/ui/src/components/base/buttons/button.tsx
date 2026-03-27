@@ -129,7 +129,7 @@ export const styles = sortCx({
     },
     'link-destructive': {
       root: [
-        'tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-errortw:outline-none',
+        'tw:justify-normal tw:rounded tw:p-0! tw:text-error-primary tw:outline-error tw:outline-none',
         // Inner text underline
         'tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current',
         // Icon styles

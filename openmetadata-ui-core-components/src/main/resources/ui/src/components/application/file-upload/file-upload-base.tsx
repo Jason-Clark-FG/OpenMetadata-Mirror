@@ -219,7 +219,9 @@ export const FileUploadDropZone = ({
       className={cx(
         'tw:relative tw:flex tw:flex-col tw:items-center tw:gap-3 tw:rounded-xl tw:bg-primary tw:px-6 tw:py-4 tw:text-tertiary tw:ring-1 tw:ring-secondary tw:transition tw:duration-100 tw:ease-linear tw:ring-inset',
         isDraggingOver && 'tw:ring-2 tw:ring-brand',
-        isDisabled ? 'tw:cursor-not-allowed tw:bg-secondary' : 'tw:cursor-pointer',
+        isDisabled
+          ? 'tw:cursor-not-allowed tw:bg-secondary'
+          : 'tw:cursor-pointer',
         className
       )}
       onClick={isDisabled ? undefined : () => inputRef.current?.click()}
