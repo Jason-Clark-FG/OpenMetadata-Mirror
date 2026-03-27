@@ -77,8 +77,7 @@ public class WorkflowVariableHandler {
 
   private String getNodeNamespace() {
     String namespace;
-    if (varScope instanceof DelegateExecution) {
-      DelegateExecution execution = (DelegateExecution) varScope;
+    if (varScope instanceof DelegateExecution execution) {
       namespace =
           Optional.ofNullable(
                   execution.getParent() != null
@@ -89,8 +88,7 @@ public class WorkflowVariableHandler {
           "[WorkflowVariable] getNodeNamespace: DelegateExecution activityId='{}' namespace='{}'",
           execution.getCurrentActivityId(),
           namespace);
-    } else if (varScope instanceof DelegateTask) {
-      DelegateTask task = (DelegateTask) varScope;
+    } else if (varScope instanceof DelegateTask task) {
       namespace = WorkflowHandler.getInstance().getParentActivityId(task.getExecutionId());
       LOG.debug(
           "[WorkflowVariable] getNodeNamespace: DelegateTask executionId='{}' namespace='{}'",
