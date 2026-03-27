@@ -1160,9 +1160,9 @@ export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
   let ssoLoginUrl: string | null = null;
 
   // Prefer HTTP-Redirect binding, fall back to HTTP-POST
-  for (let i = 0; i < ssoServices.length; i++) {
-    const binding = ssoServices[i].getAttribute('Binding') ?? '';
-    const location = ssoServices[i].getAttribute('Location');
+  for (const ssoService of ssoServices) {
+    const binding = ssoService.getAttribute('Binding') ?? '';
+    const location = ssoService.getAttribute('Location');
     if (
       binding === 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect' &&
       location
@@ -1194,15 +1194,15 @@ export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
   );
   let certText: string | null = null;
 
-  for (let i = 0; i < keyDescriptors.length; i++) {
-    const use = keyDescriptors[i].getAttribute('use');
+  for (const keyDescriptor of keyDescriptors) {
+    const use = keyDescriptor.getAttribute('use');
     if (use === 'signing' || !use) {
-      const x509 = keyDescriptors[i].getElementsByTagNameNS(
+      const x509 = keyDescriptor.getElementsByTagNameNS(
         XMLDSIG_NS,
         'X509Certificate'
       )[0];
       if (x509?.textContent) {
-        certText = x509.textContent.replace(/\s+/g, '');
+        certText = x509.textContent.replaceAll(/\s+/g, '');
 
         break;
       }
