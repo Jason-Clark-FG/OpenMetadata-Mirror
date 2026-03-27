@@ -285,7 +285,9 @@ describe('TagPage', () => {
 
       await waitFor(() => {
         expect(mockDataQualityDashboard).toHaveBeenCalledWith(
-          expect.objectContaining({ hiddenFilters: expect.arrayContaining(['tags']) })
+          expect.objectContaining({
+            hiddenFilters: expect.arrayContaining(['tags']),
+          })
         );
       });
     });
