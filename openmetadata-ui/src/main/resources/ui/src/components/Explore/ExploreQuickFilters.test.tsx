@@ -305,11 +305,15 @@ describe('ExploreQuickFilters component', () => {
       mockUseCustomLocation.mockReturnValue({
         search: '?search=pets',
       });
-      mockGetAggregationOptions.mockResolvedValue(mockAdvancedFieldDefaultOptions);
+      mockGetAggregationOptions.mockResolvedValue(
+        mockAdvancedFieldDefaultOptions
+      );
 
       render(<ExploreQuickFilters {...mockProps} aggregations={undefined} />);
 
-      const initialButton = screen.getByTestId('onGetInitialOptions-database.name');
+      const initialButton = screen.getByTestId(
+        'onGetInitialOptions-database.name'
+      );
 
       await act(async () => {
         userEvent.click(initialButton);
