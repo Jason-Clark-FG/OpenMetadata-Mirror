@@ -2337,6 +2337,11 @@ export interface UsernamePasswordAuthentication {
  * Regex to only compute metrics for table that matches the given tag, tiers, gloassary
  * pattern.
  *
+ * Regex to only fetch buckets (top-level containers) that match the pattern.
+ *
+ * Regex to only compute metrics for containers that matches the given tag, tiers, glossary
+ * pattern.
+ *
  * Regex to only fetch tags that matches the pattern.
  */
 export interface FilterPattern {
@@ -5131,6 +5136,8 @@ export interface SourceConfig {
  *
  * StorageService Metadata Pipeline Configuration.
  *
+ * StorageService AutoClassification Pipeline Configuration.
+ *
  * DriveService Metadata Pipeline Configuration.
  *
  * SearchService Metadata Pipeline Configuration.
@@ -5288,6 +5295,9 @@ export interface Pipeline {
      * Regex will be applied on fully qualified name (e.g
      * service_name.db_name.schema_name.table_name) instead of raw name (e.g. table_name)
      *
+     * Regex will be applied on fully qualified name (e.g service_name.container_name) instead
+     * of raw name (e.g. container_name)
+     *
      * Regex will be applied on fully qualified name (e.g service_name.directory_name.file_name)
      * instead of raw name (e.g. file_name)
      */
@@ -5424,6 +5434,9 @@ export interface Pipeline {
     /**
      * Regex to only compute metrics for table that matches the given tag, tiers, gloassary
      * pattern.
+     *
+     * Regex to only compute metrics for containers that matches the given tag, tiers, glossary
+     * pattern.
      */
     classificationFilterPattern?: FilterPattern;
     /**
@@ -5494,6 +5507,9 @@ export interface Pipeline {
     /**
      * Option to turn on/off storing sample data. If enabled, we will ingest sample data for
      * each table.
+     *
+     * Option to turn on/off storing sample data. If enabled, we will ingest sample data for
+     * each structured container.
      */
     storeSampleData?: boolean;
     /**
@@ -5541,6 +5557,10 @@ export interface Pipeline {
      */
     markDeletedContainers?:       boolean;
     storageMetadataConfigSource?: StorageMetadataConfigurationSource;
+    /**
+     * Regex to only fetch buckets (top-level containers) that match the pattern.
+     */
+    bucketFilterPattern?: FilterPattern;
     /**
      * Regex to only include/exclude directories that matches the pattern.
      */
@@ -7410,6 +7430,8 @@ export interface StorageMetadataBucketDetails {
  * MlModel Source Config Metadata Pipeline type
  *
  * Object Store Source Config Metadata Pipeline type
+ *
+ * Storage Service Auto Classification Pipeline type
  *
  * Drive Source Config Metadata Pipeline type
  *
