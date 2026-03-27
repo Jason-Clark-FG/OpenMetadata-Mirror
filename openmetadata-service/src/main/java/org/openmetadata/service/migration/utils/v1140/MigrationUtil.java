@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,9 @@ public class MigrationUtil {
           "rollbackEntityTask",
           "sinkTask",
           "dataCompletenessTask");
+
+  private static final Set<String> CHECK_NODE_SUBTYPES =
+      Set.of("checkEntityAttributesTask", "checkChangeDescriptionTask", "dataCompletenessTask");
 
   /**
    * Migrates all workflow definitions to support batch entity processing:
@@ -140,7 +145,33 @@ public class MigrationUtil {
       }
     }
 
+    // Build a map: targetNode → {sourceNode, condition} from edges
+    Map<String, String[]> incomingEdge = new HashMap<>();
+    JsonNode edgesNode = result.get("edges");
+    if (edgesNode != null && edgesNode.isArray()) {
+      for (JsonNode edge : edgesNode) {
+        String from = edge.has("from") ? edge.get("from").asText() : null;
+        String to = edge.has("to") ? edge.get("to").asText() : null;
+        String condition = edge.has("condition") ? edge.get("condition").asText() : null;
+        if (from != null && to != null) {
+          incomingEdge.put(to, new String[] {from, condition});
+        }
+      }
+    }
+
+    // Build a map: nodeName → subType
+    Map<String, String> nodeSubType = new HashMap<>();
     JsonNode nodesNode = result.get("nodes");
+    if (nodesNode != null && nodesNode.isArray()) {
+      for (JsonNode nodeElement : nodesNode) {
+        String name = nodeElement.has("name") ? nodeElement.get("name").asText() : null;
+        String subType = nodeElement.has("subType") ? nodeElement.get("subType").asText() : "";
+        if (name != null) {
+          nodeSubType.put(name, subType);
+        }
+      }
+    }
+
     if (nodesNode != null && nodesNode.isArray()) {
       ArrayNode newNodes = MAPPER.createArrayNode();
       boolean nodesChanged = false;
@@ -149,7 +180,9 @@ public class MigrationUtil {
           JsonNode subTypeNode = nodeElement.get("subType");
           String subType = subTypeNode != null ? subTypeNode.asText() : "";
           if (BATCH_NODE_SUBTYPES.contains(subType)) {
-            JsonNode migratedNode = addEntityListToNamespaceMap(nodeElement);
+            String nodeName = nodeElement.has("name") ? nodeElement.get("name").asText() : null;
+            String[] incoming = nodeName != null ? incomingEdge.get(nodeName) : null;
+            JsonNode migratedNode = addEntityListToNamespaceMap(nodeElement, incoming, nodeSubType);
             migratedNode = migrateInputArray(migratedNode);
             newNodes.add(migratedNode);
             if (migratedNode != nodeElement) {
@@ -171,7 +204,8 @@ public class MigrationUtil {
     return changed ? result : root;
   }
 
-  static JsonNode addEntityListToNamespaceMap(JsonNode nodeObj) {
+  static JsonNode addEntityListToNamespaceMap(
+      JsonNode nodeObj, String[] incoming, Map<String, String> nodeSubType) {
     JsonNode inputNamespaceMapNode = nodeObj.get("inputNamespaceMap");
     if (inputNamespaceMapNode == null || !inputNamespaceMapNode.isObject()) {
       return nodeObj;
@@ -179,19 +213,35 @@ public class MigrationUtil {
     ObjectNode inputNamespaceMap = (ObjectNode) inputNamespaceMapNode;
 
     boolean hasEntityList = inputNamespaceMap.has("entityList");
+    boolean hasTrueEntityList = inputNamespaceMap.has("true_entityList");
+    boolean hasFalseEntityList = inputNamespaceMap.has("false_entityList");
     boolean hasRelatedEntity = inputNamespaceMap.has("relatedEntity");
 
-    if (hasEntityList && !hasRelatedEntity) {
+    // Already correctly set with no legacy relatedEntity — nothing to do
+    if ((hasEntityList || hasTrueEntityList || hasFalseEntityList) && !hasRelatedEntity) {
       return nodeObj;
     }
 
-    ObjectNode newInputNamespaceMap = inputNamespaceMap.deepCopy();
-    if (!hasEntityList) {
-      String namespace =
-          hasRelatedEntity ? inputNamespaceMap.get("relatedEntity").asText() : "global";
-      newInputNamespaceMap.put("entityList", namespace);
+    ObjectNode newInputNamespaceMap = MAPPER.createObjectNode();
+
+    // Determine the correct namespace and key based on the incoming edge
+    if (incoming != null) {
+      String sourceNode = incoming[0];
+      String condition = incoming[1];
+      String sourceSubType = nodeSubType.getOrDefault(sourceNode, "");
+      if (CHECK_NODE_SUBTYPES.contains(sourceSubType)) {
+        if (condition != null && !condition.isEmpty()) {
+          // "true"/"false" for checkEntity/checkChangeDesc, band name for dataCompleteness
+          newInputNamespaceMap.put(condition + "_entityList", sourceNode);
+        } else {
+          newInputNamespaceMap.put("entityList", sourceNode);
+        }
+      } else {
+        newInputNamespaceMap.put("entityList", "global");
+      }
+    } else {
+      newInputNamespaceMap.put("entityList", "global");
     }
-    newInputNamespaceMap.remove("relatedEntity");
 
     ObjectNode result = ((ObjectNode) nodeObj).deepCopy();
     result.set("inputNamespaceMap", newInputNamespaceMap);
