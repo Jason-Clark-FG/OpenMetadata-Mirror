@@ -29,7 +29,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { FocusScope, useFilter, useFocusManager } from 'react-aria';
+import { FocusScope, useFilter, useFocusManager, useHover } from 'react-aria';
 import type {
   ComboBoxProps as AriaComboBoxProps,
   GroupProps as AriaGroupProps,
@@ -210,10 +210,35 @@ const InnerAutocomplete = ({
     maxVisibleItems === undefined
       ? allSelected
       : allSelected.slice(0, maxVisibleItems);
-  const overflowCount =
-    maxVisibleItems === undefined
-      ? 0
-      : allSelected.length - visibleSelected.length;
+  const overflowItems =
+    maxVisibleItems === undefined ? [] : allSelected.slice(maxVisibleItems);
+
+  const overflowTriggerRef = useRef<HTMLSpanElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isOverflowOpen, setIsOverflowOpen] = useState(false);
+
+  const cancelClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => setIsOverflowOpen(false), 100);
+  };
+
+  const { hoverProps: triggerHoverProps } = useHover({
+    onHoverStart: () => {
+      cancelClose();
+      setIsOverflowOpen(true);
+    },
+    onHoverEnd: scheduleClose,
+  });
+  const { hoverProps: popoverHoverProps } = useHover({
+    onHoverStart: cancelClose,
+    onHoverEnd: scheduleClose,
+  });
 
   return (
     <div className="tw:relative tw:flex tw:w-full tw:flex-1 tw:flex-row tw:flex-wrap tw:items-center tw:justify-start tw:gap-1.5">
@@ -240,10 +265,52 @@ const InnerAutocomplete = ({
           )
         )}
 
-      {overflowCount > 0 && (
-        <Badge color="gray" size="lg" type="modern">
-          +{overflowCount}
-        </Badge>
+      {overflowItems.length > 0 && (
+        <>
+          <span
+            {...triggerHoverProps}
+            className="tw:cursor-pointer"
+            ref={overflowTriggerRef}>
+            <Badge color="gray" size="lg" type="modern">
+              +{overflowItems.length}
+            </Badge>
+          </span>
+          <Popover
+            {...popoverHoverProps}
+            isNonModal
+            className="tw:w-auto"
+            isOpen={isOverflowOpen}
+            offset={6}
+            placement="top start"
+            size="md"
+            triggerRef={overflowTriggerRef}
+            onOpenChange={setIsOverflowOpen}>
+            <div className="tw:flex tw:min-w-48 tw:max-w-72 tw:flex-wrap tw:gap-1.5 tw:p-2">
+              {overflowItems.map((item) =>
+                context.renderTag ? (
+                  context.renderTag(item, () =>
+                    context.onRemove(new Set([item.id]))
+                  )
+                ) : (
+                  <BadgeWithButton
+                    color="gray"
+                    isDisabled={isDisabled}
+                    key={item.id}
+                    size="lg"
+                    type="modern"
+                    onButtonClick={() => context.onRemove(new Set([item.id]))}>
+                    {renderChipIcon(item)}
+                    <div className="tw:min-w-0 tw:max-w-40">
+                      <Typography ellipsis as="p" weight="medium">
+                        {item.label}
+                      </Typography>
+                    </div>
+                  </BadgeWithButton>
+                )
+              )}
+            </div>
+          </Popover>
+        </>
       )}
 
       <div
