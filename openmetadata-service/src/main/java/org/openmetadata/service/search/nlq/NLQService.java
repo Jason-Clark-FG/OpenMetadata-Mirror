@@ -20,7 +20,8 @@ public interface NLQService {
    * @return A JSON string representing a valid Elasticsearch/OpenSearch query
    * @throws IOException If the transformation process fails
    */
-  String transformNaturalLanguageQuery(SearchRequest request, String additionalContext);
+  String transformNaturalLanguageQuery(SearchRequest request, String additionalContext)
+      throws IOException;
 
   void cacheQuery(String query, String transformedQuery);
 
