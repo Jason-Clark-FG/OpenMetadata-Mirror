@@ -53,6 +53,7 @@ class MetadataCommands(Enum):
     LINEAGE = "lineage"
     APP = "app"
     AUTO_CLASSIFICATION = "classify"
+    REVERSE_METADATA = "reverse_metadata"
     SCAFFOLD_CONNECTOR = "scaffold-connector"
 
 
@@ -163,6 +164,12 @@ def get_parser(args: Optional[List[str]] = None):
         sub_parser.add_parser(
             MetadataCommands.AUTO_CLASSIFICATION.value,
             help="Workflow for running auto classification",
+        )
+    )
+    create_common_config_parser_args(
+        sub_parser.add_parser(
+            MetadataCommands.REVERSE_METADATA.value,
+            help="Reverse Metadata Workflow",
         )
     )
     webhook_args(
