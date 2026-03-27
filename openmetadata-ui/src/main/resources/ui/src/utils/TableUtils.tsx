@@ -1009,9 +1009,7 @@ export const getTableDetailPageBaseTabs = ({
           entity={
             tableDetails
               ? {
-                  id: tableDetails.id,
-                  name: tableDetails.name,
-                  fullyQualifiedName: tableDetails.fullyQualifiedName,
+                  ...tableDetails,
                   type: EntityType.TABLE,
                 }
               : undefined

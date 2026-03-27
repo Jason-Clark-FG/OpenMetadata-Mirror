@@ -12,35 +12,32 @@
  */
 
 import {
-  AimOutlined,
-  FullscreenOutlined,
-  ReloadOutlined,
-  ZoomInOutlined,
-  ZoomOutOutlined,
-} from '@ant-design/icons';
-import {
-  EdgeData as G6EdgeData,
   ExtensionCategory,
+  EdgeData as G6EdgeData,
+  NodeData as G6NodeData,
   Graph,
   IElementEvent,
-  NodeData as G6NodeData,
   NodePortStyleProps,
   register,
 } from '@antv/g6';
 import { ReactNode as AntVReactNode } from '@antv/g6-extension-react';
 import {
   Button,
+  Card,
   Divider,
-  Empty,
-  Radio,
-  RadioProps,
   Slider,
-  Space,
-  Spin,
+  Tabs,
   Tooltip,
   Typography,
-} from 'antd';
-import { AxiosError } from 'axios';
+} from '@openmetadata/ui-core-components';
+import {
+  Maximize01,
+  RefreshCw01,
+  Target01,
+  ZoomIn,
+  ZoomOut,
+} from '@untitledui/icons';
+import { isArray } from 'lodash';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EntityType } from '../../enums/entity.enum';
@@ -54,7 +51,8 @@ import {
   NODE_WIDTH,
   transformToG6Format,
 } from '../../utils/KnowledgeGraph.utils';
-import { showErrorToast } from '../../utils/ToastUtils';
+import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
+import Loader from '../common/Loader/Loader';
 import EntitySummaryPanel from '../Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import { SearchSourceDetails } from '../Explore/EntitySummaryPanel/EntitySummaryPanel.interface';
 import CustomNode from './GraphElements/CustomNode';
@@ -70,6 +68,8 @@ register(ExtensionCategory.NODE, 'react-node', AntVReactNode);
 
 const ENTITY_UUID_REGEX = /\/([a-f0-9-]{36})$/;
 
+export type KnowledgeGraphLayout = 'dagre' | 'radial';
+
 const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   entity,
   entityType,
@@ -81,7 +81,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const [loading, setLoading] = useState(true);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [selectedDepth, setSelectedDepth] = useState(depth);
-  const [layout, setLayout] = useState<'dagre' | 'radial'>('dagre');
+  const [layout, setLayout] = useState<KnowledgeGraphLayout>('dagre');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
   const fetchGraphData = useCallback(async () => {
@@ -97,11 +97,6 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         selectedDepth
       );
       setGraphData(data);
-    } catch (error) {
-      showErrorToast(
-        error as AxiosError,
-        t('server.entity-fetch-error', { entity: t('label.graph') })
-      );
     } finally {
       setLoading(false);
     }
@@ -118,12 +113,8 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     }
   };
 
-  const handleLayoutChange: RadioProps['onChange'] = ({ target }) => {
-    setLayout(target.value);
-  };
-
-  const handleDepthChange = (value: number) => {
-    setSelectedDepth(value);
+  const handleDepthChange = (value: number | number[]) => {
+    setSelectedDepth(isArray(value) ? value[0] : value);
   };
 
   const handleZoomIn = () => {
@@ -433,7 +424,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
   const graphCanvas = (
     <>
-      <div className="knowledge-graph-canvas" ref={containerRef} />
+      <Card className="knowledge-graph-canvas" ref={containerRef} />
 
       {selectedNode &&
         (selectedNode.fullyQualifiedName ? (
@@ -474,10 +465,9 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
   const emptyContent = hasNoData ? (
     <div className="knowledge-graph-empty">
-      <Empty
-        description={t('message.no-data-available')}
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-      />
+      <div className="tw:flex tw:items-center tw:justify-center">
+        <ErrorPlaceHolder />
+      </div>
     </div>
   ) : (
     graphCanvas
@@ -485,95 +475,113 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
   const graphContent = loading ? (
     <div className="knowledge-graph-loading">
-      <Spin size="large" tip={t('label.loading-graph')} />
+      <div className="tw:flex tw:items-center tw:justify-center">
+        <Loader />
+      </div>
     </div>
   ) : (
     emptyContent
   );
 
   if (!entity) {
-    return <Empty description={t('message.no-entity-selected')} />;
+    return (
+      <div className="tw:flex tw:items-center tw:justify-center tw:h-full">
+        <Typography className="tw:text-tertiary">
+          {t('label.no-entity-selected', { entity: t('label.asset') })}
+        </Typography>
+      </div>
+    );
   }
 
   return (
     <div className="knowledge-graph-container">
-      <div className="knowledge-graph-controls">
-        <Typography.Text>
-          {t('label.view-entity', { entity: t('label.mode') }) + ':'}
-        </Typography.Text>
-        <Radio.Group
-          optionType="button"
-          options={[
-            {
-              label: t('label.hierarchical'),
-              value: 'dagre',
-            },
-            {
-              label: t('label.radial'),
-              value: 'radial',
-            },
-          ]}
-          size="small"
-          value={layout}
-          onChange={handleLayoutChange}
-        />
+      <Card className="knowledge-graph-controls" size="sm">
+        <Card.Content className="tw:flex tw:items-center tw:gap-4">
+          <Typography className="tw:text-secondary" weight="medium">
+            {t('label.view-entity', { entity: t('label.mode') }) + ':'}
+          </Typography>
+          <Tabs
+            className="tw:w-auto"
+            selectedKey={layout}
+            onSelectionChange={(key) => setLayout(key as KnowledgeGraphLayout)}>
+            <Tabs.List
+              items={[
+                {
+                  id: 'dagre',
+                  label: t('label.hierarchical'),
+                },
+                {
+                  id: 'radial',
+                  label: t('label.radial'),
+                },
+              ]}
+              size="sm"
+              type="button-minimal">
+              {(tab) => <Tabs.Item {...tab} />}
+            </Tabs.List>
+          </Tabs>
 
-        <Divider type="vertical" />
+          <Divider orientation="vertical" />
 
-        <div className="depth-slider-container">
-          <span className="depth-label">{t('label.node-depth') + ':'}</span>
-          <Slider
-            className="depth-slider"
-            marks={{
-              1: '1',
-              5: '5',
-              10: '10',
-            }}
-            max={10}
-            min={1}
-            tooltip={{
-              formatter: (value) => `${t('label.depth')}: ${value}`,
-            }}
-            value={selectedDepth}
-            onChange={handleDepthChange}
-          />
-        </div>
-        <Divider type="vertical" />
-        <Space.Compact>
-          <Tooltip title={t('label.zoom-in')}>
-            <Button
-              icon={<ZoomInOutlined />}
-              size="small"
-              onClick={handleZoomIn}
+          <div className="depth-slider-container">
+            <Typography className="depth-label">
+              {t('label.node-depth') + ':'}
+            </Typography>
+            <Slider
+              className="depth-slider"
+              labelPosition="bottom"
+              maxValue={10}
+              minValue={1}
+              value={[selectedDepth]}
+              onChange={handleDepthChange}
             />
-          </Tooltip>
-          <Tooltip title={t('label.zoom-out')}>
-            <Button
-              icon={<ZoomOutOutlined />}
-              size="small"
-              onClick={handleZoomOut}
-            />
-          </Tooltip>
-          <Tooltip title={t('label.fit-to-screen')}>
-            <Button icon={<AimOutlined />} size="small" onClick={handleFit} />
-          </Tooltip>
-          <Tooltip title={t('label.fullscreen')}>
-            <Button
-              icon={<FullscreenOutlined />}
-              size="small"
-              onClick={handleFullscreen}
-            />
-          </Tooltip>
-          <Tooltip title={t('label.refresh')}>
-            <Button
-              icon={<ReloadOutlined />}
-              loading={loading}
-              size="small"
-              onClick={fetchGraphData}
-            />
-          </Tooltip>
-        </Space.Compact>
-      </div>
+          </div>
+          <Divider orientation="vertical" />
+          <div className="tw:flex tw:gap-1">
+            <Tooltip title={t('label.zoom-in')}>
+              <Button
+                color="secondary"
+                iconLeading={ZoomIn}
+                size="sm"
+                onPress={handleZoomIn}
+              />
+            </Tooltip>
+            <Tooltip title={t('label.zoom-out')}>
+              <Button
+                color="secondary"
+                iconLeading={ZoomOut}
+                size="sm"
+                onPress={handleZoomOut}
+              />
+            </Tooltip>
+            <Tooltip title={t('label.fit-to-screen')}>
+              <Button
+                color="secondary"
+                iconLeading={Target01}
+                size="sm"
+                onPress={handleFit}
+              />
+            </Tooltip>
+            <Tooltip title={t('label.fullscreen')}>
+              <Button
+                color="secondary"
+                iconLeading={Maximize01}
+                size="sm"
+                onPress={handleFullscreen}
+              />
+            </Tooltip>
+            <Tooltip title={t('label.refresh')}>
+              <Button
+                color="secondary"
+                iconLeading={RefreshCw01}
+                isLoading={loading}
+                size="sm"
+                onPress={fetchGraphData}
+              />
+            </Tooltip>
+          </div>
+        </Card.Content>
+      </Card>
 
       {graphContent}
     </div>
