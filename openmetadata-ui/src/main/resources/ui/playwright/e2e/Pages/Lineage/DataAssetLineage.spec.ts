@@ -114,24 +114,27 @@ test.describe('Data asset lineage', () => {
     }
   );
 
+  test.beforeEach(async ({ page }) => {
+    await redirectToHomePage(page);
+  });
+
   Object.entries(allEntities).forEach(([key, EntityClass]) => {
     const lineageEntity = new EntityClass();
-
-    test.beforeEach(async ({ page }) => {
-      await redirectToHomePage(page);
-      const { apiContext } = await getApiContext(page);
-      await lineageEntity.create(apiContext);
-
-      await lineageEntity.visitEntityPage(page);
-      await visitLineageTab(page);
-      await editLineageClick(page);
-    });
 
     test(`verify create lineage for entity - ${startCase(key)}`, async ({
       page,
     }) => {
       // 7 minute timeout
       test.setTimeout(7 * 60 * 1000);
+
+      await test.step('prepare entity', async () => {
+        const { apiContext } = await getApiContext(page);
+
+        await lineageEntity.create(apiContext);
+        await lineageEntity.visitEntityPage(page);
+        await visitLineageTab(page);
+        await editLineageClick(page);
+      });
 
       await test.step('should create lineage with normal edge', async () => {
         for (const entity of entities) {
@@ -271,69 +274,69 @@ test.describe('Column Level Lineage', () => {
   Object.entries(columnLevelEntities).forEach(([key, EntityClassSource]) => {
     const sourceEntity = new EntityClassSource();
     const entityKeys = Object.keys(columnLevelEntities);
+
     entityKeys.forEach((targetKey) => {
-      const targetEntity = entities.get(targetKey);
-      if (targetEntity) {
-        test(`Verify column lineage between ${key} and ${targetKey}`, async ({
+      const targetEntity = entities.get(targetKey) as EntityClassUnion;
+
+      test(`Verify column lineage between ${key} and ${targetKey}`, async ({
+        page,
+      }) => {
+        const { apiContext, afterAction } = await getApiContext(page);
+
+        await Promise.all([
+          sourceEntity.create(apiContext),
+          targetEntity?.create(apiContext),
+        ]);
+
+        const sourceCol = get(
+          sourceEntity,
+          'entityResponseData.columns[0].fullyQualifiedName',
+          ''
+        );
+        const targetCol = get(
+          targetEntity,
+          'entityResponseData.columns[0].fullyQualifiedName',
+          ''
+        );
+
+        await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
+        await activateColumnLayer(page);
+
+        // Add column lineage
+        await addColumnLineage(page, sourceCol, targetCol);
+
+        // Verify column lineage
+        await redirectToHomePage(page);
+        await sourceEntity.visitEntityPage(page);
+        await visitLineageTab(page);
+        await verifyColumnLineageInCSV(
           page,
-        }) => {
-          const { apiContext, afterAction } = await getApiContext(page);
+          sourceEntity,
+          targetEntity,
+          sourceCol,
+          targetCol
+        );
 
-          await Promise.all([
-            sourceEntity.create(apiContext),
-            targetEntity?.create(apiContext),
-          ]);
+        await verifyPlatformLineageForEntity(
+          page,
+          sourceEntity.entityResponseData.fullyQualifiedName ?? '',
+          targetEntity.entityResponseData.fullyQualifiedName ?? ''
+        );
 
-          const sourceCol = get(
-            sourceEntity,
-            'entityResponseData.columns[0].fullyQualifiedName',
-            ''
-          );
-          const targetCol = get(
-            targetEntity,
-            'entityResponseData.columns[0].fullyQualifiedName',
-            ''
-          );
+        await sourceEntity.visitEntityPage(page);
+        await visitLineageTab(page);
+        await activateColumnLayer(page);
+        await editLineageClick(page);
 
-          await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
-          await activateColumnLayer(page);
+        await removeColumnLineage(page, sourceCol, targetCol);
+        await editLineageClick(page);
 
-          // Add column lineage
-          await addColumnLineage(page, sourceCol, targetCol);
+        await deleteNode(page, targetEntity);
+        await sourceEntity.delete(apiContext);
+        await targetEntity.delete(apiContext);
 
-          // Verify column lineage
-          await redirectToHomePage(page);
-          await sourceEntity.visitEntityPage(page);
-          await visitLineageTab(page);
-          await verifyColumnLineageInCSV(
-            page,
-            sourceEntity,
-            targetEntity,
-            sourceCol,
-            targetCol
-          );
-
-          await verifyPlatformLineageForEntity(
-            page,
-            sourceEntity.entityResponseData.fullyQualifiedName ?? '',
-            targetEntity.entityResponseData.fullyQualifiedName ?? ''
-          );
-
-          await sourceEntity.visitEntityPage(page);
-          await visitLineageTab(page);
-          await activateColumnLayer(page);
-          await editLineageClick(page);
-
-          await removeColumnLineage(page, sourceCol, targetCol);
-          await editLineageClick(page);
-
-          await deleteNode(page, targetEntity);
-          await sourceEntity.delete(apiContext);
-          await targetEntity.delete(apiContext);
-
-          await afterAction();
-        });
-      }
+        await afterAction();
+      });
     });
   });
 
