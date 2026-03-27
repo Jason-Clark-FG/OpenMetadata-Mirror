@@ -494,44 +494,55 @@ test.describe('Lineage Filters', () => {
     await page.locator('[aria-label="Filters"]').click();
     await page.getByTestId('search-dropdown-Service Type').click();
 
-    const entityToTest = entities[5];
-    // service entity and base entity will be visible
-    // rest of them will be hidden
-    const entitiesToHide = entities.filter((_, index) => index !== 3);
+    entities.forEach(async (entity, index) => {
+      await test.step(`Select service type for ${entity.entityResponseData.fullyQualifiedName}`, async () => {
+        const serviceType = get(entity, 'entityResponseData.serviceType', '');
+        await page.getByTitle(serviceType).click();
 
-    const serviceType = get(entityToTest, 'entityResponseData.serviceType', '');
-    await page.getByTitle(serviceType).click();
+        // service entity and base entity will be visible
+        // rest of them will be hidden
+        const entitiesToHide = entities.filter((_, idx) => idx !== index);
 
-    const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
-    await page.getByRole('button', { name: 'Update' }).click();
-    await lineageRes;
+        await page.getByTitle(serviceType).click();
 
-    await rearrangeNodes(page);
-    await performZoomOut(page);
+        const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+        await page.getByRole('button', { name: 'Update' }).click();
+        await lineageRes;
 
-    // filtered service node should be visible
-    await expect(
-      page.getByTestId(
-        `lineage-node-${entityToTest.entityResponseData.fullyQualifiedName}`
-      )
-    ).toBeVisible();
+        await rearrangeNodes(page);
+        await performZoomOut(page);
 
-    // main entity node should always be visible
-    await expect(
-      page.getByTestId(
-        `lineage-node-${lineageEntity.entityResponseData.fullyQualifiedName}`
-      )
-    ).toBeVisible();
+        // filtered service node should be visible
+        await expect(
+          page.getByTestId(
+            `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+          )
+        ).toBeVisible();
 
-    for (const entity of entitiesToHide) {
-      await expect(
-        page.getByTestId(
-          `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
-        )
-      ).not.toBeVisible();
-    }
+        // main entity node should always be visible
+        await expect(
+          page.getByTestId(
+            `lineage-node-${lineageEntity.entityResponseData.fullyQualifiedName}`
+          )
+        ).toBeVisible();
 
-    await waitForAllLoadersToDisappear(page);
+        for (const entity of entitiesToHide) {
+          await expect(
+            page.getByTestId(
+              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            )
+          ).not.toBeVisible();
+        }
+
+        // clear the filter after validation
+        const clearAllBtn = page.getByRole('button', { name: /clear/i });
+        await expect(clearAllBtn).toBeEnabled();
+
+        await clearAllBtn.click();
+
+        await waitForAllLoadersToDisappear(page);
+      });
+    });
   });
 
   test.describe('Verify lineage Database service related filters', () => {
@@ -721,7 +732,7 @@ test.describe('Lineage Filters', () => {
   test('Verify lineage clear all filters', async ({ page }) => {
     const { apiContext } = await getApiContext(page);
     const entity = entities[2];
-    entity.patch({
+    await entity.patch({
       apiContext,
       patchData: [
         {
