@@ -13,10 +13,6 @@
 
 import { Avatar, Typography } from '@openmetadata/ui-core-components';
 import { useCallback, useMemo } from 'react';
-import {
-  getClassificationTags,
-  getGlossaryTags,
-} from '../../../utils/TagsUtils';
 import { TABLE_CARD_PAGE_SIZE } from '../../../constants/constants';
 import {
   DATAPRODUCT_DEFAULT_QUICK_FILTERS,
@@ -26,6 +22,10 @@ import { SearchIndex } from '../../../enums/search.enum';
 import { DataProduct } from '../../../generated/entity/domains/dataProduct';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../utils/IconUtils';
+import {
+  getClassificationTags,
+  getGlossaryTags,
+} from '../../../utils/TagsUtils';
 import { useListingData } from '../../common/atoms/compositions/useListingData';
 import {
   CellRenderer,

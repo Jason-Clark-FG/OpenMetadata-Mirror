@@ -57,10 +57,16 @@ jest.mock('../../../../rest/auth-API', () => ({
 
 jest.mock('@openmetadata/ui-core-components', () => ({
   Tooltip: jest.fn().mockImplementation(({ children }) => <>{children}</>),
-  TooltipTrigger: jest.fn().mockImplementation(({ children }) => <>{children}</>),
-  ButtonUtility: jest.fn().mockImplementation(({ icon, onClick, 'data-testid': testId }) => (
-    <button data-testid={testId} onClick={onClick}>{icon}</button>
-  )),
+  TooltipTrigger: jest
+    .fn()
+    .mockImplementation(({ children }) => <>{children}</>),
+  ButtonUtility: jest
+    .fn()
+    .mockImplementation(({ icon, onClick, 'data-testid': testId }) => (
+      <button data-testid={testId} onClick={onClick}>
+        {icon}
+      </button>
+    )),
 }));
 
 jest.mock('../../Team/TeamsSelectable/TeamsSelectable', () => {

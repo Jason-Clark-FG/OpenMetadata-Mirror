@@ -13,11 +13,11 @@
 
 import { useMemo } from 'react';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import { ColumnConfig } from '../../shared/types';
 import {
   getClassificationTags,
   getGlossaryTags,
 } from '../../../../../utils/TagsUtils';
+import { ColumnConfig } from '../../shared/types';
 
 interface UseDomainColumnsConfig {
   nameLabelKey?: string;
