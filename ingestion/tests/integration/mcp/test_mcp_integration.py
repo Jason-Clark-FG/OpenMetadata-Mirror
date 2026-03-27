@@ -36,11 +36,12 @@ from metadata.generated.schema.entity.services.connections.mcp.mcpConnection imp
 )
 from metadata.generated.schema.entity.services.mcpService import (
     McpConnection as McpServiceConnection,
+)
+from metadata.generated.schema.entity.services.mcpService import (
     McpService,
     McpServiceType,
 )
-from metadata.generated.schema.type.basic import EntityName, FullyQualifiedEntityName
-from metadata.ingestion.source.mcp.client import McpServerInfo
+from metadata.generated.schema.type.basic import EntityName
 from metadata.ingestion.source.mcp.connection import McpConnectionManager
 
 
