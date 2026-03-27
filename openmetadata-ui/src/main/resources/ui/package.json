@@ -296,6 +296,7 @@
     "js-yaml": "4.1.1",
     "lodash": ">=4.17.23",
     "lodash-es": ">=4.17.23",
-    "markdown-it": ">=14.1.1"
+    "markdown-it": ">=14.1.1",
+    "handlebars": "4.7.9"
   }
 }
