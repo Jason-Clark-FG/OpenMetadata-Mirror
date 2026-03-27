@@ -170,15 +170,19 @@ class SinkTaskDelegateTest {
   void testSingleEntityMode_WhenNoEntityList() {
     setupCommonExpressions(false);
     Map<String, String> namespaceMap = new HashMap<>();
-    namespaceMap.put(RELATED_ENTITY_VARIABLE, GLOBAL_NAMESPACE);
+    // No entityList in namespace map — getEntityList() returns empty list
     when(inputNamespaceMapExpr.getValue(execution)).thenReturn(JsonUtils.pojoToJson(namespaceMap));
 
-    // Setup: No entityList (event-based workflow)
     setupVariableAccess(null, false);
-    when(execution.getVariable("global_relatedEntity")).thenReturn("<#E::table::test.fqn>");
 
-    // This will throw because Entity.getEntity is static
-    assertThrows(Exception.class, () -> delegate.execute(execution));
+    // No entities to process — completes successfully with 0 synced
+    delegate.execute(execution);
+
+    assertEquals(0, testProvider.getWriteCallCount());
+    assertEquals(0, testProvider.getBatchWriteCallCount());
+    verify(execution).setVariable(eq("process_result"), eq("success"));
+    verify(execution).setVariable(eq("process_syncedCount"), eq(0));
+    verify(execution).setVariable(eq("process_failedCount"), eq(0));
   }
 
   @Test
@@ -197,15 +201,27 @@ class SinkTaskDelegateTest {
     setupCommonExpressions(true); // batchMode=true but provider doesn't support it
     Map<String, String> namespaceMap = new HashMap<>();
     namespaceMap.put(ENTITY_LIST_VARIABLE, GLOBAL_NAMESPACE);
-    namespaceMap.put(RELATED_ENTITY_VARIABLE, GLOBAL_NAMESPACE);
     when(inputNamespaceMapExpr.getValue(execution)).thenReturn(JsonUtils.pojoToJson(namespaceMap));
 
     List<String> entityList = List.of("<#E::table::test.fqn>");
     setupVariableAccess(entityList, false);
-    when(execution.getVariable("global_relatedEntity")).thenReturn("<#E::table::test.fqn>");
 
-    // Will throw due to Entity.getEntity, but verifies the code path selection
-    assertThrows(Exception.class, () -> delegate.execute(execution));
+    EntityInterface entity = mock(EntityInterface.class);
+    when(entity.getFullyQualifiedName()).thenReturn("test.fqn");
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock
+          .when(
+              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
+          .thenReturn(entity);
+
+      delegate.execute(execution);
+    }
+
+    // Falls back to list mode (write per entity, not writeBatch)
+    assertEquals(1, noBatchProvider.getWriteCallCount());
+    assertEquals(0, noBatchProvider.getBatchWriteCallCount());
+    verify(execution).setVariable(eq("process_result"), eq("success"));
   }
 
   @Test
