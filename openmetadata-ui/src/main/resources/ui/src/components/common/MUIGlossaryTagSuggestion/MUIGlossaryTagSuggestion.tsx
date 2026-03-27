@@ -39,17 +39,6 @@ interface HierarchicalGlossary extends Glossary {
   children?: ModifiedGlossaryTerm[];
 }
 
-interface GlossaryTreeOption {
-  id: string;
-  value: string;
-  title: string;
-  children: GlossaryTreeOption[];
-  disabled: boolean;
-  selectable: boolean;
-  lazyLoad?: boolean;
-  data: ModifiedGlossaryTerm | undefined;
-}
-
 export interface MUIGlossaryTagSuggestionProps {
   value?: TagLabel[];
   onChange?: (newTags: TagLabel[]) => void;
