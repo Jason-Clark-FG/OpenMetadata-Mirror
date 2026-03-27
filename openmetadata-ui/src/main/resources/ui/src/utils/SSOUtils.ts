@@ -1192,22 +1192,28 @@ export const parseSamlMetadataXml = (xmlString: string): SamlIdpMetadata => {
     SAML_MD_NS,
     'KeyDescriptor'
   );
-  let certText: string | null = null;
+  let certText: string | undefined;
+  let fallbackCertText: string | undefined;
 
   for (const keyDescriptor of keyDescriptors) {
     const use = keyDescriptor.getAttribute('use');
-    if (use === 'signing' || !use) {
-      const x509 = keyDescriptor.getElementsByTagNameNS(
-        XMLDSIG_NS,
-        'X509Certificate'
-      )[0];
-      if (x509?.textContent) {
-        certText = x509.textContent.replaceAll(/\s+/g, '');
+    const x509 = keyDescriptor.getElementsByTagNameNS(
+      XMLDSIG_NS,
+      'X509Certificate'
+    )[0];
 
-        break;
-      }
+    if (use === 'signing' && x509?.textContent) {
+      certText = x509.textContent.replaceAll(/\s+/g, '');
+
+      break;
+    }
+
+    if (!use && !fallbackCertText && x509?.textContent) {
+      fallbackCertText = x509.textContent.replaceAll(/\s+/g, '');
     }
   }
+
+  certText = certText ?? fallbackCertText;
 
   if (!certText) {
     throw new Error(

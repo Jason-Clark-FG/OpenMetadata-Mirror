@@ -319,6 +319,13 @@ const SSOConfigurationFormRJSF = ({
         return;
       }
 
+      const MAX_XML_SIZE = 1 * 1024 * 1024;
+      if (file.size > MAX_XML_SIZE) {
+        showErrorToast(t('message.file-size-exceeded', { size: '1 MB' }));
+
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
