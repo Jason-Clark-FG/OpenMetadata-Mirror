@@ -113,13 +113,12 @@ import {
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import './tag-page.less';
-import { TagTabs } from './TagPage.inteface';
 
 const TagPage = () => {
   const { t } = useTranslation();
   const { fqn: tagFqn } = useFqn();
   const navigate = useNavigate();
-  const { tab: activeTab = TagTabs.OVERVIEW } = useRequiredParams<{
+  const { tab: activeTab = EntityTabs.OVERVIEW } = useRequiredParams<{
     tab?: string;
   }>();
   const { permissions, getEntityPermission } = usePermissionProvider();
@@ -403,8 +402,8 @@ const TagPage = () => {
   const handleAssetSave = useCallback(() => {
     fetchClassificationTagAssets();
     assetTabRef.current?.refreshAssets();
-    if (activeTab !== TagTabs.ASSETS) {
-      activeTabHandler(TagTabs.ASSETS);
+    if (activeTab !== EntityTabs.ASSETS) {
+      activeTabHandler(EntityTabs.ASSETS);
     }
   }, [assetTabRef]);
 
