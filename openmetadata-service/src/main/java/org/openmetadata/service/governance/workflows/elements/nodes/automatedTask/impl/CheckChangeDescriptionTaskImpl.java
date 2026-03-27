@@ -4,9 +4,13 @@ import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FALSE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -44,16 +48,38 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       List<String> trueEntityList = new ArrayList<>();
       List<String> falseEntityList = new ArrayList<>();
 
+      Retry retry =
+          Retry.of(
+              "check-change-description",
+              RetryConfig.custom()
+                  .maxAttempts(3)
+                  .waitDuration(Duration.ofMillis(500))
+                  .retryExceptions(Exception.class)
+                  .build());
+
       for (String entityLinkStr : entityList) {
-        if (checkChangeDescription(execution, entityLinkStr)) {
-          trueEntityList.add(entityLinkStr);
-        } else {
+        try {
+          boolean passes =
+              Retry.decorateSupplier(retry, () -> checkChangeDescription(execution, entityLinkStr))
+                  .get();
+          if (passes) {
+            trueEntityList.add(entityLinkStr);
+          } else {
+            falseEntityList.add(entityLinkStr);
+          }
+        } catch (Exception e) {
           falseEntityList.add(entityLinkStr);
+          LOG.error(
+              "[{}] Failed entity '{}' after retries: {}",
+              getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()),
+              entityLinkStr,
+              e.getMessage(),
+              e);
         }
       }
 
       boolean result = !trueEntityList.isEmpty();
-      varHandler.setNodeVariable("true_" + ENTITY_LIST_VARIABLE, trueEntityList);
+      varHandler.setNodeVariable(TRUE_ENTITY_LIST_VARIABLE, trueEntityList);
       varHandler.setNodeVariable(FALSE_ENTITY_LIST_VARIABLE, falseEntityList);
       varHandler.setNodeVariable(ENTITY_LIST_VARIABLE, result ? trueEntityList : falseEntityList);
       varHandler.setNodeVariable(RESULT_VARIABLE, result);

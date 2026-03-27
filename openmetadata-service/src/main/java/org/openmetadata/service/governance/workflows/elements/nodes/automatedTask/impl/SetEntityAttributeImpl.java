@@ -5,6 +5,11 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,20 +56,80 @@ public class SetEntityAttributeImpl implements JavaDelegate {
               .map(ns -> (String) varHandler.getNamespacedVariable(ns, UPDATED_BY_VARIABLE))
               .orElse(null);
 
+      final String resolvedFieldValue = fieldValue;
+
       List<String> entityList =
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
-      for (String entityLinkStr : entityList) {
-        MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        String entityType = entityLink.getEntityType();
-        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
 
-        if (actualUser != null && !actualUser.isEmpty()) {
-          EntityFieldUtils.setEntityField(
-              entity, entityType, actualUser, fieldName, fieldValue, true, "governance-bot");
-        } else {
-          EntityFieldUtils.setEntityField(
-              entity, entityType, "governance-bot", fieldName, fieldValue, true, null);
+      Retry retry =
+          Retry.of(
+              "set-entity-attribute",
+              RetryConfig.custom()
+                  .maxAttempts(3)
+                  .waitDuration(Duration.ofMillis(500))
+                  .retryExceptions(Exception.class)
+                  .build());
+
+      List<String> failedEntities = new ArrayList<>();
+      Map<String, String> entityErrors = new LinkedHashMap<>();
+
+      for (String entityLinkStr : entityList) {
+        try {
+          Retry.decorateRunnable(
+                  retry,
+                  () -> {
+                    MessageParser.EntityLink entityLink =
+                        MessageParser.EntityLink.parse(entityLinkStr);
+                    String entityType = entityLink.getEntityType();
+                    EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+                    if (actualUser != null && !actualUser.isEmpty()) {
+                      EntityFieldUtils.setEntityField(
+                          entity,
+                          entityType,
+                          actualUser,
+                          fieldName,
+                          resolvedFieldValue,
+                          true,
+                          "governance-bot");
+                    } else {
+                      EntityFieldUtils.setEntityField(
+                          entity,
+                          entityType,
+                          "governance-bot",
+                          fieldName,
+                          resolvedFieldValue,
+                          true,
+                          null);
+                    }
+                  })
+              .run();
+        } catch (Exception e) {
+          failedEntities.add(entityLinkStr);
+          entityErrors.put(entityLinkStr, e.getMessage());
+          LOG.error(
+              "[{}] Failed entity '{}' after retries: {}",
+              getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()),
+              entityLinkStr,
+              e.getMessage(),
+              e);
         }
+      }
+
+      if (!failedEntities.isEmpty()) {
+        varHandler.setNodeVariable("failedEntities", failedEntities);
+        varHandler.setNodeVariable("entityErrors", entityErrors);
+        int total = entityList.size();
+        int failed = failedEntities.size();
+        String processingStatus = (failed == total) ? "failure" : "partial_success";
+        varHandler.setNodeVariable("processingStatus", processingStatus);
+        LOG.warn(
+            "[{}] {}: {}/{} entities failed",
+            getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()),
+            processingStatus,
+            failed,
+            total);
+        varHandler.setGlobalVariable(
+            EXCEPTION_VARIABLE, String.format("%d/%d entities failed", failed, total));
       }
 
     } catch (Exception exc) {

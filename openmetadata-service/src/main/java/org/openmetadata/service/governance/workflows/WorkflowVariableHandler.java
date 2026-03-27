@@ -136,6 +136,9 @@ public class WorkflowVariableHandler {
         return (List<String>) obj;
       }
     }
+    LOG.warn(
+        "[WorkflowVariable] getEntityList: no entityList found in inputNamespaceMap keys={}",
+        inputNamespaceMap.keySet());
     return List.of();
   }
 
