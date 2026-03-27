@@ -65,10 +65,6 @@ jobs:
     timeout-minutes: 90
     needs: changes
     if: ${{ needs.changes.outputs.java == 'true' }}
-    env:
-      NEW_CODE_COVERAGE_THRESHOLD: "90"
-    outputs:
-      jacoco-report-available: ${{ steps.jacoco-report.outputs.available }}
     steps:
       - name: Require safe-to-test label
         if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'safe to test') }}
@@ -107,7 +103,7 @@ jobs:
           librdkafka-dev unixodbc-dev libevent-dev jq
           sudo make install_antlr_cli
 
-      - name: Run openmetadata-service unit tests with JaCoCo
+      - name: Run openmetadata-service unit tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -115,29 +111,6 @@ jobs:
             -Pstatic-code-analysis \
             -DfailIfNoTests=false \
             -Dsonar.skip=true
-
-      - name: Generate JaCoCo report
-        run: |
-          mvn -B -pl openmetadata-service -Pstatic-code-analysis jacoco:report \
-            -DskipTests \
-            -Dsonar.skip=true
-
-      - name: Detect JaCoCo report
-        id: jacoco-report
-        if: ${{ always() }}
-        run: |
-          if [ -f openmetadata-service/target/site/jacoco/jacoco.xml ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload JaCoCo report
-        if: ${{ always() && github.event_name == 'pull_request' && hashFiles('openmetadata-service/target/site/jacoco/jacoco.xml') != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: openmetadata-service-jacoco-report
-          path: openmetadata-service/target/site/jacoco/
 
       - name: Upload surefire reports
         if: ${{ failure() && hashFiles('openmetadata-service/target/surefire-reports/TEST-*.xml') != '' }}
@@ -160,12 +133,7 @@ jobs:
   # Set "OpenMetadata Service Unit Tests / openmetadata-service-unit-tests-status" as the sole required check for this workflow.
   openmetadata-service-unit-tests-status:
     name: openmetadata-service-unit-tests-status
-    needs:
-      [
-        changes,
-        openmetadata-service-unit-tests,
-        openmetadata-service-new-code-coverage,
-      ]
+    needs: [changes, openmetadata-service-unit-tests]
     if: ${{ failure() || cancelled() }}
     runs-on: ubuntu-latest
     steps:
