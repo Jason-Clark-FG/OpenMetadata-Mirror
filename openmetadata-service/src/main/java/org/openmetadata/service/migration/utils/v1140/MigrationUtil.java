@@ -10,6 +10,8 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
+import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.util.EntityUtil;
@@ -88,9 +90,9 @@ public class MigrationUtil {
     int totalRedeployed = 0;
     for (WorkflowDefinition workflow : allWorkflows) {
       try {
-        repository.createOrUpdate(null, workflow, ADMIN_USER_NAME);
+        WorkflowHandler.getInstance().deploy(new Workflow(workflow));
         totalRedeployed++;
-        LOG.debug("Redeployed workflow: {}", workflow.getFullyQualifiedName());
+        LOG.info("Redeployed workflow to Flowable: {}", workflow.getFullyQualifiedName());
       } catch (Exception e) {
         LOG.error(
             "Error redeploying workflow '{}': {}",
