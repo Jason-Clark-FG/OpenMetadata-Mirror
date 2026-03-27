@@ -113,6 +113,9 @@ export default defineConfig(({ mode }) => {
         '@react-types/shared',
         'tailwind-merge',
         'react-hook-form',
+        'motion',
+        'motion/react',
+        'motion-utils',
       ],
     },
 
