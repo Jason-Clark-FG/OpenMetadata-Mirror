@@ -16,8 +16,8 @@ import {
   Avatar,
   Button as CoreButton,
   Card as CoreCard,
-  Typography as CoreTypography,
   FileUploadDropZone,
+  Typography as CoreTypography,
 } from '@openmetadata/ui-core-components';
 import Form, { IChangeEvent } from '@rjsf/core';
 import {
