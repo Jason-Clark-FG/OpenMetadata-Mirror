@@ -49,4 +49,5 @@ export interface NodeConfiguration {
 export interface InputNamespaceMap {
     entityList: string;
     updatedBy?: string;
+    [property: string]: any;
 }

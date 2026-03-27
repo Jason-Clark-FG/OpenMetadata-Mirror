@@ -218,6 +218,7 @@ export interface InputNamespaceMap {
     entityList?:    string;
     updatedBy?:     string;
     relatedEntity?: string;
+    [property: string]: any;
 }
 
 /**

@@ -121,4 +121,5 @@ export enum SyncMode {
 export interface InputNamespaceMap {
     entityList: string;
     updatedBy?: string;
+    [property: string]: any;
 }

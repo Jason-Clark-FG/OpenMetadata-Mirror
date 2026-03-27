@@ -60,4 +60,5 @@ export enum LogicalCondition {
 
 export interface InputNamespaceMap {
     entityList: string;
+    [property: string]: any;
 }
