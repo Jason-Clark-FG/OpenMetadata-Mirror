@@ -222,7 +222,8 @@ public class MigrationUtil {
       return nodeObj;
     }
 
-    ObjectNode newInputNamespaceMap = MAPPER.createObjectNode();
+    ObjectNode newInputNamespaceMap = inputNamespaceMap.deepCopy();
+    newInputNamespaceMap.remove("relatedEntity");
 
     // Determine the correct namespace and key based on the incoming edge
     if (incoming != null) {
