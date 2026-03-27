@@ -19,7 +19,10 @@ import {
   getApiContext,
   redirectToHomePage
 } from '../../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
+import {
+  closeColumnDetailPanel,
+  waitForAllLoadersToDisappear,
+} from '../../../utils/entity';
 import { sidebarClick } from '../../../utils/sidebar';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -28,15 +31,6 @@ const searchGlossaryInSelector = async (page: Page, glossaryName: string) => {
   const searchInput = page
     .getByTestId('KnowledgePanel.GlossaryTerms')
     .getByRole('combobox');
-  await searchInput.fill(glossaryName);
-  await waitForAllLoadersToDisappear(page);
-};
-
-const searchGlossaryInColumnSelector = async (
-  page: Page,
-  glossaryName: string
-) => {
-  const searchInput = page.locator('.ant-select-selection-search-input').last();
   await searchInput.fill(glossaryName);
   await waitForAllLoadersToDisappear(page);
 };
@@ -562,7 +556,9 @@ test.describe('Glossary Mutual Exclusivity Feature', () => {
       }
     });
 
-    test.skip('ME-T02: Apply ME term to table column', async ({ page }) => {
+    test('ME-T02: Apply ME term to table column via detail panel', async ({
+      page,
+    }) => {
       const { apiContext, afterAction } = await getApiContext(page);
       const glossary = new Glossary();
       const parentTerm = new GlossaryTerm(glossary);
@@ -585,49 +581,73 @@ test.describe('Glossary Mutual Exclusivity Feature', () => {
         await redirectToHomePage(page);
         await table.visitEntityPage(page);
 
-        await page.waitForLoadState('networkidle');
-        await page.waitForSelector('[data-testid="loader"]', {
-          state: 'detached',
-        });
-
+        // Open column detail panel by clicking on the first column name
         const firstColumnName = table.columnsName[0];
-        const columnRowSelector = `[data-row-key$="${firstColumnName}"]`;
-
-        // Add glossary term to column
-        await page.click(
-          `${columnRowSelector} [data-testid="glossary-tags-0"] [data-testid="add-tag"]`
+        const columnRow = page.locator(
+          `[data-row-key$="${firstColumnName}"]`
         );
+        await columnRow.waitFor({ state: 'visible' });
+        const columnNameCell = columnRow.getByTestId('column-name-cell');
+        await columnNameCell.waitFor({ state: 'visible' });
+        await columnNameCell.click();
+        const panelContainer = page.locator('.column-detail-panel');
+        await expect(panelContainer).toBeVisible();
+        await expect(panelContainer.getByTestId('entity-link')).toBeVisible();
 
-        await page.waitForSelector('.async-tree-select-list-dropdown', { state: 'visible' });
+        // Click edit glossary terms button in the column detail panel
+        const glossaryEditButton =
+          panelContainer.getByTestId('edit-glossary-terms');
+        await expect(glossaryEditButton).toBeVisible();
+        await glossaryEditButton.click();
 
-        // Search for the glossary to bring it into view
-        await searchGlossaryInColumnSelector(page, glossary.responseData.name);
+        // Wait for selectable list to appear
+        const selectableList = page.locator(
+          '[data-testid="selectable-list"]'
+        );
+        await expect(selectableList).toBeVisible();
 
-        const parentTermNode = page.getByTestId(`tag-${parentTerm.responseData.fullyQualifiedName}`);
-        await expect(parentTermNode).toBeVisible();
+        // Search for the glossary term
+        const searchBar = page.locator(
+          '[data-testid="glossary-term-select-search-bar"]'
+        );
+        await expect(searchBar).toBeVisible();
+        const searchResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/search/query') &&
+            response.url().includes('glossaryTerm') &&
+            response.request().method() === 'GET'
+        );
+        await searchBar.fill(child.responseData.displayName);
+        await searchResponse;
+        await waitForAllLoadersToDisappear(page);
 
-        // Expand the parent term
-        await parentTermNode
-          .getByTestId('expand-icon')
-          .first()
-          .click();
+        // Select the glossary term from the flat list
+        const termOption = page.locator('.ant-list-item').filter({
+          hasText: child.responseData.displayName,
+        });
+        await expect(termOption).toBeVisible();
+        await termOption.click();
 
-        const childNode = page.getByRole('tree').getByTestId(`tag-${child.responseData.fullyQualifiedName}`);
-        await childNode.click();
+        // Save via Update button
+        const updateResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/columns/name/') ||
+            response.url().includes('/api/v1/tables/')
+        );
+        const updateButton = page.getByRole('button', { name: 'Update' });
+        await expect(updateButton).toBeVisible();
+        await updateButton.click();
+        await updateResponse;
+        await waitForAllLoadersToDisappear(page);
 
-        // Save
-        const patchResponse = page.waitForResponse('/api/v1/columns/name/**');
-        await page.click('[data-testid="saveAssociatedTag"]');
-        await patchResponse;
-
-        // Verify tag appears on column
+        // Verify glossary term appears in the column detail panel
         await expect(
-          page
-            .locator(columnRowSelector)
-            .getByTestId('glossary-tags-0')
-            .getByTestId(`tag-${child.responseData.fullyQualifiedName}`)
+          panelContainer.getByTestId(
+            `tag-${child.responseData.fullyQualifiedName}`
+          )
         ).toBeVisible();
 
+        await closeColumnDetailPanel(page);
         await table.delete(apiContext);
       } finally {
         await glossary.delete(apiContext);
@@ -797,6 +817,292 @@ test.describe('Glossary Mutual Exclusivity Feature', () => {
         await expect(
           term1Node.locator('.ant-select-tree-checkbox')
         ).not.toHaveClass(/ant-select-tree-checkbox-checked/);
+
+        await table.delete(apiContext);
+      } finally {
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
+
+    test('ME-H06: Deep nesting - non-ME parent under ME grandparent allows multi-select', async ({
+      page,
+    }) => {
+      const { apiContext, afterAction } = await getApiContext(page);
+      const glossary = new Glossary();
+
+      // ME grandparent
+      const meGrandparent = new GlossaryTerm(glossary);
+      meGrandparent.data.name = 'DeepMEGrandparent';
+      meGrandparent.data.displayName = 'DeepMEGrandparent';
+      meGrandparent.data.mutuallyExclusive = true;
+
+      try {
+        await glossary.create(apiContext);
+        await meGrandparent.create(apiContext);
+
+        // Non-ME parent under ME grandparent
+        const nonMeParent = new GlossaryTerm(
+          glossary,
+          meGrandparent.responseData.fullyQualifiedName,
+          'DeepNonMEParent'
+        );
+        nonMeParent.data.mutuallyExclusive = false;
+        await nonMeParent.create(apiContext);
+
+        // Children under non-ME parent (should allow multi-select)
+        const child1 = new GlossaryTerm(
+          glossary,
+          nonMeParent.responseData.fullyQualifiedName,
+          'DeepChild1'
+        );
+        const child2 = new GlossaryTerm(
+          glossary,
+          nonMeParent.responseData.fullyQualifiedName,
+          'DeepChild2'
+        );
+        await child1.create(apiContext);
+        await child2.create(apiContext);
+
+        // ME sibling parent under same ME grandparent
+        const meSibling = new GlossaryTerm(
+          glossary,
+          meGrandparent.responseData.fullyQualifiedName,
+          'DeepMESibling'
+        );
+        meSibling.data.mutuallyExclusive = true;
+        await meSibling.create(apiContext);
+
+        const sibChild1 = new GlossaryTerm(
+          glossary,
+          meSibling.responseData.fullyQualifiedName,
+          'DeepMESibChild1'
+        );
+        const sibChild2 = new GlossaryTerm(
+          glossary,
+          meSibling.responseData.fullyQualifiedName,
+          'DeepMESibChild2'
+        );
+        await sibChild1.create(apiContext);
+        await sibChild2.create(apiContext);
+
+        const table = new TableClass();
+        await table.create(apiContext);
+
+        await redirectToHomePage(page);
+        await table.visitEntityPage(page);
+
+        await page
+          .getByTestId('KnowledgePanel.GlossaryTerms')
+          .getByRole('button', { name: 'plus' })
+          .click();
+
+        await page.waitForSelector('.async-tree-select-list-dropdown', {
+          state: 'visible',
+        });
+
+        await searchGlossaryInSelector(page, glossary.responseData.name);
+
+        // Expand ME grandparent
+        const grandparentNode = page.getByTestId(
+          `tag-${meGrandparent.responseData.fullyQualifiedName}`
+        );
+        await expect(grandparentNode).toBeVisible();
+        await grandparentNode.getByTestId('expand-icon').first().click();
+
+        // Expand non-ME parent
+        const nonMeParentNode = page.getByTestId(
+          `tag-${nonMeParent.responseData.fullyQualifiedName}`
+        );
+        await expect(nonMeParentNode).toBeVisible();
+        await nonMeParentNode.getByTestId('expand-icon').first().click();
+
+        // Children under non-ME parent should allow multi-select (checkboxes)
+        const child1Node = page
+          .getByRole('tree')
+          .getByTestId(
+            `tag-${child1.responseData.fullyQualifiedName}`
+          );
+        const child2Node = page
+          .getByRole('tree')
+          .getByTestId(
+            `tag-${child2.responseData.fullyQualifiedName}`
+          );
+        const child1Checkbox = child1Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+        const child2Checkbox = child2Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+
+        // Click checkboxes directly for deep-nested nodes
+        await child1Checkbox.click();
+        await expect(child1Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        await child2Checkbox.click();
+        await expect(child2Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        // Both should remain selected (non-ME parent allows multi-select)
+        await expect(child1Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        // Expand ME sibling to verify its children enforce ME
+        const meSiblingNode = page.getByTestId(
+          `tag-${meSibling.responseData.fullyQualifiedName}`
+        );
+        await expect(meSiblingNode).toBeVisible();
+        await meSiblingNode.getByTestId('expand-icon').first().click();
+
+        const sibChild1Node = page
+          .getByRole('tree')
+          .getByTestId(
+            `tag-${sibChild1.responseData.fullyQualifiedName}`
+          );
+        const sibChild2Node = page
+          .getByRole('tree')
+          .getByTestId(
+            `tag-${sibChild2.responseData.fullyQualifiedName}`
+          );
+        const sibChild1Checkbox = sibChild1Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+        const sibChild2Checkbox = sibChild2Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+
+        // Click checkboxes directly for deep-nested ME children
+        await sibChild1Checkbox.click();
+        await expect(sibChild1Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        // Select second ME sibling child → first should auto-deselect
+        await sibChild2Checkbox.click();
+        await expect(sibChild2Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+        await expect(sibChild1Checkbox).not.toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        // Non-ME children should still be selected (cross-parent independence)
+        await expect(child1Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+        await expect(child2Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+
+        await table.delete(apiContext);
+      } finally {
+        await glossary.delete(apiContext);
+        await afterAction();
+      }
+    });
+
+    test('ME-H07: Non-ME parent under ME glossary allows multi-select for its children', async ({
+      page,
+    }) => {
+      const { apiContext, afterAction } = await getApiContext(page);
+
+      // ME glossary
+      const glossary = new Glossary();
+      glossary.data.mutuallyExclusive = true;
+
+      try {
+        await glossary.create(apiContext);
+
+        // Non-ME parent term under ME glossary
+        const nonMeParent = new GlossaryTerm(glossary);
+        nonMeParent.data.name = 'NonMEUnderMEGlossary';
+        nonMeParent.data.displayName = 'NonMEUnderMEGlossary';
+        nonMeParent.data.mutuallyExclusive = false;
+        await nonMeParent.create(apiContext);
+
+        const child1 = new GlossaryTerm(
+          glossary,
+          nonMeParent.responseData.fullyQualifiedName,
+          'NonMEChild1'
+        );
+        const child2 = new GlossaryTerm(
+          glossary,
+          nonMeParent.responseData.fullyQualifiedName,
+          'NonMEChild2'
+        );
+        const child3 = new GlossaryTerm(
+          glossary,
+          nonMeParent.responseData.fullyQualifiedName,
+          'NonMEChild3'
+        );
+        await child1.create(apiContext);
+        await child2.create(apiContext);
+        await child3.create(apiContext);
+
+        const table = new TableClass();
+        await table.create(apiContext);
+
+        await redirectToHomePage(page);
+        await table.visitEntityPage(page);
+
+        await page
+          .getByTestId('KnowledgePanel.GlossaryTerms')
+          .getByRole('button', { name: 'plus' })
+          .click();
+
+        await page.waitForSelector('.async-tree-select-list-dropdown', {
+          state: 'visible',
+        });
+
+        await searchGlossaryInSelector(page, glossary.responseData.name);
+
+        // Expand the non-ME parent (search auto-expands glossary, need to expand parent)
+        const nonMeParentNode = page.getByTestId(
+          `tag-${nonMeParent.responseData.fullyQualifiedName}`
+        );
+        await expect(nonMeParentNode).toBeVisible();
+        await nonMeParentNode.getByTestId('expand-icon').first().click();
+
+        // Select all three children - all should remain selected (non-ME parent)
+        const child1Node = page
+          .getByRole('tree')
+          .getByTestId(`tag-${child1.responseData.fullyQualifiedName}`);
+        const child2Node = page
+          .getByRole('tree')
+          .getByTestId(`tag-${child2.responseData.fullyQualifiedName}`);
+        const child3Node = page
+          .getByRole('tree')
+          .getByTestId(`tag-${child3.responseData.fullyQualifiedName}`);
+
+        const child1Checkbox = child1Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+        const child2Checkbox = child2Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+        const child3Checkbox = child3Node.locator(
+          '.ant-select-tree-checkbox'
+        );
+
+        await child1Node.click();
+        await child2Node.click();
+        await child3Node.click();
+
+        // All three should be selected despite glossary being ME
+        // because the immediate parent is non-ME
+        await expect(child1Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+        await expect(child2Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
+        await expect(child3Checkbox).toHaveClass(
+          /ant-select-tree-checkbox-checked/
+        );
 
         await table.delete(apiContext);
       } finally {
