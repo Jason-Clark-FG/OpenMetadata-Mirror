@@ -63,12 +63,16 @@ test.describe(
       // Clean up UI-created entities (may not exist if creation tests didn't run)
       await apiContext
         .delete(
-          `/api/v1/dataProducts/name/${encodeURIComponent(uiCreatedDpName)}?hardDelete=true`
+          `/api/v1/dataProducts/name/${encodeURIComponent(
+            uiCreatedDpName
+          )}?hardDelete=true`
         )
         .catch(() => {});
       await apiContext
         .delete(
-          `/api/v1/domains/name/${encodeURIComponent(uiCreatedDomainName)}?hardDelete=true`
+          `/api/v1/domains/name/${encodeURIComponent(
+            uiCreatedDomainName
+          )}?hardDelete=true`
         )
         .catch(() => {});
 
@@ -246,16 +250,13 @@ test.describe(
         await domainInput.scrollIntoViewIfNeeded();
         await domainInput.click();
 
-        const searchDomain = page.waitForResponse(
-          (response) =>
-            response.url().includes('/api/v1/search/query?q=')
+        const searchDomain = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/search/query?q=')
         );
         await domainInput.fill(domain1.responseData.displayName);
         await searchDomain;
 
-        const domainOption = page.getByText(
-          domain1.responseData.displayName
-        );
+        const domainOption = page.getByText(domain1.responseData.displayName);
         await expect(domainOption).toBeVisible();
         await domainOption.click();
       });
@@ -333,18 +334,14 @@ test.describe(
       });
 
       await test.step('Verify empty state message', async () => {
-        await expect(
-          page.locator('.marketplace-search-results')
-        ).toBeVisible();
-        await expect(
-          page.locator('.marketplace-search-results')
-        ).toContainText('No data found');
+        await expect(page.locator('.marketplace-search-results')).toBeVisible();
+        await expect(page.locator('.marketplace-search-results')).toContainText(
+          'No data found'
+        );
       });
     });
 
-    test('Search popover dismisses when input is cleared', async ({
-      page,
-    }) => {
+    test('Search popover dismisses when input is cleared', async ({ page }) => {
       test.slow();
 
       await test.step('Navigate to marketplace', async () => {
