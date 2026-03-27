@@ -374,7 +374,8 @@ public class SearchResource {
       @Parameter(description = "Explain the results of the query")
           @DefaultValue("false")
           @QueryParam("explain")
-          boolean explain) {
+          boolean explain)
+      throws IOException {
 
     // Add Domain Filter
     List<EntityReference> domains = new ArrayList<>();

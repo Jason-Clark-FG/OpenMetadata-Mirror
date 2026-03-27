@@ -2397,7 +2397,8 @@ public class SearchRepository {
     return searchClient.previewSearch(request, subjectContext, searchSettings);
   }
 
-  public Response searchWithNLQ(SearchRequest request, SubjectContext subjectContext) {
+  public Response searchWithNLQ(SearchRequest request, SubjectContext subjectContext)
+      throws IOException {
     return searchClient.searchWithNLQ(request, subjectContext);
   }
 
