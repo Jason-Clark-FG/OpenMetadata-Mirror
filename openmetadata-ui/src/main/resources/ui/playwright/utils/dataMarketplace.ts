@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page } from '@playwright/test';
+import { APIRequestContext, expect, Page } from '@playwright/test';
 import { SidebarItem } from '../constant/sidebar';
 import { redirectToHomePage } from './common';
 import { waitForAllLoadersToDisappear } from './entity';
@@ -39,11 +39,41 @@ export const searchMarketplace = async (page: Page, term: string) => {
 };
 
 export const closeSearchPopover = async (page: Page) => {
-  await page.getByTestId('marketplace-greeting').click();
+  const searchWrapper = page.getByTestId('marketplace-search-input');
+  const searchInput = searchWrapper.locator('input');
+  await searchInput.clear();
   await expect(page.locator('.marketplace-search-results')).not.toBeVisible();
 };
 
 export const verifyGreetingBanner = async (page: Page, displayName: string) => {
   await expect(page.getByTestId('marketplace-greeting')).toBeVisible();
   await expect(page.getByTestId('greeting-text')).toContainText(displayName);
+};
+
+export const createAnnouncementViaApi = async (
+  apiContext: APIRequestContext,
+  entityLink: string,
+  message: string,
+  description: string
+) => {
+  const startTime = Math.floor(Date.now() / 1000);
+  const endTime = startTime + 86400;
+  const response = await apiContext.post('/api/v1/feed', {
+    data: {
+      message,
+      about: entityLink,
+      from: 'admin',
+      type: 'Announcement',
+      announcementDetails: { description, startTime, endTime },
+    },
+  });
+
+  return response.json();
+};
+
+export const deleteAnnouncementViaApi = async (
+  apiContext: APIRequestContext,
+  threadId: string
+) => {
+  await apiContext.delete(`/api/v1/feed/${threadId}`);
 };

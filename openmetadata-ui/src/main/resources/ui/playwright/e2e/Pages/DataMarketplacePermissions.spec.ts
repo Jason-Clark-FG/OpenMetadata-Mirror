@@ -18,6 +18,7 @@ import { performAdminLogin } from '../../utils/admin';
 import {
   navigateToMarketplace,
   searchMarketplace,
+  verifyGreetingBanner,
 } from '../../utils/dataMarketplace';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
@@ -83,6 +84,10 @@ test.describe(
         ).toBeVisible();
         await expect(adminPage.getByTestId('add-domain-btn')).toBeVisible();
       });
+
+      await test.step('Verify greeting banner shows admin name', async () => {
+        await verifyGreetingBanner(adminPage, 'admin');
+      });
     });
 
     test('Data consumer does NOT see add buttons', async ({ consumerPage }) => {
@@ -115,6 +120,13 @@ test.describe(
         await expect(
           consumerPage.getByTestId('marketplace-search-bar')
         ).toBeVisible();
+      });
+
+      await test.step('Verify greeting banner shows consumer name', async () => {
+        const name =
+          consumerUser.responseData.displayName ??
+          consumerUser.responseData.name;
+        await verifyGreetingBanner(consumerPage, name);
       });
     });
 
