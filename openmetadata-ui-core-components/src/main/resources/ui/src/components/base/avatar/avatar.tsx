@@ -156,7 +156,7 @@ export const Avatar = ({
         <VerifiedTick
           className={cx(
             'tw:absolute tw:right-0 tw:bottom-0',
-            (size === 'xxs' || size === 'xs') && 'tw:-right-px tw:-bottom-px',
+            (size === 'xxs' || size === 'xs') && 'tw:-right-px tw:-bottom-px'
           )}
           size={size === 'xxs' ? 'xs' : size}
         />
@@ -169,7 +169,6 @@ export const Avatar = ({
   return (
     <div
       data-avatar
-      style={style}
       className={cx(
         'tw:relative tw:inline-flex tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:bg-avatar-bg tw:outline-transparent',
         // Focus styles
@@ -177,8 +176,9 @@ export const Avatar = ({
           'tw:group-outline-focus-ring tw:group-focus-visible:outline-2 tw:group-focus-visible:outline-offset-2',
         contrastBorder && 'tw:outline tw:outline-avatar-contrast-border',
         styles[size].root,
-        className,
-      )}>
+        className
+      )}
+      style={style}>
       {renderMainContent()}
       {renderBadgeContent()}
     </div>
