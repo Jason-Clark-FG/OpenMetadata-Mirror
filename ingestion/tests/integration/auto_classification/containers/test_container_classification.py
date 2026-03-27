@@ -226,7 +226,6 @@ def test_container_classification_reasons(
     assert "EmailRecognizer" in email_tag.reason or "Detected" in email_tag.reason
 
 
-@pytest.mark.skip("We need to add Sample Data to containers")
 def test_container_sample_data_stored(
     metadata: OpenMetadata,
     run_autoclassification: AutoClassificationWorkflow,
