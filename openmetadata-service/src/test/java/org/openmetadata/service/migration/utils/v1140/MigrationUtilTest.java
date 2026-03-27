@@ -9,19 +9,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -152,6 +150,38 @@ class MigrationUtilTest {
   }
 
   @Test
+  void migrateWorkflowJson_preservesUpdatedByWhenMigratingRelatedEntity() throws Exception {
+    String json =
+        """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "fullyQualifiedName": "workflow1",
+          "trigger": {"output": ["entityList"]},
+          "nodes": [
+            {
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "name": "SetApproved",
+              "inputNamespaceMap": {
+                "relatedEntity": "global",
+                "updatedBy": "ApprovalForUpdates"
+              }
+            }
+          ]
+        }
+        """;
+    JsonNode root = MAPPER.readTree(json);
+    JsonNode result = MigrationUtil.migrateWorkflowJson(root);
+
+    JsonNode nsMap = result.get("nodes").get(0).get("inputNamespaceMap");
+    assertTrue(nsMap.has("entityList"), "entityList should be added");
+    assertFalse(nsMap.has("relatedEntity"), "relatedEntity should be removed");
+    assertEquals("global", nsMap.get("entityList").asText());
+    assertTrue(nsMap.has("updatedBy"), "updatedBy should be preserved");
+    assertEquals("ApprovalForUpdates", nsMap.get("updatedBy").asText());
+  }
+
+  @Test
   void migrateWorkflowJson_skipsNonBatchNodes() throws Exception {
     String json =
         """
@@ -249,6 +279,81 @@ class MigrationUtilTest {
     assertEquals(2, input.size());
   }
 
+  @Test
+  void migrateWorkflowJson_assignsTrueEntityListToNodeDownstreamOfCheckNodeOnTrueEdge()
+      throws Exception {
+    String json =
+        """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "fullyQualifiedName": "workflow1",
+          "trigger": {"output": ["entityList"]},
+          "nodes": [
+            {
+              "type": "automatedTask",
+              "subType": "checkEntityAttributesTask",
+              "name": "CheckOwner",
+              "inputNamespaceMap": {"entityList": "global"}
+            },
+            {
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "name": "SetGold",
+              "inputNamespaceMap": {"relatedEntity": "global"}
+            }
+          ],
+          "edges": [
+            {"from": "CheckOwner", "to": "SetGold", "condition": "true"}
+          ]
+        }
+        """;
+    JsonNode root = MAPPER.readTree(json);
+    JsonNode result = MigrationUtil.migrateWorkflowJson(root);
+
+    JsonNode nsMap = result.get("nodes").get(1).get("inputNamespaceMap");
+    assertTrue(nsMap.has("true_entityList"), "Should have true_entityList key");
+    assertEquals("CheckOwner", nsMap.get("true_entityList").asText());
+    assertFalse(nsMap.has("entityList"), "Should not have plain entityList");
+    assertFalse(nsMap.has("relatedEntity"), "relatedEntity should be removed");
+  }
+
+  @Test
+  void migrateWorkflowJson_assignsFalseEntityListToNodeDownstreamOfCheckNodeOnFalseEdge()
+      throws Exception {
+    String json =
+        """
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "fullyQualifiedName": "workflow1",
+          "trigger": {"output": ["entityList"]},
+          "nodes": [
+            {
+              "type": "automatedTask",
+              "subType": "checkEntityAttributesTask",
+              "name": "CheckOwner",
+              "inputNamespaceMap": {"entityList": "global"}
+            },
+            {
+              "type": "automatedTask",
+              "subType": "setEntityAttributeTask",
+              "name": "SetNone",
+              "inputNamespaceMap": {"relatedEntity": "global"}
+            }
+          ],
+          "edges": [
+            {"from": "CheckOwner", "to": "SetNone", "condition": "false"}
+          ]
+        }
+        """;
+    JsonNode root = MAPPER.readTree(json);
+    JsonNode result = MigrationUtil.migrateWorkflowJson(root);
+
+    JsonNode nsMap = result.get("nodes").get(1).get("inputNamespaceMap");
+    assertTrue(nsMap.has("false_entityList"), "Should have false_entityList key");
+    assertEquals("CheckOwner", nsMap.get("false_entityList").asText());
+    assertFalse(nsMap.has("relatedEntity"));
+  }
+
   // ─── addEntityListToNamespaceMap ──────────────────────────────────────
 
   @Test
@@ -265,12 +370,12 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
     assertSame(node, result);
   }
 
   @Test
-  void addEntityListToNamespaceMap_replacesRelatedEntityWithEntityList() throws Exception {
+  void addEntityListToNamespaceMap_replacesRelatedEntityWithEntityListGlobal() throws Exception {
     String json =
         """
         {
@@ -281,12 +386,12 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
 
     JsonNode nsMap = result.get("inputNamespaceMap");
     assertTrue(nsMap.has("entityList"));
     assertFalse(nsMap.has("relatedEntity"));
-    assertEquals("myNamespace", nsMap.get("entityList").asText());
+    assertEquals("global", nsMap.get("entityList").asText());
   }
 
   @Test
@@ -303,13 +408,37 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
 
     JsonNode nsMap = result.get("inputNamespaceMap");
     assertTrue(nsMap.has("entityList"), "entityList should be preserved");
     assertFalse(nsMap.has("relatedEntity"), "relatedEntity should be removed");
     assertEquals("global", nsMap.get("entityList").asText(), "original entityList value kept");
     assertEquals("approvalNode", nsMap.get("updatedBy").asText(), "updatedBy preserved");
+  }
+
+  @Test
+  void addEntityListToNamespaceMap_preservesUpdatedByWhenOnlyRelatedEntityPresent()
+      throws Exception {
+    String json =
+        """
+        {
+          "name": "node",
+          "inputNamespaceMap": {
+            "relatedEntity": "global",
+            "updatedBy": "ApprovalForUpdates"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("entityList"), "entityList should be added");
+    assertFalse(nsMap.has("relatedEntity"), "relatedEntity should be removed");
+    assertEquals("global", nsMap.get("entityList").asText());
+    assertTrue(nsMap.has("updatedBy"), "updatedBy should be preserved");
+    assertEquals("ApprovalForUpdates", nsMap.get("updatedBy").asText());
   }
 
   @Test
@@ -324,7 +453,98 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("entityList"));
+    assertEquals("global", nsMap.get("entityList").asText());
+    assertFalse(nsMap.has("relatedEntity"));
+  }
+
+  @Test
+  void addEntityListToNamespaceMap_setsTrueEntityListFromCheckNodeOnTrueCondition()
+      throws Exception {
+    String json =
+        """
+        {
+          "name": "SetGold",
+          "inputNamespaceMap": {
+            "relatedEntity": "global"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    String[] incoming = {"CheckOwner", "true"};
+    Map<String, String> nodeSubType = Map.of("CheckOwner", "checkEntityAttributesTask");
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("true_entityList"));
+    assertEquals("CheckOwner", nsMap.get("true_entityList").asText());
+    assertFalse(nsMap.has("entityList"));
+    assertFalse(nsMap.has("relatedEntity"));
+  }
+
+  @Test
+  void addEntityListToNamespaceMap_setsFalseEntityListFromCheckNodeOnFalseCondition()
+      throws Exception {
+    String json =
+        """
+        {
+          "name": "SetNone",
+          "inputNamespaceMap": {
+            "relatedEntity": "global"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    String[] incoming = {"CheckOwner", "false"};
+    Map<String, String> nodeSubType = Map.of("CheckOwner", "checkEntityAttributesTask");
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("false_entityList"));
+    assertEquals("CheckOwner", nsMap.get("false_entityList").asText());
+    assertFalse(nsMap.has("relatedEntity"));
+  }
+
+  @Test
+  void addEntityListToNamespaceMap_setsBandEntityListFromDataCompletenessNode() throws Exception {
+    String json =
+        """
+        {
+          "name": "SetGoldCert",
+          "inputNamespaceMap": {
+            "relatedEntity": "global"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    String[] incoming = {"DataCompletenessNode", "gold"};
+    Map<String, String> nodeSubType = Map.of("DataCompletenessNode", "dataCompletenessTask");
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("gold_entityList"));
+    assertEquals("DataCompletenessNode", nsMap.get("gold_entityList").asText());
+    assertFalse(nsMap.has("relatedEntity"));
+  }
+
+  @Test
+  void addEntityListToNamespaceMap_usesGlobalWhenSourceIsNonCheckNode() throws Exception {
+    String json =
+        """
+        {
+          "name": "SetField",
+          "inputNamespaceMap": {
+            "relatedEntity": "global"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    String[] incoming = {"StartEvent", null};
+    Map<String, String> nodeSubType = Map.of("StartEvent", "startEvent");
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
 
     JsonNode nsMap = result.get("inputNamespaceMap");
     assertTrue(nsMap.has("entityList"));
@@ -338,7 +558,7 @@ class MigrationUtilTest {
         {"name": "node"}
         """;
     JsonNode node = MAPPER.readTree(json);
-    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node);
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, null, Map.of());
     assertSame(node, result);
   }
 
@@ -422,7 +642,7 @@ class MigrationUtilTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void migrateWorkflowInputNamespaceMap_redeploysAllWorkflowsFromPhase2() throws Exception {
+  void migrateWorkflowInputNamespaceMap_phase2LoadsAllWorkflowsAfterPhase1() throws Exception {
     WorkflowDefinitionRepository repository = mock(WorkflowDefinitionRepository.class);
     EntityDAO<WorkflowDefinition> mockDao = mock(EntityDAO.class);
 
@@ -430,9 +650,7 @@ class MigrationUtilTest {
     WorkflowDefinition wf2 = buildMinimalWorkflowDefinition("wf2");
 
     when(repository.getDao()).thenReturn(mockDao);
-    when(mockDao.listAfterWithOffset(anyInt(), anyInt()))
-        .thenReturn(List.of())
-        .thenReturn(List.of());
+    when(mockDao.listAfterWithOffset(anyInt(), anyInt())).thenReturn(List.of());
     when(repository.listAll(eq(EntityUtil.Fields.EMPTY_FIELDS), any(ListFilter.class)))
         .thenReturn(List.of(wf1, wf2));
 
@@ -444,8 +662,7 @@ class MigrationUtilTest {
       MigrationUtil.migrateWorkflowInputNamespaceMap();
     }
 
-    verify(repository, times(1)).createOrUpdate(isNull(), eq(wf1), eq("admin"));
-    verify(repository, times(1)).createOrUpdate(isNull(), eq(wf2), eq("admin"));
+    verify(repository).listAll(eq(EntityUtil.Fields.EMPTY_FIELDS), any(ListFilter.class));
   }
 
   @Test
@@ -467,7 +684,6 @@ class MigrationUtilTest {
             """,
             workflowId);
 
-    final String[] capturedJson = {null};
     when(repository.getDao()).thenReturn(mockDao);
     when(mockDao.listAfterWithOffset(anyInt(), eq(0))).thenReturn(List.of(rawJsonNeedsMigration));
     when(mockDao.listAfterWithOffset(anyInt(), eq(100))).thenReturn(List.of());
@@ -518,9 +734,6 @@ class MigrationUtilTest {
     when(repository.getDao()).thenReturn(mockDao);
     when(mockDao.listAfterWithOffset(anyInt(), anyInt())).thenReturn(List.of());
     when(repository.listAll(any(), any())).thenReturn(List.of(failingWorkflow));
-    doThrow(new RuntimeException("Redeploy failed"))
-        .when(repository)
-        .createOrUpdate(any(), any(), any());
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock

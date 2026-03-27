@@ -1,5 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.triggers.impl;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.TRIGGERING_OBJECT_ID_VARIABLE;
@@ -55,6 +56,8 @@ public class FilterEntityImpl implements JavaDelegate {
     String entityLinkStr =
         (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE);
 
+    varHandler.setGlobalVariable(ENTITY_LIST_VARIABLE, List.of(entityLinkStr));
+
     // Parse entity type from entity link to determine which filter to use
     MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
     String entityType = entityLink.getEntityType();
@@ -96,8 +99,7 @@ public class FilterEntityImpl implements JavaDelegate {
     }
 
     // Parse JSON string into map if needed
-    if (filterObj instanceof String) {
-      String filterStr = (String) filterObj;
+    if (filterObj instanceof String filterStr) {
       // Handle empty string as "no filter"
       if (filterStr.trim().isEmpty()) {
         return null; // Empty string means no filtering

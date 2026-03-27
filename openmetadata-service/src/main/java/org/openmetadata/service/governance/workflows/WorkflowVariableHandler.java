@@ -77,8 +77,7 @@ public class WorkflowVariableHandler {
 
   private String getNodeNamespace() {
     String namespace;
-    if (varScope instanceof DelegateExecution) {
-      DelegateExecution execution = (DelegateExecution) varScope;
+    if (varScope instanceof DelegateExecution execution) {
       namespace =
           Optional.ofNullable(
                   execution.getParent() != null
@@ -89,8 +88,7 @@ public class WorkflowVariableHandler {
           "[WorkflowVariable] getNodeNamespace: DelegateExecution activityId='{}' namespace='{}'",
           execution.getCurrentActivityId(),
           namespace);
-    } else if (varScope instanceof DelegateTask) {
-      DelegateTask task = (DelegateTask) varScope;
+    } else if (varScope instanceof DelegateTask task) {
       namespace = WorkflowHandler.getInstance().getParentActivityId(task.getExecutionId());
       LOG.debug(
           "[WorkflowVariable] getNodeNamespace: DelegateTask executionId='{}' namespace='{}'",
@@ -119,12 +117,23 @@ public class WorkflowVariableHandler {
   @SuppressWarnings("unchecked")
   public static List<String> getEntityList(
       Map<String, ?> inputNamespaceMap, WorkflowVariableHandler varHandler) {
+    // Check for conditional entity list keys (e.g. true_entityList, false_entityList,
+    // gold_entityList)
+    for (Map.Entry<String, ?> entry : inputNamespaceMap.entrySet()) {
+      String key = entry.getKey();
+      String namespace = (String) entry.getValue();
+      if (key.endsWith("_" + ENTITY_LIST_VARIABLE) && namespace != null) {
+        Object obj = varHandler.getNamespacedVariable(namespace, key);
+        if (obj instanceof List) {
+          return (List<String>) obj;
+        }
+      }
+    }
     String entityListNamespace = (String) inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
     if (entityListNamespace != null) {
-      Object entityListObj =
-          varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
-      if (entityListObj instanceof List) {
-        return (List<String>) entityListObj;
+      Object obj = varHandler.getNamespacedVariable(entityListNamespace, ENTITY_LIST_VARIABLE);
+      if (obj instanceof List) {
+        return (List<String>) obj;
       }
     }
     return List.of();

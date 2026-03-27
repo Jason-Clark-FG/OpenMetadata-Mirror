@@ -2,6 +2,7 @@ package org.openmetadata.service.governance.workflows.elements.nodes.automatedTa
 
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.FALSE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
@@ -52,7 +53,7 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
 
       boolean result = !trueEntityList.isEmpty();
       varHandler.setNodeVariable("true_" + ENTITY_LIST_VARIABLE, trueEntityList);
-      varHandler.setNodeVariable("false_" + ENTITY_LIST_VARIABLE, falseEntityList);
+      varHandler.setNodeVariable(FALSE_ENTITY_LIST_VARIABLE, falseEntityList);
       varHandler.setNodeVariable(ENTITY_LIST_VARIABLE, result ? trueEntityList : falseEntityList);
       varHandler.setNodeVariable(RESULT_VARIABLE, result);
     } catch (Exception exc) {

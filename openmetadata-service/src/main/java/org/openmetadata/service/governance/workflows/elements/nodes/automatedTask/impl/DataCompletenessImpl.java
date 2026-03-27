@@ -193,8 +193,8 @@ public class DataCompletenessImpl implements JavaDelegate {
     if (parts.length > 1) {
       Object firstField = getNestedValue(entityMap, parts[0]);
 
-      if (firstField instanceof List) {
-        List<?> arrayList = (List<?>) firstField;
+      if (firstField instanceof List<?> arrayList) {
+        // It's an array field check like "columns.description"
         if (arrayList.isEmpty()) {
           info.totalCount = 1;
           info.filledCount = 0;
@@ -214,8 +214,7 @@ public class DataCompletenessImpl implements JavaDelegate {
       } else {
         Object value = getNestedValue(entityMap, fieldPath);
         info.totalCount = 1;
-        if (value instanceof List) {
-          List<?> list = (List<?>) value;
+        if (value instanceof List<?> list) {
           info.filledCount = !list.isEmpty() ? 1 : 0;
         } else {
           info.filledCount = isFieldFilled(value) ? 1 : 0;
@@ -225,8 +224,7 @@ public class DataCompletenessImpl implements JavaDelegate {
       Object value = getNestedValue(entityMap, fieldPath);
       info.totalCount = 1;
 
-      if (value instanceof List) {
-        List<?> list = (List<?>) value;
+      if (value instanceof List<?> list) {
         info.filledCount = !list.isEmpty() ? 1 : 0;
       } else {
         info.filledCount = isFieldFilled(value) ? 1 : 0;
@@ -265,18 +263,15 @@ public class DataCompletenessImpl implements JavaDelegate {
       return false;
     }
 
-    if (value instanceof String) {
-      String str = (String) value;
+    if (value instanceof String str) {
       return !str.trim().isEmpty();
     }
 
-    if (value instanceof List) {
-      List<?> list = (List<?>) value;
+    if (value instanceof List<?> list) {
       return !list.isEmpty();
     }
 
-    if (value instanceof Map) {
-      Map<?, ?> map = (Map<?, ?>) value;
+    if (value instanceof Map<?, ?> map) {
       return !map.isEmpty();
     }
 

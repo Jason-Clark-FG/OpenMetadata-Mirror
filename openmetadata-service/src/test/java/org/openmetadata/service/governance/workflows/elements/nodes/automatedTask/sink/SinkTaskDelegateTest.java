@@ -225,6 +225,40 @@ class SinkTaskDelegateTest {
   }
 
   @Test
+  void testListMode_EntityFetchFailure_CapturedAsError() {
+    SinkProviderRegistry.getInstance().unregister(TEST_SINK_TYPE);
+    TestSinkProvider noBatchProvider =
+        new TestSinkProvider() {
+          @Override
+          public boolean supportsBatch() {
+            return false;
+          }
+        };
+    SinkProviderRegistry.getInstance().register(TEST_SINK_TYPE, config -> noBatchProvider);
+
+    setupCommonExpressions(true);
+    Map<String, String> namespaceMap = new HashMap<>();
+    namespaceMap.put(ENTITY_LIST_VARIABLE, GLOBAL_NAMESPACE);
+    when(inputNamespaceMapExpr.getValue(execution)).thenReturn(JsonUtils.pojoToJson(namespaceMap));
+
+    List<String> entityList = List.of("<#E::table::failing.fqn>");
+    setupVariableAccess(entityList, false);
+
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
+      entityMock
+          .when(
+              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
+          .thenThrow(new RuntimeException("Entity not found"));
+
+      delegate.execute(execution);
+    }
+
+    assertEquals(0, noBatchProvider.getWriteCallCount());
+    verify(execution).setVariable(eq("process_result"), eq("failure"));
+    verify(execution).setVariable(eq("process_failedCount"), eq(1));
+  }
+
+  @Test
   void testUnregisteredSinkType_ThrowsError() {
     when(sinkTypeExpr.getValue(execution)).thenReturn("unknownSink");
     when(sinkConfigExpr.getValue(execution)).thenReturn("{}");
