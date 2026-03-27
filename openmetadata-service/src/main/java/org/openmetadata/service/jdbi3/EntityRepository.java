@@ -9747,8 +9747,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         }
       }
 
-      List<T> changedEntities =
-          changedUpdaters.stream().map(EntityUpdater::getUpdated).map(e -> e).toList();
+      List<T> changedEntities = changedUpdaters.stream().map(EntityUpdater::getUpdated).toList();
       if (!changedEntities.isEmpty()) {
         try (var ignored = phase("setInheritedFields")) {
           // Only changed entities need inheritance hydration for downstream side effects.
@@ -9804,7 +9803,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
             succeededUpdaters.stream()
                 .filter(updater -> updater.isVersionChanged() || updater.isEntityChanged())
                 .map(EntityUpdater::getUpdated)
-                .map(e -> e)
                 .toList();
         if (!fallbackChanged.isEmpty()) {
           try (var ignored = phase("invalidateCacheBulk")) {

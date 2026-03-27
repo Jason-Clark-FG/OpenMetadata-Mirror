@@ -865,7 +865,8 @@ class K8sPipelineClientTest {
 
     assertEquals(200, response.getCode());
     assertEquals("kubernetes", response.getVersion());
-    assertTrue(response.getPlatform().contains("openmetadata-pipelines"));
+    assertEquals("Kubernetes", response.getPlatform());
+    assertTrue(response.getReason().contains("openmetadata-pipelines"));
   }
 
   @Test
