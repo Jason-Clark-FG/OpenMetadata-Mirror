@@ -228,6 +228,7 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
    * @param parsedFilter Pre-parsed filter (field -> values)
    * @return true if the node matches the filter, false otherwise
    */
+  @SuppressWarnings("unchecked")
   protected boolean matchesNodeFilter(
       NodeInformation node, Map<String, List<String>> parsedFilter) {
     if (node == null
@@ -237,7 +238,13 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
       return false;
     }
 
-    Map<String, Object> entityMap = JsonUtils.getMap(node.getEntity());
+    // Entity is already stored as Map<String, Object> from ES response — avoid Jackson round-trip
+    Map<String, Object> entityMap;
+    if (node.getEntity() instanceof Map) {
+      entityMap = (Map<String, Object>) node.getEntity();
+    } else {
+      entityMap = JsonUtils.getMap(node.getEntity());
+    }
     return QueryFilterParser.matchesFilter(entityMap, parsedFilter);
   }
 
@@ -249,6 +256,7 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
    * @param queryFilter The query filter (ES Query DSL JSON or simple query string)
    * @return true if the node matches the filter, false otherwise
    */
+  @SuppressWarnings("unchecked")
   protected boolean matchesNodeFilter(NodeInformation node, String queryFilter) {
     if (node == null || node.getEntity() == null || nullOrEmpty(queryFilter)) {
       return false;
@@ -306,23 +314,39 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
     }
 
     if (request.getNodeDepth() != null) {
-      int maxDepth = Math.abs(request.getNodeDepth());
-      Map<String, NodeInformation> depthFilteredNodes = new HashMap<>();
-      for (Map.Entry<String, NodeInformation> entry : result.getNodes().entrySet()) {
-        NodeInformation node = entry.getValue();
-        int nodeDepth = node.getNodeDepth() != null ? Math.abs(node.getNodeDepth()) : 0;
-        if (nodeDepth <= maxDepth || entry.getKey().equals(request.getFqn())) {
-          depthFilteredNodes.put(entry.getKey(), node);
-        }
-      }
-      result.setNodes(depthFilteredNodes);
-      filterEdgesToMatchNodes(result);
+      applyDepthFilter(result, request.getFqn(), Math.abs(request.getNodeDepth()));
     }
 
-    List<String> sortedFqns = new ArrayList<>(result.getNodes().keySet());
-    sortedFqns.remove(request.getFqn());
-    Map<String, NodeInformation> nodes = result.getNodes();
-    sortedFqns.sort(
+    List<String> sortedFqns = sortNodesByDepthThenName(result.getNodes(), request.getFqn());
+    int from = request.getFrom() != null ? request.getFrom() : 0;
+    int size = request.getSize() != null ? request.getSize() : 50;
+
+    List<String> pageFqns = paginateNodeFqns(sortedFqns, from, size);
+    pageFqns.add(request.getFqn());
+
+    setNodesFromFqns(result, pageFqns);
+    filterEdgesToMatchNodes(result);
+    return result;
+  }
+
+  private void applyDepthFilter(SearchLineageResult result, String rootFqn, int maxDepth) {
+    Map<String, NodeInformation> filtered = new HashMap<>();
+    for (Map.Entry<String, NodeInformation> entry : result.getNodes().entrySet()) {
+      NodeInformation node = entry.getValue();
+      int nodeDepth = node.getNodeDepth() != null ? Math.abs(node.getNodeDepth()) : 0;
+      if (nodeDepth <= maxDepth || entry.getKey().equals(rootFqn)) {
+        filtered.put(entry.getKey(), node);
+      }
+    }
+    result.setNodes(filtered);
+    filterEdgesToMatchNodes(result);
+  }
+
+  private List<String> sortNodesByDepthThenName(
+      Map<String, NodeInformation> nodes, String rootFqn) {
+    List<String> fqns = new ArrayList<>(nodes.keySet());
+    fqns.remove(rootFqn);
+    fqns.sort(
         Comparator.<String, Integer>comparing(
                 fqn -> {
                   NodeInformation node = nodes.get(fqn);
@@ -330,75 +354,53 @@ public abstract class AbstractLineageGraphBuilder implements LineageGraphExecuto
                   return Math.abs(depth);
                 })
             .thenComparing(Comparator.naturalOrder()));
+    return fqns;
+  }
 
-    int from = request.getFrom() != null ? request.getFrom() : 0;
-    int size = request.getSize() != null ? request.getSize() : 50;
-    int toIndex = Math.min(from + size, sortedFqns.size());
-
+  private List<String> paginateNodeFqns(List<String> sortedFqns, int from, int size) {
     if (from >= sortedFqns.size()) {
-      Map<String, NodeInformation> rootOnlyNodes = new HashMap<>();
-      if (result.getNodes().containsKey(request.getFqn())) {
-        rootOnlyNodes.put(request.getFqn(), result.getNodes().get(request.getFqn()));
-      }
-      result.setNodes(rootOnlyNodes);
-      filterEdgesToMatchNodes(result);
-      return result;
+      return new ArrayList<>();
     }
+    int toIndex = Math.min(from + size, sortedFqns.size());
+    return new ArrayList<>(sortedFqns.subList(from, toIndex));
+  }
 
-    List<String> paginatedFqns = new ArrayList<>(sortedFqns.subList(from, toIndex));
-    paginatedFqns.add(request.getFqn());
-
-    Map<String, NodeInformation> paginatedNodes = new HashMap<>();
-    for (String fqn : paginatedFqns) {
+  private void setNodesFromFqns(SearchLineageResult result, List<String> fqns) {
+    Map<String, NodeInformation> selected = new HashMap<>();
+    for (String fqn : fqns) {
       if (result.getNodes().containsKey(fqn)) {
-        paginatedNodes.put(fqn, result.getNodes().get(fqn));
+        selected.put(fqn, result.getNodes().get(fqn));
       }
     }
-
-    result.setNodes(paginatedNodes);
-    filterEdgesToMatchNodes(result);
-
-    return result;
+    result.setNodes(selected);
   }
 
   private void filterEdgesToMatchNodes(SearchLineageResult result) {
     Set<String> nodeFqns = result.getNodes().keySet();
-
     if (result.getUpstreamEdges() != null) {
-      Map<String, EsLineageData> filteredUpstream = new HashMap<>();
-      for (Map.Entry<String, EsLineageData> entry : result.getUpstreamEdges().entrySet()) {
-        EsLineageData edge = entry.getValue();
-        String fromFqn =
-            edge.getFromEntity() != null ? edge.getFromEntity().getFullyQualifiedName() : null;
-        String toFqn =
-            edge.getToEntity() != null ? edge.getToEntity().getFullyQualifiedName() : null;
-        if (fromFqn != null
-            && toFqn != null
-            && nodeFqns.contains(fromFqn)
-            && nodeFqns.contains(toFqn)) {
-          filteredUpstream.put(entry.getKey(), edge);
-        }
-      }
-      result.setUpstreamEdges(filteredUpstream);
+      result.setUpstreamEdges(retainConnectedEdges(result.getUpstreamEdges(), nodeFqns));
     }
-
     if (result.getDownstreamEdges() != null) {
-      Map<String, EsLineageData> filteredDownstream = new HashMap<>();
-      for (Map.Entry<String, EsLineageData> entry : result.getDownstreamEdges().entrySet()) {
-        EsLineageData edge = entry.getValue();
-        String fromFqn =
-            edge.getFromEntity() != null ? edge.getFromEntity().getFullyQualifiedName() : null;
-        String toFqn =
-            edge.getToEntity() != null ? edge.getToEntity().getFullyQualifiedName() : null;
-        if (fromFqn != null
-            && toFqn != null
-            && nodeFqns.contains(fromFqn)
-            && nodeFqns.contains(toFqn)) {
-          filteredDownstream.put(entry.getKey(), edge);
-        }
-      }
-      result.setDownstreamEdges(filteredDownstream);
+      result.setDownstreamEdges(retainConnectedEdges(result.getDownstreamEdges(), nodeFqns));
     }
+  }
+
+  private Map<String, EsLineageData> retainConnectedEdges(
+      Map<String, EsLineageData> edges, Set<String> nodeFqns) {
+    Map<String, EsLineageData> filtered = new HashMap<>();
+    for (Map.Entry<String, EsLineageData> entry : edges.entrySet()) {
+      EsLineageData edge = entry.getValue();
+      String fromFqn =
+          edge.getFromEntity() != null ? edge.getFromEntity().getFullyQualifiedName() : null;
+      String toFqn = edge.getToEntity() != null ? edge.getToEntity().getFullyQualifiedName() : null;
+      if (fromFqn != null
+          && toFqn != null
+          && nodeFqns.contains(fromFqn)
+          && nodeFqns.contains(toFqn)) {
+        filtered.put(entry.getKey(), edge);
+      }
+    }
+    return filtered;
   }
 
   /**

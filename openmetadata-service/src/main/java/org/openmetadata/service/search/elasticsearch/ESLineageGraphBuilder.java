@@ -376,15 +376,8 @@ public class ESLineageGraphBuilder
                   .withDirection(LineageDirection.UPSTREAM)
                   .withDirectionValue(
                       getLineageDirection(
-                          lineageRequest.getDirection(), lineageRequest.getIsConnectedVia())));
-      // Merge upstream results, but preserve root entity paging counts
-      String rootFqn = lineageRequest.getFqn();
-      for (var entry : upstreamLineage.getNodes().entrySet()) {
-        if (entry.getKey().equals(rootFqn)) {
-          continue;
-        }
-        result.getNodes().putIfAbsent(entry.getKey(), entry.getValue());
-      }
+                          LineageDirection.UPSTREAM, lineageRequest.getIsConnectedVia())));
+      mergeNonRootNodes(upstreamLineage, result, lineageRequest.getFqn());
       result.getUpstreamEdges().putAll(upstreamLineage.getUpstreamEdges());
     }
 
@@ -396,15 +389,8 @@ public class ESLineageGraphBuilder
                   .withDirection(LineageDirection.DOWNSTREAM)
                   .withDirectionValue(
                       getLineageDirection(
-                          lineageRequest.getDirection(), lineageRequest.getIsConnectedVia())));
-      // Merge downstream results, but preserve root entity paging counts
-      String rootFqn = lineageRequest.getFqn();
-      for (var entry : downstreamLineage.getNodes().entrySet()) {
-        if (entry.getKey().equals(rootFqn)) {
-          continue;
-        }
-        result.getNodes().putIfAbsent(entry.getKey(), entry.getValue());
-      }
+                          LineageDirection.DOWNSTREAM, lineageRequest.getIsConnectedVia())));
+      mergeNonRootNodes(downstreamLineage, result, lineageRequest.getFqn());
       result.getDownstreamEdges().putAll(downstreamLineage.getDownstreamEdges());
     }
 
@@ -501,14 +487,8 @@ public class ESLineageGraphBuilder
                     .withDirection(LineageDirection.UPSTREAM)
                     .withDirectionValue(
                         getLineageDirection(
-                            lineageRequest.getDirection(), lineageRequest.getIsConnectedVia())));
-        String rootFqn = lineageRequest.getFqn();
-        for (var entry : upstreamLineage.getNodes().entrySet()) {
-          if (entry.getKey().equals(rootFqn)) {
-            continue;
-          }
-          result.getNodes().putIfAbsent(entry.getKey(), entry.getValue());
-        }
+                            LineageDirection.UPSTREAM, lineageRequest.getIsConnectedVia())));
+        mergeNonRootNodes(upstreamLineage, result, lineageRequest.getFqn());
         result.getUpstreamEdges().putAll(upstreamLineage.getUpstreamEdges());
       }
     } else {
@@ -519,19 +499,22 @@ public class ESLineageGraphBuilder
                     .withDirection(LineageDirection.DOWNSTREAM)
                     .withDirectionValue(
                         getLineageDirection(
-                            lineageRequest.getDirection(), lineageRequest.getIsConnectedVia())));
-        String rootFqn = lineageRequest.getFqn();
-        for (var entry : downstreamLineage.getNodes().entrySet()) {
-          if (entry.getKey().equals(rootFqn)) {
-            continue;
-          }
-          result.getNodes().putIfAbsent(entry.getKey(), entry.getValue());
-        }
+                            LineageDirection.DOWNSTREAM, lineageRequest.getIsConnectedVia())));
+        mergeNonRootNodes(downstreamLineage, result, lineageRequest.getFqn());
         result.getDownstreamEdges().putAll(downstreamLineage.getDownstreamEdges());
       }
     }
 
     return result;
+  }
+
+  private void mergeNonRootNodes(
+      SearchLineageResult source, SearchLineageResult target, String rootFqn) {
+    for (var entry : source.getNodes().entrySet()) {
+      if (!entry.getKey().equals(rootFqn)) {
+        target.getNodes().putIfAbsent(entry.getKey(), entry.getValue());
+      }
+    }
   }
 
   private void addRootEntityWithPagingCounts(
@@ -809,6 +792,9 @@ public class ESLineageGraphBuilder
         allEntities.addAll(entitiesByDepth.getOrDefault(depth, new ArrayList<>()));
       }
 
+      // Build reverse lookup once for O(1) depth resolution
+      Map<String, Integer> depthByFqn = buildDepthLookup(entitiesByDepth);
+
       if (hasQueryFilter) {
         // ES-native: collect all FQN hashes, fetch only matching docs via ES postFilter
         Set<String> allFqnHashes = new HashSet<>();
@@ -828,7 +814,7 @@ public class ESLineageGraphBuilder
             @SuppressWarnings("unchecked")
             Map<String, Object> entityDoc = (Map<String, Object>) entry.getValue();
             if (entityDoc != null && !entityDoc.isEmpty()) {
-              int nodeDepth = findEntityDepth(entityFqn, entitiesByDepth);
+              int nodeDepth = depthByFqn.getOrDefault(entityFqn, 1);
               if (request.getDirection() == LineageDirection.UPSTREAM) {
                 nodeDepth = -nodeDepth;
               }
@@ -1117,6 +1103,9 @@ public class ESLineageGraphBuilder
     Set<String> allCollectedFqns = new HashSet<>(entityFqns);
     allCollectedFqns.add(request.getFqn()); // Add the root entity FQN as well
 
+    // Build reverse lookup map once: O(N) instead of O(D*N) per findEntityDepth call
+    Map<String, Integer> depthByFqn = buildDepthLookup(entitiesByDepth);
+
     for (String entityFqn : entityFqns) {
       Map<String, Object> entityDoc =
           EsUtils.searchEntityByKey(
@@ -1128,26 +1117,25 @@ public class ESLineageGraphBuilder
               SOURCE_FIELDS_TO_EXCLUDE);
 
       if (!entityDoc.isEmpty()) {
-        // Find which depth this entity belongs to
-        int nodeDepth = findEntityDepth(entityFqn, entitiesByDepth);
+        int nodeDepth = depthByFqn.getOrDefault(entityFqn, 1);
         if (request.getDirection() == LineageDirection.UPSTREAM) {
-          nodeDepth = -nodeDepth; // Upstream depths are negative
+          nodeDepth = -nodeDepth;
         }
 
         result.getNodes().put(entityFqn, getNodeInformation(entityDoc, null, null, nodeDepth));
-        // Add lineage edges
         addLineageEdges(result, entityDoc, request, allCollectedFqns);
       }
     }
   }
 
-  private int findEntityDepth(String entityFqn, Map<Integer, List<String>> entitiesByDepth) {
+  private static Map<String, Integer> buildDepthLookup(Map<Integer, List<String>> entitiesByDepth) {
+    Map<String, Integer> depthByFqn = new HashMap<>();
     for (Map.Entry<Integer, List<String>> entry : entitiesByDepth.entrySet()) {
-      if (entry.getValue().contains(entityFqn)) {
-        return entry.getKey();
+      for (String fqn : entry.getValue()) {
+        depthByFqn.put(fqn, entry.getKey());
       }
     }
-    return 1; // Default depth
+    return depthByFqn;
   }
 
   private void addLineageEdges(
@@ -1429,7 +1417,6 @@ public class ESLineageGraphBuilder
   public SearchLineageResult executeInMemory(
       org.openmetadata.service.search.lineage.LineageQueryContext context, int batchSize)
       throws IOException {
-    // Delegate to the legacy/internal implementation to avoid circular calls
     return searchLineageInternal(context.getRequest());
   }
 
