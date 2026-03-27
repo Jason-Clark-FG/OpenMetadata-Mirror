@@ -327,22 +327,24 @@ public class DistributedSearchIndexExecutor {
 
     UUID jobId = currentJob.getId();
     LOG.info("Server {} starting execution of job {}", serverId, jobId);
+    boolean startedJob = false;
 
     // Start the job if in READY state
     if (currentJob.getStatus() == IndexJobStatus.READY) {
       coordinator.startJob(jobId);
       currentJob = coordinator.getJob(jobId).orElseThrow();
-
-      // Notify other servers that a job has started so they can participate
-      if (jobNotifier != null) {
-        jobNotifier.notifyJobStarted(jobId, "SEARCH_INDEX");
-        LOG.info("Notified other servers about job {} via {}", jobId, jobNotifier.getType());
-      }
+      startedJob = true;
     }
 
     if (currentJob.getStatus() != IndexJobStatus.RUNNING) {
       throw new IllegalStateException(
           "Job must be in RUNNING state to execute. Current: " + currentJob.getStatus());
+    }
+
+    // Notify other servers that a job has started so they can participate
+    if (startedJob && jobNotifier != null && currentJob.getStatus() == IndexJobStatus.RUNNING) {
+      jobNotifier.notifyJobStarted(jobId, "SEARCH_INDEX");
+      LOG.info("Notified other servers about job {} via {}", jobId, jobNotifier.getType());
     }
 
     ReindexingMetrics metrics = ReindexingMetrics.getInstance();
@@ -380,6 +382,7 @@ public class DistributedSearchIndexExecutor {
       statsAggregator.setProgressListener(listeners, jobContext);
     }
 
+    statsAggregator.setBulkSink(bulkSink);
     statsAggregator.start();
 
     // Store sink reference for stats persistence
@@ -833,6 +836,7 @@ public class DistributedSearchIndexExecutor {
         boolean refreshed = coordinator.refreshReindexLock(jobId);
         if (refreshed) {
           LOG.debug("Refreshed reindex lock for job {}", jobId);
+          collectionDAO.searchIndexJobDAO().touchJob(jobId.toString(), System.currentTimeMillis());
         } else {
           LOG.warn("Failed to refresh reindex lock for job {} - lock may have been stolen", jobId);
           // Mark the job as failed since we lost the lock

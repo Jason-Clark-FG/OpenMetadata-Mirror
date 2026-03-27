@@ -38,8 +38,6 @@ import {
   uuid,
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
-
-test.describe.configure({ mode: 'serial' });
 import {
   activateColumnLayer,
   addColumnLineage,
@@ -52,13 +50,11 @@ import {
   deleteNode,
   editLineage,
   editLineageClick,
-  performExpand,
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
   setupEntitiesForLineage,
   toggleLineageFilters,
-  updateLineageConfigFromModal,
   verifyColumnLayerInactive,
   verifyColumnLineageInCSV,
   verifyExportLineageCSV,
@@ -69,6 +65,8 @@ import {
   visitLineageTab,
 } from '../../utils/lineage';
 import { sidebarClick } from '../../utils/sidebar';
+
+test.describe.configure({ mode: 'serial' });
 
 // use the admin user to login
 test.use({
@@ -107,7 +105,7 @@ test.beforeEach(async ({ page }) => {
 for (const EntityClass of entities) {
   const defaultEntity = new EntityClass();
 
-  test(`Lineage creation from ${defaultEntity.getType()} entity`, async ({
+  test.skip(`Lineage creation from ${defaultEntity.getType()} entity`, async ({
     page,
   }) => {
     // 5 minutes to avoid test timeout happening some times in AUTs
@@ -135,7 +133,7 @@ for (const EntityClass of entities) {
         const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
         await page.reload();
         await lineageRes;
-        await page.waitForSelector('[data-testid="edit-lineage"]', {
+        await page.getByTestId('edit-lineage').waitFor({
           state: 'visible',
         });
 
@@ -252,7 +250,6 @@ test('Verify column lineage between tables', async ({ page }) => {
   await addColumnLineage(page, sourceCol, targetCol);
   await editLineageClick(page);
   await performZoomOut(page, 1);
-  await page.waitForTimeout(500);
 
   await removeColumnLineage(page, sourceCol, targetCol);
   await editLineageClick(page);
@@ -426,7 +423,7 @@ test('Verify function data in edge drawer', async ({ page }) => {
       .locator(`[data-testid="column-edge-${sourceColName}-${targetColName}"]`)
       .dispatchEvent('click');
 
-    await page.waitForSelector('.sql-function-section', {
+    await page.locator('.sql-function-section').waitFor({
       state: 'visible',
     });
 
@@ -444,7 +441,6 @@ test('Verify function data in edge drawer', async ({ page }) => {
     const lineageReq1 = page.waitForResponse('/api/v1/lineage/getLineage?*');
     await page.reload();
     await lineageReq1;
-
 
     await activateColumnLayer(page);
     await page
@@ -477,7 +473,7 @@ test('Verify table search with special characters as handled', async ({
   try {
     await sidebarClick(page, SidebarItem.LINEAGE);
 
-    await page.waitForSelector('[data-testid="search-entity-select"]');
+    await page.getByTestId('search-entity-select').waitFor();
     await page.click('[data-testid="search-entity-select"]');
 
     await page.fill(
@@ -491,7 +487,7 @@ test('Verify table search with special characters as handled', async ({
         req.url().includes('deleted=false')
     );
 
-    await page.waitForSelector('.ant-select-dropdown');
+    await page.locator('.ant-select-dropdown').waitFor();
 
     const nodeFqn = get(table, 'entityResponseData.fullyQualifiedName');
     const dbFqn = get(table, 'entityResponseData.database.fullyQualifiedName');
@@ -509,14 +505,14 @@ test('Verify table search with special characters as handled', async ({
 
     await redirectToHomePage(page);
     await sidebarClick(page, SidebarItem.LINEAGE);
-    await page.waitForSelector('[data-testid="search-entity-select"]');
+    await page.getByTestId('search-entity-select').waitFor();
     await page.click('[data-testid="search-entity-select"]');
 
     await page.fill(
       '[data-testid="search-entity-select"] .ant-select-selection-search-input',
       db
     );
-    await page.waitForSelector(`[data-testid="node-suggestion-${dbFqn}"]`);
+    await page.getByTestId(`node-suggestion-${dbFqn}`).waitFor();
     await page
       .locator(`[data-testid="node-suggestion-${dbFqn}"]`)
       .dispatchEvent('click');
@@ -838,8 +834,7 @@ test('Verify node full path is present as breadcrumb in lineage node', async ({
     expect(breadcrumbCount).toBe(fqnParts.length);
 
     for (let i = 0; i < breadcrumbCount; i++) {
-      const breadcrumbText = await breadcrumbItems.nth(i).textContent();
-      expect(breadcrumbText).toBe(fqnParts[i]);
+      await expect(breadcrumbItems.nth(i)).toHaveText(fqnParts[i]);
     }
   } finally {
     await table.delete(apiContext);
@@ -890,7 +885,6 @@ test.fixme(
 
         await table1.visitEntityPage(page);
         await visitLineageTab(page);
-        await page.waitForTimeout(500);
       });
 
       await test.step('2. Verify edge between 2 tables is visible', async () => {

@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { COMMON_TIER_TAG } from '../../constant/common';
 import { BIG_ENTITY_DELETE_TIMEOUT } from '../../constant/delete';
 import { ApiEndpointClass } from '../../support/entity/ApiEndpointClass';
@@ -272,7 +272,7 @@ test.describe('Entity Version pages', () => {
             .locator('.ant-modal-footer [data-testid="save-button"]')
             .click();
 
-          await page.waitForSelector('.ant-modal-body', {
+          await page.locator('.ant-modal-body').waitFor({
             state: 'detached',
           });
 
@@ -342,7 +342,7 @@ test.describe('Entity Version pages', () => {
         await page.click('[data-testid="manage-button"]');
         await page.click('[data-testid="delete-button"]');
 
-        await page.waitForSelector('[role="dialog"].ant-modal');
+        await page.locator('[role="dialog"].ant-modal').waitFor();
 
         await expect(page.locator('[role="dialog"].ant-modal')).toBeVisible();
 

@@ -176,9 +176,7 @@ test.describe('Search Preview test', () => {
       new RegExp(mockEntitySearchSettings.url + '$')
     );
 
-    await page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     const descriptionField = page.getByTestId(
       `field-configuration-panel-description`
@@ -199,9 +197,7 @@ test.describe('Search Preview test', () => {
     await searchInput.fill(table1.entity.name);
     await previewResponse;
 
-    await page.waitForSelector('[data-testid="loader"]', {
-      state: 'detached',
-    });
+    await waitForAllLoadersToDisappear(page);
 
     const searchResultsContainer = page.locator('.search-results-container');
 
@@ -254,7 +250,6 @@ test.describe('Column Search Settings Tests', () => {
     await expect(page).toHaveURL(
       /settings\/preferences\/search-settings\/column$/
     );
-
 
     const fieldContainers = page.getByTestId('field-container-header');
     const firstFieldContainer = fieldContainers.first();
@@ -312,13 +307,11 @@ test.describe('Column Search Settings Tests', () => {
       const columnCard = page.getByTestId('preferences.search-settings.column');
       await columnCard.click();
 
-
       const searchInput = page.getByTestId('searchbar');
       await searchInput.fill(uniqueColumnName);
 
       const previewResponse = page.waitForResponse('/api/v1/search/preview');
       await previewResponse;
-
 
       const searchResultsContainer = page.locator('.search-results-container');
       const matchedCard = searchResultsContainer

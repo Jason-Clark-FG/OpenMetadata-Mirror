@@ -955,13 +955,13 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
   }
 
   @Test
-  void test_addTestCasesToLogicalTestSuite(TestNamespace ns) {
+  void test_bulkAddTestCasesToLogicalTestSuiteByIds(TestNamespace ns) throws Exception {
     OpenMetadataClient client = SdkClients.adminClient();
     Table table = createTable(ns);
 
     TestCase testCase1 =
         TestCaseBuilder.create(client)
-            .name(ns.prefix("logical_suite1"))
+            .name(ns.prefix("bulk_ids_1"))
             .forTable(table)
             .testDefinition("tableRowCountToEqual")
             .parameter("value", "100")
@@ -969,15 +969,373 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
 
     TestCase testCase2 =
         TestCaseBuilder.create(client)
-            .name(ns.prefix("logical_suite2"))
+            .name(ns.prefix("bulk_ids_2"))
             .forTable(table)
             .testDefinition("tableColumnCountToEqual")
             .parameter("columnCount", "2")
             .create();
 
-    assertNotNull(testCase1.getTestSuite());
-    assertNotNull(testCase2.getTestSuite());
-    assertEquals(testCase1.getTestSuite().getId(), testCase2.getTestSuite().getId());
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_bulk_ids"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("mode", "ids");
+    request.put(
+        "selection",
+        Map.of("ids", List.of(testCase1.getId().toString(), testCase2.getId().toString())));
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/dataQuality/testCases/logicalTestCases/bulk",
+            request,
+            RequestOptions.builder().build());
+
+    Awaitility.await("test cases added to logical suite and search index updated")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              TestCase fetched1 =
+                  client.testCases().get(testCase1.getId().toString(), "testSuites");
+              TestCase fetched2 =
+                  client.testCases().get(testCase2.getId().toString(), "testSuites");
+
+              assertNotNull(fetched1.getTestSuites());
+              assertNotNull(fetched2.getTestSuites());
+              assertTrue(
+                  fetched1.getTestSuites().stream()
+                      .anyMatch(ts -> ts.getId().equals(logicalSuite.getId())),
+                  "testCase1 should belong to the logical suite");
+              assertTrue(
+                  fetched2.getTestSuites().stream()
+                      .anyMatch(ts -> ts.getId().equals(logicalSuite.getId())),
+                  "testCase2 should belong to the logical suite");
+            });
+
+    TestSuite updatedSuite = client.testSuites().get(logicalSuite.getId().toString(), "tests");
+    assertNotNull(updatedSuite.getTests());
+    assertEquals(2, updatedSuite.getTests().size());
+    List<java.util.UUID> testIdsInSuite =
+        updatedSuite.getTests().stream().map(ref -> ref.getId()).toList();
+    assertTrue(testIdsInSuite.contains(testCase1.getId()));
+    assertTrue(testIdsInSuite.contains(testCase2.getId()));
+  }
+
+  @Test
+  void test_bulkAddTestCasesToLogicalTestSuiteByIds_nonExistentTestCase(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_bulk_nonexistent"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("mode", "ids");
+    request.put("selection", Map.of("ids", List.of(java.util.UUID.randomUUID().toString())));
+
+    assertThrows(
+        Exception.class,
+        () ->
+            client
+                .getHttpClient()
+                .executeForString(
+                    HttpMethod.PUT,
+                    "/v1/dataQuality/testCases/logicalTestCases/bulk",
+                    request,
+                    RequestOptions.builder().build()));
+  }
+
+  @Test
+  void test_bulkAddTestCasesToLogicalTestSuiteByIds_basicSuiteRejected(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    CreateTestSuite basicSuiteReq = new CreateTestSuite();
+    basicSuiteReq.setName(table.getFullyQualifiedName());
+    basicSuiteReq.setBasicEntityReference(table.getFullyQualifiedName());
+    TestSuite basicSuite = client.testSuites().create(basicSuiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", basicSuite.getId().toString());
+    request.put("mode", "ids");
+    request.put("selection", Map.of("ids", List.of(java.util.UUID.randomUUID().toString())));
+
+    assertThrows(
+        Exception.class,
+        () ->
+            client
+                .getHttpClient()
+                .executeForString(
+                    HttpMethod.PUT,
+                    "/v1/dataQuality/testCases/logicalTestCases/bulk",
+                    request,
+                    RequestOptions.builder().build()));
+  }
+
+  @Test
+  void test_bulkAddAllTestCasesToLogicalTestSuite(TestNamespace ns) throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCase testCase1 =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("bulk_all_1"))
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    TestCase testCase2 =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("bulk_all_2"))
+            .forTable(table)
+            .testDefinition("tableColumnCountToEqual")
+            .parameter("columnCount", "2")
+            .create();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_bulk_all"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("mode", "all");
+    request.put("selection", Map.of());
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/dataQuality/testCases/logicalTestCases/bulk",
+            request,
+            RequestOptions.builder().build());
+
+    Awaitility.await("all test cases added to logical suite")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              TestSuite suiteWithTests =
+                  client.testSuites().get(logicalSuite.getId().toString(), "tests");
+              assertNotNull(suiteWithTests.getTests());
+              assertTrue(
+                  suiteWithTests.getTests().size() >= 2,
+                  "Suite should contain at least the 2 created test cases, got "
+                      + suiteWithTests.getTests().size());
+
+              List<java.util.UUID> testIdsInSuite =
+                  suiteWithTests.getTests().stream().map(ref -> ref.getId()).toList();
+              assertTrue(
+                  testIdsInSuite.contains(testCase1.getId()), "testCase1 should be in the suite");
+              assertTrue(
+                  testIdsInSuite.contains(testCase2.getId()), "testCase2 should be in the suite");
+
+              TestCase fetched1 =
+                  client.testCases().get(testCase1.getId().toString(), "testSuites");
+              assertTrue(
+                  fetched1.getTestSuites().stream()
+                      .anyMatch(ts -> ts.getId().equals(logicalSuite.getId())),
+                  "testCase1.testSuites should reference the logical suite");
+            });
+  }
+
+  @Test
+  void test_bulkAddAllTestCasesWithExcludeIds(TestNamespace ns) throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCase included =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("bulk_exclude_inc"))
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    TestCase excluded =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("bulk_exclude_exc"))
+            .forTable(table)
+            .testDefinition("tableColumnCountToEqual")
+            .parameter("columnCount", "2")
+            .create();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_bulk_exclude"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("mode", "all");
+    request.put(
+        "selection", Map.of("filter", Map.of("excludeIds", List.of(excluded.getId().toString()))));
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/dataQuality/testCases/logicalTestCases/bulk",
+            request,
+            RequestOptions.builder().build());
+
+    Awaitility.await("test cases added with exclusion applied")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              TestSuite suiteWithTests =
+                  client.testSuites().get(logicalSuite.getId().toString(), "tests");
+              assertNotNull(suiteWithTests.getTests());
+
+              List<java.util.UUID> testIdsInSuite =
+                  suiteWithTests.getTests().stream().map(ref -> ref.getId()).toList();
+
+              assertTrue(
+                  testIdsInSuite.contains(included.getId()),
+                  "Included test case should be in the suite");
+              assertFalse(
+                  testIdsInSuite.contains(excluded.getId()),
+                  "Excluded test case should NOT be in the suite");
+
+              TestCase fetchedIncluded =
+                  client.testCases().get(included.getId().toString(), "testSuites");
+              assertTrue(
+                  fetchedIncluded.getTestSuites().stream()
+                      .anyMatch(ts -> ts.getId().equals(logicalSuite.getId())));
+
+              TestCase fetchedExcluded =
+                  client.testCases().get(excluded.getId().toString(), "testSuites");
+              boolean excludedInSuite =
+                  fetchedExcluded.getTestSuites() != null
+                      && fetchedExcluded.getTestSuites().stream()
+                          .anyMatch(ts -> ts.getId().equals(logicalSuite.getId()));
+              assertFalse(
+                  excludedInSuite,
+                  "Excluded test case's testSuites should not reference the suite");
+            });
+  }
+
+  @Test
+  void test_bulkAddByIds_idempotent(TestNamespace ns) throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("bulk_idempotent_1"))
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_bulk_idempotent"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("mode", "ids");
+    request.put("selection", Map.of("ids", List.of(testCase.getId().toString())));
+
+    RequestOptions options = RequestOptions.builder().build();
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT, "/v1/dataQuality/testCases/logicalTestCases/bulk", request, options);
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT, "/v1/dataQuality/testCases/logicalTestCases/bulk", request, options);
+
+    TestSuite suiteWithTests = client.testSuites().get(logicalSuite.getId().toString(), "tests");
+    assertNotNull(suiteWithTests.getTests());
+    assertEquals(1, suiteWithTests.getTests().size(), "Test case should only appear once");
+    assertEquals(testCase.getId(), suiteWithTests.getTests().get(0).getId());
+
+    TestCase fetched = client.testCases().get(testCase.getId().toString(), "testSuites");
+    long suiteCount =
+        fetched.getTestSuites().stream()
+            .filter(ts -> ts.getId().equals(logicalSuite.getId()))
+            .count();
+    assertEquals(1, suiteCount, "Test case should reference the suite exactly once");
+  }
+
+  @Test
+  void test_deprecatedEndpointStillWorks(TestNamespace ns) throws Exception {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name(ns.prefix("deprecated_ep_1"))
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_deprecated"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> legacyRequest = new HashMap<>();
+    legacyRequest.put("testSuiteId", logicalSuite.getId().toString());
+    legacyRequest.put("testCaseIds", List.of(testCase.getId().toString()));
+
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/dataQuality/testCases/logicalTestCases",
+            legacyRequest,
+            RequestOptions.builder().build());
+
+    Awaitility.await("deprecated endpoint adds test case")
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              TestSuite suiteWithTests =
+                  client.testSuites().get(logicalSuite.getId().toString(), "tests");
+              assertNotNull(suiteWithTests.getTests());
+              assertEquals(1, suiteWithTests.getTests().size());
+              assertEquals(testCase.getId(), suiteWithTests.getTests().get(0).getId());
+
+              TestCase fetched = client.testCases().get(testCase.getId().toString(), "testSuites");
+              assertTrue(
+                  fetched.getTestSuites().stream()
+                      .anyMatch(ts -> ts.getId().equals(logicalSuite.getId())));
+            });
+  }
+
+  @Test
+  void test_bulkAddMissingModeReturnsError(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    CreateTestSuite suiteReq = new CreateTestSuite();
+    suiteReq.setName(ns.prefix("logical_no_mode"));
+    TestSuite logicalSuite = client.testSuites().create(suiteReq);
+
+    Map<String, Object> request = new HashMap<>();
+    request.put("testSuiteId", logicalSuite.getId().toString());
+    request.put("selection", Map.of("ids", List.of(java.util.UUID.randomUUID().toString())));
+
+    assertThrows(
+        Exception.class,
+        () ->
+            client
+                .getHttpClient()
+                .executeForString(
+                    HttpMethod.PUT,
+                    "/v1/dataQuality/testCases/logicalTestCases/bulk",
+                    request,
+                    RequestOptions.builder().build()));
   }
 
   @Test
@@ -3512,5 +3870,294 @@ public class TestCaseResourceIT extends BaseEntityIT<TestCase, CreateTestCase> {
       return "\"" + value.replace("\"", "\"\"") + "\"";
     }
     return value;
+  }
+
+  // ===================================================================
+  // COLUMN NAME FILTER TESTS (list and search/list endpoints)
+  // ===================================================================
+
+  @Test
+  void test_listByColumnName_filtersColumnLevelTests(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    String idColumnLink =
+        String.format("<#E::table::%s::columns::%s>", table.getFullyQualifiedName(), "id");
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("col_id_test"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("col_name_test"))
+        .forColumn(table, "name")
+        .testDefinition("columnValuesToBeNotNull")
+        .create();
+
+    ListResponse<TestCase> idResults =
+        client
+            .testCases()
+            .list(
+                new ListParams()
+                    .setLimit(100)
+                    .addQueryParam("entityLink", idColumnLink)
+                    .addQueryParam("columnName", "id"));
+
+    assertNotNull(idResults);
+    assertFalse(idResults.getData().isEmpty());
+    for (TestCase tc : idResults.getData()) {
+      assertTrue(
+          tc.getEntityLink().contains("::columns::id"),
+          "Expected column 'id' in entity link but got: " + tc.getEntityLink());
+    }
+
+    ListResponse<TestCase> nameResults =
+        client
+            .testCases()
+            .list(
+                new ListParams()
+                    .setLimit(100)
+                    .addQueryParam("entityFQN", table.getFullyQualifiedName())
+                    .addQueryParam("includeAllTests", "true")
+                    .addQueryParam("columnName", "name"));
+
+    assertNotNull(nameResults);
+    assertFalse(nameResults.getData().isEmpty());
+    for (TestCase tc : nameResults.getData()) {
+      assertTrue(
+          tc.getEntityLink().contains("::columns::name"),
+          "Expected column 'name' in entity link but got: " + tc.getEntityLink());
+    }
+  }
+
+  @Test
+  void test_listByColumnName_noResults(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("col_id_only"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    ListResponse<TestCase> results =
+        client
+            .testCases()
+            .list(
+                new ListParams()
+                    .setLimit(100)
+                    .addQueryParam("entityFQN", table.getFullyQualifiedName())
+                    .addQueryParam("includeAllTests", "true")
+                    .addQueryParam("columnName", "nonexistent_column"));
+
+    assertNotNull(results);
+    assertTrue(results.getData().isEmpty(), "Should return no results for a non-matching column");
+  }
+
+  @Test
+  void test_listByColumnName_doesNotReturnTableLevelTests(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("table_level"))
+        .forTable(table)
+        .testDefinition("tableRowCountToEqual")
+        .parameter("value", "100")
+        .create();
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("col_level"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    ListResponse<TestCase> results =
+        client
+            .testCases()
+            .list(
+                new ListParams()
+                    .setLimit(100)
+                    .addQueryParam("entityFQN", table.getFullyQualifiedName())
+                    .addQueryParam("includeAllTests", "true")
+                    .addQueryParam("columnName", "id"));
+
+    assertNotNull(results);
+    assertFalse(results.getData().isEmpty());
+    for (TestCase tc : results.getData()) {
+      assertTrue(
+          tc.getEntityLink().contains("::columns::id"),
+          "Table-level test should not be returned when filtering by columnName");
+    }
+  }
+
+  @Test
+  void test_searchListByColumnName_filtersColumnLevelTests(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("search_col_id"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("search_col_name"))
+        .forColumn(table, "name")
+        .testDefinition("columnValuesToBeNotNull")
+        .create();
+
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              String response =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET,
+                          "/v1/dataQuality/testCases/search/list",
+                          null,
+                          RequestOptions.builder()
+                              .queryParam("columnName", "id")
+                              .queryParam(
+                                  "entityLink",
+                                  String.format(
+                                      "<#E::table::%s::columns::id>",
+                                      table.getFullyQualifiedName()))
+                              .queryParam("limit", "100")
+                              .build());
+
+              assertNotNull(response);
+              org.openmetadata.schema.utils.ResultList<TestCase> results =
+                  JsonUtils.readValue(
+                      response,
+                      new com.fasterxml.jackson.core.type.TypeReference<
+                          org.openmetadata.schema.utils.ResultList<TestCase>>() {});
+
+              assertFalse(results.getData().isEmpty());
+              for (TestCase tc : results.getData()) {
+                assertTrue(
+                    tc.getEntityLink().contains("::columns::id"),
+                    "Expected column 'id' in entity link but got: " + tc.getEntityLink());
+              }
+            });
+  }
+
+  @Test
+  void test_searchListByColumnName_noResults(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("search_no_match"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              String response =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET,
+                          "/v1/dataQuality/testCases/search/list",
+                          null,
+                          RequestOptions.builder()
+                              .queryParam("columnName", "nonexistent_column")
+                              .queryParam(
+                                  "entityLink",
+                                  String.format("<#E::table::%s>", table.getFullyQualifiedName()))
+                              .queryParam("limit", "100")
+                              .build());
+
+              assertNotNull(response);
+              org.openmetadata.schema.utils.ResultList<TestCase> results =
+                  JsonUtils.readValue(
+                      response,
+                      new com.fasterxml.jackson.core.type.TypeReference<
+                          org.openmetadata.schema.utils.ResultList<TestCase>>() {});
+
+              assertTrue(
+                  results.getData().isEmpty(),
+                  "Should return no results for a non-matching column");
+            });
+  }
+
+  @Test
+  void test_searchListByColumnName_doesNotReturnTableLevelTests(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Table table = createTable(ns);
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("search_tbl_lvl"))
+        .forTable(table)
+        .testDefinition("tableRowCountToEqual")
+        .parameter("value", "100")
+        .create();
+
+    TestCaseBuilder.create(client)
+        .name(ns.prefix("search_col_lvl"))
+        .forColumn(table, "id")
+        .testDefinition("columnValuesToBeBetween")
+        .parameter("minValue", "1")
+        .parameter("maxValue", "1000")
+        .create();
+
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(30))
+        .pollInterval(Duration.ofSeconds(2))
+        .untilAsserted(
+            () -> {
+              String response =
+                  client
+                      .getHttpClient()
+                      .executeForString(
+                          HttpMethod.GET,
+                          "/v1/dataQuality/testCases/search/list",
+                          null,
+                          RequestOptions.builder()
+                              .queryParam("columnName", "id")
+                              .queryParam(
+                                  "entityLink",
+                                  String.format(
+                                      "<#E::table::%s::columns::id>",
+                                      table.getFullyQualifiedName()))
+                              .queryParam("limit", "100")
+                              .build());
+
+              assertNotNull(response);
+              org.openmetadata.schema.utils.ResultList<TestCase> results =
+                  JsonUtils.readValue(
+                      response,
+                      new com.fasterxml.jackson.core.type.TypeReference<
+                          org.openmetadata.schema.utils.ResultList<TestCase>>() {});
+
+              assertFalse(results.getData().isEmpty());
+              for (TestCase tc : results.getData()) {
+                assertTrue(
+                    tc.getEntityLink().contains("::columns::id"),
+                    "Table-level test should not appear when filtering by columnName");
+              }
+            });
   }
 }

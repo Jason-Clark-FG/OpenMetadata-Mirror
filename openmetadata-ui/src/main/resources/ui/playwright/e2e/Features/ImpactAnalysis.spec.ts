@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -397,8 +397,7 @@ test.describe('Impact Analysis', () => {
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
 
-    // Column level data take time to reflect due to UI processing
-    // hence had to add static wait
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- column level lineage data takes time to reflect due to UI processing
     await page.waitForTimeout(1000);
 
     await expect(
@@ -435,8 +434,7 @@ test.describe('Impact Analysis', () => {
     await table2ColumnLineageResponse;
     await waitForAllLoadersToDisappear(page);
 
-    // Column level data take time to reflect due to UI processing
-    // hence had to add static wait
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- column level lineage data takes time to reflect due to UI processing
     await page.waitForTimeout(1000);
 
     await expect(

@@ -370,7 +370,7 @@ const AddCustomProperty = ({
     () => ({
       name: 'multiSelect',
       label: t('label.multi-select'),
-      type: FieldTypes.UT_SWITCH,
+      type: FieldTypes.SWITCH_MUI,
       required: false,
       props: {
         'data-testid': 'multiSelect',

@@ -83,7 +83,7 @@ test.describe('Explore Assets Discovery', () => {
       `/explore?page=1&size=10&queryFilter=${JSON.stringify(queryFilter)}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -105,7 +105,7 @@ test.describe('Explore Assets Discovery', () => {
       `/explore?page=1&size=10&queryFilter=${JSON.stringify(queryFilter)}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -127,7 +127,7 @@ test.describe('Explore Assets Discovery', () => {
       `/explore?page=1&size=10&queryFilter=${JSON.stringify(queryFilter)}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -150,7 +150,7 @@ test.describe('Explore Assets Discovery', () => {
       )}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -174,7 +174,7 @@ test.describe('Explore Assets Discovery', () => {
       )}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -198,7 +198,7 @@ test.describe('Explore Assets Discovery', () => {
       )}`
     );
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(
       page.locator(
@@ -235,7 +235,7 @@ test.describe('Explore Assets Discovery', () => {
 
     await page.reload();
 
-    await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+    await waitForAllLoadersToDisappear(page);
 
     await expect(page.getByTestId('deleted-badge')).toBeVisible();
 

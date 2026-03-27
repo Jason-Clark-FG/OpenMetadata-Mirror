@@ -2816,6 +2816,8 @@ export interface DBTPrefixConfig {
 /**
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Azure Cloud Credentials
@@ -2827,6 +2829,8 @@ export interface DBTPrefixConfig {
  * GCP credentials configs.
  *
  * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
  *
  * GCP Credentials for Google Drive API
  */
@@ -3416,6 +3420,8 @@ export interface ServiceConnection {
  *
  * Mssql Database Connection Config
  *
+ * Microsoft Access Database Connection Config
+ *
  * Mysql Database Connection Config
  *
  * SQLite Database Connection Config
@@ -3499,6 +3505,8 @@ export interface ServiceConnection {
  * Redpanda Connection Config
  *
  * Kinesis Connection Config
+ *
+ * Google Cloud Pub/Sub Connection Config
  *
  * Custom Messaging Service Connection to build a source that is not supported by
  * OpenMetadata yet.
@@ -3813,6 +3821,8 @@ export interface ConfigObject {
      *
      * Host and port of the Informix service.
      *
+     * Pub/Sub APIs URL. For local testing with the emulator, use http://localhost:8085.
+     *
      * Host and port of the Amundsen Neo4j Connection. This expect a URI format like:
      * bolt://localhost:7687.
      *
@@ -4115,6 +4125,9 @@ export interface ConfigObject {
     /**
      * Choose between API or database connection fetch metadata from superset.
      *
+     * Choose between local file system path (object) or S3 bucket location (object) for Access
+     * database files.
+     *
      * Choose between Database connection or HDB User Store connection.
      *
      * Choose between mysql and postgres connection for alation database
@@ -4342,7 +4355,7 @@ export interface ConfigObject {
      *
      * GCP Credentials for Google Drive API
      */
-    credentials?: GCPCredentials;
+    credentials?: CredentialsClass;
     /**
      * Regex to only include/exclude databases that matches the pattern.
      *
@@ -4474,10 +4487,6 @@ export interface ConfigObject {
      * Database of the data source. This is the name of your Fabric Warehouse or Lakehouse. This
      * is optional parameter, if you would like to restrict the metadata reading to a single
      * database. When left blank, OpenMetadata Ingestion attempts to scan all the databases.
-     *
-     * Database of the data source. This is an optional parameter, if you would like to restrict
-     * the metadata reading to a single database. If left blank, OpenMetadata ingestion attempts
-     * to scan all the databases.
      */
     database?: string;
     /**
@@ -4510,6 +4519,9 @@ export interface ConfigObject {
      *
      * Ingest data from all databases (Warehouses and Lakehouses) in Microsoft Fabric. You can
      * use databaseFilterPattern on top of this.
+     *
+     * Ingest data from all databases in Informix. You can use databaseFilterPattern on top of
+     * this.
      */
     ingestAllDatabases?: boolean;
     /**
@@ -4981,6 +4993,31 @@ export interface ConfigObject {
      * Regex to only fetch topics that matches the pattern.
      */
     topicFilterPattern?: FilterPattern;
+    /**
+     * GCP credentials configuration for authenticating with Pub/Sub.
+     */
+    gcpConfig?: GcpConfigClass;
+    /**
+     * Include dead letter topics in metadata extraction.
+     */
+    includeDeadLetterTopics?: boolean;
+    /**
+     * Include subscription metadata for each topic.
+     */
+    includeSubscriptions?: boolean;
+    /**
+     * GCP Project ID where Pub/Sub topics are located. If not specified, will be read from
+     * credentials.
+     */
+    projectId?: string;
+    /**
+     * Enable fetching schemas from Pub/Sub Schema Registry.
+     */
+    schemaRegistryEnabled?: boolean;
+    /**
+     * Connect to a Pub/Sub emulator rather than the production service.
+     */
+    useEmulator?: boolean;
     /**
      * Enable encryption for the Amundsen Neo4j Connection.
      */
@@ -5526,6 +5563,8 @@ export enum AuthMechanismEnum {
  *
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Authentication type to connect to Apache Ranger.
@@ -5705,6 +5744,8 @@ export interface AuthenticationTypeForTableau {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  */
@@ -6113,6 +6154,8 @@ export interface IcebergFileSystem {
 /**
  * AWS credentials configs.
  *
+ * AWS credentials required to access the S3 file.
+ *
  * AWS credentials configuration.
  *
  * Azure Cloud Credentials
@@ -6382,6 +6425,14 @@ export interface ConfigSourceConnection {
  *
  * Mysql Database Connection Config
  *
+ * Choose between local file system path (object) or S3 bucket location (object) for Access
+ * database files.
+ *
+ * Local filesystem path to a single Access database file or a directory containing Access
+ * files.
+ *
+ * S3 Connection.
+ *
  * Choose between Database connection or HDB User Store connection.
  *
  * Sap Hana Database SQL Connection Config
@@ -6537,6 +6588,25 @@ export interface ConfigConnection {
      */
     useSlowLogs?: boolean;
     /**
+     * Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g.
+     * ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be
+     * ingested.
+     */
+    localFilePath?: string;
+    awsConfig?:     AWSCredentials;
+    /**
+     * Bucket Names of the data source.
+     */
+    bucketNames?: string[];
+    /**
+     * Console EndPoint URL for S3-compatible services
+     */
+    consoleEndpointURL?: string;
+    /**
+     * Regex to only fetch containers that matches the pattern.
+     */
+    containerFilterPattern?: FilterPattern;
+    /**
      * HDB Store User Key generated from the command `hdbuserstore SET <KEY> <host:port>
      * <USERNAME> <PASSWORD>`
      */
@@ -6614,6 +6684,8 @@ export interface DataStorageConfig {
 
 /**
  * AWS credentials configs.
+ *
+ * AWS credentials required to access the S3 file.
  *
  * AWS credentials configuration.
  */
@@ -6735,12 +6807,15 @@ export enum SSLMode {
  * Service Type
  *
  * Service type.
+ *
+ * S3 service type
  */
 export enum ConnectionType {
     Backend = "Backend",
     MatillionETL = "MatillionETL",
     Mysql = "Mysql",
     Postgres = "Postgres",
+    S3 = "S3",
     SQLite = "SQLite",
 }
 
@@ -6748,6 +6823,8 @@ export enum ConnectionType {
  * GCP credentials configs.
  *
  * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
  *
  * GCP Credentials for Google Drive API
  *
@@ -6757,7 +6834,7 @@ export enum ConnectionType {
  *
  * Azure Credentials
  */
-export interface GCPCredentials {
+export interface CredentialsClass {
     /**
      * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
      * Credentials Path
@@ -6924,6 +7001,27 @@ export enum FHIRVersion {
     Dstu2 = "DSTU2",
     R4 = "R4",
     Stu3 = "STU3",
+}
+
+/**
+ * GCP credentials configs.
+ *
+ * GCP Credentials
+ *
+ * GCP credentials configuration for authenticating with Pub/Sub.
+ *
+ * GCP Credentials for Google Drive API
+ */
+export interface GcpConfigClass {
+    /**
+     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+     * Credentials Path
+     */
+    gcpConfig: GCPCredentialsConfiguration;
+    /**
+     * we enable the authenticated service account to impersonate another service account
+     */
+    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
 }
 
 /**
@@ -7159,6 +7257,8 @@ export interface NifiCredentialsConfiguration {
  * Open API Schema URL Connection Config
  *
  * Open API Schema File Path Connection Config
+ *
+ * Open API Schema S3 Connection Config
  */
 export interface OpenAPISchemaConnection {
     /**
@@ -7169,6 +7269,15 @@ export interface OpenAPISchemaConnection {
      * Path to a local OpenAPI schema file.
      */
     openAPISchemaFilePath?: string;
+    /**
+     * AWS credentials required to access the S3 file.
+     */
+    awsCredentials?: AWSCredentials;
+    /**
+     * S3 URL of the OpenAPI schema file (JSON or YAML). Example:
+     * https://bucket-name.s3.amazonaws.com/path/to/openapi_schema.json
+     */
+    openAPISchemaS3URL?: string;
 }
 
 /**
@@ -7217,7 +7326,7 @@ export interface S3Connection {
     /**
      * Service Type
      */
-    type?: S3Type;
+    type?: S3ConnectionType;
 }
 
 /**
@@ -7225,7 +7334,7 @@ export interface S3Connection {
  *
  * S3 service type
  */
-export enum S3Type {
+export enum S3ConnectionType {
     S3 = "S3",
 }
 
@@ -7618,6 +7727,7 @@ export enum PurpleType {
     Metabase = "Metabase",
     MetadataES = "MetadataES",
     MicroStrategy = "MicroStrategy",
+    MicrosoftAccess = "MicrosoftAccess",
     MicrosoftFabric = "MicrosoftFabric",
     MicrosoftFabricPipeline = "MicrosoftFabricPipeline",
     Mlflow = "Mlflow",
@@ -7636,6 +7746,7 @@ export enum PurpleType {
     PowerBI = "PowerBI",
     PowerBIReportServer = "PowerBIReportServer",
     Presto = "Presto",
+    PubSub = "PubSub",
     QlikCloud = "QlikCloud",
     QlikSense = "QlikSense",
     QuickSight = "QuickSight",

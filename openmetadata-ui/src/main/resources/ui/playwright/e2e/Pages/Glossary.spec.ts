@@ -163,7 +163,7 @@ test.describe('Glossary tests', () => {
 
       // Check reviewer's notifications before approval
       await page1.getByTestId('task-notifications').click();
-      await page1.waitForSelector('.ant-dropdown');
+      await page1.locator('.ant-dropdown').waitFor();
       const firstNotification = page1
         .locator('.ant-list-items > .ant-list-item')
         .first();
@@ -388,7 +388,7 @@ test.describe('Glossary tests', () => {
       await verifyColumnsVisibility(page, checkboxLabels, true);
 
       // Verify the Reviewer
-      expect(
+      await expect(
         page.getByTestId(reviewer1.responseData?.['displayName'])
       ).toBeVisible();
 
@@ -521,9 +521,9 @@ test.describe('Glossary tests', () => {
         await selectActiveGlossary(page, glossary2.data.displayName);
         await goToAssetsTab(page, glossaryTerm3.data.displayName);
 
-        await page.waitForSelector(
-          "text=Looks like you haven't added any data assets yet."
-        );
+        await page
+          .getByText("Looks like you haven't added any data assets yet.")
+          .waitFor();
 
         await dashboardEntity.visitEntityPage(page);
 
@@ -536,7 +536,7 @@ test.describe('Glossary tests', () => {
         await page.click('[data-testid="tag-selector"] #tagsForm_tags');
 
         const glossaryRequest = page.waitForResponse(
-          `/api/v1/search/query?q=*&index=glossary_term_search_index&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
+          `/api/v1/search/query?q=*&index=glossaryTerm&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
         );
         await page.type(
           '[data-testid="tag-selector"] #tagsForm_tags',
@@ -545,17 +545,17 @@ test.describe('Glossary tests', () => {
         await glossaryRequest;
 
         await page.getByText(glossaryTerm1.data.displayName).click();
-        await page.waitForSelector(
-          '[data-testid="tag-selector"]:has-text("' +
-            glossaryTerm1.data.displayName +
-            '")'
-        );
+        await page
+          .locator(
+            `[data-testid="tag-selector"]:has-text("${glossaryTerm1.data.displayName}")`
+          )
+          .waitFor();
 
         // Select 2nd term
         await page.click('[data-testid="tag-selector"] #tagsForm_tags');
 
         const glossaryRequest2 = page.waitForResponse(
-          `/api/v1/search/query?q=*&index=glossary_term_search_index&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
+          `/api/v1/search/query?q=*&index=glossaryTerm&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
         );
         await page.type(
           '[data-testid="tag-selector"] #tagsForm_tags',
@@ -565,11 +565,11 @@ test.describe('Glossary tests', () => {
 
         await page.getByText(glossaryTerm2.data.displayName).click();
 
-        await page.waitForSelector(
-          '[data-testid="tag-selector"]:has-text("' +
-            glossaryTerm2.data.displayName +
-            '")'
-        );
+        await page
+          .locator(
+            `[data-testid="tag-selector"]:has-text("${glossaryTerm2.data.displayName}")`
+          )
+          .waitFor();
 
         const patchRequest = page.waitForResponse(`/api/v1/dashboards/*`);
 
@@ -592,7 +592,7 @@ test.describe('Glossary tests', () => {
         await page.click('[data-testid="tag-selector"] #tagsForm_tags');
 
         const glossaryRequest3 = page.waitForResponse(
-          `/api/v1/search/query?q=*&index=glossary_term_search_index&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
+          `/api/v1/search/query?q=*&index=glossaryTerm&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
         );
         await page.type(
           '[data-testid="tag-selector"] #tagsForm_tags',
@@ -601,17 +601,17 @@ test.describe('Glossary tests', () => {
         await glossaryRequest3;
 
         await page.getByText(glossaryTerm3.data.displayName).click();
-        await page.waitForSelector(
-          '[data-testid="tag-selector"]:has-text("' +
-            glossaryTerm3.data.displayName +
-            '")'
-        );
+        await page
+          .locator(
+            `[data-testid="tag-selector"]:has-text("${glossaryTerm3.data.displayName}")`
+          )
+          .waitFor();
 
         // Select 2nd term
         await page.click('[data-testid="tag-selector"] #tagsForm_tags');
 
         const glossaryRequest4 = page.waitForResponse(
-          `/api/v1/search/query?q=*&index=glossary_term_search_index&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
+          `/api/v1/search/query?q=*&index=glossaryTerm&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
         );
         await page.type(
           '[data-testid="tag-selector"] #tagsForm_tags',
@@ -621,11 +621,11 @@ test.describe('Glossary tests', () => {
 
         await page.getByText(glossaryTerm4.data.displayName).click();
 
-        await page.waitForSelector(
-          '[data-testid="tag-selector"]:has-text("' +
-            glossaryTerm4.data.displayName +
-            '")'
-        );
+        await page
+          .locator(
+            `[data-testid="tag-selector"]:has-text("${glossaryTerm4.data.displayName}")`
+          )
+          .waitFor();
 
         const patchRequest2 = page.waitForResponse(`/api/v1/dashboards/*`);
 
@@ -665,7 +665,7 @@ test.describe('Glossary tests', () => {
         await page.click('[data-testid="tag-selector"]');
 
         const glossaryRequest5 = page.waitForResponse(
-          `/api/v1/search/query?q=*&index=glossary_term_search_index&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
+          `/api/v1/search/query?q=*&index=glossaryTerm&from=0&size=25&deleted=false&track_total_hits=true&getHierarchy=true`
         );
         await page.type(
           '[data-testid="tag-selector"] #tagsForm_tags',
@@ -678,11 +678,11 @@ test.describe('Glossary tests', () => {
           .getByTestId(`tag-${glossaryTerm3.data.fullyQualifiedName}`)
           .click();
 
-        await page.waitForSelector(
-          '[data-testid="tag-selector"]:has-text("' +
-            glossaryTerm3.data.displayName +
-            '")'
-        );
+        await page
+          .locator(
+            `[data-testid="tag-selector"]:has-text("${glossaryTerm3.data.displayName}")`
+          )
+          .waitFor();
 
         const patchRequest3 = page.waitForResponse(`/api/v1/charts/*`);
 
@@ -705,7 +705,7 @@ test.describe('Glossary tests', () => {
           '[data-testid="glossary-tags-0"] > [data-testid="tags-wrapper"] > [data-testid="glossary-container"] [data-testid="glossary-icon"]'
         );
 
-        expect(await icon.isVisible()).toBe(true);
+        await expect(icon).toBeVisible();
 
         await sidebarClick(page, SidebarItem.GLOSSARY);
 
@@ -795,10 +795,8 @@ test.describe('Glossary tests', () => {
         );
         await page.getByTestId('assets').click();
         await queryRes;
-        await page.waitForSelector('[data-testid="loader"]', {
-          state: 'detached',
-        });
-        await page.waitForSelector('.ant-tabs-tab-active:has-text("Assets")');
+        await waitForAllLoadersToDisappear(page);
+        await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
 
         await expect(
           page.getByTestId('assets').getByTestId('filter-count')
@@ -864,7 +862,7 @@ test.describe('Glossary tests', () => {
         );
         await page.getByTestId('assets').click();
         await queryRes;
-        await page.waitForSelector('.ant-tabs-tab-active:has-text("Assets")');
+        await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
 
         await expect(
           page.getByTestId('assets').getByTestId('filter-count')
@@ -1513,9 +1511,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await performExpandAll(page);
 
@@ -1557,7 +1553,7 @@ test.describe('Glossary tests', () => {
         await verifyColumnsVisibility(page, checkboxLabels, true);
 
         await page.reload();
-  
+
         await verifyColumnsVisibility(page, checkboxLabels, true);
       });
 
@@ -1568,7 +1564,7 @@ test.describe('Glossary tests', () => {
         await verifyColumnsVisibility(page, checkboxLabels, false);
 
         await page.reload();
-  
+
         await verifyColumnsVisibility(page, checkboxLabels, false);
       });
 
@@ -1586,7 +1582,7 @@ test.describe('Glossary tests', () => {
         await verifyAllColumns(page, tableColumns, true);
 
         await page.reload();
-  
+
         await verifyAllColumns(page, tableColumns, true);
       });
 
@@ -1602,7 +1598,7 @@ test.describe('Glossary tests', () => {
         await verifyAllColumns(page, tableColumns, false);
 
         await page.reload();
-  
+
         await verifyAllColumns(page, tableColumns, false);
       });
     } finally {
@@ -1658,8 +1654,9 @@ test.describe('Glossary tests', () => {
       const dragColumn = 'Status';
       const dropColumn = 'Owners';
       await dragAndDropColumn(page, dragColumn, dropColumn);
-      await page.waitForSelector('thead th', { state: 'visible' });
+      await page.locator('thead th').first().waitFor({ state: 'visible' });
       const columnHeaders = page.locator('thead th');
+      // eslint-disable-next-line playwright/prefer-web-first-assertions
       const columnText = await columnHeaders.allTextContents();
 
       expect(columnText).toEqual(
@@ -1740,9 +1737,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossaryTerm(page, glossaryTerm1.data.displayName);
       await page.getByTestId('terms').click();
 
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await createGlossaryTerm(
         page,
@@ -1914,6 +1909,7 @@ test.describe('Glossary tests', () => {
   });
 
   // Need to fix the workflow from BE end, as it constantly failing in the AUT's
+  // eslint-disable-next-line playwright/no-skipped-test -- skipped: backend workflow issue
   test.skip('Term should stay approved when changes made by reviewer', async ({
     browser,
   }) => {
@@ -2048,14 +2044,12 @@ test.describe('Glossary tests', () => {
 
         await page1.getByTestId(`tag-"${domain.data.name}"`).click();
 
-        await page1.waitForSelector('[data-testid="loader"]', {
-          state: 'detached',
-        });
+        await waitForAllLoadersToDisappear(page1);
       });
 
       await test.step('Open Add Glossary form', async () => {
         await page1.click('[data-testid="add-glossary"]');
-        await page1.waitForSelector('[data-testid="form-heading"]');
+        await page1.getByTestId('form-heading').waitFor();
 
         await expect(page1.locator('[data-testid="form-heading"]')).toHaveText(
           'Add Glossary'
@@ -2103,10 +2097,9 @@ test.describe('Glossary tests', () => {
         await redirectToHomePage(page);
         await sidebarClick(page, SidebarItem.GLOSSARY);
         await waitForAllLoadersToDisappear(page);
-  
+
         await selectActiveGlossary(page, glossary.data.displayName);
         await waitForAllLoadersToDisappear(page);
-  
 
         await expect(page.getByTestId('entity-header-display-name')).toHaveText(
           glossary.data.displayName
@@ -2115,7 +2108,7 @@ test.describe('Glossary tests', () => {
 
       await test.step('Change application language to German', async () => {
         await waitForAllLoadersToDisappear(page);
-  
+
         const languageDropdown = page
           .locator('.nav-bar-side-items button.ant-dropdown-trigger')
           .filter({ hasText: 'EN' })
@@ -2128,16 +2121,14 @@ test.describe('Glossary tests', () => {
         await germanOption.click();
 
         await waitForAllLoadersToDisappear(page);
-  
       });
 
       await test.step('Open delete modal and verify delete confirmation', async () => {
         await sidebarClick(page, SidebarItem.GLOSSARY);
         await waitForAllLoadersToDisappear(page);
-  
+
         await selectActiveGlossary(page, glossary.data.displayName);
         await waitForAllLoadersToDisappear(page);
-  
 
         await page.getByTestId('manage-button').click();
         await page.getByTestId('delete-button').click();
@@ -2162,7 +2153,7 @@ test.describe('Glossary tests', () => {
 
       await test.step('Change language back to English', async () => {
         await waitForAllLoadersToDisappear(page);
-  
+
         const languageDropdown = page
           .locator('.nav-bar-side-items button.ant-dropdown-trigger')
           .filter({ hasText: 'DE' })
@@ -2259,7 +2250,7 @@ test.describe('Glossary tests', () => {
       await visitGlossaryPage(page, glossary.responseData.displayName);
 
       // Wait for the table to load
-      await page.waitForSelector('[data-testid="glossary-terms-table"]');
+      await page.getByTestId('glossary-terms-table').waitFor();
 
       // Verify the table renders without crashing
       const table = page.getByTestId('glossary-terms-table');
@@ -2312,7 +2303,7 @@ test.describe('Glossary tests', () => {
       await sidebarClick(page, SidebarItem.GLOSSARY);
 
       await page.click('[data-testid="add-glossary"]');
-      await page.waitForSelector('[data-testid="form-heading"]');
+      await page.getByTestId('form-heading').waitFor();
 
       await page.fill('[data-testid="name"]', glossary.data.name);
       await page.locator(descriptionBox).fill(glossary.data.description);
@@ -2412,7 +2403,7 @@ test.describe('Glossary tests', () => {
       const parentRow = page.locator(`[data-row-key="${escapedParentFqn}"]`);
       await parentRow.getByTestId('add-classification').click();
 
-      await page.waitForSelector('[role="dialog"].edit-glossary-modal');
+      await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
 
       const childTermName = `ChildTerm_${uuid()}`;
       await page.getByTestId('name').fill(childTermName);
@@ -2457,12 +2448,10 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
-      await page.waitForSelector('[role="dialog"].edit-glossary-modal');
+      await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
 
       const termName = `P1TermSyn_${uuid()}`;
       const synonyms = [`Syn_${uuid()}`, `Syn_${uuid()}`];
@@ -2526,12 +2515,10 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
-      await page.waitForSelector('[role="dialog"].edit-glossary-modal');
+      await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
 
       const termName = `P1TermRef_${uuid()}`;
       const references = [
@@ -2620,12 +2607,10 @@ test.describe('Glossary tests', () => {
           glossary.responseData.fullyQualifiedName
         )}`
       );
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await page.click('[data-testid="add-new-tag-button-header"]');
-      await page.waitForSelector('[role="dialog"].edit-glossary-modal');
+      await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
 
       const termName = `P1Term_${uuid()}`;
       await page.getByTestId('name').fill(termName);
@@ -2684,13 +2669,14 @@ test.describe('Glossary tests', () => {
       const createdResponse = await createRes;
       const createdTerm = await createdResponse.json();
       createdTermFqn = createdTerm.fullyQualifiedName;
-
+      await waitForAllLoadersToDisappear(page);
       expect(
         (createdTerm.tags ?? []).map((t: { tagFQN: string }) => t.tagFQN)
       ).toContain(tagFqn);
       expect(
         (createdTerm.relatedTerms ?? []).map(
-          (t: { fullyQualifiedName: string }) => t.fullyQualifiedName
+          (t: { relationType: string; term: { fullyQualifiedName: string } }) =>
+            t.term?.fullyQualifiedName
         )
       ).toContain(relatedTerm.responseData.fullyQualifiedName);
       expect(
@@ -2746,7 +2732,7 @@ test.describe('Glossary tests', () => {
       );
       await termRow.getByTestId('edit-button').click();
       await glossaryTermRes;
-      await page.waitForSelector('[role="dialog"].edit-glossary-modal');
+      await page.locator('[role="dialog"].edit-glossary-modal').waitFor();
 
       const updatedDisplayName = `${glossaryTerm.data.displayName}-updated`;
       await page.getByTestId('display-name').fill(updatedDisplayName);

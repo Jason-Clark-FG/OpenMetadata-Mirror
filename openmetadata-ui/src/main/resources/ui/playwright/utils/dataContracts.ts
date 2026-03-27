@@ -19,6 +19,7 @@ import {
 import { SidebarItem } from '../constant/sidebar';
 import { TableClass } from '../support/entity/TableClass';
 import { getApiContext } from './common';
+import { waitForAllLoadersToDisappear } from './entity';
 import { sidebarClick } from './sidebar';
 
 export const saveAndTriggerDataContractValidation = async (
@@ -53,9 +54,7 @@ export const saveAndTriggerDataContractValidation = async (
 
   await page.reload();
 
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   // Prefer validate response; fall back to save response if latestResult is missing.
   return 'latestResult' in runNowData ? runNowData : responseData;
@@ -71,7 +70,6 @@ export const validateDataContractInsideBundleTestSuites = async (
   );
   await page.getByTestId('test-suites').click();
   await testSuiteResponse;
-
 
   const bundleSuitesResponse = page.waitForResponse(
     (response) =>
@@ -120,7 +118,8 @@ export const waitForDataContractExecution = async (
           consecutiveErrors = 0; // Reset error counter on success
 
           const latestStatus = latestResultResponse?.contractExecutionStatus;
-          const specificStatus = specificResultResponse?.contractExecutionStatus;
+          const specificStatus =
+            specificResultResponse?.contractExecutionStatus;
 
           if (
             latestStatus &&
@@ -270,7 +269,7 @@ export const saveSecurityAndSLADetails = async (
 
   await page.locator('.availability-time-picker').click();
 
-  await page.waitForSelector('.ant-picker-dropdown', {
+  await page.locator('.ant-picker-dropdown').waitFor({
     state: 'attached',
   });
 
@@ -309,9 +308,7 @@ export const saveSecurityAndSLADetails = async (
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const validateSecurityAndSLADetails = async (
@@ -386,9 +383,7 @@ export const validateSecurityAndSLADetails = async (
 
 export const performInitialStepForRules = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('no-data-placeholder')).toBeVisible();
   await expect(page.getByTestId('add-contract-button')).toBeVisible();
@@ -405,14 +400,12 @@ export const performInitialStepForRules = async (page: Page) => {
 
 export const navigateToContractTab = async (page: Page) => {
   await page.click('[data-testid="contract"]');
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const openContractActionsDropdown = async (page: Page) => {
   await page.getByTestId('manage-contract-actions').click();
-  await page.waitForSelector('.contract-action-dropdown', {
+  await page.locator('.contract-action-dropdown').waitFor({
     state: 'visible',
   });
 };
@@ -464,9 +457,7 @@ export const saveContractAndWait = async (page: Page): Promise<void> => {
   await page.getByTestId('save-contract-btn').click();
   await saveContractResponse;
 
-  await page.waitForSelector('[data-testid="loader"]', {
-    state: 'detached',
-  });
+  await waitForAllLoadersToDisappear(page);
 };
 
 export const triggerContractValidation = async (page: Page): Promise<void> => {

@@ -20,8 +20,8 @@ import { DataProduct } from '../../support/domain/DataProduct';
 import { Domain } from '../../support/domain/Domain';
 import { SubDomain } from '../../support/domain/SubDomain';
 import {
-  ENTITY_PATH,
   EntityTypeEndpoint,
+  ENTITY_PATH,
 } from '../../support/entity/Entity.interface';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { TableClass } from '../../support/entity/TableClass';
@@ -75,10 +75,10 @@ import {
   deleteAnnouncement,
   editAnnouncement,
   followEntity,
+  getEncodedFqn,
   replyAnnouncement,
   unFollowEntity,
   waitForAllLoadersToDisappear,
-  getEncodedFqn,
 } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
 import {
@@ -490,7 +490,7 @@ test.describe('Domains', () => {
       await Promise.all([
         createSubDomain(page, subDomain.data),
         page.waitForResponse(
-          '/api/v1/search/query?q=&index=domain_search_index&from=0&size=9&deleted=false*'
+          '/api/v1/search/query?q=&index=domain&from=0&size=9&deleted=false*'
         ),
       ]);
 
@@ -546,14 +546,14 @@ test.describe('Domains', () => {
       await selectDomain(page, domain.data);
 
       // const selectSubDomainRes = page.waitForResponse(
-      //   '/api/v1/search/query?q=&index=domain_search_index*'
+      //   '/api/v1/search/query?q=&index=domain*'
       // );
       // await page.getByTestId('subdomains').getByText('Sub Domains').click();
       // await selectSubDomainRes;
       // await verifyDomain(page, subDomain.data, domain.data, false);
 
       const subDomainApiRes1 = page.waitForResponse(
-        '/api/v1/search/query?q=&index=domain_search_index&from=0&size=9&deleted=false*'
+        '/api/v1/search/query?q=&index=domain&from=0&size=9&deleted=false*'
       );
 
       // Create new sub domain under the existing sub domain
@@ -1202,7 +1202,7 @@ test.describe('Domains', () => {
         await sidebarClick(page, SidebarItem.DOMAIN);
         await waitForAllLoadersToDisappear(page);
         await page.click('[data-testid="add-domain"]');
-        await page.waitForSelector('h6:has-text("Add Domain")', {
+        await page.getByTestId('form-heading').waitFor({
           state: 'visible',
         });
       });
@@ -1373,7 +1373,7 @@ test.describe('Domains', () => {
     await confirmationInput.fill('DELETE');
 
     const dpListRes = page.waitForResponse(
-      '/api/v1/search/query?q=&index=data_product_search_index*'
+      '/api/v1/search/query?q=&index=dataProduct*'
     );
     const deleteRes = page.waitForResponse('/api/v1/dataProducts/*');
 
@@ -1687,7 +1687,7 @@ test.describe('Domains', () => {
       await domain.visitEntityPage(page);
 
       const dpRes = page.waitForResponse(
-        '/api/v1/search/query?q=&index=data_product_search_index&*'
+        '/api/v1/search/query?q=&index=dataProduct&*'
       );
       // Navigate to data products tab
       await page.getByTestId('data_products').click();
@@ -1753,16 +1753,14 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
       await page.getByTestId('subdomains').getByText('Sub Domains').click();
       await subdomainSearchResponse;
 
-      await page.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(page);
 
       await expect(page.getByTestId(subDomain.data.name)).toBeVisible();
 
@@ -1784,7 +1782,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponseAfterRename = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -1869,7 +1867,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse1 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -1881,7 +1879,6 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       await subdomainSearchResponse1;
 
       await waitForAllLoadersToDisappear(page);
-      await page.waitForTimeout(500);
 
       const subDomain1Card = page.getByTestId(subDomain1.data.name);
       await expect(subDomain1Card).toBeVisible();
@@ -1900,7 +1897,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse2 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -1912,7 +1909,6 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       await subdomainSearchResponse2;
 
       await waitForAllLoadersToDisappear(page);
-      await page.waitForTimeout(500);
 
       const subDomain2Card = page.getByTestId(subDomain2.data.name);
       await expect(subDomain2Card).toBeVisible();
@@ -1931,7 +1927,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse3 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -1943,7 +1939,6 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       await subdomainSearchResponse3;
 
       await waitForAllLoadersToDisappear(page);
-      await page.waitForTimeout(500);
 
       const subDomain3Card = page.getByTestId(subDomain3.data.name);
       await expect(subDomain3Card).toBeVisible();
@@ -2029,7 +2024,11 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       );
 
       // Verify data products count is preserved after rename
-      await verifyDataProductsCount(page, 2);
+      // Poll search API first since index may lag after domain rename
+      await verifyDataProductsCount(page, 2, {
+        apiContext,
+        domainFqn: newDomainName,
+      });
 
       // Verify both data products are visible (scope to container)
       const dataProductsContainer = page.locator('.explore-search-card');
@@ -2330,7 +2329,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse1 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -2355,7 +2354,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse2 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -2387,7 +2386,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse3 = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -2542,7 +2541,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
       const subdomainSearchResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/search/query') &&
-          response.url().includes('index=domain_search_index') &&
+          response.url().includes('index=domain') &&
           response.status() === 200
       );
 
@@ -2661,7 +2660,7 @@ test.describe('Domain Rename Comprehensive Tests', () => {
         const subdomainSearchResponse = page.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/search/query') &&
-            response.url().includes('index=domain_search_index') &&
+            response.url().includes('index=domain') &&
             response.status() === 200
         );
 
@@ -2801,7 +2800,7 @@ test.describe('Domains Rbac', () => {
     await expect(rolesCombobox).toBeVisible();
     await rolesCombobox.click();
 
-    await page.waitForSelector('[data-testid="profile-edit-roles-select"]');
+    await page.getByTestId('profile-edit-roles-select').waitFor();
 
     const roleOption = page.getByText('Domain Only Access Role');
     await expect(roleOption).toBeVisible();
@@ -3033,9 +3032,7 @@ test.describe('Domain Access with hasDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(userPage);
 
       // Verify no permission error
       await expect(
@@ -3101,9 +3098,7 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const domainTableFqn =
         testResources.domainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(domainTableFqn)}`);
-      await userPage.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(userPage);
 
       // Verify no permission error
       await expect(
@@ -3118,9 +3113,7 @@ test.describe('Domain Access with noDomain() Rule', () => {
       const noDomainTableFqn =
         testResources.noDomainTable.entityResponseData.fullyQualifiedName;
       await userPage.goto(`/table/${encodeURIComponent(noDomainTableFqn)}`);
-      await userPage.waitForSelector('[data-testid="loader"]', {
-        state: 'detached',
-      });
+      await waitForAllLoadersToDisappear(userPage);
 
       // Verify permission error is shown
       await expect(
@@ -3278,10 +3271,10 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+      await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomain.data);
 
-      await page.waitForSelector('[data-testid="glossary-container"]', {
+      await page.getByTestId('glossary-container').waitFor({
         state: 'visible',
       });
 
@@ -3316,7 +3309,7 @@ test.describe('Domain Tree View Functionality', () => {
 
       await page.getByTestId('assets').click();
       await responsePromise;
-      await page.waitForSelector('.ant-tabs-tab-active:has-text("Assets")');
+      await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
       await waitForAllLoadersToDisappear(page);
 
       expect(apiRequestUrl).not.toBeNull();
@@ -3353,10 +3346,10 @@ test.describe('Domain Tree View Functionality', () => {
 
       await redirectToHomePage(page);
       await sidebarClick(page, SidebarItem.DOMAIN);
-      await page.waitForSelector('[data-testid="loader"]', { state: 'hidden' });
+      await waitForAllLoadersToDisappear(page);
       await selectDomain(page, testDomain.data);
 
-      await page.waitForSelector('[data-testid="tags-container"]', {
+      await page.getByTestId('tags-container').waitFor({
         state: 'visible',
       });
 
@@ -3398,7 +3391,7 @@ test.describe('Domain Tree View Functionality', () => {
 
       await page.getByTestId('assets').click();
       await responsePromise;
-      await page.waitForSelector('.ant-tabs-tab-active:has-text("Assets")');
+      await page.locator('.ant-tabs-tab-active:has-text("Assets")').waitFor();
       await waitForAllLoadersToDisappear(page);
 
       expect(apiRequestUrl).not.toBeNull();

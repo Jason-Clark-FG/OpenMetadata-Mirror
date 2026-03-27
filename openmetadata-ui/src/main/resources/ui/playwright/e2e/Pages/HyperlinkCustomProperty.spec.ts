@@ -15,13 +15,13 @@ import { CUSTOM_PROPERTIES_ENTITIES } from '../../constant/customProperty';
 import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { redirectToHomePage, uuid } from '../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   addCustomPropertiesForEntity,
   deleteCreatedProperty,
   setValueForProperty,
   validateValueForProperty,
 } from '../../utils/customProperty';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { settingClick, SettingOptionsType } from '../../utils/sidebar';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -55,6 +55,7 @@ test.describe('Hyperlink Custom Property Tests', () => {
         `[data-testid="custom-property-${propertyName}-card"] [data-testid="edit-icon"]`
       );
       await editButton.scrollIntoViewIfNeeded();
+      // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
       await editButton.click({ force: true });
 
       await page

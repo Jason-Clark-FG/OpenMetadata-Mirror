@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { SidebarItem } from '../../../constant/sidebar';
 import { DataProduct } from '../../../support/domain/DataProduct';
 import { Domain } from '../../../support/domain/Domain';
@@ -111,7 +111,6 @@ test.describe('Data Product Permissions', () => {
 
     const manageButtonElements = ['delete-button', 'rename-button'];
 
-
     for (const testId of directElements) {
       let element;
       if (testId === 'add-tag') {
@@ -165,7 +164,6 @@ test.describe('Data Product Permissions', () => {
     const directElements = ['edit-description', 'add-tag'];
 
     const manageButtonElements = ['delete-button', 'rename-button'];
-
 
     for (const testId of directElements) {
       let element;
