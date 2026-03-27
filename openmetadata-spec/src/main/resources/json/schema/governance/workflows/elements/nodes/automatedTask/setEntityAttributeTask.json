@@ -75,7 +75,7 @@
           "default": null
         }
       },
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["entityList"]
     },
     "output": {

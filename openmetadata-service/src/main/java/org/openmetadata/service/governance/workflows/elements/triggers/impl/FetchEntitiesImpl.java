@@ -1,6 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.triggers.impl;
 
-import static org.openmetadata.service.governance.workflows.elements.triggers.PeriodicBatchEntityTrigger.COLLECTION_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.elements.triggers.PeriodicBatchEntityTrigger.HAS_FINISHED_VARIABLE;
 
 import java.io.IOException;
@@ -124,7 +124,7 @@ public class FetchEntitiesImpl implements JavaDelegate {
 
     execution.setVariable(CARDINALITY_VARIABLE, entityList.size());
     execution.setVariable(HAS_FINISHED_VARIABLE, hasFinished);
-    execution.setVariable(COLLECTION_VARIABLE, entityList);
+    execution.setVariable(ENTITY_LIST_VARIABLE, entityList);
     execution.setVariable("entityToListMap", entityToListMap);
   }
 

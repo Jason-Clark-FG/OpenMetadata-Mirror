@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ public class MigrationUtil {
   private MigrationUtil() {}
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
-  private static final String ADMIN_USER_NAME = "admin";
   private static final Set<String> BATCH_NODE_SUBTYPES =
       Set.of(
           "checkEntityAttributesTask",
@@ -46,9 +46,9 @@ public class MigrationUtil {
    *       {@code "global"} if absent).
    * </ol>
    *
-   * <p>Always calls {@link WorkflowDefinitionRepository#createOrUpdate} for every workflow,
-   * triggering BPMN redeployment with the new {@code loopCardinality("1")} structure even when no
-   * JSON changes were needed.
+   * <p>Phase 2 reloads all workflow definitions and redeploys them via {@link
+   * WorkflowHandler#deploy}, ensuring BPMN processes are redeployed with the new {@code
+   * loopCardinality("1")} structure even when no JSON changes were needed.
    *
    * <p>The migration is idempotent — safe to run multiple times.
    */
@@ -145,8 +145,8 @@ public class MigrationUtil {
       }
     }
 
-    // Build a map: targetNode → {sourceNode, condition} from edges
-    Map<String, String[]> incomingEdge = new HashMap<>();
+    // Build a map: targetNode → list of {sourceNode, condition} from edges
+    Map<String, List<String[]>> incomingEdge = new HashMap<>();
     JsonNode edgesNode = result.get("edges");
     if (edgesNode != null && edgesNode.isArray()) {
       for (JsonNode edge : edgesNode) {
@@ -154,7 +154,9 @@ public class MigrationUtil {
         String to = edge.has("to") ? edge.get("to").asText() : null;
         String condition = edge.has("condition") ? edge.get("condition").asText() : null;
         if (from != null && to != null) {
-          incomingEdge.put(to, new String[] {from, condition});
+          incomingEdge
+              .computeIfAbsent(to, k -> new ArrayList<>())
+              .add(new String[] {from, condition});
         }
       }
     }
@@ -181,7 +183,7 @@ public class MigrationUtil {
           String subType = subTypeNode != null ? subTypeNode.asText() : "";
           if (BATCH_NODE_SUBTYPES.contains(subType)) {
             String nodeName = nodeElement.has("name") ? nodeElement.get("name").asText() : null;
-            String[] incoming = nodeName != null ? incomingEdge.get(nodeName) : null;
+            List<String[]> incoming = nodeName != null ? incomingEdge.get(nodeName) : null;
             JsonNode migratedNode = addEntityListToNamespaceMap(nodeElement, incoming, nodeSubType);
             migratedNode = migrateInputArray(migratedNode);
             newNodes.add(migratedNode);
@@ -205,7 +207,7 @@ public class MigrationUtil {
   }
 
   static JsonNode addEntityListToNamespaceMap(
-      JsonNode nodeObj, String[] incoming, Map<String, String> nodeSubType) {
+      JsonNode nodeObj, List<String[]> incomingEdges, Map<String, String> nodeSubType) {
     JsonNode inputNamespaceMapNode = nodeObj.get("inputNamespaceMap");
     if (inputNamespaceMapNode == null || !inputNamespaceMapNode.isObject()) {
       return nodeObj;
@@ -225,20 +227,21 @@ public class MigrationUtil {
     ObjectNode newInputNamespaceMap = inputNamespaceMap.deepCopy();
     newInputNamespaceMap.remove("relatedEntity");
 
-    // Determine the correct namespace and key based on the incoming edge
-    if (incoming != null) {
-      String sourceNode = incoming[0];
-      String condition = incoming[1];
-      String sourceSubType = nodeSubType.getOrDefault(sourceNode, "");
-      if (CHECK_NODE_SUBTYPES.contains(sourceSubType)) {
-        if (condition != null && !condition.isEmpty()) {
-          // "true"/"false" for checkEntity/checkChangeDesc, band name for dataCompleteness
-          newInputNamespaceMap.put(condition + "_entityList", sourceNode);
+    if (incomingEdges != null && !incomingEdges.isEmpty()) {
+      for (String[] incoming : incomingEdges) {
+        String sourceNode = incoming[0];
+        String condition = incoming[1];
+        String sourceSubType = nodeSubType.getOrDefault(sourceNode, "");
+        if (CHECK_NODE_SUBTYPES.contains(sourceSubType)) {
+          if (condition != null && !condition.isEmpty()) {
+            // "true"/"false" for checkEntity/checkChangeDesc, band name for dataCompleteness
+            newInputNamespaceMap.put(condition + "_entityList", sourceNode);
+          } else {
+            newInputNamespaceMap.put("entityList", sourceNode);
+          }
         } else {
-          newInputNamespaceMap.put("entityList", sourceNode);
+          newInputNamespaceMap.put("entityList", "global");
         }
-      } else {
-        newInputNamespaceMap.put("entityList", "global");
       }
     } else {
       newInputNamespaceMap.put("entityList", "global");

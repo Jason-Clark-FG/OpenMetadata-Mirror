@@ -75,13 +75,13 @@
           "default": "global"
         }
       },
-      "additionalProperties": false,
+      "additionalProperties": true,
       "required": ["entityList"]
     },
     "output": {
       "type": "array",
       "items": { "type": "string" },
-      "default": ["entityList", "false_entityList"],
+      "default": ["entityList", "true_entityList", "false_entityList"],
       "additionalItems": false
     },
     "branches": {
