@@ -44,9 +44,13 @@ test.describe('Verify custom properties tab visibility logic for supported entit
   test.beforeAll(async ({ browser }) => {
     const { apiContext } = await getDefaultAdminAPIContext(browser);
 
-    for (const { entity } of supportedEntities) {
-      await entity.create(apiContext);
-    }
+    const createEntityArray: Promise<unknown>[] = [];
+
+    supportedEntities.forEach(({ entity }) => {
+      createEntityArray.push(entity.create(apiContext));
+    });
+
+    await Promise.all(createEntityArray);
   });
 
   test.beforeEach(async ({ page }) => {
@@ -57,15 +61,13 @@ test.describe('Verify custom properties tab visibility logic for supported entit
     test(`Verify custom properties tab IS visible for supported type: ${type}`, async ({
       page,
     }) => {
-      test.slow();
-
       const searchTerm =
         entity.entityResponseData?.['fullyQualifiedName'] || entity.entity.name;
 
       await entity.visitEntityPage(page, searchTerm);
       await visitLineageTab(page);
 
-      const nodeFqn = entity.entityResponseData?.['fullyQualifiedName'];
+      const nodeFqn = entity.entityResponseData?.['fullyQualifiedName'] ?? '';
 
       await clickLineageNode(page, nodeFqn);
 
@@ -101,9 +103,11 @@ test.describe('Verify custom properties tab is NOT visible for unsupported entit
   test.beforeAll(async ({ browser }) => {
     const { apiContext } = await getDefaultAdminAPIContext(browser);
 
+    const createEntityArray: Promise<unknown>[] = [];
     for (const { service } of unsupportedServices) {
-      await service.create(apiContext);
+      createEntityArray.push(service.create(apiContext));
     }
+    await Promise.all(createEntityArray);
   });
 
   test.beforeEach(async ({ page }) => {
@@ -114,8 +118,6 @@ test.describe('Verify custom properties tab is NOT visible for unsupported entit
     test(`Verify custom properties tab is NOT visible for ${type} in platform lineage`, async ({
       page,
     }) => {
-      test.slow();
-
       const serviceFqn = get(service, 'entityResponseData.fullyQualifiedName');
 
       await sidebarClick(page, SidebarItem.LINEAGE);
