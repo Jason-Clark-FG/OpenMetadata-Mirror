@@ -289,37 +289,45 @@ test.describe('Column Level Lineage', () => {
         const sourceCol = get(sourceColumns, '[0].fullyQualifiedName', '');
         const targetCol = get(targetColumns, '[0].fullyQualifiedName', '');
 
-        await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
-        await activateColumnLayer(page);
+        await test.step('Add column lineage', async () => {
+          await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
+          await activateColumnLayer(page);
 
-        // Add column lineage
-        await addColumnLineage(page, sourceCol, targetCol);
+          // Add column lineage
+          await addColumnLineage(page, sourceCol, targetCol);
+        });
 
-        // Verify column lineage
-        await redirectToHomePage(page);
-        await sourceEntity.visitEntityPage(page);
-        await visitLineageTab(page);
-        await verifyColumnLineageInCSV(
-          page,
-          sourceEntity,
-          targetEntity,
-          sourceCol,
-          targetCol
-        );
+        await test.step('Column lineage export as CSV', async () => {
+          // Verify column lineage
+          await redirectToHomePage(page);
+          await sourceEntity.visitEntityPage(page);
+          await visitLineageTab(page);
+          await verifyColumnLineageInCSV(
+            page,
+            sourceEntity,
+            targetEntity,
+            sourceCol,
+            targetCol
+          );
+        });
 
-        await verifyPlatformLineageForEntity(
-          page,
-          sourceEntity.entityResponseData.fullyQualifiedName ?? '',
-          targetEntity.entityResponseData.fullyQualifiedName ?? ''
-        );
+        await test.step('Verify nodes in Platform Lineage', async () => {
+          await verifyPlatformLineageForEntity(
+            page,
+            sourceEntity.entityResponseData.fullyQualifiedName ?? '',
+            targetEntity.entityResponseData.fullyQualifiedName ?? ''
+          );
+        });
 
-        await sourceEntity.visitEntityPage(page);
-        await visitLineageTab(page);
-        await activateColumnLayer(page);
-        await editLineageClick(page);
+        await test.step('Remove column lineage', async () => {
+          await sourceEntity.visitEntityPage(page);
+          await visitLineageTab(page);
+          await activateColumnLayer(page);
+          await editLineageClick(page);
 
-        await removeColumnLineage(page, sourceCol, targetCol);
-        await editLineageClick(page);
+          await removeColumnLineage(page, sourceCol, targetCol);
+          await editLineageClick(page);
+        });
 
         await deleteNode(page, targetEntity);
         await sourceEntity.delete(apiContext);

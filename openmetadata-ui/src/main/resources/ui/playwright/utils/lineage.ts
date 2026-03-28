@@ -224,11 +224,8 @@ export const dragConnection = async (
     `${selector}.react-flow__handle-left`
   );
 
-  const lineageRes = page.waitForResponse('/api/v1/lineage');
   await sourceHandle.dispatchEvent('click');
   await targetHandle.dispatchEvent('click');
-
-  await lineageRes;
 };
 
 export const rearrangeNodes = async (page: Page) => {
@@ -272,6 +269,10 @@ export const connectEdgeBetweenNodes = async (
     `lineage-node-${fromNodeFqn}`,
     `lineage-node-${toNodeFqn}`
   );
+
+  await expect(
+    page.getByTestId(`edge-${fromNodeFqn}-${toNodeFqn}`)
+  ).toBeVisible();
 };
 
 export const verifyNodePresent = async (page: Page, node: EntityClass) => {
