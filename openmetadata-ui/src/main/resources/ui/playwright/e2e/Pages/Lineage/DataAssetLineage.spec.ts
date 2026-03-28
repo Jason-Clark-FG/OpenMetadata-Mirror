@@ -276,17 +276,13 @@ test.describe('Column Level Lineage', () => {
     const entityKeys = Object.keys(columnLevelEntities);
 
     entityKeys.forEach((targetKey) => {
-      const targetEntity = entities.get(targetKey) as EntityClassUnion;
-
       test(`Verify column lineage between ${key} and ${targetKey}`, async ({
         page,
       }) => {
+        const targetEntity = entities.get(targetKey) as EntityClassUnion;
         const { apiContext, afterAction } = await getApiContext(page);
 
-        await Promise.all([
-          sourceEntity.create(apiContext),
-          targetEntity?.create(apiContext),
-        ]);
+        await sourceEntity.create(apiContext);
 
         const sourceCol = get(
           sourceEntity,
@@ -333,7 +329,6 @@ test.describe('Column Level Lineage', () => {
 
         await deleteNode(page, targetEntity);
         await sourceEntity.delete(apiContext);
-        await targetEntity.delete(apiContext);
 
         await afterAction();
       });
