@@ -289,7 +289,7 @@ Flag these patterns — they represent the highest-signal warnings from IntelliJ
 - Consider `record` for immutable data carriers
 - Use `List.of()`, `Map.of()`, `Set.of()` for immutable collection literals
 
-### 10. Class Structure and Architecture
+### 10. Class Structure and Architecture (Kafka Standards)
 
 - **One statement per line.** No `if (x) return y;` — always use braces and separate lines.
 - **No commented-out code.** Version control maintains history. Delete dead code.
@@ -302,7 +302,7 @@ Flag these patterns — they represent the highest-signal warnings from IntelliJ
 - **Entity changes** require corresponding Flyway migrations in `bootstrap/sql/migrations/`
 - **Locale-sensitive operations**: always pass explicit `Locale` — `toLowerCase(Locale.ROOT)`, never `toLowerCase()`
 
-### 7. Testing (90% Coverage Target)
+### 11. Testing (90% Coverage Target)
 
 - New API endpoints must have integration tests in `openmetadata-integration-tests/`
 - Integration tests extend `BaseEntityIT` with `TestNamespace` for isolation
@@ -315,13 +315,13 @@ Flag these patterns — they represent the highest-signal warnings from IntelliJ
 - Use `try-with-resources` in tests for any test drivers or clients
 - **90% line coverage** on changed classes (measured by JaCoCo)
 
-### 8. Database
+### 12. Database
 
 - Flyway migration version numbers follow the existing sequence
 - Both MySQL and PostgreSQL variants provided if needed
 - No data-destructive operations without explicit backup/rollback plan
 
-### 9. Security
+### 13. Security
 
 - No hardcoded credentials or secrets
 - Input validation on all API endpoints at the boundary
