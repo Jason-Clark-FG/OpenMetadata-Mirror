@@ -19,6 +19,7 @@ import org.openmetadata.schema.governance.workflows.elements.nodes.automatedTask
 import org.openmetadata.schema.governance.workflows.elements.nodes.automatedTask.SinkTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.endEvent.EndEventDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.gateway.ParallelGatewayDefinition;
+import org.openmetadata.schema.governance.workflows.elements.nodes.manualTask.ManualTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.startEvent.StartEventDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.CreateRecognizerFeedbackApprovalTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.UserApprovalTaskDefinition;
@@ -56,7 +57,8 @@ import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.User
       name = "applyRecognizerFeedbackTask"),
   @JsonSubTypes.Type(
       value = RejectRecognizerFeedbackTaskDefinition.class,
-      name = "rejectRecognizerFeedbackTask")
+      name = "rejectRecognizerFeedbackTask"),
+  @JsonSubTypes.Type(value = ManualTaskDefinition.class, name = "manualTask")
 })
 public interface WorkflowNodeDefinitionInterface {
   String getType();

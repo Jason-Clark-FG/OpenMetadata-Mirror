@@ -16,6 +16,7 @@ import org.openmetadata.schema.governance.workflows.elements.nodes.automatedTask
 import org.openmetadata.schema.governance.workflows.elements.nodes.automatedTask.SinkTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.endEvent.EndEventDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.gateway.ParallelGatewayDefinition;
+import org.openmetadata.schema.governance.workflows.elements.nodes.manualTask.ManualTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.startEvent.StartEventDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.CreateRecognizerFeedbackApprovalTaskDefinition;
 import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.UserApprovalTaskDefinition;
@@ -32,6 +33,7 @@ import org.openmetadata.service.governance.workflows.elements.nodes.automatedTas
 import org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.runApp.RunAppTask;
 import org.openmetadata.service.governance.workflows.elements.nodes.endEvent.EndEvent;
 import org.openmetadata.service.governance.workflows.elements.nodes.gateway.ParallelGateway;
+import org.openmetadata.service.governance.workflows.elements.nodes.manualTask.ManualTask;
 import org.openmetadata.service.governance.workflows.elements.nodes.startEvent.StartEvent;
 import org.openmetadata.service.governance.workflows.elements.nodes.userTask.CreateRecognizerFeedbackApprovalTask;
 import org.openmetadata.service.governance.workflows.elements.nodes.userTask.UserApprovalTaskV2;
@@ -69,6 +71,7 @@ public class NodeFactory {
           (ApplyRecognizerFeedbackTaskDefinition) nodeDefinition, config);
       case REJECT_RECOGNIZER_FEEDBACK_TASK -> new RejectRecognizerFeedbackTask(
           (RejectRecognizerFeedbackTaskDefinition) nodeDefinition, config);
+      case MANUAL_TASK -> new ManualTask((ManualTaskDefinition) nodeDefinition, config);
       default -> throw new IllegalArgumentException(
           "Unsupported node subtype: " + nodeDefinition.getSubType());
     };

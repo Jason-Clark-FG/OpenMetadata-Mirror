@@ -17,6 +17,7 @@ export enum NodeType {
     AutomatedTask = "automatedTask",
     EndEvent = "endEvent",
     Gateway = "gateway",
+    ManualTask = "manualTask",
     StartEvent = "startEvent",
     UserTask = "userTask",
 }

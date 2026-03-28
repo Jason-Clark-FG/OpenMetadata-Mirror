@@ -41,6 +41,10 @@
           "description": "Timestamp on which the workflow instance stage ended.",
           "$ref": "../../type/basic.json#/definitions/timestamp"
         },
+        "result": {
+          "description": "The result value produced by this stage, if any (e.g. the status chosen in a ManualTask or the boolean outcome of a CheckEntityAttributes).",
+          "type": "string"
+        },
         "tasks": {
           "type": "array",
           "items": {
