@@ -72,6 +72,9 @@ const columnLevelEntities = {
   topic: TopicClass,
   apiEndpoint: ApiEndpointClass,
   dashboard: DashboardClass,
+  dashboardDataModel: DashboardDataModelClass,
+  searchIndex: SearchIndexClass,
+  mlModel: MlModelClass,
 };
 
 type EntityClassUnion =

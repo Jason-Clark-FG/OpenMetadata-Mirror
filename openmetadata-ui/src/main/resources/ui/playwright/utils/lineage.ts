@@ -589,12 +589,12 @@ export const getEntityColumns = (
   entity: EntityClass,
   entityName: string
 ): Array<{ name: string; fullyQualifiedName?: string }> => {
-  if (entityName === 'table') {
+  if (entityName === 'table' || entityName === 'dashboardDataModel') {
     return get(entity, 'entityResponseData.columns', []);
   } else if (entityName === 'topic') {
     return get(entity, 'entityResponseData.messageSchema.schemaFields', []);
   } else if (entityName === 'dashboard') {
-    return get(entity, 'entityResponseData.charts[0].columns', []);
+    return get(entity, 'entityResponseData.charts', []);
   } else if (entityName === 'container') {
     return get(entity, 'entityResponseData.dataModel.columns', []);
   } else if (entityName === 'apiEndpoint') {
@@ -611,6 +611,10 @@ export const getEntityColumns = (
     const schema = responseSchema.length > 0 ? responseSchema : requestSchema;
 
     return isEmpty(schema) ? [] : schema;
+  } else if (entityName === 'mlModel') {
+    return get(entity, 'entityResponseData.modelFeatures', []);
+  } else if (entityName === 'searchIndex') {
+    return get(entity, 'entityResponseData.fields', []);
   }
 
   return [];
