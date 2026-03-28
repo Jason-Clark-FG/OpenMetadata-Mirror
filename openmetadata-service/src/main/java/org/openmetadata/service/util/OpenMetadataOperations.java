@@ -216,9 +216,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
               .fields()
               .forEachRemaining(
                   entry -> {
-                    if (!columns.contains(entry.getKey())) {
-                      columns.add(entry.getKey());
-                    }
+                    columns.add(entry.getKey());
                     row.add(entry.getValue().toString());
                   });
         }
@@ -866,9 +864,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
     JWTTokenGenerator.getInstance()
         .init(
-            SecurityConfigurationManager.getInstance()
-                .getCurrentAuthConfig()
-                .getTokenValidationAlgorithm(),
+            SecurityConfigurationManager.getCurrentAuthConfig().getTokenValidationAlgorithm(),
             config.getJwtTokenConfiguration());
 
     AppMarketPlaceMapper mapper = new AppMarketPlaceMapper(pipelineServiceClient);
@@ -2496,9 +2492,7 @@ public class OpenMetadataOperations implements Callable<Integer> {
 
       JWTTokenGenerator.getInstance()
           .init(
-              SecurityConfigurationManager.getInstance()
-                  .getCurrentAuthConfig()
-                  .getTokenValidationAlgorithm(),
+              SecurityConfigurationManager.getCurrentAuthConfig().getTokenValidationAlgorithm(),
               config.getJwtTokenConfiguration());
 
       initOrganization();
