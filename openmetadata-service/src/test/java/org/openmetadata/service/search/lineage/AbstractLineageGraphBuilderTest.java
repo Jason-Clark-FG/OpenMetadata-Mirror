@@ -739,7 +739,7 @@ class AbstractLineageGraphBuilderTest {
     }
 
     @Override
-    public int estimateGraphSize(LineageQueryContext context) throws IOException {
+    public int estimateGraphSize(LineageQueryContext context) {
       return 0;
     }
 
