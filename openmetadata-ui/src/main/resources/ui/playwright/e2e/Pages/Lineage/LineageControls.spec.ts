@@ -5,15 +5,18 @@ import { PipelineClass } from '../../../support/entity/PipelineClass';
 import { TableClass } from '../../../support/entity/TableClass';
 import { TopicClass } from '../../../support/entity/TopicClass';
 import {
+  getApiContext,
   getDefaultAdminAPIContext,
   redirectToHomePage,
 } from '../../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
   clickLineageNode,
   connectEdgeBetweenNodesViaAPI,
   performZoomOut,
   visitLineageTab,
 } from '../../../utils/lineage';
+import { sidebarClick } from '../../../utils/sidebar';
 
 const table = new TableClass();
 const topic = new TopicClass();
@@ -179,8 +182,6 @@ test.describe('Lineage Layers', () => {
 
       await observabilityBtn.click();
       await page.keyboard.press('Escape');
-
-      await page.waitForTimeout(500);
 
       await page.getByTestId('lineage-layer-btn').click();
       await expect(observabilityBtn).toHaveClass(/Mui-selected/);

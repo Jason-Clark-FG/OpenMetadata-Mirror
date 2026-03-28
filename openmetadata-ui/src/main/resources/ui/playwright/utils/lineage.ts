@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
-import { get } from 'lodash';
+import { get, isEmpty } from 'lodash';
 import { SidebarItem } from '../constant/sidebar';
 import { ApiEndpointClass } from '../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../support/entity/ContainerClass';
@@ -215,8 +215,8 @@ export const dragConnection = async (
   const selector = isColumnLineage
     ? '.lineage-column-node-handle'
     : '.lineage-node-handle';
-  const sourceNode = page.locator(`[data-testid="${sourceId}"]`);
-  const targetNode = page.locator(`[data-testid="${targetId}"]`);
+  const sourceNode = page.getByTestId(sourceId);
+  const targetNode = page.getByTestId(targetId);
   const sourceHandle = sourceNode.locator(
     `${selector}.react-flow__handle-right`
   );
@@ -231,8 +231,6 @@ export const dragConnection = async (
 export const rearrangeNodes = async (page: Page) => {
   await page.getByTestId('fit-screen').click();
   await page.getByRole('menuitem', { name: 'Rearrange Nodes' }).click();
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- node rearrange animation settling time
-  await page.waitForTimeout(500);
 };
 
 export const connectEdgeBetweenNodes = async (
@@ -536,14 +534,12 @@ export const addColumnLineage = async (
   toColumnNode: string,
   exitEditMode = true
 ) => {
-  const lineageRes = page.waitForResponse('/api/v1/lineage');
   await dragConnection(
     page,
     `column-${fromColumnNode}`,
     `column-${toColumnNode}`,
     true
   );
-  await lineageRes;
 
   await page.getByTestId(`column-${toColumnNode}`).click();
 
@@ -612,7 +608,9 @@ export const getEntityColumns = (
       'entityResponseData.responseSchema.schemaFields',
       []
     );
-    return requestSchema.length > 0 ? requestSchema : responseSchema;
+    const schema = responseSchema.length > 0 ? responseSchema : requestSchema;
+
+    return isEmpty(schema) ? [] : schema;
   }
 
   return [];
