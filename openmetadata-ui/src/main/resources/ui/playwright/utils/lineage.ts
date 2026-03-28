@@ -316,6 +316,9 @@ export const performExpand = async (
     const expandRes = page.waitForResponse('/api/v1/lineage/getLineage/*?*');
     await expandBtn.dispatchEvent('click');
     await expandRes;
+
+    // perform a zoom out to have everything in view
+    await performZoomOut(page, 5);
     await verifyNodePresent(page, newNode);
   }
 };
