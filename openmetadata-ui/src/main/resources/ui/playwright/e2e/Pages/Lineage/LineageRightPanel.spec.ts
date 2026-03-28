@@ -19,7 +19,6 @@ import { StorageServiceClass } from '../../../support/entity/service/StorageServ
 import { TableClass } from '../../../support/entity/TableClass';
 import { TopicClass } from '../../../support/entity/TopicClass';
 import {
-  createNewPage,
   getDefaultAdminAPIContext,
   redirectToHomePage,
 } from '../../../utils/common';
@@ -28,7 +27,7 @@ import { clickLineageNode, visitLineageTab } from '../../../utils/lineage';
 import { sidebarClick } from '../../../utils/sidebar';
 import { test } from '../../fixtures/pages';
 
-test.describe('Verify custom properties tab visibility logic for supported entity types', () => {
+test.describe('Verify custom properties tab visibility logic for supported entity types lineage', () => {
   const supportedEntities = [
     { entity: new TableClass(), type: 'table' },
     { entity: new TopicClass(), type: 'topic' },
@@ -100,7 +99,7 @@ test.describe('Verify custom properties tab is NOT visible for unsupported entit
   ];
 
   test.beforeAll(async ({ browser }) => {
-    const { apiContext } = await createNewPage(browser);
+    const { apiContext } = await getDefaultAdminAPIContext(browser);
 
     for (const { service } of unsupportedServices) {
       await service.create(apiContext);
