@@ -33,6 +33,7 @@ import {
   deleteNode,
   editLineage,
   editLineageClick,
+  getEntityColumns,
   performZoomOut,
   rearrangeNodes,
   removeColumnLineage,
@@ -276,24 +277,17 @@ test.describe('Column Level Lineage', () => {
     const entityKeys = Object.keys(columnLevelEntities);
 
     entityKeys.forEach((targetKey) => {
-      test(`Verify column lineage between ${key} and ${targetKey}`, async ({
-        page,
-      }) => {
+      test(`Column lineage for ${key} -> ${targetKey}`, async ({ page }) => {
         const targetEntity = entities.get(targetKey) as EntityClassUnion;
         const { apiContext, afterAction } = await getApiContext(page);
 
         await sourceEntity.create(apiContext);
 
-        const sourceCol = get(
-          sourceEntity,
-          'entityResponseData.columns[0].fullyQualifiedName',
-          ''
-        );
-        const targetCol = get(
-          targetEntity,
-          'entityResponseData.columns[0].fullyQualifiedName',
-          ''
-        );
+        const sourceColumns = getEntityColumns(sourceEntity, key);
+        const targetColumns = getEntityColumns(targetEntity, targetKey);
+
+        const sourceCol = get(sourceColumns, '[0].fullyQualifiedName', '');
+        const targetCol = get(targetColumns, '[0].fullyQualifiedName', '');
 
         await addPipelineBetweenNodes(page, sourceEntity, targetEntity);
         await activateColumnLayer(page);

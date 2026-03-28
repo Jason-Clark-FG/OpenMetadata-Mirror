@@ -17,19 +17,14 @@ import { ApiEndpointClass } from '../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../support/entity/ContainerClass';
 import { DashboardClass } from '../support/entity/DashboardClass';
 import { DashboardDataModelClass } from '../support/entity/DashboardDataModelClass';
-import { DirectoryClass } from '../support/entity/DirectoryClass';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { EntityClass } from '../support/entity/EntityClass';
-import { FileClass } from '../support/entity/FileClass';
 import { MetricClass } from '../support/entity/MetricClass';
 import { MlModelClass } from '../support/entity/MlModelClass';
 import { PipelineClass } from '../support/entity/PipelineClass';
 import { SearchIndexClass } from '../support/entity/SearchIndexClass';
-import { SpreadsheetClass } from '../support/entity/SpreadsheetClass';
-import { StoredProcedureClass } from '../support/entity/StoredProcedureClass';
 import { TableClass } from '../support/entity/TableClass';
 import { TopicClass } from '../support/entity/TopicClass';
-import { WorksheetClass } from '../support/entity/WorksheetClass';
 import {
   clickOutside,
   getApiContext,
@@ -591,6 +586,35 @@ export const visitLineageTab = async (page: Page) => {
   await page.getByRole('button', { name: 'Full Screen View' }).first().click();
   const pane = page.locator('.react-flow__pane');
   await pane.click({ position: { x: 0, y: 0 } });
+};
+
+export const getEntityColumns = (
+  entity: EntityClass,
+  entityName: string
+): Array<{ name: string; fullyQualifiedName?: string }> => {
+  if (entityName === 'table') {
+    return get(entity, 'entityResponseData.columns', []);
+  } else if (entityName === 'topic') {
+    return get(entity, 'entityResponseData.messageSchema.schemaFields', []);
+  } else if (entityName === 'dashboard') {
+    return get(entity, 'entityResponseData.charts[0].columns', []);
+  } else if (entityName === 'container') {
+    return get(entity, 'entityResponseData.dataModel.columns', []);
+  } else if (entityName === 'apiEndpoint') {
+    const requestSchema = get(
+      entity,
+      'entityResponseData.requestSchema.schemaFields',
+      []
+    );
+    const responseSchema = get(
+      entity,
+      'entityResponseData.responseSchema.schemaFields',
+      []
+    );
+    return requestSchema.length > 0 ? requestSchema : responseSchema;
+  }
+
+  return [];
 };
 
 export const addPipelineBetweenNodes = async (
