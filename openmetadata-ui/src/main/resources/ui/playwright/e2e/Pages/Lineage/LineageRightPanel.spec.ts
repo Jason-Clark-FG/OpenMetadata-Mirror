@@ -1,4 +1,4 @@
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { SidebarItem } from '../../../constant/sidebar';
 import { ApiEndpointClass } from '../../../support/entity/ApiEndpointClass';
@@ -26,6 +26,7 @@ import {
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import { clickLineageNode, visitLineageTab } from '../../../utils/lineage';
 import { sidebarClick } from '../../../utils/sidebar';
+import { test } from '../../fixtures/pages';
 
 test.describe('Verify custom properties tab visibility logic for supported entity types', () => {
   const supportedEntities = [

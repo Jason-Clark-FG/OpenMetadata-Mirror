@@ -1,4 +1,4 @@
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { DashboardClass } from '../../../support/entity/DashboardClass';
 import { EntityDataClass } from '../../../support/entity/EntityDataClass';
@@ -27,6 +27,7 @@ import {
   verifyNodePresent,
   visitLineageTab,
 } from '../../../utils/lineage';
+import { test } from '../../fixtures/pages';
 
 test.describe('Lineage Interactions', () => {
   const table1 = new TableClass();

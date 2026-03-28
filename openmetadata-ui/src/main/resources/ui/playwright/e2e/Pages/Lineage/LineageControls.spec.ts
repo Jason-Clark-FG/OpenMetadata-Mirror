@@ -1,4 +1,4 @@
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { EntityDataClass } from '../../../support/entity/EntityDataClass';
 import { PipelineClass } from '../../../support/entity/PipelineClass';
@@ -17,6 +17,7 @@ import {
   visitLineageTab,
 } from '../../../utils/lineage';
 import { sidebarClick } from '../../../utils/sidebar';
+import { test } from '../../fixtures/pages';
 
 const table = new TableClass();
 const topic = new TopicClass();

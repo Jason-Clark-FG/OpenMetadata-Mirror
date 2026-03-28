@@ -1,4 +1,4 @@
-import test, { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import { get } from 'lodash';
 import { ApiEndpointClass } from '../../../support/entity/ApiEndpointClass';
 import { ContainerClass } from '../../../support/entity/ContainerClass';
@@ -28,6 +28,7 @@ import {
   rearrangeNodes,
   visitLineageTab,
 } from '../../../utils/lineage';
+import { test } from '../../fixtures/pages';
 
 type EntityClassUnion =
   | TableClass

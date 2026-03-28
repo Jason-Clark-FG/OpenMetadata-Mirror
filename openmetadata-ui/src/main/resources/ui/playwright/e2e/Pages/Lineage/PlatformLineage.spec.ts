@@ -1,4 +1,4 @@
-import test, { expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { SidebarItem } from '../../../constant/sidebar';
 import { TableClass } from '../../../support/entity/TableClass';
@@ -14,6 +14,7 @@ import {
   visitLineageTab,
 } from '../../../utils/lineage';
 import { sidebarClick } from '../../../utils/sidebar';
+import { test } from '../../fixtures/pages';
 
 test.describe('Platform Lineage', () => {
   // Create a table with '/' in the name to test encoding functionality
