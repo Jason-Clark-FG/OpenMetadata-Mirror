@@ -1338,7 +1338,7 @@ public class ESLineageGraphBuilder
    * Checks if the filter requires metadata and loads column metadata from parent entities if needed.
    */
   private SearchLineageResult applyColumnFiltering(
-      SearchLineageResult result, SearchLineageRequest request) throws IOException {
+      SearchLineageResult result, SearchLineageRequest request) {
     if (result == null || nullOrEmpty(request.getColumnFilter())) {
       return result;
     }
@@ -1425,8 +1425,8 @@ public class ESLineageGraphBuilder
    * Estimates graph size using sampling and fanout calculation.
    */
   @Override
-  public int estimateGraphSize(org.openmetadata.service.search.lineage.LineageQueryContext context)
-      throws IOException {
+  public int estimateGraphSize(
+      org.openmetadata.service.search.lineage.LineageQueryContext context) {
     SearchLineageRequest request = context.getRequest();
 
     // Start with root node

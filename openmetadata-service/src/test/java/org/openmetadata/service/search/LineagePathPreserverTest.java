@@ -50,7 +50,7 @@ class LineagePathPreserverTest {
   }
 
   @Test
-  void filterByColumnsWithMetadataPreservesRootPathForTagMatches() throws Exception {
+  void filterByColumnsWithMetadataPreservesRootPathForTagMatches() {
     SearchLineageResult result = lineageResultWithChain();
     ColumnMetadataCache metadataCache = new ColumnMetadataCache();
     metadataCache.loadColumnMetadata(
