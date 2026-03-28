@@ -612,7 +612,7 @@ export const getEntityColumns = (
 
     return isEmpty(schema) ? [] : schema;
   } else if (entityName === 'mlModel') {
-    return get(entity, 'entityResponseData.modelFeatures', []);
+    return get(entity, 'entityResponseData.mlFeatures', []);
   } else if (entityName === 'searchIndex') {
     return get(entity, 'entityResponseData.fields', []);
   }
