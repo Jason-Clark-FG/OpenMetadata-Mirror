@@ -537,7 +537,7 @@ class DistributedIndexingStrategyTest {
 
       assertEquals(ExecutionResult.Status.FAILED, result.status());
       assertEquals(5, result.totalRecords());
-      assertTrue(result.finalStats() != null);
+      assertNotNull(result.finalStats());
       assertEquals(1, executorConstruction.constructed().size());
     }
   }
