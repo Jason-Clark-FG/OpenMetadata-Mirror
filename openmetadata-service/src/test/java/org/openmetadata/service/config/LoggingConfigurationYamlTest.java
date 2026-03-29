@@ -1,3 +1,16 @@
+/*
+ *  Copyright 2021 Collate
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package org.openmetadata.service.config;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -60,17 +73,23 @@ class LoggingConfigurationYamlTest {
             objectMapper,
             "dw");
 
-    String configPath = path;
-    if (formatOverride != null) {
-      Path tempFile = Files.createTempFile("logging-config-", ".yaml");
-      Files.writeString(
-          tempFile, Files.readString(Path.of(path)).replace("${LOG_FORMAT:-text}", formatOverride));
-      configPath = tempFile.toString();
+    if (formatOverride == null) {
+      return factory.build(
+          new SubstitutingSourceProvider(
+              new FileConfigurationSourceProvider(), new EnvironmentVariableSubstitutor(false)),
+          path);
     }
 
-    return factory.build(
-        new SubstitutingSourceProvider(
-            new FileConfigurationSourceProvider(), new EnvironmentVariableSubstitutor(false)),
-        configPath);
+    Path tempFile = Files.createTempFile("logging-config-", ".yaml");
+    try {
+      Files.writeString(
+          tempFile, Files.readString(Path.of(path)).replace("${LOG_FORMAT:-text}", formatOverride));
+      return factory.build(
+          new SubstitutingSourceProvider(
+              new FileConfigurationSourceProvider(), new EnvironmentVariableSubstitutor(false)),
+          tempFile.toString());
+    } finally {
+      Files.deleteIfExists(tempFile);
+    }
   }
 }
