@@ -28,139 +28,141 @@ import {
 import { sidebarClick } from '../../../utils/sidebar';
 import { test } from '../../fixtures/pages';
 
-test.describe('Platform Lineage', () => {
-  // Create a table with '/' in the name to test encoding functionality
-  const tableNameWithSlash = `pw-table-with/slash-${uuid()}`;
-  const table = new TableClass(tableNameWithSlash);
+// Create a table with '/' in the name to test encoding functionality
+const tableNameWithSlash = `pw-table-with/slash-${uuid()}`;
+const table = new TableClass(tableNameWithSlash);
 
-  test.beforeAll(async ({ browser }) => {
-    const { apiContext } = await getDefaultAdminAPIContext(browser);
-    await table.create(apiContext);
-  });
+test.beforeAll(async ({ browser }) => {
+  const { apiContext } = await getDefaultAdminAPIContext(browser);
+  await table.create(apiContext);
+});
 
-  test('Verify table search with special characters as handled', async ({
-    page,
-  }) => {
-    const db = table.databaseResponseData.name;
+test.beforeEach(async ({ page }) => {
+  await redirectToHomePage(page);
+});
 
-    await sidebarClick(page, SidebarItem.LINEAGE);
+test('Verify table search with special characters as handled', async ({
+  page,
+}) => {
+  const db = table.databaseResponseData.name;
 
-    await page.getByTestId('search-entity-select').waitFor();
-    await page.click('[data-testid="search-entity-select"]');
+  await sidebarClick(page, SidebarItem.LINEAGE);
 
-    await page.fill(
-      '[data-testid="search-entity-select"] .ant-select-selection-search-input',
-      table.entity.name
-    );
+  await page.getByTestId('search-entity-select').waitFor();
+  await page.click('[data-testid="search-entity-select"]');
 
-    await page.waitForRequest(
-      (req) =>
-        req.url().includes('/api/v1/search/query') &&
-        req.url().includes('deleted=false')
-    );
+  await page.fill(
+    '[data-testid="search-entity-select"] .ant-select-selection-search-input',
+    table.entity.name
+  );
 
-    await page.locator('.ant-select-dropdown').waitFor();
+  await page.waitForRequest(
+    (req) =>
+      req.url().includes('/api/v1/search/query') &&
+      req.url().includes('deleted=false')
+  );
 
-    const nodeFqn = get(table, 'entityResponseData.fullyQualifiedName');
-    const dbFqn = get(
-      table,
-      'entityResponseData.database.fullyQualifiedName',
-      ''
-    );
-    await page
-      .locator(`[data-testid="node-suggestion-${nodeFqn}"]`)
-      .dispatchEvent('click');
+  await page.locator('.ant-select-dropdown').waitFor();
 
-    await page.waitForResponse('/api/v1/lineage/getLineage?*');
+  const nodeFqn = get(table, 'entityResponseData.fullyQualifiedName');
+  const dbFqn = get(
+    table,
+    'entityResponseData.database.fullyQualifiedName',
+    ''
+  );
+  await page
+    .locator(`[data-testid="node-suggestion-${nodeFqn}"]`)
+    .dispatchEvent('click');
 
-    await expect(page.locator('[data-testid="lineage-details"]')).toBeVisible();
+  await page.waitForResponse('/api/v1/lineage/getLineage?*');
 
-    await expect(
-      page.locator(`[data-testid="lineage-node-${nodeFqn}"]`)
-    ).toBeVisible();
+  await expect(page.locator('[data-testid="lineage-details"]')).toBeVisible();
 
-    await redirectToHomePage(page);
-    await sidebarClick(page, SidebarItem.LINEAGE);
-    await page.getByTestId('search-entity-select').waitFor();
-    await page.click('[data-testid="search-entity-select"]');
+  await expect(
+    page.locator(`[data-testid="lineage-node-${nodeFqn}"]`)
+  ).toBeVisible();
 
-    await page.fill(
-      '[data-testid="search-entity-select"] .ant-select-selection-search-input',
-      db
-    );
-    await page.getByTestId(`node-suggestion-${dbFqn}`).waitFor();
-    await page.getByTestId(`node-suggestion-${dbFqn}`).dispatchEvent('click');
-    await page.waitForResponse('/api/v1/lineage/getLineage?*');
+  await redirectToHomePage(page);
+  await sidebarClick(page, SidebarItem.LINEAGE);
+  await page.getByTestId('search-entity-select').waitFor();
+  await page.click('[data-testid="search-entity-select"]');
 
-    await expect(page.getByTestId('lineage-details')).toBeVisible();
+  await page.fill(
+    '[data-testid="search-entity-select"] .ant-select-selection-search-input',
+    db
+  );
+  await page.getByTestId(`node-suggestion-${dbFqn}`).waitFor();
+  await page.getByTestId(`node-suggestion-${dbFqn}`).dispatchEvent('click');
+  await page.waitForResponse('/api/v1/lineage/getLineage?*');
 
-    await clickLineageNode(page, dbFqn);
+  await expect(page.getByTestId('lineage-details')).toBeVisible();
 
-    await expect(
-      page.locator('.lineage-entity-panel').getByTestId('entity-header-title')
-    ).toBeVisible();
-  });
+  await clickLineageNode(page, dbFqn);
 
-  test('Verify service platform view', async ({ page }) => {
-    await table.visitEntityPage(page);
-    await visitLineageTab(page);
-    await performZoomOut(page);
+  await expect(
+    page.locator('.lineage-entity-panel').getByTestId('entity-header-title')
+  ).toBeVisible();
+});
 
-    await page.getByTestId('lineage-layer-btn').click();
+test('Verify service platform view', async ({ page }) => {
+  await table.visitEntityPage(page);
+  await visitLineageTab(page);
+  await performZoomOut(page);
 
-    const serviceBtn = page.getByTestId('lineage-layer-service-btn');
-    await expect(serviceBtn).toBeVisible();
+  await page.getByTestId('lineage-layer-btn').click();
 
-    await serviceBtn.click();
-    await page.keyboard.press('Escape');
+  const serviceBtn = page.getByTestId('lineage-layer-service-btn');
+  await expect(serviceBtn).toBeVisible();
 
-    await page.getByTestId('lineage-layer-btn').click();
-    await expect(serviceBtn).toHaveClass(/Mui-selected/);
-  });
+  await serviceBtn.click();
+  await page.keyboard.press('Escape');
 
-  test('Verify domain platform view', async ({ page }) => {
-    await table.visitEntityPage(page);
-    await visitLineageTab(page);
-    await performZoomOut(page);
+  await page.getByTestId('lineage-layer-btn').click();
+  await expect(serviceBtn).toHaveClass(/Mui-selected/);
+});
 
-    await page.getByTestId('lineage-layer-btn').click();
+test('Verify domain platform view', async ({ page }) => {
+  await table.visitEntityPage(page);
+  await visitLineageTab(page);
+  await performZoomOut(page);
 
-    const domainBtn = page.getByTestId('lineage-layer-domain-btn');
-    await expect(domainBtn).toBeVisible();
+  await page.getByTestId('lineage-layer-btn').click();
 
-    await domainBtn.click();
-    await page.keyboard.press('Escape');
+  const domainBtn = page.getByTestId('lineage-layer-domain-btn');
+  await expect(domainBtn).toBeVisible();
 
-    await page.getByTestId('lineage-layer-btn').click();
-    await expect(domainBtn).toHaveClass(/Mui-selected/);
+  await domainBtn.click();
+  await page.keyboard.press('Escape');
 
-    await page.keyboard.press('Escape');
+  await page.getByTestId('lineage-layer-btn').click();
+  await expect(domainBtn).toHaveClass(/Mui-selected/);
 
-    await waitForAllLoadersToDisappear(page);
-  });
+  await page.keyboard.press('Escape');
 
-  test('Verify platform view switching', async ({ page }) => {
-    await table.visitEntityPage(page);
-    await visitLineageTab(page);
-    await performZoomOut(page);
+  await waitForAllLoadersToDisappear(page);
+});
 
-    await page.getByTestId('lineage-layer-btn').click();
+test('Verify platform view switching', async ({ page }) => {
+  await table.visitEntityPage(page);
+  await visitLineageTab(page);
+  await performZoomOut(page);
 
-    const serviceBtn = page.getByTestId('lineage-layer-service-btn');
-    const domainBtn = page.getByTestId('lineage-layer-domain-btn');
+  await page.getByTestId('lineage-layer-btn').click();
 
-    await serviceBtn.click();
-    await page.keyboard.press('Escape');
+  const serviceBtn = page.getByTestId('lineage-layer-service-btn');
+  const domainBtn = page.getByTestId('lineage-layer-domain-btn');
 
-    await page.getByTestId('lineage-layer-btn').click();
-    await expect(serviceBtn).toHaveClass(/Mui-selected/);
-    await expect(domainBtn).not.toHaveClass(/Mui-selected/);
+  await serviceBtn.click();
+  await page.keyboard.press('Escape');
 
-    await domainBtn.click();
-    await page.keyboard.press('Escape');
+  await page.getByTestId('lineage-layer-btn').click();
+  await expect(serviceBtn).toHaveClass(/Mui-selected/);
+  await expect(domainBtn).not.toHaveClass(/Mui-selected/);
 
-    await page.getByTestId('lineage-layer-btn').click();
-    await expect(domainBtn).toHaveClass(/Mui-selected/);
-    await expect(serviceBtn).not.toHaveClass(/Mui-selected/);
-  });
+  await domainBtn.click();
+  await page.keyboard.press('Escape');
+
+  await page.getByTestId('lineage-layer-btn').click();
+  await expect(domainBtn).toHaveClass(/Mui-selected/);
+  await expect(serviceBtn).not.toHaveClass(/Mui-selected/);
 });

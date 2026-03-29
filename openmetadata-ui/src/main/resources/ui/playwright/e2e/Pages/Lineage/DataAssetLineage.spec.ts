@@ -452,6 +452,11 @@ test.describe('Column Level Lineage', () => {
 test.describe('Lineage Settings modal', () => {
   const table = new TableClass();
 
+  test.beforeAll(async ({ browser }) => {
+    const { apiContext } = await getDefaultAdminAPIContext(browser);
+    await table.create(apiContext);
+  });
+
   test.beforeEach(async ({ page }) => {
     await table.visitEntityPage(page);
     await visitLineageTab(page);
@@ -472,7 +477,7 @@ test.describe('Lineage Settings modal', () => {
     await page.getByLabel(/upstream/i).fill('5');
     await page.getByLabel(/downstream/i).fill('4');
 
-    await page.getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /Ok/i }).click();
 
     await expect(page.locator('[role="dialog"]')).not.toBeVisible();
 
@@ -489,14 +494,14 @@ test.describe('Lineage Settings modal', () => {
     await page.getByTestId('lineage-config').click();
 
     await page.getByLabel(/upstream/i).fill('-1');
-    await page.getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /Ok/i }).click();
 
     await expect(page.getByText(/cannot be less than/i)).toBeVisible();
 
     await expect(page.locator('[role="dialog"]')).toBeVisible();
 
     await page.getByLabel(/upstream/i).fill('3');
-    await page.getByRole('button', { name: /save/i }).click();
+    await page.getByRole('button', { name: /Ok/i }).click();
 
     await expect(page.locator('[role="dialog"]')).not.toBeVisible();
   });
