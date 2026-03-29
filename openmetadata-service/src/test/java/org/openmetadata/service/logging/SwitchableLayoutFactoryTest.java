@@ -69,7 +69,22 @@ class SwitchableLayoutFactoryTest {
     assertEquals("hello world", json.get("message").asText());
     assertEquals("INFO", json.get("level").asText());
     assertEquals("openmetadata", json.get("service").asText());
-    assertFalse(rendered.endsWith(System.lineSeparator()));
+    assertFalse(rendered.endsWith("\n"));
+    assertFalse(rendered.endsWith("\r\n"));
+  }
+
+  @Test
+  void factoryGettersReturnConfiguredValues() {
+    SwitchableEventLayoutFactory factory = new SwitchableEventLayoutFactory();
+    factory.setFormat("json");
+    factory.setAppendLineSeparator(false);
+    factory.setPattern("%msg%n");
+    factory.setAdditionalFields(Map.of("env", "test"));
+
+    assertEquals("json", factory.getFormat());
+    assertFalse(factory.isAppendLineSeparator());
+    assertEquals("%msg%n", factory.getPattern());
+    assertEquals(Map.of("env", "test"), factory.getAdditionalFields());
   }
 
   @Test
@@ -112,7 +127,8 @@ class SwitchableLayoutFactoryTest {
     assertEquals("GET", json.get("method").asText());
     assertEquals(200, json.get("status").asInt());
     assertEquals("openmetadata", json.get("service").asText());
-    assertFalse(rendered.endsWith(System.lineSeparator()));
+    assertFalse(rendered.endsWith("\n"));
+    assertFalse(rendered.endsWith("\r\n"));
   }
 
   @Test
