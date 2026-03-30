@@ -108,12 +108,12 @@ export interface MCPServer {
      */
     resources?:       MCPResource[];
     securityMetrics?: SecurityMetrics;
+    serverInfo?:      ServerInfo;
+    serverType:       ServerType;
     /**
      * Reference to the MCP Service that contains this MCP Server.
      */
-    service?:    EntityReference;
-    serverInfo?: ServerInfo;
-    serverType:  ServerType;
+    service?: EntityReference;
     /**
      * Link to source code repository
      */
@@ -560,6 +560,8 @@ export enum AccessPattern {
  * User, Pipeline, Query that created,updated or accessed the data asset
  *
  * Reference to the underlying data entity if known
+ *
+ * Reference to the MCP Service that contains this MCP Server.
  */
 export interface EntityReference {
     /**
@@ -1392,12 +1394,12 @@ export interface ResourceDataClassification {
     complianceRequirements?: string[];
     containsPII?:            boolean;
     dataCategories?:         string[];
+    retentionPeriod?:        string;
+    sensitivityLevel?:       SensitivityLevel;
     /**
      * Tags for data classification including PII types
      */
-    tags?:             TagLabel[];
-    retentionPeriod?:  string;
-    sensitivityLevel?: SensitivityLevel;
+    tags?: TagLabel[];
     [property: string]: any;
 }
 

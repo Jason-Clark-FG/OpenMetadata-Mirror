@@ -114,13 +114,7 @@ export interface MCPExecution {
  *
  * Reference to the data source accessed
  *
- * Reference to the McpPrompt used
- *
- * Reference to the McpResource accessed
- *
  * MCP Server that was executed
- *
- * Reference to the McpTool that was called
  */
 export interface EntityReference {
     /**

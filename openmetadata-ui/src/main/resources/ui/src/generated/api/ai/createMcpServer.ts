@@ -87,10 +87,6 @@ export interface CreateMCPServer {
      */
     securityMetrics?: SecurityMetrics;
     /**
-     * Link to the MCP service that contains this server
-     */
-    service: string;
-    /**
      * Information about the MCP server software
      */
     serverInfo?: ServerInfo;
@@ -98,6 +94,10 @@ export interface CreateMCPServer {
      * Type of MCP server based on its primary function
      */
     serverType: ServerType;
+    /**
+     * Link to the MCP service that contains this server
+     */
+    service: string;
     /**
      * Link to source code repository
      */
@@ -1232,12 +1232,12 @@ export interface ResourceDataClassification {
     complianceRequirements?: string[];
     containsPII?:            boolean;
     dataCategories?:         string[];
+    retentionPeriod?:        string;
+    sensitivityLevel?:       SensitivityLevel;
     /**
      * Tags for data classification including PII types
      */
-    tags?:             TagLabel[];
-    retentionPeriod?:  string;
-    sensitivityLevel?: SensitivityLevel;
+    tags?: TagLabel[];
     [property: string]: any;
 }
 
