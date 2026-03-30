@@ -5409,4 +5409,121 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     }
     return requests;
   }
+
+  // ===================================================================
+  // PERFORMANCE TESTS - Bulk listing with column tags (N+1 regression)
+  // ===================================================================
+
+  @Test
+  @Execution(ExecutionMode.SAME_THREAD)
+  void test_listTablesWithColumnTags_performance(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Setup: create a shared schema, classification, and tag
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+
+    CreateClassification createClassification =
+        new CreateClassification()
+            .withName(ns.prefix("perf_classification"))
+            .withDescription("Classification for perf test");
+    Classification classification = client.classifications().create(createClassification);
+
+    CreateTag createTag =
+        new CreateTag()
+            .withName(ns.prefix("perf_tag"))
+            .withDescription("Tag for perf test")
+            .withClassification(classification.getName());
+    Tag tag = client.tags().create(createTag);
+
+    TagLabel tagLabel =
+        new TagLabel()
+            .withTagFQN(tag.getFullyQualifiedName())
+            .withSource(TagLabel.TagSource.CLASSIFICATION);
+
+    // Create 1000 tables with tagged columns via bulk API
+    int tableCount = 1000;
+    int batchSize = 100;
+    for (int batch = 0; batch < tableCount / batchSize; batch++) {
+      List<CreateTable> requests = new ArrayList<>();
+      for (int i = 0; i < batchSize; i++) {
+        int idx = batch * batchSize + i;
+        CreateTable request = new CreateTable();
+        request.setName(ns.prefix("perf_table_" + idx));
+        request.setDatabaseSchema(schema.getFullyQualifiedName());
+        request.setColumns(
+            List.of(
+                ColumnBuilder.of("id", "BIGINT").primaryKey().notNull().build(),
+                ColumnBuilder.of("name", "VARCHAR").dataLength(255).build(),
+                ColumnBuilder.of("email", "VARCHAR").dataLength(255).build()));
+        request.setTags(List.of(tagLabel));
+        requests.add(request);
+      }
+      BulkOperationResult result = client.tables().bulkCreateOrUpdate(requests);
+      assertEquals(batchSize, result.getNumberOfRowsPassed());
+    }
+
+    // Add tags to columns via update for a subset (every 5th table)
+    for (int i = 0; i < tableCount; i += 5) {
+      String tableFqn = schema.getFullyQualifiedName() + "." + ns.prefix("perf_table_" + i);
+      Table table = client.tables().getByName(tableFqn, "columns");
+      Column col = table.getColumns().get(0);
+      col.setTags(List.of(tagLabel));
+      table.setColumns(table.getColumns());
+      client.tables().update(table.getId().toString(), table);
+    }
+
+    // Test 1: List with fields=columns,tags — the problematic case
+    long start = System.currentTimeMillis();
+    ListParams paramsColumnsTags =
+        new ListParams()
+            .setLimit(1000)
+            .setFields("columns,tags")
+            .setDatabaseSchema(schema.getFullyQualifiedName());
+    ListResponse<Table> responseColumnsTags = client.tables().list(paramsColumnsTags);
+    long columnsTagsDuration = System.currentTimeMillis() - start;
+
+    assertEquals(tableCount, responseColumnsTags.getData().size());
+
+    // Verify data correctness: every table has tags, and tagged columns have their tags
+    for (Table table : responseColumnsTags.getData()) {
+      assertNotNull(table.getTags(), "Table should have tags");
+      assertFalse(table.getTags().isEmpty(), "Table tags should not be empty");
+      assertNotNull(table.getColumns(), "Table should have columns");
+      assertEquals(3, table.getColumns().size());
+    }
+
+    // Test 2: List with fields=columns only
+    start = System.currentTimeMillis();
+    ListParams paramsColumnsOnly =
+        new ListParams()
+            .setLimit(1000)
+            .setFields("columns")
+            .setDatabaseSchema(schema.getFullyQualifiedName());
+    ListResponse<Table> responseColumnsOnly = client.tables().list(paramsColumnsOnly);
+    long columnsOnlyDuration = System.currentTimeMillis() - start;
+
+    assertEquals(tableCount, responseColumnsOnly.getData().size());
+
+    // Test 3: List with fields=tags only (baseline comparison)
+    start = System.currentTimeMillis();
+    ListParams paramsTagsOnly =
+        new ListParams()
+            .setLimit(1000)
+            .setFields("tags")
+            .setDatabaseSchema(schema.getFullyQualifiedName());
+    ListResponse<Table> responseTagsOnly = client.tables().list(paramsTagsOnly);
+    long tagsOnlyDuration = System.currentTimeMillis() - start;
+
+    assertEquals(tableCount, responseTagsOnly.getData().size());
+
+    // Performance assertion: fields=columns,tags should not be more than 10x slower
+    // than fields=tags alone. Before the fix, the N+1 bug made it orders of magnitude slower.
+    assertTrue(
+        columnsTagsDuration < tagsOnlyDuration * 10,
+        String.format(
+            "Listing with columns+tags (%dms) should not be more than 10x slower than "
+                + "tags only (%dms). This indicates an N+1 query regression.",
+            columnsTagsDuration, tagsOnlyDuration));
+  }
 }
