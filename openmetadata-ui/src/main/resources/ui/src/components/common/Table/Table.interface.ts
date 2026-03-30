@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 import { TableProps } from 'antd/lib/table';
-import { NextPreviousProps } from '../NextPrevious/NextPrevious.interface';
 import type { DragAndDropHooks } from 'react-aria-components';
+import { NextPreviousProps } from '../NextPrevious/NextPrevious.interface';
 import { SearchBarProps } from '../SearchBarComponent/SearchBar.component';
 
 export interface TableComponentProps<T> extends TableProps<T> {

@@ -40,6 +40,7 @@ import {
   Table as UntitledTable,
 } from '@openmetadata/ui-core-components';
 import { ChevronDown, ChevronRight } from '@untitledui/icons';
+import type { ColumnsType } from 'antd/es/table/interface';
 import type {
   ColumnType,
   FilterValue,
@@ -47,25 +48,6 @@ import type {
   TableCurrentDataSource,
   TablePaginationConfig,
 } from 'antd/lib/table/interface';
-import type { ColumnsType } from 'antd/es/table/interface';
-import {
-  ColumnResizer,
-  Dialog,
-  DialogTrigger,
-  Popover,
-  ResizableTableContainer,
-} from 'react-aria-components';
-import type {
-  AriaSortDescriptor,
-  AriaSelection,
-  FlatRow,
-} from './TableV2.interface';
-import {
-  flattenTreeRows,
-  getColumnStickyStyle,
-  resolveCellValue,
-  resolveColumnTitle,
-} from './TableV2Utils';
 import classNames from 'classnames';
 import { isEmpty, isEqual } from 'lodash';
 import React, {
@@ -79,6 +61,13 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import {
+  ColumnResizer,
+  Dialog,
+  DialogTrigger,
+  Popover,
+  ResizableTableContainer,
+} from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as ColumnIcon } from '../../../assets/svg/ic-column-customize.svg';
 import { useCurrentUserPreferences } from '../../../hooks/currentUserStore/useCurrentUserStore';
@@ -96,6 +85,17 @@ import {
   TableComponentProps,
 } from './Table.interface';
 import './table.less';
+import type {
+  AriaSelection,
+  AriaSortDescriptor,
+  FlatRow,
+} from './TableV2.interface';
+import {
+  flattenTreeRows,
+  getColumnStickyStyle,
+  resolveCellValue,
+  resolveColumnTitle,
+} from './TableV2Utils';
 
 type TableV2Props<T extends object> = TableComponentProps<T>;
 
