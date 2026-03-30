@@ -107,7 +107,7 @@ import {
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import './tag-page.less';
-import { TagTabs } from './TagPage.inteface';
+import { TagTabs } from './TagPage.interface';
 
 const TagPage = () => {
   const { t } = useTranslation();
