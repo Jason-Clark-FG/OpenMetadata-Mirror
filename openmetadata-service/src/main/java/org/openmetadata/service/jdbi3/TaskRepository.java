@@ -20,18 +20,26 @@ import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.FIELD_DOMAINS;
 import static org.openmetadata.service.Entity.TEAM;
 import static org.openmetadata.service.Entity.USER;
+import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
+import static org.openmetadata.service.governance.workflows.elements.TriggerFactory.getTriggerWorkflowId;
 import static org.openmetadata.service.jdbi3.UserRepository.TEAMS_FIELD;
 
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.jdbi.v3.core.Jdbi;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.User;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
@@ -245,6 +253,8 @@ public class TaskRepository extends EntityRepository<Task> {
 
     // Compute aboutFqnHash for efficient querying by target entity FQN
     computeAboutFqnHash(task);
+
+    initializeWorkflowManagedTask(task, update);
 
     // Task domains MUST be inherited from the target entity (about field)
     // This ensures tasks follow domain-based data isolation policies
@@ -1051,11 +1061,90 @@ public class TaskRepository extends EntityRepository<Task> {
   @Override
   protected void postCreate(Task entity) {
     super.postCreate(entity);
+    triggerWorkflowManagedTask(entity);
   }
 
   @Override
   protected void postUpdate(Task original, Task updated) {
     super.postUpdate(original, updated);
+  }
+
+  private void initializeWorkflowManagedTask(Task task, boolean update) {
+    if (update || !shouldCreateWorkflowManagedTask(task)) {
+      return;
+    }
+
+    TaskWorkflowLifecycleResolver.resolveBinding(task)
+        .ifPresent(
+            binding -> {
+              WorkflowDefinition workflowDefinition =
+                  Entity.findByNameOrNull(
+                      Entity.WORKFLOW_DEFINITION, binding.workflowDefinitionRef(), NON_DELETED);
+              if (workflowDefinition == null) {
+                return;
+              }
+
+              task.setCategory(
+                  TaskWorkflowLifecycleResolver.resolveDefaultTaskCategory(
+                      task.getType(), task.getCategory()));
+              task.setTaskFormSchemaId(binding.schema() != null ? binding.schema().getId() : null);
+              task.setTaskFormSchemaVersion(
+                  binding.schema() != null ? binding.schema().getVersion() : null);
+              task.setWorkflowDefinitionId(workflowDefinition.getId());
+              task.setWorkflowStageId("pending-workflow-start");
+              task.setWorkflowStageDisplayName("Starting");
+              task.setAvailableTransitions(List.of());
+            });
+  }
+
+  private void triggerWorkflowManagedTask(Task task) {
+    if (!isPendingWorkflowManagedTask(task)) {
+      return;
+    }
+
+    WorkflowDefinition workflowDefinition =
+        Entity.getEntity(
+            Entity.WORKFLOW_DEFINITION,
+            task.getWorkflowDefinitionId(),
+            Entity.FIELD_FULLY_QUALIFIED_NAME,
+            NON_DELETED);
+
+    Map<String, Object> variables = new LinkedHashMap<>();
+    variables.putAll(TaskWorkflowLifecycleResolver.buildWorkflowStartVariables(task));
+    if (task.getAbout() != null && !nullOrEmpty(task.getAbout().getFullyQualifiedName())) {
+      variables.put(
+          getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE),
+          EntityUtil.buildEntityLink(
+              task.getAbout().getType(), task.getAbout().getFullyQualifiedName()));
+    }
+    variables.put(
+        getNamespacedVariableName(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE), task.getUpdatedBy());
+    variables.put(
+        "taskFormSchemaId",
+        task.getTaskFormSchemaId() != null ? task.getTaskFormSchemaId().toString() : null);
+    variables.put("taskFormSchemaVersion", task.getTaskFormSchemaVersion());
+    variables.put("workflowDefinitionId", workflowDefinition.getId().toString());
+
+    WorkflowHandler.getInstance()
+        .triggerByKey(
+            getTriggerWorkflowId(workflowDefinition.getFullyQualifiedName()),
+            task.getId().toString(),
+            variables);
+  }
+
+  private boolean shouldCreateWorkflowManagedTask(Task task) {
+    return task != null
+        && task.getType() != null
+        && task.getAbout() != null
+        && !nullOrEmpty(task.getAbout().getType())
+        && !nullOrEmpty(task.getAbout().getFullyQualifiedName())
+        && task.getWorkflowInstanceId() == null;
+  }
+
+  private boolean isPendingWorkflowManagedTask(Task task) {
+    return shouldCreateWorkflowManagedTask(task)
+        && task.getWorkflowDefinitionId() != null
+        && "pending-workflow-start".equals(task.getWorkflowStageId());
   }
 
   /**

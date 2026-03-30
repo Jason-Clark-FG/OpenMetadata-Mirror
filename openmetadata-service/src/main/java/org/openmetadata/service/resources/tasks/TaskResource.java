@@ -14,11 +14,6 @@
 package org.openmetadata.service.resources.tasks;
 
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
-import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
-import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
-import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
-import static org.openmetadata.service.governance.workflows.elements.TriggerFactory.getTriggerWorkflowId;
 import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
 
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
@@ -51,10 +46,8 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.tasks.BulkTaskOperation;
@@ -64,7 +57,6 @@ import org.openmetadata.schema.api.tasks.ResolveTask;
 import org.openmetadata.schema.api.tasks.TaskCount;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.User;
-import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.type.BulkTaskOperationParams;
 import org.openmetadata.schema.type.BulkTaskOperationResult;
 import org.openmetadata.schema.type.BulkTaskOperationResultItem;
@@ -80,13 +72,11 @@ import org.openmetadata.schema.type.TaskPriority;
 import org.openmetadata.schema.type.TaskResolutionType;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.UserRepository;
-import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.limits.Limits;
 import org.openmetadata.service.resources.Collection;
 import org.openmetadata.service.resources.EntityResource;
@@ -94,7 +84,6 @@ import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.tasks.TaskWorkflowLifecycleResolver;
-import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 
 @Slf4j
@@ -115,8 +104,6 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
   private static final String COUNT_VIEW_CREATED = "created";
   private static final String COUNT_VIEW_MENTIONED = "mentioned";
   private static final String COUNT_VIEW_ENTITY = "entity";
-  private static final int WORKFLOW_CREATE_MAX_ATTEMPTS = 50;
-  private static final long WORKFLOW_CREATE_RETRY_MILLIS = 100L;
 
   public TaskResource(Authorizer authorizer, Limits limits) {
     super(Entity.TASK, authorizer, limits);
@@ -626,10 +613,6 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Valid CreateTask create) {
     Task task = getTask(create, securityContext.getUserPrincipal().getName());
     enforceDomainOnlyPolicyForTask(securityContext, task);
-    Task workflowTask = createWorkflowManagedTask(uriInfo, task, securityContext);
-    if (workflowTask != null) {
-      return Response.status(Response.Status.CREATED).entity(workflowTask).build();
-    }
     return create(uriInfo, securityContext, task);
   }
 
@@ -657,10 +640,6 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Valid CreateTask create) {
     Task task = getTask(create, securityContext.getUserPrincipal().getName());
     enforceDomainOnlyPolicyForTask(securityContext, task);
-    Task workflowTask = createWorkflowManagedTask(uriInfo, task, securityContext);
-    if (workflowTask != null) {
-      return Response.ok(workflowTask).build();
-    }
     return createOrUpdate(uriInfo, securityContext, task);
   }
 
@@ -1348,103 +1327,6 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
 
     return task;
-  }
-
-  private Task createWorkflowManagedTask(
-      UriInfo uriInfo, Task task, SecurityContext securityContext) {
-    if (!shouldCreateWorkflowManagedTask(task)) {
-      return null;
-    }
-
-    return TaskWorkflowLifecycleResolver.resolveBinding(
-            task.getType(), task.getCategory(), task.getPayload())
-        .flatMap(
-            binding -> {
-              WorkflowDefinitionRepository workflowDefinitionRepository =
-                  (WorkflowDefinitionRepository)
-                      Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
-              WorkflowDefinition workflowDefinition =
-                  workflowDefinitionRepository.findByNameOrNull(
-                      binding.workflowDefinitionRef(), Include.NON_DELETED);
-              if (workflowDefinition == null) {
-                return java.util.Optional.<Task>empty();
-              }
-
-              task.setCategory(
-                  TaskWorkflowLifecycleResolver.resolveDefaultTaskCategory(
-                      task.getType(), task.getCategory()));
-              task.setTaskFormSchemaId(binding.schema() != null ? binding.schema().getId() : null);
-              task.setTaskFormSchemaVersion(
-                  binding.schema() != null ? binding.schema().getVersion() : null);
-              task.setWorkflowDefinitionId(workflowDefinition.getId());
-              task.setWorkflowStageId("pending-workflow-start");
-              task.setWorkflowStageDisplayName("Starting");
-              task.setAvailableTransitions(List.of());
-
-              Map<String, Object> variables = new HashMap<>();
-              variables.putAll(TaskWorkflowLifecycleResolver.buildWorkflowStartVariables(task));
-              if (task.getAbout() != null && task.getAbout().getFullyQualifiedName() != null) {
-                variables.put(
-                    getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE),
-                    EntityUtil.buildEntityLink(
-                        task.getAbout().getType(), task.getAbout().getFullyQualifiedName()));
-              }
-              variables.put(
-                  getNamespacedVariableName(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE),
-                  task.getUpdatedBy());
-              variables.put(
-                  "taskFormSchemaId",
-                  task.getTaskFormSchemaId() != null
-                      ? task.getTaskFormSchemaId().toString()
-                      : null);
-              variables.put("taskFormSchemaVersion", task.getTaskFormSchemaVersion());
-              variables.put("workflowDefinitionId", workflowDefinition.getId().toString());
-
-              WorkflowHandler.getInstance()
-                  .triggerByKey(
-                      getTriggerWorkflowId(workflowDefinition.getFullyQualifiedName()),
-                      task.getId().toString(),
-                      variables);
-
-              Task createdTask = waitForWorkflowManagedTask(uriInfo, task.getId());
-              return java.util.Optional.of(addHref(uriInfo, createdTask));
-            })
-        .orElse(null);
-  }
-
-  private boolean shouldCreateWorkflowManagedTask(Task task) {
-    return task != null
-        && task.getType() != null
-        && task.getAbout() != null
-        && !nullOrEmpty(task.getAbout().getType())
-        && !nullOrEmpty(task.getAbout().getFullyQualifiedName());
-  }
-
-  private Task waitForWorkflowManagedTask(UriInfo uriInfo, UUID taskId) {
-    RuntimeException lastFailure = null;
-
-    for (int attempt = 1; attempt <= WORKFLOW_CREATE_MAX_ATTEMPTS; attempt++) {
-      try {
-        return repository.get(uriInfo, taskId, getFields(FIELDS));
-      } catch (RuntimeException exc) {
-        lastFailure = exc;
-        if (attempt == WORKFLOW_CREATE_MAX_ATTEMPTS) {
-          break;
-        }
-
-        try {
-          Thread.sleep(WORKFLOW_CREATE_RETRY_MILLIS);
-        } catch (InterruptedException interruptedException) {
-          Thread.currentThread().interrupt();
-          throw exc;
-        }
-      }
-    }
-
-    throw lastFailure != null
-        ? lastFailure
-        : new IllegalStateException(
-            String.format("Workflow-managed task '%s' was not created in time", taskId));
   }
 
   private EntityReference resolveUserOrTeam(String fqn) {
