@@ -26,6 +26,7 @@ VERSIONS = {
     "avro": "avro>=1.11.4,<1.12",
     "boto3": "boto3~=1.41.5",
     "geoalchemy2": "GeoAlchemy2~=0.12",
+    "cloud-sql-python-connector-pymysql": "cloud-sql-python-connector[pymysql]>=1.0.0",
     "google-cloud-monitoring": "google-cloud-monitoring>=2.0.0",
     "google-cloud-storage": "google-cloud-storage>=1.43.0",
     "gcsfs": "gcsfs~=2023.12.1",
@@ -336,6 +337,7 @@ plugins: Dict[str, Set[str]] = {
     },
     "mysql": {
         VERSIONS["pymysql"],
+        VERSIONS["cloud-sql-python-connector-pymysql"],
         DATA_DIFF["mysql"],
     },
     "nifi": {},  # uses requests
