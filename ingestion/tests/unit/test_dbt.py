@@ -1357,6 +1357,36 @@ class DbtUnitTest(TestCase):
         assert len(columns) == 1
         assert columns[0].tags == []
 
+    @patch("metadata.utils.tag_utils.get_tag_label")
+    def test_dbt_column_meta_classification_tags_quoted(self, get_tag_label):
+        """Quoted tag names containing dots (e.g. PII."22.8.5.1") are parsed correctly"""
+        expected_tag = TagLabel(
+            tagFQN='PII."22.8.5.1"',
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Classification.value,
+        )
+        get_tag_label.return_value = expected_tag
+
+        manifest_column = SimpleNamespace(
+            name="ip_col",
+            tags=[],
+            meta={"openmetadata": {"tags": ['PII."22.8.5.1"']}},
+            description=None,
+            data_type="varchar",
+        )
+        manifest_node = SimpleNamespace(columns={"ip_col": manifest_column})
+
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+
+        assert len(columns) == 1
+        assert expected_tag in columns[0].tags
+        call_kwargs = get_tag_label.call_args
+        assert call_kwargs.kwargs["classification_name"] == "PII"
+        assert call_kwargs.kwargs["tag_name"] == '"22.8.5.1"'
+
     def test_parse_exposure_node_exposure_absent(self):
         _, dbt_objects = self.get_dbt_object_files(MOCK_SAMPLE_MANIFEST_V8)
 
