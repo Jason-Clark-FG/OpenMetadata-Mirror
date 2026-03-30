@@ -10,9 +10,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import React, { useState } from "react";
-import type { Meta, StoryObj } from "@storybook/react";
-import type { SortDescriptor } from "react-aria-components";
+import React, { useState } from 'react';
+import type { Meta, StoryObj } from '@storybook/react';
+import type { SortDescriptor } from 'react-aria-components';
 import {
   ColumnResizer,
   Dialog,
@@ -20,79 +20,78 @@ import {
   Popover,
   ResizableTableContainer,
   TableBody as AriaTableBody,
-} from "react-aria-components";
-import { ChevronDown, ChevronRight } from "@untitledui/icons";
-import { Badge } from "../components/base/badges/badges";
-import { PaginationPageDefault } from "../components/application/pagination/pagination";
+} from 'react-aria-components';
+import { ChevronDown, ChevronRight } from '@untitledui/icons';
+import { Badge } from '../components/base/badges/badges';
+import { PaginationPageDefault } from '../components/application/pagination/pagination';
 import {
   Table,
   TableCard,
   TableRowActionsDropdown,
-} from "../components/application/table/table";
+} from '../components/application/table/table';
 
 interface User {
   id: number;
   name: string;
   email: string;
   role: string;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
 }
 
 const SAMPLE_DATA: User[] = [
   {
     id: 1,
-    name: "Olivia Rhye",
-    email: "olivia@example.com",
-    role: "Admin",
-    status: "active",
+    name: 'Olivia Rhye',
+    email: 'olivia@example.com',
+    role: 'Admin',
+    status: 'active',
   },
   {
     id: 2,
-    name: "Phoenix Baker",
-    email: "phoenix@example.com",
-    role: "Editor",
-    status: "active",
+    name: 'Phoenix Baker',
+    email: 'phoenix@example.com',
+    role: 'Editor',
+    status: 'active',
   },
   {
     id: 3,
-    name: "Lana Steiner",
-    email: "lana@example.com",
-    role: "Viewer",
-    status: "inactive",
+    name: 'Lana Steiner',
+    email: 'lana@example.com',
+    role: 'Viewer',
+    status: 'inactive',
   },
   {
     id: 4,
-    name: "Demi Wilkinson",
-    email: "demi@example.com",
-    role: "Editor",
-    status: "active",
+    name: 'Demi Wilkinson',
+    email: 'demi@example.com',
+    role: 'Editor',
+    status: 'active',
   },
   {
     id: 5,
-    name: "Candice Wu",
-    email: "candice@example.com",
-    role: "Admin",
-    status: "inactive",
+    name: 'Candice Wu',
+    email: 'candice@example.com',
+    role: 'Admin',
+    status: 'inactive',
   },
 ];
 
-const StatusBadge = ({ status }: { status: "active" | "inactive" }) => (
+const StatusBadge = ({ status }: { status: 'active' | 'inactive' }) => (
   <Badge
-    type="pill-color"
-    color={status === "active" ? "success" : "gray"}
+    color={status === 'active' ? 'success' : 'gray'}
     size="sm"
-  >
-    {status === "active" ? "Active" : "Inactive"}
+    type="pill-color">
+    {status === 'active' ? 'Active' : 'Inactive'}
   </Badge>
 );
 
 const meta = {
-  title: "Components/Table",
+  title: 'Components/Table',
   component: Table,
   parameters: {
-    layout: "padded",
+    layout: 'padded',
   },
-  tags: ["autodocs"],
+  tags: ['autodocs'],
 } satisfies Meta<typeof Table>;
 
 export default meta;
@@ -125,7 +124,7 @@ export const Default: Story = {
       </Table.Header>
       <AriaTableBody>
         {SAMPLE_DATA.map((user) => (
-          <Table.Row key={user.id} id={String(user.id)}>
+          <Table.Row id={String(user.id)} key={user.id}>
             <Table.Cell>
               <span className="tw:text-sm tw:font-medium tw:text-primary">
                 {user.name}
@@ -165,7 +164,7 @@ export const SmallSize: Story = {
       </Table.Header>
       <AriaTableBody>
         {SAMPLE_DATA.map((user) => (
-          <Table.Row key={user.id} id={String(user.id)}>
+          <Table.Row id={String(user.id)} key={user.id}>
             <Table.Cell>
               <span className="tw:text-sm tw:font-medium tw:text-primary">
                 {user.name}
@@ -181,21 +180,20 @@ export const SmallSize: Story = {
 };
 
 const WithSelectionExample = () => {
-  const [selectedKeys, setSelectedKeys] = useState<"all" | Set<string>>(
-    new Set(),
+  const [selectedKeys, setSelectedKeys] = useState<'all' | Set<string>>(
+    new Set()
   );
 
   return (
     <div>
       <Table
         aria-label="Users table with selection"
-        selectionMode="multiple"
-        selectionBehavior="toggle"
         selectedKeys={selectedKeys}
+        selectionBehavior="toggle"
+        selectionMode="multiple"
         onSelectionChange={(keys) =>
-          setSelectedKeys(keys as "all" | Set<string>)
-        }
-      >
+          setSelectedKeys(keys as 'all' | Set<string>)
+        }>
         <Table.Header>
           <Table.Head isRowHeader>
             <span className="tw:text-xs tw:font-medium tw:text-tertiary">
@@ -220,7 +218,7 @@ const WithSelectionExample = () => {
         </Table.Header>
         <AriaTableBody>
           {SAMPLE_DATA.map((user) => (
-            <Table.Row key={user.id} id={String(user.id)}>
+            <Table.Row id={String(user.id)} key={user.id}>
               <Table.Cell>
                 <span className="tw:text-sm tw:font-medium tw:text-primary">
                   {user.name}
@@ -236,10 +234,10 @@ const WithSelectionExample = () => {
         </AriaTableBody>
       </Table>
       <p className="tw:mt-4 tw:text-sm tw:text-tertiary">
-        Selected:{" "}
-        {selectedKeys === "all"
-          ? "All"
-          : [...selectedKeys].join(", ") || "None"}
+        Selected:{' '}
+        {selectedKeys === 'all'
+          ? 'All'
+          : [...selectedKeys].join(', ') || 'None'}
       </p>
     </div>
   );
@@ -251,35 +249,34 @@ export const WithSelection: StoryObj = {
 
 const WithSortingExample = () => {
   const [sortDescriptor, setSortDescriptor] = useState<SortDescriptor>({
-    column: "name",
-    direction: "ascending",
+    column: 'name',
+    direction: 'ascending',
   });
 
   const sorted = [...SAMPLE_DATA].sort((a, b) => {
     const key = sortDescriptor.column as keyof User;
     const cmp = String(a[key]).localeCompare(String(b[key]));
 
-    return sortDescriptor.direction === "descending" ? -cmp : cmp;
+    return sortDescriptor.direction === 'descending' ? -cmp : cmp;
   });
 
   return (
     <Table
       aria-label="Users table with sorting"
       sortDescriptor={sortDescriptor}
-      onSortChange={setSortDescriptor}
-    >
+      onSortChange={setSortDescriptor}>
       <Table.Header>
-        <Table.Head id="name" isRowHeader allowsSorting>
+        <Table.Head allowsSorting isRowHeader id="name">
           <span className="tw:text-xs tw:font-medium tw:text-tertiary">
             Name
           </span>
         </Table.Head>
-        <Table.Head id="email" allowsSorting>
+        <Table.Head allowsSorting id="email">
           <span className="tw:text-xs tw:font-medium tw:text-tertiary">
             Email
           </span>
         </Table.Head>
-        <Table.Head id="role" allowsSorting>
+        <Table.Head allowsSorting id="role">
           <span className="tw:text-xs tw:font-medium tw:text-tertiary">
             Role
           </span>
@@ -292,7 +289,7 @@ const WithSortingExample = () => {
       </Table.Header>
       <AriaTableBody>
         {sorted.map((user) => (
-          <Table.Row key={user.id} id={String(user.id)}>
+          <Table.Row id={String(user.id)} key={user.id}>
             <Table.Cell>
               <span className="tw:text-sm tw:font-medium tw:text-primary">
                 {user.name}
@@ -344,7 +341,7 @@ export const WithRowActions: StoryObj = {
       </Table.Header>
       <AriaTableBody>
         {SAMPLE_DATA.map((user) => (
-          <Table.Row key={user.id} id={String(user.id)}>
+          <Table.Row id={String(user.id)} key={user.id}>
             <Table.Cell>
               <span className="tw:text-sm tw:font-medium tw:text-primary">
                 {user.name}
@@ -370,9 +367,9 @@ export const InsideTableCard: StoryObj = {
     <div style={{ maxWidth: 900 }}>
       <TableCard.Root>
         <TableCard.Header
-          title="Team Members"
           badge="5 users"
           description="Manage your team members and their account permissions here."
+          title="Team Members"
         />
         <Table aria-label="Team members">
           <Table.Header>
@@ -399,7 +396,7 @@ export const InsideTableCard: StoryObj = {
           </Table.Header>
           <AriaTableBody>
             {SAMPLE_DATA.map((user) => (
-              <Table.Row key={user.id} id={String(user.id)}>
+              <Table.Row id={String(user.id)} key={user.id}>
                 <Table.Cell>
                   <span className="tw:text-sm tw:font-medium tw:text-primary">
                     {user.name}
@@ -444,8 +441,7 @@ export const EmptyState: StoryObj = {
           <div className="tw:py-12 tw:text-center tw:text-sm tw:text-tertiary">
             No data available
           </div>
-        )}
-      >
+        )}>
         {[]}
       </AriaTableBody>
     </Table>
@@ -479,7 +475,7 @@ export const WithColumnTooltips: StoryObj = {
       </Table.Header>
       <AriaTableBody>
         {SAMPLE_DATA.slice(0, 3).map((user) => (
-          <Table.Row key={user.id} id={String(user.id)}>
+          <Table.Row id={String(user.id)} key={user.id}>
             <Table.Cell>
               <span className="tw:text-sm tw:font-medium tw:text-primary">
                 {user.name}
@@ -498,21 +494,20 @@ export const WithColumnTooltips: StoryObj = {
 };
 
 const WithSingleSelectionExample = () => {
-  const [selectedKeys, setSelectedKeys] = useState<"all" | Set<string>>(
-    new Set(),
+  const [selectedKeys, setSelectedKeys] = useState<'all' | Set<string>>(
+    new Set()
   );
 
   return (
     <div>
       <Table
         aria-label="Single selection table"
-        selectionMode="single"
-        selectionBehavior="toggle"
         selectedKeys={selectedKeys}
+        selectionBehavior="toggle"
+        selectionMode="single"
         onSelectionChange={(keys) =>
-          setSelectedKeys(keys as "all" | Set<string>)
-        }
-      >
+          setSelectedKeys(keys as 'all' | Set<string>)
+        }>
         <Table.Header>
           <Table.Head isRowHeader>
             <span className="tw:text-xs tw:font-medium tw:text-tertiary">
@@ -532,7 +527,7 @@ const WithSingleSelectionExample = () => {
         </Table.Header>
         <AriaTableBody>
           {SAMPLE_DATA.map((user) => (
-            <Table.Row key={user.id} id={String(user.id)}>
+            <Table.Row id={String(user.id)} key={user.id}>
               <Table.Cell>
                 <span className="tw:text-sm tw:font-medium tw:text-primary">
                   {user.name}
@@ -545,10 +540,10 @@ const WithSingleSelectionExample = () => {
         </AriaTableBody>
       </Table>
       <p className="tw:mt-4 tw:text-sm tw:text-tertiary">
-        Selected:{" "}
-        {selectedKeys === "all"
-          ? "All"
-          : [...selectedKeys].join(", ") || "None"}
+        Selected:{' '}
+        {selectedKeys === 'all'
+          ? 'All'
+          : [...selectedKeys].join(', ') || 'None'}
       </p>
     </div>
   );
@@ -563,8 +558,8 @@ export const TableCardSmall: StoryObj = {
     <div style={{ maxWidth: 700 }}>
       <TableCard.Root size="sm">
         <TableCard.Header
-          title="Recent Activity"
           description="Latest actions performed by team members."
+          title="Recent Activity"
         />
         <Table aria-label="Recent activity">
           <Table.Header>
@@ -586,7 +581,7 @@ export const TableCardSmall: StoryObj = {
           </Table.Header>
           <AriaTableBody>
             {SAMPLE_DATA.slice(0, 3).map((user) => (
-              <Table.Row key={user.id} id={String(user.id)}>
+              <Table.Row id={String(user.id)} key={user.id}>
                 <Table.Cell>
                   <span className="tw:text-sm tw:font-medium tw:text-primary">
                     {user.name}
@@ -613,7 +608,7 @@ export const TableCardSmall: StoryObj = {
 const WithColumnFilterDropdownExample = () => {
   const [openCol, setOpenCol] = useState<string | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
 
   const visibleData =
@@ -625,6 +620,7 @@ const WithColumnFilterDropdownExample = () => {
     setSelectedStatuses((prev) => {
       const next = new Set(prev);
       checked ? next.add(status) : next.delete(status);
+
       return next;
     });
   };
@@ -646,14 +642,12 @@ const WithColumnFilterDropdownExample = () => {
             <div className="tw:flex tw:items-center tw:gap-1">
               Status
               <DialogTrigger
-                isOpen={openCol === "status"}
-                onOpenChange={(isOpen) => setOpenCol(isOpen ? "status" : null)}
-              >
+                isOpen={openCol === 'status'}
+                onOpenChange={(isOpen) => setOpenCol(isOpen ? 'status' : null)}>
                 <button
                   aria-label="Filter status"
-                  className="tw:ml-1 tw:p-0.5 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-xs tw:text-tertiary tw:rounded tw:hover:bg-secondary"
-                >
-                  {selectedStatuses.size > 0 ? "●" : "○"}
+                  className="tw:ml-1 tw:p-0.5 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-xs tw:text-tertiary tw:rounded tw:hover:bg-secondary">
+                  {selectedStatuses.size > 0 ? '●' : '○'}
                 </button>
                 <Popover placement="bottom right">
                   <Dialog className="tw:outline-none">
@@ -661,11 +655,10 @@ const WithColumnFilterDropdownExample = () => {
                       <p className="tw:text-xs tw:font-medium tw:text-secondary tw:mb-2">
                         Filter by status
                       </p>
-                      {(["active", "inactive"] as const).map((s) => (
+                      {(['active', 'inactive'] as const).map((s) => (
                         <label
-                          key={s}
                           className="tw:flex tw:items-center tw:gap-2 tw:text-sm tw:p-1 tw:cursor-pointer"
-                        >
+                          key={s}>
                           <input
                             checked={selectedStatuses.has(s)}
                             type="checkbox"
@@ -677,14 +670,12 @@ const WithColumnFilterDropdownExample = () => {
                       <div className="tw:flex tw:gap-2 tw:mt-3 tw:pt-2 tw:border-t tw:border-secondary_alt">
                         <button
                           className="tw:flex-1 tw:text-xs tw:bg-brand-solid tw:text-white tw:rounded tw:px-2 tw:py-1 tw:cursor-pointer tw:border-0"
-                          onClick={confirm}
-                        >
+                          onClick={confirm}>
                           Confirm
                         </button>
                         <button
                           className="tw:flex-1 tw:text-xs tw:bg-transparent tw:text-secondary tw:rounded tw:px-2 tw:py-1 tw:cursor-pointer tw:border tw:border-secondary_alt"
-                          onClick={clearFilters}
-                        >
+                          onClick={clearFilters}>
                           Clear
                         </button>
                       </div>
@@ -697,7 +688,7 @@ const WithColumnFilterDropdownExample = () => {
         </Table.Header>
         <AriaTableBody>
           {visibleData.map((user) => (
-            <Table.Row key={user.id} id={String(user.id)}>
+            <Table.Row id={String(user.id)} key={user.id}>
               <Table.Cell>
                 <span className="tw:text-sm tw:font-medium tw:text-primary">
                   {user.name}
@@ -713,10 +704,10 @@ const WithColumnFilterDropdownExample = () => {
         </AriaTableBody>
       </Table>
       <p className="tw:mt-3 tw:text-xs tw:text-tertiary">
-        Active filter:{" "}
+        Active filter:{' '}
         {selectedStatuses.size > 0
-          ? [...selectedStatuses].join(", ")
-          : "none — showing all rows"}
+          ? [...selectedStatuses].join(', ')
+          : 'none — showing all rows'}
       </p>
     </div>
   );
@@ -728,7 +719,7 @@ export const WithColumnFilterDropdown: StoryObj = {
     docs: {
       description: {
         story:
-          "Column header filter using a controlled `DialogTrigger`. Clicking **Confirm** calls `confirm()` which sets `isOpen=false`, closing the popover immediately — the same fix applied in `TableV2`.",
+          'Column header filter using a controlled `DialogTrigger`. Clicking **Confirm** calls `confirm()` which sets `isOpen=false`, closing the popover immediately — the same fix applied in `TableV2`.',
       },
     },
   },
@@ -747,20 +738,25 @@ interface TreeRow {
 }
 
 const TREE_DATA: TreeRow[] = [
-  { id: "1", name: "Users", type: "Folder", depth: 0 },
-  { id: "1-1", name: "Olivia Rhye", type: "Admin", depth: 1 },
-  { id: "1-2", name: "Phoenix Baker", type: "Editor", depth: 1 },
-  { id: "2", name: "Groups", type: "Folder", depth: 0 },
-  { id: "2-1", name: "Engineering", type: "Group", depth: 1 },
-  { id: "2-1-1", name: "Backend", type: "Sub-group", depth: 2 },
-  { id: "2-1-2", name: "Frontend", type: "Sub-group", depth: 2 },
-  { id: "2-2", name: "Design", type: "Group", depth: 1 },
+  { id: '1', name: 'Users', type: 'Folder', depth: 0 },
+  { id: '1-1', name: 'Olivia Rhye', type: 'Admin', depth: 1 },
+  { id: '1-2', name: 'Phoenix Baker', type: 'Editor', depth: 1 },
+  { id: '2', name: 'Groups', type: 'Folder', depth: 0 },
+  { id: '2-1', name: 'Engineering', type: 'Group', depth: 1 },
+  { id: '2-1-1', name: 'Backend', type: 'Sub-group', depth: 2 },
+  { id: '2-1-2', name: 'Frontend', type: 'Sub-group', depth: 2 },
+  { id: '2-2', name: 'Design', type: 'Group', depth: 1 },
 ];
 
 const depthRowClass = (depth: number): string => {
-  if (depth === 1) return "tw:bg-secondary/50";
-  if (depth >= 2) return "tw:bg-secondary tw:text-tertiary";
-  return "";
+  if (depth === 1) {
+    return 'tw:bg-secondary/50';
+  }
+  if (depth >= 2) {
+    return 'tw:bg-secondary tw:text-tertiary';
+  }
+
+  return '';
 };
 
 export const WithNestedRowDepth: StoryObj = {
@@ -775,16 +771,14 @@ export const WithNestedRowDepth: StoryObj = {
         <AriaTableBody>
           {TREE_DATA.map((row) => (
             <Table.Row
-              key={row.id}
-              id={row.id}
               className={depthRowClass(row.depth)}
-            >
+              id={row.id}
+              key={row.id}>
               <Table.Cell>
                 <span
                   className="tw:text-sm tw:font-medium tw:text-primary"
-                  style={{ paddingLeft: `${row.depth * 20}px` }}
-                >
-                  {row.depth > 0 ? "↳ " : ""}
+                  style={{ paddingLeft: `${row.depth * 20}px` }}>
+                  {row.depth > 0 ? '↳ ' : ''}
                   {row.name}
                 </span>
               </Table.Cell>
@@ -801,8 +795,8 @@ export const WithNestedRowDepth: StoryObj = {
         </AriaTableBody>
       </Table>
       <p className="tw:mt-3 tw:text-xs tw:text-tertiary">
-        Each row receives its actual <code>depth</code> value (0 / 1 / 2) in{" "}
-        <code>rowClassName(record, index, depth)</code> — previously always{" "}
+        Each row receives its actual <code>depth</code> value (0 / 1 / 2) in{' '}
+        <code>rowClassName(record, index, depth)</code> — previously always{' '}
         <code>0</code>.
       </p>
     </div>
@@ -811,7 +805,7 @@ export const WithNestedRowDepth: StoryObj = {
     docs: {
       description: {
         story:
-          "`rowClassName` now receives the real nesting depth instead of a hardcoded `0`. Rows at depth 0/1/2 get progressively stronger background tints via `depthRowClass(depth)`.",
+          '`rowClassName` now receives the real nesting depth instead of a hardcoded `0`. Rows at depth 0/1/2 get progressively stronger background tints via `depthRowClass(depth)`.',
       },
     },
   },
@@ -827,12 +821,11 @@ export const WithResizableColumns: StoryObj = {
     <ResizableTableContainer className="tw:overflow-auto tw:relative">
       <Table aria-label="Resizable columns table" className="tw:table-fixed">
         <Table.Header>
-          {["Name", "Email", "Role", "Status"].map((col) => (
+          {['Name', 'Email', 'Role', 'Status'].map((col) => (
             <Table.Head
+              isRowHeader={col === 'Name'}
               key={col}
-              isRowHeader={col === "Name"}
-              style={{ position: "relative", width: 180, minWidth: 80 }}
-            >
+              style={{ position: 'relative', width: 180, minWidth: 80 }}>
               <span className="tw:text-xs tw:font-medium tw:text-tertiary">
                 {col}
               </span>
@@ -842,7 +835,7 @@ export const WithResizableColumns: StoryObj = {
         </Table.Header>
         <AriaTableBody>
           {SAMPLE_DATA.map((user) => (
-            <Table.Row key={user.id} id={String(user.id)}>
+            <Table.Row id={String(user.id)} key={user.id}>
               <Table.Cell>
                 <span className="tw:text-sm tw:font-medium tw:text-primary tw:truncate">
                   {user.name}
@@ -884,25 +877,25 @@ interface Department {
 
 const DEPT_DATA: Department[] = [
   {
-    id: "eng",
-    name: "Engineering",
+    id: 'eng',
+    name: 'Engineering',
     headCount: 3,
     members: [
-      { id: "eng-1", name: "Olivia Rhye", role: "Backend" },
-      { id: "eng-2", name: "Phoenix Baker", role: "Frontend" },
-      { id: "eng-3", name: "Lana Steiner", role: "DevOps" },
+      { id: 'eng-1', name: 'Olivia Rhye', role: 'Backend' },
+      { id: 'eng-2', name: 'Phoenix Baker', role: 'Frontend' },
+      { id: 'eng-3', name: 'Lana Steiner', role: 'DevOps' },
     ],
   },
   {
-    id: "design",
-    name: "Design",
+    id: 'design',
+    name: 'Design',
     headCount: 2,
     members: [
-      { id: "des-1", name: "Demi Wilkinson", role: "UX" },
-      { id: "des-2", name: "Candice Wu", role: "Visual" },
+      { id: 'des-1', name: 'Demi Wilkinson', role: 'UX' },
+      { id: 'des-2', name: 'Candice Wu', role: 'Visual' },
     ],
   },
-  { id: "legal", name: "Legal", headCount: 0 },
+  { id: 'legal', name: 'Legal', headCount: 0 },
 ];
 
 const WithExpandableRowsExample = () => {
@@ -912,6 +905,7 @@ const WithExpandableRowsExample = () => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+
       return next;
     });
 
@@ -929,7 +923,7 @@ const WithExpandableRowsExample = () => {
           const hasChildren = (dept.members?.length ?? 0) > 0;
 
           return [
-            <Table.Row key={dept.id} id={dept.id}>
+            <Table.Row id={dept.id} key={dept.id}>
               <Table.Cell>
                 <div className="tw:flex tw:items-center tw:gap-1">
                   {hasChildren ? (
@@ -937,8 +931,7 @@ const WithExpandableRowsExample = () => {
                       aria-expanded={isExpanded}
                       className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex"
                       data-testid="expand-icon"
-                      onClick={() => toggle(dept.id)}
-                    >
+                      onClick={() => toggle(dept.id)}>
                       {isExpanded ? (
                         <ChevronDown className="tw:size-4 tw:text-tertiary" />
                       ) : (
@@ -964,17 +957,15 @@ const WithExpandableRowsExample = () => {
             ...(isExpanded && dept.members
               ? dept.members.map((m) => (
                   <Table.Row
-                    key={m.id}
-                    id={m.id}
                     className="tw:bg-secondary/40"
-                  >
+                    id={m.id}
+                    key={m.id}>
                     <Table.Cell />
                     <Table.Cell />
                     <Table.Cell>
                       <span
                         className="tw:text-sm tw:text-primary"
-                        style={{ paddingLeft: 24 }}
-                      >
+                        style={{ paddingLeft: 24 }}>
                         {m.name}
                       </span>
                     </Table.Cell>
@@ -999,7 +990,7 @@ export const WithExpandableRows: StoryObj = {
     docs: {
       description: {
         story:
-          "Controlled expand/collapse using `ChevronDown`/`ChevronRight` icons and a `Set` of expanded IDs. This is the same expand-icon pattern that `TableV2` renders when the `expandable` prop is provided.",
+          'Controlled expand/collapse using `ChevronDown`/`ChevronRight` icons and a `Set` of expanded IDs. This is the same expand-icon pattern that `TableV2` renders when the `expandable` prop is provided.',
       },
     },
   },
@@ -1017,8 +1008,7 @@ const WithLoadingStateExample = () => {
       <div className="tw:mb-3">
         <button
           className="tw:text-sm tw:px-3 tw:py-1 tw:rounded tw:border tw:border-secondary_alt tw:cursor-pointer tw:bg-transparent"
-          onClick={() => setLoading((v) => !v)}
-        >
+          onClick={() => setLoading((v) => !v)}>
           Toggle loading
         </button>
       </div>
@@ -1037,7 +1027,7 @@ const WithLoadingStateExample = () => {
           </Table.Header>
           <AriaTableBody>
             {SAMPLE_DATA.map((user) => (
-              <Table.Row key={user.id} id={String(user.id)}>
+              <Table.Row id={String(user.id)} key={user.id}>
                 <Table.Cell>
                   <span className="tw:text-sm tw:font-medium tw:text-primary">
                     {user.name}
@@ -1092,7 +1082,7 @@ const WithPaginationExample = () => {
         </Table.Header>
         <AriaTableBody>
           {slice.map((user) => (
-            <Table.Row key={user.id} id={String(user.id)}>
+            <Table.Row id={String(user.id)} key={user.id}>
               <Table.Cell>
                 <span className="tw:text-sm tw:font-medium tw:text-primary">
                   {user.name}
@@ -1135,26 +1125,36 @@ export const WithPagination: StoryObj = {
 
 export const WithStickyHeader: StoryObj = {
   render: () => (
-    <Table aria-label="Sticky header table" stickyHeader>
+    <Table stickyHeader aria-label="Sticky header table">
       <Table.Header>
         <Table.Head isRowHeader>
-          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Name</span>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">
+            Name
+          </span>
         </Table.Head>
         <Table.Head>
-          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Email</span>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">
+            Email
+          </span>
         </Table.Head>
         <Table.Head>
-          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Role</span>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">
+            Role
+          </span>
         </Table.Head>
         <Table.Head>
-          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Status</span>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">
+            Status
+          </span>
         </Table.Head>
       </Table.Header>
       <AriaTableBody>
         {[...SAMPLE_DATA, ...SAMPLE_DATA, ...SAMPLE_DATA].map((user, i) => (
-          <Table.Row key={`${user.id}-${i}`} id={`${user.id}-${i}`}>
+          <Table.Row id={`${user.id}-${i}`} key={`${user.id}-${i}`}>
             <Table.Cell>
-              <span className="tw:text-sm tw:font-medium tw:text-primary">{user.name}</span>
+              <span className="tw:text-sm tw:font-medium tw:text-primary">
+                {user.name}
+              </span>
             </Table.Cell>
             <Table.Cell>{user.email}</Table.Cell>
             <Table.Cell>{user.role}</Table.Cell>
@@ -1170,7 +1170,7 @@ export const WithStickyHeader: StoryObj = {
     docs: {
       description: {
         story:
-          "Pass `stickyHeader` to keep the `<thead>` pinned while the body scrolls. The table wrapper automatically gains `overflow-auto max-h-100`.",
+          'Pass `stickyHeader` to keep the `<thead>` pinned while the body scrolls. The table wrapper automatically gains `overflow-auto max-h-100`.',
       },
     },
   },

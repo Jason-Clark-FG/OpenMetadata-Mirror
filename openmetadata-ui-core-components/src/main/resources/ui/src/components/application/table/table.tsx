@@ -79,7 +79,7 @@ const TableCardRoot = ({
         {...props}
         className={cx(
           'tw:overflow-hidden tw:rounded-xl tw:bg-primary tw:shadow-xs tw:ring-1 tw:ring-secondary',
-          className,
+          className
         )}>
         {children}
       </div>
@@ -114,14 +114,14 @@ const TableCardHeader = ({
       className={cx(
         'tw:relative tw:flex tw:flex-col tw:items-start tw:gap-4 tw:border-b tw:border-secondary tw:bg-primary tw:px-4 tw:md:flex-row',
         size === 'sm' ? 'tw:py-4 tw:md:px-5' : 'tw:py-5 tw:md:px-6',
-        className,
+        className
       )}>
       <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-0.5">
         <div className="tw:flex tw:items-center tw:gap-2">
           <h2
             className={cx(
               'tw:font-semibold tw:text-primary',
-              size === 'sm' ? 'tw:text-md' : 'tw:text-lg',
+              size === 'sm' ? 'tw:text-md' : 'tw:text-lg'
             )}>
             {title}
           </h2>
@@ -145,8 +145,7 @@ const TableCardHeader = ({
 };
 
 interface TableRootProps
-  extends
-    AriaTableProps,
+  extends AriaTableProps,
     Omit<ComponentPropsWithRef<'table'>, 'className' | 'slot' | 'style'> {
   size?: 'sm' | 'md';
   stickyHeader?: boolean;
@@ -166,13 +165,13 @@ const TableRoot = ({
       <div
         className={cx(
           'tw:overflow-x-auto',
-          stickyHeader && 'tw:overflow-auto',
+          stickyHeader && 'tw:overflow-auto'
         )}>
         <AriaTable
           className={(state) =>
             cx(
               'tw:w-full tw:overflow-x-hidden',
-              typeof className === 'function' ? className(state) : className,
+              typeof className === 'function' ? className(state) : className
             )
           }
           {...props}
@@ -184,8 +183,7 @@ const TableRoot = ({
 TableRoot.displayName = 'Table';
 
 interface TableHeaderProps<T extends object>
-  extends
-    AriaTableHeaderProps<T>,
+  extends AriaTableHeaderProps<T>,
     Omit<
       ComponentPropsWithRef<'thead'>,
       'children' | 'className' | 'slot' | 'style'
@@ -216,14 +214,14 @@ const TableHeader = <T extends object>({
           bordered &&
             'tw:[&>tr>th]:after:pointer-events-none tw:[&>tr>th]:after:absolute tw:[&>tr>th]:after:inset-x-0 tw:[&>tr>th]:after:bottom-0 tw:[&>tr>th]:after:h-px tw:[&>tr>th]:after:bg-border-secondary tw:[&>tr>th]:focus-visible:after:bg-transparent',
 
-          typeof className === 'function' ? className(state) : className,
+          typeof className === 'function' ? className(state) : className
         )
       }>
       {selectionBehavior === 'toggle' && (
         <AriaColumn
           className={cx(
             'tw:relative tw:py-2 tw:pr-0 tw:pl-4',
-            size === 'sm' ? 'tw:w-9 tw:md:pl-5' : 'tw:w-11 tw:md:pl-6',
+            size === 'sm' ? 'tw:w-9 tw:md:pl-5' : 'tw:w-11 tw:md:pl-6'
           )}>
           {selectionMode === 'multiple' && (
             <div className="tw:flex tw:items-start">
@@ -240,8 +238,7 @@ const TableHeader = <T extends object>({
 TableHeader.displayName = 'TableHeader';
 
 interface TableHeadProps
-  extends
-    AriaColumnProps,
+  extends AriaColumnProps,
     Omit<
       ThHTMLAttributes<HTMLTableCellElement>,
       'children' | 'className' | 'style' | 'id'
@@ -267,7 +264,7 @@ const TableHead = ({
           'tw:relative tw:p-0 tw:px-6 tw:py-2 tw:outline-hidden tw:focus-visible:z-1 tw:focus-visible:ring-2 tw:focus-visible:ring-focus-ring tw:focus-visible:ring-offset-bg-primary tw:focus-visible:ring-inset',
           selectionBehavior === 'toggle' && 'tw:nth-2:pl-3',
           state.allowsSorting && 'tw:cursor-pointer',
-          typeof className === 'function' ? className(state) : className,
+          typeof className === 'function' ? className(state) : className
         )
       }>
       {(state) => (
@@ -294,7 +291,7 @@ const TableHead = ({
               <ArrowDown
                 className={cx(
                   'tw:size-3 tw:stroke-[3px] tw:text-fg-quaternary',
-                  state.sortDirection === 'ascending' && 'tw:rotate-180',
+                  state.sortDirection === 'ascending' && 'tw:rotate-180'
                 )}
               />
             ) : (
@@ -312,8 +309,7 @@ const TableHead = ({
 TableHead.displayName = 'TableHead';
 
 interface TableRowProps<T extends object>
-  extends
-    AriaRowProps<T>,
+  extends AriaRowProps<T>,
     Omit<
       ComponentPropsWithRef<'tr'>,
       'children' | 'className' | 'onClick' | 'slot' | 'style' | 'id'
@@ -343,14 +339,14 @@ const TableRow = <T extends object>({
           // Row border—using an "after" pseudo-element to avoid the border taking up space.
           'tw:[&>td]:after:absolute tw:[&>td]:after:inset-x-0 tw:[&>td]:after:bottom-0 tw:[&>td]:after:h-px tw:[&>td]:after:w-full tw:[&>td]:after:bg-border-secondary tw:last:[&>td]:after:hidden tw:[&>td]:focus-visible:after:opacity-0 tw:focus-visible:[&>td]:after:opacity-0',
 
-          typeof className === 'function' ? className(state) : className,
+          typeof className === 'function' ? className(state) : className
         )
       }>
       {selectionBehavior === 'toggle' && (
         <AriaCell
           className={cx(
             'tw:relative tw:py-2 tw:pr-0 tw:pl-4',
-            size === 'sm' ? 'tw:md:pl-5' : 'tw:md:pl-6',
+            size === 'sm' ? 'tw:md:pl-5' : 'tw:md:pl-6'
           )}>
           <div className="tw:flex tw:items-end">
             <Checkbox size={size} slot="selection" />
@@ -365,8 +361,7 @@ const TableRow = <T extends object>({
 TableRow.displayName = 'TableRow';
 
 interface TableCellProps
-  extends
-    AriaCellProps,
+  extends AriaCellProps,
     Omit<
       TdHTMLAttributes<HTMLTableCellElement>,
       'children' | 'className' | 'style' | 'id'
@@ -389,7 +384,7 @@ const TableCell = ({ className, children, ...props }: TableCellProps) => {
 
           selectionBehavior === 'toggle' && 'tw:nth-2:pl-3',
 
-          typeof className === 'function' ? className(state) : className,
+          typeof className === 'function' ? className(state) : className
         )
       }>
       {children}
