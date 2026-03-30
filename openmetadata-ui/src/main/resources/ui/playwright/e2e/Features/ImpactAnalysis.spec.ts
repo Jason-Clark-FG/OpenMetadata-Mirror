@@ -88,6 +88,16 @@ const waitForDirectionalColumnLineageResponse = (
     return true;
   });
 
+const openImpactAnalysisTab = async (page: Page) => {
+  const impactAnalysisTab = page.getByRole('tab', {
+    name: 'Impact Analysis',
+  });
+
+  await expect(impactAnalysisTab).toBeVisible();
+  await impactAnalysisTab.scrollIntoViewIfNeeded();
+  await impactAnalysisTab.click();
+};
+
 test.describe('Impact Analysis', () => {
   let tableColumns: string[] = [];
   let table2Columns: string[] = [];
@@ -277,9 +287,7 @@ test.describe('Impact Analysis', () => {
       const lineageResponse = page.waitForResponse(
         `/api/v1/lineage/getLineageByEntityCount?*`
       );
-      await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-        force: true,
-      });
+      await openImpactAnalysisTab(page);
       await lineageResponse;
     }
   );
@@ -352,9 +360,7 @@ test.describe('Impact Analysis', () => {
     const dashboardLineageResponse = page.waitForResponse(
       `/api/v1/lineage/getLineageByEntityCount?*`
     );
-    await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-      force: true,
-    });
+    await openImpactAnalysisTab(page);
     await dashboardLineageResponse;
 
     await updateLineageConfigFromModal(page, {
@@ -390,9 +396,7 @@ test.describe('Impact Analysis', () => {
     const topicLineageResponse = page.waitForResponse(
       `/api/v1/lineage/getLineageByEntityCount?*`
     );
-    await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-      force: true,
-    });
+    await openImpactAnalysisTab(page);
     await topicLineageResponse;
 
     await updateLineageConfigFromModal(page, {
@@ -534,9 +538,7 @@ test.describe('Impact Analysis', () => {
     const table2LineageResponse = page.waitForResponse(
       `/api/v1/lineage/getLineageByEntityCount?*`
     );
-    await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-      force: true,
-    });
+    await openImpactAnalysisTab(page);
     await table2LineageResponse;
 
     await updateLineageConfigFromModal(page, {
@@ -575,9 +577,7 @@ test.describe('Impact Analysis', () => {
     const table2LineageResponse = page.waitForResponse(
       `/api/v1/lineage/getLineageByEntityCount?*`
     );
-    await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-      force: true,
-    });
+    await openImpactAnalysisTab(page);
     await table2LineageResponse;
 
     await updateLineageConfigFromModal(page, {
@@ -684,9 +684,7 @@ test.describe('Impact Analysis', () => {
     const table2LineageResponse = page.waitForResponse(
       `/api/v1/lineage/getLineageByEntityCount?*`
     );
-    await page.getByRole('tab', { name: 'Impact Analysis' }).click({
-      force: true,
-    });
+    await openImpactAnalysisTab(page);
     await table2LineageResponse;
     await waitForAllLoadersToDisappear(page);
 
