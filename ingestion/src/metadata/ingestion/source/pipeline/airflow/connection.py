@@ -256,7 +256,7 @@ def _test_task_detail_access(session) -> Optional[Any]:
         return result[0]["dag"]["tasks"]
     except Exception as e:
         raise AirflowTaskDetailsAccessError(f"Task details access error : {e}") from e
-        
+
 
 def _test_api_connection(
     metadata: OpenMetadata,
