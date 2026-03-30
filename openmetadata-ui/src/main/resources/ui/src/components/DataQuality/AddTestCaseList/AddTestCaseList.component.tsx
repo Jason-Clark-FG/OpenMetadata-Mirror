@@ -176,10 +176,11 @@ export const AddTestCaseList = ({
     [filterColumns, columnOptionsFromApi]
   );
 
-  const selectedTestNames = useMemo(
-    () => normalizeSelectedTestProp(selectedTest),
-    [selectedTest]
-  );
+  const selectedTestNames = useMemo(() => {
+    const normalized = normalizeSelectedTestProp(selectedTest);
+
+    return normalized;
+  }, [selectedTest]);
 
   const handleSearch = (value: string) => {
     setSearchTerm(value);
@@ -300,17 +301,22 @@ export const AddTestCaseList = ({
 
         setTotalCount(testCaseResponse.paging.total ?? 0);
         if (selectedTestNames.length > 0 && hydrateSelectedFromProp) {
-          setSelectedItems((pre) => {
-            const selectedItemsMap = new Map();
-            pre?.forEach((item) => selectedItemsMap.set(item.id, item));
-            testCaseResponse.data.forEach((hit) => {
-              if (selectedTestNames.includes(hit.name)) {
-                selectedItemsMap.set(hit.id ?? '', hit);
-              }
-            });
-
-            return selectedItemsMap;
+          const hydratedMap = new Map<string, TestCase>();
+          testCaseResponse.data.forEach((hit) => {
+            if (selectedTestNames.includes(hit.name)) {
+              hydratedMap.set(hit.id ?? '', hit);
+            }
           });
+          setSelectedItems(hydratedMap);
+          if (hydratedMap.size > 0) {
+            const testCases = [...hydratedMap.values()];
+            onChange?.({
+              selectAll: false,
+              includeIds: testCases.map((c) => c.id ?? '').filter(Boolean),
+              excludeIds: [],
+              testCases,
+            });
+          }
         }
         setItems(
           page === 1
@@ -542,8 +548,6 @@ export const AddTestCaseList = ({
     [selectAll, selectedItems, items, excludedIds, onChange]
   );
 
-  // Search/filter changes: reset effect runs first, then fetch. Both depend only on
-  // testCaseListFetchCriteriaKey so fetchTestCases/onChange identity changes do not retrigger.
   useEffect(() => {
     if (!isInitialSearchFilterLoad.current) {
       setSelectAll(false);

@@ -106,12 +106,16 @@ const BundleSuiteForm: React.FC<BundleSuiteFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [testCaseSelectionPayload, setTestCaseSelectionPayload] =
-    useState<AddTestCaseListChangePayload>(() => ({
-      selectAll: false,
-      includeIds: [],
-      excludeIds: [],
-      testCases: [],
-    }));
+    useState<AddTestCaseListChangePayload>(() => {
+      const initialTestCases = initialValues?.testCases || [];
+
+      return {
+        selectAll: false,
+        includeIds: initialTestCases.map((tc) => tc.id ?? '').filter(Boolean),
+        excludeIds: [],
+        testCases: initialTestCases,
+      };
+    });
 
   // =============================================
   // HOOKS - Memoized Values
@@ -193,24 +197,15 @@ const BundleSuiteForm: React.FC<BundleSuiteFormProps> = ({
   // HOOKS - Effects
   // =============================================
 
-  // Initialize form values
   useEffect(() => {
     if (initialValues) {
-      const initialTestCases = initialValues.testCases || [];
-      const payload: AddTestCaseListChangePayload = {
-        selectAll: false,
-        includeIds: initialTestCases.map((tc) => tc.id ?? '').filter(Boolean),
-        excludeIds: [],
-        testCases: initialTestCases,
-      };
       form.setFieldsValue({
         name: initialValues.name || '',
         description: initialValues.description || '',
-        testCaseSelection: payload,
+        testCaseSelection: testCaseSelectionPayload,
       } as Record<string, unknown>);
-      setTestCaseSelectionPayload(payload);
     }
-  }, [initialValues, form]);
+  }, [initialValues, form, testCaseSelectionPayload]);
 
   // =============================================
   // HOOKS - Callbacks

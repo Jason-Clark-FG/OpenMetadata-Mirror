@@ -11,11 +11,12 @@
  *  limitations under the License.
  */
 
-import { Form, Modal, Radio, Select, Space, Typography } from 'antd';
+import { Form, Modal, Select } from 'antd';
 import { AxiosError } from 'axios';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
 import { PAGE_SIZE_BASE } from '../../../constants/constants';
 import { TestSuiteType } from '../../../enums/TestSuite.enum';
@@ -26,6 +27,7 @@ import {
 } from '../../../rest/testAPI';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getPopupContainer } from '../../../utils/formUtils';
+import { getTestSuitePath } from '../../../utils/RouterUtils';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { AddToBundleSuiteModalProps } from './AddToBundleSuiteModal.interface';
 
@@ -34,17 +36,15 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
   selectedTestCases,
   onCancel,
   onAddedToExisting,
-  onNavigateCreateNew,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [form] = Form.useForm<{
-    mode: 'existing' | 'new';
     testSuiteId?: string;
   }>();
-  const mode = Form.useWatch('mode', form);
-  const [options, setOptions] = useState<{ label: string; value: string }[]>(
-    []
-  );
+  const [options, setOptions] = useState<
+    { label: string; value: string; suite: TestSuite }[]
+  >([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -69,6 +69,7 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
         result.data.map((ts: TestSuite) => ({
           label: getEntityName(ts),
           value: ts.id ?? '',
+          suite: ts,
         }))
       );
     } catch (error) {
@@ -91,28 +92,14 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
   }, [debouncedSearch]);
 
   useEffect(() => {
-    if (open && mode === 'existing') {
+    if (open) {
+      form.setFieldsValue({ testSuiteId: undefined });
       fetchLogicalSuites('');
     }
-  }, [open, mode, fetchLogicalSuites]);
-
-  useEffect(() => {
-    if (open) {
-      form.setFieldsValue({ mode: 'existing', testSuiteId: undefined });
-    }
-  }, [open, form]);
+  }, [open, form, fetchLogicalSuites]);
 
   const handleOk = async () => {
     if (selectedIds.length === 0) {
-      onCancel();
-
-      return;
-    }
-
-    const currentMode = form.getFieldValue('mode') ?? 'existing';
-
-    if (currentMode === 'new') {
-      onNavigateCreateNew(selectedTestCases);
       onCancel();
 
       return;
@@ -131,6 +118,12 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
         excludeIds: [],
       });
       showSuccessToast(t('message.test-cases-added-to-bundle-suite'));
+
+      const selectedSuite = options.find((opt) => opt.value === testSuiteId);
+      if (selectedSuite?.suite.fullyQualifiedName) {
+        navigate(getTestSuitePath(selectedSuite.suite.fullyQualifiedName));
+      }
+
       onAddedToExisting();
       onCancel();
     } catch (error) {
@@ -145,6 +138,7 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
 
   return (
     <Modal
+      bodyStyle={{ minHeight: '175px' }}
       cancelText={t('label.cancel')}
       confirmLoading={submitting}
       okButtonProps={{ disabled: selectedIds.length === 0 }}
@@ -153,52 +147,31 @@ const AddToBundleSuiteModal: React.FC<AddToBundleSuiteModalProps> = ({
       title={t('label.add-test-cases-to-bundle-suite')}
       onCancel={onCancel}
       onOk={handleOk}>
-      <Form form={form} initialValues={{ mode: 'existing' }} layout="vertical">
-        <Form.Item label={t('label.mode')} name="mode">
-          <Radio.Group>
-            <Space direction="vertical">
-              <Radio value="existing">
-                {t('label.use-existing-bundle-suite-option')}
-              </Radio>
-              <Radio value="new">
-                {t('label.create-new-bundle-suite-option')}
-              </Radio>
-            </Space>
-          </Radio.Group>
-        </Form.Item>
-
-        {mode === 'existing' && (
-          <Form.Item
-            label={t('label.bundle-suite')}
-            name="testSuiteId"
-            rules={[
-              {
-                required: true,
-                message: t('label.field-required', {
-                  field: t('label.bundle-suite'),
-                }),
-              },
-            ]}>
-            <Select
-              allowClear
-              showSearch
-              filterOption={false}
-              getPopupContainer={getPopupContainer}
-              loading={optionsLoading}
-              options={options}
-              placeholder={t('label.select-field', {
+      <Form form={form}>
+        <Form.Item
+          name="testSuiteId"
+          rules={[
+            {
+              required: true,
+              message: t('label.field-required', {
                 field: t('label.bundle-suite'),
-              })}
-              onSearch={(value) => debouncedSearch(value)}
-            />
-          </Form.Item>
-        )}
-
-        {mode === 'new' && (
-          <Typography.Paragraph className="text-grey-muted m-t-sm">
-            {t('message.bundle-suite-creation-redirect-hint')}
-          </Typography.Paragraph>
-        )}
+              }),
+            },
+          ]}>
+          <Select
+            allowClear
+            showSearch
+            className="w-full"
+            filterOption={false}
+            getPopupContainer={getPopupContainer}
+            loading={optionsLoading}
+            options={options}
+            placeholder={t('label.select-field', {
+              field: t('label.bundle-suite'),
+            })}
+            onSearch={(value) => debouncedSearch(value)}
+          />
+        </Form.Item>
       </Form>
     </Modal>
   );

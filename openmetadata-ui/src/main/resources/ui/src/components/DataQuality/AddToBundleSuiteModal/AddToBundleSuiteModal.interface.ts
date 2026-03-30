@@ -13,12 +13,9 @@
 
 import { TestCase } from '../../../generated/tests/testCase';
 
-export type AddToBundleSuiteMode = 'existing' | 'new';
-
 export interface AddToBundleSuiteModalProps {
   open: boolean;
   selectedTestCases: TestCase[];
   onCancel: () => void;
   onAddedToExisting: () => void;
-  onNavigateCreateNew: (testCases: TestCase[]) => void;
 }

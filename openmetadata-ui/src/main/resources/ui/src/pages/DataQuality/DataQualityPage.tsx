@@ -14,14 +14,13 @@
 import { DownOutlined } from '@ant-design/icons';
 import { Button, Card, Col, Dropdown, Row, Space, Tabs } from 'antd';
 import { isEmpty } from 'lodash';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
 import TestCaseFormV1 from '../../components/DataQuality/AddDataQualityTest/components/TestCaseFormV1';
 import BundleSuiteForm from '../../components/DataQuality/BundleSuiteForm/BundleSuiteForm';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
-import { BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY } from '../../constants/bundleSuite.constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { TestCase } from '../../generated/tests/testCase';
@@ -34,17 +33,12 @@ import {
 } from '../../utils/RouterUtils';
 import './data-quality-page.less';
 import DataQualityClassBase from './DataQualityClassBase';
-import {
-  DataQualityPageTabs,
-  DataQualitySubTabs,
-} from './DataQualityPage.interface';
+import { DataQualityPageTabs } from './DataQualityPage.interface';
 import DataQualityProvider from './DataQualityProvider';
 
 const DataQualityPage = () => {
-  const {
-    tab: activeTab = DataQualityClassBase.getDefaultActiveTab(),
-    subTab,
-  } = useParams<{ tab?: DataQualityPageTabs; subTab?: DataQualitySubTabs }>();
+  const { tab: activeTab = DataQualityClassBase.getDefaultActiveTab() } =
+    useParams<{ tab?: DataQualityPageTabs }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { permissions } = usePermissionProvider();
@@ -53,10 +47,7 @@ const DataQualityPage = () => {
   // Add state for modal open/close
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
   const [isBundleSuiteModalOpen, setIsBundleSuiteModalOpen] = useState(false);
-  const [bundleSuiteFormInitialValues, setBundleSuiteFormInitialValues] =
-    useState<{ testCases?: TestCase[] } | undefined>(undefined);
 
-  // Add handlers for modal
   const handleOpenTestCaseModal = () => {
     setIsTestCaseModalOpen(true);
   };
@@ -66,40 +57,12 @@ const DataQualityPage = () => {
   };
 
   const handleOpenBundleSuiteModal = () => {
-    setBundleSuiteFormInitialValues(undefined);
     setIsBundleSuiteModalOpen(true);
   };
 
   const handleCloseBundleSuiteModal = () => {
     setIsBundleSuiteModalOpen(false);
-    setBundleSuiteFormInitialValues(undefined);
   };
-
-  useEffect(() => {
-    if (activeTab !== DataQualityPageTabs.TEST_SUITES) {
-      return;
-    }
-    if (subTab !== DataQualitySubTabs.BUNDLE_SUITES) {
-      return;
-    }
-    try {
-      const raw = sessionStorage.getItem(
-        BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY
-      );
-      if (!raw) {
-        return;
-      }
-      const parsed: unknown = JSON.parse(raw);
-      sessionStorage.removeItem(BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        return;
-      }
-      setBundleSuiteFormInitialValues({ testCases: parsed as TestCase[] });
-      setIsBundleSuiteModalOpen(true);
-    } catch {
-      sessionStorage.removeItem(BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY);
-    }
-  }, [activeTab, subTab]);
 
   const handleBundleSuiteSuccess = (testSuite: TestSuite) => {
     if (testSuite.fullyQualifiedName) {
@@ -250,10 +213,7 @@ const DataQualityPage = () => {
       )}
       {isBundleSuiteModalOpen && (
         <BundleSuiteForm
-          drawerProps={{
-            open: isBundleSuiteModalOpen,
-          }}
-          initialValues={bundleSuiteFormInitialValues}
+          drawerProps={{ open: isBundleSuiteModalOpen }}
           onCancel={handleCloseBundleSuiteModal}
           onSuccess={handleBundleSuiteSuccess}
         />

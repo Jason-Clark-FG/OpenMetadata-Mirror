@@ -18,6 +18,7 @@ import {
   Tooltip,
 } from '@openmetadata/ui-core-components';
 import { ChevronDown, DotsVertical } from '@untitledui/icons';
+import { ReactComponent as DeleteIcon } from '../../../../assets/svg/ic-delete.svg';
 import { ColumnsType, TablePaginationConfig } from 'antd/lib/table';
 import { FilterValue, SorterResult } from 'antd/lib/table/interface';
 import { AxiosError } from 'axios';
@@ -28,7 +29,6 @@ import { useEffect, useMemo, useRef, useState, type Key } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ReactComponent as DimensionIcon } from '../../../../assets/svg/data-observability/dimension.svg';
-import { BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY } from '../../../../constants/bundleSuite.constants';
 import { DATA_QUALITY_PROFILER_DOCS } from '../../../../constants/docs.constants';
 import { TEST_CASE_STATUS_LABELS } from '../../../../constants/profiler.constant';
 import { usePermissionProvider } from '../../../../context/PermissionProvider/PermissionProvider';
@@ -41,6 +41,7 @@ import {
   TestCaseStatus,
 } from '../../../../generated/tests/testCase';
 import { TestCaseResolutionStatus } from '../../../../generated/tests/testCaseResolutionStatus';
+import { TestSuite } from '../../../../generated/tests/testSuite';
 import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
 import { getListTestCaseIncidentByStateId } from '../../../../rest/incidentManagerAPI';
 import { removeTestCaseFromTestSuite } from '../../../../rest/testAPI';
@@ -51,9 +52,9 @@ import {
 } from '../../../../utils/EntityUtils';
 import { getEntityFQN } from '../../../../utils/FeedUtils';
 import {
-  getDataQualityPagePath,
   getEntityDetailsPath,
   getTestCaseDetailPagePath,
+  getTestSuitePath,
 } from '../../../../utils/RouterUtils';
 import { replacePlus } from '../../../../utils/StringsUtils';
 import { showErrorToast } from '../../../../utils/ToastUtils';
@@ -64,13 +65,10 @@ import StatusBadge from '../../../common/StatusBadge/StatusBadge.component';
 import { StatusType } from '../../../common/StatusBadge/StatusBadge.interface';
 import Table from '../../../common/Table/Table';
 import AddToBundleSuiteModal from '../../../DataQuality/AddToBundleSuiteModal/AddToBundleSuiteModal.component';
+import BundleSuiteForm from '../../../DataQuality/BundleSuiteForm/BundleSuiteForm';
 import EditTestCaseModalV1 from '../../../DataQuality/AddDataQualityTest/components/EditTestCaseModalV1';
 import TestCaseIncidentManagerStatus from '../../../DataQuality/IncidentManager/TestCaseStatus/TestCaseIncidentManagerStatus.component';
 import ConfirmationModal from '../../../Modals/ConfirmationModal/ConfirmationModal';
-import {
-  DataQualityPageTabs,
-  DataQualitySubTabs,
-} from '../../../../pages/DataQuality/DataQualityPage.interface';
 import {
   DataQualityTabProps,
   ProfilerTabPath,
@@ -113,6 +111,9 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
   const [isAddToBundleSuiteModalOpen, setIsAddToBundleSuiteModalOpen] =
     useState(false);
+  const [isBundleSuiteFormOpen, setIsBundleSuiteFormOpen] = useState(false);
+  const [bundleSuiteFormInitialCases, setBundleSuiteFormInitialCases] =
+    useState<TestCase[]>([]);
   const isApiSortingEnabled = useRef(false);
 
   const sortedData = useMemo(
@@ -136,10 +137,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
   );
 
   const selectedTestCasesForBundle = useMemo(
-    () =>
-      sortedData.filter((tc) =>
-        selectedRowKeys.includes(tc.fullyQualifiedName ?? '')
-      ),
+    () => sortedData.filter((tc) => selectedRowKeys.includes(tc.id ?? '')),
     [sortedData, selectedRowKeys]
   );
 
@@ -586,15 +584,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
     }
   }, [testCases]);
 
-  useEffect(() => {
-    const validFqns = new Set(
-      testCases
-        .map((tc) => tc.fullyQualifiedName)
-        .filter((fqn): fqn is string => Boolean(fqn))
-    );
-    setSelectedRowKeys((prev) => prev.filter((k) => validFqns.has(String(k))));
-  }, [testCases]);
-
+  // useEffect(() => {
   const rowSelectionConfig = enableBulkActions
     ? {
         selectedRowKeys,
@@ -602,22 +592,19 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
       }
     : undefined;
 
-  const handleNavigateCreateBundleSuite = (cases: TestCase[]) => {
-    try {
-      sessionStorage.setItem(
-        BUNDLE_SUITE_PRESELECTED_TEST_CASES_STORAGE_KEY,
-        JSON.stringify(cases)
-      );
-    } catch {
-      // sessionStorage may be unavailable or full
-    }
-    navigate(
-      getDataQualityPagePath(
-        DataQualityPageTabs.TEST_SUITES,
-        DataQualitySubTabs.BUNDLE_SUITES
-      )
-    );
+  const handleOpenBundleSuiteForm = (cases: TestCase[]) => {
+    setBundleSuiteFormInitialCases(cases);
+    setIsBundleSuiteFormOpen(true);
+    setIsAddToBundleSuiteModalOpen(false);
+  };
+
+  const handleBundleSuiteSuccess = (testSuite: TestSuite) => {
+    setIsBundleSuiteFormOpen(false);
+    setBundleSuiteFormInitialCases([]);
     setSelectedRowKeys([]);
+    if (testSuite.fullyQualifiedName) {
+      navigate(getTestSuitePath(testSuite.fullyQualifiedName));
+    }
   };
 
   const handleAddedToExistingBundleSuite = () => {
@@ -634,8 +621,8 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
         <div className="data-quality-table-header">{tableHeader}</div>
       )}
       {enableBulkActions && selectedRowKeys.length > 0 && (
-        <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:gap-3 tw:rounded-md tw:bg-[var(--color-bg-secondary)] tw:px-4 tw:py-2">
-          <span className="tw:text-sm tw:text-[var(--color-text-primary)]">
+        <div className="tw:mb-3 tw:flex tw:flex-wrap tw:items-center tw:gap-3 tw:rounded-md tw:bg-(--color-bg-secondary) tw:px-4 tw:py-2">
+          <span className="tw:text-sm tw:text-(--color-text-primary)">
             {t('label.bundle-test-case-selected-count', {
               count: selectedRowKeys.length,
             })}
@@ -647,24 +634,22 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
                 data-testid="add-selected-to-bundle-suite"
                 iconTrailing={ChevronDown}
                 size="sm">
-                {t('label.add-test-cases-to-bundle-suite')}
+                {t('label.add-to-bundle-suite')}
               </Button>
               <Dropdown.Popover className="tw:min-w-65">
                 <Dropdown.Menu
                   items={[
                     {
                       id: 'existing',
-                      label: t('label.use-existing-bundle-suite-option'),
+                      label: t('label.add-to-existing-bundle-suite'),
                       onAction: () => setIsAddToBundleSuiteModalOpen(true),
                       testId: 'add-to-existing-bundle-suite',
                     },
                     {
                       id: 'new',
-                      label: t('label.create-new-bundle-suite-option'),
+                      label: t('label.create-new-bundle-suite'),
                       onAction: () =>
-                        handleNavigateCreateBundleSuite(
-                          selectedTestCasesForBundle
-                        ),
+                        handleOpenBundleSuiteForm(selectedTestCasesForBundle),
                       testId: 'create-new-bundle-suite',
                     },
                   ]}>
@@ -680,12 +665,13 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
               </Dropdown.Popover>
             </Dropdown.Root>
             <Button
-              color="link-gray"
+              className="tw:h-6 tw:w-6"
+              color="tertiary"
               data-testid="bulk-clear-test-case-selection"
+              iconLeading={DeleteIcon}
               size="sm"
-              onClick={() => setSelectedRowKeys([])}>
-              {t('label.bulk-clear-selection')}
-            </Button>
+              onClick={() => setSelectedRowKeys([])}
+            />
           </div>
         </div>
       )}
@@ -729,7 +715,7 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
           ),
         }}
         pagination={false}
-        rowKey="fullyQualifiedName"
+        rowKey="id"
         rowSelection={rowSelectionConfig}
         scroll={{ x: true }}
         onChange={handleTableChange}
@@ -740,7 +726,17 @@ const DataQualityTab: React.FC<DataQualityTabProps> = ({
           selectedTestCases={selectedTestCasesForBundle}
           onAddedToExisting={handleAddedToExistingBundleSuite}
           onCancel={() => setIsAddToBundleSuiteModalOpen(false)}
-          onNavigateCreateNew={handleNavigateCreateBundleSuite}
+        />
+      )}
+      {isBundleSuiteFormOpen && (
+        <BundleSuiteForm
+          drawerProps={{ open: isBundleSuiteFormOpen }}
+          initialValues={{ testCases: bundleSuiteFormInitialCases }}
+          onCancel={() => {
+            setIsBundleSuiteFormOpen(false);
+            setBundleSuiteFormInitialCases([]);
+          }}
+          onSuccess={handleBundleSuiteSuccess}
         />
       )}
       {selectedTestCase?.action === 'UPDATE' && (
