@@ -852,11 +852,19 @@ public class FeedRepository {
   }
 
   public void updateLegacyThread(Thread thread) {
-    dao.feedDAO().update(getLegacyThreadTableName(), thread.getId(), JsonUtils.pojoToJson(thread));
+    String legacyTableName = getLegacyThreadTableName();
+    if (legacyTableName == null) {
+      return;
+    }
+    dao.feedDAO().update(legacyTableName, thread.getId(), JsonUtils.pojoToJson(thread));
   }
 
   public void updateLegacyThreadsAbout(String newEntityLink, String entityId) {
-    dao.feedDAO().updateByEntityId(getLegacyThreadTableName(), newEntityLink, entityId);
+    String legacyTableName = getLegacyThreadTableName();
+    if (legacyTableName == null) {
+      return;
+    }
+    dao.feedDAO().updateByEntityId(legacyTableName, newEntityLink, entityId);
   }
 
   public List<ThreadCount> getThreadsCount(String link) {

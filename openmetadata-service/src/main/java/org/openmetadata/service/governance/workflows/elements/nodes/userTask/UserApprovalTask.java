@@ -26,6 +26,7 @@ import org.flowable.bpmn.model.UserTask;
 import org.openmetadata.schema.governance.workflows.WorkflowConfiguration;
 import org.openmetadata.schema.governance.workflows.elements.nodes.userTask.UserApprovalTaskDefinition;
 import org.openmetadata.schema.type.TaskCategory;
+import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.governance.workflows.elements.NodeInterface;
@@ -105,6 +106,33 @@ public class UserApprovalTask implements NodeInterface {
             .fieldValue(taskCategory.value())
             .build();
 
+    FieldExtension stageIdExpr =
+        new FieldExtensionBuilder(false)
+            .fieldName("stageIdExpr")
+            .fieldValue(nodeDefinition.getConfig().getStageId())
+            .build();
+
+    FieldExtension stageDisplayNameExpr =
+        new FieldExtensionBuilder(false)
+            .fieldName("stageDisplayNameExpr")
+            .fieldValue(nodeDefinition.getConfig().getStageDisplayName())
+            .build();
+
+    FieldExtension taskStatusExpr =
+        new FieldExtensionBuilder()
+            .fieldName("taskStatusExpr")
+            .fieldValue(
+                nodeDefinition.getConfig().getTaskStatus() != null
+                    ? nodeDefinition.getConfig().getTaskStatus().value()
+                    : TaskEntityStatus.Open.value())
+            .build();
+
+    FieldExtension transitionMetadataExpr =
+        new FieldExtensionBuilder(false)
+            .fieldName("transitionMetadataExpr")
+            .fieldValue(JsonUtils.pojoToJson(nodeDefinition.getConfig().getTransitionMetadata()))
+            .build();
+
     SubProcess subProcess = new SubProcessBuilder().id(subProcessId).build();
 
     StartEvent startEvent =
@@ -128,7 +156,11 @@ public class UserApprovalTask implements NodeInterface {
             approvalThresholdExpr,
             rejectionThresholdExpr,
             taskTypeExpr,
-            taskCategoryExpr);
+            taskCategoryExpr,
+            stageIdExpr,
+            stageDisplayNameExpr,
+            taskStatusExpr,
+            transitionMetadataExpr);
 
     ServiceTask autoApproveTask =
         new ServiceTaskBuilder()
@@ -227,7 +259,11 @@ public class UserApprovalTask implements NodeInterface {
       FieldExtension approvalThresholdExpr,
       FieldExtension rejectionThresholdExpr,
       FieldExtension taskTypeExpr,
-      FieldExtension taskCategoryExpr) {
+      FieldExtension taskCategoryExpr,
+      FieldExtension stageIdExpr,
+      FieldExtension stageDisplayNameExpr,
+      FieldExtension taskStatusExpr,
+      FieldExtension transitionMetadataExpr) {
     FlowableListener setCandidateUsersListener =
         new FlowableListenerBuilder()
             .event("create")
@@ -245,6 +281,10 @@ public class UserApprovalTask implements NodeInterface {
             .addFieldExtension(rejectionThresholdExpr)
             .addFieldExtension(taskTypeExpr)
             .addFieldExtension(taskCategoryExpr)
+            .addFieldExtension(stageIdExpr)
+            .addFieldExtension(stageDisplayNameExpr)
+            .addFieldExtension(taskStatusExpr)
+            .addFieldExtension(transitionMetadataExpr)
             .build();
 
     FlowableListener completionValidatorListener =

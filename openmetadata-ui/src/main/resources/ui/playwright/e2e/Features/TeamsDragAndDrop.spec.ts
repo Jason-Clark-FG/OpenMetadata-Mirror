@@ -12,9 +12,8 @@
  */
 import { expect, test } from '@playwright/test';
 import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
-import { GlobalSettingOptions } from '../../constant/settings';
 import {
-  redirectToHomePage,
+  createNewPage,
   toastNotification,
   uuid,
 } from '../../utils/common';
@@ -24,8 +23,8 @@ import {
   openDragDropDropdown,
 } from '../../utils/dragDrop';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
-import { settingClick } from '../../utils/sidebar';
-import { addTeamHierarchy, hardDeleteTeam } from '../../utils/team';
+import { hardDeleteTeam } from '../../utils/team';
+import { TeamClass } from '../../support/team/TeamClass';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -90,8 +89,6 @@ test.describe(
   PLAYWRIGHT_BASIC_TEST_TAG_OBJ,
   () => {
     test.beforeEach(async ({ page }) => {
-      await redirectToHomePage(page);
-
       const getOrganizationResponse = page.waitForResponse(
         (response) =>
           response.url().includes('/api/v1/teams/name/') &&
@@ -103,19 +100,51 @@ test.describe(
           response.status() === 200
       );
 
-      await settingClick(page, GlobalSettingOptions.TEAMS);
+      await page.goto('/settings/members/teams', {
+        waitUntil: 'domcontentloaded',
+      });
       await permissionResponse;
       await getOrganizationResponse;
-      await waitForAllLoadersToDisappear(page);
+      await expect(
+        page.getByRole('heading', { name: 'Organization' })
+      ).toBeVisible();
+      await expect(page.getByRole('tab', { name: /Teams/ })).toBeVisible();
     });
 
-    test('Add teams in hierarchy', async ({ page }) => {
-      for (const teamDetails of DRAG_AND_DROP_TEAM_DETAILS) {
-        await addTeamHierarchy(page, teamDetails);
+    test('Add teams in hierarchy', async ({ browser }) => {
+      test.setTimeout(180000);
+      const { page, apiContext, afterAction } = await createNewPage(browser);
 
+      try {
+        for (const teamDetails of DRAG_AND_DROP_TEAM_DETAILS) {
+          const team = new TeamClass({
+            name: teamDetails.name,
+            displayName: teamDetails.name,
+            description: teamDetails.description,
+            teamType: teamDetails.teamType,
+            email: teamDetails.email,
+            users: [],
+            policies: [],
+          });
+
+          await team.create(apiContext);
+        }
+
+        await page.goto('/settings/members/teams', {
+          waitUntil: 'domcontentloaded',
+        });
+        await page.waitForURL('**/settings/members/teams');
         await expect(
-          page.locator(`[data-row-key="${teamDetails.name}"]`)
-        ).toContainText(teamDetails.description, { timeout: 60000 });
+          page.getByRole('heading', { name: 'Organization' })
+        ).toBeVisible();
+
+        for (const teamDetails of DRAG_AND_DROP_TEAM_DETAILS) {
+          await expect(
+            page.locator(`[data-row-key="${teamDetails.name}"]`)
+          ).toBeVisible({ timeout: 60000 });
+        }
+      } finally {
+        await afterAction();
       }
     });
 

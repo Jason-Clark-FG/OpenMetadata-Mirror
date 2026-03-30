@@ -16,6 +16,7 @@ import { cloneDeep, uniqBy } from 'lodash';
 import { TagLabel } from '../generated/type/tagLabel';
 import {
   Task,
+  TaskAvailableTransition,
   TaskCategory,
   TaskEntityType,
   TaskPayload,
@@ -52,12 +53,21 @@ export type TaskFormHandlerConfig = {
 };
 
 const taskFormSchemaCache = new Map<string, Promise<TaskFormSchema | undefined>>();
+const taskCategoryValues = {
+  Approval: 'Approval' as TaskCategory,
+  DataAccess: 'DataAccess' as TaskCategory,
+  MetadataUpdate: 'MetadataUpdate' as TaskCategory,
+  Incident: 'Incident' as TaskCategory,
+  Review: 'Review' as TaskCategory,
+  Custom: 'Custom' as TaskCategory,
+};
+const taskCategories = TaskCategory ?? taskCategoryValues;
 
 const descriptionUpdateSchema: TaskFormSchema = {
   name: 'DescriptionUpdate',
   displayName: 'Description Update',
   taskType: TaskEntityType.DescriptionUpdate,
-  taskCategory: TaskCategory.MetadataUpdate,
+  taskCategory: taskCategories.MetadataUpdate,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -118,7 +128,7 @@ const tagUpdateSchema: TaskFormSchema = {
   name: 'TagUpdate',
   displayName: 'Tag Update',
   taskType: TaskEntityType.TagUpdate,
-  taskCategory: TaskCategory.MetadataUpdate,
+  taskCategory: taskCategories.MetadataUpdate,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -204,7 +214,7 @@ const approvalSchema: TaskFormSchema = {
   name: 'Approval',
   displayName: 'Approval',
   taskType: TaskEntityType.RequestApproval,
-  taskCategory: TaskCategory.Approval,
+  taskCategory: taskCategories.Approval,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -228,7 +238,7 @@ const incidentResolutionSchema: TaskFormSchema = {
   name: 'IncidentResolution',
   displayName: 'Incident Resolution',
   taskType: TaskEntityType.TestCaseResolution,
-  taskCategory: TaskCategory.Incident,
+  taskCategory: taskCategories.Incident,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -253,7 +263,7 @@ const ownershipUpdateSchema: TaskFormSchema = {
   name: 'OwnershipUpdate',
   displayName: 'Ownership Update',
   taskType: TaskEntityType.OwnershipUpdate,
-  taskCategory: TaskCategory.MetadataUpdate,
+  taskCategory: taskCategories.MetadataUpdate,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -285,7 +295,7 @@ const tierUpdateSchema: TaskFormSchema = {
   name: 'TierUpdate',
   displayName: 'Tier Update',
   taskType: TaskEntityType.TierUpdate,
-  taskCategory: TaskCategory.MetadataUpdate,
+  taskCategory: taskCategories.MetadataUpdate,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -317,7 +327,7 @@ const domainUpdateSchema: TaskFormSchema = {
   name: 'DomainUpdate',
   displayName: 'Domain Update',
   taskType: TaskEntityType.DomainUpdate,
-  taskCategory: TaskCategory.MetadataUpdate,
+  taskCategory: taskCategories.MetadataUpdate,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -349,7 +359,7 @@ const customTaskSchema: TaskFormSchema = {
   name: 'CustomTask',
   displayName: 'Custom Task',
   taskType: TaskEntityType.CustomTask,
-  taskCategory: TaskCategory.Custom,
+  taskCategory: taskCategories.Custom,
   formSchema: {
     type: 'object',
     additionalProperties: true,
@@ -371,14 +381,14 @@ export const getDefaultTaskFormSchema = (
 ) => {
   if (
     taskType === TaskEntityType.DescriptionUpdate &&
-    taskCategory === TaskCategory.MetadataUpdate
+    taskCategory === taskCategories.MetadataUpdate
   ) {
     return descriptionUpdateSchema;
   }
 
   if (
     taskType === TaskEntityType.TagUpdate &&
-    taskCategory === TaskCategory.MetadataUpdate
+    taskCategory === taskCategories.MetadataUpdate
   ) {
     return tagUpdateSchema;
   }
@@ -387,7 +397,7 @@ export const getDefaultTaskFormSchema = (
     [TaskEntityType.GlossaryApproval, TaskEntityType.RequestApproval].includes(
       taskType
     ) &&
-    taskCategory === TaskCategory.Approval
+    taskCategory === taskCategories.Approval
   ) {
     return {
       ...approvalSchema,
@@ -402,7 +412,7 @@ export const getDefaultTaskFormSchema = (
     [TaskEntityType.TestCaseResolution, TaskEntityType.IncidentResolution].includes(
       taskType
     ) &&
-    taskCategory === TaskCategory.Incident
+    taskCategory === taskCategories.Incident
   ) {
     return {
       ...incidentResolutionSchema,
@@ -415,26 +425,26 @@ export const getDefaultTaskFormSchema = (
 
   if (
     taskType === TaskEntityType.OwnershipUpdate &&
-    taskCategory === TaskCategory.MetadataUpdate
+    taskCategory === taskCategories.MetadataUpdate
   ) {
     return ownershipUpdateSchema;
   }
 
   if (
     taskType === TaskEntityType.TierUpdate &&
-    taskCategory === TaskCategory.MetadataUpdate
+    taskCategory === taskCategories.MetadataUpdate
   ) {
     return tierUpdateSchema;
   }
 
   if (
     taskType === TaskEntityType.DomainUpdate &&
-    taskCategory === TaskCategory.MetadataUpdate
+    taskCategory === taskCategories.MetadataUpdate
   ) {
     return domainUpdateSchema;
   }
 
-  if (taskType === TaskEntityType.CustomTask && taskCategory === TaskCategory.Custom) {
+  if (taskType === TaskEntityType.CustomTask && taskCategory === taskCategories.Custom) {
     return customTaskSchema;
   }
 
@@ -465,6 +475,112 @@ export const getResolvedTaskFormSchema = async (
   taskFormSchemaCache.set(cacheKey, resolverPromise);
 
   return cloneDeep(await resolverPromise);
+};
+
+const getTransitionFormConfig = (
+  taskFormSchema?: TaskFormSchema,
+  transition?: Pick<TaskAvailableTransition, 'id' | 'formRef'>
+) => {
+  if (!taskFormSchema?.transitionForms || !transition) {
+    return undefined;
+  }
+
+  const transitionKey = transition.formRef ?? transition.id;
+
+  if (!transitionKey) {
+    return undefined;
+  }
+
+  return taskFormSchema.transitionForms[transitionKey] as
+    | JsonSchemaObject
+    | undefined;
+};
+
+const ensureTransitionCommentFields = (
+  formSchema: JsonSchemaObject | undefined,
+  uiSchema: JsonSchemaObject | undefined,
+  requiresComment?: boolean
+) => {
+  if (!requiresComment) {
+    return { formSchema, uiSchema };
+  }
+
+  const nextFormSchema = cloneDeep(
+    formSchema ?? {
+      type: 'object',
+      properties: {},
+    }
+  );
+  const nextUiSchema = cloneDeep(uiSchema ?? {});
+  const properties =
+    (nextFormSchema.properties as Record<string, JsonSchemaObject> | undefined) ??
+    {};
+
+  nextFormSchema.type = nextFormSchema.type ?? 'object';
+  nextFormSchema.properties = {
+    ...properties,
+    comment: properties.comment ?? {
+      type: 'string',
+      title: 'Comment',
+    },
+  };
+
+  nextUiSchema.comment = nextUiSchema.comment ?? {
+    'ui:widget': 'textarea',
+  };
+
+  if (Array.isArray(nextUiSchema['ui:order'])) {
+    const uiOrder = nextUiSchema['ui:order'] as string[];
+
+    if (!uiOrder.includes('comment')) {
+      nextUiSchema['ui:order'] = [...uiOrder, 'comment'];
+    }
+  }
+
+  return {
+    formSchema: nextFormSchema,
+    uiSchema: nextUiSchema,
+  };
+};
+
+export const getTaskTransitionFormSchema = (
+  taskFormSchema?: TaskFormSchema,
+  transition?: Pick<TaskAvailableTransition, 'id' | 'formRef' | 'requiresComment'>
+) => {
+  const transitionConfig = getTransitionFormConfig(taskFormSchema, transition);
+  const transitionSchema =
+    (transitionConfig?.formSchema as JsonSchemaObject | undefined) ??
+    taskFormSchema?.formSchema;
+
+  return ensureTransitionCommentFields(
+    transitionSchema,
+    undefined,
+    transition?.requiresComment
+  ).formSchema;
+};
+
+export const getTaskTransitionUiSchema = (
+  taskFormSchema?: TaskFormSchema,
+  transition?: Pick<TaskAvailableTransition, 'id' | 'formRef' | 'requiresComment'>
+) => {
+  const transitionConfig = getTransitionFormConfig(taskFormSchema, transition);
+  const transitionUiSchema =
+    (transitionConfig?.uiSchema as JsonSchemaObject | undefined) ??
+    taskFormSchema?.uiSchema;
+
+  return ensureTransitionCommentFields(
+    undefined,
+    transitionUiSchema,
+    transition?.requiresComment
+  ).uiSchema;
+};
+
+export const hasTaskFormFields = (schema?: JsonSchemaObject) => {
+  const properties = schema?.properties;
+
+  return Boolean(
+    properties && typeof properties === 'object' && Object.keys(properties).length > 0
+  );
 };
 
 const DEFAULT_APPROVAL_VALUES = {

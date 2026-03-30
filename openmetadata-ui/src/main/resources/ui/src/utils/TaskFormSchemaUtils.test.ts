@@ -25,6 +25,9 @@ import {
   getEditableTaskPayload,
   getTaskFormHandlerConfig,
   getTaskResolutionNewValue,
+  getTaskTransitionFormSchema,
+  getTaskTransitionUiSchema,
+  hasTaskFormFields,
   shouldRequireTaskResolutionValue,
 } from './TaskFormSchemaUtils';
 
@@ -417,5 +420,107 @@ describe('TaskFormSchemaUtils', () => {
       )
     ).toBeUndefined();
     expect(shouldRequireTaskResolutionValue(uiSchema)).toBe(false);
+  });
+
+  it('resolves transition-specific task forms and preserves ui schema', () => {
+    const schema = {
+      name: 'CustomTask',
+      taskType: TaskEntityType.CustomTask,
+      taskCategory: TaskCategory.Custom,
+      formSchema: {
+        type: 'object',
+        properties: {},
+      },
+      uiSchema: {},
+      transitionForms: {
+        resolve: {
+          formSchema: {
+            type: 'object',
+            properties: {
+              resolution: { type: 'string', title: 'Resolution' },
+            },
+          },
+          uiSchema: {
+            resolution: { 'ui:widget': 'textarea' },
+          },
+        },
+      },
+    };
+
+    expect(
+      getTaskTransitionFormSchema(schema, {
+        id: 'resolve',
+        label: 'Resolve',
+        targetStageId: 'done',
+        targetTaskStatus: TaskEntityStatus.Completed,
+      })
+    ).toEqual({
+      type: 'object',
+      properties: {
+        resolution: { type: 'string', title: 'Resolution' },
+      },
+    });
+    expect(
+      getTaskTransitionUiSchema(schema, {
+        id: 'resolve',
+        label: 'Resolve',
+        targetStageId: 'done',
+        targetTaskStatus: TaskEntityStatus.Completed,
+      })
+    ).toEqual({
+      resolution: { 'ui:widget': 'textarea' },
+    });
+  });
+
+  it('injects a comment field for required workflow transitions', () => {
+    const formSchema = getTaskTransitionFormSchema(
+      {
+        name: 'CustomTask',
+        taskType: TaskEntityType.CustomTask,
+        taskCategory: TaskCategory.Custom,
+        formSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        id: 'close',
+        label: 'Close',
+        targetStageId: 'closed',
+        targetTaskStatus: TaskEntityStatus.Cancelled,
+        requiresComment: true,
+      }
+    );
+    const uiSchema = getTaskTransitionUiSchema(
+      {
+        name: 'CustomTask',
+        taskType: TaskEntityType.CustomTask,
+        taskCategory: TaskCategory.Custom,
+        formSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        id: 'close',
+        label: 'Close',
+        targetStageId: 'closed',
+        targetTaskStatus: TaskEntityStatus.Cancelled,
+        requiresComment: true,
+      }
+    );
+
+    expect(hasTaskFormFields(formSchema)).toBe(true);
+    expect(formSchema?.properties).toMatchObject({
+      comment: {
+        type: 'string',
+        title: 'Comment',
+      },
+    });
+    expect(uiSchema).toMatchObject({
+      comment: {
+        'ui:widget': 'textarea',
+      },
+    });
   });
 });

@@ -48,9 +48,9 @@ export const waitForAllLoadersToDisappear = async (
   dataTestId = 'loader',
   timeout = 30000
 ) => {
-  const loaders = page.locator(`[data-testid="${dataTestId}"]`);
+  const loaders = page.locator(`[data-testid="${dataTestId}"]:visible`);
 
-  // Wait for the loader elements count to become 0
+  // Some shells keep hidden loader nodes mounted; only visible loaders block progress.
   await expect(loaders).toHaveCount(0, { timeout });
 };
 
@@ -58,7 +58,7 @@ export const waitForLoadersInContainerToDisappear = async (
   container: Locator,
   timeout = 30000
 ) => {
-  const loaders = container.locator('[data-testid="loader"]');
+  const loaders = container.locator('[data-testid="loader"]:visible');
 
   await expect(loaders).toHaveCount(0, { timeout });
 };

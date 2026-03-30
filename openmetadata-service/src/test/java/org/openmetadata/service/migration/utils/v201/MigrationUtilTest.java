@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -30,16 +31,23 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.jdbi.v3.core.Handle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
+import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.TaskCategory;
+import org.openmetadata.schema.type.TaskEntityType;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.jdbi3.TaskFormSchemaRepository;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 
@@ -49,6 +57,7 @@ class MigrationUtilTest {
   private DatabaseMetaData metadata;
   private CollectionDAO collectionDAO;
   private TaskRepository taskRepository;
+  private TaskFormSchemaRepository taskFormSchemaRepository;
   private WorkflowDefinitionRepository workflowDefinitionRepository;
   private WorkflowHandler workflowHandler;
 
@@ -59,6 +68,7 @@ class MigrationUtilTest {
     metadata = mock(DatabaseMetaData.class);
     collectionDAO = mock(CollectionDAO.class);
     taskRepository = mock(TaskRepository.class);
+    taskFormSchemaRepository = mock(TaskFormSchemaRepository.class);
     workflowDefinitionRepository = mock(WorkflowDefinitionRepository.class);
     workflowHandler = mock(WorkflowHandler.class);
 
@@ -66,6 +76,7 @@ class MigrationUtilTest {
     when(handle.getConnection()).thenReturn(connection);
     when(connection.getMetaData()).thenReturn(metadata);
     when(workflowDefinitionRepository.listAll(any(), any())).thenReturn(List.of());
+    when(taskFormSchemaRepository.resolve(anyString(), any(), any())).thenReturn(Optional.empty());
   }
 
   @Test
@@ -115,10 +126,83 @@ class MigrationUtilTest {
     verify(handle, never()).createQuery(anyString());
   }
 
+  @Test
+  void runTaskWorkflowCutoverMigrationSeedsPerTaskWorkflowDefaults() throws Exception {
+    stubTables(Set.of());
+    WorkflowDefinition descriptionWorkflow =
+        new WorkflowDefinition().withName("DescriptionUpdateTaskWorkflow");
+    WorkflowDefinition incidentWorkflow =
+        new WorkflowDefinition().withName("IncidentResolutionTaskWorkflow");
+    WorkflowDefinition recognizerWorkflow =
+        new WorkflowDefinition().withName("RecognizerFeedbackReviewWorkflow");
+    WorkflowDefinition unrelatedWorkflow = new WorkflowDefinition().withName("SomeOtherWorkflow");
+    when(workflowDefinitionRepository.getEntitiesFromSeedData())
+        .thenReturn(
+            List.of(descriptionWorkflow, incidentWorkflow, recognizerWorkflow, unrelatedWorkflow));
+
+    MigrationUtil migrationUtil = newMigrationUtil();
+
+    migrationUtil.runTaskWorkflowCutoverMigration();
+
+    verify(workflowDefinitionRepository).createOrUpdate(null, descriptionWorkflow, "admin");
+    verify(workflowDefinitionRepository).createOrUpdate(null, incidentWorkflow, "admin");
+    verify(workflowDefinitionRepository).createOrUpdate(null, recognizerWorkflow, "admin");
+    verify(workflowDefinitionRepository, never()).createOrUpdate(null, unrelatedWorkflow, "admin");
+  }
+
+  @Test
+  void runTaskWorkflowCutoverMigrationBackfillsOpenTasksToWorkflowInstances() throws Exception {
+    stubTables(Set.of());
+    UUID taskId = UUID.randomUUID();
+    Task openTask =
+        new Task()
+            .withId(taskId)
+            .withName("description-update")
+            .withType(TaskEntityType.DescriptionUpdate)
+            .withCategory(TaskCategory.MetadataUpdate)
+            .withAbout(
+                new EntityReference()
+                    .withType("table")
+                    .withFullyQualifiedName("sample_data.ecommerce_db.shopify.raw_product_catalog"))
+            .withUpdatedBy("alice");
+
+    WorkflowDefinition workflowDefinition =
+        new WorkflowDefinition()
+            .withId(UUID.randomUUID())
+            .withName("DescriptionUpdateTaskWorkflow")
+            .withFullyQualifiedName("DescriptionUpdateTaskWorkflow");
+
+    when(taskRepository.listAll(any(), any())).thenReturn(List.of(openTask));
+    when(workflowDefinitionRepository.findByNameOrNull(
+            eq("DescriptionUpdateTaskWorkflow"),
+            eq(org.openmetadata.schema.type.Include.NON_DELETED)))
+        .thenReturn(workflowDefinition);
+    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
+        MockedStatic<WorkflowHandler> workflowMock = mockStatic(WorkflowHandler.class)) {
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+      entityMock
+          .when(() -> Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA))
+          .thenReturn(taskFormSchemaRepository);
+      entityMock
+          .when(() -> Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION))
+          .thenReturn(workflowDefinitionRepository);
+      workflowMock.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+
+      MigrationUtil migrationUtil = new MigrationUtil(handle);
+      migrationUtil.runTaskWorkflowCutoverMigration();
+
+      verify(workflowHandler)
+          .triggerByKey(eq("DescriptionUpdateTaskWorkflowTrigger"), eq(taskId.toString()), any());
+    }
+  }
+
   private MigrationUtil newMigrationUtil() {
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
         MockedStatic<WorkflowHandler> workflowMock = mockStatic(WorkflowHandler.class)) {
       entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+      entityMock
+          .when(() -> Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA))
+          .thenReturn(taskFormSchemaRepository);
       entityMock
           .when(() -> Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION))
           .thenReturn(workflowDefinitionRepository);

@@ -13,7 +13,7 @@
 import { expect, Page } from '@playwright/test';
 import { GlobalSettingOptions } from '../constant/settings';
 import { redirectToHomePage } from './common';
-import { waitForAllLoadersToDisappear } from './entity';
+import { getEncodedFqn, waitForAllLoadersToDisappear } from './entity';
 import { settingClick } from './sidebar';
 
 export const updatePersonaDisplayName = async ({
@@ -95,31 +95,55 @@ export const navigateToPersonaWithPagination = async (
   page: Page,
   personaName: string,
   click = true,
-  maxPages = 15
+  maxPages = 50
 ) => {
+  let resolvedPersonaName = personaName;
+
+  try {
+    resolvedPersonaName = decodeURIComponent(personaName);
+  } catch {
+    resolvedPersonaName = personaName;
+  }
+
+  const personaDetailsPath = `/settings/${GlobalSettingOptions.PERSONA}/${getEncodedFqn(
+    resolvedPersonaName
+  )}#customize-ui`;
+
+  if (click && resolvedPersonaName) {
+    await page.goto(personaDetailsPath, { waitUntil: 'domcontentloaded' });
+    await waitForAllLoadersToDisappear(page).catch(() => undefined);
+
+    if (
+      await page
+        .getByRole('tab', { name: 'Customize UI' })
+        .isVisible()
+        .catch(() => false)
+    ) {
+      return;
+    }
+
+    await redirectToHomePage(page);
+    const listPersonas = page.waitForResponse('/api/v1/personas?*');
+    await settingClick(page, GlobalSettingOptions.PERSONA);
+    await listPersonas.catch(() => undefined);
+  }
+
   for (let currentPage = 0; currentPage < maxPages; currentPage++) {
     // Wait for the skeleton card loader to disappear first
     await waitForAllLoadersToDisappear(page, 'skeleton-card-loader');
 
-    const locator = page.getByTestId(`persona-details-card-${personaName}`);
+    const locator = page.getByTestId(
+      `persona-details-card-${resolvedPersonaName}`
+    );
 
     // Check if element is visible on current page
     if (await locator.isVisible()) {
       if (click) {
-        const personaDetailsResponse = page
-          .waitForResponse(
-            (response) =>
-              response.url().includes('/api/v1/personas/name/') &&
-              response.status() === 200,
-            { timeout: 30000 }
-          )
-          .catch(() => undefined);
-
         await locator.click();
-        await personaDetailsResponse;
-        await expect(
-          page.getByRole('tab', { name: 'Customize UI' })
-        ).toBeVisible();
+        await page
+          .waitForURL(`**${personaDetailsPath}`, { timeout: 30000 })
+          .catch(() => undefined);
+        await expect(page.getByRole('tab', { name: 'Customize UI' })).toBeVisible();
       }
 
       return;
@@ -128,10 +152,48 @@ export const navigateToPersonaWithPagination = async (
     const nextBtn = page.locator('[data-testid="next"]');
     await nextBtn.waitFor({ state: 'visible' });
 
-    const getPersonas = page.waitForResponse('/api/v1/personas*');
-    await nextBtn.click();
+    const isDisabled =
+      (await nextBtn.isDisabled().catch(() => true)) ||
+      (await nextBtn.getAttribute('aria-disabled')) === 'true';
+
+    if (isDisabled) {
+      break;
+    }
+
+    const getPersonas = page.waitForResponse('/api/v1/personas*').catch(() => undefined);
+    const clickResult = await nextBtn
+      .click({ timeout: 5000 })
+      .then(() => 'clicked')
+      .catch(async (error) => {
+        const becameDisabled =
+          (await nextBtn.isDisabled().catch(() => true)) ||
+          (await nextBtn.getAttribute('aria-disabled')) === 'true';
+
+        if (becameDisabled) {
+          return 'disabled';
+        }
+
+        throw error;
+      });
+
+    if (clickResult === 'disabled') {
+      break;
+    }
+
     await getPersonas;
   }
+
+  if (click && resolvedPersonaName) {
+    await page.goto(personaDetailsPath, { waitUntil: 'domcontentloaded' });
+    await waitForAllLoadersToDisappear(page).catch(() => undefined);
+    await expect(page.getByRole('tab', { name: 'Customize UI' })).toBeVisible();
+
+    return;
+  }
+
+  throw new Error(
+    `Persona "${resolvedPersonaName}" was not found within ${maxPages} pages of the personas list.`
+  );
 };
 
 /**

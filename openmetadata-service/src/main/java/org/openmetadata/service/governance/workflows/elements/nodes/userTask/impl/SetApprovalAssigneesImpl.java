@@ -52,6 +52,9 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
 
       Set<String> assignees = new LinkedHashSet<>();
 
+      assignees.addAll(resolveTaskProvidedAssignees(execution, "taskReviewers"));
+      assignees.addAll(resolveTaskProvidedAssignees(execution, "taskAssignees"));
+
       // Process addReviewers flag
       Boolean addReviewers = (Boolean) assigneesConfig.getOrDefault("addReviewers", true);
       if (addReviewers) {
@@ -115,27 +118,40 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
         }
       }
 
+      boolean workflowManagedTask =
+          Boolean.TRUE.equals(execution.getVariable("taskWorkflowManaged"))
+              || execution.getVariable("taskEntityId") != null;
       List<String> assigneeList = new ArrayList<>(assignees);
 
-      // Prevent self-approval: Remove updatedBy user from assignees list
-      try {
+      if (workflowManagedTask && assigneeList.isEmpty()) {
         String updatedBy =
             (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
         if (updatedBy != null && !updatedBy.trim().isEmpty()) {
-          String updatedByEntityLink =
-              new MessageParser.EntityLink("user", updatedBy).getLinkString();
-          boolean removed = assigneeList.remove(updatedByEntityLink);
-          if (removed) {
-            LOG.debug(
-                "[Process: {}] Prevented self-approval: Removed updatedBy user '{}' from assignees",
-                execution.getProcessInstanceId(),
-                updatedBy);
-          }
+          assigneeList.add(new MessageParser.EntityLink("user", updatedBy).getLinkString());
         }
-      } catch (Exception e) {
-        LOG.warn(
-            "Failed to retrieve updatedBy variable for self-approval prevention: {}",
-            e.getMessage());
+      }
+
+      // Prevent self-approval: Remove updatedBy user from assignees list
+      if (!workflowManagedTask) {
+        try {
+          String updatedBy =
+              (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
+          if (updatedBy != null && !updatedBy.trim().isEmpty()) {
+            String updatedByEntityLink =
+                new MessageParser.EntityLink("user", updatedBy).getLinkString();
+            boolean removed = assigneeList.remove(updatedByEntityLink);
+            if (removed) {
+              LOG.debug(
+                  "[Process: {}] Prevented self-approval: Removed updatedBy user '{}' from assignees",
+                  execution.getProcessInstanceId(),
+                  updatedBy);
+            }
+          }
+        } catch (Exception e) {
+          LOG.warn(
+              "Failed to retrieve updatedBy variable for self-approval prevention: {}",
+              e.getMessage());
+        }
       }
 
       // Persist the list as JSON array so TaskListener can read it.
@@ -143,7 +159,7 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       execution.setVariable(
           assigneesVarNameExpr.getValue(execution).toString(), JsonUtils.pojoToJson(assigneeList));
 
-      boolean hasAssignees = !assigneeList.isEmpty();
+      boolean hasAssignees = workflowManagedTask || !assigneeList.isEmpty();
       execution.setVariable("hasAssignees", hasAssignees);
 
       LOG.debug(
@@ -151,7 +167,9 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
           execution.getProcessInstanceId(),
           hasAssignees,
           assigneeList.size(),
-          hasAssignees ? "create USER TASK" : "AUTO-APPROVE");
+          hasAssignees
+              ? (assigneeList.isEmpty() ? "create UNASSIGNED USER TASK" : "create USER TASK")
+              : "AUTO-APPROVE");
     } catch (Exception exc) {
       LOG.error(
           String.format(
@@ -228,5 +246,36 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
     }
 
     return result;
+  }
+
+  private List<String> resolveTaskProvidedAssignees(
+      DelegateExecution execution, String variableName) {
+    Object rawValue = execution.getVariable(variableName);
+    if (rawValue == null) {
+      return List.of();
+    }
+
+    try {
+      List<EntityReference> references =
+          rawValue instanceof String
+              ? JsonUtils.readValue(
+                  (String) rawValue,
+                  new com.fasterxml.jackson.core.type.TypeReference<List<EntityReference>>() {})
+              : JsonUtils.convertValue(
+                  rawValue,
+                  new com.fasterxml.jackson.core.type.TypeReference<List<EntityReference>>() {});
+
+      if (references == null || references.isEmpty()) {
+        return List.of();
+      }
+
+      return getEntityLinkStringFromEntityReferenceWithTeamExpansion(references);
+    } catch (Exception exc) {
+      LOG.warn(
+          "Failed to resolve workflow-provided assignees from '{}': {}",
+          variableName,
+          exc.getMessage());
+      return List.of();
+    }
   }
 }

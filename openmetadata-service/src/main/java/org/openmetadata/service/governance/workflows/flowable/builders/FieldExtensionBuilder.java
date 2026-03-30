@@ -35,6 +35,10 @@ public class FieldExtensionBuilder {
   }
 
   public FieldExtension build() {
+    if (fieldValue == null && expression == null && !required) {
+      return null;
+    }
+
     FieldExtension fieldExtension = new FieldExtension();
     fieldExtension.setFieldName(fieldName);
     if (fieldValue != null) {

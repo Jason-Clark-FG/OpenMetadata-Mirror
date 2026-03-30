@@ -32,6 +32,12 @@ export interface TaskFormSchema {
   taskCategory?: string;
   formSchema: JsonSchemaObject;
   uiSchema?: JsonSchemaObject;
+  workflowDefinitionRef?: string;
+  workflowVersion?: number;
+  createFormSchema?: JsonSchemaObject;
+  createUiSchema?: JsonSchemaObject;
+  transitionForms?: Record<string, JsonSchemaObject>;
+  defaultStageMappings?: Record<string, string>;
   version?: number;
   updatedBy?: string;
   updatedAt?: number;

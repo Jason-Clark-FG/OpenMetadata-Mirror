@@ -30,6 +30,10 @@ type TaskFormSchema = {
   taskCategory: string;
   formSchema: Record<string, unknown>;
   uiSchema?: Record<string, unknown>;
+  workflowDefinitionRef?: string;
+  createFormSchema?: Record<string, unknown>;
+  createUiSchema?: Record<string, unknown>;
+  transitionForms?: Record<string, unknown>;
   version?: number;
 };
 
@@ -42,7 +46,7 @@ type CreatedTask = {
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
 test.describe.serial('Task Custom Form Workflow', () => {
-  test('renders and resolves a schema-driven custom task end to end', async ({
+  test('renders and resolves a workflow-driven custom task end to end', async ({
     page,
   }) => {
     test.setTimeout(90000);
@@ -51,9 +55,11 @@ test.describe.serial('Task Custom Form Workflow', () => {
     const updatedDescription = `Playwright updated description ${uuid()}`;
     const initialReviewNotes = `Initial review notes ${uuid()}`;
     const updatedReviewNotes = `Updated review notes ${uuid()}`;
+    const workflowName = `PlaywrightCustomTaskWorkflow${uuid()}`;
     const admin = new AdminClass();
     const table = new TableClass();
     let taskId: string | undefined;
+    let workflowId: string | undefined;
     let schemaToRestore: TaskFormSchema | undefined;
     let createdSchemaId: string | undefined;
 
@@ -64,6 +70,109 @@ test.describe.serial('Task Custom Form Workflow', () => {
 
     try {
       await table.create(apiContext);
+
+      const createWorkflowResponse = await apiContext.post(
+        '/api/v1/governance/workflowDefinitions',
+        {
+          data: {
+            name: workflowName,
+            displayName: 'Playwright Custom Task Workflow',
+            description: 'Workflow-backed custom task lifecycle for Playwright',
+            config: {
+              storeStageStatus: true,
+            },
+            trigger: {
+              type: 'noOp',
+              config: {},
+              output: ['relatedEntity', 'updatedBy'],
+            },
+            nodes: [
+              {
+                type: 'startEvent',
+                subType: 'startEvent',
+                name: 'TaskStart',
+                displayName: 'Task Start',
+              },
+              {
+                type: 'userTask',
+                subType: 'userApprovalTask',
+                name: 'TaskReview',
+                displayName: 'Review Task',
+                config: {
+                  assignees: {
+                    addReviewers: true,
+                    addOwners: false,
+                    candidates: [],
+                  },
+                  approvalThreshold: 1,
+                  rejectionThreshold: 1,
+                  stageId: 'review',
+                  stageDisplayName: 'Review',
+                  taskStatus: 'Open',
+                  assigneeStrategy: 'reviewers-and-assignees',
+                  transitionMetadata: [
+                    {
+                      id: 'approve',
+                      label: 'Approve',
+                      targetStageId: 'approved',
+                      targetTaskStatus: 'Approved',
+                      resolutionType: 'Approved',
+                      formRef: 'approve',
+                      requiresComment: false,
+                    },
+                    {
+                      id: 'reject',
+                      label: 'Reject',
+                      targetStageId: 'rejected',
+                      targetTaskStatus: 'Rejected',
+                      resolutionType: 'Rejected',
+                      formRef: 'reject',
+                      requiresComment: true,
+                    },
+                  ],
+                },
+                input: ['relatedEntity'],
+                output: ['result'],
+                branches: ['approve', 'reject'],
+                inputNamespaceMap: {
+                  relatedEntity: 'global',
+                },
+              },
+              {
+                type: 'endEvent',
+                subType: 'endEvent',
+                name: 'ApprovedEnd',
+                displayName: 'Approved',
+              },
+              {
+                type: 'endEvent',
+                subType: 'endEvent',
+                name: 'RejectedEnd',
+                displayName: 'Rejected',
+              },
+            ],
+            edges: [
+              {
+                from: 'TaskStart',
+                to: 'TaskReview',
+              },
+              {
+                from: 'TaskReview',
+                to: 'ApprovedEnd',
+                condition: 'approve',
+              },
+              {
+                from: 'TaskReview',
+                to: 'RejectedEnd',
+                condition: 'reject',
+              },
+            ],
+          },
+        }
+      );
+      expect(createWorkflowResponse.ok()).toBeTruthy();
+      const createdWorkflow = await createWorkflowResponse.json();
+      workflowId = createdWorkflow.id;
 
       const schemaListResponse = await apiContext.get(
         `/api/v1/taskFormSchemas?taskType=CustomTask&taskCategory=Custom&limit=1&include=all`
@@ -82,6 +191,7 @@ test.describe.serial('Task Custom Form Workflow', () => {
           taskCategory: 'Custom',
         }),
         displayName: 'Playwright Custom Task Form',
+        workflowDefinitionRef: workflowName,
         formSchema: {
           type: 'object',
           additionalProperties: true,
@@ -140,6 +250,110 @@ test.describe.serial('Task Custom Form Workflow', () => {
             'ui:widget': 'textarea',
           },
         },
+        createFormSchema: {
+          type: 'object',
+          additionalProperties: true,
+          properties: {
+            targetField: {
+              type: 'string',
+              title: 'Target Field',
+            },
+            proposedText: {
+              type: 'string',
+              title: 'Proposed Text',
+            },
+            reviewNotes: {
+              type: 'string',
+              title: 'Review Notes',
+            },
+          },
+          required: ['targetField', 'proposedText'],
+        },
+        createUiSchema: {
+          'ui:handler': {
+            type: 'descriptionUpdate',
+            permission: 'EDIT_DESCRIPTION',
+            fieldPathField: 'targetField',
+            valueField: 'proposedText',
+          },
+          'ui:editablePayload': {
+            fieldPathField: 'targetField',
+            editedValueField: 'proposedText',
+          },
+          'ui:resolution': {
+            mode: 'payload',
+          },
+          targetField: {
+            'ui:widget': 'hidden',
+          },
+          proposedText: {
+            'ui:widget': 'textarea',
+          },
+          reviewNotes: {
+            'ui:widget': 'textarea',
+          },
+        },
+        transitionForms: {
+          approve: {
+            formSchema: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                targetField: {
+                  type: 'string',
+                  title: 'Target Field',
+                },
+                proposedText: {
+                  type: 'string',
+                  title: 'Proposed Text',
+                },
+                reviewNotes: {
+                  type: 'string',
+                  title: 'Review Notes',
+                },
+              },
+              required: ['targetField', 'proposedText'],
+            },
+            uiSchema: {
+              'ui:handler': {
+                type: 'descriptionUpdate',
+                permission: 'EDIT_DESCRIPTION',
+                fieldPathField: 'targetField',
+                valueField: 'proposedText',
+              },
+              'ui:resolution': {
+                mode: 'payload',
+              },
+              targetField: {
+                'ui:widget': 'hidden',
+              },
+              proposedText: {
+                'ui:widget': 'textarea',
+              },
+              reviewNotes: {
+                'ui:widget': 'textarea',
+              },
+            },
+          },
+          reject: {
+            formSchema: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                comment: {
+                  type: 'string',
+                  title: 'Comment',
+                },
+              },
+              required: ['comment'],
+            },
+            uiSchema: {
+              comment: {
+                'ui:widget': 'textarea',
+              },
+            },
+          },
+        },
       };
 
       if (existingSchema?.id) {
@@ -193,8 +407,8 @@ test.describe.serial('Task Custom Form Workflow', () => {
         initialReviewNotes
       );
 
-      await page.getByTestId('edit-accept-task-action-trigger').click();
-      await page.getByTestId('task-action-menu-item-edit').click();
+      await expect(page.getByTestId('workflow-task-action-primary')).toBeVisible();
+      await page.getByTestId('workflow-task-action-primary').click();
 
       const visibleModal = page.getByRole('dialog').first();
       await expect(visibleModal).toBeVisible();
@@ -254,6 +468,12 @@ test.describe.serial('Task Custom Form Workflow', () => {
       } else if (createdSchemaId) {
         await apiContext
           .delete(`/api/v1/taskFormSchemas/${createdSchemaId}?hardDelete=true&recursive=true`)
+          .catch(() => null);
+      }
+
+      if (workflowId) {
+        await apiContext
+          .delete(`/api/v1/governance/workflowDefinitions/${workflowId}`)
           .catch(() => null);
       }
 

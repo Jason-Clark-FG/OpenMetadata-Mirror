@@ -192,8 +192,21 @@ test.describe(
       await page
         .getByTestId('whats-new-alert-card')
         .locator('.whats-new-alert-close')
-        .click();
-      await page.getByText('Take a product tour to get started!').click();
+        .click()
+        .catch(() => undefined);
+
+      const welcomeTourCta = page.getByTestId('welcome-screen').getByRole(
+        'link',
+        { name: 'Take a product tour to get started!' }
+      );
+
+      if (await welcomeTourCta.isVisible().catch(() => false)) {
+        await welcomeTourCta.click();
+      } else {
+        await page.locator('[data-testid="help-icon"]').click();
+        await page.getByRole('link', { name: 'Tour', exact: true }).click();
+      }
+
       await waitForAllLoadersToDisappear(page);
       await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
       await page.waitForURL('**/tour');

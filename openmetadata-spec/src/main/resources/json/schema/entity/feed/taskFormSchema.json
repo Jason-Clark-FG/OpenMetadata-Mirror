@@ -44,6 +44,36 @@
       "type": "object",
       "additionalProperties": true
     },
+    "workflowDefinitionRef": {
+      "description": "Name of the WorkflowDefinition that orchestrates tasks created from this schema.",
+      "type": "string"
+    },
+    "workflowVersion": {
+      "description": "Version of the bound workflow definition when this form schema was last saved.",
+      "$ref": "../../type/entityHistory.json#/definitions/entityVersion"
+    },
+    "createFormSchema": {
+      "description": "Optional JSON Schema override used specifically when creating a task.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "createUiSchema": {
+      "description": "Optional uiSchema override used specifically when creating a task.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "transitionForms": {
+      "description": "Per-transition form configuration keyed by transition identifier or formRef.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "defaultStageMappings": {
+      "description": "Default workflow stage to coarse task status mappings keyed by stage identifier.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "../tasks/task.json#/definitions/taskStatus"
+      }
+    },
     "version": {
       "description": "Metadata version of the entity.",
       "$ref": "../../type/entityHistory.json#/definitions/entityVersion"

@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.jdbi.v3.core.Jdbi;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.type.AnnouncementStatus;
 import org.openmetadata.schema.type.EntityReference;
@@ -50,6 +51,13 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
         Entity.getCollectionDAO().announcementDAO(),
         "",
         "");
+    supportsSearch = false;
+    quoteFqn = false;
+  }
+
+  public AnnouncementRepository(Jdbi jdbi) {
+    super(
+        COLLECTION_PATH, ANNOUNCEMENT, Announcement.class, initializeAnnouncementDao(jdbi), "", "");
     supportsSearch = false;
     quoteFqn = false;
   }
@@ -274,5 +282,15 @@ public class AnnouncementRepository extends EntityRepository<Announcement> {
           e.getMessage());
       return null;
     }
+  }
+
+  private static CollectionDAO.AnnouncementDAO initializeAnnouncementDao(Jdbi jdbi) {
+    if (Entity.getJdbi() == null) {
+      Entity.setJdbi(jdbi);
+    }
+    if (Entity.getCollectionDAO() == null) {
+      Entity.setCollectionDAO(jdbi.onDemand(CollectionDAO.class));
+    }
+    return Entity.getCollectionDAO().announcementDAO();
   }
 }

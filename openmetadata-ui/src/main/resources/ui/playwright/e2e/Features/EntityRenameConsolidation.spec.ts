@@ -27,6 +27,7 @@ import {
   visitGlossaryPage,
 } from '../../utils/common';
 import { selectDomain } from '../../utils/domain';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
 import { sidebarClick } from '../../utils/sidebar';
 
@@ -51,16 +52,39 @@ async function performRename(
   newName: string,
   apiEndpoint: string
 ): Promise<void> {
-  await page.getByTestId('manage-button').click();
-  await page
-    .getByRole('menuitem', { name: /Rename.*Name/i })
-    .getByTestId('rename-button')
-    .click();
+  const renameInput = page.locator('#name');
+  const renameActions = [
+    page.locator('.glossary-manage-dropdown-list-container [data-testid="rename-button"]'),
+    page.locator('[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'),
+    page.locator('[data-testid="rename-button-title"]'),
+    page.getByRole('menuitem', { name: /Rename.*Name/i }).getByTestId('rename-button'),
+  ];
 
-  await expect(page.locator('#name')).toBeVisible();
+  const openRenameModal = async () => {
+    await expect(page.getByTestId('manage-button')).toBeVisible();
+    await page.getByTestId('manage-button').click();
 
-  await page.locator('#name').clear();
-  await page.locator('#name').fill(newName);
+    for (const action of renameActions) {
+      if (await action.count()) {
+        const candidate = action.first();
+        await candidate.evaluate((node) => {
+          (node as HTMLElement).click();
+        });
+
+        return;
+      }
+    }
+  };
+
+  await openRenameModal();
+
+  if (!(await renameInput.isVisible().catch(() => false))) {
+    await page.waitForTimeout(500);
+    await openRenameModal();
+  }
+
+  await renameInput.clear();
+  await renameInput.fill(newName);
 
   const patchResponse = page.waitForResponse(
     (response) =>
@@ -70,7 +94,9 @@ async function performRename(
   await page.getByTestId('save-button').click();
   await patchResponse;
 
-  await expect(page.getByTestId('entity-header-name')).toBeVisible();
+  await expect(renameInput).toBeHidden();
+  await expect(page.getByTestId('entity-header-name')).toContainText(newName);
+  await expect(page.getByTestId('manage-button')).toBeVisible();
 }
 
 /**
@@ -81,20 +107,85 @@ async function updateDescription(
   description: string,
   apiEndpoint: string
 ): Promise<void> {
-  await page.getByTestId('edit-description').click();
+  const descriptionContainer = page.getByTestId('asset-description-container');
+  const editDescriptionButton =
+    descriptionContainer.getByTestId('edit-description');
+  const visibleEditButton = editDescriptionButton
+    .filter({ visible: true })
+    .first();
 
-  const descriptionBox = '.om-block-editor[contenteditable="true"]';
-  await page.locator(descriptionBox).first().click();
-  await page.locator(descriptionBox).first().clear();
-  await page.locator(descriptionBox).first().fill(description);
+  await visibleEditButton.scrollIntoViewIfNeeded();
+  await visibleEditButton.click({ force: true }).catch(async () =>
+    visibleEditButton.evaluate((node) => {
+      (node as HTMLElement).click();
+    })
+  );
+
+  const editorSelector =
+    '.ProseMirror[contenteditable="true"], .om-block-editor[contenteditable="true"]';
+  const dialog = page.getByRole('dialog').filter({ visible: true }).last();
+  const inlineEditor = descriptionContainer.locator(editorSelector).first();
+
+  const ensureMarkdownEditorOpen = async () => {
+    if (
+      (await dialog.isVisible().catch(() => false)) ||
+      (await inlineEditor.isVisible().catch(() => false))
+    ) {
+      return;
+    }
+
+    await visibleEditButton.evaluate((node) => {
+      (node as HTMLElement).click();
+    });
+    await expect
+      .poll(
+        async () =>
+          (await dialog.isVisible().catch(() => false)) ||
+          (await inlineEditor.isVisible().catch(() => false)),
+        { timeout: 10000 }
+      )
+      .toBe(true);
+  };
+
+  await ensureMarkdownEditorOpen();
+
+  const modalDescriptionBox = dialog.locator(editorSelector).first();
+  const hasModalEditor = await modalDescriptionBox
+    .isVisible({ timeout: 2000 })
+    .catch(() => false);
+  const descriptionBox = hasModalEditor
+    ? modalDescriptionBox
+    : inlineEditor;
+  if (hasModalEditor) {
+    await expect(dialog).toBeVisible();
+  }
+  await expect(descriptionBox).toBeVisible();
+  await descriptionBox.click({ force: true });
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.press('Backspace');
+  await descriptionBox.fill(description);
 
   const patchResponse = page.waitForResponse(
     (response) =>
       response.url().includes(apiEndpoint) &&
       response.request().method() === 'PATCH'
   );
-  await page.getByTestId('save').click();
+  const saveButton = hasModalEditor
+    ? dialog.getByRole('button', { name: 'Save' })
+    : page.getByTestId('save');
+  await expect(saveButton).toBeVisible();
+  await saveButton.scrollIntoViewIfNeeded().catch(() => undefined);
+  await saveButton
+    .click({ force: true })
+    .catch(async () =>
+      saveButton.evaluate((node) => {
+        (node as HTMLElement).click();
+      })
+    );
   await patchResponse;
+  if (hasModalEditor) {
+    await expect(dialog).toBeHidden();
+  }
 }
 
 test.describe(
@@ -314,18 +405,14 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        // Navigate to classification
-        await sidebarClick(page, SidebarItem.TAGS);
-        await page.getByTestId('side-panel-classification').first().waitFor();
-        await page
-          .locator('[data-testid="side-panel-classification"]')
-          .filter({ hasText: classification.data.displayName })
-          .click();
-
-        await expect(page.getByTestId('entity-header-name')).toBeVisible();
+        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await waitForAllLoadersToDisappear(page);
+        await expect(page.getByTestId('entity-header-name')).toContainText(
+          classification.data.name
+        );
 
         // Verify tag exists
-        await expect(page.getByTestId(tag.data.name)).toBeVisible();
+        await expect(page.getByText(tag.data.name).first()).toBeVisible();
 
         // Step 1: Rename the classification
         const newName = `renamed-class-${uuid()}`;
@@ -340,7 +427,7 @@ test.describe(
         );
 
         // Step 3: Verify tag is still associated
-        await expect(page.getByTestId(tag.data.name)).toBeVisible();
+        await expect(page.getByText(tag.data.name).first()).toBeVisible();
       } finally {
         try {
           await apiContext.delete(
@@ -378,14 +465,11 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await sidebarClick(page, SidebarItem.TAGS);
-        await page.getByTestId('side-panel-classification').first().waitFor();
-        await page
-          .locator('[data-testid="side-panel-classification"]')
-          .filter({ hasText: classification.data.displayName })
-          .click();
-
-        await expect(page.getByTestId('entity-header-name')).toBeVisible();
+        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await waitForAllLoadersToDisappear(page);
+        await expect(page.getByTestId('entity-header-name')).toContainText(
+          classification.data.name
+        );
 
         // Perform 3 cycles of rename + update
         for (let i = 1; i <= 3; i++) {
@@ -400,7 +484,7 @@ test.describe(
           );
 
           // Verify tag still exists after each cycle
-          await expect(page.getByTestId(tag.data.name)).toBeVisible();
+          await expect(page.getByText(tag.data.name).first()).toBeVisible();
         }
       } finally {
         try {
@@ -441,16 +525,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        // Navigate to tag
-        await sidebarClick(page, SidebarItem.TAGS);
-        await page.getByTestId('side-panel-classification').first().waitFor();
-        await page
-          .locator('[data-testid="side-panel-classification"]')
-          .filter({ hasText: classification.data.displayName })
-          .click();
-
-        await page.getByTestId(tag.data.name).waitFor({ state: 'visible' });
-        await page.getByTestId(tag.data.name).click();
+        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await waitForAllLoadersToDisappear(page);
+        await page.getByText(tag.data.name).first().click();
 
         await expect(page.getByTestId('entity-header-name')).toBeVisible();
 
@@ -496,15 +573,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await sidebarClick(page, SidebarItem.TAGS);
-        await page.getByTestId('side-panel-classification').first().waitFor();
-        await page
-          .locator('[data-testid="side-panel-classification"]')
-          .filter({ hasText: classification.data.displayName })
-          .click();
-
-        await page.getByTestId(tag.data.name).waitFor({ state: 'visible' });
-        await page.getByTestId(tag.data.name).click();
+        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await waitForAllLoadersToDisappear(page);
+        await page.getByText(tag.data.name).first().click();
 
         await expect(page.getByTestId('entity-header-name')).toBeVisible();
 

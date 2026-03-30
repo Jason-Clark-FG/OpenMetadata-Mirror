@@ -37,11 +37,14 @@ import org.openmetadata.service.governance.workflows.elements.nodes.gateway.Para
 import org.openmetadata.service.governance.workflows.elements.nodes.startEvent.StartEvent;
 import org.openmetadata.service.governance.workflows.elements.nodes.userTask.CreateRecognizerFeedbackApprovalTask;
 import org.openmetadata.service.governance.workflows.elements.nodes.userTask.UserApprovalTask;
+import org.openmetadata.service.tasks.TaskWorkflowLifecycleResolver;
 
 public class NodeFactory {
 
   public static NodeInterface createNode(
-      WorkflowNodeDefinitionInterface nodeDefinition, WorkflowConfiguration config) {
+      WorkflowNodeDefinitionInterface nodeDefinition,
+      WorkflowConfiguration config,
+      String workflowDefinitionName) {
     return switch (NodeSubType.fromValue(nodeDefinition.getSubType())) {
       case START_EVENT -> new StartEvent((StartEventDefinition) nodeDefinition, config);
       case END_EVENT -> new EndEvent((EndEventDefinition) nodeDefinition, config);
@@ -56,7 +59,12 @@ public class NodeFactory {
       case SET_GLOSSARY_TERM_STATUS_TASK -> new SetGlossaryTermStatusTask(
           (SetGlossaryTermStatusTaskDefinition) nodeDefinition, config);
       case USER_APPROVAL_TASK -> new UserApprovalTask(
-          (UserApprovalTaskDefinition) nodeDefinition, config);
+          (UserApprovalTaskDefinition) nodeDefinition,
+          config,
+          TaskWorkflowLifecycleResolver.defaultTaskTypeForWorkflowDefinitionRef(
+              workflowDefinitionName),
+          TaskWorkflowLifecycleResolver.defaultTaskCategoryForWorkflowDefinitionRef(
+              workflowDefinitionName));
       case CREATE_AND_RUN_INGESTION_PIPELINE_TASK -> new CreateAndRunIngestionPipelineTask(
           (CreateAndRunIngestionPipelineTaskDefinition) nodeDefinition, config);
       case RUN_APP_TASK -> new RunAppTask((RunAppTaskDefinition) nodeDefinition, config);

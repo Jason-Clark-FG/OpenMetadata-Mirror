@@ -18,6 +18,8 @@ import TaskFormSettingsPage from './TaskFormSettingsPage';
 const mockListTaskFormSchemas = jest.fn();
 const mockCreateTaskFormSchema = jest.fn();
 const mockUpdateTaskFormSchema = jest.fn();
+const mockCreateOrUpdateWorkflowDefinition = jest.fn();
+const mockGetWorkflowDefinitionByName = jest.fn();
 const mockShowSuccessToast = jest.fn();
 const mockShowErrorToast = jest.fn();
 
@@ -43,6 +45,13 @@ jest.mock('../../rest/taskFormSchemasAPI', () => ({
   createTaskFormSchema: (...args: unknown[]) => mockCreateTaskFormSchema(...args),
   listTaskFormSchemas: (...args: unknown[]) => mockListTaskFormSchemas(...args),
   updateTaskFormSchema: (...args: unknown[]) => mockUpdateTaskFormSchema(...args),
+}));
+
+jest.mock('../../rest/workflowDefinitionsAPI', () => ({
+  createOrUpdateWorkflowDefinition: (...args: unknown[]) =>
+    mockCreateOrUpdateWorkflowDefinition(...args),
+  getWorkflowDefinitionByName: (...args: unknown[]) =>
+    mockGetWorkflowDefinitionByName(...args),
 }));
 
 jest.mock('../../utils/GlobalSettingsUtils', () => ({
@@ -87,6 +96,13 @@ describe('TaskFormSettingsPage', () => {
       id: 'new-schema-id',
       name: 'CustomReview',
     });
+    mockCreateOrUpdateWorkflowDefinition.mockResolvedValue({
+      name: 'DescriptionUpdateTaskWorkflow',
+      version: 1,
+    });
+    mockGetWorkflowDefinitionByName.mockResolvedValue({
+      name: 'DescriptionUpdateTaskWorkflow',
+    });
   });
 
   it('loads and displays the existing task form schema', async () => {
@@ -100,7 +116,7 @@ describe('TaskFormSettingsPage', () => {
     );
 
     expect(screen.getByLabelText('Task Category')).toHaveValue('MetadataUpdate');
-    expect(screen.getAllByTestId('code-editor')).toHaveLength(2);
+    expect(screen.getAllByTestId('code-editor')).toHaveLength(7);
   });
 
   it('updates the selected schema', async () => {
@@ -120,10 +136,25 @@ describe('TaskFormSettingsPage', () => {
       description: 'Existing description schema',
       displayName: 'Description Update v2',
       formSchema: SCHEMA.formSchema,
+      createFormSchema: {
+        properties: {
+          newDescription: { type: 'string' },
+        },
+        type: 'object',
+      },
+      createUiSchema: {
+        newDescription: {
+          'ui:widget': 'descriptionTabs',
+        },
+      },
+      transitionForms: {},
+      defaultStageMappings: {},
       name: 'DescriptionUpdate',
       taskCategory: 'MetadataUpdate',
       taskType: 'DescriptionUpdate',
       uiSchema: SCHEMA.uiSchema,
+      workflowDefinitionRef: 'DescriptionUpdateTaskWorkflow',
+      workflowVersion: 1,
     });
     expect(mockShowSuccessToast).toHaveBeenCalledWith('Task form saved successfully');
   });
@@ -153,6 +184,13 @@ describe('TaskFormSettingsPage', () => {
         properties: {},
         type: 'object',
       },
+      createFormSchema: {
+        properties: {},
+        type: 'object',
+      },
+      createUiSchema: {},
+      transitionForms: {},
+      defaultStageMappings: {},
       name: 'CustomReview',
       taskCategory: '',
       taskType: 'Review',
@@ -173,7 +211,9 @@ describe('TaskFormSettingsPage', () => {
     fireEvent.click(screen.getByTestId('task-form-save-button'));
 
     await waitFor(() =>
-      expect(mockShowErrorToast).toHaveBeenCalledWith('Task form schema JSON is invalid')
+      expect(mockShowErrorToast).toHaveBeenCalledWith(
+        'Task form settings JSON is invalid'
+      )
     );
 
     expect(mockUpdateTaskFormSchema).not.toHaveBeenCalled();

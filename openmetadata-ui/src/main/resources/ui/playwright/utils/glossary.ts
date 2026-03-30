@@ -85,7 +85,17 @@ export const selectActiveGlossaryTerm = async (
   page: Page,
   glossaryTermName: string
 ) => {
-  await page.getByTestId(glossaryTermName).click();
+  const glossaryTermEntry = page.getByTestId(glossaryTermName).first();
+
+  await expect(glossaryTermEntry).toBeVisible();
+  await glossaryTermEntry.scrollIntoViewIfNeeded().catch(() => undefined);
+  await glossaryTermEntry
+    .click({ force: true })
+    .catch(async () =>
+      glossaryTermEntry.evaluate((node) => {
+        (node as HTMLElement).click();
+      })
+    );
 
   await waitForAllLoadersToDisappear(page);
 

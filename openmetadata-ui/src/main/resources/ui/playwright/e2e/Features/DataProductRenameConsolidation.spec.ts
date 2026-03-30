@@ -110,10 +110,30 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
   ): Promise<void> {
     await page.getByTestId('edit-description').click();
 
-    const descriptionBox = '.om-block-editor[contenteditable="true"]';
-    await page.locator(descriptionBox).first().click();
-    await page.locator(descriptionBox).first().clear();
-    await page.locator(descriptionBox).first().fill(description);
+    const dialog = page
+      .locator('[role="dialog"]')
+      .filter({
+        has: page.locator('.om-block-editor[contenteditable="true"]'),
+      })
+      .last();
+    const modalDescriptionBox = dialog
+      .locator('.om-block-editor[contenteditable="true"]')
+      .first();
+    const hasModalEditor = await modalDescriptionBox
+      .isVisible({ timeout: 2000 })
+      .catch(() => false);
+    const descriptionBox = hasModalEditor
+      ? modalDescriptionBox
+      : page.locator('.om-block-editor[contenteditable="true"]').first();
+
+    if (hasModalEditor) {
+      await expect(dialog).toBeVisible();
+    }
+    await expect(descriptionBox).toBeVisible();
+    await descriptionBox.click({ force: true });
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.press('Backspace');
+    await descriptionBox.fill(description);
 
     const patchResponse = page.waitForResponse(
       (response) =>
@@ -122,6 +142,9 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
     );
     await page.getByTestId('save').click();
     await patchResponse;
+    if (hasModalEditor) {
+      await expect(dialog).toBeHidden();
+    }
   }
 
   test('Rename then update description - assets should be preserved', async ({

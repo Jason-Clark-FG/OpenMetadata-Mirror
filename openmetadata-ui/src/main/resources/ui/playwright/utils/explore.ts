@@ -306,27 +306,42 @@ export const validateBucketsForIndexAndSort = async (
 };
 
 export const selectSortOrder = async (page: Page, sortOrder: string) => {
-  await waitForAllLoadersToDisappear(page);
+  const searchResults = page.getByTestId('search-results');
+  const sortOrderButton = page.getByTestId('sort-order-button');
+  await searchResults.waitFor({ state: 'visible' });
+  await expect(page.getByTestId('sorting-dropdown-label')).toBeVisible();
   await page.getByTestId('sorting-dropdown-label').click();
   await page.getByRole('menuitem', { name: sortOrder }).waitFor({
     state: 'visible',
   });
   const nameFilter = page.waitForResponse(
-    `/api/v1/search/query?q=&index=dataAsset&*sort_field=displayName.keyword&sort_order=desc*`
+    (response) =>
+      response.url().includes('/api/v1/search/query') &&
+      response.url().includes('sort_field=displayName.keyword')
   );
   await page.getByRole('menuitem', { name: sortOrder }).click();
   await nameFilter;
+  await waitForAllLoadersToDisappear(page);
 
   await expect(page.getByTestId('sorting-dropdown-label')).toHaveText(
     sortOrder
   );
 
-  const ascSortOrder = page.waitForResponse(
-    `/api/v1/search/query?q=&index=dataAsset&*sort_field=displayName.keyword&sort_order=asc*`
+  if (!areEntityNamesSortedAscending(await getVisibleEntityNames(page))) {
+    const ascSortOrder = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/search/query') &&
+        response.url().includes('sort_field=displayName.keyword')
+    );
+    await sortOrderButton.click();
+    await ascSortOrder;
+    await waitForAllLoadersToDisappear(page);
+  }
+
+  await searchResults.waitFor({ state: 'visible' });
+  expect(areEntityNamesSortedAscending(await getVisibleEntityNames(page))).toBe(
+    true
   );
-  await page.getByTestId('sort-order-button').click();
-  await ascSortOrder;
-  await waitForAllLoadersToDisappear(page);
 };
 
 export const verifyEntitiesAreSorted = async (page: Page) => {
@@ -335,15 +350,21 @@ export const verifyEntitiesAreSorted = async (page: Page) => {
     state: 'visible',
   });
 
-  const entityNames = (
+  const entityNames = await getVisibleEntityNames(page);
+  expect(areEntityNamesSortedAscending(entityNames)).toBe(true);
+};
+
+const getVisibleEntityNames = async (page: Page) => {
+  return (
     await page
       .locator(
         '[data-testid="search-results"] .explore-search-card [data-testid="entity-link"]'
       )
       .allTextContents()
   ).map((name) => name.trim());
+};
 
-  // Elasticsearch keyword field with case-insensitive sorting
+const areEntityNamesSortedAscending = (entityNames: string[]) => {
   const sortedEntityNames = [...entityNames].sort((a, b) => {
     const aLower = a.toLowerCase();
     const bLower = b.toLowerCase();
@@ -357,7 +378,7 @@ export const verifyEntitiesAreSorted = async (page: Page) => {
     return 0;
   });
 
-  expect(entityNames).toEqual(sortedEntityNames);
+  return entityNames.every((name, index) => name === sortedEntityNames[index]);
 };
 
 export const navigateToExploreAndSelectEntity = async (

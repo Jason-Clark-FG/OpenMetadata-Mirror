@@ -952,9 +952,8 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
       daoCollection.fieldRelationshipDAO().renameByToFQN(oldFqn, newFqn);
       daoCollection.tagUsageDAO().updateTargetFQNHash(oldFqn, newFqn);
       EntityLink newAbout = new EntityLink(DATA_PRODUCT, newFqn);
-      daoCollection
-          .feedDAO()
-          .updateByEntityId(newAbout.getLinkString(), updated.getId().toString());
+      Entity.getFeedRepository()
+          .updateLegacyThreadsAbout(newAbout.getLinkString(), updated.getId().toString());
     }
   }
 

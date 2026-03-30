@@ -1009,17 +1009,15 @@ public class TagRepository extends EntityRepository<Tag> {
       daoCollection.fieldRelationshipDAO().renameByToFQN(oldFqn, newFqn);
 
       MessageParser.EntityLink newAbout = new MessageParser.EntityLink(TAG, newFqn);
-      daoCollection
-          .feedDAO()
-          .updateByEntityId(newAbout.getLinkString(), updated.getId().toString());
+      Entity.getFeedRepository()
+          .updateLegacyThreadsAbout(newAbout.getLinkString(), updated.getId().toString());
 
       List<EntityReference> childTags = findTo(updated.getId(), TAG, Relationship.CONTAINS, TAG);
 
       for (EntityReference child : childTags) {
         newAbout = new MessageParser.EntityLink(TAG, child.getFullyQualifiedName());
-        daoCollection
-            .feedDAO()
-            .updateByEntityId(newAbout.getLinkString(), child.getId().toString());
+        Entity.getFeedRepository()
+            .updateLegacyThreadsAbout(newAbout.getLinkString(), child.getId().toString());
       }
     }
 

@@ -6,6 +6,10 @@
   "javaType": "org.openmetadata.schema.api.tasks.ResolveTask",
   "type": "object",
   "properties": {
+    "transitionId": {
+      "description": "Workflow transition identifier to apply when resolving the task.",
+      "type": "string"
+    },
     "resolutionType": {
       "description": "How the task should be resolved.",
       "$ref": "../../entity/tasks/task.json#/definitions/resolutionType"
@@ -24,6 +28,13 @@
       "additionalProperties": true
     }
   },
-  "required": ["resolutionType"],
+  "anyOf": [
+    {
+      "required": ["transitionId"]
+    },
+    {
+      "required": ["resolutionType"]
+    }
+  ],
   "additionalProperties": false
 }

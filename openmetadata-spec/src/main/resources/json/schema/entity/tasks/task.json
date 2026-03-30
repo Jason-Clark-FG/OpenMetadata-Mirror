@@ -213,6 +213,44 @@
       },
       "required": ["id", "message", "author", "createdAt"],
       "additionalProperties": false
+    },
+    "taskAvailableTransition": {
+      "javaType": "org.openmetadata.schema.type.TaskAvailableTransition",
+      "description": "A workflow transition currently available for this task.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Stable transition identifier used when resolving the task.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Human-readable label shown in the UI for the transition.",
+          "type": "string"
+        },
+        "targetStageId": {
+          "description": "Workflow stage identifier reached after this transition.",
+          "type": "string"
+        },
+        "targetTaskStatus": {
+          "description": "Coarse task status mapped from the workflow stage after this transition.",
+          "$ref": "#/definitions/taskStatus"
+        },
+        "resolutionType": {
+          "description": "Optional resolution type emitted when this transition closes the task.",
+          "$ref": "#/definitions/resolutionType"
+        },
+        "formRef": {
+          "description": "Optional transition form reference in the bound TaskFormSchema.transitionForms object.",
+          "type": "string"
+        },
+        "requiresComment": {
+          "description": "Whether the transition requires a comment before submission.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["id", "label", "targetStageId", "targetTaskStatus"],
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -304,6 +342,34 @@
     "workflowInstanceId": {
       "description": "ID of the workflow instance managing this task.",
       "$ref": "../../type/basic.json#/definitions/uuid"
+    },
+    "workflowDefinitionId": {
+      "description": "ID of the workflow definition bound to this task lifecycle.",
+      "$ref": "../../type/basic.json#/definitions/uuid"
+    },
+    "workflowStageId": {
+      "description": "Current workflow stage identifier for this task.",
+      "type": "string"
+    },
+    "workflowStageDisplayName": {
+      "description": "Human-readable workflow stage name shown to users.",
+      "type": "string"
+    },
+    "availableTransitions": {
+      "description": "Transitions available from the current workflow stage.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/taskAvailableTransition"
+      },
+      "default": []
+    },
+    "taskFormSchemaId": {
+      "description": "ID of the resolved TaskFormSchema used to validate and render this task.",
+      "$ref": "../../type/basic.json#/definitions/uuid"
+    },
+    "taskFormSchemaVersion": {
+      "description": "Version of the resolved TaskFormSchema captured when this task was created.",
+      "$ref": "../../type/entityHistory.json#/definitions/entityVersion"
     },
     "comments": {
       "description": "Comments on this task.",

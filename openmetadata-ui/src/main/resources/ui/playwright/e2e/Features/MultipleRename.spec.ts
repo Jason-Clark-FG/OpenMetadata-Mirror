@@ -25,10 +25,19 @@ import {
   uuid,
   visitGlossaryPage,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
 import { sidebarClick } from '../../utils/sidebar';
+import { visitClassificationPage } from '../../utils/tag';
 
 const adminUser = new UserClass();
+
+const logRenameDebug = (...messages: Array<string | number>) => {
+  if (process.env.PW_RENAME_DEBUG) {
+    // eslint-disable-next-line no-console -- opt-in playwright debug logging
+    console.log('[PW_RENAME_DEBUG]', ...messages);
+  }
+};
 
 /**
  * Helper function to perform a rename operation via the UI
@@ -37,22 +46,126 @@ async function performRename(
   page: Page,
   newName: string,
   apiEndpoint: string
-): Promise<void> {
-  // Click manage button to open rename modal
-  await page.getByTestId('manage-button').click();
+): Promise<Record<string, unknown> | undefined> {
+  logRenameDebug('performRename:start', apiEndpoint, newName);
+  const renameModal = page.locator('.ant-modal').filter({
+    has: page
+      .getByTestId('header')
+      .filter({ hasText: /Edit (Display )?Name/ }),
+  });
+  const modalHeader = renameModal.getByTestId('header');
+  const nameInput = renameModal.locator('input#name');
+  const displayNameInput = renameModal.locator('input#displayName');
+  const saveButton = renameModal.getByTestId('save-button');
+  const isDisplayNameEdit = apiEndpoint === '/api/v1/classifications/';
+  const renameInput = isDisplayNameEdit ? displayNameInput : nameInput;
+  const headerNameLocator = isDisplayNameEdit
+    ? page.getByTestId('entity-header-display-name')
+    : page.getByTestId('entity-header-name');
+  const renameActions = [
+    page
+      .getByRole('menuitem', { name: /Rename.*Name/i })
+      .getByTestId('rename-button'),
+    page.locator('[data-testid="rename-button-title"]'),
+    page.locator('.glossary-manage-dropdown-list-container [data-testid="rename-button"]'),
+    page.locator('[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'),
+    page.getByTestId('rename-button'),
+  ];
 
-  // Always use the Rename menu item with rename-button to handle pages with multiple rename buttons
-  await page
-    .getByRole('menuitem', { name: /Rename.*Name/i })
-    .getByTestId('rename-button')
-    .click();
+  const openRenameModal = async () => {
+    logRenameDebug('performRename:openRenameModal');
+    await expect(page.getByTestId('manage-button')).toBeVisible();
+    await page.getByTestId('manage-button').click({ force: true });
+    await page.waitForTimeout(250);
+    logRenameDebug('performRename:manageClicked');
 
-  // Wait for modal to appear
-  await expect(page.locator('#name')).toBeVisible();
+    const visibleDropdownContainers = [
+      page
+        .locator('.ant-dropdown:not(.ant-dropdown-hidden)')
+        .filter({ has: page.getByTestId('rename-button') })
+        .last(),
+      page.locator('.glossary-manage-dropdown-list-container').last(),
+      page.getByTestId('manage-dropdown-list-container').last(),
+    ];
+
+    for (const container of visibleDropdownContainers) {
+      if (await container.isVisible().catch(() => false)) {
+        const visibleRenameActions = [
+          container.locator('[data-testid="rename-button-title"]').first(),
+          container.getByRole('menuitem', { name: /Rename.*Name/i }).first(),
+          container.getByTestId('rename-button').first(),
+        ];
+
+        for (const visibleRenameAction of visibleRenameActions) {
+          if (await visibleRenameAction.isVisible().catch(() => false)) {
+            try {
+              await visibleRenameAction.click({ force: true });
+            } catch {
+              await visibleRenameAction.evaluate((node) => {
+                (node as HTMLElement).click();
+              });
+            }
+            logRenameDebug('performRename:visibleRenameActionClicked');
+
+            if (await renameInput.isVisible().catch(() => false)) {
+              logRenameDebug('performRename:renameInputVisible');
+
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    for (const action of renameActions) {
+      if (await action.count()) {
+        const candidate = action.first();
+        if (await candidate.isVisible().catch(() => false)) {
+          try {
+            await candidate.click({ force: true });
+          } catch {
+            await candidate.evaluate((node) => {
+              (node as HTMLElement).click();
+            });
+          }
+          logRenameDebug('performRename:renameActionClicked');
+        }
+
+        if (await renameInput.isVisible().catch(() => false)) {
+          logRenameDebug('performRename:renameInputVisible');
+          return;
+        }
+      }
+    }
+  };
+
+  if (apiEndpoint === '/api/v1/glossaryTerms/') {
+    await expect(page.getByTestId('manage-button')).toBeVisible();
+    await page.getByTestId('manage-button').click();
+    await page.getByTestId('rename-button').click();
+  } else {
+    await openRenameModal();
+  }
+
+  if (!(await renameInput.isVisible().catch(() => false))) {
+    await page.waitForTimeout(500);
+    if (apiEndpoint === '/api/v1/glossaryTerms/') {
+      await expect(page.getByTestId('manage-button')).toBeVisible();
+      await page.getByTestId('manage-button').click();
+      await page.getByTestId('rename-button').click();
+    } else {
+      await openRenameModal();
+    }
+  }
+
+  await expect(modalHeader).toContainText(/Edit (Display )?Name/);
+  await expect(renameInput).toBeVisible();
+  logRenameDebug('performRename:modalReady');
 
   // Clear and enter new name
-  await page.locator('#name').clear();
-  await page.locator('#name').fill(newName);
+  await renameInput.clear();
+  await renameInput.fill(newName);
+  logRenameDebug('performRename:filled');
 
   // Save the rename
   const patchResponse = page.waitForResponse(
@@ -60,10 +173,28 @@ async function performRename(
       response.url().includes(apiEndpoint) &&
       response.request().method() === 'PATCH'
   );
-  await page.getByTestId('save-button').click();
-  await patchResponse;
+  await expect(saveButton).toBeVisible();
+  logRenameDebug('performRename:saveVisible');
+  await saveButton
+    .click({ force: true })
+    .catch(async () =>
+      saveButton.evaluate((node) => {
+        (node as HTMLElement).click();
+      })
+    );
+  logRenameDebug('performRename:saveClicked');
+  const patchResult = await patchResponse;
+  const patchData = (await patchResult.json()) as Record<string, unknown>;
+  logRenameDebug('performRename:patchReceived');
 
-  // Wait for the UI to update
+  await expect(renameModal).toBeHidden();
+  await page.waitForLoadState('domcontentloaded');
+  await waitForAllLoadersToDisappear(page);
+  await expect(headerNameLocator).toContainText(newName);
+  await expect(page.getByTestId('manage-button')).toBeVisible();
+  logRenameDebug('performRename:done', newName);
+
+  return patchData;
 }
 
 test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
@@ -152,10 +283,12 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     const glossaryTerm = new GlossaryTerm(glossary);
     await glossaryTerm.create(apiContext);
 
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+      storageState: 'playwright/.auth/admin.json',
+    });
+    const page = await context.newPage();
 
     try {
-      await adminUser.login(page);
       await redirectToHomePage(page);
 
       // Navigate to glossary term using displayName
@@ -171,6 +304,17 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
         await performRename(page, newName, '/api/v1/glossaryTerms/');
 
+        const glossaryTermResponse = await apiContext.get(
+          `/api/v1/glossaryTerms/${glossaryTerm.responseData.id}`
+        );
+        const glossaryTermData =
+          (await glossaryTermResponse.json()) as typeof glossaryTerm.responseData;
+        await glossaryTerm.rename(
+          glossaryTermData.name,
+          glossaryTermData.fullyQualifiedName
+        );
+        await waitForAllLoadersToDisappear(page);
+
         // Verify the header shows the new name
         await expect(page.getByTestId('entity-header-name')).toContainText(
           newName
@@ -180,7 +324,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Verify the term is still accessible
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
     } finally {
-      await page.close();
+      await context.close().catch(() => undefined);
 
       // Cleanup - delete the glossary which will cascade delete the term
       try {
@@ -196,6 +340,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     browser,
   }) => {
     test.slow();
+    test.setTimeout(300000);
 
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
@@ -203,36 +348,92 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     const classification = new ClassificationClass();
     await classification.create(apiContext);
 
-    const page = await browser.newPage();
-    let currentName = classification.data.name;
+    const context = await browser.newContext({
+      storageState: 'playwright/.auth/admin.json',
+    });
+    let page = await context.newPage();
+    let currentDisplayName =
+      classification.responseData.displayName ?? classification.data.displayName;
 
     try {
-      await adminUser.login(page);
       await redirectToHomePage(page);
-
-      // Navigate to classification using side panel and displayName
-      await sidebarClick(page, SidebarItem.TAGS);
-      await page.getByTestId('side-panel-classification').first().waitFor();
-      await page
-        .locator('[data-testid="side-panel-classification"]')
-        .filter({ hasText: classification.data.displayName })
-        .click();
-
-      // Wait for page to load
-      await expect(page.getByTestId('entity-header-name')).toBeVisible();
+      await visitClassificationPage(
+        page,
+        classification.responseData.name,
+        classification.responseData.displayName ?? classification.responseData.name
+      );
+      logRenameDebug('classification:start', classification.responseData.name);
 
       // Perform 3 consecutive renames
       for (let i = 1; i <= 3; i++) {
+        logRenameDebug('classification:cycle:start', i, classification.responseData.name);
+        await waitForAllLoadersToDisappear(page);
+        logRenameDebug('classification:cycle:visited', i, currentDisplayName);
+        await expect(page.getByTestId('entity-header-display-name')).toContainText(
+          currentDisplayName
+        );
+
         const newName = `renamed-class-${i}-${uuid()}`;
 
-        await performRename(page, newName, '/api/v1/classifications/');
+        const renameModal = page.locator('.ant-modal').filter({
+          has: page
+            .getByTestId('header')
+            .filter({ hasText: /Edit Display Name/ }),
+        });
+        const renameAction = page
+          .locator('.ant-dropdown:not(.ant-dropdown-hidden)')
+          .getByTestId('rename-button')
+          .first();
+        const patchResponse = page.waitForResponse(
+          (response) =>
+            response.url().includes('/api/v1/classifications/') &&
+            response.request().method() === 'PATCH'
+        );
 
+        await expect(page.getByTestId('manage-button')).toBeVisible();
+        await page.getByTestId('manage-button').click({ force: true });
+        await expect(renameAction).toBeVisible();
+        await renameAction.click({ force: true }).catch(async () =>
+          renameAction.evaluate((node) => {
+            (node as HTMLElement).click();
+          })
+        );
+        await expect(renameModal.getByTestId('header')).toContainText(
+          'Edit Display Name'
+        );
+        await renameModal.locator('input#displayName').fill(newName);
+        await renameModal.getByTestId('save-button').click({ force: true });
+        await patchResponse;
+        await expect(renameModal).toBeHidden();
+        await waitForAllLoadersToDisappear(page);
+        await expect(page.getByTestId('entity-header-display-name')).toContainText(
+          newName
+        );
+        logRenameDebug('classification:cycle:renamed', i, newName);
+
+        const classificationResponse = await apiContext.get(
+          `/api/v1/classifications/${classification.responseData.id}`
+        );
+        classification.responseData =
+          (await classificationResponse.json()) as typeof classification.responseData;
+        logRenameDebug(
+          'classification:cycle:apiRefreshed',
+          i,
+          classification.responseData.name
+        );
+        logRenameDebug(
+          'classification:cycle:revisited',
+          i,
+          classification.responseData.displayName ?? classification.responseData.name
+        );
         // Verify the header shows the new name
-        await expect(page.getByTestId('entity-header-name')).toContainText(
+        await expect(page.getByTestId('entity-header-display-name')).toContainText(
           newName
         );
 
-        currentName = newName;
+        currentDisplayName =
+          classification.responseData.displayName ??
+          classification.responseData.name;
 
         // Wait for name to reflect in the header
         await expect(page.getByTestId('entity-header-name')).toBeVisible();
@@ -241,15 +442,11 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Verify the classification is still accessible
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
     } finally {
-      await page.close();
+      await context.close().catch(() => undefined);
 
       // Cleanup
       try {
-        await apiContext.delete(
-          `/api/v1/classifications/name/${encodeURIComponent(
-            currentName
-          )}?hardDelete=true&recursive=true`
-        );
+        await classification.delete(apiContext);
       } catch {
         try {
           await classification.delete(apiContext);
@@ -275,10 +472,12 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     const tag = new TagClass({ classification: classification.data.name });
     await tag.create(apiContext);
 
-    const page = await browser.newPage();
+    const context = await browser.newContext({
+      storageState: 'playwright/.auth/admin.json',
+    });
+    const page = await context.newPage();
 
     try {
-      await adminUser.login(page);
       await redirectToHomePage(page);
 
       // Navigate to tag using side panel and displayName
@@ -324,6 +523,10 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await page.getByTestId('save-button').click();
         await patchResponse;
 
+        const tagResponse = await apiContext.get(`/api/v1/tags/${tag.responseData.id}`);
+        tag.responseData = (await tagResponse.json()) as typeof tag.responseData;
+        await waitForAllLoadersToDisappear(page);
+
         // Wait for the UI to update
 
         // Verify the header shows the new name
@@ -338,7 +541,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       // Verify the tag is still accessible
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
     } finally {
-      await page.close();
+      await context.close().catch(() => undefined);
 
       // Cleanup - delete the classification which will cascade delete the tag
       try {

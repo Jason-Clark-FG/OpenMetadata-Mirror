@@ -17,6 +17,7 @@ import { EntityType } from '../../../../enums/entity.enum';
 import {
   Task,
   TaskCategory,
+  TaskResolutionType,
   TaskEntityStatus,
   TaskEntityType,
   TaskPriority,
@@ -199,6 +200,25 @@ const MOCK_CUSTOM_TASK: Task = {
   } as Task['payload'],
   comments: [],
   commentCount: 0,
+};
+
+const MOCK_WORKFLOW_TASK: Task = {
+  ...MOCK_CUSTOM_TASK,
+  id: 'workflow-task-123',
+  taskId: 'TASK-00999',
+  status: TaskEntityStatus.Pending,
+  workflowStageId: 'pending-review',
+  workflowStageDisplayName: 'Pending Review',
+  availableTransitions: [
+    {
+      id: 'startProgress',
+      label: 'Start Progress',
+      targetStageId: 'in-progress',
+      targetTaskStatus: TaskEntityStatus.InProgress,
+      resolutionType: TaskResolutionType.Approved,
+      requiresComment: false,
+    },
+  ],
 };
 
 const MOCK_APPROVAL_TASK: Task = {
@@ -999,6 +1019,87 @@ describe('TaskTabNew Component', () => {
     await waitFor(() => {
       expect(resolveTask).toHaveBeenCalledWith(MOCK_CUSTOM_TASK.id, {
         resolutionType: 'Approved',
+        newValue: undefined,
+        payload: {
+          targetField: 'description',
+          proposedText: 'Custom description proposal',
+          reviewNotes: 'Needs final verification',
+        },
+      });
+    });
+  });
+
+  it('keeps workflow-driven tasks actionable outside the Open status', async () => {
+    const { useAuth } = require('../../../../hooks/authHooks');
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+
+    useAuth.mockReturnValue({ isAdminUser: true });
+    getResolvedTaskFormSchema.mockResolvedValueOnce({
+      name: 'CustomTask',
+      taskType: TaskEntityType.CustomTask,
+      taskCategory: TaskCategory.Custom,
+      formSchema: {
+        type: 'object',
+        properties: {},
+      },
+      uiSchema: {
+        'ui:handler': {
+          type: 'custom',
+        },
+      },
+    });
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_WORKFLOW_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(
+      screen.getByTestId('workflow-task-action-primary')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('comments-input-field')).toBeInTheDocument();
+  });
+
+  it('resolves workflow-driven tasks using transition ids', async () => {
+    const { useAuth } = require('../../../../hooks/authHooks');
+    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const { resolveTask } = require('../../../../rest/tasksAPI');
+
+    useAuth.mockReturnValue({ isAdminUser: true });
+    getResolvedTaskFormSchema.mockResolvedValueOnce({
+      name: 'CustomTask',
+      taskType: TaskEntityType.CustomTask,
+      taskCategory: TaskCategory.Custom,
+      formSchema: {
+        type: 'object',
+        properties: {},
+      },
+      uiSchema: {
+        'ui:handler': {
+          type: 'custom',
+        },
+        'ui:resolution': {
+          mode: 'payload',
+        },
+      },
+    });
+
+    await act(async () => {
+      render(<TaskTabNew {...mockProps} task={MOCK_WORKFLOW_TASK} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('workflow-task-action-primary'));
+    });
+
+    await waitFor(() => {
+      expect(resolveTask).toHaveBeenCalledWith(MOCK_WORKFLOW_TASK.id, {
+        transitionId: 'startProgress',
+        resolutionType: 'Approved',
+        comment: undefined,
         newValue: undefined,
         payload: {
           targetField: 'description',

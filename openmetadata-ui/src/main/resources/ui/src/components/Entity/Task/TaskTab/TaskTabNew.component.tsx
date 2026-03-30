@@ -70,6 +70,7 @@ import {
   closeTask as closeTaskAPI,
   patchTask,
   resolveTask as resolveTaskAPI,
+  TaskAvailableTransition,
   TaskPayload,
   TaskEntityStatus,
   TaskEntityType,
@@ -81,10 +82,14 @@ import { checkPermission } from '../../../../utils/PermissionsUtils';
 import { getErrorText } from '../../../../utils/StringsUtils';
 import {
   applyTaskFormSchemaDefaults,
+  getDefaultTaskFormSchema,
+  getTaskTransitionFormSchema,
+  getTaskTransitionUiSchema,
   getEditableTaskPayload,
   getTaskFormHandlerConfig,
   getResolvedTaskFormSchema,
   getTaskResolutionNewValue,
+  hasTaskFormFields,
   shouldRequireTaskResolutionValue,
 } from '../../../../utils/TaskFormSchemaUtils';
 import {
@@ -162,24 +167,59 @@ export const TaskTabNew = ({
     () => getTaskDisplayId(task.taskId),
     [task.taskId]
   );
-  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema>();
+  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema | undefined>(
+    () => getDefaultTaskFormSchema(task.type, task.category)
+  );
   const taskHandler = useMemo(
     () => getTaskFormHandlerConfig(task, taskFormSchema?.uiSchema),
     [task, taskFormSchema?.uiSchema]
   );
+  const isWorkflowDrivenTask = useMemo(
+    () => Boolean(task.availableTransitions?.length),
+    [task.availableTransitions]
+  );
+  const [selectedTransitionId, setSelectedTransitionId] = useState<
+    string | undefined
+  >(task.availableTransitions?.[0]?.id);
+  const selectedTransition = useMemo(
+    () =>
+      task.availableTransitions?.find(
+        (transition) => transition.id === selectedTransitionId
+      ) ?? task.availableTransitions?.[0],
+    [selectedTransitionId, task.availableTransitions]
+  );
+  const activeTaskFormSchema = useMemo(() => {
+    if (!taskFormSchema || !isWorkflowDrivenTask) {
+      return taskFormSchema;
+    }
+
+    return {
+      ...taskFormSchema,
+      formSchema: getTaskTransitionFormSchema(taskFormSchema, selectedTransition),
+      uiSchema: getTaskTransitionUiSchema(taskFormSchema, selectedTransition),
+    };
+  }, [isWorkflowDrivenTask, selectedTransition, taskFormSchema]);
   const isTaskTags = taskHandler.type === 'tagUpdate';
   const isTaskApprovalRequest = taskHandler.type === 'approval';
   const isTaskRecognizerFeedbackApproval =
     taskHandler.type === 'feedbackApproval';
   const isApprovalWorkflowTask =
     isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
-  const initialTaskPayload = useMemo(
+  const readOnlyTaskPayload = useMemo(
     () =>
       applyTaskFormSchemaDefaults(
         getEditableTaskPayload(task, taskFormSchema?.uiSchema),
         taskFormSchema?.formSchema
       ),
     [task, taskFormSchema]
+  );
+  const initialTaskPayload = useMemo(
+    () =>
+      applyTaskFormSchemaDefaults(
+        getEditableTaskPayload(task, activeTaskFormSchema?.uiSchema),
+        activeTaskFormSchema?.formSchema
+      ),
+    [task, activeTaskFormSchema]
   );
 
   const showAddSuggestionButton = useMemo(() => {
@@ -190,15 +230,15 @@ export const TaskTabNew = ({
     if (taskHandler.type === 'descriptionUpdate') {
       const valueField = taskHandler.valueField ?? 'newDescription';
 
-      return isEmpty(initialTaskPayload?.[valueField] ?? suggestedValue);
+        return isEmpty(readOnlyTaskPayload?.[valueField] ?? suggestedValue);
     }
 
     const addTagsField = taskHandler.addTagsField ?? 'tagsToAdd';
-    const suggestedTags = initialTaskPayload?.[addTagsField];
+    const suggestedTags = readOnlyTaskPayload?.[addTagsField];
 
     return !Array.isArray(suggestedTags) || suggestedTags.length === 0;
   }, [
-    initialTaskPayload,
+    readOnlyTaskPayload,
     suggestedValue,
     taskHandler.addTagsField,
     taskHandler.type,
@@ -264,6 +304,11 @@ export const TaskTabNew = ({
   const [taskAction, setTaskAction] = useState<TaskAction>(latestAction);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const isTaskClosed = isTaskTerminalStatus(task.status);
+  const isTaskActionable = !isTaskClosed
+    ? isWorkflowDrivenTask
+      ? Boolean(task.availableTransitions?.length)
+      : task.status === TaskEntityStatus.Open
+    : false;
   const [showEditTaskModel, setShowEditTaskModel] = useState(false);
   const [comment, setComment] = useState('');
   const [isEditAssignee, setIsEditAssignee] = useState<boolean>(false);
@@ -310,14 +355,8 @@ export const TaskTabNew = ({
     return [taskTypeLabel, taskScope].filter(Boolean).join(' ').trim();
   }, [entityFQN, task.about, task.type, taskColumnLabel, t]);
   const shouldRenderTaskPayload = useMemo(() => {
-    const properties = taskFormSchema?.formSchema?.properties;
-
-    return Boolean(
-      properties &&
-        typeof properties === 'object' &&
-        Object.keys(properties).length > 0
-    );
-  }, [taskFormSchema?.formSchema?.properties]);
+    return hasTaskFormFields(taskFormSchema?.formSchema);
+  }, [taskFormSchema?.formSchema]);
 
   const isOwner = owners?.some((owner) => isEqual(owner.id, currentUser?.id));
   const isCreator = isEqual(task.createdBy?.name, currentUser?.name);
@@ -420,15 +459,18 @@ export const TaskTabNew = ({
   );
 
   const updateTaskData = async (
-    data: { newValue?: string; payload?: TaskPayload },
-    resolutionType: TaskResolutionType = TaskResolutionType.Approved
+    data: { newValue?: string; payload?: TaskPayload; comment?: string },
+    resolutionType: TaskResolutionType = TaskResolutionType.Approved,
+    transitionId?: string
   ) => {
     if (!task?.id) {
       return;
     }
     try {
       const updatedTask = await resolveTaskAPI(task.id, {
+        transitionId,
         resolutionType,
+        comment: data.comment,
         newValue: data.newValue,
         payload: data.payload,
       });
@@ -446,6 +488,50 @@ export const TaskTabNew = ({
     }
   };
 
+  const getTransitionResolutionType = (
+    transition?: TaskAvailableTransition
+  ): TaskResolutionType =>
+    transition?.resolutionType ?? TaskResolutionType.Approved;
+
+  const shouldOpenWorkflowTransitionModal = useCallback(
+    (transition?: TaskAvailableTransition) => {
+      if (!isWorkflowDrivenTask || !transition) {
+        return false;
+      }
+
+      return (
+        transition.requiresComment === true ||
+        hasTaskFormFields(getTaskTransitionFormSchema(taskFormSchema, transition))
+      );
+    },
+    [isWorkflowDrivenTask, taskFormSchema]
+  );
+
+  const runWorkflowTransition = useCallback(
+    (
+      transition: TaskAvailableTransition,
+      payload: TaskPayload = initialTaskPayload
+    ) => {
+      const transitionUiSchema = getTaskTransitionUiSchema(
+        taskFormSchema,
+        transition
+      );
+      const commentText =
+        typeof payload.comment === 'string' ? payload.comment : undefined;
+
+      updateTaskData(
+        {
+          newValue: getTaskResolutionNewValue(task, payload, transitionUiSchema),
+          payload,
+          comment: commentText,
+        },
+        getTransitionResolutionType(transition),
+        transition.id
+      );
+    },
+    [initialTaskPayload, task, taskFormSchema]
+  );
+
   const onGlossaryTaskResolve = (status = 'approved') => {
     const resolutionType =
       status.toLowerCase() === 'approved'
@@ -461,6 +547,18 @@ export const TaskTabNew = ({
   };
 
   const onTaskResolve = () => {
+    if (isWorkflowDrivenTask && selectedTransition) {
+      if (shouldOpenWorkflowTransitionModal(selectedTransition)) {
+        setShowEditTaskModel(true);
+
+        return;
+      }
+
+      runWorkflowTransition(selectedTransition);
+
+      return;
+    }
+
     const newValue = getTaskResolutionNewValue(
       task,
       initialTaskPayload,
@@ -490,8 +588,18 @@ export const TaskTabNew = ({
   };
 
   const onEditAndSuggest = ({ payload }: { payload: TaskPayload }) => {
+    if (isWorkflowDrivenTask && selectedTransition) {
+      runWorkflowTransition(selectedTransition, payload);
+
+      return;
+    }
+
     updateTaskData({
-      newValue: getTaskResolutionNewValue(task, payload, taskFormSchema?.uiSchema),
+      newValue: getTaskResolutionNewValue(
+        task,
+        payload,
+        taskFormSchema?.uiSchema
+      ),
       payload,
     });
   };
@@ -719,6 +827,100 @@ export const TaskTabNew = ({
     );
   }, [comment, onSave]);
 
+  const workflowTransitionActions = useMemo(() => {
+    if (!isWorkflowDrivenTask || !task.availableTransitions?.length) {
+      return null;
+    }
+
+    const hasWorkflowAccess = hasEditAccess || isCreator;
+    const menuItems = task.availableTransitions.map((transition) => ({
+      key: transition.id,
+      label: (
+        <span data-testid={`workflow-transition-menu-item-${transition.id}`}>
+          {transition.label}
+        </span>
+      ),
+    }));
+
+    const handleWorkflowTransitionSelect = (transitionId: string) => {
+      const transition = task.availableTransitions?.find(
+        (candidate) => candidate.id === transitionId
+      );
+
+      if (!transition) {
+        return;
+      }
+
+      setSelectedTransitionId(transition.id);
+
+      if (shouldOpenWorkflowTransitionModal(transition)) {
+        setShowEditTaskModel(true);
+
+        return;
+      }
+
+      runWorkflowTransition(transition);
+    };
+
+    if (task.availableTransitions.length === 1 && selectedTransition) {
+      return (
+        <Space
+          className="items-end justify-end"
+          data-testid="task-cta-buttons"
+          size="small">
+          <Button
+            className="task-action-button"
+            data-testid="workflow-task-action-primary"
+            disabled={!hasWorkflowAccess}
+            loading={isActionLoading}
+            type="primary"
+            onClick={() => handleWorkflowTransitionSelect(selectedTransition.id)}>
+            {selectedTransition.label}
+          </Button>
+        </Space>
+      );
+    }
+
+    return (
+      <Space
+        className="items-end justify-end"
+        data-testid="task-cta-buttons"
+        size="small">
+        <Dropdown.Button
+          buttonsRender={renderDropdownButtons('workflow-task-action')}
+          className="task-action-button"
+          data-testid="workflow-task-action-dropdown"
+          disabled={!hasWorkflowAccess}
+          icon={<DownOutlined />}
+          loading={isActionLoading}
+          menu={{
+            items: menuItems,
+            selectable: true,
+            selectedKeys: selectedTransition ? [selectedTransition.id] : [],
+            onClick: ({ key }) => handleWorkflowTransitionSelect(String(key)),
+          }}
+          overlayClassName="task-action-dropdown"
+          onClick={() => {
+            if (selectedTransition) {
+              handleWorkflowTransitionSelect(selectedTransition.id);
+            }
+          }}>
+          {selectedTransition?.label ?? t('label.resolve')}
+        </Dropdown.Button>
+      </Space>
+    );
+  }, [
+    hasEditAccess,
+    isActionLoading,
+    isCreator,
+    isWorkflowDrivenTask,
+    runWorkflowTransition,
+    selectedTransition,
+    shouldOpenWorkflowTransitionModal,
+    task.availableTransitions,
+    t,
+  ]);
+
   const approvalWorkflowActions = useMemo(() => {
     const hasApprovalAccess =
       isAssignee || (Boolean(isPartOfAssigneeTeam) && !isCreator);
@@ -803,6 +1005,10 @@ export const TaskTabNew = ({
   }, [task, isAssignee, isPartOfAssigneeTeam, taskAction, renderCommentButton]);
 
   const actionButtons = useMemo(() => {
+    if (isWorkflowDrivenTask) {
+      return workflowTransitionActions;
+    }
+
     if (isTaskApprovalRequest || isTaskRecognizerFeedbackApproval) {
       return approvalWorkflowActions;
     }
@@ -878,14 +1084,15 @@ export const TaskTabNew = ({
     onTaskResolve,
     handleMenuItemClick,
     taskAction,
-    isTaskClosed,
     isTaskApprovalRequest,
     isTaskRecognizerFeedbackApproval,
+    isWorkflowDrivenTask,
     showAddSuggestionButton,
     isCreator,
     approvalWorkflowActions,
     testCaseResultFlow,
     isTaskTestCaseResult,
+    workflowTransitionActions,
     renderCommentButton,
     handleNoSuggestionMenuItemClick,
     onNoSuggestionTaskDropdownClick,
@@ -925,8 +1132,13 @@ export const TaskTabNew = ({
   }, [initialAssignees, assigneeOptions]);
 
   useEffect(() => {
+    setTaskFormSchema(getDefaultTaskFormSchema(task.type, task.category));
     getResolvedTaskFormSchema(task.type, task.category).then(setTaskFormSchema);
   }, [task.category, task.type]);
+
+  useEffect(() => {
+    setSelectedTransitionId(task.availableTransitions?.[0]?.id);
+  }, [task.availableTransitions, task.id]);
 
   useEffect(() => {
     form.setFieldsValue(initialFormValue);
@@ -1159,9 +1371,7 @@ export const TaskTabNew = ({
       <Col className="d-flex items-start task-feed-message-container" span={24}>
         <Icon
           className="m-r-xs"
-          component={
-            task.status === TaskEntityStatus.Open ? TaskOpenIcon : TaskCloseIcon
-          }
+          component={isTaskClosed ? TaskCloseIcon : TaskOpenIcon}
           height={14}
         />
 
@@ -1181,22 +1391,20 @@ export const TaskTabNew = ({
             data-testid="task-payload-details">
             <TaskPayloadSchemaFields
               mode="read"
-              payload={initialTaskPayload}
+              payload={readOnlyTaskPayload}
               schema={taskFormSchema?.formSchema}
               uiSchema={taskFormSchema?.uiSchema}
             />
           </div>
         )}
-        {task.status === TaskEntityStatus.Open &&
-          !rest.isOpenInDrawer &&
-          ActionRequired()}
+        {isTaskActionable && !rest.isOpenInDrawer && ActionRequired()}
 
         <Col span={24}>
           <div className="activity-feed-comments-container d-flex flex-col">
             <Typography.Text
               className={classNames('activity-feed-comments-title', {
                 'm-b-md':
-                  task.status === TaskEntityStatus.Open && !showFeedEditor,
+                  isTaskActionable && !showFeedEditor,
               })}>
               {t('label.comment-plural')}
             </Typography.Text>
@@ -1215,7 +1423,7 @@ export const TaskTabNew = ({
                 onTextChange={setComment}
               />
             ) : (
-              task.status === TaskEntityStatus.Open && (
+              isTaskActionable && (
                 <div className="d-flex gap-2">
                   <div className="profile-picture">
                     <UserPopOverCard userName={currentUser?.name ?? ''}>
@@ -1244,7 +1452,7 @@ export const TaskTabNew = ({
         </Col>
       </Col>
 
-      {isTaskTestCaseResult ? (
+      {isTaskTestCaseResult && !isWorkflowDrivenTask ? (
         <Modal
           destroyOnClose
           closable={false}
@@ -1267,8 +1475,8 @@ export const TaskTabNew = ({
             <Form.Item hidden name="payload" />
             <TaskPayloadSchemaFields
               payload={editablePayload ?? initialTaskPayload}
-              schema={taskFormSchema?.formSchema}
-              uiSchema={taskFormSchema?.uiSchema}
+              schema={activeTaskFormSchema?.formSchema}
+              uiSchema={activeTaskFormSchema?.uiSchema}
               onChange={(payload) => form.setFieldValue('payload', payload)}
             />
           </Form>
@@ -1281,9 +1489,13 @@ export const TaskTabNew = ({
           data-testid="suggestion-edit-task-modal"
           maskClosable={false}
           open={showEditTaskModel}
-          title={`${t('label.edit-entity', {
-            entity: t('label.task-lowercase'),
-          })} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`}
+          title={
+            isWorkflowDrivenTask && selectedTransition
+              ? `${selectedTransition.label} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`
+              : `${t('label.edit-entity', {
+                  entity: t('label.task-lowercase'),
+                })} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`
+          }
           width={768}
           onCancel={() => {
             form.resetFields();
@@ -1298,8 +1510,8 @@ export const TaskTabNew = ({
             <Form.Item hidden name="payload" />
             <TaskPayloadSchemaFields
               payload={editablePayload ?? initialTaskPayload}
-              schema={taskFormSchema?.formSchema}
-              uiSchema={taskFormSchema?.uiSchema}
+              schema={activeTaskFormSchema?.formSchema}
+              uiSchema={activeTaskFormSchema?.uiSchema}
               onChange={(payload) => form.setFieldValue('payload', payload)}
             />
           </Form>

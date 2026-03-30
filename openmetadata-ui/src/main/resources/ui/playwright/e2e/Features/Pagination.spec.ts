@@ -39,19 +39,37 @@ test.use({
 
 test.describe('Pagination Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
   test.describe('Pagination tests for Users page', () => {
+    test.setTimeout(120000);
+
+    const paginationUserPrefix = `pw_pagination_${uuid()}`;
+    const paginationUsers: UserClass[] = [];
+
     test.beforeAll(async ({ browser }) => {
       const { apiContext, afterAction } = await createNewPage(browser);
+      const users = Array.from({ length: 20 }, (_, index) => {
+        const i = index + 1;
 
-      for (let i = 1; i <= 20; i++) {
-        const user = new UserClass({
-          firstName: `pw_pagination_User${i}`,
+        return new UserClass({
+          firstName: `${paginationUserPrefix}_User${i}`,
           lastName: `LastName${i}`,
-          email: `pw_pagination_user${i}@example.com`,
+          email: `${paginationUserPrefix}_user${i}@example.com`,
           password: 'User@OMD123',
         });
+      });
 
-        await user.create(apiContext);
-      }
+      await Promise.all(users.map((user) => user.create(apiContext, false)));
+      paginationUsers.push(...users);
+
+      await afterAction();
+    });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await Promise.allSettled(
+        paginationUsers.map((user) =>
+          user.delete(apiContext).catch(() => undefined)
+        )
+      );
 
       await afterAction();
     });

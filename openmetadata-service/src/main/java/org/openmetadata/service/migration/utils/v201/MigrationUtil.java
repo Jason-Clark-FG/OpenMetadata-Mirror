@@ -2,6 +2,11 @@ package org.openmetadata.service.migration.utils.v201;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
+import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
+import static org.openmetadata.service.governance.workflows.elements.TriggerFactory.getTriggerWorkflowId;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
@@ -36,6 +41,7 @@ import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.TaskRepository;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.resources.feeds.MessageParser;
+import org.openmetadata.service.tasks.TaskWorkflowLifecycleResolver;
 import org.openmetadata.service.util.EntityUtil;
 
 /** Migration utility for 2.0.1 task workflow cutover. */
@@ -63,16 +69,50 @@ public class MigrationUtil {
   }
 
   public void runTaskWorkflowCutoverMigration() {
+    int seededDefaults = ensureDefaultTaskWorkflows();
     int redeployedWorkflows = redeployUserApprovalWorkflows();
     MigrationStats stats = migrateLegacyThreadTasks();
+    int backfilledOpenTasks = backfillOpenTasksToWorkflowInstances();
 
     LOG.info(
-        "Completed task workflow cutover migration. workflowsRedeployed={}, migrated={}, alreadyMigrated={}, skipped={}, failures={}",
+        "Completed task workflow cutover migration. seededDefaults={}, workflowsRedeployed={}, migrated={}, alreadyMigrated={}, skipped={}, failures={}, backfilledOpenTasks={}",
+        seededDefaults,
         redeployedWorkflows,
         stats.migrated,
         stats.alreadyMigrated,
         stats.skipped,
-        stats.failed);
+        stats.failed,
+        backfilledOpenTasks);
+  }
+
+  private int ensureDefaultTaskWorkflows() {
+    int seeded = 0;
+    try {
+      for (WorkflowDefinition workflowDefinition :
+          workflowDefinitionRepository.getEntitiesFromSeedData()) {
+        String workflowName = workflowDefinition.getName();
+        if (!TaskWorkflowLifecycleResolver.defaultWorkflowDefinitionRefs().contains(workflowName)) {
+          continue;
+        }
+
+        WorkflowDefinition existingWorkflow =
+            workflowDefinitionRepository.findByNameOrNull(workflowName, Include.NON_DELETED);
+        if (existingWorkflow != null) {
+          workflowDefinition.setId(existingWorkflow.getId());
+          workflowDefinition.setVersion(existingWorkflow.getVersion());
+        } else if (workflowDefinition.getId() == null) {
+          workflowDefinition.setId(UUID.randomUUID());
+        }
+
+        workflowDefinition.setUpdatedBy(ADMIN_USER_NAME);
+        workflowDefinition.setUpdatedAt(System.currentTimeMillis());
+        workflowDefinitionRepository.createOrUpdate(null, workflowDefinition, ADMIN_USER_NAME);
+        seeded++;
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to seed default task workflows during migration", e);
+    }
+    return seeded;
   }
 
   private int redeployUserApprovalWorkflows() {
@@ -146,6 +186,59 @@ public class MigrationUtil {
     }
 
     return stats;
+  }
+
+  private int backfillOpenTasksToWorkflowInstances() {
+    int backfilled = 0;
+    try {
+      ListFilter filter = new ListFilter(Include.NON_DELETED);
+      filter.addQueryParam("taskStatusGroup", "open");
+      List<Task> openTasks =
+          taskRepository.listAll(taskRepository.getFields("about,payload"), filter);
+      for (Task task : openTasks) {
+        if (task.getWorkflowInstanceId() != null || task.getAbout() == null) {
+          continue;
+        }
+
+        var workflowBinding =
+            TaskWorkflowLifecycleResolver.resolveBinding(
+                task.getType(), task.getCategory(), task.getPayload());
+        if (workflowBinding.isEmpty()) {
+          continue;
+        }
+
+        WorkflowDefinition workflowDefinition =
+            workflowDefinitionRepository.findByNameOrNull(
+                workflowBinding.get().workflowDefinitionRef(), Include.NON_DELETED);
+        if (workflowDefinition == null) {
+          continue;
+        }
+
+        Map<String, Object> variables = new LinkedHashMap<>();
+        variables.putAll(TaskWorkflowLifecycleResolver.buildWorkflowStartVariables(task));
+        variables.put(
+            getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE),
+            EntityUtil.buildEntityLink(
+                task.getAbout().getType(), task.getAbout().getFullyQualifiedName()));
+        variables.put(
+            getNamespacedVariableName(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE), task.getUpdatedBy());
+        variables.put("workflowDefinitionId", workflowDefinition.getId().toString());
+        if (workflowBinding.get().schema() != null
+            && workflowBinding.get().schema().getId() != null) {
+          variables.put("taskFormSchemaId", workflowBinding.get().schema().getId().toString());
+          variables.put("taskFormSchemaVersion", workflowBinding.get().schema().getVersion());
+        }
+
+        workflowHandler.triggerByKey(
+            getTriggerWorkflowId(workflowDefinition.getFullyQualifiedName()),
+            task.getId().toString(),
+            variables);
+        backfilled++;
+      }
+    } catch (Exception e) {
+      LOG.error("Failed to backfill open tasks to workflow instances", e);
+    }
+    return backfilled;
   }
 
   private List<String> listTaskThreadWithOffset(String tableName, int limit, int offset) {

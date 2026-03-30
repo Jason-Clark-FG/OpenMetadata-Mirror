@@ -29,12 +29,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.jdbi.v3.core.Jdbi;
 import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.SuggestionPayload;
+import org.openmetadata.schema.type.TaskAvailableTransition;
 import org.openmetadata.schema.type.TaskCategory;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
@@ -56,6 +58,7 @@ import org.openmetadata.service.security.policyevaluator.ResourceContext;
 import org.openmetadata.service.tasks.TaskFormExecutionResolver;
 import org.openmetadata.service.tasks.TaskFormSchemaValidator;
 import org.openmetadata.service.tasks.TaskWorkflowHandler;
+import org.openmetadata.service.tasks.TaskWorkflowLifecycleResolver;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -83,6 +86,27 @@ public class TaskRepository extends EntityRepository<Task> {
         Entity.TASK,
         Task.class,
         Entity.getCollectionDAO().taskDAO(),
+        "assignees,reviewers,watchers,about,createdBy",
+        "assignees,reviewers,watchers,about,createdBy");
+    supportsSearch = true;
+    quoteFqn = false;
+    this.allowedFields.add(FIELD_ASSIGNEES);
+    this.allowedFields.add(FIELD_REVIEWERS);
+    this.allowedFields.add(FIELD_WATCHERS);
+    this.allowedFields.add(FIELD_ABOUT);
+    this.allowedFields.add(FIELD_COMMENTS);
+    this.allowedFields.add(FIELD_RESOLUTION);
+    this.allowedFields.add(FIELD_DOMAINS);
+    this.allowedFields.add(FIELD_CREATED_BY);
+    this.allowedFields.add(FIELD_PAYLOAD);
+  }
+
+  public TaskRepository(Jdbi jdbi) {
+    super(
+        COLLECTION_PATH,
+        Entity.TASK,
+        Task.class,
+        initializeTaskDao(jdbi),
         "assignees,reviewers,watchers,about,createdBy",
         "assignees,reviewers,watchers,about,createdBy");
     supportsSearch = true;
@@ -127,6 +151,16 @@ public class TaskRepository extends EntityRepository<Task> {
     if (!nullOrEmpty(domains)) {
       filter.addQueryParam("domainId", EntityUtil.getCommaSeparatedIdsFromRefs(domains));
     }
+  }
+
+  private static CollectionDAO.TaskDAO initializeTaskDao(Jdbi jdbi) {
+    if (Entity.getJdbi() == null) {
+      Entity.setJdbi(jdbi);
+    }
+    if (Entity.getCollectionDAO() == null) {
+      Entity.setCollectionDAO(jdbi.onDemand(CollectionDAO.class));
+    }
+    return Entity.getCollectionDAO().taskDAO();
   }
 
   public void applyTaskDomainFilter(ListFilter filter) {
@@ -625,16 +659,11 @@ public class TaskRepository extends EntityRepository<Task> {
       return;
     }
 
-    TaskFormSchemaRepository schemaRepository =
-        (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
-    schemaRepository
-        .resolve(
-            task.getType().value(),
-            task.getCategory() != null ? task.getCategory().value() : null,
-            task.getPayload())
+    TaskWorkflowLifecycleResolver.resolveBinding(task)
         .ifPresent(
-            schema ->
-                TaskFormSchemaValidator.validatePayload(schema.getFormSchema(), task.getPayload()));
+            binding ->
+                TaskFormSchemaValidator.validatePayload(
+                    binding.createFormSchema(), task.getPayload()));
   }
 
   /**
@@ -650,14 +679,19 @@ public class TaskRepository extends EntityRepository<Task> {
    * @return The updated task, or null if still waiting for more approvals
    */
   public Task resolveTaskWithWorkflow(
-      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
-    validateResolutionPayloadAgainstFormSchema(task, resolvedPayload, newValue);
+      Task task,
+      String transitionId,
+      TaskResolutionType resolutionType,
+      String newValue,
+      Object resolvedPayload,
+      String user) {
+    validateResolutionPayloadAgainstFormSchema(task, transitionId, resolvedPayload, newValue);
     return TaskWorkflowHandler.getInstance()
-        .resolveTask(task, approved, newValue, resolvedPayload, user);
+        .resolveTask(task, transitionId, resolutionType, newValue, resolvedPayload, user);
   }
 
   private void validateResolutionPayloadAgainstFormSchema(
-      Task task, Object resolvedPayload, String newValue) {
+      Task task, String transitionId, Object resolvedPayload, String newValue) {
     if (task.getType() == null) {
       return;
     }
@@ -666,18 +700,18 @@ public class TaskRepository extends EntityRepository<Task> {
       return;
     }
 
-    TaskFormSchemaRepository schemaRepository =
-        (TaskFormSchemaRepository) Entity.getEntityRepository(Entity.TASK_FORM_SCHEMA);
-    schemaRepository
-        .resolve(
-            task.getType().value(),
-            task.getCategory() != null ? task.getCategory().value() : null,
-            resolvedPayload != null ? resolvedPayload : task.getPayload())
+    TaskWorkflowLifecycleResolver.resolveSchema(task)
         .ifPresent(
-            schema ->
-                TaskFormSchemaValidator.validatePayload(
-                    schema.getFormSchema(),
-                    TaskWorkflowHandler.mergeResolutionPayload(task, resolvedPayload, newValue)));
+            schema -> {
+              TaskAvailableTransition transition =
+                  TaskWorkflowLifecycleResolver.findTransition(task, transitionId);
+              Object transitionSchema =
+                  TaskWorkflowLifecycleResolver.resolveTransitionFormSchema(
+                      schema, transitionId, transition);
+              TaskFormSchemaValidator.validatePayload(
+                  transitionSchema,
+                  TaskWorkflowHandler.mergeResolutionPayload(task, resolvedPayload, newValue));
+            });
   }
 
   /**

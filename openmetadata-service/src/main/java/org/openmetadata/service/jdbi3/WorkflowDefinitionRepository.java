@@ -700,6 +700,15 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
                   workflowName, node.getNodeDisplayName()));
         }
 
+        if (USER_APPROVAL_TASK.equals(node.getSubType())) {
+          List<String> configuredTransitions = getConfiguredUserApprovalTransitions(node);
+          if (!configuredTransitions.isEmpty()) {
+            validateUserApprovalTransitions(
+                workflowName, node.getNodeDisplayName(), configuredTransitions, outgoingEdges);
+            continue;
+          }
+        }
+
         // Check if we have both TRUE and FALSE conditions
         boolean hasTrueCondition = false;
         boolean hasFalseCondition = false;
@@ -734,5 +743,69 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
     return "checkEntityAttributesTask".equals(nodeType)
         || "userApprovalTask".equals(nodeType)
         || "checkChangeDescriptionTask".equals(nodeType);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> getConfiguredUserApprovalTransitions(WorkflowNodeDefinitionInterface node) {
+    if (node.getConfig() == null) {
+      return List.of();
+    }
+
+    Map<String, Object> config = JsonUtils.readOrConvertValue(node.getConfig(), Map.class);
+    Object transitionMetadata = config.get("transitionMetadata");
+    if (transitionMetadata == null) {
+      return List.of();
+    }
+
+    List<Map<String, Object>> transitions =
+        JsonUtils.readOrConvertValue(transitionMetadata, List.class);
+    List<String> transitionIds = new ArrayList<>();
+    for (Map<String, Object> transition : transitions) {
+      if (transition == null) {
+        continue;
+      }
+      Object transitionId = transition.get("id");
+      if (transitionId instanceof String id && !id.isBlank()) {
+        transitionIds.add(id.trim());
+      }
+    }
+    return transitionIds;
+  }
+
+  private void validateUserApprovalTransitions(
+      String workflowName,
+      String nodeDisplayName,
+      List<String> configuredTransitions,
+      List<EdgeDefinition> outgoingEdges) {
+    Set<String> configuredTransitionSet = Set.copyOf(configuredTransitions);
+    Set<String> outgoingConditions = new java.util.HashSet<>();
+    for (EdgeDefinition edge : outgoingEdges) {
+      if (edge.getCondition() != null && !edge.getCondition().isBlank()) {
+        outgoingConditions.add(edge.getCondition().trim());
+      }
+    }
+
+    List<String> missingTransitions =
+        configuredTransitions.stream()
+            .filter(transitionId -> !outgoingConditions.contains(transitionId))
+            .toList();
+    if (!missingTransitions.isEmpty()) {
+      throw BadRequestException.of(
+          String.format(
+              "Workflow '%s': User approval task '%s' must have outgoing sequence flows for every configured transition. Missing conditions for %s",
+              workflowName, nodeDisplayName, missingTransitions));
+    }
+
+    List<String> unexpectedConditions =
+        outgoingConditions.stream()
+            .filter(condition -> !configuredTransitionSet.contains(condition))
+            .sorted()
+            .toList();
+    if (!unexpectedConditions.isEmpty()) {
+      throw BadRequestException.of(
+          String.format(
+              "Workflow '%s': User approval task '%s' has outgoing sequence flows with conditions not declared in transitionMetadata: %s",
+              workflowName, nodeDisplayName, unexpectedConditions));
+    }
   }
 }

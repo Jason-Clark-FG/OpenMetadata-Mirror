@@ -117,14 +117,14 @@ export default defineConfig({
       testMatch: '**/DataAssetRulesEnabled.spec.ts',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
-      fullyParallel: true,
+      fullyParallel: false,
     },
     {
       name: 'DataAssetRulesDisabled',
       testMatch: '**/DataAssetRulesDisabled.spec.ts',
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['DataAssetRulesEnabled'],
-      fullyParallel: true,
+      fullyParallel: false,
     },
     {
       name: 'Basic',
@@ -132,6 +132,21 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
       dependencies: ['setup'],
       fullyParallel: true,
+      testIgnore: [
+        '**/TeamsDragAndDrop.spec.ts',
+        '**/TeamsHierarchy.spec.ts',
+      ],
+    },
+    {
+      name: 'TeamsSharedState',
+      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup'],
+      testMatch: [
+        '**/TeamsDragAndDrop.spec.ts',
+        '**/TeamsHierarchy.spec.ts',
+      ],
+      fullyParallel: false,
+      workers: 1,
     },
     // System Certification Tags tests modify global shared state (system tags like Gold, Silver, Bronze)
     // They must run in isolation after the main chromium project to avoid flakiness

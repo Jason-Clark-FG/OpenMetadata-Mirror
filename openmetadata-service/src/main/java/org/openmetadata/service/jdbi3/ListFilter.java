@@ -197,19 +197,14 @@ public class ListFilter extends Filter<ListFilter> {
 
   /**
    * Filter tasks by creator. Supports two modes:
-   * - createdById: Uses CREATED relationship for exact UUID match
+   * - createdById: Uses the indexed createdById column for exact UUID match
    * - createdBy: Uses CREATED relationship with FQN lookup
    */
   private String getCreatedByCondition() {
     String createdById = queryParams.get("createdById");
     if (createdById != null) {
       queryParams.put("createdByIdParam", createdById);
-      return String.format(
-          "(id IN (SELECT entity_relationship.toId FROM entity_relationship "
-              + "WHERE entity_relationship.fromEntity = 'user' "
-              + "AND entity_relationship.fromId = :createdByIdParam "
-              + "AND entity_relationship.relation = %d))",
-          Relationship.CREATED.ordinal());
+      return "createdById = :createdByIdParam";
     }
 
     String createdBy = queryParams.get("createdBy");

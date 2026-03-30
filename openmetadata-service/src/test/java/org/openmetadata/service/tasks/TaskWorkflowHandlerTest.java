@@ -122,11 +122,48 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
 
-      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
+      Task result =
+          TaskWorkflowHandler.getInstance()
+              .resolveTask(task, "approve", TaskResolutionType.Approved, null, null, "alice");
 
       assertSame(refreshedTask, result);
       verify(taskRepository, never()).resolveTask(any(), any(TaskResolution.class), anyString());
       verify(workflowHandler).isTaskStillOpen(taskId);
+    }
+  }
+
+  @Test
+  void testResolveWorkflowTaskDoesNotFallbackWhenWorkflowResolutionFails() {
+    UUID taskId = UUID.randomUUID();
+    Task task =
+        new Task()
+            .withId(taskId)
+            .withWorkflowInstanceId(UUID.randomUUID())
+            .withStatus(TaskEntityStatus.Open)
+            .withType(TaskEntityType.RequestApproval);
+
+    WorkflowHandler workflowHandler = mock(WorkflowHandler.class);
+    TaskRepository taskRepository = mock(TaskRepository.class);
+
+    try (MockedStatic<WorkflowHandler> workflowMock = Mockito.mockStatic(WorkflowHandler.class);
+        MockedStatic<Entity> entityMock = Mockito.mockStatic(Entity.class)) {
+      workflowMock.when(WorkflowHandler::getInstance).thenReturn(workflowHandler);
+      when(workflowHandler.transformToNodeVariables(eq(taskId), any()))
+          .thenAnswer(invocation -> invocation.getArgument(1));
+      when(workflowHandler.resolveTask(eq(taskId), any())).thenReturn(false);
+
+      entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
+
+      IllegalStateException exception =
+          assertThrows(
+              IllegalStateException.class,
+              () ->
+                  TaskWorkflowHandler.getInstance()
+                      .resolveTask(
+                          task, "approve", TaskResolutionType.Approved, null, null, "alice"));
+
+      assertTrue(exception.getMessage().contains(taskId.toString()));
+      verify(taskRepository, never()).resolveTask(any(), any(TaskResolution.class), anyString());
     }
   }
 
@@ -161,7 +198,9 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(refreshedTask);
 
-      Task result = TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
+      Task result =
+          TaskWorkflowHandler.getInstance()
+              .resolveTask(task, "complete", TaskResolutionType.Completed, null, null, "alice");
 
       assertSame(refreshedTask, result);
       verify(taskRepository).resolveTask(eq(task), any(TaskResolution.class), eq("alice"));
@@ -199,7 +238,8 @@ class TaskWorkflowHandlerTest {
       when(taskRepository.getFields(anyString())).thenReturn(fields);
       when(taskRepository.get(isNull(), eq(taskId), eq(fields))).thenReturn(storedTask);
 
-      TaskWorkflowHandler.getInstance().resolveTask(task, true, null, null, "alice");
+      TaskWorkflowHandler.getInstance()
+          .resolveTask(task, "approve", TaskResolutionType.Approved, null, null, "alice");
 
       verify(taskRepository)
           .resolveTask(

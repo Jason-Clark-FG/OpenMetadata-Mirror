@@ -29,6 +29,7 @@ import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TaskAvailableTransition;
 import org.openmetadata.schema.type.TaskComment;
 import org.openmetadata.schema.type.TaskEntityStatus;
 import org.openmetadata.schema.type.TaskEntityType;
@@ -90,12 +91,22 @@ public class TaskWorkflowHandler {
    *     approvals.
    */
   public Task resolveTask(
-      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
+      Task task,
+      String transitionId,
+      TaskResolutionType requestedResolutionType,
+      String newValue,
+      Object resolvedPayload,
+      String user) {
     UUID taskId = task.getId();
+    TaskAvailableTransition selectedTransition =
+        TaskWorkflowLifecycleResolver.findTransition(task, transitionId);
+    TaskResolutionType effectiveResolutionType =
+        resolveResolutionType(task, requestedResolutionType, selectedTransition);
     LOG.info(
-        "[TaskWorkflowHandler] Resolving task: id='{}', approved={}, user='{}'",
+        "[TaskWorkflowHandler] Resolving task: id='{}', transitionId='{}', resolutionType='{}', user='{}'",
         taskId,
-        approved,
+        transitionId,
+        effectiveResolutionType,
         user);
 
     // During migration cutover, legacy workflow tasks can be converted to Task entities before
@@ -103,9 +114,17 @@ public class TaskWorkflowHandler {
     boolean isWorkflowManaged = isWorkflowManaged(task);
 
     if (isWorkflowManaged) {
-      return resolveWorkflowTask(task, approved, newValue, resolvedPayload, user);
+      return resolveWorkflowTask(
+          task,
+          transitionId,
+          effectiveResolutionType,
+          selectedTransition,
+          newValue,
+          resolvedPayload,
+          user);
     } else {
-      return resolveStandaloneTask(task, approved, newValue, resolvedPayload, user);
+      return resolveStandaloneTask(
+          task, effectiveResolutionType, selectedTransition, newValue, resolvedPayload, user);
     }
   }
 
@@ -113,19 +132,28 @@ public class TaskWorkflowHandler {
    * Resolve a task that is managed by a Flowable workflow.
    */
   private Task resolveWorkflowTask(
-      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
+      Task task,
+      String transitionId,
+      TaskResolutionType resolutionType,
+      TaskAvailableTransition selectedTransition,
+      String newValue,
+      Object resolvedPayload,
+      String user) {
     UUID taskId = task.getId();
     WorkflowHandler workflowHandler = WorkflowHandler.getInstance();
 
     // Build workflow variables
     Map<String, Object> variables = new HashMap<>();
-    variables.put(RESULT_VARIABLE, approved);
+    variables.put(RESULT_VARIABLE, resolveWorkflowResult(task, transitionId, resolutionType));
     variables.put(UPDATED_BY_VARIABLE, user);
+    if (transitionId != null) {
+      variables.put("transitionId", transitionId);
+    }
     if (newValue != null) {
       variables.put("newValue", newValue);
     }
     if (resolvedPayload != null) {
-      variables.put("payload", resolvedPayload);
+      variables.put("payload", serializeWorkflowVariable(resolvedPayload));
     }
 
     // Resolve in Flowable workflow
@@ -134,39 +162,52 @@ public class TaskWorkflowHandler {
     boolean workflowSuccess = workflowHandler.resolveTask(taskId, namespacedVariables);
 
     if (!workflowSuccess) {
-      LOG.warn(
-          "[TaskWorkflowHandler] Workflow resolution failed for task '{}', applying directly",
-          taskId);
-      return resolveStandaloneTask(task, approved, newValue, resolvedPayload, user);
+      throw new IllegalStateException(
+          String.format(
+              "Workflow resolution failed for task '%s' on transition '%s'",
+              taskId, transitionId != null ? transitionId : defaultWorkflowResult(resolutionType)));
     }
 
     // Check if multi-approval task is still waiting for more votes
     if (workflowHandler.isTaskStillOpen(taskId)) {
       LOG.info("[TaskWorkflowHandler] Task '{}' still open, waiting for more approvals", taskId);
       persistEditedWorkflowPayload(task, resolvedPayload, newValue, user);
-      updateTaskVotes(task, user, approved);
+      updateTaskVotes(task, user, isPositiveResolution(resolutionType));
       return refreshTask(taskId);
     }
 
     // Task threshold met, apply resolution
-    return applyTaskResolution(task, approved, newValue, resolvedPayload, user);
+    return applyTaskResolution(
+        task, resolutionType, selectedTransition, newValue, resolvedPayload, user);
   }
 
   /**
    * Resolve a standalone task (not managed by a workflow).
    */
   private Task resolveStandaloneTask(
-      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
-    return applyTaskResolution(task, approved, newValue, resolvedPayload, user);
+      Task task,
+      TaskResolutionType resolutionType,
+      TaskAvailableTransition selectedTransition,
+      String newValue,
+      Object resolvedPayload,
+      String user) {
+    return applyTaskResolution(
+        task, resolutionType, selectedTransition, newValue, resolvedPayload, user);
   }
 
   /**
    * Apply the task resolution: update entity and mark task as resolved.
    */
   private Task applyTaskResolution(
-      Task task, boolean approved, String newValue, Object resolvedPayload, String user) {
+      Task task,
+      TaskResolutionType resolutionType,
+      TaskAvailableTransition selectedTransition,
+      String newValue,
+      Object resolvedPayload,
+      String user) {
     UUID taskId = task.getId();
     TaskRepository taskRepository = (TaskRepository) Entity.getEntityRepository(Entity.TASK);
+    boolean approved = isPositiveResolution(resolutionType);
 
     LOG.info(
         "[TaskWorkflowHandler] applyTaskResolution: taskId='{}', approved={}, newValue='{}', aboutPresent={}",
@@ -192,9 +233,6 @@ public class TaskWorkflowHandler {
     }
 
     // Build resolution
-    TaskResolutionType resolutionType =
-        approved ? TaskResolutionType.Approved : TaskResolutionType.Rejected;
-
     EntityReference resolvedByRef =
         Entity.getEntityReferenceByName(Entity.USER, user, Include.NON_DELETED);
 
@@ -204,6 +242,12 @@ public class TaskWorkflowHandler {
             .withResolvedBy(resolvedByRef)
             .withResolvedAt(System.currentTimeMillis())
             .withNewValue(newValue);
+
+    if (selectedTransition != null) {
+      task.setWorkflowStageId(selectedTransition.getTargetStageId());
+      task.setWorkflowStageDisplayName(selectedTransition.getTargetStageId());
+      task.setAvailableTransitions(List.of());
+    }
 
     // Update task status
     task = taskRepository.resolveTask(task, resolution, user);
@@ -957,5 +1001,80 @@ public class TaskWorkflowHandler {
 
       return fallbackTask;
     }
+  }
+
+  private boolean isPositiveResolution(TaskResolutionType resolutionType) {
+    return resolutionType == TaskResolutionType.Approved
+        || resolutionType == TaskResolutionType.AutoApproved
+        || resolutionType == TaskResolutionType.Completed;
+  }
+
+  private String defaultWorkflowResult(TaskResolutionType resolutionType) {
+    if (resolutionType == null) {
+      return "approve";
+    }
+    return switch (resolutionType) {
+      case Approved, AutoApproved -> "approve";
+      case Rejected, AutoRejected -> "reject";
+      case Completed -> "complete";
+      case Cancelled -> "cancel";
+      case TimedOut -> "timeout";
+    };
+  }
+
+  private String resolveWorkflowResult(
+      Task task, String transitionId, TaskResolutionType resolutionType) {
+    if (transitionId != null) {
+      return transitionId;
+    }
+
+    if (task == null
+        || task.getAvailableTransitions() == null
+        || task.getAvailableTransitions().isEmpty()) {
+      return isPositiveResolution(resolutionType) ? "true" : "false";
+    }
+
+    return defaultWorkflowResult(resolutionType);
+  }
+
+  private TaskResolutionType resolveResolutionType(
+      Task task,
+      TaskResolutionType requestedResolutionType,
+      TaskAvailableTransition selectedTransition) {
+    if (requestedResolutionType != null) {
+      return requestedResolutionType;
+    }
+
+    if (selectedTransition != null && selectedTransition.getResolutionType() != null) {
+      return selectedTransition.getResolutionType();
+    }
+
+    if (selectedTransition != null && selectedTransition.getTargetTaskStatus() != null) {
+      return switch (selectedTransition.getTargetTaskStatus()) {
+        case Approved -> TaskResolutionType.Approved;
+        case Rejected -> TaskResolutionType.Rejected;
+        case Completed -> TaskResolutionType.Completed;
+        case Cancelled -> TaskResolutionType.Cancelled;
+        case Failed -> TaskResolutionType.TimedOut;
+        default -> TaskResolutionType.Completed;
+      };
+    }
+
+    String defaultTransitionId =
+        TaskWorkflowLifecycleResolver.defaultTransitionId(task, TaskResolutionType.Approved);
+    if ("reject".equals(defaultTransitionId)) {
+      return TaskResolutionType.Rejected;
+    }
+    return TaskResolutionType.Approved;
+  }
+
+  private Object serializeWorkflowVariable(Object value) {
+    if (value == null
+        || value instanceof String
+        || value instanceof Number
+        || value instanceof Boolean) {
+      return value;
+    }
+    return JsonUtils.pojoToJson(value);
   }
 }

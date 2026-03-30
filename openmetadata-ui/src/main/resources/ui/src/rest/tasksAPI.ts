@@ -95,6 +95,16 @@ export interface TaskResolution {
   newValue?: string;
 }
 
+export interface TaskAvailableTransition {
+  id: string;
+  label: string;
+  targetStageId: string;
+  targetTaskStatus: TaskEntityStatus;
+  resolutionType?: TaskResolutionType;
+  formRef?: string;
+  requiresComment?: boolean;
+}
+
 // Task payload interface - union of all payload types
 export interface TaskPayload {
   [key: string]: unknown;
@@ -148,6 +158,12 @@ export interface Task {
     lastSyncedAt?: number;
   };
   workflowInstanceId?: string;
+  workflowDefinitionId?: string;
+  workflowStageId?: string;
+  workflowStageDisplayName?: string;
+  availableTransitions?: TaskAvailableTransition[];
+  taskFormSchemaId?: string;
+  taskFormSchemaVersion?: number;
   comments?: TaskComment[];
   commentCount?: number;
   tags?: TagLabel[];
@@ -185,7 +201,8 @@ export interface CreateTask {
 
 // ResolveTask request interface
 export interface ResolveTask {
-  resolutionType: TaskResolutionType;
+  transitionId?: string;
+  resolutionType?: TaskResolutionType;
   comment?: string;
   newValue?: string;
   payload?: TaskPayload;
