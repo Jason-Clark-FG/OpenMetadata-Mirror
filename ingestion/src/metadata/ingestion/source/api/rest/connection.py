@@ -45,6 +45,7 @@ from metadata.ingestion.source.api.rest.parser import (
     validate_openapi_schema,
 )
 from metadata.utils.constants import THREE_MIN
+from metadata.utils.ssl_registry import get_verify_ssl_fn
 
 
 class SchemaURLError(Exception):
@@ -67,10 +68,20 @@ def get_connection(connection: RestConnection) -> Union[Response, Dict]:
     """
     schema_conn = connection.openAPISchemaConnection
     if isinstance(schema_conn, OpenAPISchemaURL):
+        verify = True
+        if connection.verifySSL:
+            verify_ssl_fn = get_verify_ssl_fn(connection.verifySSL)
+            verify_result = verify_ssl_fn(connection.sslConfig)
+            if verify_result is None:
+                verify = True
+            else:
+                verify = verify_result
+        headers = {}
         if connection.token:
-            headers = {"Authorization": f"Bearer {connection.token.get_secret_value()}"}
-            return requests.get(schema_conn.openAPISchemaURL, headers=headers)
-        return requests.get(schema_conn.openAPISchemaURL)
+            headers["Authorization"] = f"Bearer {connection.token.get_secret_value()}"
+        return requests.get(
+            schema_conn.openAPISchemaURL, headers=headers, verify=verify
+        )
 
     if isinstance(schema_conn, OpenAPISchemaFilePath):
         return parse_openapi_schema_from_file(schema_conn.openAPISchemaFilePath)
