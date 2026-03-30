@@ -573,6 +573,10 @@
       "descriptionStatus": {
         "type": "keyword"
       },
+      "ownerDisplayName": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
       "lifeCycle": {
         "type": "object"
       },
