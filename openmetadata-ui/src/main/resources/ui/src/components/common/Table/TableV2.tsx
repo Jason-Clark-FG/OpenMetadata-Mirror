@@ -238,11 +238,8 @@ const TableV2 = <T extends object>(
 
     return {
       ...(scroll.x ? { overflowX: 'auto' } : {}),
-      ...(scroll.y
-        ? { overflowY: 'auto', maxHeight: scroll.y as string | number }
-        : {}),
     };
-  }, [scroll?.x, scroll?.y]);
+  }, [scroll?.x]);
 
   // ─── Column customization (identical to Table.tsx) ───────────────────────
 
@@ -537,14 +534,12 @@ const TableV2 = <T extends object>(
   return (
     <div
       className={classNames('table-container', rest.containerClassName)}
-      ref={ref}
-    >
+      ref={ref}>
       <div
         className={classNames('p-x-md', {
           'p-y-md':
             searchProps || rest.extraTableFilters || isCustomizeColumnEnable,
-        })}
-      >
+        })}>
         <div className="tw:flex tw:items-center">
           {searchProps && (
             <div style={{ flex: 1 }}>
@@ -564,8 +559,7 @@ const TableV2 = <T extends object>(
                 'd-flex justify-end items-center gap-5',
                 rest.extraTableFiltersClassName
               )}
-              style={{ flex: 1 }}
-            >
+              style={{ flex: 1 }}>
               {rest.extraTableFilters}
               {isCustomizeColumnEnable && (
                 <Dropdown.Root>
@@ -574,24 +568,21 @@ const TableV2 = <T extends object>(
                     data-testid="column-dropdown"
                     iconLeading={ColumnIcon}
                     size="sm"
-                    title={t('label.show-or-hide-column-plural')}
-                  >
+                    title={t('label.show-or-hide-column-plural')}>
                     {t('label.customize')}
                   </Button>
                   <Dropdown.Popover>
                     <div className="d-flex justify-between items-center w-52 p-x-md p-b-xss border-bottom">
                       <span
                         className="text-sm text-grey-muted font-medium"
-                        data-testid="column-dropdown-title"
-                      >
+                        data-testid="column-dropdown-title">
                         {t('label.column')}
                       </span>
                       <Button
                         color="link-color"
                         data-testid="column-dropdown-action-button"
                         size="sm"
-                        onPress={() => handleBulkColumnAction()}
-                      >
+                        onPress={() => handleBulkColumnAction()}>
                         {dropdownColumnList.length ===
                         columnDropdownSelections.length
                           ? t('label.hide-all')
@@ -622,8 +613,7 @@ const TableV2 = <T extends object>(
       <div
         className="tw:flex tw:flex-col tw:w-full"
         data-testid={dataTestId}
-        style={scrollStyle}
-      >
+        style={scrollStyle}>
         {isLoading && (
           <div className="tw:absolute tw:inset-0 tw:z-10 tw:flex tw:items-center tw:justify-center tw:bg-white/60">
             <Loader />
@@ -633,8 +623,17 @@ const TableV2 = <T extends object>(
         {(() => {
           const tableContent = (
             <UntitledTable
+              stickyHeader
               aria-label="data-table"
               className={rest.resizableColumns ? 'tw:table-fixed' : undefined}
+              containerStyle={
+                scroll?.y
+                  ? {
+                      maxHeight: scroll.y as string | number,
+                      overflowY: 'auto',
+                    }
+                  : undefined
+              }
               dragAndDropHooks={dragAndDropHooks}
               selectedKeys={
                 rest.rowSelection?.selectedRowKeys
@@ -653,15 +652,8 @@ const TableV2 = <T extends object>(
                   : undefined
               }
               onSelectionChange={handleSelectionChange}
-              onSortChange={handleSortChange}
-            >
-              <UntitledTable.Header
-                className={classNames('tw:px-2', {
-                  'tw:sticky tw:top-0 tw:z-10 tw:bg-primary': Boolean(
-                    scroll?.y
-                  ),
-                })}
-              >
+              onSortChange={handleSortChange}>
+              <UntitledTable.Header className="tw:px-2">
                 {propsColumns.map((col, colIdx) => {
                   const colType = col as ColumnType<T>;
                   const colKey = String(col.key ?? colType.dataIndex ?? colIdx);
@@ -686,8 +678,7 @@ const TableV2 = <T extends object>(
                           ? { position: 'relative' }
                           : {}),
                         ...stickyStyle,
-                      }}
-                    >
+                      }}>
                       <div className="tw:flex tw:items-center tw:gap-1">
                         {resolveColumnTitle(colType, propsColumns)}
                         {Boolean(colType.filters || colType.filterDropdown) && (
@@ -695,13 +686,11 @@ const TableV2 = <T extends object>(
                             isOpen={openFilterKey === colKey}
                             onOpenChange={(isOpen) =>
                               setOpenFilterKey(isOpen ? colKey : null)
-                            }
-                          >
+                            }>
                             <Button
                               aria-label="filter"
                               className="tw:ml-1 tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:inline-flex tw:items-center"
-                              color="tertiary"
-                            >
+                              color="tertiary">
                               {typeof colType.filterIcon === 'function'
                                 ? colType.filterIcon(
                                     Boolean(filterState[colKey]?.length)
@@ -712,8 +701,7 @@ const TableV2 = <T extends object>(
                               <Dialog className="tw:outline-none">
                                 <div
                                   className="tw:bg-primary tw:shadow-lg tw:ring-1 tw:ring-secondary_alt tw:rounded-lg"
-                                  style={{ minWidth: '200px' }}
-                                >
+                                  style={{ minWidth: '200px' }}>
                                   {typeof colType.filterDropdown === 'function'
                                     ? colType.filterDropdown({
                                         prefixCls: 'ant-table-filter-dropdown',
@@ -762,8 +750,7 @@ const TableV2 = <T extends object>(
                         t('label.no-data')}
                     </div>
                   )
-                }
-              >
+                }>
                 {flatRows.map((flatRow) => {
                   const { record, actualIndex, depth, hasChildren, rowKey } =
                     flatRow;
@@ -804,8 +791,9 @@ const TableV2 = <T extends object>(
                       onDragStart={
                         dragAndDropHooks ? undefined : rowHandlers.onDragStart
                       }
-                      onDrop={dragAndDropHooks ? undefined : rowHandlers.onDrop}
-                    >
+                      onDrop={
+                        dragAndDropHooks ? undefined : rowHandlers.onDrop
+                      }>
                       {propsColumns.map((col, colIdx) => {
                         const colType = col as ColumnType<T>;
                         const cellKey = String(
@@ -858,13 +846,11 @@ const TableV2 = <T extends object>(
                                 ? { paddingLeft: `${16 + depth * 12}px` }
                                 : {}),
                               ...cellHandlerProps.style,
-                            }}
-                          >
+                            }}>
                             <div
                               className={classNames(
                                 'tw:flex tw:items-start tw:gap-1 tw:max-w-full'
-                              )}
-                            >
+                              )}>
                               {showExpandInCell && (
                                 <div className="tw:flex-shrink-0">
                                   {hasChildren ? (
@@ -887,8 +873,7 @@ const TableV2 = <T extends object>(
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleExpandToggle(record, rowKey);
-                                        }}
-                                      >
+                                        }}>
                                         {isExpanded ? (
                                           <ChevronDown className="tw:size-4" />
                                         ) : (
@@ -934,8 +919,7 @@ const TableV2 = <T extends object>(
           return rest.resizableColumns ? (
             <ResizableTableContainer
               className="tw:overflow-auto tw:relative"
-              onResize={handleColumnResize}
-            >
+              onResize={handleColumnResize}>
               {tableContent}
             </ResizableTableContainer>
           ) : (
