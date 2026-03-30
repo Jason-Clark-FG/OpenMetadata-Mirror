@@ -13,8 +13,6 @@
 from clickhouse_sqlalchemy.drivers.base import ischema_names as ch_ischema_names
 from sqlalchemy import types as sqltypes
 
-# Import the utils module first so ischema_names is mutated before we read it
-import metadata.ingestion.source.database.clickhouse.utils  # noqa: F401
 from metadata.ingestion.source.database.clickhouse.utils import _get_column_type
 
 
@@ -39,11 +37,12 @@ class TestClickhouseGetColumnType:
     # --- LowCardinality tests (the changed behavior) ---
 
     def test_low_cardinality_string_returns_string(self):
+        """LowCardinality(String) should unwrap to String."""
         result = self.dialect._get_column_type("col", "LowCardinality(String)")
         assert result == ch_ischema_names["String"]
 
     def test_low_cardinality_uint8_returns_string(self):
-        """Any inner type inside LowCardinality should still map to String."""
+        """LowCardinality(UInt8) should unwrap to UInt8."""
         result = self.dialect._get_column_type("col", "LowCardinality(UInt8)")
         assert result == ch_ischema_names["UInt8"]
 
