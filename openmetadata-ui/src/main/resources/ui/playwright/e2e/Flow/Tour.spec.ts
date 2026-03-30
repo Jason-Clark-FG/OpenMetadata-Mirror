@@ -11,17 +11,18 @@
  *  limitations under the License.
  */
 import { expect, Page, test } from '@playwright/test';
+import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
-import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
 
 const user = new UserClass();
 
 const waitForTourBadgeWithRetry = async (
   page: Page,
   maxAttempts = 3,
-  timeout = 20000
+  timeout = 20000,
+  onRetry?: () => Promise<void>
 ) => {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -33,7 +34,11 @@ const waitForTourBadgeWithRetry = async (
       return; // Success
     } catch (e) {
       if (attempt < maxAttempts) {
-        await page.reload();
+        if (onRetry) {
+          await onRetry();
+        } else {
+          await page.reload();
+        }
         await waitForAllLoadersToDisappear(page);
         await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
       } else {
@@ -206,7 +211,6 @@ test.describe(
         await page.locator('[data-testid="help-icon"]').click();
         await page.getByRole('link', { name: 'Tour', exact: true }).click();
       }
-
       await waitForAllLoadersToDisappear(page);
       await waitForAllLoadersToDisappear(page, 'entity-list-skeleton');
       await page.waitForURL('**/tour');
@@ -234,7 +238,9 @@ test.describe(
       await page.locator('#feedWidgetData').waitFor();
       // Since the tour steps are already tested in the first test,
       // here we only validate whether the tour is loading or not.
-      await waitForTourBadgeWithRetry(page);
+      await waitForTourBadgeWithRetry(page, 3, 20000, async () => {
+        await page.goto('/tour');
+      });
     });
   }
 );

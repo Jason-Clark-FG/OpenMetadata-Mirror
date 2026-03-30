@@ -860,7 +860,6 @@ const DomainDetails = ({
   const iconData = useMemo(() => {
     return (
       <Avatar
-        className="entity-header-avatar"
         size={isTreeView ? 'md' : '2xl'}
         {...getEntityAvatarProps({ ...domain, entityType: 'domain' })}
       />

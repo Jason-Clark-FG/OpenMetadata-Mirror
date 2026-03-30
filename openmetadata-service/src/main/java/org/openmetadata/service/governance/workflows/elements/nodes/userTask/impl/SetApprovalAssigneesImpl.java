@@ -26,6 +26,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.resources.feeds.MessageParser;
+import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
 public class SetApprovalAssigneesImpl implements JavaDelegate {
@@ -107,7 +108,7 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
           if (teamFqn != null && !teamFqn.trim().isEmpty()) {
             try {
               MessageParser.EntityLink teamLink = new MessageParser.EntityLink("team", teamFqn);
-              Team team = (Team) Entity.getEntity(teamLink, "users", Include.ALL);
+              Team team = Entity.getEntity(teamLink, "users", Include.ALL);
               if (team.getUsers() != null) {
                 assignees.addAll(getEntityLinkStringFromEntityReference(team.getUsers()));
               }
@@ -127,7 +128,9 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
         String updatedBy =
             (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
         if (updatedBy != null && !updatedBy.trim().isEmpty()) {
-          assigneeList.add(new MessageParser.EntityLink("user", updatedBy).getLinkString());
+          assigneeList.add(
+              new MessageParser.EntityLink("user", FullyQualifiedName.quoteName(updatedBy))
+                  .getLinkString());
         }
       }
 
@@ -138,7 +141,8 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
               (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
           if (updatedBy != null && !updatedBy.trim().isEmpty()) {
             String updatedByEntityLink =
-                new MessageParser.EntityLink("user", updatedBy).getLinkString();
+                new MessageParser.EntityLink("user", FullyQualifiedName.quoteName(updatedBy))
+                    .getLinkString();
             boolean removed = assigneeList.remove(updatedByEntityLink);
             if (removed) {
               LOG.debug(
