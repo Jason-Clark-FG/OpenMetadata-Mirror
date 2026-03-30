@@ -162,7 +162,7 @@ public class SearchIndexApp extends AbstractNativeApplication {
       }
     }
     for (Runnable cleanup :
-        List.of(
+        List.<Runnable>of(
             () -> collectionDAO.searchIndexPartitionDAO().deleteAll(),
             () -> collectionDAO.searchIndexServerStatsDAO().deleteAll(),
             () -> collectionDAO.searchIndexFailureDAO().deleteAll(),
