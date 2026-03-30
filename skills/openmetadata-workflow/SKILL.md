@@ -25,6 +25,8 @@ This skill is loaded automatically at session start. It ensures you follow the r
 | E2E test creation | `/playwright` |
 | Finishing implementation | `/test-enforcement` then `/verification` |
 
+> **Note:** Connector skills (`/connector-standards`, `/connector-building`, `/connector-review`) and `/playwright` are part of the OpenMetadata Skills plugin and ship together with this workflow skill. They are defined in the `skills/` directory alongside this file.
+
 ### Workflow Rules
 
 1. **Plan before coding.** For any non-trivial task, use `/planning` to design the approach before writing code.
@@ -49,9 +51,12 @@ When your task touches multiple layers, ensure all are synchronized:
 - [ ] Connection schema → run `yarn parse-schema`
 - [ ] Java entity changes → Flyway migration in `bootstrap/sql/migrations/`
 - [ ] Backend API changes → update frontend API client
-- [ ] New UI strings → add to `locale/languages/en-us.json` using `t('label.xxx')`
+- [ ] New UI strings → add to `locale/languages/en-us.json` then run `yarn i18n`
 - [ ] Java files → run `mvn spotless:apply`
 - [ ] Python files → run `make py_format && make lint`
+- [ ] TypeScript/React files → run `yarn organize-imports:cli && yarn lint:fix && yarn pretty:base --write`
+- [ ] New source files → ensure Apache 2.0 license header (run `yarn license-header-fix`)
+- [ ] Application changes → run `yarn generate:app-docs`
 
 ### CLAUDE.md Takes Precedence
 

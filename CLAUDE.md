@@ -92,6 +92,18 @@ yarn lint:fix                  # ESLint with auto-fix
 yarn build                     # Production build
 ```
 
+### Frontend CI Checkstyle (run before PR to match CI)
+```bash
+cd openmetadata-ui/src/main/resources/ui
+yarn organize-imports:cli <files>  # Sort and organize imports
+yarn lint:fix                      # ESLint auto-fix
+yarn pretty:base --write <files>   # Prettier formatting
+yarn license-header-fix <files>    # Add Apache 2.0 license headers
+yarn i18n                          # Sync all 17 locale files with en-us.json
+yarn generate:app-docs             # Regenerate application documentation
+npx tsc --noEmit                   # TypeScript type check (catches errors early)
+```
+
 ### Backend Development
 ```bash
 mvn clean package -DskipTests  # Build without tests
@@ -395,14 +407,37 @@ yarn parse-schema              # Parse JSON schemas for frontend (connection and
 - **NEVER use `any` type** in TypeScript code - always use proper types
 - Use `unknown` when the type is truly unknown and add type guards
 - Import types from existing type definitions (e.g., `RJSFSchema` from `@rjsf/utils`)
-- Follow ESLint rules strictly - the project enforces no-console, proper formatting
 - Add `// eslint-disable-next-line` comments only when absolutely necessary
-- **Import Organization** (in order):
-  1. External libraries (React, Ant Design, etc.)
+- **Import Organization** — use `yarn organize-imports:cli` to auto-sort. Order:
+  1. External libraries (React, etc.)
   2. Internal absolute imports from `generated/`, `constants/`, `hooks/`, etc.
   3. Relative imports for utilities and components
   4. Asset imports (SVGs, styles)
   5. Type imports grouped separately when needed
+
+#### CI Checkstyle Rules (enforced on every PR)
+These checks run automatically in CI. Code that violates them **will not merge**.
+- **No `console.log/warn/error`** — `no-console` rule is enforced. Use the logger or remove.
+- **Use `===` not `==`** — `eqeqeq` (smart mode, except for `null` checks)
+- **Max 200 characters per line** — break long lines
+- **Self-closing components** — `<Div />` not `<Div></Div>`
+- **Sort JSX props alphabetically** — callbacks last
+- **Space after `//` in comments** — `// comment` not `//comment`
+- **Blank lines** before `function`, `class`, `export`, `return` statements
+- **Use `it()` consistently in tests** — don't mix `test()` and `it()`
+- **Blank lines around `describe`, `it`, `beforeEach`** in test files
+- **JSON keys sorted alphabetically** in locale files (`src/locale/**/*.json`)
+- **Apache 2.0 license header** on every new source file — run `yarn license-header-fix`
+- **i18n keys synced** — after adding keys to `en-us.json`, run `yarn i18n` to sync all 17 locales
+- **Prettier formatting** — 2-space indent, single quotes, strict HTML whitespace
+
+#### Playwright Test Rules (lint-playwright)
+- **No `waitForLoadState('networkidle')`** — flaky, use web-first assertions
+- **No `page.pause()`** — remove before committing
+- **No `.only` on tests** — blocks all other tests in CI
+- Prefer `expect(locator).toBeVisible()` over manual `waitForSelector` checks
+- Don't use `{ force: true }` — fix the locator instead
+- Use locators, not element handles
 
 ### Python Code Requirements
 - **Use pytest, not unittest** - write tests using pytest style with plain `assert` statements
