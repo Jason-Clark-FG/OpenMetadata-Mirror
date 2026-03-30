@@ -47,6 +47,7 @@ import org.openmetadata.service.jdbi3.EntityRepository;
 @Slf4j
 public class OpenLineageEntityResolver {
 
+  private static final Set<String> ALLOWED_CONTAINER_JSON_FIELDS = Set.of("fullPath");
   private static final Set<String> STORAGE_URI_SCHEMES =
       Set.of("gs://", "s3://", "s3a://", "abfss://", "abfs://", "wasbs://", "adl://");
 
@@ -729,6 +730,9 @@ public class OpenLineageEntityResolver {
 
     public ListFilterByJsonField(String fieldName, String value) {
       super(Include.NON_DELETED);
+      if (!ALLOWED_CONTAINER_JSON_FIELDS.contains(fieldName)) {
+        throw new IllegalArgumentException("Unsupported JSON field: " + fieldName);
+      }
       this.fieldName = fieldName;
       addQueryParam("jsonFieldValue", value);
     }

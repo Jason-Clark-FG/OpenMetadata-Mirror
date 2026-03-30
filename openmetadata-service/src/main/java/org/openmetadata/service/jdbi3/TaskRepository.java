@@ -1103,34 +1103,57 @@ public class TaskRepository extends EntityRepository<Task> {
       return;
     }
 
-    WorkflowDefinition workflowDefinition =
-        Entity.getEntity(
-            Entity.WORKFLOW_DEFINITION,
-            task.getWorkflowDefinitionId(),
-            Entity.FIELD_FULLY_QUALIFIED_NAME,
-            NON_DELETED);
+    try {
+      WorkflowDefinition workflowDefinition =
+          Entity.getEntity(
+              Entity.WORKFLOW_DEFINITION,
+              task.getWorkflowDefinitionId(),
+              Entity.FIELD_FULLY_QUALIFIED_NAME,
+              NON_DELETED);
 
-    Map<String, Object> variables = new LinkedHashMap<>();
-    variables.putAll(TaskWorkflowLifecycleResolver.buildWorkflowStartVariables(task));
-    if (task.getAbout() != null && !nullOrEmpty(task.getAbout().getFullyQualifiedName())) {
+      Map<String, Object> variables = new LinkedHashMap<>();
+      variables.putAll(TaskWorkflowLifecycleResolver.buildWorkflowStartVariables(task));
+      if (task.getAbout() != null && !nullOrEmpty(task.getAbout().getFullyQualifiedName())) {
+        variables.put(
+            getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE),
+            EntityUtil.buildEntityLink(
+                task.getAbout().getType(), task.getAbout().getFullyQualifiedName()));
+      }
       variables.put(
-          getNamespacedVariableName(GLOBAL_NAMESPACE, RELATED_ENTITY_VARIABLE),
-          EntityUtil.buildEntityLink(
-              task.getAbout().getType(), task.getAbout().getFullyQualifiedName()));
-    }
-    variables.put(
-        getNamespacedVariableName(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE), task.getUpdatedBy());
-    variables.put(
-        "taskFormSchemaId",
-        task.getTaskFormSchemaId() != null ? task.getTaskFormSchemaId().toString() : null);
-    variables.put("taskFormSchemaVersion", task.getTaskFormSchemaVersion());
-    variables.put("workflowDefinitionId", workflowDefinition.getId().toString());
+          getNamespacedVariableName(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE), task.getUpdatedBy());
+      variables.put(
+          "taskFormSchemaId",
+          task.getTaskFormSchemaId() != null ? task.getTaskFormSchemaId().toString() : null);
+      variables.put("taskFormSchemaVersion", task.getTaskFormSchemaVersion());
+      variables.put("workflowDefinitionId", workflowDefinition.getId().toString());
 
-    WorkflowHandler.getInstance()
-        .triggerByKey(
-            getTriggerWorkflowId(workflowDefinition.getFullyQualifiedName()),
-            task.getId().toString(),
-            variables);
+      WorkflowHandler.getInstance()
+          .triggerByKey(
+              getTriggerWorkflowId(workflowDefinition.getFullyQualifiedName()),
+              task.getId().toString(),
+              variables);
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to trigger workflow-managed task {} using workflow definition {}",
+          task.getId(),
+          task.getWorkflowDefinitionId(),
+          e);
+      markWorkflowTriggerFailure(task);
+    }
+  }
+
+  private void markWorkflowTriggerFailure(Task task) {
+    try {
+      task.setWorkflowStageId("workflow-start-failed");
+      task.setWorkflowStageDisplayName("Workflow start failed");
+      task.setUpdatedAt(System.currentTimeMillis());
+      storeEntity(task, true);
+    } catch (Exception persistenceException) {
+      LOG.error(
+          "Failed to persist workflow trigger failure state for task {}",
+          task.getId(),
+          persistenceException);
+    }
   }
 
   private boolean shouldCreateWorkflowManagedTask(Task task) {
