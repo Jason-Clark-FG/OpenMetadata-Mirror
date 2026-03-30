@@ -25,7 +25,9 @@ import org.openmetadata.schema.entity.datacontract.DataContractResult;
 import org.openmetadata.schema.entity.datacontract.QualityValidation;
 import org.openmetadata.schema.entity.datacontract.SchemaValidation;
 import org.openmetadata.schema.entity.datacontract.SemanticsValidation;
+import org.openmetadata.schema.tests.ResultSummary;
 import org.openmetadata.schema.tests.TestCase;
+import org.openmetadata.schema.tests.TestSuite;
 import org.openmetadata.schema.tests.type.TestCaseResult;
 import org.openmetadata.schema.tests.type.TestCaseStatus;
 import org.openmetadata.schema.type.Column;
@@ -558,6 +560,72 @@ class DataContractRepositoryTest {
             new Class[] {DataContract.class, List.class},
             contract,
             Collections.emptyList());
+
+    assertNotNull(result);
+  }
+
+  // --- validateDQ (division-by-zero guard) ---
+
+  @Test
+  void testValidateDQ_zeroTotal_noArithmeticException() throws Exception {
+    TestSuite testSuite = new TestSuite();
+    testSuite.setTests(List.of(new EntityReference().withFullyQualifiedName("test1")));
+    testSuite.setTestCaseResultSummary(
+        List.of(new ResultSummary().withTestCaseName("test1").withStatus(TestCaseStatus.Success)));
+
+    QualityValidation existing = new QualityValidation().withTotal(0).withPassed(0).withFailed(0);
+
+    QualityValidation result =
+        invoke(
+            "validateDQ",
+            new Class[] {TestSuite.class, QualityValidation.class},
+            testSuite,
+            existing);
+
+    assertEquals(0.0, result.getQualityScore());
+    assertFalse(Double.isNaN(result.getQualityScore()));
+    assertFalse(Double.isInfinite(result.getQualityScore()));
+  }
+
+  @Test
+  void testValidateDQ_withTotal_calculatesScore() throws Exception {
+    TestSuite testSuite = new TestSuite();
+    testSuite.setTests(
+        List.of(
+            new EntityReference().withFullyQualifiedName("test1"),
+            new EntityReference().withFullyQualifiedName("test2")));
+    testSuite.setTestCaseResultSummary(
+        List.of(
+            new ResultSummary().withTestCaseName("test1").withStatus(TestCaseStatus.Success),
+            new ResultSummary().withTestCaseName("test2").withStatus(TestCaseStatus.Failed)));
+
+    QualityValidation existing =
+        new QualityValidation().withTotal(2).withPassed(0).withFailed(0).withQualityScore(0.0);
+
+    QualityValidation result =
+        invoke(
+            "validateDQ",
+            new Class[] {TestSuite.class, QualityValidation.class},
+            testSuite,
+            existing);
+
+    assertEquals(1, result.getPassed());
+    assertEquals(1, result.getFailed());
+    assertEquals(50.0, result.getQualityScore());
+  }
+
+  @Test
+  void testValidateDQ_nullExistingValidation() throws Exception {
+    TestSuite testSuite = new TestSuite();
+    testSuite.setTests(List.of());
+    testSuite.setTestCaseResultSummary(null);
+
+    QualityValidation result =
+        invoke(
+            "validateDQ",
+            new Class[] {TestSuite.class, QualityValidation.class},
+            testSuite,
+            (QualityValidation) null);
 
     assertNotNull(result);
   }
