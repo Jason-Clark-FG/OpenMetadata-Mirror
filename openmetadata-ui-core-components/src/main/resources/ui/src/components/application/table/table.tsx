@@ -170,7 +170,7 @@ const TableRoot = ({
       <div
         className={cx(
           "tw:overflow-x-auto",
-          stickyHeader && "tw:overflow-auto tw:max-h-100",
+          stickyHeader && "tw:overflow-auto",
         )}
       >
         <AriaTable
