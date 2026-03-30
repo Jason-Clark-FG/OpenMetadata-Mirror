@@ -164,7 +164,6 @@ class TestHttpTransport:
             transport.send_request("invalid/method")
         assert "Invalid Request" in str(exc_info.value)
 
-
     @patch("requests.Session.post")
     def test_send_notification_logs_on_failure(self, mock_post):
         """send_notification should log warnings, not silently swallow errors"""
