@@ -51,6 +51,7 @@ const TreeNodeItem: FC<TreeNodeItemProps> = ({
 }) => {
   return (
     <TreeItem
+      data-testid={`tree-item-${node.id}`}
       itemId={node.id}
       label={
         renderNode ? (

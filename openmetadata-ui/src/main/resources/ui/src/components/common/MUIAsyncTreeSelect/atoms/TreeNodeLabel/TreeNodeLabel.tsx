@@ -43,9 +43,12 @@ const TreeNodeLabel: FC<TreeNodeLabelProps> = ({
   onNodeClick,
   onMouseDown,
 }) => {
+  const selectionType = node.isParentMutuallyExclusive ? 'radio' : 'checkbox';
+
   return (
     <Box
       data-nodeid={node.id}
+      data-testid={`tree-node-${node.id}`}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -67,6 +70,7 @@ const TreeNodeLabel: FC<TreeNodeLabelProps> = ({
           {node.isParentMutuallyExclusive ? (
             <Radio
               checked={isSelected}
+              data-testid={`${selectionType}-${node.id}`}
               disabled={disabled || node.disabled}
               sx={{ p: 0.5, mr: 1.5 }}
               onChange={(e) => {
@@ -81,6 +85,7 @@ const TreeNodeLabel: FC<TreeNodeLabelProps> = ({
           ) : (
             <Checkbox
               checked={isSelected}
+              data-testid={`${selectionType}-${node.id}`}
               disabled={disabled || node.disabled}
               sx={{ p: 0.5, mr: 1.5 }}
               onChange={(e) => {

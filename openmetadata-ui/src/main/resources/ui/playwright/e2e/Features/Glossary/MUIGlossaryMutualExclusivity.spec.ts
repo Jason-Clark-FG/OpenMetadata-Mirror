@@ -10,14 +10,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { expect, Page, test } from '@playwright/test';
-import { SidebarItem } from '../../../constant/sidebar';
+import { expect, test } from '@playwright/test';
 import { Domain } from '../../../support/domain/Domain';
 import { Glossary } from '../../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../../support/glossary/GlossaryTerm';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
-import { waitForAllLoadersToDisappear } from '../../../utils/entity';
-import { sidebarClick } from '../../../utils/sidebar';
+import { openDataProductDrawer } from '../../../utils/domain';
+import {
+  clickTreeNode,
+  expandToGlossaryTermChildren,
+  expectCheckbox,
+  expectChecked,
+  expectNotChecked,
+  expectRadio,
+} from '../../../utils/glossary';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
@@ -25,89 +31,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
   test.beforeEach(async ({ page }) => {
     await redirectToHomePage(page);
   });
-
-  const openDataProductDrawer = async (page: Page, domain: Domain) => {
-    await sidebarClick(page, SidebarItem.DATA_PRODUCT);
-    await page.getByTestId('add-entity-button').click();
-    await expect(page.getByTestId('form-heading')).toContainText(
-      'Add Data Product'
-    );
-
-    // Fill name field - use pattern from existing specs
-    await page
-      .getByTestId('name')
-      .locator('input')
-      .fill(`test-dp-${Date.now()}`);
-
-    // Fill description field - use contenteditable pattern
-    const descriptionEditor = page.locator('[contenteditable="true"]').first();
-    await descriptionEditor.waitFor({ state: 'visible', timeout: 10000 });
-    await descriptionEditor.click();
-    await page.keyboard.type('Test data product description');
-
-    // Select domain - use pattern from existing specs
-    const domainInput = page.getByTestId('domain-select');
-    await domainInput.scrollIntoViewIfNeeded();
-    await domainInput.waitFor({ state: 'visible' });
-    await domainInput.click();
-
-    const searchDomain = page.waitForResponse(
-      /\/api\/v1\/search\/query\?q=.*index=domain_search_index.*/
-    );
-    await domainInput.fill(domain.data.displayName);
-    await searchDomain;
-
-    const domainOption = page.getByText(domain.data.displayName);
-    await domainOption.waitFor({ state: 'visible', timeout: 5000 });
-    await domainOption.click();
-  };
-
-  const openGlossaryTermsDropdown = async (page: Page) => {
-    // Click on the glossary terms field to open dropdown
-    const glossaryField = page.getByTestId('glossary-terms');
-    await expect(glossaryField).toBeVisible();
-    await glossaryField.click();
-    // Wait for dropdown tree to be visible
-    await page.waitForSelector('.MuiTreeItem-root', {
-      state: 'visible',
-      timeout: 10000,
-    });
-  };
-
-  const searchAndExpandGlossaryTerm = async (
-    page: Page,
-    glossaryName: string,
-    _termDisplayName: string
-  ) => {
-    // Type in the glossary terms field to search
-    const glossaryField = page.getByTestId('glossary-terms');
-    await expect(glossaryField).toBeVisible();
-
-    // Wait for search API response before proceeding
-    const searchGlossary = page.waitForResponse(
-      /\/api\/v1\/search\/query\?q=.*index=glossary_term_search_index.*/
-    );
-    await glossaryField.fill(glossaryName);
-    await searchGlossary;
-
-    await waitForAllLoadersToDisappear(page);
-
-    // Click on the expand icon - navigate up to find TreeItem icon container
-    const expandIcon = page
-      .getByRole('tooltip')
-      .locator('.MuiSvgIcon-root')
-      .first();
-    await expandIcon.click();
-
-    // Wait for children to load
-    await waitForAllLoadersToDisappear(page);
-
-    const expandIcon2 = page
-      .getByRole('tooltip')
-      .locator('.MuiSvgIcon-root')
-      .nth(1);
-    await expandIcon2.click();
-  };
 
   test.describe('Suite 1: Radio/Checkbox Rendering', () => {
     test('MUI-ME-R01: Children of ME parent should render Radio buttons', async ({
@@ -124,7 +47,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
         await glossary.create(apiContext);
         await parentTerm.create(apiContext);
 
-        // Create children under ME parent
         const child1 = new GlossaryTerm(
           glossary,
           parentTerm.responseData.fullyQualifiedName,
@@ -140,33 +62,14 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
-          glossary.responseData.name,
-          parentTerm.responseData.name
+          glossary.responseData.displayName,
+          parentTerm.responseData.displayName
         );
 
-        // Verify children have Radio buttons (not Checkboxes)
-        const child1Node = page.getByText(child1.responseData.displayName, {
-          exact: true,
-        });
-        const child1Radio = child1Node.locator('..').locator('.MuiRadio-root');
-        await expect(child1Radio).toBeVisible();
-
-        const child2Node = page.getByText(child2.responseData.displayName, {
-          exact: true,
-        });
-        const child2Radio = child2Node.locator('..').locator('.MuiRadio-root');
-        await expect(child2Radio).toBeVisible();
-
-        // Verify no checkboxes present for these children
-        await expect(
-          child1Node.locator('..').locator('.MuiCheckbox-root')
-        ).toHaveCount(0);
-        await expect(
-          child2Node.locator('..').locator('.MuiCheckbox-root')
-        ).toHaveCount(0);
+        await expectRadio(page, child1.responseData.name);
+        await expectRadio(page, child2.responseData.name);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
@@ -203,37 +106,14 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
           glossary.responseData.displayName,
           parentTerm.responseData.displayName
         );
 
-        // Verify children have Checkboxes (not Radio buttons)
-        const child1Node = page.getByText(child1.responseData.displayName, {
-          exact: true,
-        });
-        const child1Checkbox = child1Node
-          .locator('..')
-          .locator('.MuiCheckbox-root');
-        await expect(child1Checkbox).toBeVisible();
-
-        const child2Node = page.getByText(child2.responseData.displayName, {
-          exact: true,
-        });
-        const child2Checkbox = child2Node
-          .locator('..')
-          .locator('.MuiCheckbox-root');
-        await expect(child2Checkbox).toBeVisible();
-
-        // Verify no radio buttons present for these children
-        await expect(
-          child1Node.locator('..').locator('.MuiRadio-root')
-        ).toHaveCount(0);
-        await expect(
-          child2Node.locator('..').locator('.MuiRadio-root')
-        ).toHaveCount(0);
+        await expectCheckbox(page, child1.responseData.name);
+        await expectCheckbox(page, child2.responseData.name);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
@@ -278,41 +158,27 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
           glossary.responseData.displayName,
           parentTerm.responseData.displayName
         );
 
-        const child1Node = page.getByText(child1.responseData.displayName, {
-          exact: true,
-        });
-        const child2Node = page.getByText(child2.responseData.displayName, {
-          exact: true,
-        });
-        const child3Node = page.getByText(child3.responseData.displayName, {
-          exact: true,
-        });
+        const id1 = child1.responseData.name;
+        const id2 = child2.responseData.name;
+        const id3 = child3.responseData.name;
 
-        const child1Radio = child1Node.locator('..').locator('.MuiRadio-root');
-        const child2Radio = child2Node.locator('..').locator('.MuiRadio-root');
-        const child3Radio = child3Node.locator('..').locator('.MuiRadio-root');
+        await clickTreeNode(page, id1);
+        await expectChecked(page, id1);
 
-        // Select first child
-        await child1Node.click();
-        await expect(child1Radio).toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id2);
+        await expectChecked(page, id2);
+        await expectNotChecked(page, id1);
 
-        // Select second child - first should be deselected
-        await child2Node.click();
-        await expect(child2Radio).toHaveClass(/Mui-checked/);
-        await expect(child1Radio).not.toHaveClass(/Mui-checked/);
-
-        // Select third child - second should be deselected
-        await child3Node.click();
-        await expect(child3Radio).toHaveClass(/Mui-checked/);
-        await expect(child2Radio).not.toHaveClass(/Mui-checked/);
-        await expect(child1Radio).not.toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id3);
+        await expectChecked(page, id3);
+        await expectNotChecked(page, id2);
+        await expectNotChecked(page, id1);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
@@ -355,47 +221,28 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
           glossary.responseData.displayName,
           parentTerm.responseData.displayName
         );
 
-        const child1Node = page.getByText(child1.responseData.displayName, {
-          exact: true,
-        });
-        const child2Node = page.getByText(child2.responseData.displayName, {
-          exact: true,
-        });
-        const child3Node = page.getByText(child3.responseData.displayName, {
-          exact: true,
-        });
+        const id1 = child1.responseData.name;
+        const id2 = child2.responseData.name;
+        const id3 = child3.responseData.name;
 
-        const child1Checkbox = child1Node
-          .locator('..')
-          .locator('.MuiCheckbox-root');
-        const child2Checkbox = child2Node
-          .locator('..')
-          .locator('.MuiCheckbox-root');
-        const child3Checkbox = child3Node
-          .locator('..')
-          .locator('.MuiCheckbox-root');
+        await clickTreeNode(page, id1);
+        await expectChecked(page, id1);
 
-        // Select all three children
-        await child1Node.click();
-        await expect(child1Checkbox).toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id2);
+        await expectChecked(page, id2);
 
-        await child2Node.click();
-        await expect(child2Checkbox).toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id3);
+        await expectChecked(page, id3);
 
-        await child3Node.click();
-        await expect(child3Checkbox).toHaveClass(/Mui-checked/);
-
-        // Verify all three remain selected
-        await expect(child1Checkbox).toHaveClass(/Mui-checked/);
-        await expect(child2Checkbox).toHaveClass(/Mui-checked/);
-        await expect(child3Checkbox).toHaveClass(/Mui-checked/);
+        await expectChecked(page, id1);
+        await expectChecked(page, id2);
+        await expectChecked(page, id3);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
@@ -426,26 +273,19 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
           glossary.responseData.displayName,
           parentTerm.responseData.displayName
         );
 
-        // Scope to tooltip to avoid matching chip in input field
-        const child1Node = page
-          .getByRole('tooltip')
-          .getByText(child1.responseData.displayName, { exact: true });
-        const child1Radio = child1Node.locator('..').locator('.MuiRadio-root');
+        const id = child1.responseData.name;
 
-        // Select child
-        await child1Node.click();
-        await expect(child1Radio).toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id);
+        await expectChecked(page, id);
 
-        // Click again to deselect
-        await child1Node.click();
-        await expect(child1Radio).not.toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id);
+        await expectNotChecked(page, id);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
@@ -478,25 +318,18 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-        await searchAndExpandGlossaryTerm(
+        await expandToGlossaryTermChildren(
           page,
           glossary.responseData.displayName,
           parentTerm.responseData.displayName
         );
 
-        // Select the child term
-        const childNode = page.getByText(child.responseData.displayName, {
-          exact: true,
-        });
-        const childRadio = childNode.locator('..').locator('.MuiRadio-root');
-        await childNode.click();
-        await expect(childRadio).toHaveClass(/Mui-checked/);
+        const childId = child.responseData.name;
+        await clickTreeNode(page, childId);
+        await expectChecked(page, childId);
 
-        // Click outside the dropdown to close it
         await page.getByTestId('name').locator('input').click();
 
-        // Save the data product
         const createResponse = page.waitForResponse(
           (response) =>
             response.url().includes('/api/v1/dataProducts') &&
@@ -506,7 +339,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
         const response = await createResponse;
         const responseBody = await response.json();
 
-        // Verify the glossary term is in the response
         expect(responseBody.tags).toBeDefined();
         const glossaryTags = responseBody.tags.filter(
           (tag: { source: string }) => tag.source === 'Glossary'
@@ -516,7 +348,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
           child.responseData.fullyQualifiedName
         );
 
-        // Clean up the created data product
         await apiContext.delete(
           `/api/v1/dataProducts/name/${encodeURIComponent(
             responseBody.fullyQualifiedName
@@ -537,7 +368,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
       const { apiContext, afterAction } = await getApiContext(page);
       const domain = new Domain();
 
-      // Create glossary with ME flag at glossary level
       const glossary = new Glossary();
       glossary.data.mutuallyExclusive = true;
 
@@ -545,7 +375,6 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
         await domain.create(apiContext);
         await glossary.create(apiContext);
 
-        // Create terms directly under ME glossary
         const term1 = new GlossaryTerm(glossary);
         term1.data.name = 'MUIGlossaryChild1';
         term1.data.displayName = 'MUIGlossaryChild1';
@@ -557,49 +386,23 @@ test.describe('MUI Glossary Mutual Exclusivity Feature', () => {
 
         await redirectToHomePage(page);
         await openDataProductDrawer(page, domain);
-        await openGlossaryTermsDropdown(page);
-
-        // Search for the glossary
-        const glossaryField = page.getByTestId('glossary-terms');
-        await expect(glossaryField).toBeVisible();
-
-        const searchGlossary = page.waitForResponse(
-          /\/api\/v1\/search\/query\?q=.*index=glossary_term_search_index.*/
+        await expandToGlossaryTermChildren(
+          page,
+          glossary.responseData.displayName
         );
-        await glossaryField.fill(glossary.responseData.displayName);
-        await searchGlossary;
 
-        await waitForAllLoadersToDisappear(page);
-        const expandIcon = page
-          .getByRole('tooltip')
-          .locator('.MuiSvgIcon-root')
-          .first();
-        await expandIcon.click();
+        const id1 = term1.responseData.name;
+        const id2 = term2.responseData.name;
 
-        // Wait for children to load
-        await waitForAllLoadersToDisappear(page);
+        await expectRadio(page, id1);
+        await expectRadio(page, id2);
 
-        // Terms directly under ME glossary should have Radio buttons
-        const term1Node = page.getByText(term1.responseData.displayName, {
-          exact: true,
-        });
-        const term2Node = page.getByText(term2.responseData.displayName, {
-          exact: true,
-        });
+        await clickTreeNode(page, id1);
+        await expectChecked(page, id1);
 
-        const term1Radio = term1Node.locator('..').locator('.MuiRadio-root');
-        const term2Radio = term2Node.locator('..').locator('.MuiRadio-root');
-
-        await expect(term1Radio).toBeVisible();
-        await expect(term2Radio).toBeVisible();
-
-        // Verify mutual exclusivity works
-        await term1Node.click();
-        await expect(term1Radio).toHaveClass(/Mui-checked/);
-
-        await term2Node.click();
-        await expect(term2Radio).toHaveClass(/Mui-checked/);
-        await expect(term1Radio).not.toHaveClass(/Mui-checked/);
+        await clickTreeNode(page, id2);
+        await expectChecked(page, id2);
+        await expectNotChecked(page, id1);
       } finally {
         await glossary.delete(apiContext);
         await domain.delete(apiContext);
