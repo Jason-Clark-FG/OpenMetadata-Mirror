@@ -296,11 +296,7 @@ export interface PromptUseRecord {
      */
     arguments?: { [key: string]: any };
     /**
-     * Reference to the McpPrompt used
-     */
-    prompt?: EntityReference;
-    /**
-     * Name of the prompt for quick reference
+     * Name of the prompt that was used
      */
     promptName?: string;
     timestamp?:  number;
@@ -320,9 +316,9 @@ export interface ResourceAccessRecord {
      */
     bytesTransferred?: number;
     /**
-     * Reference to the McpResource accessed
+     * Name of the resource accessed
      */
-    resource?: EntityReference;
+    resourceName?: string;
     /**
      * URI of the resource accessed
      */
@@ -378,11 +374,7 @@ export interface ToolCallRecord {
      */
     timestamp?: number;
     /**
-     * Reference to the McpTool that was called
-     */
-    tool?: EntityReference;
-    /**
-     * Name of the tool for quick reference
+     * Name of the tool that was called
      */
     toolName?: string;
 }

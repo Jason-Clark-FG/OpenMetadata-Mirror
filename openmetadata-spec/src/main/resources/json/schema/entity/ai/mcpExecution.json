@@ -62,13 +62,9 @@
       "description": "Record of a tool invocation during execution",
       "additionalProperties": false,
       "properties": {
-        "tool": {
-          "$ref": "../../type/entityReference.json",
-          "description": "Reference to the McpTool that was called"
-        },
         "toolName": {
           "type": "string",
-          "description": "Name of the tool for quick reference"
+          "description": "Name of the tool that was called"
         },
         "parameters": {
           "type": "object",
@@ -143,9 +139,9 @@
       "description": "Record of a resource access during execution",
       "additionalProperties": false,
       "properties": {
-        "resource": {
-          "$ref": "../../type/entityReference.json",
-          "description": "Reference to the McpResource accessed"
+        "resourceName": {
+          "type": "string",
+          "description": "Name of the resource accessed"
         },
         "resourceUri": {
           "type": "string",
@@ -173,13 +169,9 @@
       "description": "Record of a prompt use during execution",
       "additionalProperties": false,
       "properties": {
-        "prompt": {
-          "$ref": "../../type/entityReference.json",
-          "description": "Reference to the McpPrompt used"
-        },
         "promptName": {
           "type": "string",
-          "description": "Name of the prompt for quick reference"
+          "description": "Name of the prompt that was used"
         },
         "arguments": {
           "type": "object",
