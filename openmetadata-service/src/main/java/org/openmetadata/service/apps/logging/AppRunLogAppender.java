@@ -155,10 +155,10 @@ public class AppRunLogAppender extends AppenderBase<ILoggingEvent> {
       String appRunId, String appId, String appName, String serverId, String... threadPrefixes) {
     ensureRegistered();
     cleanupOldRuns(appName);
-    Path logFile = resolveLogFile(appName, Long.parseLong(appRunId), serverId);
+    long runTimestamp = Long.parseLong(appRunId);
+    Path logFile = resolveLogFile(appName, runTimestamp, serverId);
     RunLogBuffer buffer =
-        new RunLogBuffer(
-            appId, appName, serverId, Long.parseLong(appRunId), maxLinesPerRun, logFile);
+        new RunLogBuffer(appId, appName, serverId, runTimestamp, maxLinesPerRun, logFile);
     activeBuffers.put(bufferKey(appName, appRunId), buffer);
 
     for (String prefix : threadPrefixes) {

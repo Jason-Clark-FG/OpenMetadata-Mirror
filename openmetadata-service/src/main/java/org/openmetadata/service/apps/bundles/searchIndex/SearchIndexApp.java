@@ -161,14 +161,24 @@ public class SearchIndexApp extends AbstractNativeApplication {
         }
       }
     }
-    collectionDAO.searchIndexPartitionDAO().deleteAll();
-    collectionDAO.searchIndexServerStatsDAO().deleteAll();
-    collectionDAO.searchIndexFailureDAO().deleteAll();
-    collectionDAO.searchReindexLockDAO().delete("SEARCH_REINDEX_LOCK");
-    collectionDAO.searchIndexJobDAO().deleteAll();
-    App app = getApp();
-    if (app != null) {
-      collectionDAO.appExtensionTimeSeriesDao().deleteAllByAppId(app.getId().toString());
+    for (Runnable cleanup :
+        List.of(
+            () -> collectionDAO.searchIndexPartitionDAO().deleteAll(),
+            () -> collectionDAO.searchIndexServerStatsDAO().deleteAll(),
+            () -> collectionDAO.searchIndexFailureDAO().deleteAll(),
+            () -> collectionDAO.searchReindexLockDAO().delete("SEARCH_REINDEX_LOCK"),
+            () -> collectionDAO.searchIndexJobDAO().deleteAll(),
+            () -> {
+              App app = getApp();
+              if (app != null) {
+                collectionDAO.appExtensionTimeSeriesDao().deleteAllByAppId(app.getId().toString());
+              }
+            })) {
+      try {
+        cleanup.run();
+      } catch (Exception e) {
+        LOG.error("Failed to purge search index table during uninstall", e);
+      }
     }
   }
 

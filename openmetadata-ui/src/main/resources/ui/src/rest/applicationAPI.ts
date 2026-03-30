@@ -193,11 +193,10 @@ export const getLiveIndexingQueue = async (
   appName: string,
   params?: { limit?: number; offset?: number }
 ) => {
-  const response = await APIClient.get<
-    PagingResponse<SearchIndexRetryRecord[]>
-  >(`${BASE_URL}/name/${getEncodedFqn(appName)}/live-indexing-queue`, {
-    params,
-  });
+  const response = await APIClient.get<PagingResponse<SearchIndexRetryRecord[]>>(
+    `${BASE_URL}/name/${getEncodedFqn(appName)}/live-indexing-queue`,
+    { params }
+  );
 
   return response.data;
 };

@@ -97,7 +97,7 @@ export const getEntityStatsData = (data: {
           successRecords: stats.successRecords,
           failedRecords: stats.failedRecords,
           vectorEmbeddings: isVectorIndexable
-            ? stats.vectorSuccessRecords ?? 0
+            ? (stats.vectorSuccessRecords ?? 0)
             : null,
         },
       ];

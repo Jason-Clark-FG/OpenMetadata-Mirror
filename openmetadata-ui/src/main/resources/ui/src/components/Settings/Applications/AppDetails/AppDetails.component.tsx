@@ -73,8 +73,8 @@ import TabsLabel from '../../../common/TabsLabel/TabsLabel.component';
 import ConfirmationModal from '../../../Modals/ConfirmationModal/ConfirmationModal';
 import PageLayoutV1 from '../../../PageLayoutV1/PageLayoutV1';
 import { useApplicationsProvider } from '../ApplicationsProvider/ApplicationsProvider';
-import AppLiveIndexing from '../AppLiveIndexing/AppLiveIndexing.component';
 import AppLogo from '../AppLogo/AppLogo.component';
+import AppLiveIndexing from '../AppLiveIndexing/AppLiveIndexing.component';
 import AppRunsHistory from '../AppRunsHistory/AppRunsHistory.component';
 import AppSchedule from '../AppSchedule/AppSchedule.component';
 import { ApplicationTabs } from '../MarketPlaceAppDetails/MarketPlaceAppDetails.interface';
@@ -425,7 +425,8 @@ const AppDetails = () => {
             },
           ]
         : []),
-      ...(!appData?.deleted && appData?.name === 'SearchIndexingApplication'
+      ...(!appData?.deleted &&
+      appData?.name === 'SearchIndexingApplication'
         ? [
             {
               label: (
