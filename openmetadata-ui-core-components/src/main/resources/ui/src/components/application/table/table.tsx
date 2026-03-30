@@ -164,9 +164,7 @@ const TableRoot = ({
   return (
     <TableContext.Provider
       value={{ size: context?.size ?? size, stickyHeader }}>
-      <div
-        className="tw:overflow-x-auto"
-        style={containerStyle}>
+      <div className="tw:overflow-x-auto" style={containerStyle}>
         <AriaTable
           className={(state) =>
             cx(
