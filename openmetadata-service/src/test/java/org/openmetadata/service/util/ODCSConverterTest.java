@@ -938,7 +938,7 @@ class ODCSConverterTest {
         EntityStatus.DEPRECATED,
         getContractStatus(ODCSDataContract.OdcsStatus.DEPRECATED, entityRef));
     assertEquals(
-        EntityStatus.DEPRECATED, getContractStatus(ODCSDataContract.OdcsStatus.RETIRED, entityRef));
+        EntityStatus.ARCHIVED, getContractStatus(ODCSDataContract.OdcsStatus.RETIRED, entityRef));
   }
 
   @Test
