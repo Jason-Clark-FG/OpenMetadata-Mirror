@@ -166,6 +166,7 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.audit.AuditLogRecord;
 import org.openmetadata.service.audit.AuditLogRecordMapper;
+import org.openmetadata.service.governance.workflows.outbox.OutboxEntry;
 import org.openmetadata.service.jdbi3.CollectionDAO.TagUsageDAO.TagLabelMapper;
 import org.openmetadata.service.jdbi3.CollectionDAO.UsageDAO.UsageDetailsMapper;
 import org.openmetadata.service.jdbi3.FeedRepository.FilterType;
@@ -375,6 +376,9 @@ public interface CollectionDAO {
 
   @CreateSqlObject
   TaskDAO taskDAO();
+
+  @CreateSqlObject
+  TaskWorkflowOutboxDAO taskWorkflowOutboxDAO();
 
   @CreateSqlObject
   StoredProcedureDAO storedProcedureDAO();
@@ -3093,6 +3097,88 @@ public interface CollectionDAO {
                 + "AND ((json->>'deleted')::boolean = false OR json->>'deleted' IS NULL)",
         connectionType = POSTGRES)
     String fetchTaskByTestCaseResolutionStatusId(@Bind("stateId") String stateId);
+  }
+
+  interface TaskWorkflowOutboxDAO {
+
+    @ConnectionAwareSqlUpdate(
+        value =
+            "INSERT IGNORE INTO task_workflow_outbox"
+                + " (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
+                + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "INSERT INTO task_workflow_outbox"
+                + " (id, taskId, status, updatedBy, createdAt, delivered, attempts)"
+                + " VALUES (:id, :taskId, :status, :updatedBy, :createdAt, false, 0)"
+                + " ON CONFLICT (id) DO NOTHING",
+        connectionType = POSTGRES)
+    void insertEntry(
+        @Bind("id") String id,
+        @Bind("taskId") String taskId,
+        @Bind("status") String status,
+        @Bind("updatedBy") String updatedBy,
+        @Bind("createdAt") long createdAt);
+
+    @SqlQuery(
+        "SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts, lastAttemptAt"
+            + " FROM ("
+            + "   SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts,"
+            + "     lastAttemptAt,"
+            + "     ROW_NUMBER() OVER (PARTITION BY taskId ORDER BY createdAt ASC, id ASC) AS rn"
+            + "   FROM task_workflow_outbox"
+            + "   WHERE delivered = false AND attempts < :maxAttempts"
+            + " ) ranked WHERE rn = 1"
+            + " ORDER BY attempts ASC, createdAt ASC"
+            + " LIMIT :batchSize")
+    @RegisterRowMapper(OutboxEntryRowMapper.class)
+    List<OutboxEntry> findAllOldestPending(
+        @Bind("maxAttempts") int maxAttempts, @Bind("batchSize") int batchSize);
+
+    @SqlQuery(
+        "SELECT id, taskId, status, updatedBy, createdAt, delivered, attempts, lastAttemptAt"
+            + " FROM task_workflow_outbox"
+            + " WHERE id = :id AND delivered = false"
+            + " FOR UPDATE SKIP LOCKED")
+    @RegisterRowMapper(OutboxEntryRowMapper.class)
+    OutboxEntry lockById(@Bind("id") String id);
+
+    @SqlUpdate(
+        "UPDATE task_workflow_outbox"
+            + " SET delivered = true, lastAttemptAt = :now"
+            + " WHERE id = :id")
+    void markDelivered(@Bind("id") String id, @Bind("now") long now);
+
+    @SqlUpdate(
+        "UPDATE task_workflow_outbox"
+            + " SET attempts = :attempts, lastAttemptAt = :now"
+            + " WHERE id = :id")
+    void recordFailedAttempt(
+        @Bind("id") String id, @Bind("attempts") int attempts, @Bind("now") long now);
+
+    @SqlUpdate(
+        "DELETE FROM task_workflow_outbox"
+            + " WHERE (delivered = true AND createdAt < :cutoff)"
+            + " OR (delivered = false AND attempts >= :maxAttempts AND lastAttemptAt < :cutoff)")
+    int cleanup(@Bind("cutoff") long cutoff, @Bind("maxAttempts") int maxAttempts);
+
+    class OutboxEntryRowMapper implements RowMapper<OutboxEntry> {
+      @Override
+      public OutboxEntry map(ResultSet rs, StatementContext ctx) throws SQLException {
+        return OutboxEntry.builder()
+            .id(rs.getString("id"))
+            .taskId(rs.getString("taskId"))
+            .status(rs.getString("status"))
+            .updatedBy(rs.getString("updatedBy"))
+            .createdAt(rs.getLong("createdAt"))
+            .delivered(rs.getBoolean("delivered"))
+            .attempts(rs.getInt("attempts"))
+            .lastAttemptAt(
+                rs.getObject("lastAttemptAt") != null ? rs.getLong("lastAttemptAt") : null)
+            .build();
+      }
+    }
   }
 
   interface FieldRelationshipDAO {
@@ -8945,6 +9031,14 @@ public interface CollectionDAO {
             "SELECT json FROM workflow_instance_state_time_series "
                 + "WHERE workflowInstanceId = :workflowInstanceId AND stage = :stage ORDER BY timestamp DESC")
     List<String> listWorkflowInstanceStateForStage(
+        @Bind("workflowInstanceId") String workflowInstanceId, @Bind("stage") String stage);
+
+    @SqlQuery(
+        value =
+            "SELECT json FROM workflow_instance_state_time_series "
+                + "WHERE workflowInstanceId = :workflowInstanceId AND stage = :stage "
+                + "ORDER BY timestamp DESC LIMIT 1")
+    String getLatestStateForStage(
         @Bind("workflowInstanceId") String workflowInstanceId, @Bind("stage") String stage);
   }
 

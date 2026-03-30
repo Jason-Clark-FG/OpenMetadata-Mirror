@@ -15,15 +15,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openmetadata.schema.entity.events.EventSubscription;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
+import org.openmetadata.schema.entity.tasks.Task;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
+import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.RecognizerFeedback;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -100,7 +103,8 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
           Entity.METRIC,
           Entity.DATA_INSIGHT_CHART,
           Entity.DATA_CONTRACT,
-          Entity.PAGE);
+          Entity.PAGE,
+          Entity.TASK);
 
   private static final Registry<Function<ChangeEvent, Map<String, Object>>> handlerRegistry =
       new Registry<>(WorkflowEventConsumer::defaultHandler);
@@ -166,35 +170,46 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
       return;
     }
 
+    // Signal broadcast (always runs first, for any workflow triggers listening)
     Function<ChangeEvent, Map<String, Object>> handler = handlerRegistry.get(event.getEntityType());
 
-    if (handler == null) {
-      LOG.debug("No handler found in registry for entity type {}", event.getEntityType());
-      return;
+    if (handler != null) {
+      LOG.debug("WorkflowEventConsumer - Generated Signal: {}", signal);
+
+      try {
+        Map<String, Object> variables = handler.apply(event);
+
+        if (variables != null && !variables.isEmpty()) {
+          LOG.info("WorkflowEventConsumer - Triggering with signal: {}", signal);
+          Retry.decorateRunnable(
+                  retry, () -> WorkflowHandler.getInstance().triggerWithSignal(signal, variables))
+              .run();
+        }
+      } catch (Exception exc) {
+        LOG.error("WorkflowEventConsumer - Error processing event", exc);
+        String message =
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, event, exc.getMessage());
+        LOG.error(message);
+        throw new EventPublisherException(
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
+            Pair.of(subscriptionDestination.getId(), event));
+      }
     }
 
-    LOG.debug("WorkflowEventConsumer - Generated Signal: {}", signal);
-
-    Map<String, Object> variables;
-    try {
-      variables = handler.apply(event);
-
-      if (variables != null && !variables.isEmpty()) {
-        LOG.info("WorkflowEventConsumer - Triggering with signal: {}", signal);
-        Retry.decorateRunnable(
-                retry, () -> WorkflowHandler.getInstance().triggerWithSignal(signal, variables))
-            .run();
+    // Outbox enqueue (after signal succeeds — exception wrapped for event retry)
+    if (isWorkflowManagedTaskStatusChange(event)) {
+      String outboxId = UUID.randomUUID().toString();
+      try {
+        Retry.decorateRunnable(retry, () -> enqueueTaskMessage(event, outboxId)).run();
+      } catch (Exception exc) {
+        LOG.error("Failed to enqueue outbox message for task '{}'", event.getEntityId(), exc);
+        throw new EventPublisherException(
+            CatalogExceptionMessage.eventPublisherFailedToPublish(
+                GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
+            Pair.of(subscriptionDestination.getId(), event));
       }
-    } catch (Exception exc) {
-      LOG.error("WorkflowEventConsumer - Error processing event", exc);
-      String message =
-          CatalogExceptionMessage.eventPublisherFailedToPublish(
-              GOVERNANCE_WORKFLOW_CHANGE_EVENT, event, exc.getMessage());
-      LOG.error(message);
-      throw new EventPublisherException(
-          CatalogExceptionMessage.eventPublisherFailedToPublish(
-              GOVERNANCE_WORKFLOW_CHANGE_EVENT, exc.getMessage()),
-          Pair.of(subscriptionDestination.getId(), event));
     }
   }
 
@@ -282,6 +297,71 @@ public class WorkflowEventConsumer implements Destination<ChangeEvent> {
   @Override
   public EventSubscription getEventSubscriptionForDestination() {
     return eventSubscription;
+  }
+
+  private static boolean isWorkflowManagedTaskStatusChange(ChangeEvent event) {
+    if (event.getEventType() != EventType.ENTITY_UPDATED) {
+      return false;
+    }
+    if (!Entity.TASK.equals(event.getEntityType())) {
+      return false;
+    }
+    if (event.getChangeDescription() == null
+        || event.getChangeDescription().getFieldsUpdated() == null) {
+      return false;
+    }
+    boolean statusChanged =
+        event.getChangeDescription().getFieldsUpdated().stream()
+            .anyMatch(fc -> "status".equals(fc.getName()));
+    if (!statusChanged) {
+      return false;
+    }
+    try {
+      Task task;
+      if (event.getEntity() instanceof String str) {
+        task = JsonUtils.readValue(str, Task.class);
+      } else {
+        task = JsonUtils.convertValue(event.getEntity(), Task.class);
+      }
+      return task != null && task.getWorkflowInstanceId() != null;
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not parse task from event entity for '{}': {}",
+          event.getEntityId(),
+          e.getMessage());
+      return false;
+    }
+  }
+
+  private static void enqueueTaskMessage(ChangeEvent event, String outboxId) {
+    String newStatus = null;
+    for (FieldChange fc : event.getChangeDescription().getFieldsUpdated()) {
+      if ("status".equals(fc.getName())) {
+        Object newValue = fc.getNewValue();
+        newStatus = newValue instanceof String s ? s : String.valueOf(newValue);
+        break;
+      }
+    }
+    if (newStatus == null) {
+      LOG.warn(
+          "Could not extract new status from ENTITY_UPDATED event for task '{}'",
+          event.getEntityId());
+      return;
+    }
+
+    String taskId = event.getEntityId().toString();
+    String updatedBy = event.getUserName();
+    long createdAt = event.getTimestamp();
+
+    Entity.getCollectionDAO()
+        .taskWorkflowOutboxDAO()
+        .insertEntry(outboxId, taskId, newStatus, updatedBy, createdAt);
+
+    LOG.info(
+        "Enqueued outbox message for task '{}': status='{}', updatedBy='{}'",
+        taskId,
+        newStatus,
+        updatedBy);
   }
 
   @Override

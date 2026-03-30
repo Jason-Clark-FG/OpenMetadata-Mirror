@@ -789,11 +789,6 @@ public class TaskRepository extends EntityRepository<Task> {
     super.postCreate(entity);
   }
 
-  @Override
-  protected void postUpdate(Task original, Task updated) {
-    super.postUpdate(original, updated);
-  }
-
   /**
    * Update domains for all open tasks related to a target entity using bulk operations.
    * Called when an entity's domains change to keep tasks in sync.

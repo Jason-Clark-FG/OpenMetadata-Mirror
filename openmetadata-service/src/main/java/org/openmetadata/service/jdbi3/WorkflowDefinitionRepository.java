@@ -13,6 +13,7 @@ import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.EdgeDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
+import org.openmetadata.schema.governance.workflows.elements.nodes.manualTask.ManualTaskDefinition;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.schema.utils.JsonUtils;
@@ -20,6 +21,7 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.BadRequestException;
 import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
+import org.openmetadata.service.governance.workflows.elements.nodes.manualTask.impl.ManualTaskTemplateResolver;
 import org.openmetadata.service.resources.governance.WorkflowDefinitionResource;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -244,21 +246,14 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
               workflowName, startNodes.size(), startNodes));
     }
 
-    // Build adjacency lists
+    // Build adjacency list and validate edge references
     Map<String, List<String>> outgoingEdges = new java.util.HashMap<>();
-    Map<String, List<String>> incomingEdges = new java.util.HashMap<>();
-
-    // Initialize empty lists for all nodes
     for (String nodeId : allNodeIds) {
       outgoingEdges.put(nodeId, new ArrayList<>());
-      incomingEdges.put(nodeId, new ArrayList<>());
     }
-
-    // Validation 4: All edges must reference valid nodes
     for (EdgeDefinition edge : workflowDefinition.getEdges()) {
       String from = edge.getFrom();
       String to = edge.getTo();
-
       if (!allNodeIds.contains(from)) {
         throw BadRequestException.of(
             String.format(
@@ -268,10 +263,12 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
         throw BadRequestException.of(
             String.format("Workflow '%s' has edge to non-existent node: '%s'", workflowName, to));
       }
-
       outgoingEdges.get(from).add(to);
-      incomingEdges.get(to).add(from);
     }
+
+    // Build cycle-check graph (filters out valid ManualTask non-terminal loops)
+    Map<String, List<String>> cycleCheckEdges =
+        buildCycleCheckGraph(workflowDefinition.getEdges(), nodeMap, outgoingEdges);
 
     // Validation 5 & 6: End nodes validation and non-end nodes must have outgoing edges
     for (String nodeId : allNodeIds) {
@@ -295,13 +292,12 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
       }
     }
 
-    // Validation 2 & 3: Cycle detection and orphaned nodes check using DFS
+    // Validation 2 & 3: Cycle detection (using filtered graph without valid self-loops)
     String startNode = startNodes.iterator().next();
     Set<String> visited = new java.util.HashSet<>();
     Set<String> recursionStack = new java.util.HashSet<>();
 
-    // Check for cycles and collect reachable nodes
-    if (hasCycleDFS(startNode, outgoingEdges, visited, recursionStack)) {
+    if (hasCycleDFS(startNode, cycleCheckEdges, visited, recursionStack)) {
       throw BadRequestException.of(
           String.format("Workflow '%s' contains a cycle in its execution path", workflowName));
     }
@@ -360,6 +356,79 @@ public class WorkflowDefinitionRepository extends EntityRepository<WorkflowDefin
     // Mark node as completely processed (black) by removing from recursion stack
     recursionStack.remove(node);
     return false;
+  }
+
+  /**
+   * Builds the cycle-check adjacency list by filtering out valid ManualTask loops.
+   * A loop back to a ManualTask (self-loop or multi-hop) is valid only from non-terminal branches.
+   */
+  private Map<String, List<String>> buildCycleCheckGraph(
+      List<EdgeDefinition> edges,
+      Map<String, WorkflowNodeDefinitionInterface> nodeMap,
+      Map<String, List<String>> outgoingEdges) {
+
+    Map<String, Set<String>> validLoopSources = new java.util.HashMap<>();
+    for (Map.Entry<String, WorkflowNodeDefinitionInterface> entry : nodeMap.entrySet()) {
+      if (!"manualTask".equals(entry.getValue().getType())) {
+        continue;
+      }
+      validLoopSources.put(
+          entry.getKey(),
+          nonTerminalReachable(entry.getKey(), (ManualTaskDefinition) entry.getValue(), edges));
+    }
+
+    Map<String, List<String>> graph = new java.util.HashMap<>();
+    for (String id : nodeMap.keySet()) {
+      graph.put(id, new ArrayList<>());
+    }
+    for (EdgeDefinition edge : edges) {
+      Set<String> valid = validLoopSources.get(edge.getTo());
+      if (valid != null && valid.contains(edge.getFrom())) {
+        continue;
+      }
+      graph.get(edge.getFrom()).add(edge.getTo());
+    }
+    return graph;
+  }
+
+  /**
+   * Computes nodes reachable from a ManualTask via non-terminal condition edges (BFS).
+   * Includes the ManualTask itself for non-terminal self-loops, so both self-loops
+   * and multi-hop loops are validated uniformly.
+   */
+  private Set<String> nonTerminalReachable(
+      String mtId, ManualTaskDefinition manualTask, List<EdgeDefinition> edges) {
+
+    Set<String> terminal =
+        Set.copyOf(
+            ManualTaskTemplateResolver.resolve(manualTask.getConfig().getTemplate())
+                .terminalStatuses());
+
+    Set<String> reachable = new java.util.HashSet<>();
+    java.util.ArrayDeque<String> queue = new java.util.ArrayDeque<>();
+
+    for (EdgeDefinition edge : edges) {
+      if (edge.getFrom().equals(mtId)
+          && edge.getCondition() != null
+          && !terminal.contains(edge.getCondition())
+          && reachable.add(edge.getTo())
+          && !edge.getTo().equals(mtId)) {
+        queue.add(edge.getTo());
+      }
+    }
+
+    while (!queue.isEmpty()) {
+      String current = queue.poll();
+      for (EdgeDefinition edge : edges) {
+        if (edge.getFrom().equals(current)) {
+          String neighbor = edge.getTo();
+          if (!neighbor.equals(mtId) && reachable.add(neighbor)) {
+            queue.add(neighbor);
+          }
+        }
+      }
+    }
+    return reachable;
   }
 
   public void suspendWorkflow(WorkflowDefinition workflow) {

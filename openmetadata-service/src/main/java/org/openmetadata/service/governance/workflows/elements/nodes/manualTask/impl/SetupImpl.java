@@ -47,8 +47,10 @@ public class SetupImpl {
             .withFullyQualifiedName(entity.getFullyQualifiedName());
 
     String updatedBy = entity.getUpdatedBy();
+    String resolvedCreator =
+        (updatedBy != null && !updatedBy.isBlank()) ? updatedBy : "governance-bot";
     EntityReference createdByRef =
-        Entity.getEntityReferenceByName(Entity.USER, updatedBy, Include.NON_DELETED);
+        Entity.getEntityReferenceByName(Entity.USER, resolvedCreator, Include.NON_DELETED);
 
     List<EntityReference> assignees = resolveAssignees(entity, assigneesConfig);
 
