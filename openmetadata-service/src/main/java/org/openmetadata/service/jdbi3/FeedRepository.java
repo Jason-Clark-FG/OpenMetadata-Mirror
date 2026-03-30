@@ -487,7 +487,7 @@ public class FeedRepository {
                   dao.feedDAO().findById(getLegacyThreadTableName(), threadId),
                   Thread.class);
         } catch (EntityNotFoundException exc) {
-          LOG.debug(String.format("Thread '%s' not found.", threadId));
+          LOG.debug("Thread '{}' not found.", threadId);
           continue;
         }
         if (Optional.ofNullable(taskStatus).isPresent()) {
