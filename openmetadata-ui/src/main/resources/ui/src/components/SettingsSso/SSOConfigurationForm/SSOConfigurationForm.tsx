@@ -279,6 +279,8 @@ const SSOConfigurationFormRJSF = ({
     // Clear all existing state first
     setHasExistingConfig(false);
     setSavedData(undefined);
+    setMetadataUploadStatus(null);
+    setMetadataUploadFileName('');
 
     // Initialize fresh form data for the selected provider
     setCurrentProvider(selectedProvider);
@@ -323,6 +325,10 @@ const SSOConfigurationFormRJSF = ({
       }
 
       const reader = new FileReader();
+      reader.onerror = () => {
+        setMetadataUploadFileName(file.name);
+        setMetadataUploadStatus('error');
+      };
       reader.onload = (e) => {
         try {
           const xmlContent = e.target?.result as string;
