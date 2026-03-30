@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Badge, Typography } from '@openmetadata/ui-core-components';
+import { Box, Chip, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,14 +29,23 @@ export const useTitleAndCount = (config: TitleAndCountConfig) => {
 
   const titleAndCount = useMemo(
     () => (
-      <div className="tw:flex tw:items-center tw:gap-2">
-        <Typography size="text-md" weight="bold">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            fontSize: '1.125rem',
+            color: 'text.primary',
+          }}
+          variant="h6">
           {displayTitle}
         </Typography>
-        <Badge color="brand" size="sm">
-          {displayCount}
-        </Badge>
-      </div>
+        <Chip
+          color="primary"
+          label={displayCount}
+          size="small"
+          sx={{ border: 'none' }}
+        />
+      </Box>
     ),
     [displayTitle, displayCount]
   );

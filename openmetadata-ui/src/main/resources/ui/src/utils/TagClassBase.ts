@@ -136,7 +136,6 @@ class TagClassBase {
       EntityTabs.ASSETS,
       EntityTabs.ACTIVITY_FEED,
       EntityTabs.CUSTOM_PROPERTIES,
-      EntityTabs.DATA_OBSERVABILITY,
     ].map((tab: EntityTabs) => ({
       id: tab,
       name: tab,

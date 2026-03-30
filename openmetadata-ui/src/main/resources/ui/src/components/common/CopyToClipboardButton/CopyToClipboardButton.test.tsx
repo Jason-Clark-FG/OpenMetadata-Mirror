@@ -11,28 +11,16 @@
  *  limitations under the License.
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { CopyToClipboardButton } from './CopyToClipboardButton';
 
-jest.mock('@openmetadata/ui-core-components', () => ({
-  Tooltip: jest.fn().mockImplementation(({ children, title }) => (
-    <div data-testid="tooltip" data-title={title}>
-      {children}
-    </div>
-  )),
-  TooltipTrigger: jest
-    .fn()
-    .mockImplementation(({ children }) => <>{children}</>),
-  ButtonUtility: jest
-    .fn()
-    .mockImplementation(({ icon, onClick, 'data-testid': testId }) => (
-      <button data-testid={testId} onClick={onClick}>
-        {icon}
-      </button>
-    )),
-}));
-
-const clipboardWriteTextMock = jest.fn().mockResolvedValue(undefined);
+const clipboardWriteTextMock = jest.fn();
 const clipboardMock = {
   writeText: clipboardWriteTextMock,
 };
@@ -40,26 +28,18 @@ const clipboardMock = {
 const value = 'Test Value';
 const callBack = jest.fn();
 
-Object.defineProperty(globalThis.navigator, 'clipboard', {
+Object.defineProperty(window.navigator, 'clipboard', {
   value: clipboardMock,
   writable: true,
 });
 
-Object.defineProperty(globalThis, 'isSecureContext', {
+// Set secure context to true by default
+Object.defineProperty(window, 'isSecureContext', {
   value: true,
   writable: true,
 });
 
 describe('Test CopyToClipboardButton Component', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    clipboardWriteTextMock.mockResolvedValue(undefined);
-    Object.defineProperty(globalThis.navigator, 'clipboard', {
-      value: clipboardMock,
-      writable: true,
-    });
-  });
-
   it('Should render all child elements', async () => {
     render(<CopyToClipboardButton copyText={value} />);
 
@@ -70,67 +50,60 @@ describe('Test CopyToClipboardButton Component', () => {
   it('Should calls onCopy callback when clicked', async () => {
     render(<CopyToClipboardButton copyText={value} onCopy={callBack} />);
 
-    fireEvent.click(screen.getByTestId('copy-secret'));
+    await act(async () => {
+      await fireEvent.click(screen.getByTestId('copy-secret'));
+    });
 
-    await waitFor(() => expect(callBack).toHaveBeenCalled());
+    expect(callBack).toHaveBeenCalled();
   });
 
-  it('Should show copied message in tooltip after click', async () => {
+  it('Should show success message on clipboard click', async () => {
     jest.useFakeTimers();
     render(<CopyToClipboardButton copyText={value} />);
 
-    fireEvent.click(screen.getByTestId('copy-secret'));
-
-    await waitFor(() => {
-      expect(screen.getByTestId('tooltip')).toHaveAttribute(
-        'data-title',
-        'message.copied-to-clipboard'
-      );
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-secret'));
+      fireEvent.mouseOver(screen.getByTestId('copy-secret'));
     });
 
-    jest.useRealTimers();
-  });
-
-  it('Should show default copy message in tooltip before click', () => {
-    render(<CopyToClipboardButton copyText={value} />);
-
-    expect(screen.getByTestId('tooltip')).toHaveAttribute(
-      'data-title',
-      'message.copy-to-clipboard'
-    );
+    expect(await screen.findByTestId('copy-success')).toBeInTheDocument();
   });
 
   it('Should have copied text in clipboard', async () => {
     render(<CopyToClipboardButton copyText={value} />);
 
-    fireEvent.click(screen.getByTestId('copy-secret'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-secret'));
+    });
 
-    await waitFor(() =>
-      expect(clipboardWriteTextMock).toHaveBeenCalledWith(value)
-    );
+    // clipboard should have the copied text
+    expect(clipboardWriteTextMock).toHaveBeenCalledWith(value);
   });
 
   it('Should handles error when cannot access clipboard API', async () => {
-    Object.defineProperty(globalThis.navigator, 'clipboard', {
+    Object.defineProperty(window.navigator, 'clipboard', {
       value: undefined,
       writable: true,
     });
 
     render(<CopyToClipboardButton copyText={value} />);
 
-    fireEvent.click(screen.getByTestId('copy-secret'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-secret'));
+    });
 
+    // not show the success message if clipboard API has error
     await waitFor(() => {
-      expect(screen.getByTestId('tooltip')).toHaveAttribute(
-        'data-title',
-        'message.copy-to-clipboard'
-      );
+      expect(screen.queryByTestId('copy-success')).not.toBeInTheDocument();
     });
   });
 
-  it('Should render button with correct testid', () => {
+  it('Should render MUI IconButton with correct props', () => {
     render(<CopyToClipboardButton copyText={value} position="top" />);
 
-    expect(screen.getByTestId('copy-secret')).toBeInTheDocument();
+    const iconButton = screen.getByTestId('copy-secret');
+
+    expect(iconButton).toBeInTheDocument();
+    expect(iconButton).toHaveClass('h-8 m-l-md relative flex-center');
   });
 });

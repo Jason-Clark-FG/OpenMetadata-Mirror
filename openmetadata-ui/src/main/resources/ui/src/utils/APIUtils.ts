@@ -33,7 +33,6 @@ export const formatUsersResponse = (
       teams: d._source.teams,
       roles: d._source.roles,
       href: d._source.href,
-      isBot: d._source.isBot,
     };
   });
 };

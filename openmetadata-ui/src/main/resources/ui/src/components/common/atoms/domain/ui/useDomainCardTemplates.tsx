@@ -11,15 +11,11 @@
  *  limitations under the License.
  */
 
-import { Grid, Typography } from '@openmetadata/ui-core-components';
+import { Box, Typography } from '@mui/material';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataProduct } from '../../../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import {
-  getClassificationTags,
-  getGlossaryTags,
-} from '../../../../../utils/TagsUtils';
 import { ColumnConfig } from '../../shared/types';
 
 /**
@@ -64,19 +60,28 @@ export const useDomainCardTemplates = () => {
       ) =>
         (
           <>
-            <div className="tw:mb-3">
+            {/* Row 1: Entity name with avatar (full width) */}
+            <Box sx={{ mb: 3 }}>
               {renderCell(entity, {
                 key: 'name',
                 labelKey: 'label.domain',
                 render: 'entityName',
               })}
-            </div>
+            </Box>
 
-            <Grid className="tw:mb-3" gap="4">
-              <Grid.Item span={12}>
+            {/* Row 2: Owner and Domain Type (two columns) */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 4,
+                mb: 3,
+              }}>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.owner')}
                 </Typography>
                 {renderCell(entity, {
@@ -84,11 +89,12 @@ export const useDomainCardTemplates = () => {
                   labelKey: 'label.owner-plural',
                   render: 'owners',
                 })}
-              </Grid.Item>
-              <Grid.Item span={12}>
+              </Box>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.domain-type')}
                 </Typography>
                 {renderCell(entity, {
@@ -97,37 +103,46 @@ export const useDomainCardTemplates = () => {
                   render: 'custom',
                   customRenderer: 'domainTypeChip',
                 })}
-              </Grid.Item>
-            </Grid>
+              </Box>
+            </Box>
 
-            <Grid gap="4">
-              <Grid.Item span={12}>
+            {/* Row 3: Glossary Terms and Tags (two columns) */}
+            <Box
+              sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.glossary-term-plural')}
                 </Typography>
                 {renderCell(entity, {
                   key: 'glossaryTerms',
                   labelKey: 'label.glossary-term-plural',
                   render: 'tags',
-                  getValue: (entity) => getGlossaryTags(entity.tags),
+                  getValue: (domain: Domain) =>
+                    domain.tags?.filter((tag) => tag.source === 'Glossary') ||
+                    [],
                 })}
-              </Grid.Item>
-              <Grid.Item span={12}>
+              </Box>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.tag-plural')}
                 </Typography>
                 {renderCell(entity, {
                   key: 'classificationTags',
                   labelKey: 'label.tag-plural',
                   render: 'tags',
-                  getValue: (entity) => getClassificationTags(entity.tags),
+                  getValue: (domain: Domain) =>
+                    domain.tags?.filter(
+                      (tag) => tag.source === 'Classification'
+                    ) || [],
                 })}
-              </Grid.Item>
-            </Grid>
+              </Box>
+            </Box>
           </>
         ),
     []
@@ -145,19 +160,28 @@ export const useDomainCardTemplates = () => {
       ) =>
         (
           <>
-            <div className="tw:mb-3">
+            {/* Row 1: Entity name with avatar (full width) */}
+            <Box sx={{ mb: 3 }}>
               {renderCell(entity, {
                 key: 'name',
                 labelKey: 'label.data-product',
                 render: 'entityName',
               })}
-            </div>
+            </Box>
 
-            <Grid className="tw:mb-3" gap="4">
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+            {/* Row 2: Owners and Experts (two columns) */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 4,
+                mb: 3,
+              }}>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.owner-plural')}
                 </Typography>
                 {renderCell(entity, {
@@ -165,11 +189,12 @@ export const useDomainCardTemplates = () => {
                   labelKey: 'label.owner',
                   render: 'owners',
                 })}
-              </Grid.Item>
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              </Box>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.expert-plural')}
                 </Typography>
                 {renderCell(entity, {
@@ -177,37 +202,47 @@ export const useDomainCardTemplates = () => {
                   labelKey: 'label.expert-plural',
                   render: 'owners',
                 })}
-              </Grid.Item>
-            </Grid>
+              </Box>
+            </Box>
 
-            <Grid gap="4">
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+            {/* Row 3: Glossary Terms and Tags (two columns) */}
+            <Box
+              sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.glossary-term-plural')}
                 </Typography>
                 {renderCell(entity, {
                   key: 'glossaryTerms',
                   labelKey: 'label.glossary-term-plural',
                   render: 'tags',
-                  getValue: (entity) => getGlossaryTags(entity.tags),
+                  getValue: (dataProduct: DataProduct) =>
+                    dataProduct.tags?.filter(
+                      (tag) => tag.source === 'Glossary'
+                    ) || [],
                 })}
-              </Grid.Item>
-              <Grid.Item className="tw:min-w-0 tw:overflow-hidden" span={12}>
+              </Box>
+              <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
                 <Typography
-                  className="tw:mb-0.5 tw:text-gray-700"
-                  size="text-xs">
+                  color="text.secondary"
+                  sx={{ display: 'block', mb: 0.5 }}
+                  variant="caption">
                   {t('label.tag-plural')}
                 </Typography>
                 {renderCell(entity, {
                   key: 'classificationTags',
                   labelKey: 'label.tag-plural',
                   render: 'tags',
-                  getValue: (entity) => getClassificationTags(entity.tags),
+                  getValue: (dataProduct: DataProduct) =>
+                    dataProduct.tags?.filter(
+                      (tag) => tag.source === 'Classification'
+                    ) || [],
                 })}
-              </Grid.Item>
-            </Grid>
+              </Box>
+            </Box>
           </>
         ),
     []

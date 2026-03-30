@@ -19,25 +19,11 @@ import { Tag } from '../generated/entity/classification/tag';
 import { searchQuery } from '../rest/searchAPI';
 import tagClassBase, { TagClassBase } from './TagClassBase';
 
-jest.mock('../rest/searchAPI', () => ({
-  searchQuery: jest.fn(),
-}));
+jest.mock('../rest/searchAPI');
 
 jest.mock('./StringsUtils', () => ({
   getEncodedFqn: jest.fn().mockReturnValue('test'),
   escapeESReservedCharacters: jest.fn().mockReturnValue('test'),
-}));
-
-jest.mock('./SearchUtils', () => ({
-  getTermQuery: jest.fn((params: Record<string, string>) => ({
-    query: {
-      bool: {
-        must: Object.entries(params).map(([key, value]) => ({
-          term: { [key]: value },
-        })),
-      },
-    },
-  })),
 }));
 
 jest.mock('./CustomizePage/CustomizePageUtils', () => ({
@@ -54,12 +40,6 @@ jest.mock('../components/DataAssets/DomainLabelV2/DomainLabelV2', () => ({
 
 jest.mock('../components/DataAssets/OwnerLabelV2/OwnerLabelV2', () => ({
   OwnerLabelV2: 'OwnerLabelV2',
-}));
-
-jest.mock('./i18next/LocalUtil', () => ({
-  __esModule: true,
-  default: { t: jest.fn((key: string) => key) },
-  t: jest.fn((key: string) => key),
 }));
 
 const mockSearchResponse = (fqn: string) => ({
@@ -149,10 +129,10 @@ describe('TagClassBase', () => {
   });
 
   describe('getTagDetailPageTabsIds', () => {
-    it('returns 5 tabs', () => {
+    it('returns 4 tabs', () => {
       const tabs = tagClassBase.getTagDetailPageTabsIds();
 
-      expect(tabs).toHaveLength(5);
+      expect(tabs).toHaveLength(4);
     });
 
     it('returns tabs in expected order', () => {
@@ -164,7 +144,6 @@ describe('TagClassBase', () => {
         EntityTabs.ASSETS,
         EntityTabs.ACTIVITY_FEED,
         EntityTabs.CUSTOM_PROPERTIES,
-        EntityTabs.DATA_OBSERVABILITY,
       ]);
     });
 
@@ -182,25 +161,6 @@ describe('TagClassBase', () => {
       tabs
         .filter((t) => t.id !== EntityTabs.OVERVIEW)
         .forEach((t) => expect(t.editable).toBe(false));
-    });
-
-    it('includes DATA_OBSERVABILITY tab with empty layout', () => {
-      const tabs = tagClassBase.getTagDetailPageTabsIds();
-      const dqTab = tabs.find((t) => t.id === EntityTabs.DATA_OBSERVABILITY);
-
-      expect(dqTab).toBeDefined();
-      expect(dqTab?.layout).toEqual([]);
-      expect(dqTab?.editable).toBe(false);
-    });
-
-    it('DATA_OBSERVABILITY tab comes after all base tabs', () => {
-      const tabs = tagClassBase.getTagDetailPageTabsIds();
-      const overviewIndex = tabs.findIndex((t) => t.id === EntityTabs.OVERVIEW);
-      const dqIndex = tabs.findIndex(
-        (t) => t.id === EntityTabs.DATA_OBSERVABILITY
-      );
-
-      expect(overviewIndex).toBeLessThan(dqIndex);
     });
   });
 
@@ -421,13 +381,23 @@ describe('TagClassBase', () => {
   });
 
   describe('getAdditionalTagDetailPageTabs', () => {
-    it('returns empty array in base class', () => {
-      const tabs = tagClassBase.getAdditionalTagDetailPageTabs(
-        { fullyQualifiedName: 'PII.Sensitive' } as unknown as Tag,
-        'overview'
-      );
+    it('returns an empty array by default', () => {
+      const mockTag = { fullyQualifiedName: 'PII.Sensitive' } as unknown as Tag;
 
-      expect(tabs).toEqual([]);
+      expect(
+        tagClassBase.getAdditionalTagDetailPageTabs(mockTag, 'overview')
+      ).toEqual([]);
+    });
+
+    it('returns an empty array regardless of activeTab value', () => {
+      const mockTag = { fullyQualifiedName: 'PII.Sensitive' } as unknown as Tag;
+
+      expect(
+        tagClassBase.getAdditionalTagDetailPageTabs(mockTag, 'assets')
+      ).toEqual([]);
+      expect(
+        tagClassBase.getAdditionalTagDetailPageTabs(mockTag, 'activity_feed')
+      ).toEqual([]);
     });
   });
 });

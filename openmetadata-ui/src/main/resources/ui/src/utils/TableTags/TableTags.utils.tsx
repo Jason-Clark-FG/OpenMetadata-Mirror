@@ -16,23 +16,16 @@ import { TagFilterOptions, TagsData } from 'Models';
 import React from 'react';
 import { TableTagsProps } from '../../components/Database/TableTags/TableTags.interface';
 import { TagLabel, TagSource } from '../../generated/type/tagLabel';
-import { isCertificationTag, isTierTag } from '../TableUtils';
 
 export const getFilterTags = (tags: TagLabel[]): TableTagsProps =>
   reduce(
     tags,
     (acc, cv) => {
-      if (
-        cv.source === TagSource.Classification &&
-        !isTierTag(cv.tagFQN) &&
-        !isCertificationTag(cv.tagFQN)
-      ) {
+      if (cv.source === TagSource.Classification) {
         return { ...acc, Classification: [...acc.Classification, cv] };
-      } else if (cv.source === TagSource.Glossary) {
+      } else {
         return { ...acc, Glossary: [...acc.Glossary, cv] };
       }
-
-      return acc;
     },
     { Classification: [] as TagLabel[], Glossary: [] as TagLabel[] }
   );

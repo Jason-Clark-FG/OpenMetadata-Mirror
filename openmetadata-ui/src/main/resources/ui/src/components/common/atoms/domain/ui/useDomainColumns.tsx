@@ -11,12 +11,9 @@
  *  limitations under the License.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import {
-  getClassificationTags,
-  getGlossaryTags,
-} from '../../../../../utils/TagsUtils';
+import { TagSource } from '../../../../../generated/type/tagLabel';
 import { ColumnConfig } from '../../shared/types';
 
 interface UseDomainColumnsConfig {
@@ -38,6 +35,19 @@ export const useDomainColumns = (config: UseDomainColumnsConfig = {}) => {
     customColumns = [],
   } = config;
 
+  const getGlossaryTags = useCallback(
+    (domain: Domain) =>
+      domain.tags?.filter((tag) => tag.source === TagSource.Glossary) || [],
+    []
+  );
+
+  const getClassificationTags = useCallback(
+    (domain: Domain) =>
+      domain.tags?.filter((tag) => tag.source === TagSource.Classification) ||
+      [],
+    []
+  );
+
   const baseColumns = useMemo(() => {
     const columns: ColumnConfig<Domain>[] = [
       { key: 'name', labelKey: nameLabelKey, render: 'entityName' },
@@ -56,7 +66,7 @@ export const useDomainColumns = (config: UseDomainColumnsConfig = {}) => {
         key: 'glossaryTerms',
         labelKey: 'label.glossary-term-plural',
         render: 'tags',
-        getValue: (domain: Domain) => getGlossaryTags(domain.tags),
+        getValue: getGlossaryTags,
       });
     }
 
@@ -74,7 +84,7 @@ export const useDomainColumns = (config: UseDomainColumnsConfig = {}) => {
         key: 'classificationTags',
         labelKey: 'label.tag-plural',
         render: 'tags',
-        getValue: (domain: Domain) => getClassificationTags(domain.tags),
+        getValue: getClassificationTags,
       });
     }
 
@@ -85,11 +95,17 @@ export const useDomainColumns = (config: UseDomainColumnsConfig = {}) => {
     includeGlossaryTerms,
     includeDomainType,
     includeClassificationTags,
+    getGlossaryTags,
+    getClassificationTags,
   ]);
 
   const columns = useMemo(() => {
     return [...baseColumns, ...customColumns];
   }, [baseColumns, customColumns]);
 
-  return { columns };
+  return {
+    columns,
+    getGlossaryTags,
+    getClassificationTags,
+  };
 };

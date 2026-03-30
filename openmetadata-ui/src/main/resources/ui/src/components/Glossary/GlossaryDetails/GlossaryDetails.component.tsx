@@ -113,7 +113,7 @@ const GlossaryDetails = ({
               children: (
                 <OntologyExplorer
                   glossaryId={glossary.id}
-                  height="100%"
+                  height="calc(100vh - 216px)"
                   scope="glossary"
                   showHeader={false}
                 />

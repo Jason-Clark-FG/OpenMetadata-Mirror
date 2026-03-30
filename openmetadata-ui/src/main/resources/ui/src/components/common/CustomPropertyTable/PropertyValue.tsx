@@ -12,6 +12,7 @@
  */
 
 import Icon, { InfoCircleOutlined } from '@ant-design/icons';
+import { Stack } from '@mui/material';
 import {
   Card,
   Form,
@@ -149,18 +150,18 @@ export const PropertyValue: FC<PropertyValueProps> = ({
       : updatedValue;
 
     try {
-      const isNumericType = ['integer', 'number'].includes(
-        propertyType.name ?? ''
-      );
-      const numericValue = updatedValue ? toNumber(updatedValue) : updatedValue;
-      const resolvedValue = isNumericType ? numericValue : propertyValue;
-
       // Omit undefined and empty values
       const updatedExtension = omitBy(
         omitBy(
           {
             ...extension,
-            [propertyName]: resolvedValue,
+            [propertyName]: ['integer', 'number'].includes(
+              propertyType.name ?? ''
+            )
+              ? updatedValue
+                ? toNumber(updatedValue)
+                : updatedValue // If number is cleared and set undefined
+              : propertyValue,
           },
           isUndefined
         ),
@@ -1118,7 +1119,7 @@ export const PropertyValue: FC<PropertyValueProps> = ({
   }
 
   const customPropertyElement = (
-    <div className="tw:flex tw:flex-col tw:gap-2" data-testid={propertyName}>
+    <Stack data-testid={propertyName} spacing={2}>
       <div className="d-flex items-center gap-1">
         <Typography.Text
           className="text-grey-body property-name"
@@ -1203,7 +1204,7 @@ export const PropertyValue: FC<PropertyValueProps> = ({
           />
         )}
       </div>
-    </div>
+    </Stack>
   );
 
   if (isRenderedInRightPanel) {

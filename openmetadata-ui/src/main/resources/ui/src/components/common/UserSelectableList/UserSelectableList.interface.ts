@@ -21,7 +21,6 @@ export type UserSelectableListProps =
       children?: ReactNode;
       popoverProps?: PopoverProps;
       filterCurrentUser?: boolean;
-      includeBot?: boolean;
     } & (
       | {
           multiSelect?: true;

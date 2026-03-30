@@ -12,47 +12,42 @@
  */
 
 import {
-  Badge,
-  BadgeWithIcon,
   Button,
+  Select,
   Tooltip,
   TooltipTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
 import { Tag01 } from '@untitledui/icons';
-import { groupBy, isEmpty } from 'lodash';
-import type { ReactNode } from 'react';
+import classNames from 'classnames';
+import { groupBy, isArray, isEmpty, isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-
-import {
-  NO_DATA_PLACEHOLDER,
-  PAGE_SIZE_MEDIUM,
-} from '../../../../constants/constants';
+import TagSelectForm from '../../../../components/Tag/TagsSelectForm/TagsSelectForm.component';
+import { NO_DATA_PLACEHOLDER } from '../../../../constants/constants';
 import { EntityField } from '../../../../constants/Feeds.constants';
 import { EntityType } from '../../../../enums/entity.enum';
 import { GlossaryTermRelationType } from '../../../../generated/configuration/glossaryTermRelationSettings';
 import { GlossaryTerm } from '../../../../generated/entity/data/glossaryTerm';
-import { Operation } from '../../../../generated/entity/policies/accessControl/resourcePermission';
 import {
   ChangeDescription,
   EntityReference,
 } from '../../../../generated/entity/type';
 import { TermRelation } from '../../../../generated/type/termRelation';
+import { getGlossaryTermRelationSettings } from '../../../../rest/glossaryAPI';
 import {
-  getGlossaryTermRelationSettings,
-  searchGlossaryTermsPaginated,
-} from '../../../../rest/glossaryAPI';
-import { getEntityName } from '../../../../utils/EntityUtils';
+  getEntityName,
+  getEntityReferenceFromEntity,
+} from '../../../../utils/EntityUtils';
 import {
   getChangedEntityNewValue,
   getChangedEntityOldValue,
   getDiffByFieldName,
 } from '../../../../utils/EntityVersionUtils';
 import { VersionStatus } from '../../../../utils/EntityVersionUtils.interface';
-import { getPrioritizedEditPermission } from '../../../../utils/PermissionsUtils';
 import { getGlossaryPath } from '../../../../utils/RouterUtils';
+import { SelectOption } from '../../../common/AsyncSelectList/AsyncSelectList.interface';
 import ExpandableCard from '../../../common/ExpandableCard/ExpandableCard';
 import {
   EditIconButton,
@@ -60,29 +55,20 @@ import {
 } from '../../../common/IconButtons/EditIconButton';
 import { useGenericContext } from '../../../Customization/GenericProvider/GenericProvider';
 import { DEFAULT_GLOSSARY_TERM_RELATION_TYPES_FALLBACK } from '../../../OntologyExplorer/OntologyExplorer.constants';
-import {
-  RelatedTermTagButtonProps,
-  RelationEditRow,
-  TermsRowEditorProps,
-} from './RelatedTerms.interface';
-import TermsRowEditor from './TermsRowEditor.component';
 
-const MAX_VISIBLE_BADGES = 5;
+interface RelatedTermOption {
+  value?: string;
+  data?: unknown;
+  label?: string;
+}
 
-const BadgeList: React.FC<{ items: ReactNode[] }> = ({ items }) => {
-  const hiddenCount = Math.max(0, items.length - MAX_VISIBLE_BADGES);
-
-  return (
-    <div className="tw:flex tw:flex-wrap tw:mt-2 tw:gap-1">
-      {items.slice(0, MAX_VISIBLE_BADGES)}
-      {hiddenCount > 0 && (
-        <Badge color="gray" size="sm" type="pill-color">
-          +{hiddenCount}
-        </Badge>
-      )}
-    </div>
-  );
-};
+interface RelatedTermTagButtonProps {
+  entity: EntityReference;
+  relationType?: string;
+  versionStatus?: VersionStatus;
+  getRelationDisplayName: (relationType: string) => string;
+  onRelatedTermClick: (fqn: string) => void;
+}
 
 const RelatedTermTagButton: React.FC<RelatedTermTagButtonProps> = ({
   entity,
@@ -93,16 +79,16 @@ const RelatedTermTagButton: React.FC<RelatedTermTagButtonProps> = ({
 }) => {
   const tooltipContent = (
     <div className="tw:p-2 tw:space-y-1">
-      <Typography as="p" weight="semibold">
+      <Typography as="span" className="tw:block tw:font-semibold">
         {entity.fullyQualifiedName}
       </Typography>
       {relationType && (
-        <Typography as="p" size="text-xs">
+        <Typography as="span" className="tw:block tw:text-xs tw:text-gray-500">
           {getRelationDisplayName(relationType)}
         </Typography>
       )}
       {entity.description && (
-        <Typography as="p" size="text-xs">
+        <Typography as="span" className="tw:block tw:text-xs tw:text-gray-600">
           {entity.description}
         </Typography>
       )}
@@ -111,19 +97,22 @@ const RelatedTermTagButton: React.FC<RelatedTermTagButtonProps> = ({
 
   return (
     <Tooltip placement="bottom left" title={tooltipContent}>
-      <TooltipTrigger
-        className={
-          versionStatus?.added
-            ? 'diff-added'
-            : versionStatus?.removed
-            ? 'diff-removed'
-            : undefined
-        }
-        data-testid={getEntityName(entity)}
-        onPress={() => onRelatedTermClick(entity.fullyQualifiedName ?? '')}>
-        <BadgeWithIcon color="gray" iconLeading={Tag01} size="md" type="color">
-          {getEntityName(entity)}
-        </BadgeWithIcon>
+      <TooltipTrigger>
+        <Button
+          className={classNames(
+            'tw:inline-flex tw:text-xs tw:whitespace-nowrap tw:cursor-pointer',
+            { 'diff-added': versionStatus?.added },
+            { 'diff-removed tw:text-gray-500': versionStatus?.removed }
+          )}
+          color="secondary"
+          data-testid={getEntityName(entity)}
+          iconLeading={<Tag01 className="tw:size-3" />}
+          size="sm"
+          onClick={() => onRelatedTermClick(entity.fullyQualifiedName ?? '')}>
+          <Typography as="span" className="tw:text-xs tw:font-semibold">
+            {getEntityName(entity)}
+          </Typography>
+        </Button>
       </TooltipTrigger>
     </Tooltip>
   );
@@ -139,12 +128,11 @@ const RelatedTerms = () => {
   } = useGenericContext<GlossaryTerm>();
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [isAdding, setIsAdding] = useState<boolean>(false);
-  const [editingRows, setEditingRows] = useState<RelationEditRow[]>([]);
+  const [selectedRelationType, setSelectedRelationType] =
+    useState<string>('relatedTo');
   const [relationTypes, setRelationTypes] = useState<
     GlossaryTermRelationType[]
   >([]);
-  const [preloadedTerms, setPreloadedTerms] = useState<GlossaryTerm[]>([]);
 
   const termRelations = useMemo(() => {
     return glossaryTerm?.relatedTerms ?? [];
@@ -165,22 +153,9 @@ const RelatedTerms = () => {
     }
   }, []);
 
-  const fetchAllTerms = useCallback(async () => {
-    try {
-      const result = await searchGlossaryTermsPaginated({
-        offset: 0,
-        limit: PAGE_SIZE_MEDIUM,
-      });
-      setPreloadedTerms(result.data);
-    } catch {
-      // silently handle
-    }
-  }, []);
-
   useEffect(() => {
     fetchRelationTypes();
-    fetchAllTerms();
-  }, [fetchRelationTypes, fetchAllTerms]);
+  }, [fetchRelationTypes]);
 
   const relationTypeOptions = useMemo(
     () =>
@@ -192,110 +167,81 @@ const RelatedTerms = () => {
     [relationTypes]
   );
 
+  const currentRelationTypeTerms = useMemo(() => {
+    const existing = termRelations.filter(
+      (tr) => tr.relationType === selectedRelationType
+    );
+
+    return existing
+      .filter((tr) => tr.term)
+      .map((tr) => ({
+        ...tr.term,
+        value: tr.term?.id,
+        label: getEntityName(tr.term as EntityReference),
+        key: tr.term?.id,
+      }));
+  }, [termRelations, selectedRelationType]);
+
+  const initialOptions = useMemo(() => {
+    return (
+      currentRelationTypeTerms.map((item) => ({
+        label: getEntityName(item as EntityReference),
+        value: item.fullyQualifiedName,
+        data: item,
+      })) ?? []
+    );
+  }, [currentRelationTypeTerms]);
+
   const handleRelatedTermClick = (fqn: string) => {
     navigate(getGlossaryPath(fqn));
   };
 
-  const handleStartEditing = useCallback(() => {
-    if (isEmpty(termRelations)) {
-      setEditingRows([
-        {
-          id: '0',
-          relationType: relationTypes[0]?.name ?? 'relatedTo',
-          terms: [],
-        },
-      ]);
-    } else {
-      const grouped = groupBy(termRelations, 'relationType');
-      setEditingRows(
-        Object.entries(grouped).map(([relationType, relations], idx) => ({
-          id: String(idx),
-          relationType,
-          terms: relations
-            .filter((r) => r.term?.fullyQualifiedName)
-            .map((r) => ({
-              value: r.term!.fullyQualifiedName!,
-              label: getEntityName(r.term as EntityReference),
-              entity: r.term as EntityReference,
-            })),
-        }))
-      );
+  const handleRelatedTermsSave = async (
+    selectedData: RelatedTermOption | RelatedTermOption[]
+  ): Promise<void> => {
+    if (!isArray(selectedData)) {
+      return;
     }
-    setIsEditing(true);
-  }, [termRelations, relationTypes]);
 
-  const handleStartAdding = useCallback(() => {
-    setEditingRows([
-      {
-        id: String(Date.now()),
-        relationType: relationTypes[0]?.name ?? 'relatedTo',
-        terms: [],
-      },
-    ]);
-    setIsAdding(true);
-  }, [relationTypes]);
+    const newTermsForRelationType: TermRelation[] = selectedData.map(
+      (value) => {
+        const termRef = isUndefined(value.data)
+          ? termRelations.find(
+              (tr: TermRelation) => tr.term?.fullyQualifiedName === value.value
+            )?.term
+          : getEntityReferenceFromEntity(
+              value.data as EntityReference,
+              EntityType.GLOSSARY_TERM
+            );
 
-  const handleSave = useCallback(async () => {
-    const rowRelations: TermRelation[] = editingRows.flatMap((row) =>
-      row.terms.map((term) => ({
-        relationType: row.relationType,
-        term:
-          term.entity ??
-          ({
-            fullyQualifiedName: term.value,
-            type: EntityType.GLOSSARY_TERM,
-          } as EntityReference),
-      }))
+        return {
+          relationType: selectedRelationType,
+          term: termRef as EntityReference,
+        };
+      }
     );
-    const updatedRelations = isAdding
-      ? [...termRelations, ...rowRelations]
-      : rowRelations;
 
-    await onUpdate({ ...glossaryTerm, relatedTerms: updatedRelations });
+    const otherRelations = termRelations.filter(
+      (tr) => tr.relationType !== selectedRelationType
+    );
+
+    const updatedGlossaryTerm = {
+      ...glossaryTerm,
+      relatedTerms: [...otherRelations, ...newTermsForRelationType],
+    };
+
+    await onUpdate(updatedGlossaryTerm);
     setIsEditing(false);
-    setIsAdding(false);
-  }, [editingRows, glossaryTerm, onUpdate, isAdding, termRelations]);
+  };
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = () => {
     setIsEditing(false);
-    setIsAdding(false);
-  }, []);
+  };
 
-  const handleAddRow = useCallback(() => {
-    setEditingRows((prev) => [
-      ...prev,
-      {
-        id: String(Date.now()),
-        relationType: relationTypes[0]?.name ?? 'relatedTo',
-        terms: [],
-      },
-    ]);
-  }, [relationTypes]);
-
-  const handleRemoveRow = useCallback((rowId: string) => {
-    setEditingRows((prev) => prev.filter((r) => r.id !== rowId));
-  }, []);
-
-  const handleRelationTypeChange = useCallback(
-    (rowId: string, relationType: string) => {
-      setEditingRows((prev) =>
-        prev.map((r) => (r.id === rowId ? { ...r, relationType } : r))
-      );
-    },
-    []
-  );
-
-  const handleTermsChange = useCallback(
-    (
-      rowId: string,
-      terms: Array<{ value: string; label: string; entity?: EntityReference }>
-    ) => {
-      setEditingRows((prev) =>
-        prev.map((r) => (r.id === rowId ? { ...r, terms } : r))
-      );
-    },
-    []
-  );
+  const handleStartEditing = () => {
+    setSelectedRelationType('relatedTo');
+    setIsEditing(true);
+  };
 
   const getRelationDisplayName = useCallback(
     (relationType: string) => {
@@ -369,7 +315,9 @@ const RelatedTerms = () => {
             ? getRelatedTermElement(
                 relatedTerm.term,
                 relatedTerm.relationType,
-                { added: true }
+                {
+                  added: true,
+                }
               )
             : null
         )}
@@ -378,7 +326,9 @@ const RelatedTerms = () => {
             ? getRelatedTermElement(
                 relatedTerm.term,
                 relatedTerm.relationType,
-                { removed: true }
+                {
+                  removed: true,
+                }
               )
             : null
         )}
@@ -390,29 +340,26 @@ const RelatedTerms = () => {
     if (isVersionView) {
       return getVersionRelatedTerms();
     }
-    const hasEditPermission = getPrioritizedEditPermission(
-      permissions,
-      Operation.EditGlossaryTerms
-    );
-    if (!hasEditPermission || !isEmpty(termRelations)) {
+    if (!permissions.EditAll || !isEmpty(termRelations)) {
       return (
-        <div className="d-flex flex-col gap-4">
+        <div className="d-flex flex-col gap-3">
           {Object.entries(groupedRelations).map(([relationType, relations]) => (
-            <div className="d-flex flex-col" key={relationType}>
-              <Typography as="span">
+            <div className="d-flex flex-col gap-1" key={relationType}>
+              <Typography
+                as="span"
+                className="text-xs font-medium text-grey-muted">
                 {getRelationDisplayName(relationType)}
               </Typography>
-              <BadgeList
-                items={(relations as TermRelation[]).flatMap(
-                  (tr: TermRelation) =>
-                    tr.term
-                      ? [getRelatedTermElement(tr.term, tr.relationType)]
-                      : []
+              <div className="d-flex flex-wrap gap-1">
+                {(relations as TermRelation[]).map((tr: TermRelation) =>
+                  tr.term
+                    ? getRelatedTermElement(tr.term, tr.relationType)
+                    : null
                 )}
-              />
+              </div>
             </div>
           ))}
-          {!hasEditPermission && termRelations.length === 0 && (
+          {!permissions.EditAll && termRelations.length === 0 && (
             <div>{NO_DATA_PLACEHOLDER}</div>
           )}
         </div>
@@ -431,96 +378,87 @@ const RelatedTerms = () => {
   ]);
 
   const header = (
-    <div className="d-flex items-center justify-between w-full">
-      <div className="d-flex items-center gap-2">
-        <Typography as="span" className="text-sm font-medium">
-          {t('label.related-term-plural')}
+    <div className="d-flex items-center gap-2">
+      <Typography as="span" className="text-sm font-medium">
+        {t('label.related-term-plural')}
+      </Typography>
+      {permissions.EditAll &&
+        (isEmpty(termRelations) ? (
+          <PlusIconButton
+            data-testid="related-term-add-button"
+            size="small"
+            title={t('label.add-entity', {
+              entity: t('label.related-term-plural'),
+            })}
+            onClick={handleStartEditing}
+          />
+        ) : (
+          <EditIconButton
+            newLook
+            data-testid="edit-button"
+            size="small"
+            title={t('label.edit-entity', {
+              entity: t('label.related-term-plural'),
+            })}
+            onClick={handleStartEditing}
+          />
+        ))}
+    </div>
+  );
+
+  const editingContent = (
+    <div className="d-flex flex-col gap-3">
+      <div className="tw:flex tw:flex-col tw:gap-2">
+        <Typography as="span" className="text-xs text-grey-muted">
+          {t('label.relation-type')}
         </Typography>
-        {getPrioritizedEditPermission(
-          permissions,
-          Operation.EditGlossaryTerms
-        ) &&
-          !isVersionView &&
-          !isEditing &&
-          !isAdding && (
-            <>
-              <EditIconButton
-                newLook
-                data-testid="edit-button"
-                size="small"
-                title={t('label.edit-entity', {
-                  entity: t('label.related-term-plural'),
-                })}
-                onClick={handleStartEditing}
-              />
-              <PlusIconButton
-                data-testid="related-term-add-button"
-                size="small"
-                title={t('label.add-entity', {
-                  entity: t('label.related-term-plural'),
-                })}
-                onClick={handleStartAdding}
-              />
-            </>
+        <Select
+          className="w-full"
+          data-testid="relation-type-select"
+          items={relationTypeOptions}
+          placeholder={t('label.select-field', {
+            field: t('label.relation-type'),
+          })}
+          size="sm"
+          value={selectedRelationType}
+          onChange={(key) =>
+            setSelectedRelationType(String(key ?? 'relatedTo'))
+          }>
+          {(item) => (
+            <Select.Item id={item.id} key={item.id} label={item.label} />
           )}
+        </Select>
       </div>
-      {(isEditing || isAdding) && (
-        <div className="d-flex items-center gap-2">
-          <Button
-            color="primary"
-            data-testid="save-related-terms"
-            size="sm"
-            onClick={handleSave}>
-            {t('label.save')}
-          </Button>
-          <Button
-            color="secondary"
-            data-testid="cancel-related-terms"
-            size="sm"
-            onClick={handleCancel}>
-            {t('label.cancel')}
-          </Button>
-        </div>
-      )}
+      <div className="tw:flex tw:flex-col tw:gap-2">
+        <Typography as="span" className="text-xs text-grey-muted">
+          {t('label.term-plural')}
+        </Typography>
+        <TagSelectForm
+          defaultValue={currentRelationTypeTerms.map(
+            (item) => item.fullyQualifiedName ?? ''
+          )}
+          filterOptions={[glossaryTerm?.fullyQualifiedName ?? '']}
+          placeholder={t('label.add-entity', {
+            entity: t('label.related-term-plural'),
+          })}
+          tagData={initialOptions as SelectOption[]}
+          onCancel={handleCancel}
+          onSubmit={
+            handleRelatedTermsSave as (option: unknown) => Promise<void>
+          }
+        />
+      </div>
     </div>
   );
-
-  const sharedEditorProps: TermsRowEditorProps = {
-    excludeFQN: glossaryTerm?.fullyQualifiedName ?? '',
-    onAddRow: handleAddRow,
-    onRelationTypeChange: handleRelationTypeChange,
-    onRemove: handleRemoveRow,
-    onTermsChange: handleTermsChange,
-    preloadedTerms,
-    relationTypeOptions,
-    rows: editingRows,
-  };
-
-  const editingContent = <TermsRowEditor {...sharedEditorProps} />;
-
-  const addingContent = (
-    <div className="tw:flex tw:flex-col tw:gap-3">
-      {relatedTermsContainer}
-      <TermsRowEditor {...sharedEditorProps} />
-    </div>
-  );
-
-  let cardContent = relatedTermsContainer;
-
-  if (isEditing) {
-    cardContent = editingContent;
-  } else if (isAdding) {
-    cardContent = addingContent;
-  }
 
   return (
     <ExpandableCard
-      cardProps={{ title: header }}
+      cardProps={{
+        title: header,
+      }}
       dataTestId="related-term-container"
-      defaultExpanded={isEditing || isAdding || !isEmpty(termRelations)}
-      isExpandDisabled={!isAdding && !isEditing && termRelations.length === 0}
-      key={isEditing || isAdding ? 'active' : 'inactive'}>
-      {cardContent}
+      isExpandDisabled={termRelations.length === 0 && !isEditing}>
+      {isEditing ? editingContent : relatedTermsContainer}
     </ExpandableCard>
   );
 };

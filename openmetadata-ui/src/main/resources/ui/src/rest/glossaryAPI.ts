@@ -322,16 +322,6 @@ export const getGlossaryTermAssets = async (
   return response.data;
 };
 
-export const getGlossaryTermsAssetCounts = async (): Promise<
-  Record<string, number>
-> => {
-  const response = await APIClient.get<Record<string, number>>(
-    '/glossaryTerms/assets/counts'
-  );
-
-  return response.data;
-};
-
 export const searchGlossaryTerms = async (search: string, page = 1) => {
   const apiUrl = `/search/query?q=${search ?? ''}`;
 

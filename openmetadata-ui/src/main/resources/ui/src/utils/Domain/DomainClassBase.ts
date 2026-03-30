@@ -11,10 +11,7 @@
  *  limitations under the License.
  */
 
-import { createElement } from 'react';
-import TabsLabel from '../../components/common/TabsLabel/TabsLabel.component';
 import { TabProps } from '../../components/common/TabsLabel/TabsLabel.interface';
-import DataQualityDashboard from '../../components/DataQuality/DataQualityDashboard/DataQualityDashboard.component';
 import { DataProductsTabRef } from '../../components/Domain/DomainTabs/DataProductsTab/DataProductsTab.interface';
 import { EntityDetailsObjectInterface } from '../../components/Explore/ExplorePage.interface';
 import { AssetsTabRef } from '../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
@@ -92,28 +89,7 @@ class DomainClassBase {
   public getDomainDetailPageTabs(
     domainDetailsPageProps: DomainDetailPageTabProps
   ): TabProps[] {
-    const baseTabs = getDomainDetailTabs(domainDetailsPageProps);
-
-    if (domainDetailsPageProps.isVersionsView) {
-      return baseTabs;
-    }
-
-    const dqTab: TabProps = {
-      label: createElement(TabsLabel, {
-        id: EntityTabs.DATA_OBSERVABILITY,
-        name: i18n.t('label.data-observability'),
-      }),
-      key: EntityTabs.DATA_OBSERVABILITY,
-      children: createElement(DataQualityDashboard, {
-        isGovernanceView: true,
-        className: 'data-quality-governance-tab-wrapper tw:mt-2',
-        initialFilters: domainDetailsPageProps.domain.fullyQualifiedName
-          ? { domainFqn: domainDetailsPageProps.domain.fullyQualifiedName }
-          : undefined,
-      }),
-    };
-
-    return [...baseTabs, dqTab];
+    return getDomainDetailTabs(domainDetailsPageProps);
   }
 
   public getDomainDetailPageTabsIds(): Tab[] {
@@ -124,7 +100,6 @@ class DomainClassBase {
       EntityTabs.ACTIVITY_FEED,
       EntityTabs.ASSETS,
       EntityTabs.CUSTOM_PROPERTIES,
-      EntityTabs.DATA_OBSERVABILITY,
     ].map((tab: EntityTabs) => ({
       id: tab,
       name: tab,

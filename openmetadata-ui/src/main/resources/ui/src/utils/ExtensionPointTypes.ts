@@ -45,9 +45,6 @@ export const EXTENSION_POINTS = {
   // User Profile Page
   PROFILE_TABS: 'profile.tabs',
 
-  // Team Details Page
-  TEAM_DETAILS_TABS: 'team-details.tabs',
-
   // Global UI
   GLOBAL_FLOATING_BUTTONS: 'global.floating-buttons',
 } as const;
@@ -74,7 +71,6 @@ export interface PluginEntityDetailsContext {
   entity?: EntityReference;
   userData?: User;
   isLoggedInUser?: boolean;
-  teamId?: string;
 }
 
 // ============================================================================

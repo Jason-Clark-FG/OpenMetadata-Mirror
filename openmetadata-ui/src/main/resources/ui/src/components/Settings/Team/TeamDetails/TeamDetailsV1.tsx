@@ -70,10 +70,6 @@ import { searchQuery } from '../../../../rest/searchAPI';
 import { exportTeam, restoreTeam } from '../../../../rest/teamsAPI';
 import { Transi18next } from '../../../../utils/CommonUtils';
 import { getEntityName } from '../../../../utils/EntityUtils';
-import {
-  EXTENSION_POINTS,
-  TabContribution,
-} from '../../../../utils/ExtensionPointTypes';
 import { getSettingPageEntityBreadCrumb } from '../../../../utils/GlobalSettingsUtils';
 import {
   getSettingsPathWithFqn,
@@ -96,7 +92,6 @@ import { EntityDetailsObjectInterface } from '../../../Explore/ExplorePage.inter
 import AssetsTabs from '../../../Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import { LearningIcon } from '../../../Learning/LearningIcon/LearningIcon.component';
-import { useApplicationsProvider } from '../../Applications/ApplicationsProvider/ApplicationsProvider';
 import ListEntities from './RolesAndPoliciesList';
 import { TeamsPageTab } from './team.interface';
 import {
@@ -139,7 +134,6 @@ const TeamDetailsV1 = ({
   const location = useCustomLocation();
   const { isAdminUser } = useAuth();
   const { currentUser } = useApplicationStore();
-  const { extensionRegistry } = useApplicationsProvider();
 
   const { activeTab } = useMemo(() => {
     const param = location.search;
@@ -1130,44 +1124,6 @@ const TeamDetailsV1 = ({
     ]
   );
 
-  // Get plugin-contributed tabs
-  const pluginTabs = useMemo(() => {
-    const extensionContext = {
-      teamId: currentTeam.id,
-    };
-
-    return extensionRegistry
-      .getContributions<TabContribution>(EXTENSION_POINTS.TEAM_DETAILS_TABS)
-      .filter((tab) => {
-        if (tab.condition) {
-          return tab.condition(extensionContext);
-        }
-
-        return !tab.isHidden;
-      })
-      .map((tab) => {
-        const TabComponent = tab.component;
-
-        return {
-          label:
-            typeof tab.label === 'string' ? (
-              <TabsLabel
-                count={tab.count}
-                id={tab.key}
-                isActive={currentTab === tab.key}
-                name={tab.label}
-              />
-            ) : (
-              tab.label
-            ),
-          key: tab.key,
-          children: <TabComponent {...extensionContext} />,
-        };
-      });
-  }, [extensionRegistry, currentTeam.id, currentTab]);
-
-  const allTabs = useMemo(() => [...tabs, ...pluginTabs], [tabs, pluginTabs]);
-
   if (isTeamMemberLoading > 0) {
     return <Loader />;
   }
@@ -1202,7 +1158,7 @@ const TeamDetailsV1 = ({
             destroyInactiveTabPane
             activeKey={currentTab}
             className="tabs-new"
-            items={allTabs}
+            items={tabs}
             onChange={updateActiveTab}
           />
         </Col>

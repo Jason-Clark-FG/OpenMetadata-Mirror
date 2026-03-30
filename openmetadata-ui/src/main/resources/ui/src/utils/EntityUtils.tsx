@@ -2671,7 +2671,7 @@ export const getEntityBreadcrumbs = (
           url: ROUTES.METRICS,
         },
         {
-          name: entity.name,
+          name: getEntityName(entity),
           url: '',
         },
       ];

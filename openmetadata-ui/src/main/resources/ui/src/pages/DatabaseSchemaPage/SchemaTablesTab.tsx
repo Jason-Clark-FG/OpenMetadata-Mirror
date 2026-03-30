@@ -68,13 +68,11 @@ import {
 } from '../../utils/PermissionsUtils';
 import { stringToHTML } from '../../utils/StringsUtils';
 import {
-  certificationTableObject,
   dataProductTableObject,
   descriptionTableObject,
   domainTableObject,
   ownerTableObject,
   tagTableObject,
-  tierTableObject,
 } from '../../utils/TableColumn.util';
 import { showErrorToast } from '../../utils/ToastUtils';
 
@@ -282,8 +280,6 @@ function SchemaTablesTab({
       ...domainTableObject<Table>(),
       ...dataProductTableObject<Table>(),
       ...tagTableObject<Table>(),
-      ...tierTableObject<Table>(),
-      ...certificationTableObject<Table>(),
     ],
     [handleDisplayNameUpdate, allowEditDisplayNamePermission]
   );

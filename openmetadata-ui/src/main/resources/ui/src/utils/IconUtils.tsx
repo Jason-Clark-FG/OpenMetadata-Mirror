@@ -216,7 +216,7 @@ export const getDefaultIconForEntityType = (entityType?: string): FC => {
 };
 
 export const getEntityAvatarProps = (entity: {
-  style?: { iconURL?: string; color?: string };
+  style?: { iconURL?: string };
   entityType?: string;
 }) => ({
   src:
@@ -224,10 +224,6 @@ export const getEntityAvatarProps = (entity: {
     entity.style?.iconURL?.startsWith('/')
       ? entity.style.iconURL
       : undefined,
-  className: 'tw:text-white',
-  style: {
-    backgroundColor: entity.style?.color ?? 'var(--tw-color-brand-600)',
-  },
   placeholderIcon: getDefaultIconForEntityType(entity.entityType) as FC<{
     className?: string;
   }>,

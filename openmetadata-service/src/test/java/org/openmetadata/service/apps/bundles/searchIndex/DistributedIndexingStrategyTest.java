@@ -552,7 +552,7 @@ class DistributedIndexingStrategyTest {
     when(entityRepository.getDao()).thenReturn(entityDao);
     when(entityDao.listCount(any(ListFilter.class))).thenReturn(5);
     when(searchRepository.createBulkSink(anyInt(), anyInt(), anyLong())).thenReturn(bulkSink);
-    doThrow(new java.io.IOException("close failed")).when(bulkSink).close();
+    doThrow(new RuntimeException("close failed")).when(bulkSink).close();
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class);
         MockedConstruction<DistributedSearchIndexExecutor> executorConstruction =
