@@ -54,7 +54,7 @@ class TestMcpServerInfo:
             args=["-y", "server-package"],
             env={"MY_VAR": "test-value"},
             url="http://localhost:8080",
-            api_key="test-key",  # NOSONAR
+            api_key="test-api-key-00000",  # NOSONAR
         )
         assert server.name == "my-server"
         assert server.transport == "SSE"
@@ -62,7 +62,7 @@ class TestMcpServerInfo:
         assert server.args == ["-y", "server-package"]
         assert server.env == {"MY_VAR": "test-value"}
         assert server.url == "http://localhost:8080"
-        assert server.api_key == "test-key"  # NOSONAR
+        assert server.api_key == "test-api-key-00000"  # NOSONAR
 
 
 class TestStdioTransport:
@@ -108,11 +108,11 @@ class TestHttpTransport:
     def test_initialization(self):
         transport = HttpTransport(
             url="http://localhost:8080/",
-            api_key="test-key",  # NOSONAR
+            api_key="test-api-key-00000",  # NOSONAR
             timeout=30,
         )
         assert transport.url == "http://localhost:8080"
-        assert transport.api_key == "test-key"
+        assert transport.api_key == "test-api-key-00000"
         assert transport.timeout == 30
 
     def test_url_trailing_slash_removed(self):
@@ -121,11 +121,11 @@ class TestHttpTransport:
 
     def test_connect_sets_headers(self):
         transport = HttpTransport(
-            url="http://localhost:8080", api_key="test-key"  # NOSONAR
+            url="http://localhost:8080", api_key="test-api-key-00000"  # NOSONAR
         )
         transport.connect()
         assert "Authorization" in transport.session.headers
-        assert transport.session.headers["Authorization"] == "Bearer test-key"
+        assert transport.session.headers["Authorization"] == "Bearer test-api-key-00000"
         assert transport.session.headers["Content-Type"] == "application/json"
 
     @patch("requests.Session.post")
