@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FALSE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY_LIST_VARIABLE;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -72,7 +72,7 @@ class CheckEntityAttributesImplTest {
       impl.execute(execution);
     }
 
-    verify(execution).setVariable(eq("process_true_" + ENTITY_LIST_VARIABLE), eq(entityList));
+    verify(execution).setVariable(eq("process_" + TRUE_ENTITY_LIST_VARIABLE), eq(entityList));
     verify(execution).setVariable(eq("process_" + RESULT_VARIABLE), eq(true));
   }
 
