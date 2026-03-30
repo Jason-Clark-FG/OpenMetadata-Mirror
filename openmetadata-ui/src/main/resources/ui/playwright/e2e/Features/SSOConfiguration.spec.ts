@@ -820,7 +820,7 @@ test.describe('SAML Metadata XML Upload', () => {
     ).toBeVisible();
   });
 
-  test('should parse valid SAML metadata XML and populate form fields', async ({
+  test('should parse valid SAML metadata XML and populate form fields, then clear fields on invalid XML', async ({
     page,
   }) => {
     test.slow();
@@ -866,19 +866,11 @@ test.describe('SAML Metadata XML Upload', () => {
 
       await expect(certField).toHaveValue(new RegExp(EXPECTED_CERT_PREFIX));
     });
-  });
 
-  test('should show error status card for invalid XML file', async ({
-    page,
-  }) => {
-    test.slow();
-
-    await redirectToHomePage(page);
-    await enableSSOEditMode(page);
-    await selectSSOProvider(page, 'saml');
-
-    await test.step('Wait for drop zone and upload invalid SAML metadata XML', async () => {
+    await test.step('Click change file and upload invalid SAML metadata XML', async () => {
+      await page.getByTestId('change-metadata-xml-btn').click();
       await expect(page.getByTestId('file-upload-drop-zone')).toBeVisible();
+
       const fileInput = page.getByTestId('file-uploader');
 
       await fileInput.setInputFiles(INVALID_SAML_XML);
@@ -891,45 +883,22 @@ test.describe('SAML Metadata XML Upload', () => {
       await expect(page.getByTestId('change-metadata-xml-btn')).toBeVisible();
     });
 
-    await test.step('Verify form fields are not populated', async () => {
-      const entityIdField = page.locator(
-        '[id="root/authenticationConfiguration/samlConfiguration/idp/entityId"]'
-      );
-
-      await expect(entityIdField).toHaveValue('');
-    });
-  });
-
-  test('should allow re-upload after error by clicking change file button', async ({
-    page,
-  }) => {
-    test.slow();
-
-    await redirectToHomePage(page);
-    await enableSSOEditMode(page);
-    await selectSSOProvider(page, 'saml');
-
-    await test.step('Upload invalid file first', async () => {
-      await expect(page.getByTestId('file-upload-drop-zone')).toBeVisible();
-      const fileInput = page.getByTestId('file-uploader');
-
-      await fileInput.setInputFiles(INVALID_SAML_XML);
-      await expect(page.getByTestId('change-metadata-xml-btn')).toBeVisible();
-    });
-
-    await test.step('Click change file to reset to drop zone', async () => {
-      await page.getByTestId('change-metadata-xml-btn').click();
-
-      await expect(page.getByTestId('file-upload-drop-zone')).toBeVisible();
-    });
-
-    await test.step('Upload valid file after reset', async () => {
-      const fileInput = page.getByTestId('file-uploader');
-
-      await fileInput.setInputFiles(VALID_SAML_XML);
+    await test.step('Verify IdP fields are cleared after invalid upload', async () => {
       await expect(
-        page.getByText(/has been uploaded and parsed successfully/i)
-      ).toBeVisible();
+        page.locator(
+          '[id="root/authenticationConfiguration/samlConfiguration/idp/entityId"]'
+        )
+      ).toHaveValue('');
+      await expect(
+        page.locator(
+          '[id="root/authenticationConfiguration/samlConfiguration/idp/ssoLoginUrl"]'
+        )
+      ).toHaveValue('');
+      await expect(
+        page.locator(
+          '[id="root/authenticationConfiguration/samlConfiguration/idp/idpX509Certificate"]'
+        )
+      ).toHaveValue('');
     });
   });
 });

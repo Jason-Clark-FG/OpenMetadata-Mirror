@@ -324,46 +324,60 @@ const SSOConfigurationFormRJSF = ({
         return;
       }
 
-      const reader = new FileReader();
-      reader.onerror = () => {
-        setMetadataUploadFileName(file.name);
-        setMetadataUploadStatus('error');
-      };
-      reader.onload = (e) => {
-        try {
-          const xmlContent = e.target?.result as string;
-          const parsed = parseSamlMetadataXml(xmlContent);
+      const updateIdpFields = (fields: {
+        entityId: string | undefined;
+        ssoLoginUrl: string | undefined;
+        idpX509Certificate: string | undefined;
+      }) => {
+        setInternalData((prev) => {
+          if (!prev) {
+            return prev;
+          }
 
-          setInternalData((prev) => {
-            if (!prev) {
-              return prev;
-            }
-
-            return {
-              ...prev,
-              authenticationConfiguration: {
-                ...prev.authenticationConfiguration,
-                samlConfiguration: {
-                  ...prev.authenticationConfiguration?.samlConfiguration,
-                  idp: {
-                    ...prev.authenticationConfiguration?.samlConfiguration?.idp,
-                    entityId: parsed.entityId,
-                    ssoLoginUrl: parsed.ssoLoginUrl,
-                    idpX509Certificate: parsed.idpX509Certificate,
-                  },
+          return {
+            ...prev,
+            authenticationConfiguration: {
+              ...prev.authenticationConfiguration,
+              samlConfiguration: {
+                ...prev.authenticationConfiguration?.samlConfiguration,
+                idp: {
+                  ...(prev.authenticationConfiguration.samlConfiguration
+                    ?.idp as object),
+                  ...fields,
                 },
               },
-            };
-          });
+            },
+          };
+        });
+      };
 
-          setMetadataUploadFileName(file.name);
-          setMetadataUploadStatus('success');
-        } catch {
+      file
+        .text()
+        .then((xmlContent) => {
+          try {
+            const parsed = parseSamlMetadataXml(xmlContent);
+
+            updateIdpFields({
+              entityId: parsed.entityId,
+              ssoLoginUrl: parsed.ssoLoginUrl,
+              idpX509Certificate: parsed.idpX509Certificate,
+            });
+            setMetadataUploadFileName(file.name);
+            setMetadataUploadStatus('success');
+          } catch {
+            updateIdpFields({
+              entityId: undefined,
+              ssoLoginUrl: undefined,
+              idpX509Certificate: undefined,
+            });
+            setMetadataUploadFileName(file.name);
+            setMetadataUploadStatus('error');
+          }
+        })
+        .catch(() => {
           setMetadataUploadFileName(file.name);
           setMetadataUploadStatus('error');
-        }
-      };
-      reader.readAsText(file);
+        });
     },
     [t]
   );
