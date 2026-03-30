@@ -74,7 +74,8 @@ import org.openmetadata.service.security.Authorizer;
 public class McpServerResource extends EntityResource<McpServer, McpServerRepository> {
   public static final String COLLECTION_PATH = "/v1/mcpServers/";
   private final McpServerMapper mapper = new McpServerMapper();
-  static final String FIELDS = "owners,followers,tags,extension,domains,tools,resources,prompts";
+  static final String FIELDS =
+      "owners,followers,tags,extension,domains,tools,resources,prompts,service";
 
   @Override
   public McpServer addHref(UriInfo uriInfo, McpServer mcpServer) {
