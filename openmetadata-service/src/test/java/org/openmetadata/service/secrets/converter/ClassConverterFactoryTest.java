@@ -23,6 +23,7 @@ import org.openmetadata.schema.services.connections.database.SalesforceConnectio
 import org.openmetadata.schema.services.connections.database.TrinoConnection;
 import org.openmetadata.schema.services.connections.database.datalake.GCSConfig;
 import org.openmetadata.schema.services.connections.pipeline.AirflowConnection;
+import org.openmetadata.schema.services.connections.pipeline.MatillionConnection;
 import org.openmetadata.schema.services.connections.search.ElasticSearchConnection;
 import org.openmetadata.schema.services.connections.storage.GCSConnection;
 
@@ -50,6 +51,7 @@ public class ClassConverterFactoryTest {
         TrinoConnection.class,
         Workflow.class,
         SalesforceConnection.class,
+        MatillionConnection.class,
       })
   void testClassConverterIsSet(Class<?> clazz) {
     assertFalse(
