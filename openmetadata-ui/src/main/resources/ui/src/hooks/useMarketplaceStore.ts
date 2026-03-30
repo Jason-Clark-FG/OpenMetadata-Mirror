@@ -23,8 +23,8 @@ interface MarketplaceStore {
 
 export const useMarketplaceStore = create<MarketplaceStore>()((set) => ({
   isMarketplace: false,
-  domainBasePath: ROUTES.DOMAIN,
-  dataProductBasePath: ROUTES.DATA_PRODUCT,
+  domainBasePath: '/domain',
+  dataProductBasePath: '/dataProduct',
 
   setMarketplaceContext: (enabled: boolean) => {
     set({
