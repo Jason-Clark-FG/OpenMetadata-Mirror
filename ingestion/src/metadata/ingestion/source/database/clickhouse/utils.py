@@ -83,8 +83,8 @@ def _get_column_type(
 
     if spec.startswith("LowCardinality"):
         inner = spec[15:-1]
-        coltype = self.ischema_names["_lowcardinality"]
-        return coltype(self._get_column_type(name, inner))
+        # Using String as the base type instead of _lowcardinality for LowCardinality.
+        return self.ischema_names["String"]
 
     if spec.startswith("Tuple"):
         return self.ischema_names["Tuple"]
