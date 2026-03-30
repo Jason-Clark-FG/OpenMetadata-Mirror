@@ -30,6 +30,7 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
 import org.openmetadata.schema.api.ai.CreateMcpServer;
+import org.openmetadata.schema.api.services.CreateMcpService;
 import org.openmetadata.schema.entity.ai.McpComplianceCheckRecord;
 import org.openmetadata.schema.entity.ai.McpComplianceSeverity;
 import org.openmetadata.schema.entity.ai.McpDataAccessRecord;
@@ -54,12 +55,24 @@ import org.openmetadata.sdk.network.RequestOptions;
 @ExtendWith(TestNamespaceExtension.class)
 public class McpExecutionResourceIT {
 
+  private static final String MCP_SERVICE_NAME = "mcp-it-execution-svc";
+
   private static final ObjectMapper MAPPER =
       new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   @BeforeAll
-  public static void setup() {
-    SdkClients.adminClient();
+  public static void setup() throws Exception {
+    CreateMcpService createService =
+        new CreateMcpService()
+            .withName(MCP_SERVICE_NAME)
+            .withServiceType(CreateMcpService.McpServiceType.Mcp);
+    SdkClients.adminClient()
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/services/mcpServices",
+            createService,
+            RequestOptions.builder().build());
   }
 
   @Test
@@ -442,6 +455,7 @@ public class McpExecutionResourceIT {
                 ns.prefix("exec-test-server") + "-" + UUID.randomUUID().toString().substring(0, 8))
             .withServerType(McpServerType.DataAccess)
             .withTransportType(McpTransportType.Stdio)
+            .withService(MCP_SERVICE_NAME)
             .withDescription("Test server for execution tests");
 
     String response =

@@ -30,6 +30,7 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
 import org.openmetadata.schema.api.ai.CreateMcpServer;
+import org.openmetadata.schema.api.services.CreateMcpService;
 import org.openmetadata.schema.entity.ai.McpDevelopmentStage;
 import org.openmetadata.schema.entity.ai.McpGovernanceMetadata;
 import org.openmetadata.schema.entity.ai.McpPrompt;
@@ -56,12 +57,24 @@ import org.openmetadata.sdk.network.RequestOptions;
 @ExtendWith(TestNamespaceExtension.class)
 public class McpServerResourceIT {
 
+  private static final String MCP_SERVICE_NAME = "mcp-it-server-svc";
+
   private static final ObjectMapper MAPPER =
       new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
   @BeforeAll
-  public static void setup() {
-    SdkClients.adminClient();
+  public static void setup() throws Exception {
+    CreateMcpService createService =
+        new CreateMcpService()
+            .withName(MCP_SERVICE_NAME)
+            .withServiceType(CreateMcpService.McpServiceType.Mcp);
+    SdkClients.adminClient()
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/services/mcpServices",
+            createService,
+            RequestOptions.builder().build());
   }
 
   @Test
@@ -519,6 +532,7 @@ public class McpServerResourceIT {
   }
 
   private McpServer createMcpServer(CreateMcpServer create) throws Exception {
+    create.withService(MCP_SERVICE_NAME);
     String response =
         SdkClients.adminClient()
             .getHttpClient()
@@ -528,6 +542,7 @@ public class McpServerResourceIT {
   }
 
   private McpServer updateMcpServer(CreateMcpServer update) throws Exception {
+    update.withService(MCP_SERVICE_NAME);
     String response =
         SdkClients.adminClient()
             .getHttpClient()

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
@@ -31,6 +32,7 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
 import org.openmetadata.schema.api.ai.CreateMcpServer;
+import org.openmetadata.schema.api.services.CreateMcpService;
 import org.openmetadata.schema.entity.ai.McpExecution;
 import org.openmetadata.schema.entity.ai.McpExecutionStatus;
 import org.openmetadata.schema.entity.ai.McpServer;
@@ -47,6 +49,8 @@ import org.openmetadata.sdk.network.RequestOptions;
 @Execution(ExecutionMode.CONCURRENT)
 @ExtendWith(TestNamespaceExtension.class)
 public class McpPermissionIT {
+  private static final String MCP_SERVICE_NAME = "mcp-it-permission-svc";
+
   private static final ObjectMapper MAPPER =
       new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -54,6 +58,21 @@ public class McpPermissionIT {
 
   public static class McpExecutionList
       extends org.openmetadata.schema.utils.ResultList<McpExecution> {}
+
+  @BeforeAll
+  public static void setup() throws Exception {
+    CreateMcpService createService =
+        new CreateMcpService()
+            .withName(MCP_SERVICE_NAME)
+            .withServiceType(CreateMcpService.McpServiceType.Mcp);
+    SdkClients.adminClient()
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/services/mcpServices",
+            createService,
+            RequestOptions.builder().build());
+  }
 
   // ==================== MCP Server Permission Tests ====================
 
@@ -495,6 +514,7 @@ public class McpPermissionIT {
 
   private McpServer createMcpServer(OpenMetadataClient client, CreateMcpServer create)
       throws Exception {
+    create.withService(MCP_SERVICE_NAME);
     String response =
         client
             .getHttpClient()

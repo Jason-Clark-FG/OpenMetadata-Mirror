@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
@@ -13,6 +14,7 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.it.util.TestNamespaceExtension;
 import org.openmetadata.schema.api.ai.CreateMcpServer;
+import org.openmetadata.schema.api.services.CreateMcpService;
 import org.openmetadata.schema.entity.ai.McpExecution;
 import org.openmetadata.schema.entity.ai.McpExecutionStatus;
 import org.openmetadata.schema.entity.ai.McpServer;
@@ -31,7 +33,24 @@ import org.openmetadata.sdk.network.RequestOptions;
 @ExtendWith(TestNamespaceExtension.class)
 public class McpSearchIT {
 
+  private static final String MCP_SERVICE_NAME = "mcp-it-search-svc";
+
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+  @BeforeAll
+  public static void setup() throws Exception {
+    CreateMcpService createService =
+        new CreateMcpService()
+            .withName(MCP_SERVICE_NAME)
+            .withServiceType(CreateMcpService.McpServiceType.Mcp);
+    SdkClients.adminClient()
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PUT,
+            "/v1/services/mcpServices",
+            createService,
+            RequestOptions.builder().build());
+  }
 
   @Test
   void testSearchMcpServerByName(TestNamespace ns) throws Exception {
@@ -256,6 +275,7 @@ public class McpSearchIT {
             .withName(ns.prefix("desc_search_server"))
             .withServerType(McpServerType.Database)
             .withTransportType(McpTransportType.Stdio)
+            .withService(MCP_SERVICE_NAME)
             .withDescription("This server provides unique database access capabilities");
 
     String json = OBJECT_MAPPER.writeValueAsString(create);
@@ -335,6 +355,7 @@ public class McpSearchIT {
             .withName(ns.prefix(baseName))
             .withServerType(McpServerType.Database)
             .withTransportType(McpTransportType.Stdio)
+            .withService(MCP_SERVICE_NAME)
             .withDescription("Test MCP server for search tests");
 
     String json = OBJECT_MAPPER.writeValueAsString(create);
