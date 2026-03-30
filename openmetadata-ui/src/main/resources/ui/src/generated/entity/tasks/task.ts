@@ -29,7 +29,11 @@ export interface Task {
      * Users or teams assigned to complete this task.
      */
     assignees?: EntityReference[];
-    category:   TaskCategory;
+    /**
+     * Transitions available from the current workflow stage.
+     */
+    availableTransitions?: TaskAvailableTransition[];
+    category:              TaskCategory;
     /**
      * Change that lead to this version of the task.
      */
@@ -109,6 +113,14 @@ export interface Task {
      */
     tags?: TagLabel[];
     /**
+     * ID of the resolved TaskFormSchema used to validate and render this task.
+     */
+    taskFormSchemaId?: string;
+    /**
+     * Version of the resolved TaskFormSchema captured when this task was created.
+     */
+    taskFormSchemaVersion?: number;
+    /**
      * Human-readable task identifier (e.g., TASK-00001).
      */
     taskId?: string;
@@ -130,9 +142,21 @@ export interface Task {
      */
     watchers?: EntityReference[];
     /**
+     * ID of the workflow definition bound to this task lifecycle.
+     */
+    workflowDefinitionId?: string;
+    /**
      * ID of the workflow instance managing this task.
      */
     workflowInstanceId?: string;
+    /**
+     * Human-readable workflow stage name shown to users.
+     */
+    workflowStageDisplayName?: string;
+    /**
+     * Current workflow stage identifier for this task.
+     */
+    workflowStageId?: string;
 }
 
 /**
@@ -199,6 +223,71 @@ export interface EntityReference {
      * `dashboardService`...
      */
     type: string;
+}
+
+/**
+ * A workflow transition currently available for this task.
+ */
+export interface TaskAvailableTransition {
+    /**
+     * Optional transition form reference in the bound TaskFormSchema.transitionForms object.
+     */
+    formRef?: string;
+    /**
+     * Stable transition identifier used when resolving the task.
+     */
+    id: string;
+    /**
+     * Human-readable label shown in the UI for the transition.
+     */
+    label: string;
+    /**
+     * Whether the transition requires a comment before submission.
+     */
+    requiresComment?: boolean;
+    /**
+     * Optional resolution type emitted when this transition closes the task.
+     */
+    resolutionType?: ResolutionType;
+    /**
+     * Workflow stage identifier reached after this transition.
+     */
+    targetStageId: string;
+    /**
+     * Coarse task status mapped from the workflow stage after this transition.
+     */
+    targetTaskStatus: TaskStatus;
+}
+
+/**
+ * Optional resolution type emitted when this transition closes the task.
+ *
+ * How the task was resolved.
+ */
+export enum ResolutionType {
+    Approved = "Approved",
+    AutoApproved = "AutoApproved",
+    AutoRejected = "AutoRejected",
+    Cancelled = "Cancelled",
+    Completed = "Completed",
+    Rejected = "Rejected",
+    TimedOut = "TimedOut",
+}
+
+/**
+ * Coarse task status mapped from the workflow stage after this transition.
+ *
+ * Current status of the task in its lifecycle.
+ */
+export enum TaskStatus {
+    Approved = "Approved",
+    Cancelled = "Cancelled",
+    Completed = "Completed",
+    Failed = "Failed",
+    InProgress = "InProgress",
+    Open = "Open",
+    Pending = "Pending",
+    Rejected = "Rejected",
 }
 
 /**
@@ -402,33 +491,6 @@ export interface TaskResolution {
      */
     resolvedBy?: EntityReference;
     type?:       ResolutionType;
-}
-
-/**
- * How the task was resolved.
- */
-export enum ResolutionType {
-    Approved = "Approved",
-    AutoApproved = "AutoApproved",
-    AutoRejected = "AutoRejected",
-    Cancelled = "Cancelled",
-    Completed = "Completed",
-    Rejected = "Rejected",
-    TimedOut = "TimedOut",
-}
-
-/**
- * Current status of the task in its lifecycle.
- */
-export enum TaskStatus {
-    Approved = "Approved",
-    Cancelled = "Cancelled",
-    Completed = "Completed",
-    Failed = "Failed",
-    InProgress = "InProgress",
-    Open = "Open",
-    Pending = "Pending",
-    Rejected = "Rejected",
 }
 
 /**

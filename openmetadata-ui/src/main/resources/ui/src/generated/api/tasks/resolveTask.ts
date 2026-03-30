@@ -29,7 +29,11 @@ export interface ResolveTask {
     /**
      * How the task should be resolved.
      */
-    resolutionType: ResolutionType;
+    resolutionType?: ResolutionType;
+    /**
+     * Workflow transition identifier to apply when resolving the task.
+     */
+    transitionId?: string;
 }
 
 /**

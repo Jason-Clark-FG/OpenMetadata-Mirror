@@ -20,6 +20,18 @@ export interface TaskFormSchema {
      */
     changeDescription?: ChangeDescription;
     /**
+     * Optional JSON Schema override used specifically when creating a task.
+     */
+    createFormSchema?: { [key: string]: any };
+    /**
+     * Optional uiSchema override used specifically when creating a task.
+     */
+    createUiSchema?: { [key: string]: any };
+    /**
+     * Default workflow stage to coarse task status mappings keyed by stage identifier.
+     */
+    defaultStageMappings?: { [key: string]: TaskStatus };
+    /**
      * When true indicates the entity has been soft deleted.
      */
     deleted?: boolean;
@@ -57,6 +69,10 @@ export interface TaskFormSchema {
      */
     taskType: string;
     /**
+     * Per-transition form configuration keyed by transition identifier or formRef.
+     */
+    transitionForms?: { [key: string]: any };
+    /**
      * RJSF uiSchema object for customizing form rendering.
      */
     uiSchema?: { [key: string]: any };
@@ -72,6 +88,14 @@ export interface TaskFormSchema {
      * Metadata version of the entity.
      */
     version?: number;
+    /**
+     * Name of the WorkflowDefinition that orchestrates tasks created from this schema.
+     */
+    workflowDefinitionRef?: string;
+    /**
+     * Version of the bound workflow definition when this form schema was last saved.
+     */
+    workflowVersion?: number;
 }
 
 /**
@@ -137,4 +161,18 @@ export interface FieldChange {
      * field type to deserialize it.
      */
     oldValue?: any;
+}
+
+/**
+ * Current status of the task in its lifecycle.
+ */
+export enum TaskStatus {
+    Approved = "Approved",
+    Cancelled = "Cancelled",
+    Completed = "Completed",
+    Failed = "Failed",
+    InProgress = "InProgress",
+    Open = "Open",
+    Pending = "Pending",
+    Rejected = "Rejected",
 }
