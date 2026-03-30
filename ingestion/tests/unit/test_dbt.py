@@ -1235,6 +1235,28 @@ class DbtUnitTest(TestCase):
         self.assertEqual(dbt_meta_tags, expected_tags)
 
     @patch("metadata.utils.tag_utils.get_tag_label")
+    def test_dbt_classification_tags_quoted_table_level(self, get_tag_label):
+        """Table-level tags with quoted names containing dots are parsed correctly"""
+        expected_tag = TagLabel(
+            tagFQN='PII."22.8.5.1"',
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Classification.value,
+        )
+        get_tag_label.return_value = expected_tag
+
+        manifest_meta = {"openmetadata": {"tags": ['PII."22.8.5.1"']}}
+        dbt_meta_tags = self.dbt_source_obj.process_dbt_meta(
+            manifest_meta=manifest_meta,
+            table_fqn="test_service.test_db.test_schema.test_table",
+        )
+
+        assert dbt_meta_tags == [expected_tag]
+        call_kwargs = get_tag_label.call_args
+        assert call_kwargs.kwargs["classification_name"] == "PII"
+        assert call_kwargs.kwargs["tag_name"] == '"22.8.5.1"'
+
+    @patch("metadata.utils.tag_utils.get_tag_label")
     def test_dbt_combined_meta_tags(self, get_tag_label):
         """Test processing combined glossary, tier, and classification tags"""
         get_tag_label.side_effect = [

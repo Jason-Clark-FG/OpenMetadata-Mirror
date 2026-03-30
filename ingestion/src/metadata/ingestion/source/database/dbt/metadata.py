@@ -1425,8 +1425,7 @@ class DbtSource(DbtServiceSource):
 
             if dbt_meta_info.openmetadata and dbt_meta_info.openmetadata.tags:
                 for tag_fqn in dbt_meta_info.openmetadata.tags:
-                    # Parse classification.tag format
-                    tag_parts = tag_fqn.split(fqn.FQN_SEPARATOR)
+                    tag_parts = fqn.split(tag_fqn)
                     if len(tag_parts) >= 2:
                         classification_name = tag_parts[0]
                         tag_name = fqn.FQN_SEPARATOR.join(tag_parts[1:])
