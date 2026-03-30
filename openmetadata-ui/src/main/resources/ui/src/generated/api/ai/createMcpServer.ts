@@ -87,6 +87,10 @@ export interface CreateMCPServer {
      */
     securityMetrics?: SecurityMetrics;
     /**
+     * Link to the MCP service that contains this server
+     */
+    service: string;
+    /**
      * Information about the MCP server software
      */
     serverInfo?: ServerInfo;

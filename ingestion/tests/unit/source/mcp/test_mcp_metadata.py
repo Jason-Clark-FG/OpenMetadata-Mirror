@@ -135,8 +135,8 @@ class TestTransportTypeMap:
         assert TRANSPORT_TYPE_MAP["sse"] == TransportType.SSE
 
     def test_streamable_mappings(self):
-        assert TRANSPORT_TYPE_MAP["streamablehttp"] == TransportType.Streamable
-        assert TRANSPORT_TYPE_MAP["streamable"] == TransportType.Streamable
+        assert TRANSPORT_TYPE_MAP["streamablehttp"] == TransportType.StreamableHTTP
+        assert TRANSPORT_TYPE_MAP["streamable"] == TransportType.StreamableHTTP
 
 
 class TestMcpSourceBuildCreateRequest:
@@ -152,11 +152,24 @@ class TestMcpSourceBuildCreateRequest:
             from metadata.ingestion.source.mcp.metadata import McpSource
 
             source = McpSource.__new__(McpSource)
+            source.config = MagicMock()
+            source.config.serviceName = "test-mcp-service"
             source.service_connection = MagicMock()
             source.service_connection.fetchTools = True
             source.service_connection.fetchResources = True
             source.service_connection.fetchPrompts = True
             return source
+
+    def test_build_request_includes_service(self, mock_source):
+        server = McpServerInfo(
+            name="test-server",
+            transport="Stdio",
+            command="echo",
+        )
+
+        request = mock_source._build_create_request(server)
+
+        assert request.service.root == "test-mcp-service"
 
     def test_build_request_basic(self, mock_source):
         server = McpServerInfo(

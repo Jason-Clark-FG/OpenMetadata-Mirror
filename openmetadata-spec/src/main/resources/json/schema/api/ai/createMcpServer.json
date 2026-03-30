@@ -20,6 +20,10 @@
       "description": "Description of the MCP Server, its purpose, and capabilities.",
       "$ref": "../../type/basic.json#/definitions/markdown"
     },
+    "service": {
+      "description": "Link to the MCP service that contains this server",
+      "$ref": "../../type/basic.json#/definitions/fullyQualifiedEntityName"
+    },
     "serverType": {
       "description": "Type of MCP server based on its primary function",
       "$ref": "../../entity/ai/mcpServer.json#/definitions/serverType"
@@ -128,6 +132,6 @@
       }
     }
   },
-  "required": ["name", "serverType"],
+  "required": ["name", "serverType", "service"],
   "additionalProperties": false
 }

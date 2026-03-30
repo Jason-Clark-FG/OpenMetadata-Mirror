@@ -13,14 +13,18 @@
 
 package org.openmetadata.service.resources.ai;
 
+import static org.openmetadata.service.util.EntityUtil.getEntityReference;
+
 import org.openmetadata.schema.api.ai.CreateMcpServer;
 import org.openmetadata.schema.entity.ai.McpServer;
+import org.openmetadata.service.Entity;
 import org.openmetadata.service.mapper.EntityMapper;
 
 public class McpServerMapper implements EntityMapper<McpServer, CreateMcpServer> {
   @Override
   public McpServer createToEntity(CreateMcpServer create, String user) {
     return copy(new McpServer(), create, user)
+        .withService(getEntityReference(Entity.MCP_SERVICE, create.getService()))
         .withServerType(create.getServerType())
         .withTransportType(create.getTransportType())
         .withProtocolVersion(create.getProtocolVersion())

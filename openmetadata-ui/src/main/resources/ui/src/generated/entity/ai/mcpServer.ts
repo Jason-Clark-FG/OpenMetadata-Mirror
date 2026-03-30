@@ -108,8 +108,12 @@ export interface MCPServer {
      */
     resources?:       MCPResource[];
     securityMetrics?: SecurityMetrics;
-    serverInfo?:      ServerInfo;
-    serverType:       ServerType;
+    /**
+     * Reference to the MCP Service that contains this MCP Server.
+     */
+    service?:    EntityReference;
+    serverInfo?: ServerInfo;
+    serverType:  ServerType;
     /**
      * Link to source code repository
      */

@@ -13,14 +13,20 @@
 
 package org.openmetadata.service.jdbi3;
 
+import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.ai.McpServer;
+import org.openmetadata.schema.entity.services.McpService;
+import org.openmetadata.schema.type.EntityReference;
+import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.ai.McpServerResource;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
+import org.openmetadata.service.util.FullyQualifiedName;
 
 @Slf4j
 @Repository
@@ -40,8 +46,19 @@ public class McpServerRepository extends EntityRepository<McpServer> {
   }
 
   @Override
+  public void setFullyQualifiedName(McpServer mcpServer) {
+    if (mcpServer.getService() != null) {
+      mcpServer.setFullyQualifiedName(
+          FullyQualifiedName.add(
+              mcpServer.getService().getFullyQualifiedName(), mcpServer.getName()));
+    } else {
+      mcpServer.setFullyQualifiedName(mcpServer.getName());
+    }
+  }
+
+  @Override
   public void setFields(McpServer mcpServer, Fields fields, RelationIncludes relationIncludes) {
-    // No additional fields to set beyond base entity fields
+    mcpServer.setService(getContainer(mcpServer.getId()));
   }
 
   @Override
@@ -50,8 +67,21 @@ public class McpServerRepository extends EntityRepository<McpServer> {
   }
 
   @Override
+  public void restorePatchAttributes(McpServer original, McpServer updated) {
+    super.restorePatchAttributes(original, updated);
+    updated.withService(original.getService());
+  }
+
+  @Override
   public void prepare(McpServer mcpServer, boolean update) {
-    // Validate tools, resources, and prompts if needed
+    if (mcpServer.getService() != null) {
+      populateService(mcpServer);
+    }
+  }
+
+  @Override
+  protected List<String> getFieldsStrippedFromStorageJson() {
+    return List.of("service");
   }
 
   @Override
@@ -61,8 +91,9 @@ public class McpServerRepository extends EntityRepository<McpServer> {
 
   @Override
   public void storeRelationships(McpServer mcpServer) {
-    // Store relationship to AI Applications that use this server
-    // Relationships are stored as part of the JSON entity
+    if (mcpServer.getService() != null) {
+      addServiceRelationship(mcpServer, mcpServer.getService());
+    }
   }
 
   @Override
@@ -79,6 +110,25 @@ public class McpServerRepository extends EntityRepository<McpServer> {
   public EntityRepository<McpServer>.EntityUpdater getUpdater(
       McpServer original, McpServer updated, Operation operation, ChangeSource changeSource) {
     return new McpServerUpdater(original, updated, operation);
+  }
+
+  @Override
+  protected EntityReference getParentReference(McpServer entity) {
+    return entity.getService();
+  }
+
+  @Override
+  public EntityInterface getParentEntity(McpServer entity, String fields) {
+    if (entity.getService() == null) {
+      return null;
+    }
+    return Entity.getEntity(entity.getService(), fields, Include.ALL);
+  }
+
+  private void populateService(McpServer mcpServer) {
+    McpService service =
+        (McpService) getCachedParentOrLoad(mcpServer.getService(), "", Include.NON_DELETED);
+    mcpServer.setService(service.getEntityReference());
   }
 
   public class McpServerUpdater extends EntityUpdater {

@@ -831,6 +831,10 @@
       "description": "Description of the MCP Server, its purpose, and capabilities.",
       "$ref": "../../type/basic.json#/definitions/markdown"
     },
+    "service": {
+      "description": "Reference to the MCP Service that contains this MCP Server.",
+      "$ref": "../../type/entityReference.json"
+    },
     "serverType": {
       "$ref": "#/definitions/serverType"
     },

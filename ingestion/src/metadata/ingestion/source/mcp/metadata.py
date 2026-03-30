@@ -318,6 +318,7 @@ class McpSource(Source):
             name=self._sanitize_name(server.name),
             displayName=server.name,
             description=description,
+            service=self.config.serviceName,
             serverType=server_type,
             transportType=transport_type,
             protocolVersion=(
