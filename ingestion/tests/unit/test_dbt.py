@@ -1309,6 +1309,54 @@ class DbtUnitTest(TestCase):
         )
         self.assertEqual(dbt_meta_tags, [])
 
+    @patch("metadata.utils.tag_utils.get_tag_label")
+    def test_dbt_column_meta_classification_tags(self, get_tag_label):
+        """Test that meta.openmetadata.tags on dbt columns are resolved and applied"""
+        expected_tag = TagLabel(
+            tagFQN="PII.Sensitive",
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Classification.value,
+        )
+        get_tag_label.return_value = expected_tag
+
+        manifest_column = SimpleNamespace(
+            name="email_address",
+            tags=[],
+            meta={"openmetadata": {"tags": ["PII.Sensitive"]}},
+            description="User email",
+            data_type="varchar",
+        )
+        manifest_node = SimpleNamespace(columns={"email_address": manifest_column})
+
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+
+        assert len(columns) == 1
+        assert expected_tag in columns[0].tags
+
+    @patch("metadata.utils.tag_utils.get_tag_label")
+    def test_dbt_column_meta_classification_tags_invalid_format(self, get_tag_label):
+        """Tags without a classification separator are silently skipped"""
+        get_tag_label.return_value = None
+
+        manifest_column = SimpleNamespace(
+            name="col",
+            tags=[],
+            meta={"openmetadata": {"tags": ["InvalidTagNoSeparator"]}},
+            description=None,
+            data_type="varchar",
+        )
+        manifest_node = SimpleNamespace(columns={"col": manifest_column})
+
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+
+        assert len(columns) == 1
+        assert columns[0].tags == []
+
     def test_parse_exposure_node_exposure_absent(self):
         _, dbt_objects = self.get_dbt_object_files(MOCK_SAMPLE_MANIFEST_V8)
 

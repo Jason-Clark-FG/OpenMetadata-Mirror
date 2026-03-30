@@ -1104,6 +1104,25 @@ class DbtSource(DbtServiceSource):
                             or []
                         )
 
+                    if (
+                        dbt_column_meta.openmetadata
+                        and dbt_column_meta.openmetadata.tags
+                    ):
+                        for tag_fqn in dbt_column_meta.openmetadata.tags:
+                            tag_parts = tag_fqn.split(fqn.FQN_SEPARATOR)
+                            if len(tag_parts) >= 2:
+                                classification_name = tag_parts[0]
+                                tag_name = fqn.FQN_SEPARATOR.join(tag_parts[1:])
+                                dbt_column_tag_list.extend(
+                                    get_tag_labels(
+                                        metadata=self.metadata,
+                                        tags=[tag_name],
+                                        classification_name=classification_name,
+                                        include_tags=self.source_config.includeTags,
+                                    )
+                                    or []
+                                )
+
                 columns.append(
                     Column(
                         name=column_name,
