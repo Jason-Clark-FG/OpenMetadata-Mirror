@@ -72,7 +72,7 @@
         "rules": "{\"and\":[{\"isReviewer\":{\"var\":\"updatedBy\"}}]}"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "true_entityList": "CheckGlossaryTermHasReviewers"
       }
     },
     {
@@ -85,7 +85,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "entityList": "global",
+        "true_entityList": "CheckIfGlossaryTermUpdatedByIsReviewer",
         "updatedBy": "global"
       }
     },
@@ -110,7 +110,7 @@
         "rules": "{\"and\":[{\"!!\":[{\"var\":\"description\"}]}]}"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "false_entityList": "CheckIfGlossaryTermUpdatedByIsReviewer"
       }
     },
     {
@@ -123,7 +123,7 @@
         "fieldValue": "In Review"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "true_entityList": "CheckIfGlossaryTermIsNew"
       }
     },
     {
@@ -136,7 +136,7 @@
         "fieldValue": "Draft"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "false_entityList": "CheckGlossaryTermIsReadyToBeReviewed"
       }
     },
     {
@@ -166,7 +166,7 @@
         "rules": "{\"and\":[{\"==\":[{\"var\":\"version\"},0.1]}]}"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "true_entityList": "CheckGlossaryTermIsReadyToBeReviewed"
       }
     },
     {
@@ -179,7 +179,7 @@
         "fieldValue": "In Review"
       },
       "inputNamespaceMap": {
-        "entityList": "global",
+        "false_entityList": "CheckIfGlossaryTermIsNew",
         "updatedBy": "global"
       }
     },
@@ -265,7 +265,7 @@
         "fieldValue": "Approved"
       },
       "inputNamespaceMap": {
-        "entityList": "global"
+        "false_entityList": "CheckGlossaryTermHasReviewers"
       }
     },
     {

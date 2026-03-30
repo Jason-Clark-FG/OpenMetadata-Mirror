@@ -1,6 +1,5 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
-import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FALSE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
@@ -81,7 +80,6 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       boolean result = !trueEntityList.isEmpty();
       varHandler.setNodeVariable(TRUE_ENTITY_LIST_VARIABLE, trueEntityList);
       varHandler.setNodeVariable(FALSE_ENTITY_LIST_VARIABLE, falseEntityList);
-      varHandler.setNodeVariable(ENTITY_LIST_VARIABLE, result ? trueEntityList : falseEntityList);
       varHandler.setNodeVariable(RESULT_VARIABLE, result);
     } catch (Exception exc) {
       LOG.error(

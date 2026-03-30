@@ -147,9 +147,6 @@ public class DataCompletenessImpl implements JavaDelegate {
           priorityBand,
           entitiesByBand.keySet());
 
-      // Backward compat: standard entityList for Phase 1 exclusive gateway routing
-      varHandler.setNodeVariable(
-          ENTITY_LIST_VARIABLE, entitiesByBand.getOrDefault(priorityBand, List.of()));
       varHandler.setNodeVariable(RESULT_VARIABLE, priorityBand);
       varHandler.setNodeVariable("entityResults", entityResults);
 
