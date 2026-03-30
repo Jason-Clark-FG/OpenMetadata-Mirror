@@ -31,6 +31,7 @@ import org.flowable.engine.impl.cfg.StandaloneProcessEngineConfiguration;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.runtime.Execution;
 import org.flowable.engine.runtime.ProcessInstance;
+import org.flowable.eventsubscription.api.EventSubscription;
 import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.jdbi.v3.core.transaction.TransactionIsolationLevel;
@@ -1452,6 +1453,82 @@ public class WorkflowHandler {
 
     } catch (Exception e) {
       LOG.warn("Failed to terminate conflicting instances: {}", e.getMessage());
+    }
+  }
+
+  public boolean hasRunningInstance(String mainWorkflowDefinitionName, String entityLink) {
+    try {
+      String relatedEntityVar =
+          getNamespacedVariableName(Workflow.GLOBAL_NAMESPACE, Workflow.RELATED_ENTITY_VARIABLE);
+      long count =
+          processEngine
+              .getRuntimeService()
+              .createProcessInstanceQuery()
+              .processDefinitionKey(mainWorkflowDefinitionName)
+              .variableValueEquals(relatedEntityVar, entityLink)
+              .count();
+      return count > 0;
+    } catch (Exception e) {
+      LOG.warn("Failed to check for running instances: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  public boolean forwardRetrigger(
+      String mainWorkflowDefinitionName, String entityLink, Map<String, Object> variables) {
+    try {
+      String relatedEntityVar =
+          getNamespacedVariableName(Workflow.GLOBAL_NAMESPACE, Workflow.RELATED_ENTITY_VARIABLE);
+      RuntimeService runtimeService = processEngine.getRuntimeService();
+
+      List<ProcessInstance> targets =
+          runtimeService
+              .createProcessInstanceQuery()
+              .processDefinitionKey(mainWorkflowDefinitionName)
+              .variableValueEquals(relatedEntityVar, entityLink)
+              .list();
+
+      if (targets.isEmpty()) {
+        return false;
+      }
+
+      ProcessInstance target = targets.get(0);
+      List<EventSubscription> subscriptions =
+          runtimeService
+              .createEventSubscriptionQuery()
+              .processInstanceId(target.getId())
+              .eventType("message")
+              .list();
+
+      if (subscriptions.isEmpty()) {
+        LOG.debug(
+            "No message subscriptions found in process instance {} — ManualTask may not be active",
+            target.getId());
+        return false;
+      }
+
+      for (EventSubscription sub : subscriptions) {
+        try {
+          Map<String, Object> retriggerVars = new HashMap<>(variables);
+          retriggerVars.put("status", "retrigger");
+          runtimeService.messageEventReceived(
+              sub.getEventName(), sub.getExecutionId(), retriggerVars);
+          LOG.info(
+              "Forwarded retrigger to process instance {} via message '{}'",
+              target.getId(),
+              sub.getEventName());
+          return true;
+        } catch (Exception e) {
+          LOG.debug(
+              "Could not deliver retrigger to subscription '{}': {}",
+              sub.getEventName(),
+              e.getMessage());
+        }
+      }
+      return false;
+    } catch (Exception e) {
+      LOG.warn("Failed to forward retrigger: {}", e.getMessage());
+      return false;
     }
   }
 

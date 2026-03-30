@@ -234,6 +234,265 @@ public class ManualTaskOutboxIT {
     }
   }
 
+  @Test
+  void onConflict_restart_terminatesOldWorkflow(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    String id = ns.shortPrefix();
+    String workflowName = "restart-e2e-" + id;
+
+    DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("sv" + id, ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sc" + id, ns, service);
+    Table table =
+        TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name("tc" + id)
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    WorkflowDefinition workflow =
+        deployManualTaskWorkflowWithPolicy(client, workflowName, "restart", false);
+    assertNotNull(workflow);
+    waitForWorkflowDeployed(client, workflowName);
+
+    try {
+      createFailedTestResult(client, testCase);
+
+      AtomicReference<Task> firstTaskRef = new AtomicReference<>();
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Task found = findIncidentTaskForTestCase(client, testCase);
+                if (found != null && found.getWorkflowInstanceId() != null) {
+                  firstTaskRef.set(found);
+                  return true;
+                }
+                return false;
+              });
+
+      UUID firstWorkflowInstanceId = firstTaskRef.get().getWorkflowInstanceId();
+      assertNotNull(firstWorkflowInstanceId);
+
+      patchTestCaseDescription(client, testCase, "Updated to trigger retrigger");
+
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Map<String, Object> instance =
+                    getWorkflowInstance(client, workflowName, firstWorkflowInstanceId.toString());
+                if (instance == null) return false;
+                return "FAILURE".equals(instance.get("status"));
+              });
+
+      Map<String, Object> terminated =
+          getWorkflowInstance(client, workflowName, firstWorkflowInstanceId.toString());
+      assertEquals(
+          "FAILURE", terminated.get("status"), "Old workflow should be terminated on restart");
+    } finally {
+      deleteWorkflow(client, workflow);
+    }
+  }
+
+  @Test
+  void onConflict_skip_keepsExistingWorkflow(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    String id = ns.shortPrefix();
+    String workflowName = "skip-e2e-" + id;
+
+    DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("sv" + id, ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sc" + id, ns, service);
+    Table table =
+        TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name("tc" + id)
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    WorkflowDefinition workflow =
+        deployManualTaskWorkflowWithPolicy(client, workflowName, "skip", false);
+    assertNotNull(workflow);
+    waitForWorkflowDeployed(client, workflowName);
+
+    try {
+      createFailedTestResult(client, testCase);
+
+      AtomicReference<Task> taskRef = new AtomicReference<>();
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Task found = findIncidentTaskForTestCase(client, testCase);
+                if (found != null && found.getWorkflowInstanceId() != null) {
+                  taskRef.set(found);
+                  return true;
+                }
+                return false;
+              });
+
+      Task originalTask = taskRef.get();
+      UUID originalWorkflowInstanceId = originalTask.getWorkflowInstanceId();
+
+      String retriggerDesc = "skip-retrigger-" + System.currentTimeMillis();
+      patchTestCaseDescription(client, testCase, retriggerDesc);
+
+      // Wait for the patch to be visible — proves the ChangeEvent pipeline processed the update
+      await()
+          .atMost(Duration.ofSeconds(30))
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                TestCase tc =
+                    client.testCases().getByName(testCase.getFullyQualifiedName(), "description");
+                return retriggerDesc.equals(tc.getDescription());
+              });
+
+      // Now verify the instance count is still 1 (skip policy kept the old, didn't start new)
+      await()
+          .during(Duration.ofSeconds(10))
+          .atMost(Duration.ofSeconds(15))
+          .pollInterval(Duration.ofSeconds(2))
+          .until(() -> countWorkflowInstances(client, workflowName) == 1);
+
+      Task sameTask = findIncidentTaskForTestCase(client, testCase);
+      assertNotNull(sameTask);
+      assertEquals(
+          originalTask.getId(), sameTask.getId(), "Task should be the same after second trigger");
+      assertEquals(
+          originalWorkflowInstanceId,
+          sameTask.getWorkflowInstanceId(),
+          "Workflow instance should be unchanged");
+
+      Map<String, Object> instance =
+          getWorkflowInstance(client, workflowName, originalWorkflowInstanceId.toString());
+      assertEquals("RUNNING", instance.get("status"), "Original workflow should still be running");
+
+      patchTaskStatus(client, originalTask.getId().toString(), "Completed");
+
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Map<String, Object> inst =
+                    getWorkflowInstance(
+                        client, workflowName, originalWorkflowInstanceId.toString());
+                return inst != null && "FINISHED".equals(inst.get("status"));
+              });
+    } finally {
+      deleteWorkflow(client, workflow);
+    }
+  }
+
+  @Test
+  void onConflict_forward_deliversRetriggerToManualTask(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    String id = ns.shortPrefix();
+    String workflowName = "fwd-e2e-" + id;
+
+    DatabaseService service = DatabaseServiceTestFactory.createPostgresWithName("sv" + id, ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimpleWithName("sc" + id, ns, service);
+    Table table =
+        TableTestFactory.createSimpleWithName("tbl" + id, ns, schema.getFullyQualifiedName());
+    TestCase testCase =
+        TestCaseBuilder.create(client)
+            .name("tc" + id)
+            .forTable(table)
+            .testDefinition("tableRowCountToEqual")
+            .parameter("value", "100")
+            .create();
+
+    WorkflowDefinition workflow =
+        deployManualTaskWorkflowWithPolicy(client, workflowName, "forward", true);
+    assertNotNull(workflow);
+    waitForWorkflowDeployed(client, workflowName);
+
+    try {
+      createFailedTestResult(client, testCase);
+
+      AtomicReference<Task> taskRef = new AtomicReference<>();
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Task found = findIncidentTaskForTestCase(client, testCase);
+                if (found != null && found.getWorkflowInstanceId() != null) {
+                  taskRef.set(found);
+                  return true;
+                }
+                return false;
+              });
+
+      Task originalTask = taskRef.get();
+      UUID originalWorkflowInstanceId = originalTask.getWorkflowInstanceId();
+
+      List<Map<String, Object>> statesBefore =
+          getWorkflowInstanceStates(client, workflowName, originalWorkflowInstanceId.toString());
+      long entriesBefore =
+          statesBefore.stream().filter(s -> NODE_NAME.equals(getStageName(s))).count();
+
+      patchTestCaseDescription(client, testCase, "Updated to trigger retrigger");
+
+      // Wait for retrigger to be delivered — ManualTask subprocess re-entered
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                List<Map<String, Object>> states =
+                    getWorkflowInstanceStates(
+                        client, workflowName, originalWorkflowInstanceId.toString());
+                long entries =
+                    states.stream().filter(s -> NODE_NAME.equals(getStageName(s))).count();
+                return entries > entriesBefore;
+              });
+
+      Map<String, Object> instance =
+          getWorkflowInstance(client, workflowName, originalWorkflowInstanceId.toString());
+      assertEquals("RUNNING", instance.get("status"), "Same workflow should still be running");
+
+      Task sameTask = findIncidentTaskForTestCase(client, testCase);
+      assertEquals(originalTask.getId(), sameTask.getId(), "Same task after retrigger");
+      assertEquals(TaskEntityStatus.Open, sameTask.getStatus(), "Task still open after retrigger");
+      assertEquals(1, countWorkflowInstances(client, workflowName), "Only one workflow instance");
+
+      patchTaskStatus(client, originalTask.getId().toString(), "Completed");
+
+      await()
+          .atMost(PIPELINE_TIMEOUT)
+          .pollInterval(Duration.ofSeconds(2))
+          .until(
+              () -> {
+                Map<String, Object> inst =
+                    getWorkflowInstance(
+                        client, workflowName, originalWorkflowInstanceId.toString());
+                return inst != null && "FINISHED".equals(inst.get("status"));
+              });
+    } finally {
+      deleteWorkflow(client, workflow);
+    }
+  }
+
+  private void deleteWorkflow(OpenMetadataClient client, WorkflowDefinition workflow) {
+    try {
+      client
+          .workflowDefinitions()
+          .delete(workflow.getId().toString(), Map.of("hardDelete", "true", "recursive", "true"));
+    } catch (Exception e) {
+      // Best-effort cleanup
+    }
+  }
+
   private WorkflowDefinition deployManualTaskWorkflow(
       OpenMetadataClient client, String workflowName) {
     String workflowJson =
@@ -446,5 +705,124 @@ public class ManualTaskOutboxIT {
   private String getStageName(Map<String, Object> state) {
     Map<String, Object> stage = (Map<String, Object>) state.get("stage");
     return stage != null ? (String) stage.get("name") : null;
+  }
+
+  private WorkflowDefinition deployManualTaskWorkflowWithPolicy(
+      OpenMetadataClient client,
+      String workflowName,
+      String onConflict,
+      boolean includeRetriggerEdge) {
+    String retriggerEdge =
+        includeRetriggerEdge
+            ? """
+            ,{"from": "%s", "to": "%s", "condition": "retrigger"}"""
+                .formatted(NODE_NAME, NODE_NAME)
+            : "";
+    String workflowJson =
+        """
+        {
+          "name": "%s",
+          "displayName": "OnConflict E2E Test Workflow",
+          "description": "Tests onConflict=%s policy",
+          "trigger": {
+            "type": "eventBasedEntity",
+            "config": {
+              "events": ["Updated"],
+              "entityTypes": ["testCase"],
+              "onConflict": "%s"
+            },
+            "output": ["relatedEntity"]
+          },
+          "nodes": [
+            {
+              "type": "startEvent",
+              "subType": "startEvent",
+              "name": "start",
+              "displayName": "Start"
+            },
+            {
+              "type": "manualTask",
+              "subType": "manualTask",
+              "name": "%s",
+              "displayName": "Resolve Incident",
+              "config": { "template": "IncidentResolution" },
+              "input": ["relatedEntity"],
+              "inputNamespaceMap": { "relatedEntity": "global" },
+              "output": ["result"]
+            },
+            {
+              "type": "endEvent",
+              "subType": "endEvent",
+              "name": "resolvedEnd",
+              "displayName": "Resolved"
+            }
+          ],
+          "edges": [
+            {"from": "start", "to": "%s"},
+            {"from": "%s", "to": "%s", "condition": "Open"},
+            {"from": "%s", "to": "%s", "condition": "InProgress"},
+            {"from": "%s", "to": "%s", "condition": "Pending"},
+            {"from": "%s", "to": "resolvedEnd", "condition": "Completed"}%s
+          ],
+          "config": { "storeStageStatus": true }
+        }
+        """
+            .formatted(
+                workflowName,
+                onConflict,
+                onConflict,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                NODE_NAME,
+                retriggerEdge);
+
+    CreateWorkflowDefinition request =
+        JsonUtils.readValue(workflowJson, CreateWorkflowDefinition.class);
+    return client.workflowDefinitions().create(request);
+  }
+
+  private void patchTestCaseDescription(
+      OpenMetadataClient client, TestCase testCase, String description) {
+    String patchJson =
+        String.format(
+            "[{\"op\": \"add\", \"path\": \"/description\", \"value\": \"%s\"}]", description);
+    client
+        .getHttpClient()
+        .executeForString(
+            HttpMethod.PATCH,
+            "/v1/dataQuality/testCases/" + testCase.getId(),
+            patchJson,
+            RequestOptions.builder().header("Content-Type", "application/json-patch+json").build());
+  }
+
+  @SuppressWarnings("unchecked")
+  private long countWorkflowInstances(OpenMetadataClient client, String workflowName) {
+    try {
+      String response =
+          client
+              .getHttpClient()
+              .executeForString(
+                  HttpMethod.GET,
+                  "/v1/governance/workflowInstances?startTs=0&endTs="
+                      + System.currentTimeMillis()
+                      + "&workflowDefinitionName="
+                      + workflowName
+                      + "&limit=100",
+                  null,
+                  RequestOptions.builder().build());
+
+      Map<String, Object> result = JsonUtils.readValue(response, new TypeReference<>() {});
+      List<Map<String, Object>> data = (List<Map<String, Object>>) result.get("data");
+      if (data == null) return 0;
+      return data.stream().filter(i -> "RUNNING".equals(i.get("status"))).count();
+    } catch (Exception e) {
+      return 0;
+    }
   }
 }

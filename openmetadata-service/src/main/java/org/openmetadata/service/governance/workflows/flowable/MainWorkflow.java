@@ -16,9 +16,12 @@ import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Process;
 import org.flowable.bpmn.model.SequenceFlow;
+import org.openmetadata.schema.governance.workflows.WorkflowConfiguration;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.EdgeDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
+import org.openmetadata.schema.governance.workflows.elements.triggers.Config;
+import org.openmetadata.schema.governance.workflows.elements.triggers.EventBasedEntityTriggerDefinition;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.governance.workflows.elements.Edge;
 import org.openmetadata.service.governance.workflows.elements.NodeFactory;
@@ -45,10 +48,14 @@ public class MainWorkflow {
             .orElse(workflowDefinition.getFullyQualifiedName()));
     model.addProcess(process);
 
+    WorkflowConfiguration config = workflowDefinition.getConfig();
+    if (hasForwardOnConflict(workflowDefinition)) {
+      config.setRetriggerEnabled(true);
+    }
+
     // Add Nodes
     for (WorkflowNodeDefinitionInterface nodeDefinitionObj : workflowDefinition.getNodes()) {
-      NodeInterface node =
-          NodeFactory.createNode(nodeDefinitionObj, workflowDefinition.getConfig());
+      NodeInterface node = NodeFactory.createNode(nodeDefinitionObj, config);
       node.addToWorkflow(model, process);
 
       Optional.ofNullable(node.getRuntimeExceptionBoundaryEvent())
@@ -66,6 +73,15 @@ public class MainWorkflow {
 
     this.model = model;
     this.workflowName = workflowName;
+  }
+
+  private static boolean hasForwardOnConflict(WorkflowDefinition workflowDefinition) {
+    if (workflowDefinition.getTrigger() instanceof EventBasedEntityTriggerDefinition trigger) {
+      Config triggerConfig = trigger.getConfig();
+      return triggerConfig != null
+          && Config.OnConflict.FORWARD.equals(triggerConfig.getOnConflict());
+    }
+    return false;
   }
 
   private void configureRuntimeExceptionFlow(Process process) {

@@ -222,13 +222,20 @@ public class EventBasedEntityTrigger implements TriggerInterface {
         serviceTask.getFieldExtensions().add(excludedFilterExpr);
       }
       if (triggerConfig.getFilter() != null) {
-        // Filter is now a map of entity-specific filters
         FieldExtension filterExpr =
             new FieldExtensionBuilder()
                 .fieldName("filterExpr")
                 .fieldValue(JsonUtils.pojoToJson(triggerConfig.getFilter()))
                 .build();
         serviceTask.getFieldExtensions().add(filterExpr);
+      }
+      if (triggerConfig.getOnConflict() != null) {
+        FieldExtension onConflictExpr =
+            new FieldExtensionBuilder()
+                .fieldName("onConflictExpr")
+                .fieldValue(triggerConfig.getOnConflict().value())
+                .build();
+        serviceTask.getFieldExtensions().add(onConflictExpr);
       }
     }
 

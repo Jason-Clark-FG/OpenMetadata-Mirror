@@ -8,6 +8,7 @@ import static org.openmetadata.service.governance.workflows.elements.triggers.Ev
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.flowable.common.engine.api.delegate.Expression;
@@ -35,6 +36,7 @@ public class FilterEntityImpl implements JavaDelegate {
   private static final Logger log = LoggerFactory.getLogger(FilterEntityImpl.class);
   private Expression excludedFieldsExpr;
   private Expression filterExpr;
+  private Expression onConflictExpr;
 
   @Override
   public void execute(DelegateExecution execution) {
@@ -71,9 +73,41 @@ public class FilterEntityImpl implements JavaDelegate {
       String mainWorkflowDefinitionName =
           TriggerFactory.getMainWorkflowDefinitionNameFromTrigger(triggerWorkflowDefinitionKey);
       String currentProcessInstanceId = execution.getProcessInstanceId();
-      WorkflowHandler.getInstance()
-          .terminateDuplicateInstances(
-              mainWorkflowDefinitionName, entityLinkStr, currentProcessInstanceId);
+
+      String onConflict =
+          (onConflictExpr != null && onConflictExpr.getValue(execution) != null)
+              ? (String) onConflictExpr.getValue(execution)
+              : "restart";
+
+      switch (onConflict) {
+        case "skip" -> {
+          if (WorkflowHandler.getInstance()
+              .hasRunningInstance(mainWorkflowDefinitionName, entityLinkStr)) {
+            log.info(
+                "onConflict=skip: existing instance found for entity={}, skipping new trigger",
+                entityLinkStr);
+            passesFilter = false;
+          }
+        }
+        case "forward" -> {
+          boolean forwarded =
+              WorkflowHandler.getInstance()
+                  .forwardRetrigger(mainWorkflowDefinitionName, entityLinkStr, Map.of());
+          if (forwarded) {
+            log.info(
+                "onConflict=forward: retrigger delivered to running instance for entity={}",
+                entityLinkStr);
+            passesFilter = false;
+          } else {
+            log.debug(
+                "onConflict=forward: no active ManualTask found for entity={}, starting new instance",
+                entityLinkStr);
+          }
+        }
+        default -> WorkflowHandler.getInstance()
+            .terminateDuplicateInstances(
+                mainWorkflowDefinitionName, entityLinkStr, currentProcessInstanceId);
+      }
     }
 
     String workflowKey =

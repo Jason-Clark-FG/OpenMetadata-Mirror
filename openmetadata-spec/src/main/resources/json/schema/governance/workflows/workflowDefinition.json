@@ -24,6 +24,12 @@
           "description": "If True, all the stage status will be stored in the database.",
           "type": "boolean",
           "default": false
+        },
+        "retriggerEnabled": {
+          "title": "Retrigger Enabled",
+          "description": "If True, ManualTask nodes will accept 'retrigger' as a valid non-terminal status, enabling the retrigger branch for workflow edge routing. Set automatically when the trigger uses onConflict='forward'.",
+          "type": "boolean",
+          "default": false
         }
       },
       "additionalProperties": false,

@@ -5,6 +5,7 @@ import static org.openmetadata.service.governance.workflows.WorkflowVariableHand
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
@@ -60,7 +61,11 @@ public class ManualTask implements NodeInterface {
 
     ResolvedTemplate resolvedTemplate =
         ManualTaskTemplateResolver.resolve(nodeDefinition.getConfig().getTemplate());
-    nodeDefinition.setBranches(new ArrayList<>(resolvedTemplate.statuses()));
+    List<String> branches = new ArrayList<>(resolvedTemplate.statuses());
+    if (Boolean.TRUE.equals(config.getRetriggerEnabled())) {
+      branches.add("retrigger");
+    }
+    nodeDefinition.setBranches(branches);
 
     SubProcess subProcess = new SubProcessBuilder().id(subProcessId).build();
 
@@ -85,7 +90,7 @@ public class ManualTask implements NodeInterface {
             .implementation(SetResultDelegate.class.getName())
             .build();
 
-    ServiceTask checkTerminalTask = getCheckTerminalTask(subProcessId, resolvedTemplate);
+    ServiceTask checkTerminalTask = getCheckTerminalTask(subProcessId, resolvedTemplate, config);
 
     ExclusiveGateway isTerminalGateway =
         new ExclusiveGatewayBuilder()
@@ -185,11 +190,16 @@ public class ManualTask implements NodeInterface {
         .build();
   }
 
-  private ServiceTask getCheckTerminalTask(String subProcessId, ResolvedTemplate resolvedTemplate) {
+  private ServiceTask getCheckTerminalTask(
+      String subProcessId, ResolvedTemplate resolvedTemplate, WorkflowConfiguration config) {
+    List<String> allStatuses = new ArrayList<>(resolvedTemplate.statuses());
+    if (Boolean.TRUE.equals(config.getRetriggerEnabled())) {
+      allStatuses.add("retrigger");
+    }
     FieldExtension statusesExpr =
         new FieldExtensionBuilder()
             .fieldName("statusesExpr")
-            .fieldValue(JsonUtils.pojoToJson(resolvedTemplate.statuses()))
+            .fieldValue(JsonUtils.pojoToJson(allStatuses))
             .build();
 
     FieldExtension terminalStatusesExpr =
