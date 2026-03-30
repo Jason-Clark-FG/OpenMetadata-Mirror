@@ -165,6 +165,20 @@ class TestHttpTransport:
         assert "Invalid Request" in str(exc_info.value)
 
 
+    @patch("requests.Session.post")
+    def test_send_notification_logs_on_failure(self, mock_post):
+        """send_notification should log warnings, not silently swallow errors"""
+        mock_post.side_effect = ConnectionError("server down")
+
+        transport = HttpTransport(url="http://localhost:8080")
+        transport.connect()
+
+        with patch("metadata.ingestion.source.mcp.client.logger") as mock_logger:
+            transport.send_notification("notifications/initialized", {})
+            mock_logger.warning.assert_called_once()
+            assert "server down" in str(mock_logger.warning.call_args)
+
+
 class TestMcpClient:
     """Tests for McpClient class"""
 

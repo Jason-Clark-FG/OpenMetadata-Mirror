@@ -264,8 +264,8 @@ class HttpTransport:
                 json=notification,
                 timeout=self.timeout,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to send notification '{method}': {e}")
 
     def send_request(
         self, method: str, params: Optional[Dict] = None
