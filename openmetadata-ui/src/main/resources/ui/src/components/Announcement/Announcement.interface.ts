@@ -12,8 +12,8 @@
  */
 import { Operation } from 'fast-json-patch';
 import { HTMLAttributes } from 'react';
-import { ConfirmState } from '../ActivityFeed/ActivityFeedCard/ActivityFeedCard.interface';
 import { AnnouncementEntity } from '../../rest/announcementsAPI';
+import { ConfirmState } from '../ActivityFeed/ActivityFeedCard/ActivityFeedCard.interface';
 
 export type AnnouncementUpdatedFunction = (
   announcementId: string,

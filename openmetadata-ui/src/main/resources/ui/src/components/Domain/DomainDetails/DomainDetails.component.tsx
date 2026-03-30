@@ -56,13 +56,13 @@ import { Style } from '../../../generated/type/tagLabel';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
 import {
-  addDataProducts,
-  patchDataProduct,
-} from '../../../rest/dataProductAPI';
-import {
   AnnouncementEntity,
   getActiveAnnouncements,
 } from '../../../rest/announcementsAPI';
+import {
+  addDataProducts,
+  patchDataProduct,
+} from '../../../rest/dataProductAPI';
 import { addDomains, patchDomains } from '../../../rest/domainAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getFeedCounts, getIsErrorMatch } from '../../../utils/CommonUtils';

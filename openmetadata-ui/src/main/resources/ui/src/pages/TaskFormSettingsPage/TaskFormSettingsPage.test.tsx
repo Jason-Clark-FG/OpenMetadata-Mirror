@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,8 +35,9 @@ const mockGetWorkflowDefinitionByName = jest.fn();
 const mockShowSuccessToast = jest.fn();
 const mockShowErrorToast = jest.fn();
 
-jest.mock('../../components/common/TitleBreadcrumb/TitleBreadcrumb.component', () =>
-  jest.fn().mockImplementation(() => <div>TitleBreadcrumb.component</div>)
+jest.mock(
+  '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component',
+  () => jest.fn().mockImplementation(() => <div>TitleBreadcrumb.component</div>)
 );
 
 jest.mock('../../components/PageLayoutV1/PageLayoutV1', () =>
@@ -32,19 +45,23 @@ jest.mock('../../components/PageLayoutV1/PageLayoutV1', () =>
 );
 
 jest.mock('../../components/Database/SchemaEditor/CodeEditor', () =>
-  jest.fn().mockImplementation(({ value, onChange }) => (
-    <textarea
-      data-testid="code-editor"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  ))
+  jest
+    .fn()
+    .mockImplementation(({ value, onChange }) => (
+      <textarea
+        data-testid="code-editor"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    ))
 );
 
 jest.mock('../../rest/taskFormSchemasAPI', () => ({
-  createTaskFormSchema: (...args: unknown[]) => mockCreateTaskFormSchema(...args),
+  createTaskFormSchema: (...args: unknown[]) =>
+    mockCreateTaskFormSchema(...args),
   listTaskFormSchemas: (...args: unknown[]) => mockListTaskFormSchemas(...args),
-  updateTaskFormSchema: (...args: unknown[]) => mockUpdateTaskFormSchema(...args),
+  updateTaskFormSchema: (...args: unknown[]) =>
+    mockUpdateTaskFormSchema(...args),
 }));
 
 jest.mock('../../rest/workflowDefinitionsAPI', () => ({
@@ -108,14 +125,18 @@ describe('TaskFormSettingsPage', () => {
   it('loads and displays the existing task form schema', async () => {
     render(<TaskFormSettingsPage />);
 
-    expect(await screen.findByText('TitleBreadcrumb.component')).toBeInTheDocument();
+    expect(
+      await screen.findByText('TitleBreadcrumb.component')
+    ).toBeInTheDocument();
     expect(await screen.findByText('Description Update')).toBeInTheDocument();
 
     await waitFor(() =>
       expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
     );
 
-    expect(screen.getByLabelText('Task Category')).toHaveValue('MetadataUpdate');
+    expect(screen.getByLabelText('Task Category')).toHaveValue(
+      'MetadataUpdate'
+    );
     expect(screen.getAllByTestId('code-editor')).toHaveLength(7);
   });
 
@@ -156,7 +177,9 @@ describe('TaskFormSettingsPage', () => {
       workflowDefinitionRef: 'DescriptionUpdateTaskWorkflow',
       workflowVersion: 1,
     });
-    expect(mockShowSuccessToast).toHaveBeenCalledWith('Task form saved successfully');
+    expect(mockShowSuccessToast).toHaveBeenCalledWith(
+      'Task form saved successfully'
+    );
   });
 
   it('creates a new schema when add is selected', async () => {

@@ -31,11 +31,7 @@ import {
   postThread,
   removeActivityReaction,
 } from '../../../rest/feedsAPI';
-import {
-  listMyAssignedTasks,
-  listMyVisibleTasks,
-  listTasks,
-} from '../../../rest/tasksAPI';
+import { listMyVisibleTasks, listTasks } from '../../../rest/tasksAPI';
 import ActivityFeedProvider from './ActivityFeedProvider';
 import {
   DummyActivityCommentComponent,
@@ -44,9 +40,9 @@ import {
   DummyChildrenComponent,
   DummyChildrenDeletePostComponent,
   DummyChildrenEntityComponent,
-  DummyEntityActivityFeedComponent,
   DummyChildrenMentionsComponent,
   DummyChildrenTaskCloseComponent,
+  DummyEntityActivityFeedComponent,
   DummySetActiveActivityComponent,
 } from './DummyTestComponent';
 
@@ -152,7 +148,9 @@ describe('ActivityFeedProvider', () => {
   });
 
   it('should show loading indicator in initial fetch', async () => {
-    (listMyVisibleTasks as jest.Mock).mockReturnValueOnce(new Promise(() => {}));
+    (listMyVisibleTasks as jest.Mock).mockReturnValueOnce(
+      new Promise(() => {})
+    );
 
     render(
       <ActivityFeedProvider>
@@ -229,6 +227,7 @@ describe('ActivityFeedProvider', () => {
         fields: 'assignees,createdBy,about,comments,payload',
       })
     );
+
     expect(listTasks).not.toHaveBeenCalled();
   });
 

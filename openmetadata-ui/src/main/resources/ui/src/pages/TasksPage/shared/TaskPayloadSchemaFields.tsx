@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,15 +24,23 @@
  *  limitations under the License.
  */
 
-import { Checkbox, Form, Input, InputNumber, Select, Tag, Typography } from 'antd';
+import {
+  Checkbox,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Tag,
+  Typography,
+} from 'antd';
 import { uniqBy } from 'lodash';
 import { useMemo } from 'react';
 import { TagLabel } from '../../../generated/type/tagLabel';
-import { TaskPayload } from '../../../rest/tasksAPI';
 import { JsonSchemaObject } from '../../../rest/taskFormSchemasAPI';
+import { TaskPayload } from '../../../rest/tasksAPI';
 import { DescriptionTabs } from './DescriptionTabs';
-import TagSuggestion from './TagSuggestion';
 import { TagsTabs } from './TagsTabs';
+import TagSuggestion from './TagSuggestion';
 
 type JsonSchemaProperty = {
   type?: string;
@@ -72,7 +92,8 @@ const TaskPayloadSchemaFields = ({
           .filter(
             ([field, config]) =>
               field !== 'ui:order' &&
-              (config as Record<string, unknown>)?.['ui:widget'] === HIDDEN_WIDGET
+              (config as Record<string, unknown>)?.['ui:widget'] ===
+                HIDDEN_WIDGET
           )
           .map(([field]) => field)
       ),
@@ -80,7 +101,9 @@ const TaskPayloadSchemaFields = ({
   );
 
   const getWidget = (fieldName: string) =>
-    (uiSchema?.[fieldName] as Record<string, unknown> | undefined)?.['ui:widget'];
+    (uiSchema?.[fieldName] as Record<string, unknown> | undefined)?.[
+      'ui:widget'
+    ];
 
   const getFieldValue = (fieldName: string, fallback?: unknown) => {
     const payloadValue = payload[fieldName];
@@ -89,9 +112,14 @@ const TaskPayloadSchemaFields = ({
       return payloadValue;
     }
 
-    const fieldSchema = properties[fieldName] as Record<string, unknown> | undefined;
+    const fieldSchema = properties[fieldName] as
+      | Record<string, unknown>
+      | undefined;
 
-    if (fieldSchema && Object.prototype.hasOwnProperty.call(fieldSchema, 'default')) {
+    if (
+      fieldSchema &&
+      Object.prototype.hasOwnProperty.call(fieldSchema, 'default')
+    ) {
       return fieldSchema.default;
     }
 
@@ -131,7 +159,11 @@ const TaskPayloadSchemaFields = ({
     return JSON.stringify(value, null, 2);
   };
 
-  const renderReadOnlyText = (label: string, value: unknown, description?: string) => (
+  const renderReadOnlyText = (
+    label: string,
+    value: unknown,
+    description?: string
+  ) => (
     <Form.Item key={label} label={`${label}:`}>
       <Typography.Paragraph className="m-b-0 whitespace-pre-wrap">
         {stringifyValue(value)}
@@ -211,13 +243,18 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (widget === 'tagsTabs') {
-          const currentTags = (payload.currentTags as TagLabel[] | undefined) ?? [];
+          const currentTags =
+            (payload.currentTags as TagLabel[] | undefined) ?? [];
           const suggestedTags = getSuggestedTags();
 
           if (mode === 'read') {
             return (
               <div key={fieldName}>
-                {renderReadOnlyTags(`${label} (${'Current'})`, currentTags, description)}
+                {renderReadOnlyTags(
+                  `${label} (${'Current'})`,
+                  currentTags,
+                  description
+                )}
                 {renderReadOnlyTags(`${label} (${'Suggested'})`, suggestedTags)}
               </div>
             );
@@ -229,7 +266,9 @@ const TaskPayloadSchemaFields = ({
                 tags={currentTags}
                 value={suggestedTags}
                 onChange={(newTags) => {
-                  const currentTagFqns = new Set(currentTags.map((tag) => tag.tagFQN));
+                  const currentTagFqns = new Set(
+                    currentTags.map((tag) => tag.tagFQN)
+                  );
                   const newTagFqns = new Set(newTags.map((tag) => tag.tagFQN));
 
                   onChange({
@@ -256,7 +295,9 @@ const TaskPayloadSchemaFields = ({
           if (mode === 'read') {
             return renderReadOnlyTags(
               label,
-              ((payload[fieldName] as TagLabel[] | undefined) ?? []).filter(Boolean),
+              ((payload[fieldName] as TagLabel[] | undefined) ?? []).filter(
+                Boolean
+              ),
               description
             );
           }
@@ -278,7 +319,11 @@ const TaskPayloadSchemaFields = ({
 
         if (fieldSchema?.enum?.length) {
           if (mode === 'read') {
-            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+            return renderReadOnlyText(
+              label,
+              getFieldValue(fieldName),
+              description
+            );
           }
 
           return (
@@ -297,7 +342,11 @@ const TaskPayloadSchemaFields = ({
 
         if (fieldSchema?.type === 'number') {
           if (mode === 'read') {
-            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+            return renderReadOnlyText(
+              label,
+              getFieldValue(fieldName),
+              description
+            );
           }
 
           return (
@@ -321,10 +370,15 @@ const TaskPayloadSchemaFields = ({
           }
 
           return (
-            <Form.Item key={fieldName} label={`${label}:`} valuePropName="checked">
+            <Form.Item
+              key={fieldName}
+              label={`${label}:`}
+              valuePropName="checked">
               <Checkbox
                 checked={Boolean(getFieldValue(fieldName, false))}
-                onChange={(event) => updateField(fieldName, event.target.checked)}>
+                onChange={(event) =>
+                  updateField(fieldName, event.target.checked)
+                }>
                 {description}
               </Checkbox>
             </Form.Item>
@@ -333,7 +387,11 @@ const TaskPayloadSchemaFields = ({
 
         if (widget === 'textarea') {
           if (mode === 'read') {
-            return renderReadOnlyText(label, getFieldValue(fieldName, ''), description);
+            return renderReadOnlyText(
+              label,
+              getFieldValue(fieldName, ''),
+              description
+            );
           }
 
           return (
@@ -349,14 +407,23 @@ const TaskPayloadSchemaFields = ({
 
         if (fieldSchema?.type === 'object' || fieldSchema?.type === 'array') {
           if (mode === 'read') {
-            return renderReadOnlyText(label, getFieldValue(fieldName), description);
+            return renderReadOnlyText(
+              label,
+              getFieldValue(fieldName),
+              description
+            );
           }
 
           return (
             <Form.Item key={fieldName} label={`${label}:`}>
               <Input.TextArea
                 autoSize={{ minRows: 4, maxRows: 12 }}
-                value={stringifyValue(getFieldValue(fieldName, fieldSchema?.type === 'array' ? [] : {}))}
+                value={stringifyValue(
+                  getFieldValue(
+                    fieldName,
+                    fieldSchema?.type === 'array' ? [] : {}
+                  )
+                )}
                 onChange={(event) => {
                   try {
                     updateField(fieldName, JSON.parse(event.target.value));
@@ -375,7 +442,11 @@ const TaskPayloadSchemaFields = ({
         }
 
         if (mode === 'read') {
-          return renderReadOnlyText(label, getFieldValue(fieldName, ''), description);
+          return renderReadOnlyText(
+            label,
+            getFieldValue(fieldName, ''),
+            description
+          );
         }
 
         return (

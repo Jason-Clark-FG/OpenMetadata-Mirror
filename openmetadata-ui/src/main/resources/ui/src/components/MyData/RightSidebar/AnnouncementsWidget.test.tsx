@@ -14,9 +14,7 @@ import { act, render, screen } from '@testing-library/react';
 import { MOCK_ANNOUNCEMENT_DATA } from '../../../mocks/Announcement.mock';
 import AnnouncementsWidget from './AnnouncementsWidget';
 
-const mockAnnouncementData = [
-  MOCK_ANNOUNCEMENT_DATA.data[0],
-];
+const mockAnnouncementData = [MOCK_ANNOUNCEMENT_DATA.data[0]];
 
 jest.mock('../../common/Loader/Loader', () =>
   jest.fn().mockReturnValue(<div>Loader</div>)

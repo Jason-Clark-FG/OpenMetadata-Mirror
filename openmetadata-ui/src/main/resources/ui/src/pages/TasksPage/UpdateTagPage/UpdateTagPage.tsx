@@ -32,6 +32,7 @@ import { Glossary } from '../../../generated/entity/data/glossary';
 import { withPageLayout } from '../../../hoc/withPageLayout';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useFqn } from '../../../hooks/useFqn';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import {
   CreateTask,
   createTask,
@@ -40,7 +41,6 @@ import {
   TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
-import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import i18n from '../../../utils/i18next/LocalUtil';
 import {

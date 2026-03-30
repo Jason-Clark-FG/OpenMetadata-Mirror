@@ -16,10 +16,10 @@ import React, { act } from 'react';
 import * as reactRouterDom from 'react-router-dom';
 import { Severities } from '../../../../generated/tests/testCaseResolutionStatus';
 import {
+  MOCK_TASK_DATA,
   MOCK_TEST_CASE_DATA,
   MOCK_TEST_CASE_INCIDENT,
   MOCK_TEST_CASE_RESOLUTION_STATUS,
-  MOCK_TASK_DATA,
 } from '../../../../mocks/TestCase.mock';
 import {
   getIncidentTaskByStateId,

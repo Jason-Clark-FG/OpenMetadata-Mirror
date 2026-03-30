@@ -61,9 +61,7 @@ const AnnouncementDrawer: FC<Props> = ({
     </Space>
   );
 
-  const deletePostHandler = async (
-    announcementId: string
-  ): Promise<void> => {
+  const deletePostHandler = async (announcementId: string): Promise<void> => {
     try {
       await deleteAnnouncement(announcementId, true);
     } catch (err) {

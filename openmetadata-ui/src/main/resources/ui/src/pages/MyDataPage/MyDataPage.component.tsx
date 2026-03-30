@@ -31,11 +31,11 @@ import LimitWrapper from '../../hoc/LimitWrapper';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useGridLayoutDirection } from '../../hooks/useGridLayoutDirection';
 import { useWelcomeStore } from '../../hooks/useWelcomeStore';
-import { getDocumentByFQN } from '../../rest/DocStoreAPI';
 import {
   AnnouncementEntity,
   getActiveAnnouncements,
 } from '../../rest/announcementsAPI';
+import { getDocumentByFQN } from '../../rest/DocStoreAPI';
 import { updateUserDetail } from '../../rest/userAPI';
 import {
   getConstrainedWidgetWidth,

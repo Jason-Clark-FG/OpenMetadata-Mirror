@@ -282,7 +282,9 @@ export const ActivityFeedTab = ({
 
     return {
       feedThreadType:
-        activeTab === ActivityFeedTabs.ALL ? ThreadType.Conversation : undefined,
+        activeTab === ActivityFeedTabs.ALL
+          ? ThreadType.Conversation
+          : undefined,
       feedFilter: activeTab === 'mentions' ? FeedFilter.MENTIONS : filter,
     };
   }, [activeTab, isAdminUser, currentUser, fqn, isUserEntity]);

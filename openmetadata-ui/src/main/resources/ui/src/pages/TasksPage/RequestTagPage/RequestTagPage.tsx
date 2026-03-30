@@ -30,6 +30,7 @@ import { TagLabel } from '../../../generated/type/tagLabel';
 import { withPageLayout } from '../../../hoc/withPageLayout';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useFqn } from '../../../hooks/useFqn';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import {
   CreateTask,
   createTask,
@@ -38,7 +39,6 @@ import {
   TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
-import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import {
   applyTaskFormSchemaDefaults,

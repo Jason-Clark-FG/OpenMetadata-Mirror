@@ -20,8 +20,8 @@ import {
   mockPersonaName,
   mockUserData,
 } from '../../mocks/MyDataPage.mock';
-import { getDocumentByFQN } from '../../rest/DocStoreAPI';
 import { getActiveAnnouncements } from '../../rest/announcementsAPI';
+import { getDocumentByFQN } from '../../rest/DocStoreAPI';
 import MyDataPage from './MyDataPage.component';
 
 const mockLocalStorage = (() => {

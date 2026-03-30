@@ -29,6 +29,7 @@ import { Glossary } from '../../../generated/entity/data/glossary';
 import { withPageLayout } from '../../../hoc/withPageLayout';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useFqn } from '../../../hooks/useFqn';
+import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import {
   CreateTask,
   createTask,
@@ -37,7 +38,6 @@ import {
   TaskPayload,
   TaskPriority,
 } from '../../../rest/tasksAPI';
-import { TaskFormSchema } from '../../../rest/taskFormSchemasAPI';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import {
   applyTaskFormSchemaDefaults,
@@ -122,7 +122,10 @@ const RequestDescription = () => {
         about: entityFQN,
         aboutType: entityType,
         assignees: assignees.map((assignee) => assignee.name ?? ''),
-        payload: applyTaskFormSchemaDefaults(payload, taskFormSchema?.formSchema),
+        payload: applyTaskFormSchemaDefaults(
+          payload,
+          taskFormSchema?.formSchema
+        ),
       };
 
       try {
@@ -284,7 +287,9 @@ const RequestDescription = () => {
                       htmlType="submit"
                       loading={isLoading}
                       type="primary">
-                      {payload.newDescription ? t('label.suggest') : t('label.save')}
+                      {payload.newDescription
+                        ? t('label.suggest')
+                        : t('label.save')}
                     </Button>
                   </Space>
                 </Form.Item>

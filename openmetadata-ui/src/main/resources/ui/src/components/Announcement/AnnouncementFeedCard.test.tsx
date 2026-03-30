@@ -15,16 +15,18 @@ import { MOCK_ANNOUNCEMENT_DATA } from '../../mocks/Announcement.mock';
 import AnnouncementFeedCard from './AnnouncementFeedCard.component';
 
 jest.mock('./AnnouncementFeedCardBody.component', () =>
-  jest.fn().mockImplementation(({ updateAnnouncementHandler, onConfirmation }) => (
-    <>
-      <p>AnnouncementFeedCardBody</p>
-      <button
-        onClick={() => updateAnnouncementHandler('announcementId', 'data')}>
-        UpdateAnnouncementHandlerButton
-      </button>
-      <button onClick={onConfirmation}>ConfirmationButton</button>
-    </>
-  ))
+  jest
+    .fn()
+    .mockImplementation(({ updateAnnouncementHandler, onConfirmation }) => (
+      <>
+        <p>AnnouncementFeedCardBody</p>
+        <button
+          onClick={() => updateAnnouncementHandler('announcementId', 'data')}>
+          UpdateAnnouncementHandlerButton
+        </button>
+        <button onClick={onConfirmation}>ConfirmationButton</button>
+      </>
+    ))
 );
 
 jest.mock('../ActivityFeed/Shared/AnnouncementBadge', () => {

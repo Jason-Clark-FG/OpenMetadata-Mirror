@@ -23,8 +23,7 @@ import {
 } from '../../../../constants/constants';
 import { MY_TASK_WIDGET_FILTER_OPTIONS } from '../../../../constants/Widgets.constant';
 import { SIZE } from '../../../../enums/common.enum';
-import { FeedFilter } from '../../../../enums/mydata.enum';
-import { MyTaskFilter } from '../../../../enums/mydata.enum';
+import { FeedFilter, MyTaskFilter } from '../../../../enums/mydata.enum';
 import { useApplicationStore } from '../../../../hooks/useApplicationStore';
 import { WidgetCommonProps } from '../../../../pages/CustomizablePage/CustomizablePage.interface';
 import { getUserPath } from '../../../../utils/RouterUtils';

@@ -1,4 +1,16 @@
 /*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
  *  Copyright 2024 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -38,13 +50,15 @@ jest.mock('../common/ProfilePicture/ProfilePicture', () =>
   jest.fn().mockReturnValue(<p data-testid="profile-picture">ProfilePicture</p>)
 );
 jest.mock('react-router-dom', () => ({
-  Link: jest.fn().mockImplementation(
-    ({ children, to }: { children: React.ReactNode; to: string }) => (
-      <span data-testid="link" data-to={to}>
-        {children}
-      </span>
-    )
-  ),
+  Link: jest
+    .fn()
+    .mockImplementation(
+      ({ children, to }: { children: React.ReactNode; to: string }) => (
+        <span data-testid="link" data-to={to}>
+          {children}
+        </span>
+      )
+    ),
 }));
 jest.mock('../../utils/EntityUtils', () => ({
   getEntityName: jest
@@ -148,10 +162,12 @@ describe('NotificationFeedCard', () => {
           createdBy="admin"
           entityFQN="Article_sQDEeTK6"
           entityType="page"
-          mentionNotification={{
-            ...mockMentionThread,
-            entityRef: undefined,
-          } as MentionNotification}
+          mentionNotification={
+            {
+              ...mockMentionThread,
+              entityRef: undefined,
+            } as MentionNotification
+          }
           timestamp={1692612000000}
         />
       );

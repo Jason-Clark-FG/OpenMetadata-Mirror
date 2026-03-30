@@ -71,9 +71,9 @@ import {
   patchTask,
   resolveTask as resolveTaskAPI,
   TaskAvailableTransition,
-  TaskPayload,
   TaskEntityStatus,
   TaskEntityType,
+  TaskPayload,
   TaskResolutionType,
 } from '../../../../rest/tasksAPI';
 import { getNameFromFQN } from '../../../../utils/CommonUtils';
@@ -83,12 +83,12 @@ import { getErrorText } from '../../../../utils/StringsUtils';
 import {
   applyTaskFormSchemaDefaults,
   getDefaultTaskFormSchema,
+  getEditableTaskPayload,
+  getResolvedTaskFormSchema,
+  getTaskFormHandlerConfig,
+  getTaskResolutionNewValue,
   getTaskTransitionFormSchema,
   getTaskTransitionUiSchema,
-  getEditableTaskPayload,
-  getTaskFormHandlerConfig,
-  getResolvedTaskFormSchema,
-  getTaskResolutionNewValue,
   hasTaskFormFields,
   shouldRequireTaskResolutionValue,
 } from '../../../../utils/TaskFormSchemaUtils';
@@ -149,7 +149,9 @@ export const TaskTabNew = ({
 
   const { t } = useTranslation();
   const [form] = Form.useForm();
-  const editablePayload = Form.useWatch('payload', form) as TaskPayload | undefined;
+  const editablePayload = Form.useWatch('payload', form) as
+    | TaskPayload
+    | undefined;
   const { isAdminUser } = useAuth();
   const {
     postFeed,
@@ -167,9 +169,9 @@ export const TaskTabNew = ({
     () => getTaskDisplayId(task.taskId),
     [task.taskId]
   );
-  const [taskFormSchema, setTaskFormSchema] = useState<TaskFormSchema | undefined>(
-    () => getDefaultTaskFormSchema(task.type, task.category)
-  );
+  const [taskFormSchema, setTaskFormSchema] = useState<
+    TaskFormSchema | undefined
+  >(() => getDefaultTaskFormSchema(task.type, task.category));
   const taskHandler = useMemo(
     () => getTaskFormHandlerConfig(task, taskFormSchema?.uiSchema),
     [task, taskFormSchema?.uiSchema]
@@ -195,7 +197,10 @@ export const TaskTabNew = ({
 
     return {
       ...taskFormSchema,
-      formSchema: getTaskTransitionFormSchema(taskFormSchema, selectedTransition),
+      formSchema: getTaskTransitionFormSchema(
+        taskFormSchema,
+        selectedTransition
+      ),
       uiSchema: getTaskTransitionUiSchema(taskFormSchema, selectedTransition),
     };
   }, [isWorkflowDrivenTask, selectedTransition, taskFormSchema]);
@@ -230,7 +235,7 @@ export const TaskTabNew = ({
     if (taskHandler.type === 'descriptionUpdate') {
       const valueField = taskHandler.valueField ?? 'newDescription';
 
-        return isEmpty(readOnlyTaskPayload?.[valueField] ?? suggestedValue);
+      return isEmpty(readOnlyTaskPayload?.[valueField] ?? suggestedValue);
     }
 
     const addTagsField = taskHandler.addTagsField ?? 'tagsToAdd';
@@ -501,7 +506,9 @@ export const TaskTabNew = ({
 
       return (
         transition.requiresComment === true ||
-        hasTaskFormFields(getTaskTransitionFormSchema(taskFormSchema, transition))
+        hasTaskFormFields(
+          getTaskTransitionFormSchema(taskFormSchema, transition)
+        )
       );
     },
     [isWorkflowDrivenTask, taskFormSchema]
@@ -521,7 +528,11 @@ export const TaskTabNew = ({
 
       updateTaskData(
         {
-          newValue: getTaskResolutionNewValue(task, payload, transitionUiSchema),
+          newValue: getTaskResolutionNewValue(
+            task,
+            payload,
+            transitionUiSchema
+          ),
           payload,
           comment: commentText,
         },
@@ -541,8 +552,8 @@ export const TaskTabNew = ({
       isApprovalWorkflowTask && status.toLowerCase() === 'approved'
         ? taskHandler.approvedValue
         : isApprovalWorkflowTask
-          ? taskHandler.rejectedValue
-          : suggestedValue;
+        ? taskHandler.rejectedValue
+        : suggestedValue;
     updateTaskData({ newValue }, resolutionType);
   };
 
@@ -874,7 +885,9 @@ export const TaskTabNew = ({
             disabled={!hasWorkflowAccess}
             loading={isActionLoading}
             type="primary"
-            onClick={() => handleWorkflowTransitionSelect(selectedTransition.id)}>
+            onClick={() =>
+              handleWorkflowTransitionSelect(selectedTransition.id)
+            }>
             {selectedTransition.label}
           </Button>
         </Space>
@@ -1403,8 +1416,7 @@ export const TaskTabNew = ({
           <div className="activity-feed-comments-container d-flex flex-col">
             <Typography.Text
               className={classNames('activity-feed-comments-title', {
-                'm-b-md':
-                  isTaskActionable && !showFeedEditor,
+                'm-b-md': isTaskActionable && !showFeedEditor,
               })}>
               {t('label.comment-plural')}
             </Typography.Text>
@@ -1491,7 +1503,9 @@ export const TaskTabNew = ({
           open={showEditTaskModel}
           title={
             isWorkflowDrivenTask && selectedTransition
-              ? `${selectedTransition.label} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`
+              ? `${selectedTransition.label} #${taskDisplayId} ${
+                  task.displayName ?? taskDisplayMessage
+                }`
               : `${t('label.edit-entity', {
                   entity: t('label.task-lowercase'),
                 })} #${taskDisplayId} ${task.displayName ?? taskDisplayMessage}`

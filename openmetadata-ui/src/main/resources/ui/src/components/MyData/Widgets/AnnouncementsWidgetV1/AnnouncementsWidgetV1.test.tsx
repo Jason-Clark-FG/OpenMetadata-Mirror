@@ -31,7 +31,9 @@ jest.mock('react-i18next', () => ({
 
 // Mock utility functions
 jest.mock('../../../../utils/FeedUtils', () => ({
-  getEntityFQN: jest.fn(() => 'sample_data.ecommerce_db.shopify.raw_product_catalog'),
+  getEntityFQN: jest.fn(
+    () => 'sample_data.ecommerce_db.shopify.raw_product_catalog'
+  ),
   getEntityType: jest.fn(() => 'table'),
   prepareFeedLink: jest.fn(() => '/test-feed-link'),
 }));
@@ -62,8 +64,7 @@ const mockAnnouncements: AnnouncementEntity[] = [
     id: '1',
     name: 'announcement-one',
     displayName: 'Alberto updated `dim_address_table`',
-    description:
-      'We will be deprecating a column, please change accordingly.',
+    description: 'We will be deprecating a column, please change accordingly.',
     entityLink:
       '<#E::table::sample_data.ecommerce_db.shopify.raw_product_catalog>',
     createdBy: 'alberto',

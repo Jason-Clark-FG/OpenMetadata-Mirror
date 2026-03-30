@@ -58,12 +58,12 @@ import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useFqn } from '../../../hooks/useFqn';
 import { FeedCounts } from '../../../interface/feed.interface';
 import { QueryFilterInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
-import { getContractByEntityId } from '../../../rest/contractAPI';
-import { getDataProductPortsView } from '../../../rest/dataProductAPI';
 import {
   AnnouncementEntity,
   getActiveAnnouncements,
 } from '../../../rest/announcementsAPI';
+import { getContractByEntityId } from '../../../rest/contractAPI';
+import { getDataProductPortsView } from '../../../rest/dataProductAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import {
   getEntityDeleteMessage,

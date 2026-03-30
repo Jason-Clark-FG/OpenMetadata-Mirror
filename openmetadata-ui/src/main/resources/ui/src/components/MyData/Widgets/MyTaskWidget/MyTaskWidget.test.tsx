@@ -14,8 +14,8 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { PAGE_SIZE_MEDIUM } from '../../../../constants/constants';
-import { useActivityFeedProvider as mockUseActivityFeedProvider } from '../../../ActivityFeed/ActivityFeedProvider/ActivityFeedProvider';
 import { TaskEntityStatus, TaskEntityType } from '../../../../rest/tasksAPI';
+import { useActivityFeedProvider as mockUseActivityFeedProvider } from '../../../ActivityFeed/ActivityFeedProvider/ActivityFeedProvider';
 import { mockUserData } from '../../../Settings/Users/mocks/User.mocks';
 import MyTaskWidget from './MyTaskWidget';
 

@@ -17,10 +17,10 @@ import { EntityType } from '../../../../enums/entity.enum';
 import {
   Task,
   TaskCategory,
-  TaskResolutionType,
   TaskEntityStatus,
   TaskEntityType,
   TaskPriority,
+  TaskResolutionType,
 } from '../../../../rest/tasksAPI';
 import { TaskTabNew } from './TaskTabNew.component';
 
@@ -288,9 +288,11 @@ jest.mock('../../../../utils/TaskFormSchemaUtils', () => {
 
   return {
     ...actual,
-    getResolvedTaskFormSchema: jest.fn().mockImplementation((taskType, taskCategory) =>
-      Promise.resolve(actual.getDefaultTaskFormSchema(taskType, taskCategory))
-    ),
+    getResolvedTaskFormSchema: jest
+      .fn()
+      .mockImplementation((taskType, taskCategory) =>
+        Promise.resolve(actual.getDefaultTaskFormSchema(taskType, taskCategory))
+      ),
   };
 });
 
@@ -441,7 +443,9 @@ describe('TaskTabNew Component', () => {
     const {
       useApplicationStore,
     } = require('../../../../hooks/useApplicationStore');
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
     const {
       isTagsTaskType,
       isDescriptionTaskType,
@@ -461,7 +465,10 @@ describe('TaskTabNew Component', () => {
     });
     getResolvedTaskFormSchema.mockImplementation((taskType, taskCategory) =>
       Promise.resolve(
-        actualTaskFormSchemaUtils.getDefaultTaskFormSchema(taskType, taskCategory)
+        actualTaskFormSchemaUtils.getDefaultTaskFormSchema(
+          taskType,
+          taskCategory
+        )
       )
     );
     isTagsTaskType.mockReturnValue(true);
@@ -553,7 +560,9 @@ describe('TaskTabNew Component', () => {
     });
 
     expect(screen.getByTestId('task-payload-details')).toBeInTheDocument();
-    expect(screen.getByText('PersonalData.SpecialCategory')).toBeInTheDocument();
+    expect(
+      screen.getByText('PersonalData.SpecialCategory')
+    ).toBeInTheDocument();
   });
 
   it('should render schema-driven description payload details for description tasks', async () => {
@@ -704,7 +713,9 @@ describe('TaskTabNew Component', () => {
   });
 
   it('should resolve task form schema for approval tasks as well', async () => {
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
 
     await act(async () => {
       render(<TaskTabNew {...mockProps} task={MOCK_APPROVAL_TASK} />, {
@@ -937,7 +948,9 @@ describe('TaskTabNew Component', () => {
   });
 
   it('renders schema-driven payload details for custom tasks', async () => {
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
 
     getResolvedTaskFormSchema.mockResolvedValueOnce({
       name: 'CustomTask',
@@ -978,7 +991,9 @@ describe('TaskTabNew Component', () => {
 
   it('submits schema-driven payload when resolving a custom task', async () => {
     const { useAuth } = require('../../../../hooks/authHooks');
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
     const { resolveTask } = require('../../../../rest/tasksAPI');
 
     useAuth.mockReturnValue({ isAdminUser: true });
@@ -1031,7 +1046,9 @@ describe('TaskTabNew Component', () => {
 
   it('keeps workflow-driven tasks actionable outside the Open status', async () => {
     const { useAuth } = require('../../../../hooks/authHooks');
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
 
     useAuth.mockReturnValue({ isAdminUser: true });
     getResolvedTaskFormSchema.mockResolvedValueOnce({
@@ -1063,7 +1080,9 @@ describe('TaskTabNew Component', () => {
 
   it('resolves workflow-driven tasks using transition ids', async () => {
     const { useAuth } = require('../../../../hooks/authHooks');
-    const { getResolvedTaskFormSchema } = require('../../../../utils/TaskFormSchemaUtils');
+    const {
+      getResolvedTaskFormSchema,
+    } = require('../../../../utils/TaskFormSchemaUtils');
     const { resolveTask } = require('../../../../rest/tasksAPI');
 
     useAuth.mockReturnValue({ isAdminUser: true });

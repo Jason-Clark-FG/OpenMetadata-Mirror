@@ -11,11 +11,7 @@
  *  limitations under the License.
  */
 
-import {
-  findByTestId,
-  queryByTestId,
-  render,
-} from '@testing-library/react';
+import { findByTestId, queryByTestId, render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { mockThreadData } from './ActivityThread.mock';
 import ActivityThreadList from './ActivityThreadList';
@@ -148,5 +144,4 @@ describe('Test ActivityThreadList Component', () => {
     expect(thread2MainMessage).toBeInTheDocument();
     expect(thread2QuickReplyEditor).toBeInTheDocument();
   });
-
 });

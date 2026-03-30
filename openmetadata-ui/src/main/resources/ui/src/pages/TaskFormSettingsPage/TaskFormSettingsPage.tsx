@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -91,9 +103,14 @@ const TaskFormSettingsPage = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm<TaskFormSchema>();
   const [schemas, setSchemas] = useState<TaskFormSchema[]>([]);
-  const [selectedSchema, setSelectedSchema] = useState<TaskFormSchema>(EMPTY_SCHEMA);
-  const [formSchemaValue, setFormSchemaValue] = useState(stringifyJson(EMPTY_SCHEMA.formSchema));
-  const [uiSchemaValue, setUiSchemaValue] = useState(stringifyJson(EMPTY_SCHEMA.uiSchema));
+  const [selectedSchema, setSelectedSchema] =
+    useState<TaskFormSchema>(EMPTY_SCHEMA);
+  const [formSchemaValue, setFormSchemaValue] = useState(
+    stringifyJson(EMPTY_SCHEMA.formSchema)
+  );
+  const [uiSchemaValue, setUiSchemaValue] = useState(
+    stringifyJson(EMPTY_SCHEMA.uiSchema)
+  );
   const [createFormSchemaValue, setCreateFormSchemaValue] = useState(
     stringifyJson(EMPTY_SCHEMA.createFormSchema)
   );
@@ -122,7 +139,8 @@ const TaskFormSettingsPage = () => {
 
   const setSchemaEditors = (schema: TaskFormSchema) => {
     const workflowDefinitionRef =
-      schema.workflowDefinitionRef ?? getDefaultWorkflowDefinitionRef(schema.taskType);
+      schema.workflowDefinitionRef ??
+      getDefaultWorkflowDefinitionRef(schema.taskType);
     setSelectedSchema(schema);
     form.setFieldsValue({
       ...schema,
@@ -133,9 +151,13 @@ const TaskFormSettingsPage = () => {
     setCreateFormSchemaValue(
       stringifyJson(schema.createFormSchema ?? schema.formSchema)
     );
-    setCreateUiSchemaValue(stringifyJson(schema.createUiSchema ?? schema.uiSchema));
+    setCreateUiSchemaValue(
+      stringifyJson(schema.createUiSchema ?? schema.uiSchema)
+    );
     setTransitionFormsValue(stringifyJson(schema.transitionForms ?? {}));
-    setDefaultStageMappingsValue(stringifyJson(schema.defaultStageMappings ?? {}));
+    setDefaultStageMappingsValue(
+      stringifyJson(schema.defaultStageMappings ?? {})
+    );
     setWorkflowDefinitionValue('{}');
     if (workflowDefinitionRef) {
       void getWorkflowDefinitionByName(workflowDefinitionRef)
@@ -271,11 +293,15 @@ const TaskFormSettingsPage = () => {
                 dataSource={schemas}
                 renderItem={(schema) => (
                   <List.Item
-                    className={schema.id === selectedSchema.id ? 'bg-grey-1' : ''}
+                    className={
+                      schema.id === selectedSchema.id ? 'bg-grey-1' : ''
+                    }
                     data-testid={`task-form-list-item-${schema.name}`}
                     onClick={() => handleSelectSchema(schema)}>
                     <List.Item.Meta
-                      description={`${schema.taskType} / ${schema.taskCategory ?? '-'}`}
+                      description={`${schema.taskType} / ${
+                        schema.taskCategory ?? '-'
+                      }`}
                       title={schema.displayName ?? schema.name}
                     />
                   </List.Item>
@@ -313,7 +339,9 @@ const TaskFormSettingsPage = () => {
               <Form.Item label="Task Category" name="taskCategory">
                 <Input data-testid="task-form-category-input" />
               </Form.Item>
-              <Form.Item label="Workflow Definition" name="workflowDefinitionRef">
+              <Form.Item
+                label="Workflow Definition"
+                name="workflowDefinitionRef">
                 <Input data-testid="task-form-workflow-definition-input" />
               </Form.Item>
 
@@ -381,7 +409,9 @@ const TaskFormSettingsPage = () => {
               />
 
               <Space className="w-full justify-end m-t-md">
-                <Button data-testid="task-form-cancel-button" onClick={handleCreateNew}>
+                <Button
+                  data-testid="task-form-cancel-button"
+                  onClick={handleCreateNew}>
                   {t('label.cancel')}
                 </Button>
                 <Button

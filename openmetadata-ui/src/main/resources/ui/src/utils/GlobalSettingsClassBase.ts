@@ -937,7 +937,8 @@ class GlobalSettingsClassBase {
           },
           {
             label: 'Task Forms',
-            description: 'Manage the payload schemas and UI schemas used to create tasks.',
+            description:
+              'Manage the payload schemas and UI schemas used to create tasks.',
             isProtected: Boolean(isAdminUser),
             key: `${GlobalSettingsMenuCategory.GOVERNANCE}.${GlobalSettingOptions.TASK_FORMS}`,
             icon: GovernanceIcon,

@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,6 +27,11 @@
 import { cloneDeep, uniqBy } from 'lodash';
 import { TagLabel } from '../generated/type/tagLabel';
 import {
+  JsonSchemaObject,
+  resolveTaskFormSchema,
+  TaskFormSchema,
+} from '../rest/taskFormSchemasAPI';
+import {
   Task,
   TaskAvailableTransition,
   TaskCategory,
@@ -22,11 +39,9 @@ import {
   TaskPayload,
 } from '../rest/tasksAPI';
 import {
-  JsonSchemaObject,
-  resolveTaskFormSchema,
-  TaskFormSchema,
-} from '../rest/taskFormSchemasAPI';
-import { getNormalizedTaskPayload, isRecognizerFeedbackTask } from './TasksUtils';
+  getNormalizedTaskPayload,
+  isRecognizerFeedbackTask,
+} from './TasksUtils';
 
 export type TaskFormHandlerType =
   | 'descriptionUpdate'
@@ -52,7 +67,10 @@ export type TaskFormHandlerConfig = {
   rejectedValue?: string;
 };
 
-const taskFormSchemaCache = new Map<string, Promise<TaskFormSchema | undefined>>();
+const taskFormSchemaCache = new Map<
+  string,
+  Promise<TaskFormSchema | undefined>
+>();
 const taskCategoryValues = {
   Approval: 'Approval' as TaskCategory,
   DataAccess: 'DataAccess' as TaskCategory,
@@ -268,8 +286,16 @@ const ownershipUpdateSchema: TaskFormSchema = {
     type: 'object',
     additionalProperties: true,
     properties: {
-      currentOwners: { type: 'array', title: 'Current Owners', items: { type: 'object' } },
-      newOwners: { type: 'array', title: 'New Owners', items: { type: 'object' } },
+      currentOwners: {
+        type: 'array',
+        title: 'Current Owners',
+        items: { type: 'object' },
+      },
+      newOwners: {
+        type: 'array',
+        title: 'New Owners',
+        items: { type: 'object' },
+      },
     },
   },
   uiSchema: {
@@ -409,9 +435,10 @@ export const getDefaultTaskFormSchema = (
   }
 
   if (
-    [TaskEntityType.TestCaseResolution, TaskEntityType.IncidentResolution].includes(
-      taskType
-    ) &&
+    [
+      TaskEntityType.TestCaseResolution,
+      TaskEntityType.IncidentResolution,
+    ].includes(taskType) &&
     taskCategory === taskCategories.Incident
   ) {
     return {
@@ -444,7 +471,10 @@ export const getDefaultTaskFormSchema = (
     return domainUpdateSchema;
   }
 
-  if (taskType === TaskEntityType.CustomTask && taskCategory === taskCategories.Custom) {
+  if (
+    taskType === TaskEntityType.CustomTask &&
+    taskCategory === taskCategories.Custom
+  ) {
     return customTaskSchema;
   }
 
@@ -464,7 +494,10 @@ export const getResolvedTaskFormSchema = async (
 
   const resolverPromise = (async () => {
     try {
-      const resolvedSchema = await resolveTaskFormSchema(taskType, taskCategory);
+      const resolvedSchema = await resolveTaskFormSchema(
+        taskType,
+        taskCategory
+      );
 
       return resolvedSchema ?? getDefaultTaskFormSchema(taskType, taskCategory);
     } catch {
@@ -513,8 +546,9 @@ const ensureTransitionCommentFields = (
   );
   const nextUiSchema = cloneDeep(uiSchema ?? {});
   const properties =
-    (nextFormSchema.properties as Record<string, JsonSchemaObject> | undefined) ??
-    {};
+    (nextFormSchema.properties as
+      | Record<string, JsonSchemaObject>
+      | undefined) ?? {};
 
   nextFormSchema.type = nextFormSchema.type ?? 'object';
   nextFormSchema.properties = {
@@ -545,7 +579,10 @@ const ensureTransitionCommentFields = (
 
 export const getTaskTransitionFormSchema = (
   taskFormSchema?: TaskFormSchema,
-  transition?: Pick<TaskAvailableTransition, 'id' | 'formRef' | 'requiresComment'>
+  transition?: Pick<
+    TaskAvailableTransition,
+    'id' | 'formRef' | 'requiresComment'
+  >
 ) => {
   const transitionConfig = getTransitionFormConfig(taskFormSchema, transition);
   const transitionSchema =
@@ -561,7 +598,10 @@ export const getTaskTransitionFormSchema = (
 
 export const getTaskTransitionUiSchema = (
   taskFormSchema?: TaskFormSchema,
-  transition?: Pick<TaskAvailableTransition, 'id' | 'formRef' | 'requiresComment'>
+  transition?: Pick<
+    TaskAvailableTransition,
+    'id' | 'formRef' | 'requiresComment'
+  >
 ) => {
   const transitionConfig = getTransitionFormConfig(taskFormSchema, transition);
   const transitionUiSchema =
@@ -579,7 +619,9 @@ export const hasTaskFormFields = (schema?: JsonSchemaObject) => {
   const properties = schema?.properties;
 
   return Boolean(
-    properties && typeof properties === 'object' && Object.keys(properties).length > 0
+    properties &&
+      typeof properties === 'object' &&
+      Object.keys(properties).length > 0
   );
 };
 
@@ -822,7 +864,8 @@ export const getEditableTaskPayload = (
       (payload[addTagsField] as TagLabel[] | undefined) ??
       (payload.tagsToAdd as TagLabel[] | undefined) ??
       normalizedPayload.suggestedTags.filter(
-        (tag) => !currentTags.some((currentTag) => currentTag.tagFQN === tag.tagFQN)
+        (tag) =>
+          !currentTags.some((currentTag) => currentTag.tagFQN === tag.tagFQN)
       );
     const tagsToRemove =
       (payload[removeTagsField] as TagLabel[] | undefined) ??
@@ -871,14 +914,17 @@ export const getTaskResolutionNewValue = (
 
   if (resolutionConfig.mode === 'tagMerge') {
     const currentTags =
-      (payload[resolutionConfig.currentField ?? 'currentTags'] as TagLabel[] | undefined) ??
-      [];
+      (payload[resolutionConfig.currentField ?? 'currentTags'] as
+        | TagLabel[]
+        | undefined) ?? [];
     const tagsToAdd =
-      (payload[resolutionConfig.addField ?? 'tagsToAdd'] as TagLabel[] | undefined) ??
-      [];
+      (payload[resolutionConfig.addField ?? 'tagsToAdd'] as
+        | TagLabel[]
+        | undefined) ?? [];
     const tagsToRemove =
-      (payload[resolutionConfig.removeField ?? 'tagsToRemove'] as TagLabel[] | undefined) ??
-      [];
+      (payload[resolutionConfig.removeField ?? 'tagsToRemove'] as
+        | TagLabel[]
+        | undefined) ?? [];
     const removedTagFqns = new Set(tagsToRemove.map((tag) => tag.tagFQN));
     const updatedTags = uniqBy(
       [
@@ -918,8 +964,12 @@ export const getTaskResolutionNewValue = (
   return undefined;
 };
 
-export const shouldRequireTaskResolutionValue = (uiSchema?: JsonSchemaObject) => {
+export const shouldRequireTaskResolutionValue = (
+  uiSchema?: JsonSchemaObject
+) => {
   const resolutionConfig = getResolutionConfig(uiSchema);
 
-  return resolutionConfig.mode === 'field' || resolutionConfig.mode === 'tagMerge';
+  return (
+    resolutionConfig.mode === 'field' || resolutionConfig.mode === 'tagMerge'
+  );
 };

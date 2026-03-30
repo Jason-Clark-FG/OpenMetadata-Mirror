@@ -138,5 +138,4 @@ describe('Test Popover content component', () => {
 
     expect(onConfirmation).toHaveBeenCalled();
   });
-
 });

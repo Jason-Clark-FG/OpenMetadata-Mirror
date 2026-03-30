@@ -22,7 +22,10 @@ import {
 } from '../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../utils/EntityUtils';
 import { entityDisplayName, prepareFeedLink } from '../../utils/FeedUtils';
-import { getTaskDetailPathFromTask, getTaskDisplayId } from '../../utils/TasksUtils';
+import {
+  getTaskDetailPathFromTask,
+  getTaskDisplayId,
+} from '../../utils/TasksUtils';
 import { ActivityFeedTabs } from '../ActivityFeed/ActivityFeedTab/ActivityFeedTab.interface';
 import ProfilePicture from '../common/ProfilePicture/ProfilePicture';
 import { SourceType } from '../SearchedData/SearchedData.interface';

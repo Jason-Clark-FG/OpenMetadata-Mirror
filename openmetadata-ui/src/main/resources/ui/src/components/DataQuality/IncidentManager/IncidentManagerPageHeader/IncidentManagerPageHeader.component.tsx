@@ -79,10 +79,8 @@ const IncidentManagerPageHeader = ({
     fqn: string;
     dimensionKey?: string;
   }>();
-  const {
-    testCaseResolutionStatus,
-    updateTestCaseIncidentStatus,
-  } = useActivityFeedProvider();
+  const { testCaseResolutionStatus, updateTestCaseIncidentStatus } =
+    useActivityFeedProvider();
 
   const { ownerDisplayName, ownerRef } = useMemo(() => {
     return getCommonExtraInfoForVersionDetails(
@@ -189,7 +187,9 @@ const IncidentManagerPageHeader = ({
   };
 
   const incidentStateId = useMemo(() => {
-    const payload = incidentTask?.payload as TestCaseResolutionPayload | undefined;
+    const payload = incidentTask?.payload as
+      | TestCaseResolutionPayload
+      | undefined;
 
     return payload?.testCaseResolutionStatusId;
   }, [incidentTask]);
@@ -342,12 +342,7 @@ const IncidentManagerPageHeader = ({
         </Typography>
       </>
     );
-  }, [
-    testCaseStatusData,
-    isLoading,
-    incidentTask,
-    hasEditStatusPermission,
-  ]);
+  }, [testCaseStatusData, isLoading, incidentTask, hasEditStatusPermission]);
 
   return (
     <Space wrap align="center" className="incident-manager-header w-full ">

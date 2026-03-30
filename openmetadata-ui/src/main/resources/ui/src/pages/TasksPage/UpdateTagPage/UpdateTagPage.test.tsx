@@ -109,19 +109,21 @@ jest.mock('../../../utils/TasksUtils', () => ({
   getTaskAssignee: jest.fn().mockReturnValue(MOCK_TASK_ASSIGNEE),
 }));
 
-const mockPayloadSchemaFields = jest.fn().mockImplementation(({ payload, onChange }) => (
-  <button
-    data-testid="mock-tags-tabs"
-    onClick={() =>
-      onChange?.({
-        ...payload,
-        tagsToAdd: [mockSuggestedTag],
-        tagsToRemove: [],
-      })
-    }>
-    TagsTabs.component
-  </button>
-));
+const mockPayloadSchemaFields = jest
+  .fn()
+  .mockImplementation(({ payload, onChange }) => (
+    <button
+      data-testid="mock-tags-tabs"
+      onClick={() =>
+        onChange?.({
+          ...payload,
+          tagsToAdd: [mockSuggestedTag],
+          tagsToRemove: [],
+        })
+      }>
+      TagsTabs.component
+    </button>
+  ));
 
 jest.mock('../shared/Assignees', () =>
   jest.fn().mockImplementation(() => <div>Assignees.component</div>)

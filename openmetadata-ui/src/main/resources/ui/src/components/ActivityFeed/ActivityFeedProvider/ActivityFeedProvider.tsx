@@ -67,7 +67,6 @@ import {
   getTaskById,
   listMyAssignedTasks,
   listMyCreatedTasks,
-  listMyOwnedTasks,
   listMyVisibleTasks,
   listTasks,
   Task,
@@ -265,9 +264,13 @@ const ActivityFeedProvider = ({ children, user }: Props) => {
           taskResponse = await listTasks({
             statusGroup: taskStatusGroup,
             assignee:
-              feedFilterType === FeedFilter.ASSIGNED_BY ? undefined : assigneeFqn,
+              feedFilterType === FeedFilter.ASSIGNED_BY
+                ? undefined
+                : assigneeFqn,
             createdBy:
-              feedFilterType === FeedFilter.ASSIGNED_BY ? assigneeFqn : undefined,
+              feedFilterType === FeedFilter.ASSIGNED_BY
+                ? assigneeFqn
+                : undefined,
             after,
             limit,
             domain,

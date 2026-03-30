@@ -54,12 +54,7 @@ const TestCaseIncidentTab = () => {
 
   const handleFeedFetchFromFeedList = useCallback(
     (after?: string) => {
-      getTaskData(
-        undefined,
-        after,
-        EntityType.TEST_CASE,
-        decodedFqn
-      );
+      getTaskData(undefined, after, EntityType.TEST_CASE, decodedFqn);
     },
     [decodedFqn, getTaskData]
   );

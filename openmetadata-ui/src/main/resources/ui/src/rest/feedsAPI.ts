@@ -259,7 +259,10 @@ export const getActivityByEntityLink = async (
   return response.data;
 };
 
-export const getActivityCount = async (params?: { days?: number; domain?: string }) => {
+export const getActivityCount = async (params?: {
+  days?: number;
+  domain?: string;
+}) => {
   const response = await APIClient.get<number>(`${ACTIVITY_BASE_URL}/count`, {
     params,
   });

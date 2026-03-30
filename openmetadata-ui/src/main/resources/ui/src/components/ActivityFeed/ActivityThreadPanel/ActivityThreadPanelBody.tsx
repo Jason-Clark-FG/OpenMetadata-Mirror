@@ -81,7 +81,8 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 
   const [isThreadLoading, setIsThreadLoading] = useState(false);
 
-  const [taskStatusGroup, setTaskStatusGroup] = useState<TaskStatusGroup>('open');
+  const [taskStatusGroup, setTaskStatusGroup] =
+    useState<TaskStatusGroup>('open');
 
   const isTaskType = view === 'tasks';
 
@@ -248,7 +249,14 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
 
   useEffect(() => {
     getThreads();
-  }, [getTaskData, isConversationType, isTaskType, taskStatusGroup, threadLink, view]);
+  }, [
+    getTaskData,
+    isConversationType,
+    isTaskType,
+    taskStatusGroup,
+    threadLink,
+    view,
+  ]);
 
   useEffect(() => {
     fetchMoreThread(
