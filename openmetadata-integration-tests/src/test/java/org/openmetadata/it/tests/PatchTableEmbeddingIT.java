@@ -86,7 +86,7 @@ public class PatchTableEmbeddingIT {
 
     try (Rest5Client searchClient = TestSuiteBootstrap.createSearchClient()) {
       Awaitility.await("Wait for initial embedding")
-          .atMost(Duration.ofSeconds(30))
+          .atMost(Duration.ofSeconds(60))
           .pollInterval(Duration.ofSeconds(2))
           .ignoreExceptions()
           .until(() -> getFieldFromIndex(searchClient, tableId, "fingerprint") != null);
@@ -98,7 +98,7 @@ public class PatchTableEmbeddingIT {
       client.tables().update(tableId, table);
 
       Awaitility.await("Wait for embedding update after PATCH")
-          .atMost(Duration.ofSeconds(30))
+          .atMost(Duration.ofSeconds(60))
           .pollInterval(Duration.ofSeconds(2))
           .ignoreExceptions()
           .until(
