@@ -188,8 +188,7 @@ const ExploreQuickFilters: FC<ExploreQuickFiltersProps> = ({
         isNLPEnabled
       );
 
-      const buckets =
-        res.data.aggregations[`sterms#${searchKeyToUse}`].buckets;
+      const buckets = res.data.aggregations[`sterms#${searchKeyToUse}`].buckets;
       setOptions(uniqWith(getOptionsFromAggregationBucket(buckets), isEqual));
     } catch (error) {
       showErrorToast(error as AxiosError);
