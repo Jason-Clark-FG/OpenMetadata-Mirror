@@ -93,7 +93,6 @@ import {
   POSTGRES,
   POWERBI,
   PRESTO,
-  PUBSUB,
   QLIK_SENSE,
   QUICKSIGHT,
   REDASH,
@@ -140,6 +139,10 @@ import {
   StorageServiceTypeSmallCaseType,
 } from '../enums/service.enum';
 import { DriveServiceType } from '../generated/api/services/createDriveService';
+import {
+  ConfigObject,
+  WorkflowType,
+} from '../generated/entity/automations/workflow';
 import { StorageServiceType } from '../generated/entity/data/container';
 import { DashboardServiceType } from '../generated/entity/data/dashboard';
 import { DatabaseServiceType } from '../generated/entity/data/database';
@@ -166,7 +169,10 @@ import { getMlmodelConfig } from './MlmodelServiceUtils';
 import { getPipelineConfig } from './PipelineServiceUtils';
 import { getSearchServiceConfig } from './SearchServiceUtils';
 import { getSecurityConfig } from './SecurityServiceUtils';
-import { getSearchIndexFromService } from './ServiceUtils';
+import {
+  getSearchIndexFromService,
+  getTestConnectionName,
+} from './ServiceUtils';
 import { getStorageConfig } from './StorageServiceUtils';
 import { customServiceComparator } from './StringsUtils';
 
