@@ -6689,11 +6689,15 @@ public class DataContractResourceIT extends BaseEntityIT<DataContract, CreateDat
     DataContractResult result = SdkClients.adminClient().dataContracts().validate(contract.getId());
 
     assertNotNull(result);
-    assertNotNull(result.getContractExecutionStatus());
     assertNotNull(result.getSemanticsValidation());
-    assertNotNull(
+    assertEquals(
+        1,
         result.getSemanticsValidation().getFailed(),
-        "SemanticsValidation.failed must not be null — NPE guard");
+        "Exactly one semantics rule (the empty one) should be marked as failed");
+    assertEquals(
+        1,
+        result.getSemanticsValidation().getTotal(),
+        "Total semantics rules evaluated should be exactly one for this contract");
     assertEquals(
         ContractExecutionStatus.Failed,
         result.getContractExecutionStatus(),

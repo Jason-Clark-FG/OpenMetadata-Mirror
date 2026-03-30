@@ -1208,7 +1208,8 @@ public class DataContractRepository extends EntityRepository<DataContract> {
           dataContract.getFullyQualifiedName(),
           e.getMessage(),
           e);
-      validation.withFailed(0).withPassed(0).withTotal(0);
+      int totalRules = Optional.ofNullable(dataContract.getSemantics()).map(List::size).orElse(0);
+      validation.withFailed(totalRules).withPassed(0).withTotal(totalRules);
     }
 
     return validation;
