@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { test as base, expect, Page } from '@playwright/test';
+import { expect, Page, test as base } from '@playwright/test';
 import { SearchIndex } from '../../../src/enums/search.enum';
 import { KPI_DATA } from '../../constant/dataInsight';
 import { SidebarItem } from '../../constant/sidebar';
