@@ -531,11 +531,6 @@ public interface CollectionDAO {
     }
 
     @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
-
-    @Override
     default Class<DashboardService> getEntityClass() {
       return DashboardService.class;
     }
@@ -615,11 +610,6 @@ public interface CollectionDAO {
     default Class<DatabaseService> getEntityClass() {
       return DatabaseService.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface MetadataServiceDAO extends EntityDAO<MetadataService> {
@@ -631,11 +621,6 @@ public interface CollectionDAO {
     @Override
     default Class<MetadataService> getEntityClass() {
       return MetadataService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -649,11 +634,6 @@ public interface CollectionDAO {
     default Class<TestConnectionDefinition> getEntityClass() {
       return TestConnectionDefinition.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface StorageServiceDAO extends EntityDAO<StorageService> {
@@ -665,11 +645,6 @@ public interface CollectionDAO {
     @Override
     default Class<StorageService> getEntityClass() {
       return StorageService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -813,11 +788,6 @@ public interface CollectionDAO {
     default Class<SearchService> getEntityClass() {
       return SearchService.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface SecurityServiceDAO extends EntityDAO<SecurityService> {
@@ -829,11 +799,6 @@ public interface CollectionDAO {
     @Override
     default Class<SecurityService> getEntityClass() {
       return SecurityService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -847,11 +812,6 @@ public interface CollectionDAO {
     default Class<ApiService> getEntityClass() {
       return ApiService.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface DriveServiceDAO extends EntityDAO<DriveService> {
@@ -863,11 +823,6 @@ public interface CollectionDAO {
     @Override
     default Class<DriveService> getEntityClass() {
       return DriveService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -3464,11 +3419,6 @@ public interface CollectionDAO {
     default Class<Bot> getEntityClass() {
       return Bot.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface DomainDAO extends EntityDAO<Domain> {
@@ -3653,11 +3603,6 @@ public interface CollectionDAO {
     @Override
     default Class<EventSubscription> getEntityClass() {
       return EventSubscription.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     @SqlQuery("SELECT json FROM event_subscription_entity")
@@ -3959,11 +3904,6 @@ public interface CollectionDAO {
     default Class<MessagingService> getEntityClass() {
       return MessagingService.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface MetricDAO extends EntityDAO<Metric> {
@@ -4029,11 +3969,6 @@ public interface CollectionDAO {
     @Override
     default Class<Glossary> getEntityClass() {
       return Glossary.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -4365,11 +4300,6 @@ public interface CollectionDAO {
     default Class<PipelineService> getEntityClass() {
       return PipelineService.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface MlModelServiceDAO extends EntityDAO<MlModelService> {
@@ -4381,11 +4311,6 @@ public interface CollectionDAO {
     @Override
     default Class<MlModelService> getEntityClass() {
       return MlModelService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
@@ -4806,7 +4731,7 @@ public interface CollectionDAO {
         bindMap.put("beforeAfterId", id);
       }
       // Add filter params
-      filter.getQueryParams().forEach(bindMap::put);
+      bindMap.putAll(filter.getQueryParams());
       return bindMap;
     }
 
@@ -4832,11 +4757,6 @@ public interface CollectionDAO {
     @Override
     default Class<Classification> getEntityClass() {
       return Classification.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     // Much more efficient: Use IN clause with proper index usage
@@ -5049,8 +4969,7 @@ public interface CollectionDAO {
       String targetFQNPrefixHash =
           requiresFqnHash ? FullyQualifiedName.buildHash(targetFQNPrefix) : targetFQNPrefix;
       Map<String, List<TagLabel>> resultSet = new LinkedHashMap<>();
-      List<Pair<String, TagLabel>> tags =
-          getTagsInternalByPrefix(new String[] {targetFQNPrefixHash, postfix});
+      List<Pair<String, TagLabel>> tags = getTagsInternalByPrefix(targetFQNPrefixHash, postfix);
       tags.forEach(
           pair -> {
             String targetHash = pair.getLeft();
@@ -5079,6 +4998,17 @@ public interface CollectionDAO {
     @UseRowMapper(TagLabelWithFQNHashMapper.class)
     List<TagLabelWithFQNHash> getTagsInternalBatch(
         @BindListFQN("targetFQNHashes") List<String> targetFQNHashes);
+
+    @SqlQuery(
+        "SELECT targetFQNHash, source, tagFQN, labelType, state, reason, appliedAt, appliedBy, metadata "
+            + "FROM tag_usage "
+            + "WHERE targetFQNHash IN (<targetFQNHashes>) "
+            + "AND tagFQN LIKE :tagFQNPrefix "
+            + "ORDER BY targetFQNHash, tagFQN")
+    @UseRowMapper(TagLabelWithFQNHashMapper.class)
+    List<TagLabelWithFQNHash> getCertTagsInternalBatch(
+        @BindListFQN("targetFQNHashes") List<String> targetFQNHashes,
+        @Bind("tagFQNPrefix") String tagFQNPrefix);
 
     /**
      * Batch fetch derived tags for multiple glossary term FQNs. Returns a map from glossary term
@@ -5217,8 +5147,22 @@ public interface CollectionDAO {
     @SqlUpdate("DELETE FROM tag_usage where targetFQNHash = :targetFQNHash")
     void deleteTagsByTarget(@BindFQN("targetFQNHash") String targetFQNHash);
 
+    @SqlUpdate(
+        "DELETE FROM tag_usage WHERE source = :source AND tagFQN LIKE :tagFQNPrefix AND targetFQNHash = :targetFQNHash")
+    void deleteTagsByPrefixAndTarget(
+        @Bind("source") int source,
+        @Bind("tagFQNPrefix") String tagFQNPrefix,
+        @BindFQN("targetFQNHash") String targetFQNHash);
+
     @SqlUpdate("DELETE FROM tag_usage WHERE targetFQNHash IN (<targetFQNHashes>)")
     void deleteTagsByTargets(@BindListFQN("targetFQNHashes") List<String> targetFQNs);
+
+    @SqlUpdate(
+        "DELETE FROM tag_usage WHERE source = :source AND tagFQN LIKE :tagFQNPrefix AND targetFQNHash IN (<targetFQNHashes>)")
+    void deleteTagsByPrefixAndTargets(
+        @Bind("source") int source,
+        @Bind("tagFQNPrefix") String tagFQNPrefix,
+        @BindListFQN("targetFQNHashes") List<String> targetFQNHashes);
 
     @SqlUpdate(
         "DELETE FROM tag_usage where tagFQNHash = :tagFqnHash AND targetFQNHash LIKE :targetFQNHash")
@@ -5355,6 +5299,12 @@ public interface CollectionDAO {
     class TagLabelMapper implements RowMapper<TagLabel> {
       @Override
       public TagLabel map(ResultSet r, StatementContext ctx) throws SQLException {
+        TagLabelMetadata metadata = null;
+        try {
+          metadata = JsonUtils.readValue(r.getString("metadata"), TagLabelMetadata.class);
+        } catch (Exception e) {
+          // Ignore unknown fields from future schema versions — metadata is best-effort
+        }
         return new TagLabel()
             .withSource(TagLabel.TagSource.values()[r.getInt("source")])
             .withLabelType(TagLabel.LabelType.values()[r.getInt("labelType")])
@@ -5363,7 +5313,7 @@ public interface CollectionDAO {
             .withReason(r.getString("reason"))
             .withAppliedAt(r.getTimestamp("appliedAt"))
             .withAppliedBy(r.getString("appliedBy"))
-            .withMetadata(JsonUtils.readValue(r.getString("metadata"), TagLabelMetadata.class));
+            .withMetadata(metadata);
       }
     }
 
@@ -5412,6 +5362,12 @@ public interface CollectionDAO {
     class TagLabelWithFQNHashMapper implements RowMapper<TagLabelWithFQNHash> {
       @Override
       public TagLabelWithFQNHash map(ResultSet rs, StatementContext ctx) throws SQLException {
+        TagLabelMetadata metadata = null;
+        try {
+          metadata = JsonUtils.readValue(rs.getString("metadata"), TagLabelMetadata.class);
+        } catch (Exception e) {
+          // Ignore unknown fields from future schema versions — metadata is best-effort
+        }
         TagLabelWithFQNHash tag = new TagLabelWithFQNHash();
         tag.setTargetFQNHash(rs.getString("targetFQNHash"));
         tag.setSource(rs.getInt("source"));
@@ -5421,7 +5377,7 @@ public interface CollectionDAO {
         tag.setReason(rs.getString("reason"));
         tag.setAppliedAt(rs.getTimestamp("appliedAt"));
         tag.setAppliedBy(rs.getString("appliedBy"));
-        tag.setMetadata(JsonUtils.readValue(rs.getString("metadata"), TagLabelMetadata.class));
+        tag.setMetadata(metadata);
         return tag;
       }
     }
@@ -5441,10 +5397,22 @@ public interface CollectionDAO {
 
       public TagLabel toTagLabel() {
         TagLabel tagLabel = new TagLabel();
-        tagLabel.setSource(TagLabel.TagSource.values()[this.source]);
+        TagLabel.TagSource[] sources = TagLabel.TagSource.values();
+        tagLabel.setSource(
+            this.source >= 0 && this.source < sources.length
+                ? sources[this.source]
+                : TagLabel.TagSource.CLASSIFICATION);
         tagLabel.setTagFQN(this.tagFQN);
-        tagLabel.setLabelType(TagLabel.LabelType.values()[this.labelType]);
-        tagLabel.setState(TagLabel.State.values()[this.state]);
+        TagLabel.LabelType[] labelTypes = TagLabel.LabelType.values();
+        tagLabel.setLabelType(
+            this.labelType >= 0 && this.labelType < labelTypes.length
+                ? labelTypes[this.labelType]
+                : TagLabel.LabelType.MANUAL);
+        TagLabel.State[] states = TagLabel.State.values();
+        tagLabel.setState(
+            this.state >= 0 && this.state < states.length
+                ? states[this.state]
+                : TagLabel.State.CONFIRMED);
         tagLabel.setReason(this.reason);
         tagLabel.setAppliedAt(this.appliedAt);
         tagLabel.setAppliedBy(this.appliedBy);
@@ -5869,11 +5837,6 @@ public interface CollectionDAO {
     default Class<Role> getEntityClass() {
       return Role.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface PersonaDAO extends EntityDAO<Persona> {
@@ -5885,11 +5848,6 @@ public interface CollectionDAO {
     @Override
     default Class<Persona> getEntityClass() {
       return Persona.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     @Override
@@ -5926,11 +5884,6 @@ public interface CollectionDAO {
     @Override
     default Class<Team> getEntityClass() {
       return Team.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     @Override
@@ -6241,7 +6194,7 @@ public interface CollectionDAO {
     }
 
     /** Usage details with entity ID for batch operations */
-    public static class UsageDetailsWithId {
+    class UsageDetailsWithId {
       private final String entityId;
       private final UsageDetails usageDetails;
 
@@ -6295,11 +6248,6 @@ public interface CollectionDAO {
     @Override
     default Class<User> getEntityClass() {
       return User.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     @Override
@@ -6943,11 +6891,6 @@ public interface CollectionDAO {
     }
 
     @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
-
-    @Override
     default boolean supportsSoftDelete() {
       return false;
     }
@@ -6962,11 +6905,6 @@ public interface CollectionDAO {
     @Override
     default Class<TestDefinition> getEntityClass() {
       return TestDefinition.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
 
     @Override
@@ -7025,8 +6963,8 @@ public interface CollectionDAO {
 
       if (enabled != null) {
         String enabledValue = Boolean.parseBoolean(enabled) ? "TRUE" : "FALSE";
-        mysqlCondition.append("AND enabled=" + enabledValue + " ");
-        psqlCondition.append("AND enabled=" + enabledValue + " ");
+        mysqlCondition.append("AND enabled=").append(enabledValue).append(" ");
+        psqlCondition.append("AND enabled=").append(enabledValue).append(" ");
       }
 
       return listBefore(
@@ -7094,8 +7032,8 @@ public interface CollectionDAO {
 
       if (enabled != null) {
         String enabledValue = Boolean.parseBoolean(enabled) ? "TRUE" : "FALSE";
-        mysqlCondition.append("AND enabled=" + enabledValue + " ");
-        psqlCondition.append("AND enabled=" + enabledValue + " ");
+        mysqlCondition.append("AND enabled=").append(enabledValue).append(" ");
+        psqlCondition.append("AND enabled=").append(enabledValue).append(" ");
       }
 
       return listAfter(
@@ -8940,11 +8878,6 @@ public interface CollectionDAO {
     default Class<Kpi> getEntityClass() {
       return Kpi.class;
     }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
-    }
   }
 
   interface WorkflowDAO extends EntityDAO<Workflow> {
@@ -9939,11 +9872,6 @@ public interface CollectionDAO {
     @Override
     default Class<org.openmetadata.schema.entity.services.LLMService> getEntityClass() {
       return org.openmetadata.schema.entity.services.LLMService.class;
-    }
-
-    @Override
-    default String getNameHashColumn() {
-      return "nameHash";
     }
   }
 
