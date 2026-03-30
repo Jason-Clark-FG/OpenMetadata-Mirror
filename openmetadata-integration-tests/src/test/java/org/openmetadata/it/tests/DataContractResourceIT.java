@@ -6664,4 +6664,39 @@ public class DataContractResourceIT extends BaseEntityIT<DataContract, CreateDat
             .getIdentities()
             .contains("manager@company.com"));
   }
+
+  @Test
+  void testValidateContractWithEmptySemanticsRuleDoesNotThrowNPE(TestNamespace ns) {
+    Table table = createTestTable(ns);
+
+    SemanticsRule emptyRule =
+        new SemanticsRule()
+            .withName("empty_rule")
+            .withDescription("Rule with empty expression")
+            .withRule("\"\"")
+            .withEnabled(true);
+
+    CreateDataContract request =
+        new CreateDataContract()
+            .withName(ns.prefix("empty_semantics"))
+            .withEntity(table.getEntityReference())
+            .withEntityStatus(EntityStatus.APPROVED)
+            .withSemantics(List.of(emptyRule))
+            .withDescription("Contract with an empty semantics rule");
+
+    DataContract contract = createEntity(request);
+
+    DataContractResult result = SdkClients.adminClient().dataContracts().validate(contract.getId());
+
+    assertNotNull(result);
+    assertNotNull(result.getContractExecutionStatus());
+    assertNotNull(result.getSemanticsValidation());
+    assertNotNull(
+        result.getSemanticsValidation().getFailed(),
+        "SemanticsValidation.failed must not be null — NPE guard");
+    assertEquals(
+        ContractExecutionStatus.Failed,
+        result.getContractExecutionStatus(),
+        "Empty rule should be treated as a failed semantics check");
+  }
 }
