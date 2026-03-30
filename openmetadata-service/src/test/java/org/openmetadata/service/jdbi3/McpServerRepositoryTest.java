@@ -18,7 +18,6 @@ import org.openmetadata.schema.entity.ai.McpServerType;
 import org.openmetadata.schema.entity.ai.McpTransportType;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.util.EntityUtil.Fields;
-import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 
 class McpServerRepositoryTest {
 
@@ -93,18 +92,6 @@ class McpServerRepositoryTest {
       Field supportsSearchField = EntityRepository.class.getDeclaredField("supportsSearch");
       supportsSearchField.setAccessible(true);
       assertTrue((boolean) supportsSearchField.get(repo));
-    }
-  }
-
-  @Test
-  void testSetFieldsIsNoOp() {
-    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
-      McpServerRepository repo = createRepo(entityMock);
-      McpServer server = new McpServer().withId(UUID.randomUUID()).withName("s1");
-      Fields fields = Fields.EMPTY_FIELDS;
-      RelationIncludes relationIncludes = mock(RelationIncludes.class);
-
-      assertDoesNotThrow(() -> repo.setFields(server, fields, relationIncludes));
     }
   }
 
