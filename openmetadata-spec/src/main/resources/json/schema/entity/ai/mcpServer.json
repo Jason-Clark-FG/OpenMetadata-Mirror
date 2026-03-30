@@ -556,25 +556,6 @@
         {"name": "Custom"}
       ]
     },
-    "piiType": {
-      "javaType": "org.openmetadata.schema.entity.ai.McpPiiType",
-      "description": "Type of PII",
-      "type": "string",
-      "enum": ["Name", "Email", "Phone", "SSN", "Address", "DateOfBirth", "FinancialData", "HealthData", "BiometricData", "LocationData", "Other"],
-      "javaEnums": [
-        {"name": "Name"},
-        {"name": "Email"},
-        {"name": "Phone"},
-        {"name": "SSN"},
-        {"name": "Address"},
-        {"name": "DateOfBirth"},
-        {"name": "FinancialData"},
-        {"name": "HealthData"},
-        {"name": "BiometricData"},
-        {"name": "LocationData"},
-        {"name": "Other"}
-      ]
-    },
     "mcpResource": {
       "type": "object",
       "javaType": "org.openmetadata.schema.entity.ai.McpResource",
@@ -614,9 +595,10 @@
           "properties": {
             "sensitivityLevel": {"$ref": "#/definitions/sensitivityLevel"},
             "containsPII": {"type": "boolean"},
-            "piiTypes": {
+            "tags": {
+              "description": "Tags for data classification including PII types",
               "type": "array",
-              "items": {"$ref": "#/definitions/piiType"}
+              "items": {"$ref": "../../type/tagLabel.json"}
             },
             "dataCategories": {
               "type": "array",

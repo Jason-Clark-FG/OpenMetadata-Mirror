@@ -1232,27 +1232,13 @@ export interface ResourceDataClassification {
     complianceRequirements?: string[];
     containsPII?:            boolean;
     dataCategories?:         string[];
-    piiTypes?:               PiiType[];
-    retentionPeriod?:        string;
-    sensitivityLevel?:       SensitivityLevel;
+    /**
+     * Tags for data classification including PII types
+     */
+    tags?:             TagLabel[];
+    retentionPeriod?:  string;
+    sensitivityLevel?: SensitivityLevel;
     [property: string]: any;
-}
-
-/**
- * Type of PII
- */
-export enum PiiType {
-    Address = "Address",
-    BiometricData = "BiometricData",
-    DateOfBirth = "DateOfBirth",
-    Email = "Email",
-    FinancialData = "FinancialData",
-    HealthData = "HealthData",
-    LocationData = "LocationData",
-    Name = "Name",
-    Other = "Other",
-    Phone = "Phone",
-    Ssn = "SSN",
 }
 
 /**
