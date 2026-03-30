@@ -107,6 +107,7 @@ import securitySafe from '../assets/svg/security-safe.svg';
 import googleDrive from '../assets/svg/service-icon-google-drive.svg';
 import hex from '../assets/svg/service-icon-hex.svg';
 import mlflow from '../assets/svg/service-icon-mlflow.svg';
+import pubsub from '../assets/svg/service-icon-pubsub.svg';
 import sftp from '../assets/svg/service-icon-sftp.svg';
 import teradata from '../assets/svg/teradata.svg';
 import topicDefault from '../assets/svg/topic.svg';
@@ -150,6 +151,7 @@ export const GLUE = glue;
 export const MARIADB = mariadb;
 export const VERTICA = vertica;
 export const KAFKA = kafka;
+export const PUBSUB = pubsub;
 export const REDPANDA = redpanda;
 export const SUPERSET = superset;
 export const SYNAPSE = synapse;
@@ -462,6 +464,7 @@ export const BETA_SERVICES = [
   DatabaseServiceType.StarRocks,
   DriveServiceType.SFTP,
   DatabaseServiceType.Informix,
+  DatabaseServiceType.MicrosoftAccess,
 ];
 
 export const TEST_CONNECTION_INITIAL_MESSAGE =

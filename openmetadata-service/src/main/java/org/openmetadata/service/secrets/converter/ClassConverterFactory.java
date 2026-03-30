@@ -52,6 +52,7 @@ import org.openmetadata.schema.services.connections.drive.GoogleDriveConnection;
 import org.openmetadata.schema.services.connections.mlmodel.VertexAIConnection;
 import org.openmetadata.schema.services.connections.pipeline.AirbyteConnection;
 import org.openmetadata.schema.services.connections.pipeline.AirflowConnection;
+import org.openmetadata.schema.services.connections.pipeline.AirflowRestApiConnection;
 import org.openmetadata.schema.services.connections.pipeline.MatillionConnection;
 import org.openmetadata.schema.services.connections.pipeline.MulesoftConnection;
 import org.openmetadata.schema.services.connections.pipeline.NifiConnection;
@@ -74,6 +75,7 @@ public final class ClassConverterFactory {
         Map.ofEntries(
             Map.entry(AirbyteConnection.class, new AirbyteConnectionClassConverter()),
             Map.entry(AirflowConnection.class, new AirflowConnectionClassConverter()),
+            Map.entry(AirflowRestApiConnection.class, new AirflowRestApiConnectionClassConverter()),
             Map.entry(BigQueryConnection.class, new BigQueryConnectionClassConverter()),
             Map.entry(BigTableConnection.class, new BigTableConnectionClassConverter()),
             Map.entry(DatalakeConnection.class, new DatalakeConnectionClassConverter()),
@@ -88,6 +90,8 @@ public final class ClassConverterFactory {
             Map.entry(GoogleDriveConnection.class, new GoogleDriveConnectionClassConverter()),
             Map.entry(HiveConnection.class, new HiveConnectionClassConverter()),
             Map.entry(LookerConnection.class, new LookerConnectionClassConverter()),
+            Map.entry(
+                MicrosoftAccessConnection.class, new MicrosoftAccessConnectionClassConverter()),
             Map.entry(MssqlConnection.class, new MssqlConnectionClassConverter()),
             Map.entry(MysqlConnection.class, new MysqlConnectionClassConverter()),
             Map.entry(RedshiftConnection.class, new RedshiftConnectionClassConverter()),
