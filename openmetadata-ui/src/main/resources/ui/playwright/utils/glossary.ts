@@ -1962,14 +1962,9 @@ export const getTreeNode = (page: Page, nodeId: string) =>
   getTreeDropdown(page).getByTestId(`tree-node-${nodeId}`);
 
 export const getSelectionControl = (page: Page, nodeId: string) =>
-  getTreeDropdown(page).getByTestId(
-    new RegExp(`^(radio|checkbox)-${nodeId}$`)
-  );
+  getTreeDropdown(page).getByTestId(new RegExp(`^(radio|checkbox)-${nodeId}$`));
 
-export const expandTreeNodeByName = async (
-  page: Page,
-  displayName: string
-) => {
+export const expandTreeNodeByName = async (page: Page, displayName: string) => {
   const tooltip = getTreeDropdown(page);
   const nodeText = tooltip.getByText(displayName, { exact: true });
   await expect(nodeText).toBeVisible({ timeout: 10000 });

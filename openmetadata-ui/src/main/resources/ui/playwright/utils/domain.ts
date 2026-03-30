@@ -1794,10 +1794,7 @@ export const openDataProductDrawer = async (page: Page, domain: Domain) => {
     'Add Data Product'
   );
 
-  await page
-    .getByTestId('name')
-    .locator('input')
-    .fill(`test-dp-${Date.now()}`);
+  await page.getByTestId('name').locator('input').fill(`test-dp-${Date.now()}`);
 
   const descriptionEditor = page.locator('[contenteditable="true"]').first();
   await descriptionEditor.waitFor({ state: 'visible', timeout: 10000 });
