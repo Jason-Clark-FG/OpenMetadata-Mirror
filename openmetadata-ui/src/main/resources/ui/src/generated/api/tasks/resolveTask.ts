@@ -23,6 +23,10 @@ export interface ResolveTask {
      */
     newValue?: string;
     /**
+     * Schema-driven resolution payload used for configurable task forms.
+     */
+    payload?: { [key: string]: any };
+    /**
      * How the task should be resolved.
      */
     resolutionType: ResolutionType;
