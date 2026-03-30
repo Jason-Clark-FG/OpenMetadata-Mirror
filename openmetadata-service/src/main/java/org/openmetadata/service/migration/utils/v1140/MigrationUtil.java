@@ -227,24 +227,27 @@ public class MigrationUtil {
     ObjectNode newInputNamespaceMap = inputNamespaceMap.deepCopy();
     newInputNamespaceMap.remove("relatedEntity");
 
-    if (incomingEdges != null && !incomingEdges.isEmpty()) {
-      for (String[] incoming : incomingEdges) {
-        String sourceNode = incoming[0];
-        String condition = incoming[1];
-        String sourceSubType = nodeSubType.getOrDefault(sourceNode, "");
-        if (CHECK_NODE_SUBTYPES.contains(sourceSubType)) {
-          if (condition != null && !condition.isEmpty()) {
-            // "true"/"false" for checkEntity/checkChangeDesc, band name for dataCompleteness
-            newInputNamespaceMap.put(condition + "_entityList", sourceNode);
+    // Only compute entityList keys when none are already present — preserves correct mappings
+    if (!hasEntityList && !hasTrueEntityList && !hasFalseEntityList) {
+      if (incomingEdges != null && !incomingEdges.isEmpty()) {
+        for (String[] incoming : incomingEdges) {
+          String sourceNode = incoming[0];
+          String condition = incoming[1];
+          String sourceSubType = nodeSubType.getOrDefault(sourceNode, "");
+          if (CHECK_NODE_SUBTYPES.contains(sourceSubType)) {
+            if (condition != null && !condition.isEmpty()) {
+              // "true"/"false" for checkEntity/checkChangeDesc, band name for dataCompleteness
+              newInputNamespaceMap.put(condition + "_entityList", sourceNode);
+            } else {
+              newInputNamespaceMap.put("entityList", sourceNode);
+            }
           } else {
-            newInputNamespaceMap.put("entityList", sourceNode);
+            newInputNamespaceMap.put("entityList", "global");
           }
-        } else {
-          newInputNamespaceMap.put("entityList", "global");
         }
+      } else {
+        newInputNamespaceMap.put("entityList", "global");
       }
-    } else {
-      newInputNamespaceMap.put("entityList", "global");
     }
 
     ObjectNode result = ((ObjectNode) nodeObj).deepCopy();
