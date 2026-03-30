@@ -399,7 +399,7 @@ public class TaskWorkflowHandler {
       List<TaskExecutionAction> actions =
           approved ? executionPlan.approveActions() : executionPlan.rejectActions();
       if (actions == null || actions.isEmpty()) {
-        if (binding.handlerType() == TaskFormExecutionResolver.HandlerType.SUGGESTION) {
+        if (approved && binding.handlerType() == TaskFormExecutionResolver.HandlerType.SUGGESTION) {
           applySuggestion(task, effectivePayload, entity, repository, user);
         } else {
           LOG.debug("No entity changes configured for task type: {}", taskType);

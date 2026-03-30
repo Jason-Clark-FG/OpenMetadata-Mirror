@@ -1032,6 +1032,20 @@ class OpenLineageEntityResolverTest {
   }
 
   @Test
+  void resolveTable_prefixNamespaceMapping_doesNotMatchShortNamespaceAgainstLongerMapping() {
+    OpenLineageEntityResolver resolver =
+        new OpenLineageEntityResolver(
+            false, "openlineage", Map.of("postgresql://prod-host:5432/finance", "finance-pg"));
+
+    OpenLineageInputDataset dataset =
+        new OpenLineageInputDataset().withNamespace("postgres").withName("public.users");
+
+    EntityReference result = resolver.resolveTable(dataset);
+
+    assertNull(result);
+  }
+
+  @Test
   void resolveOrCreateTable_autoCreateEnabled_createsTable() {
     OpenLineageEntityResolver resolver = new OpenLineageEntityResolver(true, "openlineage");
 

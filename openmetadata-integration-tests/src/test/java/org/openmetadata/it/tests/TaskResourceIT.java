@@ -3439,5 +3439,9 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Task updatedTaskTwo = SdkClients.adminClient().tasks().get(taskTwo.getId().toString());
     assertEquals(TaskEntityStatus.Rejected, updatedTaskOne.getStatus());
     assertEquals(TaskEntityStatus.Rejected, updatedTaskTwo.getStatus());
+
+    Table unchangedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "description");
+    assertNull(unchangedTable.getDescription());
   }
 }

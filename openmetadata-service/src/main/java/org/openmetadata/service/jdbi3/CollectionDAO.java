@@ -1501,6 +1501,13 @@ public interface CollectionDAO {
 
   @Getter
   @Builder
+  class RelationTypeUsageCount {
+    private String relationType;
+    private Integer count;
+  }
+
+  @Getter
+  @Builder
   class EntityRelationshipObject {
     private String fromId;
     private String toId;
@@ -1886,6 +1893,26 @@ public interface CollectionDAO {
             + "WHERE fromEntity = :fromEntity AND toEntity = :toEntity AND relation = :relation")
     @RegisterRowMapper(ToRelationshipMapper.class)
     List<EntityRelationshipRecord> findAllByEntityTypes(
+        @Bind("fromEntity") String fromEntity,
+        @Bind("toEntity") String toEntity,
+        @Bind("relation") int relation);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT JSON_UNQUOTE(JSON_EXTRACT(json, '$.relationType')) AS relationType, COUNT(*) AS cnt "
+                + "FROM entity_relationship "
+                + "WHERE fromEntity = :fromEntity AND toEntity = :toEntity AND relation = :relation "
+                + "GROUP BY JSON_UNQUOTE(JSON_EXTRACT(json, '$.relationType'))",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT json->>'relationType' AS relationType, COUNT(*) AS cnt "
+                + "FROM entity_relationship "
+                + "WHERE fromEntity = :fromEntity AND toEntity = :toEntity AND relation = :relation "
+                + "GROUP BY json->>'relationType'",
+        connectionType = POSTGRES)
+    @RegisterRowMapper(RelationTypeUsageCountMapper.class)
+    List<RelationTypeUsageCount> countByRelationType(
         @Bind("fromEntity") String fromEntity,
         @Bind("toEntity") String toEntity,
         @Bind("relation") int relation);
@@ -2440,6 +2467,16 @@ public interface CollectionDAO {
         return EntityRelationshipCount.builder()
             .id(UUID.fromString(rs.getString(1)))
             .count(rs.getInt(2))
+            .build();
+      }
+    }
+
+    class RelationTypeUsageCountMapper implements RowMapper<RelationTypeUsageCount> {
+      @Override
+      public RelationTypeUsageCount map(ResultSet rs, StatementContext ctx) throws SQLException {
+        return RelationTypeUsageCount.builder()
+            .relationType(rs.getString("relationType"))
+            .count(rs.getInt("cnt"))
             .build();
       }
     }

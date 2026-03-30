@@ -173,6 +173,28 @@ class SetApprovalAssigneesImplTest {
         "All reviewers should be retained when updatedBy is null");
   }
 
+  @Test
+  void testSelfApprovalPrevention_workflowManagedTaskRemovesCreatorAndLeavesTaskUnassigned() {
+    EntityReference creatorRef =
+        new EntityReference().withType("user").withFullyQualifiedName("alice");
+
+    when(mockEntity.getReviewers()).thenReturn(List.of(creatorRef));
+    when(execution.getVariable("global_updatedBy")).thenReturn("alice");
+    when(execution.getVariable("taskWorkflowManaged")).thenReturn(true);
+    when(assigneesExpr.getValue(execution))
+        .thenReturn("{\"addReviewers\":true,\"addOwners\":false,\"users\":[],\"teams\":[]}");
+
+    delegate.execute(execution);
+
+    String assigneesJson = (String) capturedVars.get("ApprovalTask_assignees");
+    assertNotNull(assigneesJson);
+    assertFalse(
+        assigneesJson.contains("<#E::user::alice>"),
+        "Workflow-managed approvals should not assign the creator as approver");
+    assertEquals("[]", assigneesJson);
+    assertTrue((Boolean) capturedVars.get("hasAssignees"));
+  }
+
   private static void injectField(Object target, String fieldName, Object value) throws Exception {
     Field field = target.getClass().getDeclaredField(fieldName);
     field.setAccessible(true);

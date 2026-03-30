@@ -221,14 +221,16 @@ public class GlossaryTermRepository extends EntityRepository<GlossaryTerm> {
 
   public Map<String, Integer> getRelationTypeUsageCounts() {
     Map<String, Integer> usageCounts = new HashMap<>();
-    List<EntityRelationshipRecord> records =
+
+    List<CollectionDAO.RelationTypeUsageCount> counts =
         daoCollection
             .relationshipDAO()
-            .findAllByEntityTypes(entityType, entityType, Relationship.RELATED_TO.ordinal());
+            .countByRelationType(entityType, entityType, Relationship.RELATED_TO.ordinal());
 
-    for (EntityRelationshipRecord record : records) {
-      String relationType = extractRelationType(record.getJson());
-      usageCounts.merge(relationType, 1, Integer::sum);
+    for (CollectionDAO.RelationTypeUsageCount count : counts) {
+      String relationType =
+          nullOrEmpty(count.getRelationType()) ? "relatedTo" : count.getRelationType();
+      usageCounts.put(relationType, count.getCount());
     }
 
     return usageCounts;

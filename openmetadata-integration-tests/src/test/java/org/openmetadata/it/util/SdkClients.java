@@ -1,5 +1,6 @@
 package org.openmetadata.it.util;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.openmetadata.it.auth.JwtAuthProvider;
 import org.openmetadata.sdk.client.OpenMetadataClient;
@@ -99,7 +100,8 @@ public class SdkClients {
   public static OpenMetadataClient testUserClient() {
     TEST_USER_CLIENT =
         getOrRefreshClient(
-            TEST_USER_CLIENT,
+            () -> TEST_USER_CLIENT,
+            cachedClient -> TEST_USER_CLIENT = cachedClient,
             () ->
                 createClient("test@open-metadata.org", "test@open-metadata.org", new String[] {}));
 
@@ -109,7 +111,8 @@ public class SdkClients {
   public static OpenMetadataClient botClient() {
     BOT_CLIENT =
         getOrRefreshClient(
-            BOT_CLIENT,
+            () -> BOT_CLIENT,
+            cachedClient -> BOT_CLIENT = cachedClient,
             () ->
                 createClient(
                     "ingestion-bot@open-metadata.org",
@@ -126,7 +129,8 @@ public class SdkClients {
   public static OpenMetadataClient dataStewardClient() {
     DATA_STEWARD_CLIENT =
         getOrRefreshClient(
-            DATA_STEWARD_CLIENT,
+            () -> DATA_STEWARD_CLIENT,
+            cachedClient -> DATA_STEWARD_CLIENT = cachedClient,
             () ->
                 createClient(
                     "data-steward@open-metadata.org",
@@ -139,7 +143,8 @@ public class SdkClients {
   public static OpenMetadataClient dataConsumerClient() {
     DATA_CONSUMER_CLIENT =
         getOrRefreshClient(
-            DATA_CONSUMER_CLIENT,
+            () -> DATA_CONSUMER_CLIENT,
+            cachedClient -> DATA_CONSUMER_CLIENT = cachedClient,
             () ->
                 createClient(
                     "data-consumer@open-metadata.org",
@@ -152,7 +157,8 @@ public class SdkClients {
   public static OpenMetadataClient user1Client() {
     USER1_CLIENT =
         getOrRefreshClient(
-            USER1_CLIENT,
+            () -> USER1_CLIENT,
+            cachedClient -> USER1_CLIENT = cachedClient,
             () ->
                 createClient(
                     "shared_user1@test.openmetadata.org",
@@ -165,7 +171,8 @@ public class SdkClients {
   public static OpenMetadataClient user2Client() {
     USER2_CLIENT =
         getOrRefreshClient(
-            USER2_CLIENT,
+            () -> USER2_CLIENT,
+            cachedClient -> USER2_CLIENT = cachedClient,
             () ->
                 createClient(
                     "shared_user2@test.openmetadata.org",
@@ -178,7 +185,8 @@ public class SdkClients {
   public static OpenMetadataClient user3Client() {
     USER3_CLIENT =
         getOrRefreshClient(
-            USER3_CLIENT,
+            () -> USER3_CLIENT,
+            cachedClient -> USER3_CLIENT = cachedClient,
             () ->
                 createClient(
                     "shared_user3@test.openmetadata.org",
@@ -189,12 +197,17 @@ public class SdkClients {
   }
 
   private static CachedClient getOrRefreshClient(
-      CachedClient cachedClient, Supplier<OpenMetadataClient> clientSupplier) {
+      Supplier<CachedClient> fieldReader,
+      Consumer<CachedClient> fieldWriter,
+      Supplier<OpenMetadataClient> clientSupplier) {
     long nowMillis = System.currentTimeMillis();
+    CachedClient cachedClient = fieldReader.get();
     if (cachedClient == null || cachedClient.isExpired(nowMillis)) {
       synchronized (SdkClients.class) {
+        cachedClient = fieldReader.get();
         if (cachedClient == null || cachedClient.isExpired(nowMillis)) {
           cachedClient = new CachedClient(clientSupplier.get(), nowMillis);
+          fieldWriter.accept(cachedClient);
         }
       }
     }

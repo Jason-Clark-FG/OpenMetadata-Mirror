@@ -292,7 +292,7 @@ public class OpenLineageEntityResolver {
 
     // Try prefix matching for namespaces like "postgresql://host:5432/db"
     for (Map.Entry<String, String> entry : namespaceToServiceMapping.entrySet()) {
-      if (namespace.startsWith(entry.getKey()) || entry.getKey().startsWith(namespace)) {
+      if (namespace.startsWith(entry.getKey())) {
         return entry.getValue();
       }
     }

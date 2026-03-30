@@ -124,38 +124,26 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
               || execution.getVariable("taskEntityId") != null;
       List<String> assigneeList = new ArrayList<>(assignees);
 
-      if (workflowManagedTask && assigneeList.isEmpty()) {
+      // Prevent self-approval: Remove updatedBy user from assignees list
+      try {
         String updatedBy =
             (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
         if (updatedBy != null && !updatedBy.trim().isEmpty()) {
-          assigneeList.add(
+          String updatedByEntityLink =
               new MessageParser.EntityLink("user", FullyQualifiedName.quoteName(updatedBy))
-                  .getLinkString());
-        }
-      }
-
-      // Prevent self-approval: Remove updatedBy user from assignees list
-      if (!workflowManagedTask) {
-        try {
-          String updatedBy =
-              (String) varHandler.getNamespacedVariable(GLOBAL_NAMESPACE, UPDATED_BY_VARIABLE);
-          if (updatedBy != null && !updatedBy.trim().isEmpty()) {
-            String updatedByEntityLink =
-                new MessageParser.EntityLink("user", FullyQualifiedName.quoteName(updatedBy))
-                    .getLinkString();
-            boolean removed = assigneeList.remove(updatedByEntityLink);
-            if (removed) {
-              LOG.debug(
-                  "[Process: {}] Prevented self-approval: Removed updatedBy user '{}' from assignees",
-                  execution.getProcessInstanceId(),
-                  updatedBy);
-            }
+                  .getLinkString();
+          boolean removed = assigneeList.remove(updatedByEntityLink);
+          if (removed) {
+            LOG.debug(
+                "[Process: {}] Prevented self-approval: Removed updatedBy user '{}' from assignees",
+                execution.getProcessInstanceId(),
+                updatedBy);
           }
-        } catch (Exception e) {
-          LOG.warn(
-              "Failed to retrieve updatedBy variable for self-approval prevention: {}",
-              e.getMessage());
         }
+      } catch (Exception e) {
+        LOG.warn(
+            "Failed to retrieve updatedBy variable for self-approval prevention: {}",
+            e.getMessage());
       }
 
       // Persist the list as JSON array so TaskListener can read it.
