@@ -17,8 +17,17 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from metadata.generated.schema.entity.data.container import Container
-from metadata.generated.schema.entity.data.table import Column, DataType, Table
+from metadata.generated.schema.entity.data.container import (
+    Container,
+    ContainerDataModel,
+)
+from metadata.generated.schema.entity.data.table import (
+    Column,
+    ColumnName,
+    DataType,
+    Table,
+    TableData,
+)
 from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
     OpenMetadataConnection,
 )
@@ -33,8 +42,8 @@ from metadata.generated.schema.metadataIngestion.workflow import (
     SourceConfig,
     WorkflowConfig,
 )
-from metadata.generated.schema.type.basic import FullyQualifiedEntityName
-from metadata.generated.schema.type.containerDataModel import ContainerDataModel
+from metadata.generated.schema.type.basic import FullyQualifiedEntityName, Uuid
+from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.profiler.source.model import ProfilerSourceAndEntity
 from metadata.sampler.processor import SamplerProcessor
 
@@ -45,7 +54,13 @@ def container_entity():
     return Container(
         id=uuid.uuid4(),
         name="test_container",
-        fullyQualifiedName=FullyQualifiedEntityName("s3_service.test_container"),
+        fullyQualifiedName=FullyQualifiedEntityName(root="s3_service.test_container"),
+        service=EntityReference(
+            id=Uuid(root=uuid.uuid4()),
+            type="storageService",
+            name="s3_service",
+            fullyQualifiedName="s3_service",
+        ),
         dataModel=ContainerDataModel(
             columns=[
                 Column(name="id", dataType=DataType.INT),
@@ -103,10 +118,17 @@ def test_sampler_processor_handles_container(
     # Setup mocks
     mock_sampler_class = MagicMock()
     mock_sampler_instance = MagicMock()
-    mock_sampler_instance.generate_sample_data.return_value = [
-        ["1", "Alice", "alice@example.com"],
-        ["2", "Bob", "bob@example.com"],
-    ]
+    mock_sampler_instance.generate_sample_data.return_value = TableData(
+        columns=[
+            ColumnName(root="id"),
+            ColumnName(root="name"),
+            ColumnName(root="email"),
+        ],
+        rows=[
+            ["1", "Alice", "alice@example.com"],
+            ["2", "Bob", "bob@example.com"],
+        ],
+    )
     mock_sampler_class.create.return_value = mock_sampler_instance
     mock_import_sampler.return_value = mock_sampler_class
     mock_copy_config.return_value = {}
@@ -120,7 +142,7 @@ def test_sampler_processor_handles_container(
 
     # Create profiler source and entity
     profiler_source = MagicMock()
-    record = ProfilerSourceAndEntity(
+    record = ProfilerSourceAndEntity.model_construct(
         profiler_source=profiler_source, entity=container_entity
     )
 
@@ -145,10 +167,16 @@ def test_sampler_processor_handles_table(
     # Setup mocks
     mock_sampler_class = MagicMock()
     mock_sampler_instance = MagicMock()
-    mock_sampler_instance.generate_sample_data.return_value = [
-        ["1", "Alice"],
-        ["2", "Bob"],
-    ]
+    mock_sampler_instance.generate_sample_data.return_value = TableData(
+        columns=[
+            ColumnName(root="id"),
+            ColumnName(root="name"),
+        ],
+        rows=[
+            ["1", "Alice"],
+            ["2", "Bob"],
+        ],
+    )
     mock_sampler_class.create.return_value = mock_sampler_instance
     mock_import_sampler.return_value = mock_sampler_class
     mock_copy_config.return_value = {}
@@ -167,7 +195,7 @@ def test_sampler_processor_handles_table(
 
         # Create profiler source and entity
         profiler_source = MagicMock()
-        record = ProfilerSourceAndEntity(
+        record = ProfilerSourceAndEntity.model_construct(
             profiler_source=profiler_source, entity=table_entity
         )
 
@@ -188,7 +216,9 @@ def test_sampler_processor_run_for_container_no_context_entities(
     with patch("metadata.sampler.processor.import_sampler_class") as mock_import:
         mock_sampler_class = MagicMock()
         mock_sampler_instance = MagicMock()
-        mock_sampler_instance.generate_sample_data.return_value = []
+        mock_sampler_instance.generate_sample_data.return_value = TableData(
+            columns=[], rows=[]
+        )
         mock_sampler_class.create.return_value = mock_sampler_instance
         mock_import.return_value = mock_sampler_class
 
@@ -199,7 +229,7 @@ def test_sampler_processor_run_for_container_no_context_entities(
         )
 
         profiler_source = MagicMock()
-        record = ProfilerSourceAndEntity(
+        record = ProfilerSourceAndEntity.model_construct(
             profiler_source=profiler_source, entity=container_entity
         )
 
@@ -228,7 +258,7 @@ def test_sampler_processor_unsupported_entity_type(workflow_config):
         )
 
         profiler_source = MagicMock()
-        record = ProfilerSourceAndEntity(
+        record = ProfilerSourceAndEntity.model_construct(
             profiler_source=profiler_source, entity=unsupported_entity
         )
 
@@ -249,7 +279,9 @@ def test_sample_data_store_flag_respected(container_entity, workflow_config):
     with patch("metadata.sampler.processor.import_sampler_class") as mock_import:
         mock_sampler_class = MagicMock()
         mock_sampler_instance = MagicMock()
-        mock_sampler_instance.generate_sample_data.return_value = []
+        mock_sampler_instance.generate_sample_data.return_value = TableData(
+            columns=[], rows=[]
+        )
         mock_sampler_class.create.return_value = mock_sampler_instance
         mock_import.return_value = mock_sampler_class
 
@@ -260,7 +292,7 @@ def test_sample_data_store_flag_respected(container_entity, workflow_config):
         )
 
         profiler_source = MagicMock()
-        record = ProfilerSourceAndEntity(
+        record = ProfilerSourceAndEntity.model_construct(
             profiler_source=profiler_source, entity=container_entity
         )
 

@@ -14,7 +14,10 @@ Validate Container entity fetcher filtering strategies
 """
 import uuid
 
-from metadata.generated.schema.entity.data.container import Container
+from metadata.generated.schema.entity.data.container import (
+    Container,
+    ContainerDataModel,
+)
 from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import (
     OpenMetadataConnection,
 )
@@ -27,8 +30,8 @@ from metadata.generated.schema.metadataIngestion.workflow import (
     SourceConfig,
     WorkflowConfig,
 )
-from metadata.generated.schema.type.basic import FullyQualifiedEntityName
-from metadata.generated.schema.type.containerDataModel import ContainerDataModel
+from metadata.generated.schema.type.basic import FullyQualifiedEntityName, Uuid
+from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.generated.schema.type.tagLabel import TagLabel
 from metadata.ingestion.api.status import Status
 from metadata.profiler.source.fetcher.fetcher_strategy import StorageFetcherStrategy
@@ -36,22 +39,40 @@ from metadata.profiler.source.fetcher.fetcher_strategy import StorageFetcherStra
 # Test containers with different characteristics
 STRUCTURED_CONTAINER = Container(
     id=uuid.uuid4(),
+    service=EntityReference(
+        id=Uuid(root=uuid.uuid4()),
+        type="storage",
+        fullyQualifiedName="s3_service",
+        name="s3_service",
+    ),
     name="structured_bucket",
-    fullyQualifiedName=FullyQualifiedEntityName("s3_service.structured_bucket"),
+    fullyQualifiedName=FullyQualifiedEntityName(root="s3_service.structured_bucket"),
     dataModel=ContainerDataModel(columns=[]),
 )
 
 UNSTRUCTURED_CONTAINER = Container(
     id=uuid.uuid4(),
+    service=EntityReference(
+        id=Uuid(root=uuid.uuid4()),
+        type="storage",
+        fullyQualifiedName="s3_service",
+        name="s3_service",
+    ),
     name="unstructured_bucket",
-    fullyQualifiedName=FullyQualifiedEntityName("s3_service.unstructured_bucket"),
+    fullyQualifiedName=FullyQualifiedEntityName(root="s3_service.unstructured_bucket"),
     dataModel=None,
 )
 
 TAGGED_CONTAINER = Container(
     id=uuid.uuid4(),
+    service=EntityReference(
+        id=Uuid(root=uuid.uuid4()),
+        type="storage",
+        fullyQualifiedName="s3_service",
+        name="s3_service",
+    ),
     name="tagged_container",
-    fullyQualifiedName=FullyQualifiedEntityName("s3_service.tagged_container"),
+    fullyQualifiedName=FullyQualifiedEntityName(root="s3_service.tagged_container"),
     dataModel=ContainerDataModel(columns=[]),
     tags=[
         TagLabel(
