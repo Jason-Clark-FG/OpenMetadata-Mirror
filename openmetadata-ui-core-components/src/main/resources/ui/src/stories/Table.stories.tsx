@@ -1132,3 +1132,46 @@ export const WithPagination: StoryObj = {
     },
   },
 };
+
+export const WithStickyHeader: StoryObj = {
+  render: () => (
+    <Table aria-label="Sticky header table" stickyHeader>
+      <Table.Header>
+        <Table.Head isRowHeader>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Name</span>
+        </Table.Head>
+        <Table.Head>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Email</span>
+        </Table.Head>
+        <Table.Head>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Role</span>
+        </Table.Head>
+        <Table.Head>
+          <span className="tw:text-xs tw:font-medium tw:text-tertiary">Status</span>
+        </Table.Head>
+      </Table.Header>
+      <AriaTableBody>
+        {[...SAMPLE_DATA, ...SAMPLE_DATA, ...SAMPLE_DATA].map((user, i) => (
+          <Table.Row key={`${user.id}-${i}`} id={`${user.id}-${i}`}>
+            <Table.Cell>
+              <span className="tw:text-sm tw:font-medium tw:text-primary">{user.name}</span>
+            </Table.Cell>
+            <Table.Cell>{user.email}</Table.Cell>
+            <Table.Cell>{user.role}</Table.Cell>
+            <Table.Cell>
+              <StatusBadge status={user.status} />
+            </Table.Cell>
+          </Table.Row>
+        ))}
+      </AriaTableBody>
+    </Table>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Pass `stickyHeader` to keep the `<thead>` pinned while the body scrolls. The table wrapper automatically gains `overflow-auto max-h-100`.",
+      },
+    },
+  },
+};
