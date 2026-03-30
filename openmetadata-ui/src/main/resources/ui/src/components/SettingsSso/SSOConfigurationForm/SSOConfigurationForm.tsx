@@ -118,7 +118,7 @@ const MetadataUploadStatusCard = ({
       <div className="flex items-center gap-2">
         <div
           className={classNames(
-            'flex-shrink-0 flex items-center justify-center rounded-full w-6 h-6',
+            'flex-shrink flex items-center justify-center rounded-full w-6 h-6',
             {
               'metadata-upload-status-icon-success': isSuccess,
               'metadata-upload-status-icon-error': !isSuccess,
@@ -446,10 +446,9 @@ const SSOConfigurationFormRJSF = ({
     }
 
     // Provider-specific schema modifications
-    if (provider === AuthProvider.Saml) {
-      removeSchemaFields(authSchema, OIDC_SPECIFIC_FIELDS);
-      removeRequiredFields(authSchema, OIDC_SPECIFIC_FIELDS);
-    } else if (provider === AuthProvider.LDAP) {
+    if (
+      [AuthProvider.Saml, AuthProvider.LDAP].includes(provider as AuthProvider)
+    ) {
       removeSchemaFields(authSchema, OIDC_SPECIFIC_FIELDS);
       removeRequiredFields(authSchema, OIDC_SPECIFIC_FIELDS);
     } else if (provider === AuthProvider.CustomOidc) {
@@ -644,45 +643,49 @@ const SSOConfigurationFormRJSF = ({
   ]);
 
   // Handle form data changes
-  const handleOnChange = (e: IChangeEvent<FormData>) => {
-    if (e.formData) {
-      const newFormData = { ...e.formData };
-      const authConfig = newFormData.authenticationConfiguration;
-
-      // Clear field-specific errors for changed fields
-      if (
-        fieldErrorsRef.current &&
-        Object.keys(fieldErrorsRef.current).length > 0
-      ) {
-        const changedFields = findChangedFields(internalData, newFormData);
-        if (changedFields.length > 0) {
-          for (const fieldPath of changedFields) {
-            handleClearFieldError(fieldPath);
-          }
-          // Force form to re-render and re-validate with cleared errors
-          setErrorClearTrigger((prev) => prev + 1);
-        }
-      }
-
-      // Handle client type changes (Confidential ↔ Public transitions)
-      const previousClientType =
-        internalData?.authenticationConfiguration?.clientType;
-      const newClientType = authConfig?.clientType;
-
-      handleClientTypeChange(authConfig, previousClientType, newClientType);
-
-      setInternalData(newFormData);
-
-      // Check if provider changed
-      const newProvider = newFormData?.authenticationConfiguration?.provider;
-      if (newProvider && newProvider !== currentProvider) {
-        setCurrentProvider(newProvider);
-        // Notify parent component about provider change
-        if (onProviderSelect) {
-          onProviderSelect(newProvider as AuthProvider);
-        }
-      }
+  const clearErrorsForChangedFields = (newFormData: FormData) => {
+    // Clear field-specific errors for changed fields
+    if (
+      !fieldErrorsRef.current ||
+      Object.keys(fieldErrorsRef.current).length === 0
+    ) {
+      return;
     }
+    const changedFields = findChangedFields(internalData, newFormData);
+    if (changedFields.length > 0) {
+      for (const fieldPath of changedFields) {
+        handleClearFieldError(fieldPath);
+      }
+      // Force form to re-render and re-validate with cleared errors
+      setErrorClearTrigger((prev) => prev + 1);
+    }
+  };
+
+  const handleProviderChange = (newFormData: FormData) => {
+    const newProvider = newFormData?.authenticationConfiguration?.provider;
+    if (newProvider && newProvider !== currentProvider) {
+      setCurrentProvider(newProvider);
+      onProviderSelect?.(newProvider as AuthProvider);
+    }
+  };
+
+  const handleOnChange = (e: IChangeEvent<FormData>) => {
+    if (!e.formData) {
+      return;
+    }
+    const newFormData = { ...e.formData };
+    const authConfig = newFormData.authenticationConfiguration;
+
+    clearErrorsForChangedFields(newFormData);
+
+    handleClientTypeChange(
+      authConfig,
+      internalData?.authenticationConfiguration?.clientType,
+      authConfig?.clientType
+    );
+
+    setInternalData(newFormData);
+    handleProviderChange(newFormData);
   };
 
   // Add DOM event listeners for field focus tracking

@@ -44,7 +44,9 @@ export const SAML_SSO_DEFAULTS = {
   authority: getAuthorityUrl(),
   clientType: 'public',
   jwtPrincipalClaims: ['email', 'preferred_username', 'sub'],
-  idp: {},
+  idp: {
+    authorityUrl: '',
+  },
   sp: {
     entityId: getServerUrl(),
     acs: getCallbackUrl(),
