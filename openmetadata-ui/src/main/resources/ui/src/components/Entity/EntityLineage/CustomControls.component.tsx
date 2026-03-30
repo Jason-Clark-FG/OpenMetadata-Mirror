@@ -171,18 +171,16 @@ const CustomControls: FC<{
   useEffect(() => {
     const updatedQuickFilters = getLineageDropdownItems(
       impactLevel === EImpactLevel.ColumnLevel
-    ).map(
-      (selectedFilterItem) => {
-        const originalFilterItem = selectedQuickFilters?.find(
-          (filter) => filter.key === selectedFilterItem.key
-        );
+    ).map((selectedFilterItem) => {
+      const originalFilterItem = selectedQuickFilters?.find(
+        (filter) => filter.key === selectedFilterItem.key
+      );
 
-        return {
-          ...(originalFilterItem || selectedFilterItem),
-          value: originalFilterItem?.value || [],
-        };
-      }
-    );
+      return {
+        ...(originalFilterItem || selectedFilterItem),
+        value: originalFilterItem?.value || [],
+      };
+    });
 
     if (updatedQuickFilters.length > 0) {
       setSelectedQuickFilters(updatedQuickFilters);
@@ -329,7 +327,9 @@ const CustomControls: FC<{
   }, [selectedQuickFilters, impactLevel]);
 
   const filterApplied = useMemo(() => {
-    return selectedQuickFilters.some((filter) => (filter.value ?? []).length > 0);
+    return selectedQuickFilters.some(
+      (filter) => (filter.value ?? []).length > 0
+    );
   }, [selectedQuickFilters]);
 
   const searchBarComponent = useMemo(() => {

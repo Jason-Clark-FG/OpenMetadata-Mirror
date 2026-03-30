@@ -522,7 +522,9 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         delete res.nodes[fqn];
         if (shouldIncludePaginationInfo) {
           setLineagePagingInfo(res.paginationInfo ?? null);
-          paginationInfoKeyRef.current = res.paginationInfo ? paginationInfoKey : null;
+          paginationInfoKeyRef.current = res.paginationInfo
+            ? paginationInfoKey
+            : null;
         }
 
         setFilterNodes(

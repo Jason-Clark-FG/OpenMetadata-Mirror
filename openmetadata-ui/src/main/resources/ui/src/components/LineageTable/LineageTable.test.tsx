@@ -393,28 +393,28 @@ describe('LineageTable', () => {
   it('should fetch nodes on component mount', async () => {
     render(<LineageTable entity={mockEntity} />, { wrapper: MemoryRouter });
 
-      await waitFor(() => {
-        expect(mockGetLineageByEntityCount).toHaveBeenCalledWith({
-          fqn: 'test.table',
-          entityType: EntityType.TABLE,
-          direction: LineageDirection.Downstream,
-          nodeDepth: 2,
-          maxDepth: 2,
-          upstreamDepth: 2,
-          downstreamDepth: 2,
-          from: 0,
-          size: 25,
-          include_pagination_info: true,
-        });
+    await waitFor(() => {
+      expect(mockGetLineageByEntityCount).toHaveBeenCalledWith({
+        fqn: 'test.table',
+        entityType: EntityType.TABLE,
+        direction: LineageDirection.Downstream,
+        nodeDepth: 2,
+        maxDepth: 2,
+        upstreamDepth: 2,
+        downstreamDepth: 2,
+        from: 0,
+        size: 25,
+        include_pagination_info: true,
       });
+    });
   });
 
   it('should not fetch paging data separately on component mount', async () => {
     render(<LineageTable entity={mockEntity} />, { wrapper: MemoryRouter });
 
-      await waitFor(() => {
-        expect(mockGetLineageByEntityCount).toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockGetLineageByEntityCount).toHaveBeenCalled();
+    });
 
     expect(mockGetLineagePagingData).not.toHaveBeenCalled();
   });

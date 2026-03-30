@@ -80,7 +80,10 @@ const waitForDirectionalColumnLineageResponse = (
 
     if (
       columnFilterIncludes &&
-      !(url.searchParams.get('column_filter')?.includes(columnFilterIncludes) ?? false)
+      !(
+        url.searchParams.get('column_filter')?.includes(columnFilterIncludes) ??
+        false
+      )
     ) {
       return false;
     }
@@ -211,7 +214,8 @@ test.describe('Impact Analysis', () => {
             },
             {
               name: EntityDataClass.glossaryTerm1.responseData.name,
-              tagFQN: EntityDataClass.glossaryTerm1.responseData.fullyQualifiedName,
+              tagFQN:
+                EntityDataClass.glossaryTerm1.responseData.fullyQualifiedName,
               source: 'Glossary',
               labelType: 'Manual',
               state: 'Confirmed',
@@ -516,9 +520,12 @@ test.describe('Impact Analysis', () => {
       }
     });
     const paginationRequestCountBeforeColumnMode = paginationRequests.length;
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
@@ -587,24 +594,30 @@ test.describe('Impact Analysis', () => {
     await waitForAllLoadersToDisappear(page);
 
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const initialColumnResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-      fqn: table2.entityResponseData.fullyQualifiedName,
-      upstreamDepth: 0,
-      downstreamDepth: 2,
-    });
+    const initialColumnResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+        fqn: table2.entityResponseData.fullyQualifiedName,
+        upstreamDepth: 0,
+        downstreamDepth: 2,
+      }
+    );
     await page.getByText('Column level').click();
     await initialColumnResponse;
     await waitForAllLoadersToDisappear(page);
 
     await expect(page.locator('[data-row-key]')).toHaveCount(0);
 
-    const upstreamColumnResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Upstream',
-      fqn: table2.entityResponseData.fullyQualifiedName,
-      upstreamDepth: 2,
-      downstreamDepth: 0,
-    });
+    const upstreamColumnResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Upstream',
+        fqn: table2.entityResponseData.fullyQualifiedName,
+        upstreamDepth: 2,
+        downstreamDepth: 0,
+      }
+    );
     await page.getByRole('button', { name: 'Upstream' }).click();
     await upstreamColumnResponse;
     await waitForAllLoadersToDisappear(page);
@@ -614,9 +627,12 @@ test.describe('Impact Analysis', () => {
 
   test('Verify column level downstream connections', async ({ page }) => {
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
@@ -689,18 +705,24 @@ test.describe('Impact Analysis', () => {
     await waitForAllLoadersToDisappear(page);
 
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-      fqn: table2.entityResponseData.fullyQualifiedName,
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+        fqn: table2.entityResponseData.fullyQualifiedName,
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
 
-    const upstreamColumnResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Upstream',
-      fqn: table2.entityResponseData.fullyQualifiedName,
-    });
+    const upstreamColumnResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Upstream',
+        fqn: table2.entityResponseData.fullyQualifiedName,
+      }
+    );
     await page.getByRole('button', { name: 'Upstream' }).click();
     await upstreamColumnResponse;
     await waitForAllLoadersToDisappear(page);
@@ -874,9 +896,12 @@ test.describe('Impact Analysis', () => {
     page,
   }) => {
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
@@ -909,9 +934,12 @@ test.describe('Impact Analysis', () => {
     page,
   }) => {
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
@@ -954,9 +982,12 @@ test.describe('Impact Analysis', () => {
     await expect(page.locator('[data-row-key]')).toHaveCount(1);
 
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
@@ -1016,7 +1047,9 @@ test.describe('Impact Analysis', () => {
 
       const url = new URL(response.url());
 
-      return url.searchParams.get('column_filter')?.includes('glossary:') ?? false;
+      return (
+        url.searchParams.get('column_filter')?.includes('glossary:') ?? false
+      );
     });
     await page.getByRole('button', { name: 'Update' }).click();
     await filterResponse;
@@ -1055,9 +1088,12 @@ test.describe('Impact Analysis', () => {
 
   test('Verify column level table has correct columns', async ({ page }) => {
     await page.getByRole('button', { name: 'Impact On: Table' }).click();
-    const columnLineageResponse = waitForDirectionalColumnLineageResponse(page, {
-      direction: 'Downstream',
-    });
+    const columnLineageResponse = waitForDirectionalColumnLineageResponse(
+      page,
+      {
+        direction: 'Downstream',
+      }
+    );
     await page.getByText('Column level').click();
     await columnLineageResponse;
     await waitForAllLoadersToDisappear(page);
