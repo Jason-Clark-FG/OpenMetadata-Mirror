@@ -176,8 +176,8 @@ public class RuleEngine {
   private void validateRule(Object facts, SemanticsRule rule) throws RuleValidationException {
     try {
       JsonLogic jsonLogic = jsonLogicThreadLocal.get();
-      Boolean result = (Boolean) jsonLogic.apply(rule.getRule(), JsonUtils.getMap(facts));
-      if (result == null || !result) {
+      Object rawResult = jsonLogic.apply(rule.getRule(), JsonUtils.getMap(facts));
+      if (!(rawResult instanceof Boolean result) || !result) {
         throw new RuleValidationException(rule, "Entity does not satisfy the rule");
       }
     } catch (JsonLogicException e) {

@@ -6302,4 +6302,42 @@ public class DataContractResourceIT extends BaseEntityIT<DataContract, CreateDat
         validation.getConstraintErrors() == null || validation.getConstraintErrors().isEmpty(),
         "Expected constraintErrors to be null or empty");
   }
+  @Test
+  void testValidateContractWithEmptySemanticsRuleDoesNotThrowNPE(TestNamespace ns) {
+    Table table = createTestTable(ns);
+
+    SemanticsRule emptyRule =
+        new SemanticsRule()
+            .withName("empty_rule")
+            .withDescription("Rule with empty expression")
+            .withRule("\"\"")
+            .withEnabled(true);
+
+    CreateDataContract request =
+        new CreateDataContract()
+            .withName(ns.prefix("empty_semantics"))
+            .withEntity(table.getEntityReference())
+            .withEntityStatus(EntityStatus.APPROVED)
+            .withSemantics(List.of(emptyRule))
+            .withDescription("Contract with an empty semantics rule");
+
+    DataContract contract = createEntity(request);
+
+    DataContractResult result = SdkClients.adminClient().dataContracts().validate(contract.getId());
+
+    assertNotNull(result);
+    assertNotNull(result.getSemanticsValidation());
+    assertEquals(
+        1,
+        result.getSemanticsValidation().getFailed(),
+        "Exactly one semantics rule (the empty one) should be marked as failed");
+    assertEquals(
+        1,
+        result.getSemanticsValidation().getTotal(),
+        "Total semantics rules evaluated should be exactly one for this contract");
+    assertEquals(
+        ContractExecutionStatus.Failed,
+        result.getContractExecutionStatus(),
+        "Empty rule should be treated as a failed semantics check");
+  }
 }
