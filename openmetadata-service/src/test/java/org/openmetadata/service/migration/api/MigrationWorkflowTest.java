@@ -84,9 +84,10 @@ class MigrationWorkflowTest {
   void loadMigrationsIncludesUnexecutedExtensionVersions() throws Exception {
     Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
     Path extensionRoot = Files.createDirectories(tempDir.resolve("extension"));
-    createMigrationDir(nativeRoot, "1.2.0", "");
+    // Use 1.2.1 (no custom Migration class) so it's skipped during reprocessing
+    createMigrationDir(nativeRoot, "1.2.1", "");
     createMigrationDir(extensionRoot, "1.0.1", "SELECT 2;");
-    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.2.0"));
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.2.1"));
 
     MigrationWorkflow workflow =
         new MigrationWorkflow(
@@ -101,7 +102,7 @@ class MigrationWorkflowTest {
     workflow.loadMigrations();
 
     assertEquals(List.of("1.0.1"), getMigrationVersions(workflow));
-    assertEquals(Optional.of("1.2.0"), getCurrentMaxVersion(workflow));
+    assertEquals(Optional.of("1.2.1"), getCurrentMaxVersion(workflow));
   }
 
   @Test
@@ -216,6 +217,40 @@ class MigrationWorkflowTest {
     workflow.loadMigrations();
 
     assertEquals(List.of("0.0.1", "0.0.1-collate"), getMigrationVersions(workflow));
+  }
+
+  @Test
+  void loadMigrationsKeepsReprocessingVersionWithCustomJavaMigration() throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    // Version 1.13.0 has a custom postgres Migration class but all SQL already ran
+    createMigrationDir(nativeRoot, "1.13.0", "SELECT 1;");
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.13.0"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn("already ran");
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi, nativeRoot.toString(), ConnectionType.POSTGRES, null, null, config, false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of("1.13.0"), getMigrationVersions(workflow));
+  }
+
+  @Test
+  void loadMigrationsSkipsReprocessingVersionWithNoNewSqlAndNoCustomMigration() throws Exception {
+    Path nativeRoot = Files.createDirectories(tempDir.resolve("native"));
+    // Version 1.12.3 has no custom Migration class and all SQL already ran
+    createMigrationDir(nativeRoot, "1.12.3", "SELECT 1;");
+    when(migrationDAO.getMigrationVersions()).thenReturn(List.of("1.12.3"));
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn("already ran");
+
+    MigrationWorkflow workflow =
+        new MigrationWorkflow(
+            jdbi, nativeRoot.toString(), ConnectionType.POSTGRES, null, null, config, false);
+
+    workflow.loadMigrations();
+
+    assertEquals(List.of(), getMigrationVersions(workflow));
   }
 
   @Test

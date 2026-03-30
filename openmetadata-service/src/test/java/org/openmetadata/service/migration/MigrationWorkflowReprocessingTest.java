@@ -365,4 +365,35 @@ class MigrationWorkflowReprocessingTest {
     toApply.get(0).parseSQLFiles();
     assertFalse(toApply.get(0).hasNewStatements());
   }
+
+  // --- hasCustomMigration tests ---
+
+  @Test
+  void testHasCustomMigrationReturnsFalseForDefaultMigration() throws IOException {
+    // Version 1.12.3 maps to package v1123, which has no custom Migration class
+    MigrationFile file = createMigrationDir("1.12.3", "");
+    assertFalse(file.hasCustomMigration());
+  }
+
+  @Test
+  void testHasCustomMigrationReturnsTrueWhenCustomClassExists() throws IOException {
+    // Version 1.13.0 maps to package v1130, which has a custom Migration class
+    MigrationFile file = createMigrationDir("1.13.0", "");
+    assertTrue(file.hasCustomMigration());
+  }
+
+  @Test
+  void testReprocessingVersionKeptWhenCustomMigrationExistsButNoNewSql() throws IOException {
+    when(migrationDAO.checkIfQueryPreviouslyRan(anyString())).thenReturn("already ran");
+
+    // Version 1.13.0 has a custom Migration class on classpath
+    MigrationFile file = createMigrationDir("1.13.0", "ALTER TABLE test ADD COLUMN a INT;");
+    file.setReprocessing(true);
+    file.parseSQLFiles();
+
+    assertFalse(file.hasNewStatements());
+    assertTrue(file.hasCustomMigration());
+    // The skip gate should NOT trigger: isReprocessing && !hasNewStatements && !hasCustomMigration
+    assertFalse(file.isReprocessing() && !file.hasNewStatements() && !file.hasCustomMigration());
+  }
 }

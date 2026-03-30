@@ -219,6 +219,13 @@ public class MigrationFile implements Comparable<MigrationFile> {
     return !schemaChanges.isEmpty() || !postDDLScripts.isEmpty();
   }
 
+  public boolean hasCustomMigration() {
+    if (version.contains("collate")) {
+      return getMigrationProcessExtClassName() != null;
+    }
+    return !DEFAULT_MIGRATION_PROCESS_CLASS.equals(getMigrationProcessClassName());
+  }
+
   private boolean checkIfQueryPreviouslyRan(String query) {
     try {
       String checksum = EntityUtil.hash(query);
