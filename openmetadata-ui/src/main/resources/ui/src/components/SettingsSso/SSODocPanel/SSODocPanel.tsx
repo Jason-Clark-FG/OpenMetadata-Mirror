@@ -26,7 +26,7 @@ import {
   getProviderIcon,
 } from '../../../utils/SSOUtils';
 import Loader from '../../common/Loader/Loader';
-import RichTextEditorPreviewer from '../../common/RichTextEditor/RichTextEditorPreviewer';
+import RichTextEditorPreviewerV1 from '../../common/RichTextEditor/RichTextEditorPreviewerV1';
 import './sso-doc-panel.less';
 import { FIELD_MAPPINGS, PROVIDER_FILE_MAP } from './SSODocPanel.constants';
 
@@ -251,7 +251,7 @@ const SSODocPanel: FC<SSODocPanelProp> = ({ serviceName, activeField }) => {
                 )}`}
           </Typography.Title>
         </div>
-        <RichTextEditorPreviewer
+        <RichTextEditorPreviewerV1
           enableSeeMoreVariant={false}
           markdown={markdownContent}
         />
