@@ -2545,9 +2545,9 @@ class DbtUnitTest(TestCase):
                                 manifest_entities, model_node
                             )
 
-        assert result == [expected_fqn], (
-            f"Expected lineage to resolve via target_schema 'snapshots', got: {result}"
-        )
+        assert result == [
+            expected_fqn
+        ], f"Expected lineage to resolve via target_schema 'snapshots', got: {result}"
 
 
 class TestDownloadDbtFiles(TestCase):
