@@ -813,7 +813,7 @@ test.describe('SAML Metadata XML Upload', () => {
 
     await expect(dropZone).toBeVisible();
     await expect(
-      dropZone.getByText(/or drag and drop a xml file here/i)
+      dropZone.getByText(/or drag and drop an xml file here/i)
     ).toBeVisible();
     await expect(
       dropZone.getByText(/we'll auto-fill saml configuration fields/i)
