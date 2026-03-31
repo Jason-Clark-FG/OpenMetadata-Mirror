@@ -30,6 +30,11 @@ CREATE TABLE IF NOT EXISTS task_entity (
     KEY idx_status_about (status, aboutFqnHash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- aboutEntityLink: hierarchical entity identity for lifecycle handler lookups
+ALTER TABLE task_entity ADD COLUMN IF NOT EXISTS aboutEntityLink varchar(1024)
+  GENERATED ALWAYS AS (json_unquote(json_extract(`json`, _utf8mb4'$.aboutEntityLink'))) STORED;
+CREATE INDEX idx_task_about_entity_link ON task_entity (aboutEntityLink(255));
+
 CREATE TABLE IF NOT EXISTS new_task_sequence (
     id bigint NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

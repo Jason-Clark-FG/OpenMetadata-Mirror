@@ -31,6 +31,11 @@ CREATE INDEX IF NOT EXISTS idx_task_status_category ON task_entity (status, cate
 CREATE INDEX IF NOT EXISTS idx_task_about_fqn_hash ON task_entity (aboutfqnhash);
 CREATE INDEX IF NOT EXISTS idx_task_status_about ON task_entity (status, aboutfqnhash);
 
+-- aboutEntityLink: hierarchical entity identity for lifecycle handler lookups
+ALTER TABLE task_entity ADD COLUMN IF NOT EXISTS aboutentitylink character varying(1024)
+  GENERATED ALWAYS AS ((json ->> 'aboutEntityLink'::text)) STORED;
+CREATE INDEX IF NOT EXISTS idx_task_about_entity_link ON task_entity (aboutentitylink);
+
 CREATE TABLE IF NOT EXISTS new_task_sequence (
     id bigint NOT NULL DEFAULT 0
 );

@@ -253,6 +253,10 @@
       "description": "Reference to the entity this task is about.",
       "$ref": "../../type/entityReference.json"
     },
+    "aboutEntityLink": {
+      "description": "EntityLink string providing hierarchical entity identity for this task. Format: <#E::entityType::fqn[::fieldName[::arrayFieldName]]>. For incident tasks, encodes testCase FQN and incident stateId. Used by lifecycle handlers for zero-resolution data extraction.",
+      "type": "string"
+    },
     "aboutFqnHash": {
       "description": "Hash of the target entity's fully qualified name for efficient querying. Computed from about.fullyQualifiedName using FullyQualifiedName.buildHash().",
       "type": "string"
