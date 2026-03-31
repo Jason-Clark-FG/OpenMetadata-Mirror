@@ -1409,6 +1409,86 @@ class DbtUnitTest(TestCase):
         assert call_kwargs.kwargs["classification_name"] == "PII"
         assert call_kwargs.kwargs["tag_name"] == '"22.8.5.1"'
 
+    @patch("metadata.utils.tag_utils.get_tag_label")
+    @patch("metadata.ingestion.source.database.dbt.metadata.fqn")
+    def test_process_dbt_meta_bad_tag_does_not_abort_meta(
+        self, mock_fqn, get_tag_label
+    ):
+        """A malformed tag FQN must not prevent glossary terms from being processed"""
+        from antlr4.error.Errors import ParseCancellationException
+
+        mock_fqn.FQN_SEPARATOR = "."
+        mock_fqn.split.side_effect = ParseCancellationException("bad fqn")
+
+        expected_glossary = TagLabel(
+            tagFQN="Glossary.Term1",
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Glossary.value,
+        )
+        get_tag_label.return_value = expected_glossary
+
+        manifest_meta = {
+            "openmetadata": {
+                "glossary": ["Glossary.Term1"],
+                "tags": ['malformed."unclosed'],
+            }
+        }
+        result = self.dbt_source_obj.process_dbt_meta(
+            manifest_meta=manifest_meta,
+            table_fqn="svc.db.schema.table",
+        )
+        assert expected_glossary in result
+
+    @patch("metadata.ingestion.source.database.dbt.metadata.fqn")
+    def test_parse_data_model_columns_bad_tag_does_not_drop_column(self, mock_fqn):
+        """A malformed tag FQN must not cause the entire column to be skipped"""
+        from antlr4.error.Errors import ParseCancellationException
+
+        mock_fqn.FQN_SEPARATOR = "."
+        mock_fqn.split.side_effect = ParseCancellationException("bad fqn")
+
+        manifest_column = SimpleNamespace(
+            name="col",
+            tags=[],
+            meta={"openmetadata": {"tags": ['malformed."unclosed']}},
+            description=None,
+            data_type="varchar",
+        )
+        manifest_node = SimpleNamespace(columns={"col": manifest_column})
+
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+        assert len(columns) == 1
+        assert columns[0].tags == []
+
+    @patch("metadata.ingestion.source.database.dbt.metadata.fqn")
+    def test_parse_data_model_columns_skips_split_when_include_tags_false(
+        self, mock_fqn
+    ):
+        """fqn.split must not be called for meta.openmetadata.tags when includeTags=False"""
+        mock_fqn.FQN_SEPARATOR = "."
+        original = self.dbt_source_obj.source_config.includeTags
+        self.dbt_source_obj.source_config.includeTags = False
+
+        manifest_column = SimpleNamespace(
+            name="col",
+            tags=[],
+            meta={"openmetadata": {"tags": ["PII.Sensitive"]}},
+            description=None,
+            data_type="varchar",
+        )
+        manifest_node = SimpleNamespace(columns={"col": manifest_column})
+
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+        mock_fqn.split.assert_not_called()
+        assert len(columns) == 1
+
+        self.dbt_source_obj.source_config.includeTags = original
+
     def test_parse_exposure_node_exposure_absent(self):
         _, dbt_objects = self.get_dbt_object_files(MOCK_SAMPLE_MANIFEST_V8)
 

@@ -1105,11 +1105,21 @@ class DbtSource(DbtServiceSource):
                         )
 
                     if (
-                        dbt_column_meta.openmetadata
+                        self.source_config.includeTags
+                        and dbt_column_meta.openmetadata
                         and dbt_column_meta.openmetadata.tags
                     ):
                         for tag_fqn in dbt_column_meta.openmetadata.tags:
-                            tag_parts = fqn.split(tag_fqn)
+                            if not tag_fqn:
+                                continue
+                            try:
+                                tag_parts = fqn.split(tag_fqn)
+                            except Exception:  # pylint: disable=broad-except
+                                logger.warning(
+                                    f"Failed to parse tag FQN {tag_fqn!r} for column"
+                                    f" {column_name}, skipping"
+                                )
+                                continue
                             if len(tag_parts) >= 2:
                                 classification_name = tag_parts[0]
                                 tag_name = fqn.FQN_SEPARATOR.join(tag_parts[1:])
@@ -1425,7 +1435,16 @@ class DbtSource(DbtServiceSource):
 
             if dbt_meta_info.openmetadata and dbt_meta_info.openmetadata.tags:
                 for tag_fqn in dbt_meta_info.openmetadata.tags:
-                    tag_parts = fqn.split(tag_fqn)
+                    if not tag_fqn:
+                        continue
+                    try:
+                        tag_parts = fqn.split(tag_fqn)
+                    except Exception:  # pylint: disable=broad-except
+                        logger.warning(
+                            f"Failed to parse tag FQN {tag_fqn!r} for table"
+                            f" {table_fqn}, skipping"
+                        )
+                        continue
                     if len(tag_parts) >= 2:
                         classification_name = tag_parts[0]
                         tag_name = fqn.FQN_SEPARATOR.join(tag_parts[1:])
