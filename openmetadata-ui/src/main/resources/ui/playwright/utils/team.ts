@@ -325,8 +325,10 @@ export const searchTeam = async (
   teamName: string,
   options?: SearchTeamOptions
 ) => {
-  const searchBar = await openTeamsPage(page);
+  await openTeamsPage(page);
   await page.fill('[data-testid="searchbar"]', teamName);
+
+  const teamNameLinks = page.locator('[data-testid^="team-name-"]');
 
   if (options?.expectEmptyResults) {
     await expect
@@ -336,18 +338,18 @@ export const searchTeam = async (
             .getByTestId('search-error-placeholder')
             .isVisible()
             .catch(() => false);
-          const matchingRows = await page
-            .getByRole('cell', { name: teamName })
+          const matchingCount = await teamNameLinks
+            .filter({ hasText: teamName })
             .count();
 
-          return hasPlaceholder || matchingRows === 0;
+          return hasPlaceholder || matchingCount === 0;
         },
         { timeout: 30000, intervals: [500, 1000, 2000] }
       )
       .toBe(true);
   } else if (options?.expectNotFound) {
     await expect
-      .poll(async () => page.getByRole('cell', { name: teamName }).count(), {
+      .poll(async () => teamNameLinks.filter({ hasText: teamName }).count(), {
         timeout: 30000,
         intervals: [500, 1000, 2000],
       })
