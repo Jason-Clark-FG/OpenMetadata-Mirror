@@ -34,6 +34,7 @@ import {
   AuthorizerConfiguration,
   getSSOUISchema,
   GOOGLE_SSO_DEFAULTS,
+  MAX_XML_SIZE,
   NON_OIDC_SPECIFIC_FIELDS,
   OIDC_SPECIFIC_FIELDS,
   VALIDATION_STATUS,
@@ -317,7 +318,6 @@ const SSOConfigurationFormRJSF = ({
         return;
       }
 
-      const MAX_XML_SIZE = 1 * 1024 * 1024;
       if (file.size > MAX_XML_SIZE) {
         showErrorToast(t('message.file-size-exceeded', { size: '1 MB' }));
 
@@ -325,9 +325,9 @@ const SSOConfigurationFormRJSF = ({
       }
 
       const updateIdpFields = (fields: {
-        entityId: string | undefined;
-        ssoLoginUrl: string | undefined;
-        idpX509Certificate: string | undefined;
+        entityId?: string;
+        ssoLoginUrl?: string;
+        idpX509Certificate?: string;
       }) => {
         setInternalData((prev) => {
           if (!prev) {
@@ -366,9 +366,9 @@ const SSOConfigurationFormRJSF = ({
             setMetadataUploadStatus('success');
           } catch {
             updateIdpFields({
-              entityId: undefined,
-              ssoLoginUrl: undefined,
-              idpX509Certificate: undefined,
+              entityId: '',
+              ssoLoginUrl: '',
+              idpX509Certificate: '',
             });
             setMetadataUploadFileName(file.name);
             setMetadataUploadStatus('error');

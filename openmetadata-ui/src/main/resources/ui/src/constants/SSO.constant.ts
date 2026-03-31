@@ -18,6 +18,8 @@ import {
   getServerUrl,
 } from '../utils/SSOURLUtils';
 
+export const MAX_XML_SIZE = 1 * 1024 * 1024;
+
 // Default callback URL for SSO configuration
 export const DEFAULT_CALLBACK_URL = getCallbackUrl();
 

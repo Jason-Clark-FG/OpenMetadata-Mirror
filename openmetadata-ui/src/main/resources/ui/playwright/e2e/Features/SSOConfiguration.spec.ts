@@ -37,9 +37,9 @@ const INVALID_SAML_XML = path.join(
 );
 
 const EXPECTED_ENTITY_ID =
-  'https://sts.windows.net/face9c4e-1b50-41d3-b404-d4d2432a5be3/';
+  'https://sts.example.com/00000000-0000-0000-0000-000000000000/';
 const EXPECTED_SSO_LOGIN_URL =
-  'https://login.microsoftonline.com/face9c4e-1b50-41d3-b404-d4d2432a5be3/saml2';
+  'https://sso.example.com/00000000-0000-0000-0000-000000000000/saml2';
 const EXPECTED_CERT_PREFIX = '-----BEGIN CERTIFICATE-----';
 
 const { expect } = test;
