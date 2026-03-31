@@ -1434,7 +1434,11 @@ class DbtSource(DbtServiceSource):
             if dbt_meta_info.openmetadata and dbt_meta_info.openmetadata.domain:
                 self.extracted_domains[table_fqn] = dbt_meta_info.openmetadata.domain
 
-            if dbt_meta_info.openmetadata and dbt_meta_info.openmetadata.tags:
+            if (
+                self.source_config.includeTags
+                and dbt_meta_info.openmetadata
+                and dbt_meta_info.openmetadata.tags
+            ):
                 for tag_fqn in dbt_meta_info.openmetadata.tags:
                     if not tag_fqn:
                         continue
