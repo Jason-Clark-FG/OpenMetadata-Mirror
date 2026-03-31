@@ -12,6 +12,7 @@
 """
 Source connection handler
 """
+import logging
 
 from typing import Optional
 
@@ -34,9 +35,13 @@ from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.source.database.databricks.client import DatabricksClient
 from metadata.utils.constants import THREE_MIN
 
+# Suppress noisy deprecation warning from databricks-sqlalchemy using
+# the deprecated '_user_agent_entry' parameter internally
+logging.getLogger("databricks.sql.session").setLevel(logging.ERROR)
+
 
 def get_connection_url(connection: DatabricksPipelineConnection) -> str:
-    url = f"databricks+connector://token:{connection.token.get_secret_value()}@{connection.hostPort}"
+    url = f"databricks://token:{connection.token.get_secret_value()}@{connection.hostPort}"
     return url
 
 

@@ -12,6 +12,7 @@
 """
 Source connection handler
 """
+import logging
 from copy import deepcopy
 from functools import partial
 from typing import Optional
@@ -62,9 +63,15 @@ from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
+# Suppress noisy deprecation warning from databricks-sqlalchemy using
+# the deprecated '_user_agent_entry' parameter internally
+logging.getLogger("databricks.sql.session").setLevel(logging.ERROR)
+
 
 def get_connection_url(connection: UnityCatalogConnection) -> str:
     url = f"{connection.scheme.value}://{connection.hostPort}"
+    if connection.catalog:
+        url = f"{url}?catalog={connection.catalog}"
     return url
 
 

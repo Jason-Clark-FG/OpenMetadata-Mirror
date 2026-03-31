@@ -15,8 +15,8 @@ supporting sqlalchemy abstraction layer
 """
 from typing import List, Type, cast
 
-from pyhive.sqlalchemy_hive import HiveCompiler
 from sqlalchemy import Column
+from sqlalchemy.sql.compiler import SQLCompiler
 
 from metadata.generated.schema.entity.data.table import Column as OMColumn
 from metadata.generated.schema.entity.data.table import (
@@ -69,10 +69,7 @@ class DatabricksProfilerInterface(SQAProfilerInterface):
         return instance.get_system_metrics()
 
     def visit_column(self, *args, **kwargs):
-        result = super(  # pylint: disable=bad-super-call
-            HiveCompiler, self
-        ).visit_column(*args, **kwargs)
-        # Here the databricks uses HiveCompiler.
+        result = SQLCompiler.visit_column(self, *args, **kwargs)
         # the `result` here would be `db.schema.table` or `db.schema.table.column`
         # for struct it will be `db.schema.table.column.nestedchild.nestedchild` etc
         # the logic is to add the backticks to nested children.
@@ -86,9 +83,7 @@ class DatabricksProfilerInterface(SQAProfilerInterface):
         return result
 
     def visit_table(self, *args, **kwargs):
-        result = super(  # pylint: disable=bad-super-call
-            HiveCompiler, self
-        ).visit_table(*args, **kwargs)
+        result = SQLCompiler.visit_table(self, *args, **kwargs)
         # Handle table references with hyphens in database/schema names
         # Format: `database`.`schema`.`table` for Unity Catalog/Databricks
         if "." in result and not result.startswith("`"):
@@ -105,8 +100,14 @@ class DatabricksProfilerInterface(SQAProfilerInterface):
     def __init__(self, service_connection_config, **kwargs):
         super().__init__(service_connection_config=service_connection_config, **kwargs)
         self.set_catalog(self.session)
-        HiveCompiler.visit_column = DatabricksProfilerInterface.visit_column
-        HiveCompiler.visit_table = DatabricksProfilerInterface.visit_table
+        from databricks.sqlalchemy._ddl import DatabricksStatementCompiler
+
+        DatabricksStatementCompiler.visit_column = (
+            DatabricksProfilerInterface.visit_column
+        )
+        DatabricksStatementCompiler.visit_table = (
+            DatabricksProfilerInterface.visit_table
+        )
 
     def _get_struct_columns(self, columns: List[OMColumn], parent: str):
         """Get struct columns"""
@@ -126,7 +127,9 @@ class DatabricksProfilerInterface(SQAProfilerInterface):
                     _quote=False,
                 )
                 sqa_col._set_parent(  # pylint: disable=protected-access
-                    self.table.__table__
+                    self.table.__table__,
+                    all_names={c.name: c for c in self.table.__table__.columns},
+                    allow_replacements=True,
                 )
                 columns_list.append(sqa_col)
             else:
@@ -147,7 +150,9 @@ class DatabricksProfilerInterface(SQAProfilerInterface):
             else:
                 col = build_orm_col(idx, column_obj, DatabaseServiceType.Databricks)
                 col._set_parent(  # pylint: disable=protected-access
-                    self.table.__table__
+                    self.table.__table__,
+                    all_names={c.name: c for c in self.table.__table__.columns},
+                    allow_replacements=True,
                 )
                 columns.append(col)
         return columns
