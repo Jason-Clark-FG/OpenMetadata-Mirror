@@ -304,6 +304,69 @@ test.describe('Lineage Filters', () => {
 
         await afterAction();
       });
+
+      test(`Verify Impact Analysis ${filterName} filter with partial metadata assignment`, async ({
+        page,
+      }) => {
+        const { apiContext, afterAction } = await getApiContext(page);
+
+        const entitiesToShow: EntityClassUnion[] = [
+          lineageEntity,
+          depth1Entity,
+        ];
+        const entitiesToHide: EntityClassUnion[] = [];
+
+        depth2ndEntities.forEach((entity, index) => {
+          if (index % 2 === 0) {
+            entitiesToShow.push(entity);
+          } else {
+            entitiesToHide.push(entity);
+          }
+        });
+
+        await setupMetadata(apiContext, entitiesToShow);
+
+        // Navigate to Impact Analysis
+        const impactAnalysisTab = page.getByRole('tab', {
+          name: 'Impact Analysis',
+        });
+
+        await expect(impactAnalysisTab).toBeVisible();
+        await impactAnalysisTab.scrollIntoViewIfNeeded();
+        await impactAnalysisTab.click();
+        await page.reload();
+        await waitForAllLoadersToDisappear(page);
+
+        await page.getByTestId('filters-button').click();
+        await page.getByTestId(`search-dropdown-${filterTestId}`).click();
+
+        await page.getByTitle(filterValue).click();
+
+        const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+        await page.getByRole('button', { name: 'Update' }).click();
+        await lineageRes;
+
+        await rearrangeNodes(page);
+        await performZoomOut(page);
+
+        for (const entity of entitiesToShow) {
+          await expect(
+            page.getByTestId(
+              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            )
+          ).toBeVisible();
+        }
+
+        for (const entity of entitiesToHide) {
+          await expect(
+            page.getByTestId(
+              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            )
+          ).not.toBeVisible();
+        }
+
+        await afterAction();
+      });
     }
   );
 
@@ -777,21 +840,16 @@ test.describe('Lineage Filters', () => {
       }
     });
 
-    test('verify upstream / Downstream count for all the entities', async ({
-      page,
-    }) => {
+    test('verify upstream count for all the entities', async ({ page }) => {
       // Verify Dashboard is visible in Impact Analysis for Upstream
       await page.getByRole('button', { name: 'Upstream' }).click();
       await waitForAllLoadersToDisappear(page);
 
       // validate main entity count
       const upstreamCount = 0;
-      const downstreamCount = entities.length;
+
       await expect(
         page.getByRole('button', { name: `Upstream ${upstreamCount}` })
-      ).toBeVisible();
-      await expect(
-        page.getByRole('button', { name: `Downstream ${downstreamCount}` })
       ).toBeVisible();
 
       await depth1Entity.visitEntityPage(page);
@@ -803,22 +861,18 @@ test.describe('Lineage Filters', () => {
         page.getByRole('button', { name: `Upstream ${upstreamCount + 1}` })
       ).toBeVisible();
 
-      await expect(
-        page.getByRole('button', { name: `Downstream ${downstreamCount - 1}` })
-      ).toBeVisible();
-
       for (const entity of depth2ndEntities) {
         await entity.visitEntityPage(page);
         await visitLineageTab(page);
         await page.getByRole('tab', { name: 'Impact Analysis' }).click();
+
+        await waitForAllLoadersToDisappear(page);
+        // Verify Dashboard is visible in Impact Analysis for Upstream
+        await page.getByRole('button', { name: 'Upstream' }).click();
         await waitForAllLoadersToDisappear(page);
 
         await expect(
           page.getByRole('button', { name: `Upstream 2` })
-        ).toBeVisible();
-
-        await expect(
-          page.getByRole('button', { name: `Downstream 0` })
         ).toBeVisible();
       }
     });

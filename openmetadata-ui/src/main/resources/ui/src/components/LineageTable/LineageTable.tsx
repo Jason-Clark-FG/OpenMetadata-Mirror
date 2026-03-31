@@ -494,8 +494,6 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         const paginationInfoKey = JSON.stringify({
           fqn,
           entityType,
-          lineageDirection,
-          nodeDepth,
           upstreamDepth: lineageConfig.upstreamDepth,
           downstreamDepth: lineageConfig.downstreamDepth,
           queryFilter,
