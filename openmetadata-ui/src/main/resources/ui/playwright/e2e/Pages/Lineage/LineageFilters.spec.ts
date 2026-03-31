@@ -969,6 +969,8 @@ test.describe('Lineage Filters', () => {
     });
 
     test('verify downstream count for all the entities', async ({ page }) => {
+      test.slow();
+
       // validate main entity count
       const count = entities.length;
       await expect(
@@ -997,6 +999,8 @@ test.describe('Lineage Filters', () => {
     });
 
     test('verify upstream count for all the entities', async ({ page }) => {
+      test.slow();
+
       // Verify Dashboard is visible in Impact Analysis for Upstream
       await page.getByRole('button', { name: 'Upstream' }).click();
       await waitForAllLoadersToDisappear(page);

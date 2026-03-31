@@ -224,15 +224,22 @@ const CustomControls: FC<{
       lineageConfig.upstreamDepth,
     ]);
 
+  const handleClearAllFilters = useCallback(() => {
+    setSelectedQuickFilters((prev) =>
+      (prev ?? []).map((filter) => ({ ...filter, value: [] }))
+    );
+  }, [setSelectedQuickFilters]);
+
   const handleTabChange = useCallback(
     (key: string) => {
       const params = QueryString.parse(location.search, {
         ignoreQueryPrefix: true,
       });
       params['mode'] = key;
+      handleClearAllFilters();
       navigate({ search: QueryString.stringify(params) });
     },
-    [navigate, location.search]
+    [navigate, location.search, handleClearAllFilters]
   );
 
   const updateURLParams = useCallback(
@@ -275,12 +282,6 @@ const CustomControls: FC<{
         });
       }
     }, [filterSelectionActive, updateURLParams]);
-
-  const handleClearAllFilters = useCallback(() => {
-    setSelectedQuickFilters((prev) =>
-      (prev ?? []).map((filter) => ({ ...filter, value: [] }))
-    );
-  }, [setSelectedQuickFilters]);
 
   // Function to handle export click
   const handleImpactAnalysisExport = useCallback(
