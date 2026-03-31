@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -27,9 +28,7 @@ import org.mockito.MockedStatic;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.EntityDAO;
-import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
-import org.openmetadata.service.util.EntityUtil;
 
 class MigrationUtilTest {
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -672,17 +671,12 @@ class MigrationUtilTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void migrateWorkflowInputNamespaceMap_phase2LoadsAllWorkflowsAfterPhase1() throws Exception {
+  void migrateWorkflowInputNamespaceMap_phase2SkippedWhenNoChangesInPhase1() throws Exception {
     WorkflowDefinitionRepository repository = mock(WorkflowDefinitionRepository.class);
     EntityDAO<WorkflowDefinition> mockDao = mock(EntityDAO.class);
 
-    WorkflowDefinition wf1 = buildMinimalWorkflowDefinition("wf1");
-    WorkflowDefinition wf2 = buildMinimalWorkflowDefinition("wf2");
-
     when(repository.getDao()).thenReturn(mockDao);
     when(mockDao.listAfterWithOffset(anyInt(), anyInt())).thenReturn(List.of());
-    when(repository.listAll(eq(EntityUtil.Fields.EMPTY_FIELDS), any(ListFilter.class)))
-        .thenReturn(List.of(wf1, wf2));
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
@@ -692,7 +686,8 @@ class MigrationUtilTest {
       MigrationUtil.migrateWorkflowInputNamespaceMap();
     }
 
-    verify(repository).listAll(eq(EntityUtil.Fields.EMPTY_FIELDS), any(ListFilter.class));
+    verify(repository, never()).listAll(any(), any());
+    verify(repository, never()).getByName(any(), anyString(), any());
   }
 
   @Test
@@ -714,11 +709,13 @@ class MigrationUtilTest {
             """,
             workflowId);
 
+    WorkflowDefinition wf1 = buildMinimalWorkflowDefinition("wf1");
+
     when(repository.getDao()).thenReturn(mockDao);
     when(mockDao.listAfterWithOffset(anyInt(), eq(0))).thenReturn(List.of(rawJsonNeedsMigration));
     when(mockDao.listAfterWithOffset(anyInt(), eq(100))).thenReturn(List.of());
     doNothing().when(mockDao).update(eq(workflowId), eq("wf1"), anyString());
-    when(repository.listAll(any(), any())).thenReturn(List.of());
+    when(repository.getByName(isNull(), eq("wf1"), any())).thenReturn(wf1);
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
@@ -729,6 +726,8 @@ class MigrationUtilTest {
     }
 
     verify(mockDao).update(eq(workflowId), eq("wf1"), anyString());
+    verify(repository).getByName(isNull(), eq("wf1"), any());
+    verify(repository, never()).listAll(any(), any());
   }
 
   @Test
@@ -741,7 +740,6 @@ class MigrationUtilTest {
     when(mockDao.listAfterWithOffset(anyInt(), anyInt()))
         .thenReturn(List.of("{invalid-json}"))
         .thenReturn(List.of());
-    when(repository.listAll(any(), any())).thenReturn(List.of());
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
@@ -759,11 +757,26 @@ class MigrationUtilTest {
   void migrateWorkflowInputNamespaceMap_handlesRedeployExceptionGracefully() throws Exception {
     WorkflowDefinitionRepository repository = mock(WorkflowDefinitionRepository.class);
     EntityDAO<WorkflowDefinition> mockDao = mock(EntityDAO.class);
-    WorkflowDefinition failingWorkflow = buildMinimalWorkflowDefinition("wf-fail");
+
+    UUID workflowId = UUID.fromString("00000000-0000-0000-0000-000000000002");
+    String rawJsonNeedsMigration =
+        String.format(
+            """
+            {
+              "id": "%s",
+              "fullyQualifiedName": "wf-fail",
+              "trigger": {"output": ["relatedEntity"]},
+              "nodes": []
+            }
+            """,
+            workflowId);
 
     when(repository.getDao()).thenReturn(mockDao);
-    when(mockDao.listAfterWithOffset(anyInt(), anyInt())).thenReturn(List.of());
-    when(repository.listAll(any(), any())).thenReturn(List.of(failingWorkflow));
+    when(mockDao.listAfterWithOffset(anyInt(), eq(0))).thenReturn(List.of(rawJsonNeedsMigration));
+    when(mockDao.listAfterWithOffset(anyInt(), eq(100))).thenReturn(List.of());
+    doNothing().when(mockDao).update(any(UUID.class), anyString(), anyString());
+    when(repository.getByName(isNull(), eq("wf-fail"), any()))
+        .thenThrow(new RuntimeException("Simulated redeploy failure"));
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
@@ -772,6 +785,7 @@ class MigrationUtilTest {
 
       MigrationUtil.migrateWorkflowInputNamespaceMap();
     }
+    // Exception during redeploy should be caught and logged, not propagated
   }
 
   @Test
@@ -793,7 +807,6 @@ class MigrationUtilTest {
     when(repository.getDao()).thenReturn(mockDao);
     when(mockDao.listAfterWithOffset(anyInt(), eq(0))).thenReturn(List.of(alreadyMigratedJson));
     when(mockDao.listAfterWithOffset(anyInt(), eq(100))).thenReturn(List.of());
-    when(repository.listAll(any(), any())).thenReturn(List.of());
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock

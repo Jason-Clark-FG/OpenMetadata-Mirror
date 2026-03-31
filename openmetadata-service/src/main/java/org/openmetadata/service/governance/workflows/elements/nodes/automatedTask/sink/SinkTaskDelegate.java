@@ -200,6 +200,8 @@ public class SinkTaskDelegate implements JavaDelegate {
       }
     }
 
+    Retry batchFetchRetry = Retry.of("sink-batch-fetch", Workflow.TASK_RETRY_CONFIG);
+
     // Process entities in sub-batches using Guava's partition
     BatchAccumulator result =
         Lists.partition(entityLinks, MAX_ENTITIES_PER_FETCH_BATCH).stream()
@@ -217,7 +219,7 @@ public class SinkTaskDelegate implements JavaDelegate {
                   try {
                     entityMap =
                         Retry.decorateSupplier(
-                                Retry.of("sink-batch-fetch", Workflow.TASK_RETRY_CONFIG),
+                                batchFetchRetry,
                                 () -> Entity.getEntitiesByLinks(subBatch, "*", Include.ALL))
                             .get();
                   } catch (Exception e) {

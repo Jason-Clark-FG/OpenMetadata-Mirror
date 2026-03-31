@@ -117,8 +117,10 @@ public class WorkflowVariableHandler {
   @SuppressWarnings("unchecked")
   public static List<String> getEntityList(
       Map<String, ?> inputNamespaceMap, WorkflowVariableHandler varHandler) {
-    // Check for conditional entity list keys (e.g. true_entityList, false_entityList,
-    // gold_entityList)
+    // Each inputNamespaceMap has exactly one entity list key — either the plain "entityList" or
+    // one conditional variant (e.g. "true_entityList", "false_entityList", "gold_entityList")
+    // produced by a preceding check/completeness node. Multiple *_entityList keys in the same map
+    // are not valid; only the first match found will be used.
     for (Map.Entry<String, ?> entry : inputNamespaceMap.entrySet()) {
       String key = entry.getKey();
       String namespace = (String) entry.getValue();

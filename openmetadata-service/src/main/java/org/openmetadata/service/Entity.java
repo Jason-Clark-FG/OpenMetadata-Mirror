@@ -651,6 +651,9 @@ public final class Entity {
     if (entityLinkStrs == null || entityLinkStrs.isEmpty()) {
       return Map.of();
     }
+    // All entity links in a workflow's entityList are always the same entity type —
+    // event-based triggers fire for a single entity, and periodic batch triggers are configured
+    // with one entity type. The type is taken from the first link.
     Map<String, String> linkToFqn = new LinkedHashMap<>();
     String entityType = null;
     for (String linkStr : entityLinkStrs) {
