@@ -93,10 +93,8 @@ class SQAInterfaceMixin(Root):
             self.service_connection_config,
             (UnityCatalogConnection, DatabricksConnection),
         ):
-            session.execute(
-                text("USE CATALOG :catalog"),
-                {"catalog": self.service_connection_config.catalog},
-            ).first()
+            catalog = self.service_connection_config.catalog
+            session.execute(text(f"USE CATALOG `{catalog}`"))
 
         if isinstance(
             self.service_connection_config, (MysqlConnection, MariaDBConnection)
