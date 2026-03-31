@@ -78,12 +78,18 @@ class MySQLConnection(BaseConnection[MySQLConnectionConfig, Engine]):
         )
 
     def _get_cloudsql_engine(self, connection: MySQLConnectionConfig) -> Engine:
-        from google.cloud.sql.connectors import Connector
+        try:
+            from google.cloud.sql.connectors import Connector
+        except ImportError:
+            raise ImportError(
+                "google-cloud-sql-connector is required for GCP CloudSQL connections. "
+                "Install it with: pip install 'cloud-sql-python-connector[pymysql]>=1.0.0'"
+            )
 
         if connection.authType.gcpConfig:
             set_google_credentials(connection.authType.gcpConfig)
 
-        connector = Connector()
+        self._cloud_sql_connector = Connector()
         instance_connection_name = connection.hostPort
         enable_iam_auth = connection.authType.enableIamAuth or False
         password = connection.authType.password or ""
@@ -99,7 +105,7 @@ class MySQLConnection(BaseConnection[MySQLConnectionConfig, Engine]):
                 connect_kwargs["enable_iam_auth"] = True
             else:
                 connect_kwargs["password"] = password
-            return connector.connect(**connect_kwargs)
+            return self._cloud_sql_connector.connect(**connect_kwargs)
 
         return create_generic_db_connection(
             connection=connection,
@@ -107,6 +113,10 @@ class MySQLConnection(BaseConnection[MySQLConnectionConfig, Engine]):
             get_connection_args_fn=get_connection_args_common,
             creator=getconn,
         )
+
+    def __del__(self):
+        if hasattr(self, "_cloud_sql_connector"):
+            self._cloud_sql_connector.close()
 
     def get_connection_dict(self) -> dict:
         """
