@@ -49,6 +49,7 @@ import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -95,6 +96,7 @@ import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.type.csv.CsvDocumentation;
 import org.openmetadata.schema.type.csv.CsvFile;
 import org.openmetadata.schema.type.csv.CsvHeader;
+import org.openmetadata.schema.type.lineage.NodeInformation;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.sdk.exception.CSVExportException;
 import org.openmetadata.search.IndexMapping;
@@ -570,15 +572,14 @@ public class LineageRepository {
                       .withIncludeDeleted(deleted)
                       .withIsConnectedVia(isConnectedVia(entityType))
                       .withDirection(LineageDirection.UPSTREAM));
-      String jsonResponse = JsonUtils.pojoToJson(response);
-      JsonNode rootNode = JsonUtils.readTree(jsonResponse);
 
       Map<String, JsonNode> entityMap = new HashMap<>();
-      JsonNode nodes = rootNode.path("nodes");
-      for (JsonNode node : nodes) {
-        JsonNode entityNode = node.path("entity");
-        String id = entityNode.path("id").asText();
-        entityMap.put(id, entityNode);
+      if (response.getNodes() != null) {
+        for (NodeInformation nodeInfo : response.getNodes().values()) {
+          JsonNode entityNode = JsonUtils.valueToTree(nodeInfo.getEntity());
+          String id = entityNode.path("id").asText();
+          entityMap.put(id, entityNode);
+        }
       }
 
       StringWriter csvContent = new StringWriter();
@@ -607,10 +608,12 @@ public class LineageRepository {
       };
       csvWriter.writeNext(headers);
 
-      JsonNode upstreamEdges = rootNode.path("upstreamEdges");
-      writeEdge(csvWriter, entityMap, upstreamEdges);
-      JsonNode downstreamEdges = rootNode.path("downstreamEdges");
-      writeEdge(csvWriter, entityMap, downstreamEdges);
+      if (response.getUpstreamEdges() != null) {
+        writeEdge(csvWriter, entityMap, response.getUpstreamEdges().values());
+      }
+      if (response.getDownstreamEdges() != null) {
+        writeEdge(csvWriter, entityMap, response.getDownstreamEdges().values());
+      }
       csvWriter.close();
       return csvContent.toString();
     } catch (IOException e) {
@@ -618,10 +621,11 @@ public class LineageRepository {
     }
   }
 
-  private void writeEdge(CSVWriter csvWriter, Map<String, JsonNode> entityMap, JsonNode edges) {
-    for (JsonNode edge : edges) {
-      String fromEntityId = edge.path("fromEntity").path("id").asText();
-      String toEntityId = edge.path("toEntity").path("id").asText();
+  private void writeEdge(
+      CSVWriter csvWriter, Map<String, JsonNode> entityMap, Collection<EsLineageData> edges) {
+    for (EsLineageData edge : edges) {
+      String fromEntityId = edge.getFromEntity().getId().toString();
+      String toEntityId = edge.getToEntity().getId().toString();
 
       JsonNode fromEntity = entityMap.getOrDefault(fromEntityId, null);
       JsonNode toEntity = entityMap.getOrDefault(toEntityId, null);
@@ -645,12 +649,11 @@ public class LineageRepository {
       baseRow.put("toOwners", getOwners(toEntity.path(FIELD_OWNERS)));
       baseRow.put("toDomain", getDomainFQN(toEntity.path(FIELD_DOMAINS)));
 
-      JsonNode columns = edge.path("columns");
-      JsonNode pipeline = edge.path("pipeline");
+      List<ColumnLineage> columns = edge.getColumns();
+      Object pipeline = edge.getPipeline();
 
-      if (columns.isArray() && !columns.isEmpty()) {
-        // Process column mappings
-        List<ColumnMapping> columnMappings = extractColumnMappingsFromEdge(columns);
+      if (!nullOrEmpty(columns)) {
+        List<ColumnMapping> columnMappings = extractColumnMappingsFromTypedEdge(columns);
         for (ColumnMapping mapping : columnMappings) {
           writeCsvRow(
               csvWriter,
@@ -670,8 +673,9 @@ public class LineageRepository {
               mapping.getFromChildFQN(),
               mapping.getToChildFQN());
         }
-      } else if (!pipeline.isMissingNode() && !pipeline.isNull()) {
-        writePipelineRow(csvWriter, baseRow, pipeline);
+      } else if (!nullOrEmpty(pipeline)) {
+        JsonNode pipelineNode = JsonUtils.valueToTree(pipeline);
+        writePipelineRow(csvWriter, baseRow, pipelineNode);
       } else {
         writeCsvRow(csvWriter, baseRow, "", "", "", "", "", "", "", "", "", "");
       }
@@ -786,6 +790,23 @@ public class LineageRepository {
             if (!fromChildFQN.isEmpty()) {
               mappings.add(new ColumnMapping(fromChildFQN, toColumn));
             }
+          }
+        }
+      }
+    }
+    return mappings;
+  }
+
+  private static List<ColumnMapping> extractColumnMappingsFromTypedEdge(
+      List<ColumnLineage> columns) {
+    List<ColumnMapping> mappings = new ArrayList<>();
+    for (ColumnLineage colLineage : columns) {
+      String toColumn = colLineage.getToColumn();
+      if (toColumn != null && !toColumn.trim().isEmpty()) {
+        for (String fromColumn : listOrEmpty(colLineage.getFromColumns())) {
+          String fromChildFQN = fromColumn.trim();
+          if (!fromChildFQN.isEmpty()) {
+            mappings.add(new ColumnMapping(fromChildFQN, toColumn.trim()));
           }
         }
       }
@@ -1492,15 +1513,13 @@ public class LineageRepository {
                       .withIncludeSourceFields(
                           org.openmetadata.service.search.SearchUtils.getRequiredLineageFields(
                               includeSourceFields)));
-      String jsonResponse = JsonUtils.pojoToJson(response);
-      JsonNode rootNode = JsonUtils.readTree(jsonResponse);
-
       Map<String, JsonNode> entityMap = new HashMap<>();
-      JsonNode nodes = rootNode.path("nodes");
-      for (JsonNode node : nodes) {
-        JsonNode entityNode = node.path("entity");
-        String id = entityNode.path("id").asText();
-        entityMap.put(id, entityNode);
+      if (response.getNodes() != null) {
+        for (NodeInformation nodeInfo : response.getNodes().values()) {
+          JsonNode entityNode = JsonUtils.valueToTree(nodeInfo.getEntity());
+          String id = entityNode.path("id").asText();
+          entityMap.put(id, entityNode);
+        }
       }
 
       StringWriter csvContent = new StringWriter();
@@ -1529,11 +1548,12 @@ public class LineageRepository {
       };
       csvWriter.writeNext(headers);
 
-      JsonNode upstreamEdges = rootNode.path("upstreamEdges");
-      writeEdge(csvWriter, entityMap, upstreamEdges);
-
-      JsonNode downstreamEdges = rootNode.path("downstreamEdges");
-      writeEdge(csvWriter, entityMap, downstreamEdges);
+      if (response.getUpstreamEdges() != null) {
+        writeEdge(csvWriter, entityMap, response.getUpstreamEdges().values());
+      }
+      if (response.getDownstreamEdges() != null) {
+        writeEdge(csvWriter, entityMap, response.getDownstreamEdges().values());
+      }
       csvWriter.close();
       return csvContent.toString();
     } catch (IOException e) {
