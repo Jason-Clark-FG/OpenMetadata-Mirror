@@ -89,9 +89,7 @@ export const ContractSemanticFormTab: React.FC<{
   const handleDeleteSemantic = useCallback(
     (key: number) => {
       const filteredValue =
-        semanticsFormData
-          ?.filter((_item, idx) => idx !== key)
-          ?.filter(Boolean) ?? [];
+        semanticsFormData?.filter((_item, idx) => idx !== key) ?? [];
       form.setFieldsValue({ semantics: filteredValue });
       onChange({ semantics: filteredValue });
     },
@@ -107,22 +105,23 @@ export const ContractSemanticFormTab: React.FC<{
     rule: string,
     tree?: JsonTree
   ) => {
-    const modifyRule = JSON.stringify(
-      jsonLogicSearchClassBase.getNegativeQueryForNotContainsReverserOperation(
-        JSON.parse(rule)
-      )
-    );
+    let modifyRule = '';
+    if (rule) {
+      try {
+        modifyRule = JSON.stringify(
+          jsonLogicSearchClassBase.getNegativeQueryForNotContainsReverserOperation(
+            JSON.parse(rule)
+          )
+        );
+      } catch {
+        modifyRule = '';
+      }
+    }
+
     form.setFields([
       {
         name: ['semantics', field.name, 'rule'],
         value: modifyRule,
-        errors: modifyRule
-          ? []
-          : [
-              t('message.field-text-is-required', {
-                fieldText: t('label.rule'),
-              }),
-            ],
       },
     ]);
     form.setFieldsValue({
@@ -318,29 +317,54 @@ export const ContractSemanticFormTab: React.FC<{
                             </Form.Item>
                           </Col>
                           <Col span={24}>
-                            <QueryBuilderWidgetV1
-                              entityType={EntityType.TABLE}
-                              fields={queryBuilderFields}
-                              getQueryActions={handleAddQueryBuilderRule}
-                              key={field.name}
+                            <Form.Item
+                              {...field}
                               label={t('label.rule')}
-                              outputType={SearchOutputType.JSONLogic}
-                              tree={
-                                editFieldData?.jsonTree
-                                  ? JSON.parse(editFieldData?.jsonTree)
-                                  : undefined
-                              }
-                              value={editFieldData?.rule ?? ''}
-                              onChange={(rule: string, tree?: JsonTree) =>
-                                handleQueryBuilderChange(field, rule, tree)
-                              }
-                            />
+                              name={[field.name, 'rule']}
+                              rules={[
+                                {
+                                  required: true,
+                                  validator: (_, value) => {
+                                    if (
+                                      !value ||
+                                      value === '""' ||
+                                      value === '{}'
+                                    ) {
+                                      return Promise.reject(
+                                        t('message.field-text-is-required', {
+                                          fieldText: t('label.rule'),
+                                        })
+                                      );
+                                    }
+
+                                    return Promise.resolve();
+                                  },
+                                },
+                              ]}>
+                              <QueryBuilderWidgetV1
+                                entityType={EntityType.TABLE}
+                                fields={queryBuilderFields}
+                                getQueryActions={handleAddQueryBuilderRule}
+                                key={field.name}
+                                outputType={SearchOutputType.JSONLogic}
+                                tree={
+                                  editFieldData?.jsonTree
+                                    ? JSON.parse(editFieldData?.jsonTree)
+                                    : undefined
+                                }
+                                value={editFieldData?.rule ?? ''}
+                                onChange={(rule: string, tree?: JsonTree) =>
+                                  handleQueryBuilderChange(field, rule, tree)
+                                }
+                              />
+                            </Form.Item>
                           </Col>
                         </Row>
 
                         <div className="semantic-form-item-actions">
                           <Button
                             className="add-semantic-button"
+                            data-testid="add-new-rule-btn"
                             disabled={!queryBuilderAddRule?.addRule}
                             icon={<Icon component={PlusIcon} />}
                             type="link"
