@@ -19,7 +19,7 @@ import {
 } from '../constant/permission';
 import { AdminClass } from '../support/user/AdminClass';
 import { UserClass } from '../support/user/UserClass';
-import { getApiContext, uuid } from '../utils/common';
+import { getApiContext, redirectToHomePage, uuid } from '../utils/common';
 import { loginAsAdmin } from '../utils/initialSetup';
 
 const adminFile = 'playwright/.auth/admin.json';
@@ -78,7 +78,7 @@ const ownerUser = new UserClass({
 });
 
 setup('authenticate all users', async ({ browser }) => {
-  setup.setTimeout(120 * 1000);
+  setup.setTimeout(300 * 1000);
   // Create separate pages for each user
   const [
     adminPage,
@@ -110,8 +110,7 @@ setup('authenticate all users', async ({ browser }) => {
     // This is done to avoid logging out the user to get the new token
     const newAdminPage = await browser.newPage();
     await admin.login(newAdminPage);
-
-    await newAdminPage.waitForURL('**/my-data');
+    await redirectToHomePage(newAdminPage);
 
     const { apiContext, afterAction } = await getApiContext(adminPage);
 
@@ -153,11 +152,12 @@ setup('authenticate all users', async ({ browser }) => {
       ownerUser.setDataConsumerRole(apiContext),
     ]);
 
-    // Wait for indexedDB databases to be available
-    await adminPage.waitForFunction(() => indexedDB.databases());
+    // Wait for indexedDB databases to be available on the context whose
+    // storage state will be persisted for subsequent authenticated tests.
+    await newAdminPage.waitForFunction(() => indexedDB.databases());
 
     // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth state to be persisted to indexedDB
-    await adminPage.waitForTimeout(2000);
+    await newAdminPage.waitForTimeout(2000);
 
     // Save admin state
     await newAdminPage

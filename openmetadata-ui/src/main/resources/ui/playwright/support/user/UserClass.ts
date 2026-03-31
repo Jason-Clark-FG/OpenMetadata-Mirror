@@ -17,6 +17,7 @@ import {
   DATA_STEWARD_RULES,
 } from '../../constant/permission';
 import { generateRandomUsername, uuid } from '../../utils/common';
+import { setToken } from '../../utils/tokenStorage';
 import { PolicyClass, PolicyRulesType } from '../access-control/PoliciesClass';
 import { RolesClass } from '../access-control/RolesClass';
 import { UserResponseDataType } from '../entity/Entity.interface';
@@ -212,29 +213,51 @@ export class UserClass {
     userName = this.data.email,
     password = this.data.password
   ) {
-    await page.goto('/');
-    try {
-      await page.waitForURL('**/signin', { timeout: 5000 });
-    } catch {
-      await page.context().clearCookies();
-      await page.goto('/signin');
-      await page.waitForURL('**/signin');
-    }
-    await page.waitForLoadState('domcontentloaded');
+    await page.goto('/signin');
+    await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+
     const emailInput = page.locator('input[id="email"]');
+    const hasInteractiveLogin = await emailInput
+      .isVisible({
+        timeout: 5000,
+      })
+      .catch(() => false);
+
+    if (!hasInteractiveLogin) {
+      await page
+        .waitForURL((url) => !url.pathname.includes('/signin'), {
+          timeout: 10000,
+        })
+        .catch(() => undefined);
+      await this.completeAuthenticatedLogin(page);
+
+      return;
+    }
+
+    await page.waitForLoadState('domcontentloaded');
     await emailInput.waitFor({ state: 'visible' });
     await emailInput.fill(userName);
     await page.locator('#email').press('Tab');
     await page.fill('input[id="password"]', password);
     const loginRes = page.waitForResponse('/api/v1/auth/login');
     await page.getByTestId('login').click();
-    await loginRes;
+    const loginResponse = await loginRes;
+    const loginPayload = await loginResponse.json().catch(() => undefined);
+
+    if (loginPayload?.accessToken) {
+      await setToken(page, loginPayload.accessToken);
+    }
     await page
       .waitForURL((url) => !url.pathname.includes('/signin'), {
         timeout: 60000,
       })
       .catch(() => undefined);
     await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+
+    await this.completeAuthenticatedLogin(page);
+  }
+
+  private async completeAuthenticatedLogin(page: Page) {
 
     // Set localStorage to prevent welcome screen from showing
     // The welcome screen checks for user's name in 'loggedInUsers' localStorage key

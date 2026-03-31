@@ -223,12 +223,13 @@ public class TaskWorkflowHandler {
       addResolutionComment(task, taskRepository, newValue, user);
     }
 
-    // Apply entity changes based on task type
-    if (task.getAbout() != null) {
+    // Only positive resolutions should mutate the target entity.
+    if (approved && task.getAbout() != null) {
       applyEntityChanges(task, approved, newValue, resolvedPayload, user);
     } else {
       LOG.info(
-          "[TaskWorkflowHandler] Skipping entity changes: aboutPresent={}",
+          "[TaskWorkflowHandler] Skipping entity changes: approved={}, aboutPresent={}",
+          approved,
           task.getAbout() != null);
     }
 
@@ -1028,9 +1029,13 @@ public class TaskWorkflowHandler {
       return transitionId;
     }
 
-    if (task == null
-        || task.getAvailableTransitions() == null
-        || task.getAvailableTransitions().isEmpty()) {
+    String defaultTransitionId =
+        TaskWorkflowLifecycleResolver.defaultTransitionId(task, resolutionType);
+    if (defaultTransitionId != null) {
+      return defaultTransitionId;
+    }
+
+    if (task != null && TaskEntityType.DataQualityReview == task.getType()) {
       return isPositiveResolution(resolutionType) ? "true" : "false";
     }
 

@@ -26,10 +26,9 @@
 
 import { expect, test } from '@playwright/test';
 import { TableClass } from '../../../support/entity/TableClass';
-import { AdminClass } from '../../../support/user/AdminClass';
+import { authenticateAdminPage } from '../../../utils/admin';
 import {
   getApiContext,
-  redirectToHomePage,
   uuid,
 } from '../../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
@@ -55,8 +54,6 @@ type CreatedTask = {
   status?: string;
 };
 
-test.use({ storageState: 'playwright/.auth/admin.json' });
-
 test.describe.serial('Task Custom Form Workflow', () => {
   test('renders and resolves a workflow-driven custom task end to end', async ({
     page,
@@ -68,15 +65,13 @@ test.describe.serial('Task Custom Form Workflow', () => {
     const initialReviewNotes = `Initial review notes ${uuid()}`;
     const updatedReviewNotes = `Updated review notes ${uuid()}`;
     const workflowName = `PlaywrightCustomTaskWorkflow${uuid()}`;
-    const admin = new AdminClass();
     const table = new TableClass();
     let taskId: string | undefined;
     let workflowId: string | undefined;
     let schemaToRestore: TaskFormSchema | undefined;
     let createdSchemaId: string | undefined;
 
-    await admin.login(page);
-    await redirectToHomePage(page);
+    await authenticateAdminPage(page);
 
     const { apiContext, afterAction } = await getApiContext(page);
 
@@ -419,8 +414,20 @@ test.describe.serial('Task Custom Form Workflow', () => {
         initialReviewNotes
       );
 
-      await expect(page.getByTestId('workflow-task-action-primary')).toBeVisible();
-      await page.getByTestId('workflow-task-action-primary').click();
+      const editAcceptDropdown = page.getByTestId('edit-accept-task-dropdown');
+
+      if (await editAcceptDropdown.isVisible().catch(() => false)) {
+        await editAcceptDropdown.locator('button').last().click();
+        await page.getByTestId('task-action-menu-item-edit').click();
+      } else {
+        const workflowActionButton = page
+          .locator(
+            '[data-testid="workflow-task-action-primary"], [data-testid="workflow-task-action-dropdown"]'
+          )
+          .first();
+        await expect(workflowActionButton).toBeVisible();
+        await workflowActionButton.click();
+      }
 
       const visibleModal = page.getByRole('dialog').first();
       await expect(visibleModal).toBeVisible();

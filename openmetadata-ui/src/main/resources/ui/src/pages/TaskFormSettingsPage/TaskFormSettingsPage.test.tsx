@@ -128,16 +128,23 @@ describe('TaskFormSettingsPage', () => {
     expect(
       await screen.findByText('TitleBreadcrumb.component')
     ).toBeInTheDocument();
-    expect(await screen.findByText('Description Update')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('task-form-list-item-DescriptionUpdate')
+    ).toBeInTheDocument();
 
     await waitFor(() =>
       expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
     );
 
-    expect(screen.getByLabelText('Task Category')).toHaveValue(
+    expect(screen.getByTestId('task-form-category-input')).toHaveTextContent(
       'MetadataUpdate'
     );
-    expect(screen.getAllByTestId('code-editor')).toHaveLength(7);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced JSON' }));
+
+    await waitFor(() =>
+      expect(screen.getAllByTestId('code-editor')).toHaveLength(7)
+    );
   });
 
   it('updates the selected schema', async () => {
@@ -227,6 +234,8 @@ describe('TaskFormSettingsPage', () => {
     await waitFor(() =>
       expect(screen.getByLabelText('Name')).toHaveValue('DescriptionUpdate')
     );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Advanced JSON' }));
 
     fireEvent.change(screen.getAllByTestId('code-editor')[0], {
       target: { value: '{invalid-json' },

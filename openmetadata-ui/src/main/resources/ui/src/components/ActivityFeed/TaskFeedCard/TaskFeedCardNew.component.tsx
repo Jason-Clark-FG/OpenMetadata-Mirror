@@ -48,7 +48,6 @@ import { useUserProfile } from '../../../hooks/user-profile/useUserProfile';
 import DescriptionTaskNew from '../../../pages/TasksPage/shared/DescriptionTaskNew';
 import TagsTask from '../../../pages/TasksPage/shared/TagsTask';
 import {
-  closeTask as closeTaskAPI,
   resolveTask as resolveTaskAPI,
   TaskResolutionType,
 } from '../../../rest/tasksAPI';
@@ -188,13 +187,37 @@ const TaskFeedCard = ({
   const isTaskRecognizerFeedbackApproval =
     taskDetails?.type === TaskType.RecognizerFeedbackApproval;
 
-  const updateTaskData = async (data: TaskDetails | ResolveTask) => {
+  const getResolutionPayload = (resolutionType: TaskResolutionType) => {
+    if (resolutionType === TaskResolutionType.Rejected) {
+      if (isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval) {
+        return { newValue: 'Rejected' };
+      }
+
+      return { newValue: '' };
+    }
+
+    if (isTaskTags) {
+      return { newValue: taskDetails?.suggestion || '[]' };
+    }
+
+    return {
+      newValue:
+        isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
+          ? 'approved'
+          : taskDetails?.suggestion,
+    };
+  };
+
+  const updateTaskData = async (
+    data: TaskDetails | ResolveTask,
+    resolutionType: TaskResolutionType = TaskResolutionType.Approved
+  ) => {
     if (!feed?.id) {
       return;
     }
     try {
       const updatedTask = await resolveTaskAPI(feed.id, {
-        resolutionType: TaskResolutionType.Completed,
+        resolutionType,
         newValue: (data as ResolveTask).newValue,
       });
       showSuccessToast(
@@ -226,42 +249,16 @@ const TaskFeedCard = ({
 
       return;
     }
-    if (isTaskTags) {
-      const tagsData = {
-        newValue: taskDetails?.suggestion || '[]',
-      };
-
-      updateTaskData(tagsData as TaskDetails);
-    } else {
-      const newValue =
-        isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval
-          ? 'approved'
-          : taskDetails?.suggestion;
-      const data = { newValue: newValue };
-      updateTaskData(data as TaskDetails);
-    }
+    updateTaskData(
+      getResolutionPayload(TaskResolutionType.Approved) as TaskDetails,
+      TaskResolutionType.Approved
+    );
   };
   const onTaskReject = async () => {
-    const updatedComment = 'Rejected';
-    if (isTaskGlossaryApproval || isTaskRecognizerFeedbackApproval) {
-      const data = { newValue: 'Rejected' };
-      updateTaskData(data as TaskDetails);
-
-      return;
-    }
-
-    if (!feed?.id) {
-      return;
-    }
-
-    try {
-      await closeTaskAPI(feed.id, updatedComment);
-      showSuccessToast(t('server.task-closed-successfully'));
-      onAfterClose?.();
-      onUpdateEntityDetails?.();
-    } catch (err) {
-      showErrorToast(err as AxiosError);
-    }
+    updateTaskData(
+      getResolutionPayload(TaskResolutionType.Rejected) as TaskDetails,
+      TaskResolutionType.Rejected
+    );
   };
   const isCreator = isEqual(feed.createdBy, currentUser?.name);
   const checkIfUserPartOfTeam = useCallback(

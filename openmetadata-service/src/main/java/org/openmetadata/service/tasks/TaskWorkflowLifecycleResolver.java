@@ -199,9 +199,11 @@ public final class TaskWorkflowLifecycleResolver {
       case DomainUpdate -> "DomainUpdateTaskWorkflow";
       case GlossaryApproval -> "GlossaryApprovalTaskWorkflow";
       case RequestApproval -> "RequestApprovalTaskWorkflow";
+      case DataAccessRequest -> "DataAccessRequestTaskWorkflow";
       case Suggestion -> "SuggestionTaskWorkflow";
       case TestCaseResolution -> "TestCaseResolutionTaskWorkflow";
       case IncidentResolution -> "IncidentResolutionTaskWorkflow";
+      case PipelineReview -> "PipelineReviewTaskWorkflow";
       case DataQualityReview -> "RecognizerFeedbackReviewWorkflow";
       case CustomTask -> "CustomTaskWorkflow";
       default -> "CustomTaskWorkflow";
@@ -222,9 +224,11 @@ public final class TaskWorkflowLifecycleResolver {
       case "DomainUpdateTaskWorkflow" -> TaskEntityType.DomainUpdate;
       case "GlossaryApprovalTaskWorkflow" -> TaskEntityType.GlossaryApproval;
       case "RequestApprovalTaskWorkflow" -> TaskEntityType.RequestApproval;
+      case "DataAccessRequestTaskWorkflow" -> TaskEntityType.DataAccessRequest;
       case "SuggestionTaskWorkflow" -> TaskEntityType.Suggestion;
       case "TestCaseResolutionTaskWorkflow" -> TaskEntityType.TestCaseResolution;
       case "IncidentResolutionTaskWorkflow" -> TaskEntityType.IncidentResolution;
+      case "PipelineReviewTaskWorkflow" -> TaskEntityType.PipelineReview;
       case "RecognizerFeedbackReviewWorkflow" -> TaskEntityType.DataQualityReview;
       case "GenericReviewTaskWorkflow" -> TaskEntityType.RequestApproval;
       case "GenericIncidentTaskWorkflow" -> TaskEntityType.IncidentResolution;
@@ -263,9 +267,11 @@ public final class TaskWorkflowLifecycleResolver {
         "DomainUpdateTaskWorkflow",
         "GlossaryApprovalTaskWorkflow",
         "RequestApprovalTaskWorkflow",
+        "DataAccessRequestTaskWorkflow",
         "SuggestionTaskWorkflow",
         "TestCaseResolutionTaskWorkflow",
         "IncidentResolutionTaskWorkflow",
+        "PipelineReviewTaskWorkflow",
         "RecognizerFeedbackReviewWorkflow",
         "CustomTaskWorkflow",
         // Keep legacy generic defaults seedable during cutover so older bindings remain valid.
@@ -480,12 +486,39 @@ public final class TaskWorkflowLifecycleResolver {
               defaultWorkflowDefinitionRef(taskType),
               namedObjectSchema("comment"))
           : null;
+      case DataAccessRequest -> taskCategory == TaskCategory.DataAccess
+          ? defaultSchema(
+              taskType,
+              taskCategory,
+              defaultWorkflowDefinitionRef(taskType),
+              schemaWithProperties(
+                  Map.of(
+                      "requestedAccess", stringProperty(),
+                      "duration", stringProperty(),
+                      "reason", stringProperty(),
+                      "assets", Map.of("type", "array", "items", objectProperty()),
+                      "ticketId", stringProperty(),
+                      "expirationDate", stringProperty())))
+          : null;
       case TestCaseResolution, IncidentResolution -> taskCategory == TaskCategory.Incident
           ? defaultSchema(
               taskType,
               taskCategory,
               defaultWorkflowDefinitionRef(taskType),
               namedObjectSchema("rootCause", "resolution"))
+          : null;
+      case PipelineReview -> taskCategory == TaskCategory.Review
+          ? defaultSchema(
+              taskType,
+              taskCategory,
+              defaultWorkflowDefinitionRef(taskType),
+              schemaWithProperties(
+                  Map.of(
+                      "reviewType", stringProperty(),
+                      "reviewCriteria", Map.of("type", "array", "items", objectProperty()),
+                      "findings", stringProperty(),
+                      "recommendation", stringProperty(),
+                      "attachments", Map.of("type", "array", "items", objectProperty()))))
           : null;
       case DataQualityReview -> taskCategory == TaskCategory.Review
           ? defaultSchema(

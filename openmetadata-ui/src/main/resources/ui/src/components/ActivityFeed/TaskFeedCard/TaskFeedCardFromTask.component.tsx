@@ -32,7 +32,6 @@ import { useUserProfile } from '../../../hooks/user-profile/useUserProfile';
 import DescriptionTaskFromTask from '../../../pages/TasksPage/shared/DescriptionTaskFromTask';
 import TagsTaskFromTask from '../../../pages/TasksPage/shared/TagsTaskFromTask';
 import {
-  closeTask as closeTaskAPI,
   resolveTask as resolveTaskAPI,
   Task,
   TaskEntityStatus,
@@ -188,6 +187,16 @@ const TaskFeedCardFromTask = ({
   const isApprovalWorkflowTask =
     isTaskApprovalRequest || isTaskRecognizerFeedbackApproval;
 
+  const getTransitionId = (resolutionType: TaskResolutionType) =>
+    task.availableTransitions?.find(
+      (transition) => transition.resolutionType === resolutionType
+    )?.id ??
+    task.availableTransitions?.find((transition) =>
+      resolutionType === TaskResolutionType.Rejected
+        ? transition.id === 'reject'
+        : transition.id === 'approve'
+    )?.id;
+
   const updateTaskData = async (
     newValue: string,
     resolutionType: TaskResolutionType = TaskResolutionType.Approved
@@ -197,6 +206,7 @@ const TaskFeedCardFromTask = ({
     }
     try {
       const updatedTask = await resolveTaskAPI(task.id, {
+        transitionId: getTransitionId(resolutionType),
         resolutionType,
         newValue,
       });
@@ -238,25 +248,10 @@ const TaskFeedCardFromTask = ({
   };
 
   const onTaskReject = async () => {
-    if (isApprovalWorkflowTask) {
-      updateTaskData('rejected', TaskResolutionType.Rejected);
-
-      return;
-    }
-
-    const updatedComment = 'Rejected';
-    if (!task?.id) {
-      return;
-    }
-
-    try {
-      await closeTaskAPI(task.id, updatedComment);
-      showSuccessToast(t('server.task-closed-successfully'));
-      onAfterClose?.();
-      onUpdateEntityDetails?.();
-    } catch (err) {
-      showErrorToast(err as AxiosError);
-    }
+    updateTaskData(
+      isApprovalWorkflowTask ? 'rejected' : '',
+      TaskResolutionType.Rejected
+    );
   };
 
   const isCreator = isEqual(task.createdBy?.name, currentUser?.name);

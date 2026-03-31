@@ -3071,8 +3071,8 @@ public class WorkflowDefinitionResourceIT {
                   "events": ["Updated"],
                   "exclude": ["reviewers"],
                   "filter": {
-                    "glossaryTerm": "{\\\"!\\\": [{\\\"in\\\": [\\\"workflow\\\", {\\\"var\\\": \\\"description\\\"}]}]}",
-                    "table": "{\\\"!\\\": [{\\\"in\\\": [\\\"production\\\", {\\\"var\\\": \\\"name\\\"}]}]}"
+                    "glossaryTerm": "{\\\"in\\\": [\\\"workflow\\\", {\\\"var\\\": \\\"description\\\"}]}",
+                    "table": "{\\\"in\\\": [\\\"production\\\", {\\\"var\\\": \\\"name\\\"}]}"
                   }
                 },
                 "output": ["relatedEntity", "updatedBy"]

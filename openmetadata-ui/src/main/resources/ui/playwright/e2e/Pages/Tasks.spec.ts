@@ -13,10 +13,8 @@
 import { expect, test } from '@playwright/test';
 import { TaskClass } from '../../support/entity/TaskClass';
 import { UserClass } from '../../support/user/UserClass';
-import { getApiContext, redirectToHomePage } from '../../utils/common';
-
-const adminFile = 'playwright/.auth/admin.json';
-test.use({ storageState: adminFile });
+import { authenticateAdminPage } from '../../utils/admin';
+import { getApiContext } from '../../utils/common';
 
 test.describe('Task Entity API Tests', () => {
   const user1 = new UserClass();
@@ -26,36 +24,30 @@ test.describe('Task Entity API Tests', () => {
   let task3: TaskClass;
 
   test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
+    const page = await browser.newPage();
+    await authenticateAdminPage(page);
     const { apiContext, afterAction } = await getApiContext(page);
     await user1.create(apiContext);
     await user2.create(apiContext);
     await afterAction();
     await page.close();
-    await context.close();
   });
 
   test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
+    const page = await browser.newPage();
+    await authenticateAdminPage(page);
     const { apiContext, afterAction } = await getApiContext(page);
     await user1.delete(apiContext);
     await user2.delete(apiContext);
     await afterAction();
     await page.close();
-    await context.close();
   });
 
   test.beforeEach(async ({ page }) => {
-    await redirectToHomePage(page);
+    await authenticateAdminPage(page);
   });
 
-  test('Create task with different categories', async ({ page }) => {
+  test('Create task with different built-in categories', async ({ page }) => {
     const { apiContext } = await getApiContext(page);
 
     await test.step('Create MetadataUpdate task', async () => {
@@ -89,17 +81,17 @@ test.describe('Task Entity API Tests', () => {
       expect(response.priority).toBe('High');
     });
 
-    await test.step('Create Custom task', async () => {
+    await test.step('Create Review task', async () => {
       task3 = new TaskClass({
-        category: 'Custom',
-        type: 'CustomTask',
-        description: 'Custom workflow task',
+        category: 'Review',
+        type: 'DataQualityReview',
+        description: 'Review workflow task',
         priority: 'Critical',
       });
       const response = await task3.create(apiContext);
 
       expect(response).toBeDefined();
-      expect(response.category).toBe('Custom');
+      expect(response.category).toBe('Review');
       expect(response.priority).toBe('Critical');
     });
   });
@@ -279,7 +271,7 @@ test.describe('Task Entity API Tests', () => {
     });
   });
 
-  test('All task categories can be created', async ({ page }) => {
+  test('All built-in task categories can be created', async ({ page }) => {
     const { apiContext } = await getApiContext(page);
 
     const categories = [
@@ -288,7 +280,6 @@ test.describe('Task Entity API Tests', () => {
       { category: 'MetadataUpdate', type: 'DescriptionUpdate' },
       { category: 'Incident', type: 'IncidentResolution' },
       { category: 'Review', type: 'DataQualityReview' },
-      { category: 'Custom', type: 'CustomTask' },
     ];
 
     const createdTasks: TaskClass[] = [];
@@ -331,10 +322,8 @@ test.describe('Task Entity API Tests', () => {
   });
 
   test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
+    const page = await browser.newPage();
+    await authenticateAdminPage(page);
     const { apiContext, afterAction } = await getApiContext(page);
 
     if (task1?.responseData?.id) {
@@ -349,6 +338,5 @@ test.describe('Task Entity API Tests', () => {
 
     await afterAction();
     await page.close();
-    await context.close();
   });
 });

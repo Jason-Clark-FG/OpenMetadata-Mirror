@@ -10,17 +10,42 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Browser } from '@playwright/test';
-import { AdminClass } from '../support/user/AdminClass';
-import { getAuthContext, getToken, redirectToHomePage } from './common';
+import { APIRequestContext, Browser, Page, request } from '@playwright/test';
+import { DEFAULT_ADMIN_USER } from '../constant/user';
+import { getAuthContext, redirectToHomePage } from './common';
+import { setToken } from './tokenStorage';
 
-export const performAdminLogin = async (browser: Browser) => {
-  const admin = new AdminClass();
-  const page = await browser.newPage();
-  await admin.login(page);
+export const authenticateAdminPage = async (page: Page) => {
+  const { accessToken } = await loginAsAdminViaApi();
+
+  await page.goto('/signin');
+  await page.waitForURL('**/signin');
+  await page.waitForLoadState('domcontentloaded');
+  await setToken(page, accessToken);
   await redirectToHomePage(page);
 
-  const token = await getToken(page);
+  return accessToken;
+};
+
+export const createAdminApiContext = async (): Promise<{
+  apiContext: APIRequestContext;
+  afterAction: () => Promise<void>;
+}> => {
+  const { accessToken, afterAction: afterLogin } = await loginAsAdminViaApi();
+  const apiContext = await getAuthContext(accessToken);
+
+  return {
+    apiContext,
+    afterAction: async () => {
+      await apiContext.dispose();
+      await afterLogin();
+    },
+  };
+};
+
+export const performAdminLogin = async (browser: Browser) => {
+  const page = await browser.newPage();
+  const token = await authenticateAdminPage(page);
   const apiContext = await getAuthContext(token);
   const afterAction = async () => {
     await apiContext.dispose();
@@ -28,4 +53,41 @@ export const performAdminLogin = async (browser: Browser) => {
   };
 
   return { page, apiContext, afterAction };
+};
+
+const loginAsAdminViaApi = async () => {
+  const loginContext = await request.newContext({
+    baseURL: 'http://localhost:8585',
+    timeout: 90000,
+  });
+
+  try {
+    const loginResponse = await loginContext.post('/api/v1/auth/login', {
+      data: {
+        email: DEFAULT_ADMIN_USER.userName,
+        password: Buffer.from(DEFAULT_ADMIN_USER.password).toString('base64'),
+      },
+    });
+
+    if (!loginResponse.ok()) {
+      throw new Error(
+        `Admin authentication failed (${loginResponse.status()}): ${await loginResponse.text()}`
+      );
+    }
+
+    const loginPayload = (await loginResponse.json()) as {
+      accessToken: string;
+    };
+
+    return {
+      accessToken: loginPayload.accessToken,
+      afterAction: async () => {
+        await loginContext.dispose();
+      },
+    };
+  } catch (error) {
+    await loginContext.dispose();
+
+    throw error;
+  }
 };

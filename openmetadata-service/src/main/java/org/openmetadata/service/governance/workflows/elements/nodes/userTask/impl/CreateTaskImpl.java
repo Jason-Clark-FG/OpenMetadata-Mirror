@@ -230,15 +230,30 @@ public class CreateTaskImpl implements TaskListener {
   }
 
   private UUID getWorkflowInstanceId(DelegateTask delegateTask) {
-    // Get the root process instance ID which corresponds to our WorkflowInstance
-    String processInstanceId = delegateTask.getProcessInstanceId();
-    // The workflow instance ID is stored as a variable by WorkflowInstanceListener
+    // First prefer an explicit runtime variable when one is present.
     Object workflowInstanceIdObj = delegateTask.getVariable("workflowInstanceId");
     if (workflowInstanceIdObj != null) {
       return UUID.fromString(workflowInstanceIdObj.toString());
     }
-    // Fallback: use process instance ID (may not match exactly)
-    return null;
+
+    String processInstanceId = delegateTask.getProcessInstanceId();
+    if (processInstanceId == null || processInstanceId.isBlank()) {
+      return null;
+    }
+
+    org.flowable.engine.runtime.ProcessInstance processInstance =
+        WorkflowHandler.getInstance()
+            .getRuntimeService()
+            .createProcessInstanceQuery()
+            .processInstanceId(processInstanceId)
+            .singleResult();
+
+    String businessKey = processInstance != null ? processInstance.getBusinessKey() : null;
+    if (businessKey == null || businessKey.isBlank()) {
+      return null;
+    }
+
+    return UUID.fromString(businessKey);
   }
 
   private List<EntityReference> getAssignees(DelegateTask delegateTask) {

@@ -1980,6 +1980,100 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
   }
 
   @Test
+  void testResolveDescriptionUpdateTaskWithoutAvailableTransitions(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+
+    String newDescription = "Fallback approval without transitions - " + ns.shortPrefix();
+
+    org.openmetadata.schema.type.DescriptionUpdatePayload payload =
+        new org.openmetadata.schema.type.DescriptionUpdatePayload()
+            .withFieldPath("description")
+            .withCurrentDescription(table.getDescription())
+            .withNewDescription(newDescription);
+
+    Task task =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                new CreateTask()
+                    .withName(ns.prefix("desc-update-no-transitions"))
+                    .withDescription("Update table description without materialized transitions")
+                    .withCategory(TaskCategory.MetadataUpdate)
+                    .withType(TaskEntityType.DescriptionUpdate)
+                    .withAbout(table.getFullyQualifiedName())
+                    .withAboutType("table")
+                    .withPayload(payload));
+
+    task.setAvailableTransitions(List.of());
+    Task updatedTask = SdkClients.adminClient().tasks().update(task.getId().toString(), task);
+
+    Task resolvedTask =
+        SdkClients.adminClient()
+            .tasks()
+            .resolve(
+                updatedTask.getId().toString(),
+                new ResolveTask()
+                    .withResolutionType(TaskResolutionType.Approved)
+                    .withNewValue(newDescription)
+                    .withComment("Approved without task transitions"));
+
+    assertEquals(TaskEntityStatus.Approved, resolvedTask.getStatus());
+
+    Table refreshedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName());
+    assertEquals(newDescription, refreshedTable.getDescription());
+  }
+
+  @Test
+  void testRejectSuggestionTaskWithoutAvailableTransitions(TestNamespace ns) {
+    DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
+    DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);
+    Table table = TableTestFactory.createSimple(ns, schema.getFullyQualifiedName());
+    String originalDescription = table.getDescription();
+
+    Map<String, Object> rawSuggestionPayload =
+        Map.of(
+            "suggestionType", "Description",
+            "fieldPath", "description",
+            "suggestedValue", "Should be rejected",
+            "source", "Agent",
+            "confidence", 70.0);
+
+    Task task =
+        SdkClients.adminClient()
+            .tasks()
+            .create(
+                new CreateTask()
+                    .withName(ns.prefix("suggestion-reject-no-transitions"))
+                    .withDescription("Reject suggestion without materialized transitions")
+                    .withCategory(TaskCategory.MetadataUpdate)
+                    .withType(TaskEntityType.Suggestion)
+                    .withAbout(table.getFullyQualifiedName())
+                    .withAboutType("table")
+                    .withPayload(rawSuggestionPayload));
+
+    task.setAvailableTransitions(List.of());
+    Task updatedTask = SdkClients.adminClient().tasks().update(task.getId().toString(), task);
+
+    Task rejectedTask =
+        SdkClients.adminClient()
+            .tasks()
+            .resolve(
+                updatedTask.getId().toString(),
+                new ResolveTask()
+                    .withResolutionType(TaskResolutionType.Rejected)
+                    .withComment("Rejected without task transitions"));
+
+    assertEquals(TaskEntityStatus.Rejected, rejectedTask.getStatus());
+
+    Table refreshedTable =
+        SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "description");
+    assertEquals(originalDescription, refreshedTable.getDescription());
+  }
+
+  @Test
   void testRejectingTaskDoesNotApplyChanges(TestNamespace ns) {
     DatabaseService service = DatabaseServiceTestFactory.createPostgres(ns);
     DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, service);

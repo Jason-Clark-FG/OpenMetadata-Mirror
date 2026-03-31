@@ -14,7 +14,7 @@ import { Page } from '@playwright/test';
 import { JWT_EXPIRY_TIME_MAP } from '../constant/login';
 import { AdminClass } from '../support/user/AdminClass';
 import { enableDisableAutoPilotApplication } from './applications';
-import { getApiContext } from './common';
+import { getApiContext, redirectToHomePage } from './common';
 import { updateJWTTokenExpiryTime } from './login';
 import {
   updateDefaultDataConsumerPolicy,
@@ -43,7 +43,7 @@ const initialSetup = async (page: Page) => {
 
 export const loginAsAdmin = async (page: Page, admin: AdminClass) => {
   await admin.login(page);
-  await page.waitForURL('**/my-data');
+  await redirectToHomePage(page);
 
   // Setup policy and increase the token expiry time
   await initialSetup(page);

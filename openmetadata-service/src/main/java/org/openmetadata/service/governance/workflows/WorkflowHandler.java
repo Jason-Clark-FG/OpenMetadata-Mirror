@@ -997,7 +997,7 @@ public class WorkflowHandler {
     String updatedByVariable = getNamespacedVariableName(nodeName, "updatedBy");
     String resultVariable = getNamespacedVariableName(nodeName, "result");
     String currentUser = (String) variables.get(updatedByVariable);
-    Boolean approved = (Boolean) variables.get(resultVariable);
+    Boolean approved = parseApprovalDecision(variables.get(resultVariable));
 
     if (currentUser == null || approved == null) {
       LOG.warn(
@@ -1065,6 +1065,22 @@ public class WorkflowHandler {
         approvalThreshold - approvalCount,
         rejectionThreshold - rejectionCount);
     return false;
+  }
+
+  private Boolean parseApprovalDecision(Object value) {
+    if (value instanceof Boolean boolValue) {
+      return boolValue;
+    }
+
+    if (value instanceof String stringValue) {
+      return switch (stringValue.trim().toLowerCase(java.util.Locale.ROOT)) {
+        case "true", "approve", "approved" -> true;
+        case "false", "reject", "rejected" -> false;
+        default -> null;
+      };
+    }
+
+    return null;
   }
 
   public boolean isTaskStillOpen(UUID customTaskId) {

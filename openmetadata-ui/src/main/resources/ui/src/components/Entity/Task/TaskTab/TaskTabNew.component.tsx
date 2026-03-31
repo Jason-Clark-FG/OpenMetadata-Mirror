@@ -498,6 +498,19 @@ export const TaskTabNew = ({
   ): TaskResolutionType =>
     transition?.resolutionType ?? TaskResolutionType.Approved;
 
+  const getTransitionForResolution = useCallback(
+    (resolutionType: TaskResolutionType) =>
+      task.availableTransitions?.find(
+        (transition) => transition.resolutionType === resolutionType
+      ) ??
+      task.availableTransitions?.find((transition) =>
+        resolutionType === TaskResolutionType.Rejected
+          ? transition.id === 'reject'
+          : transition.id === 'approve'
+      ),
+    [task.availableTransitions]
+  );
+
   const shouldOpenWorkflowTransitionModal = useCallback(
     (transition?: TaskAvailableTransition) => {
       if (!isWorkflowDrivenTask || !transition) {
@@ -644,6 +657,25 @@ export const TaskTabNew = ({
   };
 
   const onTaskReject = async () => {
+    const rejectedTransition = getTransitionForResolution(
+      TaskResolutionType.Rejected
+    );
+
+    if (!task?.id) {
+      return;
+    }
+
+    updateTaskData(
+      {
+        newValue: isApprovalWorkflowTask ? taskHandler.rejectedValue : undefined,
+      },
+      TaskResolutionType.Rejected,
+      rejectedTransition?.id
+    );
+    setShowEditTaskModel(false);
+  };
+
+  const onTaskClose = async () => {
     if (!isApprovalWorkflowTask && !hasAddedComment) {
       showErrorToast(t('server.task-closed-without-comment'));
 
@@ -651,15 +683,6 @@ export const TaskTabNew = ({
     }
 
     if (!task?.id) {
-      return;
-    }
-
-    if (isApprovalWorkflowTask) {
-      updateTaskData(
-        { newValue: taskHandler.rejectedValue },
-        TaskResolutionType.Rejected
-      );
-
       return;
     }
 
@@ -802,7 +825,7 @@ export const TaskTabNew = ({
     if (info.key === TaskActionMode.EDIT) {
       setShowEditTaskModel(true);
     } else {
-      onTaskReject();
+      onTaskClose();
     }
     setTaskAction(
       noSuggestionTaskMenuOptions.find((action) => action.key === info.key) ??
@@ -822,7 +845,7 @@ export const TaskTabNew = ({
     if (taskAction.key === TaskActionMode.EDIT) {
       handleNoSuggestionMenuItemClick({ key: taskAction.key } as MenuInfo);
     } else {
-      onTaskReject();
+      onTaskClose();
     }
   };
 
@@ -1036,7 +1059,7 @@ export const TaskTabNew = ({
         data-testid="task-cta-buttons"
         size="small">
         {isCreator && !hasEditAccess && (
-          <Button data-testid="close-button" onClick={onTaskReject}>
+          <Button data-testid="close-button" onClick={onTaskClose}>
             {t('label.close')}
           </Button>
         )}
@@ -1092,7 +1115,7 @@ export const TaskTabNew = ({
       </Space>
     );
   }, [
-    onTaskReject,
+    onTaskClose,
     task,
     onTaskResolve,
     handleMenuItemClick,
@@ -1336,6 +1359,33 @@ export const TaskTabNew = ({
     setShowFeedEditor(false);
   };
 
+  const showRejectInEditModal = useMemo(
+    () => !isTaskTestCaseResult && !showAddSuggestionButton,
+    [isTaskTestCaseResult, showAddSuggestionButton]
+  );
+
+  const editTaskModalFooter = useMemo(
+    () => [
+      <Button
+        key="cancel"
+        onClick={() => {
+          form.resetFields();
+          setShowEditTaskModel(false);
+        }}>
+        {t('label.cancel')}
+      </Button>,
+      showRejectInEditModal ? (
+        <Button key="reject" onClick={onTaskReject}>
+          {t('label.reject')}
+        </Button>
+      ) : null,
+      <Button key="submit" type="primary" onClick={() => form.submit()}>
+        {t('label.ok')}
+      </Button>,
+    ],
+    [form, onTaskReject, showRejectInEditModal, t]
+  );
+
   const comments = useMemo(() => {
     if (isPostsLoading) {
       return (
@@ -1499,6 +1549,7 @@ export const TaskTabNew = ({
           closable={false}
           closeIcon={null}
           data-testid="suggestion-edit-task-modal"
+          footer={editTaskModalFooter}
           maskClosable={false}
           open={showEditTaskModel}
           title={

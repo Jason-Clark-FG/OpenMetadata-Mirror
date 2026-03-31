@@ -144,7 +144,23 @@ export const createNewPage = async (browser: Browser) => {
  */
 export const getApiContext = async (page: Page) => {
   const token = await getToken(page);
-  const apiContext = await getAuthContext(token);
+  const storageState = await page.context().storageState({ indexedDB: true });
+  const apiContext = token
+    ? await request.newContext({
+        baseURL: new URL(page.url() || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585').origin,
+        storageState,
+        // Default timeout is 30s making it to 1m for AUTs
+        timeout: 90000,
+        extraHTTPHeaders: {
+          Connection: 'keep-alive',
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    : await request.newContext({
+        baseURL: new URL(page.url() || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585').origin,
+        storageState,
+        timeout: 90000,
+      });
   const afterAction = async () => await apiContext.dispose();
 
   return { apiContext, afterAction };

@@ -24,7 +24,19 @@
  *  limitations under the License.
  */
 
-import { Button, Card, Form, Input, List, Space, Spin, Typography } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  Select,
+  Space,
+  Spin,
+  Tabs,
+  Typography,
+} from 'antd';
 import { AxiosError } from 'axios';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,8 +57,29 @@ import {
   createOrUpdateWorkflowDefinition,
   getWorkflowDefinitionByName,
 } from '../../rest/workflowDefinitionsAPI';
+import {
+  TaskCategory,
+  TaskEntityStatus,
+  TaskEntityType,
+} from '../../rest/tasksAPI';
 import { getSettingPageEntityBreadCrumb } from '../../utils/GlobalSettingsUtils';
+import {
+  buildDesignerSchema,
+  buildStageMappings,
+  buildTransitionForms,
+  createEmptyDesignerTransition,
+  createEmptyStageMapping,
+  parseSchemaToDesignerFields,
+  parseStageMappings,
+  parseTransitionForms,
+  stringifyDesignerJson,
+  TaskFormDesignerStageMapping,
+  TaskFormDesignerTransition,
+} from '../../utils/TaskFormDesignerUtils';
+import { getDefaultTaskFormSchema } from '../../utils/TaskFormSchemaUtils';
 import { showErrorToast, showSuccessToast } from '../../utils/ToastUtils';
+import TaskFormBuilderSection from './components/TaskFormBuilderSection';
+import './task-form-settings.less';
 
 const EMPTY_SCHEMA: TaskFormSchema = {
   name: '',
@@ -68,7 +101,17 @@ const EMPTY_SCHEMA: TaskFormSchema = {
   defaultStageMappings: {},
 };
 
-const stringifyJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
+const parseJsonObject = (value: string) => {
+  try {
+    const parsed = JSON.parse(value);
+
+    return parsed && typeof parsed === 'object' ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const stringifyJson = stringifyDesignerJson;
 
 const getDefaultWorkflowDefinitionRef = (taskType?: string) => {
   switch (taskType) {
@@ -99,6 +142,42 @@ const getDefaultWorkflowDefinitionRef = (taskType?: string) => {
   }
 };
 
+const sanitizeWorkflowDefinitionPayload = (
+  workflowDefinition: Record<string, unknown>
+) => {
+  const {
+    name,
+    displayName,
+    description,
+    owners,
+    reviewers,
+    domains,
+    dataProducts,
+    tags,
+    type,
+    config,
+    trigger,
+    nodes,
+    edges,
+  } = workflowDefinition;
+
+  return {
+    name,
+    displayName,
+    description,
+    owners,
+    reviewers,
+    domains,
+    dataProducts,
+    tags,
+    type,
+    config,
+    trigger,
+    nodes,
+    edges,
+  };
+};
+
 const TaskFormSettingsPage = () => {
   const { t } = useTranslation();
   const [form] = Form.useForm<TaskFormSchema>();
@@ -124,8 +203,31 @@ const TaskFormSettingsPage = () => {
     stringifyJson(EMPTY_SCHEMA.defaultStageMappings)
   );
   const [workflowDefinitionValue, setWorkflowDefinitionValue] = useState('{}');
+  const [resolveFields, setResolveFields] = useState(
+    parseSchemaToDesignerFields(
+      EMPTY_SCHEMA.formSchema,
+      EMPTY_SCHEMA.uiSchema
+    )
+  );
+  const [createFields, setCreateFields] = useState(
+    parseSchemaToDesignerFields(
+      EMPTY_SCHEMA.createFormSchema,
+      EMPTY_SCHEMA.createUiSchema
+    )
+  );
+  const [transitionBuilders, setTransitionBuilders] = useState<
+    TaskFormDesignerTransition[]
+  >([]);
+  const [stageMappings, setStageMappings] = useState<
+    TaskFormDesignerStageMapping[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const watchedName = Form.useWatch('name', form);
+  const watchedDisplayName = Form.useWatch('displayName', form);
+  const watchedDescription = Form.useWatch('description', form);
+  const watchedTaskType = Form.useWatch('taskType', form);
+  const watchedTaskCategory = Form.useWatch('taskCategory', form);
 
   const breadcrumbs = useMemo(
     () =>
@@ -141,23 +243,32 @@ const TaskFormSettingsPage = () => {
     const workflowDefinitionRef =
       schema.workflowDefinitionRef ??
       getDefaultWorkflowDefinitionRef(schema.taskType);
+    const nextResolveSchema = schema.formSchema;
+    const nextResolveUiSchema = schema.uiSchema;
+    const nextCreateSchema = schema.createFormSchema ?? schema.formSchema;
+    const nextCreateUiSchema = schema.createUiSchema ?? schema.uiSchema;
+    const nextTransitionForms = schema.transitionForms ?? {};
+    const nextStageMappings = schema.defaultStageMappings ?? {};
+
     setSelectedSchema(schema);
     form.setFieldsValue({
       ...schema,
       workflowDefinitionRef,
     });
-    setFormSchemaValue(stringifyJson(schema.formSchema));
-    setUiSchemaValue(stringifyJson(schema.uiSchema));
-    setCreateFormSchemaValue(
-      stringifyJson(schema.createFormSchema ?? schema.formSchema)
+    setFormSchemaValue(stringifyJson(nextResolveSchema));
+    setUiSchemaValue(stringifyJson(nextResolveUiSchema));
+    setCreateFormSchemaValue(stringifyJson(nextCreateSchema));
+    setCreateUiSchemaValue(stringifyJson(nextCreateUiSchema));
+    setTransitionFormsValue(stringifyJson(nextTransitionForms));
+    setDefaultStageMappingsValue(stringifyJson(nextStageMappings));
+    setResolveFields(
+      parseSchemaToDesignerFields(nextResolveSchema, nextResolveUiSchema)
     );
-    setCreateUiSchemaValue(
-      stringifyJson(schema.createUiSchema ?? schema.uiSchema)
+    setCreateFields(
+      parseSchemaToDesignerFields(nextCreateSchema, nextCreateUiSchema)
     );
-    setTransitionFormsValue(stringifyJson(schema.transitionForms ?? {}));
-    setDefaultStageMappingsValue(
-      stringifyJson(schema.defaultStageMappings ?? {})
-    );
+    setTransitionBuilders(parseTransitionForms(nextTransitionForms));
+    setStageMappings(parseStageMappings(nextStageMappings));
     setWorkflowDefinitionValue('{}');
     if (workflowDefinitionRef) {
       void getWorkflowDefinitionByName(workflowDefinitionRef)
@@ -193,6 +304,107 @@ const TaskFormSettingsPage = () => {
   const handleCreateNew = () => {
     form.resetFields();
     setSchemaEditors(EMPTY_SCHEMA);
+  };
+
+  const handleDiscardChanges = () => {
+    if (selectedSchema.id || selectedSchema.name) {
+      setSchemaEditors(selectedSchema);
+    } else {
+      handleCreateNew();
+    }
+  };
+
+  const handleLoadTemplate = () => {
+    const currentValues = form.getFieldsValue();
+    const taskType = currentValues.taskType as TaskEntityType | undefined;
+    const taskCategory = currentValues.taskCategory as TaskCategory | undefined;
+
+    if (!taskType || !taskCategory) {
+      showErrorToast('Select a task type and category before loading a template');
+
+      return;
+    }
+
+    const template = getDefaultTaskFormSchema(taskType, taskCategory);
+
+    if (!template) {
+      showErrorToast('No built-in template is available for this task type');
+
+      return;
+    }
+
+    setSchemaEditors({
+      ...selectedSchema,
+      ...template,
+      ...currentValues,
+      taskType,
+      taskCategory,
+      name: currentValues.name || template.name,
+      displayName: currentValues.displayName || template.displayName,
+      description: currentValues.description || template.description,
+      workflowDefinitionRef:
+        currentValues.workflowDefinitionRef ??
+        template.workflowDefinitionRef ??
+        getDefaultWorkflowDefinitionRef(taskType),
+    });
+  };
+
+  const syncResolveDesigner = (
+    fields = resolveFields,
+    nextFormSchemaValue = formSchemaValue,
+    nextUiSchemaValue = uiSchemaValue
+  ) => {
+    const { formSchema: nextFormSchema, uiSchema: nextUiSchema } =
+      buildDesignerSchema(
+        fields,
+        parseJsonObject(nextFormSchemaValue),
+        parseJsonObject(nextUiSchemaValue)
+      );
+
+    setResolveFields(fields);
+    setFormSchemaValue(stringifyJson(nextFormSchema));
+    setUiSchemaValue(stringifyJson(nextUiSchema));
+  };
+
+  const syncCreateDesigner = (
+    fields = createFields,
+    nextFormSchemaValue = createFormSchemaValue,
+    nextUiSchemaValue = createUiSchemaValue
+  ) => {
+    const { formSchema: nextFormSchema, uiSchema: nextUiSchema } =
+      buildDesignerSchema(
+        fields,
+        parseJsonObject(nextFormSchemaValue),
+        parseJsonObject(nextUiSchemaValue)
+      );
+
+    setCreateFields(fields);
+    setCreateFormSchemaValue(stringifyJson(nextFormSchema));
+    setCreateUiSchemaValue(stringifyJson(nextUiSchema));
+  };
+
+  const syncTransitionDesigner = (
+    transitions = transitionBuilders,
+    nextTransitionFormsValue = transitionFormsValue
+  ) => {
+    const existingConfigs = parseJsonObject(nextTransitionFormsValue) as
+      | Record<string, unknown>
+      | undefined;
+    const mergedTransitions = transitions.map((transition) => ({
+      ...transition,
+      config:
+        (existingConfigs?.[transition.transitionId] as Record<string, unknown>) ??
+        transition.config,
+    }));
+    const nextTransitionForms = buildTransitionForms(mergedTransitions);
+
+    setTransitionBuilders(mergedTransitions);
+    setTransitionFormsValue(stringifyJson(nextTransitionForms));
+  };
+
+  const syncStageMappings = (mappings = stageMappings) => {
+    setStageMappings(mappings);
+    setDefaultStageMappingsValue(stringifyJson(buildStageMappings(mappings)));
   };
 
   const handleSave = async (values: TaskFormSchema) => {
@@ -245,7 +457,7 @@ const TaskFormSettingsPage = () => {
         }
 
         const savedWorkflow = await createOrUpdateWorkflowDefinition({
-          ...parsedWorkflowDefinition,
+          ...sanitizeWorkflowDefinitionPayload(parsedWorkflowDefinition),
           name: workflowName,
         });
         payload.workflowDefinitionRef = savedWorkflow.name;
@@ -266,165 +478,661 @@ const TaskFormSettingsPage = () => {
     }
   };
 
+  const pageTitle =
+    watchedDisplayName?.trim() ||
+    watchedName?.trim() ||
+    selectedSchema.displayName ||
+    selectedSchema.name ||
+    'New Task Form';
+  const pageDescription =
+    watchedDescription?.trim() ||
+    selectedSchema.description ||
+    'Configure task schemas, form behavior, and workflow transitions in one workspace.';
+  const schemaSubtitle = [watchedTaskType, watchedTaskCategory]
+    .filter(Boolean)
+    .join(' / ');
+
   return (
     <PageLayoutV1 pageTitle="Task Forms">
-      <div className="d-grid gap-4" data-testid="task-form-settings-page">
+      <div className="task-form-settings-page" data-testid="task-form-settings-page">
         <TitleBreadcrumb titleLinks={breadcrumbs} />
+        <Form<TaskFormSchema> form={form} layout="vertical" onFinish={handleSave}>
+          <div className="task-form-settings-shell">
+            <aside className="task-form-settings-sidebar">
+              <Card className="task-form-settings-sidebar-card" title="Schemas">
+                {loading ? (
+                  <div className="text-center p-y-lg">
+                    <Spin />
+                  </div>
+                ) : (
+                  <div className="task-form-settings-schema-list">
+                    {schemas.length ? (
+                      schemas.map((schema) => {
+                        const isActive = schema.id === selectedSchema.id;
 
-        <div className="d-flex gap-4">
-          <Card
-            extra={
-              <Button
-                data-testid="task-form-add-button"
-                size="small"
-                type="primary"
-                onClick={handleCreateNew}>
-                {t('label.add')}
-              </Button>
-            }
-            style={{ flex: '0 0 320px' }}
-            title="Schemas">
-            {loading ? (
-              <div className="text-center p-y-lg">
-                <Spin />
-              </div>
-            ) : (
-              <List
-                dataSource={schemas}
-                renderItem={(schema) => (
-                  <List.Item
-                    className={
-                      schema.id === selectedSchema.id ? 'bg-grey-1' : ''
-                    }
-                    data-testid={`task-form-list-item-${schema.name}`}
-                    onClick={() => handleSelectSchema(schema)}>
-                    <List.Item.Meta
-                      description={`${schema.taskType} / ${
-                        schema.taskCategory ?? '-'
-                      }`}
-                      title={schema.displayName ?? schema.name}
-                    />
-                  </List.Item>
+                        return (
+                          <button
+                            className={`task-form-settings-schema-item ${
+                              isActive
+                                ? 'task-form-settings-schema-item--active'
+                                : ''
+                            }`}
+                            data-testid={`task-form-list-item-${schema.name}`}
+                            key={schema.id ?? schema.name}
+                            type="button"
+                            onClick={() => handleSelectSchema(schema)}>
+                            <span className="task-form-settings-schema-item__title">
+                              {schema.displayName ?? schema.name}
+                            </span>
+                            <span className="task-form-settings-schema-item__meta">
+                              {`${schema.taskType} / ${schema.taskCategory ?? '-'}`}
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <Typography.Text className="text-grey-muted">
+                        No task forms found yet.
+                      </Typography.Text>
+                    )}
+                  </div>
                 )}
-              />
-            )}
-          </Card>
 
-          <Card style={{ flex: 1 }} title="Editor">
-            <Form<TaskFormSchema>
-              form={form}
-              layout="vertical"
-              onFinish={handleSave}>
-              <Form.Item
-                label="Name"
-                name="name"
-                rules={[{ required: true, message: 'Name is required' }]}>
-                <Input data-testid="task-form-name-input" />
-              </Form.Item>
-              <Form.Item label="Display Name" name="displayName">
-                <Input data-testid="task-form-display-name-input" />
-              </Form.Item>
-              <Form.Item label="Description" name="description">
-                <Input.TextArea
-                  autoSize={{ minRows: 3, maxRows: 5 }}
-                  data-testid="task-form-description-input"
-                />
-              </Form.Item>
-              <Form.Item
-                label="Task Type"
-                name="taskType"
-                rules={[{ required: true, message: 'Task type is required' }]}>
-                <Input data-testid="task-form-type-input" />
-              </Form.Item>
-              <Form.Item label="Task Category" name="taskCategory">
-                <Input data-testid="task-form-category-input" />
-              </Form.Item>
-              <Form.Item
-                label="Workflow Definition"
-                name="workflowDefinitionRef">
-                <Input data-testid="task-form-workflow-definition-input" />
-              </Form.Item>
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Form Schema
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-schema-editor"
-                value={formSchemaValue}
-                onChange={(value) => setFormSchemaValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                UI Schema
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-ui-schema-editor"
-                value={uiSchemaValue}
-                onChange={(value) => setUiSchemaValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Create Form Schema
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-create-schema-editor"
-                value={createFormSchemaValue}
-                onChange={(value) => setCreateFormSchemaValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Create UI Schema
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-create-ui-schema-editor"
-                value={createUiSchemaValue}
-                onChange={(value) => setCreateUiSchemaValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Transition Forms
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-transition-forms-editor"
-                value={transitionFormsValue}
-                onChange={(value) => setTransitionFormsValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Default Stage Mappings
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-stage-mappings-editor"
-                value={defaultStageMappingsValue}
-                onChange={(value) => setDefaultStageMappingsValue(value)}
-              />
-
-              <Typography.Title className="m-b-sm m-t-md" level={5}>
-                Workflow Definition JSON
-              </Typography.Title>
-              <CodeEditor
-                editorClass="task-form-workflow-definition-editor"
-                value={workflowDefinitionValue}
-                onChange={(value) => setWorkflowDefinitionValue(value)}
-              />
-
-              <Space className="w-full justify-end m-t-md">
                 <Button
-                  data-testid="task-form-cancel-button"
+                  block
+                  className="task-form-settings-sidebar-action"
+                  data-testid="task-form-add-button"
+                  type="primary"
                   onClick={handleCreateNew}>
-                  {t('label.cancel')}
+                  {t('label.add')}
                 </Button>
-                <Button
-                  data-testid="task-form-save-button"
-                  htmlType="submit"
-                  loading={saving}
-                  type="primary">
-                  {t('label.save')}
-                </Button>
-              </Space>
-            </Form>
-          </Card>
-        </div>
+              </Card>
+            </aside>
+
+            <section className="task-form-settings-main">
+              <div className="task-form-settings-hero">
+                <div className="task-form-settings-hero__copy">
+                  <Typography.Text className="task-form-settings-hero__eyebrow">
+                    Form Builder
+                  </Typography.Text>
+                  <Typography.Title
+                    className="task-form-settings-hero__title"
+                    level={2}>
+                    {pageTitle}
+                  </Typography.Title>
+                  <Typography.Paragraph className="task-form-settings-hero__description">
+                    {pageDescription}
+                  </Typography.Paragraph>
+                  {schemaSubtitle ? (
+                    <Typography.Text className="task-form-settings-hero__meta">
+                      {schemaSubtitle}
+                    </Typography.Text>
+                  ) : null}
+                </div>
+                <Space className="task-form-settings-hero__actions" size="middle">
+                  <Button
+                    data-testid="task-form-cancel-button"
+                    onClick={handleDiscardChanges}>
+                    {t('label.cancel')}
+                  </Button>
+                  <Button
+                    data-testid="task-form-save-button"
+                    htmlType="submit"
+                    loading={saving}
+                    type="primary">
+                    {t('label.save')}
+                  </Button>
+                </Space>
+              </div>
+
+              <div className="task-form-settings-config-grid">
+                <Card
+                  className="task-form-settings-card"
+                  title="General Configuration">
+                  <div className="task-form-settings-form-grid">
+                    <Form.Item
+                      className="m-b-0"
+                      label="Name"
+                      name="name"
+                      rules={[{ required: true, message: 'Name is required' }]}>
+                      <Input data-testid="task-form-name-input" />
+                    </Form.Item>
+                    <Form.Item
+                      className="m-b-0"
+                      label="Display Name"
+                      name="displayName">
+                      <Input data-testid="task-form-display-name-input" />
+                    </Form.Item>
+                    <Form.Item
+                      className="m-b-0 task-form-settings-form-grid__span-2"
+                      label="Description"
+                      name="description">
+                      <Input.TextArea
+                        autoSize={{ minRows: 4, maxRows: 6 }}
+                        data-testid="task-form-description-input"
+                      />
+                    </Form.Item>
+                  </div>
+                </Card>
+
+                <Card
+                  className="task-form-settings-card task-form-settings-card--sidebar"
+                  title="Classification">
+                  <div className="task-form-settings-card__stack">
+                    <Form.Item
+                      className="m-b-0"
+                      label="Task Type"
+                      name="taskType"
+                      rules={[{ required: true, message: 'Task type is required' }]}>
+                      <Input data-testid="task-form-type-input" />
+                    </Form.Item>
+                    <Form.Item
+                      className="m-b-0"
+                      label="Task Category"
+                      name="taskCategory">
+                      <Select
+                        allowClear
+                        data-testid="task-form-category-input"
+                        options={Object.values(TaskCategory).map((category) => ({
+                          label: category,
+                          value: category,
+                        }))}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      className="m-b-0"
+                      label="Workflow Definition"
+                      name="workflowDefinitionRef">
+                      <Input data-testid="task-form-workflow-definition-input" />
+                    </Form.Item>
+                    <Button
+                      data-testid="task-form-load-template-button"
+                      onClick={handleLoadTemplate}>
+                      Load built-in template
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+
+              <Card className="task-form-settings-card task-form-settings-workspace">
+                <Tabs
+                  className="task-form-settings-primary-tabs"
+                  items={[
+                    {
+                      key: 'designer',
+                      label: 'Designer',
+                      children: (
+                        <div className="task-form-settings-designer-pane">
+                          <Alert
+                            showIcon
+                            className="task-form-settings-designer-pane__alert"
+                            description="Use the builder for create forms, resolve forms, transition forms, and stage mappings. The raw JSON editors are still available under Advanced."
+                            message="Design task forms visually"
+                            type="info"
+                          />
+                          <Tabs
+                            className="task-form-settings-secondary-tabs"
+                            items={[
+                              {
+                                key: 'create-form',
+                                label: 'Create Form',
+                                children: (
+                                  <TaskFormBuilderSection
+                                    baseFormSchema={parseJsonObject(
+                                      createFormSchemaValue
+                                    )}
+                                    baseUiSchema={parseJsonObject(
+                                      createUiSchemaValue
+                                    )}
+                                    description="Fields shown when a task is created."
+                                    fields={createFields}
+                                    testIdPrefix="task-form-create-builder"
+                                    title="Create Form Fields"
+                                    onChange={(fields) =>
+                                      syncCreateDesigner(fields)
+                                    }
+                                  />
+                                ),
+                              },
+                              {
+                                key: 'resolve-form',
+                                label: 'Resolve Form',
+                                children: (
+                                  <TaskFormBuilderSection
+                                    baseFormSchema={parseJsonObject(
+                                      formSchemaValue
+                                    )}
+                                    baseUiSchema={parseJsonObject(uiSchemaValue)}
+                                    description="Fields shown when the task is reviewed or resolved."
+                                    fields={resolveFields}
+                                    testIdPrefix="task-form-resolve-builder"
+                                    title="Resolve Form Fields"
+                                    onChange={(fields) =>
+                                      syncResolveDesigner(fields)
+                                    }
+                                  />
+                                ),
+                              },
+                              {
+                                key: 'transitions',
+                                label: 'Transition Forms',
+                                children: (
+                                  <div className="task-form-settings-transition-pane">
+                                    <div className="task-form-settings-section-header">
+                                      <div>
+                                        <Typography.Title
+                                          className="m-b-xs"
+                                          level={5}>
+                                          Transition Forms
+                                        </Typography.Title>
+                                        <Typography.Paragraph className="m-b-0 text-grey-muted">
+                                          Configure additional fields for specific workflow transitions like approve, reject, or reassign.
+                                        </Typography.Paragraph>
+                                      </div>
+                                      <Button
+                                        data-testid="task-form-transition-add-button"
+                                        icon={<PlusOutlined />}
+                                        onClick={() =>
+                                          syncTransitionDesigner([
+                                            ...transitionBuilders,
+                                            createEmptyDesignerTransition(),
+                                          ])
+                                        }>
+                                        Add transition form
+                                      </Button>
+                                    </div>
+                                    {transitionBuilders.length ? (
+                                      <div className="task-form-settings-transition-list">
+                                        {transitionBuilders.map(
+                                          (transition, index) => (
+                                            <Card
+                                              className="task-form-settings-transition-card"
+                                              data-testid={`task-form-transition-card-${index}`}
+                                              extra={
+                                                <Button
+                                                  danger
+                                                  data-testid={`task-form-transition-remove-${index}`}
+                                                  size="small"
+                                                  type="text"
+                                                  onClick={() =>
+                                                    syncTransitionDesigner(
+                                                      transitionBuilders.filter(
+                                                        (_, currentIndex) =>
+                                                          currentIndex !== index
+                                                      )
+                                                    )
+                                                  }>
+                                                  Remove
+                                                </Button>
+                                              }
+                                              key={transition.key}
+                                              title={
+                                                transition.transitionId ||
+                                                `Transition ${index + 1}`
+                                              }>
+                                              <Form.Item
+                                                required
+                                                label="Transition Id">
+                                                <Input
+                                                  data-testid={`task-form-transition-id-${index}`}
+                                                  placeholder="approve"
+                                                  value={transition.transitionId}
+                                                  onChange={(event) =>
+                                                    syncTransitionDesigner(
+                                                      transitionBuilders.map(
+                                                        (
+                                                          currentTransition,
+                                                          currentIndex
+                                                        ) =>
+                                                          currentIndex === index
+                                                            ? {
+                                                                ...currentTransition,
+                                                                transitionId:
+                                                                  event.target
+                                                                    .value,
+                                                              }
+                                                            : currentTransition
+                                                      )
+                                                    )
+                                                  }
+                                                />
+                                              </Form.Item>
+                                              <TaskFormBuilderSection
+                                                baseFormSchema={
+                                                  (transition.config?.formSchema as
+                                                    | Record<string, unknown>
+                                                    | undefined) as
+                                                    | undefined
+                                                }
+                                                baseUiSchema={
+                                                  (transition.config?.uiSchema as
+                                                    | Record<string, unknown>
+                                                    | undefined) as
+                                                    | undefined
+                                                }
+                                                description="Extra fields shown only for this transition."
+                                                fields={transition.fields}
+                                                testIdPrefix={`task-form-transition-builder-${index}`}
+                                                title="Transition Fields"
+                                                onChange={(fields) =>
+                                                  syncTransitionDesigner(
+                                                    transitionBuilders.map(
+                                                      (
+                                                        currentTransition,
+                                                        currentIndex
+                                                      ) =>
+                                                        currentIndex === index
+                                                          ? {
+                                                              ...currentTransition,
+                                                              fields,
+                                                            }
+                                                          : currentTransition
+                                                    )
+                                                  )
+                                                }
+                                              />
+                                            </Card>
+                                          )
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <Typography.Text className="text-grey-muted">
+                                        No transition forms configured yet.
+                                      </Typography.Text>
+                                    )}
+                                  </div>
+                                ),
+                              },
+                              {
+                                key: 'workflow',
+                                label: 'Workflow Stages',
+                                children: (
+                                  <div className="task-form-settings-stage-pane">
+                                    <div className="task-form-settings-section-header">
+                                      <div>
+                                        <Typography.Title
+                                          className="m-b-xs"
+                                          level={5}>
+                                          Stage to Status Mapping
+                                        </Typography.Title>
+                                        <Typography.Paragraph className="m-b-0 text-grey-muted">
+                                          Map workflow stage ids to the coarse task status exposed in APIs and counts.
+                                        </Typography.Paragraph>
+                                      </div>
+                                      <Button
+                                        data-testid="task-form-stage-mapping-add-button"
+                                        icon={<PlusOutlined />}
+                                        onClick={() =>
+                                          syncStageMappings([
+                                            ...stageMappings,
+                                            createEmptyStageMapping(),
+                                          ])
+                                        }>
+                                        Add stage mapping
+                                      </Button>
+                                    </div>
+                                    {stageMappings.length ? (
+                                      <div className="task-form-settings-stage-grid">
+                                        {stageMappings.map((mapping, index) => (
+                                          <Card
+                                            className="task-form-settings-stage-card"
+                                            data-testid={`task-form-stage-mapping-card-${index}`}
+                                            extra={
+                                              <Button
+                                                danger
+                                                data-testid={`task-form-stage-mapping-remove-${index}`}
+                                                size="small"
+                                                type="text"
+                                                onClick={() =>
+                                                  syncStageMappings(
+                                                    stageMappings.filter(
+                                                      (_, currentIndex) =>
+                                                        currentIndex !== index
+                                                    )
+                                                  )
+                                                }>
+                                                Remove
+                                              </Button>
+                                            }
+                                            key={mapping.key}
+                                            size="small"
+                                            title={
+                                              mapping.stageId ||
+                                              `Stage ${index + 1}`
+                                            }>
+                                            <div className="task-form-settings-form-grid">
+                                              <Form.Item
+                                                className="m-b-0"
+                                                label="Stage Id">
+                                                <Input
+                                                  data-testid={`task-form-stage-id-${index}`}
+                                                  placeholder="open"
+                                                  value={mapping.stageId}
+                                                  onChange={(event) =>
+                                                    syncStageMappings(
+                                                      stageMappings.map(
+                                                        (
+                                                          currentMapping,
+                                                          currentIndex
+                                                        ) =>
+                                                          currentIndex === index
+                                                            ? {
+                                                                ...currentMapping,
+                                                                stageId:
+                                                                  event.target
+                                                                    .value,
+                                                              }
+                                                            : currentMapping
+                                                      )
+                                                    )
+                                                  }
+                                                />
+                                              </Form.Item>
+                                              <Form.Item
+                                                className="m-b-0"
+                                                label="Task Status">
+                                                <Select
+                                                  data-testid={`task-form-stage-status-${index}`}
+                                                  options={Object.values(
+                                                    TaskEntityStatus
+                                                  ).map((status) => ({
+                                                    label: status,
+                                                    value: status,
+                                                  }))}
+                                                  value={
+                                                    mapping.taskStatus ||
+                                                    undefined
+                                                  }
+                                                  onChange={(value) =>
+                                                    syncStageMappings(
+                                                      stageMappings.map(
+                                                        (
+                                                          currentMapping,
+                                                          currentIndex
+                                                        ) =>
+                                                          currentIndex === index
+                                                            ? {
+                                                                ...currentMapping,
+                                                                taskStatus:
+                                                                  value,
+                                                              }
+                                                            : currentMapping
+                                                      )
+                                                    )
+                                                  }
+                                                />
+                                              </Form.Item>
+                                            </div>
+                                          </Card>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <Typography.Text className="text-grey-muted">
+                                        No stage mappings configured yet.
+                                      </Typography.Text>
+                                    )}
+                                  </div>
+                                ),
+                              },
+                            ]}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      key: 'advanced',
+                      label: 'Advanced JSON',
+                      children: (
+                        <div className="task-form-settings-json-pane">
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Resolve Form Schema
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-schema-editor"
+                          value={formSchemaValue}
+                          onChange={(value) => {
+                            setFormSchemaValue(value);
+                            const nextFormSchema = parseJsonObject(value);
+                            const nextUiSchema = parseJsonObject(uiSchemaValue);
+
+                            if (nextFormSchema) {
+                              setResolveFields(
+                                parseSchemaToDesignerFields(
+                                  nextFormSchema,
+                                  nextUiSchema
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Resolve UI Schema
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-ui-schema-editor"
+                          value={uiSchemaValue}
+                          onChange={(value) => {
+                            setUiSchemaValue(value);
+                            const nextFormSchema = parseJsonObject(formSchemaValue);
+                            const nextUiSchema = parseJsonObject(value);
+
+                            if (nextFormSchema) {
+                              setResolveFields(
+                                parseSchemaToDesignerFields(
+                                  nextFormSchema,
+                                  nextUiSchema
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Create Form Schema
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-create-schema-editor"
+                          value={createFormSchemaValue}
+                          onChange={(value) => {
+                            setCreateFormSchemaValue(value);
+                            const nextFormSchema = parseJsonObject(value);
+                            const nextUiSchema = parseJsonObject(
+                              createUiSchemaValue
+                            );
+
+                            if (nextFormSchema) {
+                              setCreateFields(
+                                parseSchemaToDesignerFields(
+                                  nextFormSchema,
+                                  nextUiSchema
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Create UI Schema
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-create-ui-schema-editor"
+                          value={createUiSchemaValue}
+                          onChange={(value) => {
+                            setCreateUiSchemaValue(value);
+                            const nextFormSchema = parseJsonObject(
+                              createFormSchemaValue
+                            );
+                            const nextUiSchema = parseJsonObject(value);
+
+                            if (nextFormSchema) {
+                              setCreateFields(
+                                parseSchemaToDesignerFields(
+                                  nextFormSchema,
+                                  nextUiSchema
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Transition Forms
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-transition-forms-editor"
+                          value={transitionFormsValue}
+                          onChange={(value) => {
+                            setTransitionFormsValue(value);
+                            const nextTransitionForms = parseJsonObject(value);
+
+                            if (nextTransitionForms) {
+                              setTransitionBuilders(
+                                parseTransitionForms(
+                                  nextTransitionForms as TaskFormSchema['transitionForms']
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Default Stage Mappings
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-stage-mappings-editor"
+                          value={defaultStageMappingsValue}
+                          onChange={(value) => {
+                            setDefaultStageMappingsValue(value);
+                            const nextStageMappings = parseJsonObject(value);
+
+                            if (nextStageMappings) {
+                              setStageMappings(
+                                parseStageMappings(
+                                  nextStageMappings as TaskFormSchema['defaultStageMappings']
+                                )
+                              );
+                            }
+                          }}
+                        />
+
+                        <Typography.Title className="m-b-sm" level={5}>
+                          Workflow Definition JSON
+                        </Typography.Title>
+                        <CodeEditor
+                          editorClass="task-form-workflow-definition-editor"
+                          value={workflowDefinitionValue}
+                          onChange={(value) => setWorkflowDefinitionValue(value)}
+                        />
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+            </section>
+          </div>
+        </Form>
       </div>
     </PageLayoutV1>
   );

@@ -142,6 +142,15 @@ const clickDropdownMenuItem = async ({
     (await roleMenuItem.isVisible().catch(() => false)) ||
     (await cssMenuItem.isVisible().catch(() => false));
 
+  const waitForMenuItem = async () => {
+    await Promise.race([
+      roleMenuItem.waitFor({ state: 'visible', timeout: 1500 }),
+      cssMenuItem.waitFor({ state: 'visible', timeout: 1500 }),
+    ]).catch(() => undefined);
+
+    return isMenuItemVisible();
+  };
+
   if (await isMenuItemVisible()) {
     if (await roleMenuItem.isVisible().catch(() => false)) {
       await roleMenuItem.click({ force: true });
@@ -176,26 +185,26 @@ const clickDropdownMenuItem = async ({
     logTaskDebug('clickDropdownMenuItem:openAttempt', attempt + 1);
     await resolvedTrigger.click({ force: true }).catch(() => undefined);
 
-    if (await isMenuItemVisible()) {
+    if (await waitForMenuItem()) {
       break;
     }
 
     await resolvedTrigger.focus().catch(() => undefined);
     await resolvedTrigger.press('ArrowDown').catch(() => undefined);
 
-    if (await isMenuItemVisible()) {
+    if (await waitForMenuItem()) {
       break;
     }
 
     await resolvedTrigger.press('Enter').catch(() => undefined);
 
-    if (await isMenuItemVisible()) {
+    if (await waitForMenuItem()) {
       break;
     }
 
     await fallbackTrigger.click({ force: true }).catch(() => undefined);
 
-    if (await isMenuItemVisible()) {
+    if (await waitForMenuItem()) {
       break;
     }
   }
@@ -392,6 +401,8 @@ export const openTaskDetails = async (page: Page, task: CreatedTask) => {
 
 export const openTaskEditModal = async (page: Page) => {
   logTaskDebug('openTaskEditModal:start');
+  const editTransitionPattern =
+    /edit suggestion|edit|update description|update tags|add description|add tags/i;
   const visibleTaskModal = page.locator(VISIBLE_TASK_MODAL_SELECTOR).first();
   const workflowTaskActionPrimary = page
     .locator('#task-panel [data-testid="workflow-task-action-primary"]')
@@ -430,8 +441,6 @@ export const openTaskEditModal = async (page: Page) => {
     )
       ?.trim()
       .replace(/\s+/g, ' ');
-    const editTransitionPattern =
-      /edit suggestion|edit|update description|update tags|add description|add tags/i;
     const isPrimaryEditAction = Boolean(
       dropdownPrimaryLabel?.match(/edit|resolve|update|add/i)
     );
@@ -501,7 +510,7 @@ export const openTaskEditModal = async (page: Page) => {
     await clickDropdownMenuItem({
       dropdown: editSuggestionDropdown,
       page,
-      menuPattern: /edit suggestion|edit/i,
+      menuPattern: editTransitionPattern,
     });
   } else if (
     await genericTaskActionPanel
@@ -517,9 +526,6 @@ export const openTaskEditModal = async (page: Page) => {
     const genericDropdownTrigger = genericTaskActionPanel
       .getByRole('button', { name: /down/i })
       .first();
-    const editTransitionPattern =
-      /edit suggestion|edit|update description|update tags|add description|add tags/i;
-
     if (await genericPrimaryAction.isVisible().catch(() => false)) {
       await genericPrimaryAction.scrollIntoViewIfNeeded().catch(() => undefined);
       await genericPrimaryAction.click().catch(() => undefined);

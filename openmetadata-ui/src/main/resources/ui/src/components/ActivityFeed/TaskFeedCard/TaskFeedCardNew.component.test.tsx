@@ -226,7 +226,7 @@ describe('TaskFeedCardNew Component', () => {
   });
 
   it('should handle reject button click', async () => {
-    const { closeTask } = require('../../../rest/tasksAPI');
+    const { resolveTask } = require('../../../rest/tasksAPI');
     const { useAuth } = require('../../../hooks/authHooks');
     useAuth.mockReturnValue({ isAdminUser: true });
 
@@ -241,7 +241,12 @@ describe('TaskFeedCardNew Component', () => {
       fireEvent.click(rejectButton);
     });
 
-    expect(closeTask).toHaveBeenCalled();
+    expect(resolveTask).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        resolutionType: 'Rejected',
+      })
+    );
   });
 
   it('should display replies count when posts are available', async () => {
