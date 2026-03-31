@@ -11,11 +11,18 @@
  *  limitations under the License.
  */
 
-import { Box, Card } from '@openmetadata/ui-core-components';
+import {
+  Avatar,
+  BadgeWithIcon,
+  Box,
+  Card,
+  Typography,
+} from '@openmetadata/ui-core-components';
+import { Globe01, Tag01 } from '@untitledui/icons';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useSnackbar } from 'notistack';
-import { useCallback, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
@@ -24,9 +31,15 @@ import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { CreateDataProduct } from '../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../generated/api/domains/createDomain';
+import { DataProduct } from '../../generated/entity/domains/dataProduct';
+import { EntityReference } from '../../generated/entity/type';
+import { TagLabel } from '../../generated/type/tagLabel';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { addDataProducts, patchDataProduct } from '../../rest/dataProductAPI';
 import { createEntityWithCoverImage } from '../../utils/CoverImageUploadUtils';
+import { getEntityName } from '../../utils/EntityUtils';
+import { getEntityAvatarProps } from '../../utils/IconUtils';
+import { getClassificationTags, getGlossaryTags } from '../../utils/TagsUtils';
 import { useDelete } from '../common/atoms/actions/useDelete';
 import { useDataProductFilters } from '../common/atoms/domain/ui/useDataProductFilters';
 import { useDomainCardTemplates } from '../common/atoms/domain/ui/useDomainCardTemplates';
@@ -39,8 +52,11 @@ import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { useCardView } from '../common/atoms/table/useCardView';
-import EntityListingTable from '../common/EntityListingTable/EntityListingTable';
+import EntityListingTable, {
+  ColumnDef,
+} from '../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
+import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
 import { useDataProductListingData } from './hooks/useDataProductListingData';
@@ -137,6 +153,118 @@ const DataProductListPage = () => {
   const { view, viewToggle } = useViewToggle();
   const { dataProductCardTemplate } = useDomainCardTemplates();
 
+  const dataProductColumns: ColumnDef[] = useMemo(
+    () => [
+      { id: 'name', label: t('label.data-product') },
+      { id: 'owners', label: t('label.owner') },
+      { id: 'glossaryTerms', label: t('label.glossary-term-plural') },
+      { id: 'domains', label: t('label.domain-plural') },
+      { id: 'tags', label: t('label.tag-plural') },
+      { id: 'experts', label: t('label.expert-plural') },
+    ],
+    [t]
+  );
+
+  const renderTagList = useCallback((tags: TagLabel[]): ReactNode => {
+    if (!tags.length) {
+      return <Typography size="text-sm">-</Typography>;
+    }
+
+    const firstTag = tags[0];
+    const remaining = tags.length - 1;
+
+    return (
+      <Box align="center" direction="row" gap={1}>
+        <BadgeWithIcon
+          color="gray"
+          iconLeading={Tag01}
+          key={firstTag.tagFQN}
+          size="lg"
+          type="color">
+          {firstTag.displayName || firstTag.tagFQN}
+        </BadgeWithIcon>
+        {remaining > 0 && (
+          <Typography size="text-xs" weight="medium">
+            +{remaining}
+          </Typography>
+        )}
+      </Box>
+    );
+  }, []);
+
+  const renderDataProductCell = useCallback(
+    (entity: DataProduct, columnId: string): ReactNode => {
+      switch (columnId) {
+        case 'name': {
+          const entityName = getEntityName(entity);
+          const showName =
+            entity.displayName &&
+            entity.name &&
+            entity.displayName !== entity.name;
+
+          return (
+            <Box align="center" direction="row" gap={3}>
+              <Avatar size="md" {...getEntityAvatarProps(entity)} />
+              <Box direction="col">
+                <Typography size="text-sm" weight="medium">
+                  {entityName}
+                </Typography>
+                {showName && (
+                  <Typography size="text-xs">{entity.name}</Typography>
+                )}
+              </Box>
+            </Box>
+          );
+        }
+        case 'owners':
+          return (
+            <OwnerLabel
+              isCompactView={false}
+              maxVisibleOwners={4}
+              owners={entity.owners}
+              showLabel={false}
+            />
+          );
+        case 'glossaryTerms':
+          return renderTagList(getGlossaryTags(entity.tags));
+        case 'domains': {
+          const domains = (entity as unknown as { domains?: EntityReference[] })
+            .domains;
+          if (!domains?.length) {
+            return <Typography size="text-sm">-</Typography>;
+          }
+          const domain = domains[0];
+
+          return (
+            <Box align="center" direction="row" gap={1}>
+              <Globe01
+                size={16}
+                style={{ flexShrink: 0 }}
+              />
+              <Typography size="text-sm">
+                {domain.displayName || domain.name}
+              </Typography>
+            </Box>
+          );
+        }
+        case 'tags':
+          return renderTagList(getClassificationTags(entity.tags));
+        case 'experts':
+          return (
+            <OwnerLabel
+              isCompactView={false}
+              maxVisibleOwners={4}
+              owners={entity.experts}
+              showLabel={false}
+            />
+          );
+        default:
+          return null;
+      }
+    },
+    [renderTagList]
+  );
+
   const { cardView } = useCardView({
     listing: dataProductListing,
     cardTemplate: dataProductCardTemplate,
@@ -214,8 +342,10 @@ const DataProductListPage = () => {
         <>
           <EntityListingTable
             ariaLabel={t('label.data-product')}
+            columns={dataProductColumns}
             entities={dataProductListing.entities}
             loading={dataProductListing.loading}
+            renderCell={renderDataProductCell}
             selectedEntities={dataProductListing.selectedEntities}
             onEntityClick={dataProductListing.actionHandlers.onEntityClick}
             onSelect={dataProductListing.handleSelect}

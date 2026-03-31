@@ -11,11 +11,18 @@
  *  limitations under the License.
  */
 
-import { Box, Card } from '@openmetadata/ui-core-components';
+import {
+  Avatar,
+  BadgeWithIcon,
+  Box,
+  Card,
+  Typography,
+} from '@openmetadata/ui-core-components';
+import { Tag01 } from '@untitledui/icons';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useSnackbar } from 'notistack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
@@ -24,9 +31,14 @@ import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { CreateDataProduct } from '../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../generated/api/domains/createDomain';
+import { Domain } from '../../generated/entity/domains/domain';
+import { TagLabel } from '../../generated/type/tagLabel';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { addDomains, patchDomains } from '../../rest/domainAPI';
 import { createEntityWithCoverImage } from '../../utils/CoverImageUploadUtils';
+import { getEntityName } from '../../utils/EntityUtils';
+import { getEntityAvatarProps } from '../../utils/IconUtils';
+import { getClassificationTags, getGlossaryTags } from '../../utils/TagsUtils';
 import { useDelete } from '../common/atoms/actions/useDelete';
 import { useDomainCardTemplates } from '../common/atoms/domain/ui/useDomainCardTemplates';
 import { useDomainFilters } from '../common/atoms/domain/ui/useDomainFilters';
@@ -39,10 +51,14 @@ import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { useCardView } from '../common/atoms/table/useCardView';
-import EntityListingTable from '../common/EntityListingTable/EntityListingTable';
+import EntityListingTable, {
+  ColumnDef,
+} from '../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
+import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
+import { DomainTypeChip } from './components/DomainTypeChip';
 import DomainTreeView from './components/DomainTreeView';
 import { useDomainListingData } from './hooks/useDomainListingData';
 
@@ -148,6 +164,82 @@ const DomainListPage = () => {
     }
   }, [isTreeView]);
 
+  const domainColumns: ColumnDef[] = useMemo(
+    () => [
+      { id: 'name', label: t('label.domain') },
+      { id: 'owners', label: t('label.owner-plural') },
+      { id: 'glossaryTerms', label: t('label.glossary-term-plural') },
+      { id: 'domainType', label: t('label.domain-type') },
+      { id: 'tags', label: t('label.tag-plural') },
+    ],
+    [t]
+  );
+
+  const renderTagList = useCallback((tags: TagLabel[]): ReactNode => {
+    if (!tags.length) {
+      return <Typography size="text-sm">-</Typography>;
+    }
+
+    const firstTag = tags[0];
+    const remaining = tags.length - 1;
+
+    return (
+      <Box align="center" direction="row" gap={1}>
+        <BadgeWithIcon
+          color="gray"
+          iconLeading={Tag01}
+          key={firstTag.tagFQN}
+          size="lg"
+          type="color">
+          {firstTag.displayName || firstTag.tagFQN}
+        </BadgeWithIcon>
+        {remaining > 0 && (
+          <Typography size="text-xs" weight="medium">
+            +{remaining}
+          </Typography>
+        )}
+      </Box>
+    );
+  }, []);
+
+  const renderDomainCell = useCallback(
+    (entity: Domain, columnId: string): ReactNode => {
+      switch (columnId) {
+        case 'name':
+          return (
+            <Box align="center" direction="row" gap={3}>
+              <Avatar size="md" {...getEntityAvatarProps(entity)} />
+              <Typography size="text-sm" weight="medium">
+                {getEntityName(entity)}
+              </Typography>
+            </Box>
+          );
+        case 'domainType':
+          return entity.domainType ? (
+            <DomainTypeChip domainType={entity.domainType} />
+          ) : (
+            <Typography size="text-sm">-</Typography>
+          );
+        case 'owners':
+          return (
+            <OwnerLabel
+              isCompactView={false}
+              maxVisibleOwners={4}
+              owners={entity.owners}
+              showLabel={false}
+            />
+          );
+        case 'glossaryTerms':
+          return renderTagList(getGlossaryTags(entity.tags));
+        case 'tags':
+          return renderTagList(getClassificationTags(entity.tags));
+        default:
+          return null;
+      }
+    },
+    [renderTagList]
+  );
+
   const { cardView } = useCardView({
     listing: domainListing,
     cardTemplate: domainCardTemplate,
@@ -225,8 +317,10 @@ const DomainListPage = () => {
         <>
           <EntityListingTable
             ariaLabel={t('label.domain')}
+            columns={domainColumns}
             entities={domainListing.entities}
             loading={domainListing.loading}
+            renderCell={renderDomainCell}
             selectedEntities={domainListing.selectedEntities}
             onEntityClick={domainListing.actionHandlers.onEntityClick}
             onSelect={domainListing.handleSelect}
