@@ -342,17 +342,16 @@ test.describe('Lineage Filters', () => {
 
         await page.getByTitle(filterValue).click();
 
-        const lineageRes = page.waitForResponse('/api/v1/lineage/getLineage?*');
+        const lineageRes = page.waitForResponse(
+          '/api/v1/lineage/getLineageByEntityCount?*'
+        );
         await page.getByRole('button', { name: 'Update' }).click();
         await lineageRes;
 
-        await rearrangeNodes(page);
-        await performZoomOut(page);
-
         for (const entity of entitiesToShow) {
           await expect(
-            page.getByTestId(
-              `lineage-node-${entity.entityResponseData.fullyQualifiedName}`
+            page.locator(
+              `[data-row-key="${entity.entityResponseData.fullyQualifiedName}"]`
             )
           ).toBeVisible();
         }
