@@ -904,10 +904,21 @@ class DbtSource(DbtServiceSource):
 
                     model_name = get_dbt_model_name(manifest_node)
 
-                    # Filter the dbt models based on filter patterns
+                    # snapshots can redirect output to a different schema/database via config.target_schema/target_database
+                    if resource_type == "snapshot":
+                        location = get_snapshot_effective_schema_and_database(
+                            manifest_node
+                        )
+                        node_schema = location.schema_
+                        node_database = location.database
+                    else:
+                        node_schema = manifest_node.schema_
+                        node_database = manifest_node.database
+
+                    # Filter the dbt models based on filter patterns using effective schema/database
                     filter_model = self.is_filtered(
-                        database_name=get_corrected_name(manifest_node.database),
-                        schema_name=get_corrected_name(manifest_node.schema_),
+                        database_name=get_corrected_name(node_database),
+                        schema_name=get_corrected_name(node_schema),
                         table_name=model_name,
                     )
                     if filter_model.is_filtered:
@@ -932,17 +943,6 @@ class DbtSource(DbtServiceSource):
                             )
                             or []
                         )
-
-                    # snapshots can redirect output to a different schema/database via config.target_schema/target_database
-                    if resource_type == "snapshot":
-                        location = get_snapshot_effective_schema_and_database(
-                            manifest_node
-                        )
-                        node_schema = location.schema_
-                        node_database = location.database
-                    else:
-                        node_schema = manifest_node.schema_
-                        node_database = manifest_node.database
                     table_fqn = fqn.build(
                         self.metadata,
                         entity_type=Table,
