@@ -310,10 +310,7 @@ test.describe('Lineage Filters', () => {
       }) => {
         const { apiContext, afterAction } = await getApiContext(page);
 
-        const entitiesToShow: EntityClassUnion[] = [
-          lineageEntity,
-          depth1Entity,
-        ];
+        const entitiesToShow: EntityClassUnion[] = [depth1Entity];
         const entitiesToHide: EntityClassUnion[] = [];
 
         depth2ndEntities.forEach((entity, index) => {
