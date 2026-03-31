@@ -13,7 +13,7 @@
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import path from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -38,19 +38,19 @@ export default defineConfig(({ mode }) => {
           // Don't replace ${basePath} placeholder - it will be replaced at runtime by Java backend
           // Add ${basePath} prefix to asset paths (with or without leading slash)
           return html
-            .replace(
+            .replaceAll(
               /(<script[^>]*src=["'])(\.\/)?assets\//g,
               '$1${basePath}assets/'
             )
-            .replace(
+            .replaceAll(
               /(<link[^>]*href=["'])(\.\/)?assets\//g,
               '$1${basePath}assets/'
             )
-            .replace(
+            .replaceAll(
               /(<img[^>]*src=["'])(\.\/)?assets\//g,
               '$1${basePath}assets/'
             )
-            .replace(
+            .replaceAll(
               /(<img[^>]*src=["'])(\.\/)?images\//g,
               '$1${basePath}images/'
             );
@@ -73,6 +73,9 @@ export default defineConfig(({ mode }) => {
           ext: '.gz',
           threshold: 1024, // Only compress files larger than 1KB
           deleteOriginFile: false, // Keep original files for fallback
+          // Skip binary formats that are already compressed — re-compressing
+          // them wastes build CPU and saves zero bytes.
+          filter: /\.(js|mjs|css|html|svg|json|wasm)(\?.*)?$/i,
         }),
       mode === 'production' &&
         viteCompression({
@@ -80,6 +83,8 @@ export default defineConfig(({ mode }) => {
           ext: '.br',
           threshold: 1024, // Only compress files larger than 1KB
           deleteOriginFile: false, // Keep original files for fallback
+          // Same exclusion list — woff2 is already brotli-compressed internally.
+          filter: /\.(js|mjs|css|html|svg|json|wasm)(\?.*)?$/i,
         }),
     ].filter(Boolean),
 
@@ -169,23 +174,131 @@ export default defineConfig(({ mode }) => {
       cssMinify: 'esbuild',
       cssCodeSplit: true,
       reportCompressedSize: false,
-      chunkSizeWarningLimit: 5000,
+      // Each named chunk is now bounded; raise the warning limit only so CI
+      // doesn't complain about the few legitimately large vendor chunks.
+      chunkSizeWarningLimit: 3000,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            'antd-vendor': ['antd', '@ant-design/icons'],
-            'editor-vendor': [
+          /**
+           * manualChunks object — Rollup resolves each package name and groups
+           * all its internal modules into the named chunk automatically.
+           *
+           * Order within this object does not matter; what matters is which
+           * chunk a package is assigned to. Keep the comment groups as a guide.
+           */
+          /**
+           * Function-based manualChunks using an explicit package map.
+           * This achieves what the object pattern does, but importantly
+           * allows us to add a catch-all at the end so unlisted node_modules
+           * are properly split out of the main index.js bundle.
+           */
+          manualChunks: ((packageMap: Record<string, string[]>) => (id: string) => {
+            // Find if this module belongs to any of our explicit vendor chunks
+            for (const [chunkName, packages] of Object.entries(packageMap)) {
+              if (packages.some((pkg) => id.includes(`node_modules/${pkg}/`))) {
+                return chunkName;
+              }
+            }
+
+            // --- THE CRITICAL CATCH-ALL ---
+            // If it's a node_module but wasn't in the list above, group it here
+            // instead of letting it bloat the main application index.js!
+            if (id.includes('node_modules/')) {
+              return 'vendor-misc';
+            }
+          })({
+            // ── Login critical path (loaded before auth resolves) ─────────────
+            'vendor-react': ['react', 'react-dom', 'scheduler'],
+            'vendor-router': ['react-router-dom', 'react-router'],
+            'vendor-zustand': ['zustand'],
+            'vendor-antd': ['antd', '@ant-design/icons'],
+            'vendor-i18n': ['i18next', 'react-i18next'],
+
+            // ── Core UI Components (massive library) ──────────────────────────
+            'vendor-core': ['@openmetadata/ui-core-components'],
+
+            // ── MUI / Emotion (authenticated pages only) ──────────────────────
+            'vendor-mui': [
+              '@mui/material',
+              '@mui/system',
+              '@mui/icons-material',
+              '@mui/x-date-pickers',
+              '@mui/x-tree-view',
+              '@emotion/react',
+              '@emotion/styled',
+            ],
+
+            // ── Rich-text editors ─────────────────────────────────────────────
+            'vendor-editor-tiptap': [
               '@tiptap/react',
+              '@tiptap/core',
               '@tiptap/starter-kit',
               '@tiptap/extension-link',
+              '@tiptap/extension-placeholder',
+              '@tiptap/extension-table',
+              '@tiptap/extension-table-cell',
+              '@tiptap/extension-table-header',
+              '@tiptap/extension-table-row',
+              '@tiptap/extension-task-item',
+              '@tiptap/extension-task-list',
+              '@tiptap/suggestion',
             ],
-            'chart-vendor': ['recharts', 'reactflow'],
-          },
+            'vendor-editor-quill': [
+              'quill',
+              'react-quill-new',
+              '@toast-ui/react-editor',
+              '@windmillcode/quill-emoji',
+              'quill-mention',
+              'quilljs-markdown',
+            ],
+            'vendor-codemirror': ['codemirror', 'react-codemirror2'],
+
+            // ── Data Parsers & AST (very heavy) ───────────────────────────────
+            'vendor-antlr': ['antlr4'],
+            'vendor-schema': ['@apidevtools/json-schema-ref-parser'],
+            'vendor-markdown': ['showdown', 'turndown', 'dompurify', 'html-react-parser'],
+
+            // ── Charts & graphs ───────────────────────────────────────────────
+            'vendor-recharts': ['recharts'],
+            'vendor-reactflow': ['reactflow', '@dagrejs/dagre'],
+            'vendor-g6': ['@antv/g6', 'elkjs'],
+            'vendor-vis': ['vis-network', 'vis-data'],
+
+            // ── Auth SDKs ─────────────────────────────────────────────────────
+            'vendor-auth-okta-auth0': [
+              '@okta/okta-react',
+              '@okta/okta-auth-js',
+              '@auth0/auth0-react',
+              'oidc-client',
+            ],
+            'vendor-auth-azure': [
+              '@azure/msal-browser',
+              '@azure/msal-react',
+            ],
+
+            // ── Forms & Query schemas ─────────────────────────────────────────
+            'vendor-query-builder': ['@react-awesome-query-builder/antd'],
+            'vendor-rjsf': [
+              '@rjsf/core',
+              '@rjsf/utils',
+              '@rjsf/validator-ajv8',
+              'ajv',
+            ],
+
+            // ── DnD, tour, sockets ────────────────────────────────────────────
+            'vendor-dnd': ['react-dnd', 'react-dnd-html5-backend'],
+            'vendor-tour': ['@deuex-solutions/react-tour'],
+            'vendor-socketio': ['socket.io-client'],
+
+            // ── Utilities ─────────────────────────────────────────────────────
+            'vendor-lodash': ['lodash'],
+            'vendor-rapidoc': ['rapidoc'],
+            'vendor-analytics': ['analytics', 'use-analytics'],
+          }),
           assetFileNames: (assetInfo) => {
-            const fileName = assetInfo.name || '';
-            const info = fileName.split('.');
-            const ext = info[info.length - 1];
+            const fileName = assetInfo.names || '';
+            
+            const ext = fileName.at(-1) ?? '';
 
             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
               return `images/[name]-[hash][extname]`;

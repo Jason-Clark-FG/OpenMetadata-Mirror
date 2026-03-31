@@ -21,17 +21,66 @@ import {
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { Operation } from '../../generated/entity/policies/policy';
-import AddCustomMetricPage from '../../pages/AddCustomMetricPage/AddCustomMetricPage';
-import { CustomizablePage } from '../../pages/CustomizablePage/CustomizablePage';
-import DataQualityPage from '../../pages/DataQuality/DataQualityPage';
-import ForbiddenPage from '../../pages/ForbiddenPage/ForbiddenPage';
-import PlatformLineage from '../../pages/PlatformLineage/PlatformLineage';
-import TagPage from '../../pages/TagPage/TagPage';
 import { checkPermission, userPermissions } from '../../utils/PermissionsUtils';
 import { useApplicationsProvider } from '../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { RoutePosition } from '../Settings/Applications/plugins/AppPlugin';
 import AdminProtectedRoute from './AdminProtectedRoute';
 import withSuspenseFallback from './withSuspenseFallback';
+
+// Previously statically imported — lazify so they stay out of the main chunk
+const AddCustomMetricPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "AddCustomMetricPage" */ '../../pages/AddCustomMetricPage/AddCustomMetricPage'
+      )
+  )
+);
+
+const CustomizablePage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "CustomizablePage" */ '../../pages/CustomizablePage/CustomizablePage'
+      ).then((m) => ({ default: m.CustomizablePage }))
+  )
+);
+
+const DataQualityPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "DataQualityPage" */ '../../pages/DataQuality/DataQualityPage'
+      )
+  )
+);
+
+const ForbiddenPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "ForbiddenPage" */ '../../pages/ForbiddenPage/ForbiddenPage'
+      )
+  )
+);
+
+const PlatformLineage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "PlatformLineage" */ '../../pages/PlatformLineage/PlatformLineage'
+      )
+  )
+);
+
+const TagPage = withSuspenseFallback(
+  React.lazy(
+    () =>
+      import(
+        /* webpackChunkName: "TagPage" */ '../../pages/TagPage/TagPage'
+      )
+  )
+);
 
 const DomainRouter = withSuspenseFallback(
   React.lazy(

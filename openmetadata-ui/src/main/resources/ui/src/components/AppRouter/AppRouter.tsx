@@ -12,7 +12,7 @@
  */
 
 import { isEmpty, isNil } from 'lodash';
-import { useCallback, useEffect } from 'react';
+import { lazy, useCallback, useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAnalytics } from 'use-analytics';
 import { useShallow } from 'zustand/react/shallow';
@@ -20,16 +20,67 @@ import { ROUTES } from '../../constants/constants';
 import { CustomEventTypes } from '../../generated/analytics/webAnalyticEventData';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
-import AccessNotAllowedPage from '../../pages/AccessNotAllowedPage/AccessNotAllowedPage';
-import { LogoutPage } from '../../pages/LogoutPage/LogoutPage';
-import PageNotFound from '../../pages/PageNotFound/PageNotFound';
-import SamlCallback from '../../pages/SamlCallback';
-import SignUpPage from '../../pages/SignUp/SignUpPage';
 import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
-import AppContainer from '../AppContainer/AppContainer';
 import Loader from '../common/Loader/Loader';
 import { useApplicationsProvider } from '../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { RoutePosition } from '../Settings/Applications/plugins/AppPlugin';
+import withSuspenseFallback from './withSuspenseFallback';
+
+// Lazy-load the entire authenticated shell so login page users never download it
+const AppContainer = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "AppContainer" */ '../AppContainer/AppContainer'
+      )
+  )
+);
+
+// Lazy-load infrequently-visited unauthenticated pages
+const AccessNotAllowedPage = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "AccessNotAllowedPage" */ '../../pages/AccessNotAllowedPage/AccessNotAllowedPage'
+      )
+  )
+);
+
+const LogoutPage = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "LogoutPage" */ '../../pages/LogoutPage/LogoutPage'
+      ).then((m) => ({ default: m.LogoutPage }))
+  )
+);
+
+const PageNotFound = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "PageNotFound" */ '../../pages/PageNotFound/PageNotFound'
+      )
+  )
+);
+
+const SamlCallback = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "SamlCallback" */ '../../pages/SamlCallback'
+      )
+  )
+);
+
+const SignUpPage = withSuspenseFallback(
+  lazy(
+    () =>
+      import(
+        /* webpackChunkName: "SignUpPage" */ '../../pages/SignUp/SignUpPage'
+      )
+  )
+);
 
 const AppRouter = () => {
   const location = useCustomLocation();
