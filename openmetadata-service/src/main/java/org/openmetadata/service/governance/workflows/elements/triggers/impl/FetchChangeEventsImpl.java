@@ -2,11 +2,13 @@ package org.openmetadata.service.governance.workflows.elements.triggers.impl;
 
 import static org.openmetadata.service.apps.bundles.changeEvent.AbstractEventConsumer.OFFSET_EXTENSION;
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.TASK_RETRY_CONFIG;
 import static org.openmetadata.service.governance.workflows.elements.triggers.PeriodicBatchEntityTrigger.HAS_FINISHED_VARIABLE;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.resilience4j.retry.Retry;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,22 +51,32 @@ public class FetchChangeEventsImpl implements JavaDelegate {
 
   @Override
   public void execute(DelegateExecution execution) {
-    String entityType = resolveEntityType(execution);
+    String entityType = (String) entityTypesExpr.getValue(execution);
     int batchSize = Integer.parseInt((String) batchSizeExpr.getValue(execution));
     String workflowFqn = (String) workflowFqnExpr.getValue(execution);
 
-    long currentOffset = resolveStartingOffset(execution, workflowFqn, entityType);
+    Retry retry = Retry.of("fetch-change-events", TASK_RETRY_CONFIG);
+
+    long currentOffset = resolveStartingOffset(execution, workflowFqn, entityType, retry);
 
     List<ChangeEventRecord> records =
-        Entity.getCollectionDAO()
-            .changeEventDAO()
-            .listByEntityTypesWithOffset(List.of(entityType), currentOffset, batchSize);
+        Retry.decorateSupplier(
+                retry,
+                () ->
+                    Entity.getCollectionDAO()
+                        .changeEventDAO()
+                        .listByEntityTypesWithOffset(List.of(entityType), currentOffset, batchSize))
+            .get();
 
     if (records.isEmpty() && currentOffset > 0) {
       long minOffset =
-          Entity.getCollectionDAO()
-              .changeEventDAO()
-              .getMinOffsetForEntityTypes(List.of(entityType));
+          Retry.decorateSupplier(
+                  retry,
+                  () ->
+                      Entity.getCollectionDAO()
+                          .changeEventDAO()
+                          .getMinOffsetForEntityTypes(List.of(entityType)))
+              .get();
       if (minOffset > 0 && minOffset > currentOffset) {
         LOG.warn(
             "Workflow '{}' stored offset {} has been purged. Earliest available offset for entity type '{}' is {}. Resuming from there.",
@@ -72,11 +84,16 @@ public class FetchChangeEventsImpl implements JavaDelegate {
             currentOffset,
             entityType,
             minOffset);
-        currentOffset = minOffset - 1;
+        long resumeOffset = minOffset - 1;
         records =
-            Entity.getCollectionDAO()
-                .changeEventDAO()
-                .listByEntityTypesWithOffset(List.of(entityType), currentOffset, batchSize);
+            Retry.decorateSupplier(
+                    retry,
+                    () ->
+                        Entity.getCollectionDAO()
+                            .changeEventDAO()
+                            .listByEntityTypesWithOffset(
+                                List.of(entityType), resumeOffset, batchSize))
+                .get();
       }
     }
 
@@ -133,19 +150,8 @@ public class FetchChangeEventsImpl implements JavaDelegate {
     execution.setVariable("entityToListMap", entityToListMap);
   }
 
-  private String resolveEntityType(DelegateExecution execution) {
-    String processDefinitionKey = execution.getProcessDefinitionId().split(":")[0];
-    if (processDefinitionKey.contains("-")) {
-      String[] parts = processDefinitionKey.split("-");
-      if (parts.length >= 2) {
-        return parts[parts.length - 1];
-      }
-    }
-    return (String) entityTypesExpr.getValue(execution);
-  }
-
   private long resolveStartingOffset(
-      DelegateExecution execution, String workflowFqn, String entityType) {
+      DelegateExecution execution, String workflowFqn, String entityType, Retry retry) {
     Object stored = execution.getVariable(CURRENT_BATCH_OFFSET_VARIABLE);
     if (stored != null) {
       return (Long) stored;
@@ -160,7 +166,13 @@ public class FetchChangeEventsImpl implements JavaDelegate {
       return offset.getCurrentOffset();
     }
     long minOffset =
-        Entity.getCollectionDAO().changeEventDAO().getMinOffsetForEntityTypes(List.of(entityType));
+        Retry.decorateSupplier(
+                retry,
+                () ->
+                    Entity.getCollectionDAO()
+                        .changeEventDAO()
+                        .getMinOffsetForEntityTypes(List.of(entityType)))
+            .get();
     if (minOffset > 0) {
       LOG.info(
           "No stored offset for workflow '{}' entity type '{}'. Starting from earliest available offset {}.",
@@ -227,11 +239,19 @@ public class FetchChangeEventsImpl implements JavaDelegate {
     }
   }
 
-  private String extractEntityFilter(String filterObj, String entityType) {
+  static String extractEntityFilter(String filterObj, String entityType) {
     if (filterObj == null || filterObj.isBlank()) {
       return null;
     }
     try {
+      JsonNode node = JsonUtils.readTree(filterObj);
+      if (!node.isObject()) {
+        LOG.warn(
+            "Filter for entity type '{}' is not a JSON object, ignoring: {}",
+            entityType,
+            filterObj);
+        return null;
+      }
       @SuppressWarnings("unchecked")
       Map<String, String> filterMap = JsonUtils.readValue(filterObj, Map.class);
       String filter = filterMap.get(entityType);
@@ -240,7 +260,7 @@ public class FetchChangeEventsImpl implements JavaDelegate {
       }
       return filterMap.get("default");
     } catch (Exception e) {
-      LOG.warn("Could not parse filter for entity type '{}': {}", entityType, e.getMessage());
+      LOG.warn("Could not parse filter JSON for entity type '{}': {}", entityType, e.getMessage());
       return null;
     }
   }
@@ -283,6 +303,10 @@ public class FetchChangeEventsImpl implements JavaDelegate {
   }
 
   static String buildConsumerId(String workflowFqn, String entityType) {
+    if (workflowFqn == null || workflowFqn.isBlank()) {
+      throw new IllegalArgumentException(
+          "workflowFqn must not be null or blank when building consumer ID");
+    }
     return workflowFqn + "Trigger-" + entityType;
   }
 }
