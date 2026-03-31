@@ -1,0 +1,58 @@
+{
+  "name": "IncidentLifecycleWorkflow",
+  "fullyQualifiedName": "IncidentLifecycleWorkflow",
+  "displayName": "Incident Lifecycle Workflow",
+  "description": "When a Test Case fails, this workflow creates an incident task assigned to the table owner and waits for human resolution.",
+  "config": {
+    "storeStageStatus": true
+  },
+  "trigger": {
+    "type": "eventBasedEntity",
+    "config": {
+      "entityTypes": ["testCase"],
+      "events": ["Updated"],
+      "onConflict": "forward",
+      "filter": {
+        "testCase": "{\"!=\":[{\"var\":\"testCaseStatus\"},\"Failed\"]}"
+      }
+    },
+    "output": ["relatedEntity"]
+  },
+  "nodes": [
+    {
+      "type": "startEvent",
+      "subType": "startEvent",
+      "name": "testCaseFailed",
+      "displayName": "Test Case Failed"
+    },
+    {
+      "type": "manualTask",
+      "subType": "manualTask",
+      "name": "resolveIncident",
+      "displayName": "Resolve Incident",
+      "config": {
+        "template": "IncidentResolution",
+        "assignees": {
+          "addOwners": true
+        }
+      },
+      "input": ["relatedEntity"],
+      "inputNamespaceMap": { "relatedEntity": "global" },
+      "output": ["result"]
+    },
+    {
+      "type": "endEvent",
+      "subType": "endEvent",
+      "name": "resolvedEnd",
+      "displayName": "Incident Resolved"
+    }
+  ],
+  "edges": [
+    {"from": "testCaseFailed", "to": "resolveIncident"},
+    {"from": "resolveIncident", "to": "resolveIncident", "condition": "Open"},
+    {"from": "resolveIncident", "to": "resolveIncident", "condition": "InProgress"},
+    {"from": "resolveIncident", "to": "resolveIncident", "condition": "Pending"},
+    {"from": "resolveIncident", "to": "resolveIncident", "condition": "retrigger"},
+    {"from": "resolveIncident", "to": "resolvedEnd", "condition": "Completed"}
+  ]
+}
