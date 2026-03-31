@@ -89,6 +89,8 @@ WHERE ue.name = 'mcpapplicationbot'
 -- change-event-driven workflow processing (filters by entityType + offset range).
 CREATE INDEX idx_change_event_entity_type_offset ON change_event (entityType, `offset`);
 
--- Widen change_event_consumers.id from VARCHAR(36) to VARCHAR(768) to support workflow consumer IDs
+-- Widen change_event_consumers.id from VARCHAR(36) to VARCHAR(500) to support workflow consumer IDs
 -- which follow the pattern {workflowFQN}Trigger-{entityType} and can exceed 36 characters.
-ALTER TABLE change_event_consumers MODIFY COLUMN id VARCHAR(768) NOT NULL;
+-- VARCHAR(500) keeps the composite UNIQUE(id, extension) key within MySQL's 3072-byte limit
+-- (500 * 4 + 256 * 4 = 3024 bytes with utf8mb4).
+ALTER TABLE change_event_consumers MODIFY COLUMN id VARCHAR(500) NOT NULL;
