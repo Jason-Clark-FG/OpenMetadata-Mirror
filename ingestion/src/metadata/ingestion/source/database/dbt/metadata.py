@@ -1028,9 +1028,24 @@ class DbtSource(DbtServiceSource):
                     parent_node = manifest_entities[node]
                     table_name = get_dbt_model_name(parent_node)
 
+                    parent_resource_type = getattr(
+                        parent_node.resource_type,
+                        "value",
+                        parent_node.resource_type,
+                    )
+                    if parent_resource_type == "snapshot":
+                        parent_location = get_snapshot_effective_schema_and_database(
+                            parent_node
+                        )
+                        parent_database = parent_location.database
+                        parent_schema = parent_location.schema_
+                    else:
+                        parent_database = parent_node.database
+                        parent_schema = parent_node.schema_
+
                     filter_model = self.is_filtered(
-                        database_name=get_corrected_name(parent_node.database),
-                        schema_name=get_corrected_name(parent_node.schema_),
+                        database_name=get_corrected_name(parent_database),
+                        schema_name=get_corrected_name(parent_schema),
                         table_name=table_name,
                     )
                     if filter_model.is_filtered:
@@ -1047,8 +1062,8 @@ class DbtSource(DbtServiceSource):
                             self.metadata,
                             entity_type=Table,
                             service_name=self.config.serviceName,
-                            database_name=get_corrected_name(parent_node.database),
-                            schema_name=get_corrected_name(parent_node.schema_),
+                            database_name=get_corrected_name(parent_database),
+                            schema_name=get_corrected_name(parent_schema),
                             table_name=table_name,
                         )
 
