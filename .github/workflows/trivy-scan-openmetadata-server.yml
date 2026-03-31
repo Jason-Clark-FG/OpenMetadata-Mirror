@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency: 
-  group: trivy-server-scan-${{ github.head_ref || github.run_id }}
+  group: trivy-server-scan-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
         run: |
           docker build -t openmetadata-server:trivy -f docker/development/Dockerfile .
       - name: Run Trivy Image Scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           scan-type: "image"
           image-ref: openmetadata-server:trivy

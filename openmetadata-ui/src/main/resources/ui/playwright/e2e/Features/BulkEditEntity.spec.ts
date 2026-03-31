@@ -27,6 +27,7 @@ import {
   redirectToHomePage,
   toastNotification,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
 import {
   createColumnRowDetails,
@@ -44,7 +45,6 @@ import {
   validateImportStatus,
 } from '../../utils/importUtils';
 import { visitServiceDetailsPage } from '../../utils/service';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 // use the admin user to login
 test.use({
@@ -140,7 +140,10 @@ test.describe('Bulk Edit Entity', () => {
       ).not.toBeVisible();
 
       // Wait for grid cells to be ready for interaction
-      await page.locator('.rdg-cell[role="gridcell"]').first().waitFor({ state: 'visible' });
+      await page
+        .locator('.rdg-cell[role="gridcell"]')
+        .first()
+        .waitFor({ state: 'visible' });
 
       // Click on first cell and edit
 
@@ -185,7 +188,6 @@ test.describe('Bulk Edit Entity', () => {
 
       await page.click('[data-testid="databases"]');
 
-
       // Verify Details updated
       await expect(page.getByTestId('column-name')).toHaveText(
         `${table.database.name}${databaseDetails.displayName}`
@@ -210,9 +212,17 @@ test.describe('Bulk Edit Entity', () => {
         })
       ).toBeVisible();
 
+      // Verify Tier
       await expect(
         page.getByRole('link', {
           name: 'Tier1',
+        })
+      ).toBeVisible();
+
+      // Verify Certification
+      await expect(
+        page.getByRole('link', {
+          name: 'Gold',
         })
       ).toBeVisible();
 
@@ -273,7 +283,10 @@ test.describe('Bulk Edit Entity', () => {
       ).not.toBeVisible();
 
       // Wait for grid cells to be ready for interaction
-      await page.locator('.rdg-cell[role="gridcell"]').first().waitFor({ state: 'visible' });
+      await page
+        .locator('.rdg-cell[role="gridcell"]')
+        .first()
+        .waitFor({ state: 'visible' });
 
       // click on last row first cell
       await page.click('.rdg-cell[role="gridcell"]');
@@ -351,9 +364,17 @@ test.describe('Bulk Edit Entity', () => {
         })
       ).toBeVisible();
 
+      // Verify Tier
       await expect(
         page.getByRole('link', {
           name: 'Tier1',
+        })
+      ).toBeVisible();
+
+      // Verify Certification
+      await expect(
+        page.getByRole('link', {
+          name: 'Gold',
         })
       ).toBeVisible();
 
@@ -416,7 +437,10 @@ test.describe('Bulk Edit Entity', () => {
       ).not.toBeVisible();
 
       // Wait for grid cells to be ready for interaction
-      await page.locator('.rdg-cell[role="gridcell"]').first().waitFor({ state: 'visible' });
+      await page
+        .locator('.rdg-cell[role="gridcell"]')
+        .first()
+        .waitFor({ state: 'visible' });
 
       // Click on first cell and edit
       await page.click('.rdg-cell[role="gridcell"]');
@@ -489,10 +513,16 @@ test.describe('Bulk Edit Entity', () => {
         })
       ).toBeVisible();
 
+      // Verify Tier
       await expect(
         page.getByRole('link', {
           name: 'Tier1',
         })
+      ).toBeVisible();
+
+      // Verify Certification
+      await expect(
+        page.getByTestId('certification-Certification.Gold')
       ).toBeVisible();
 
       await expect(
@@ -527,7 +557,10 @@ test.describe('Bulk Edit Entity', () => {
       ).not.toBeVisible();
 
       // Wait for grid cells to be ready for interaction
-      await page.locator('.rdg-cell[role="gridcell"]').first().waitFor({ state: 'visible' });
+      await page
+        .locator('.rdg-cell[role="gridcell"]')
+        .first()
+        .waitFor({ state: 'visible' });
 
       // click on row first cell
       await page.click('.rdg-cell[role="gridcell"]');

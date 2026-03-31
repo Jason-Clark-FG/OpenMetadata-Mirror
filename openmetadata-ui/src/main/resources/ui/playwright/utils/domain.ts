@@ -522,10 +522,9 @@ export const createDomain = async (
   validate = false
 ) => {
   await page.click('[data-testid="add-domain"]');
+  await page.getByTestId('form-heading').waitFor({ timeout: 5000 });
 
-  await page.locator('h6:has-text("Add Domain")').waitFor({ timeout: 5000 });
-
-  await expect(page.locator('h6:has-text("Add Domain")')).toBeVisible();
+  await expect(page.getByTestId('form-heading')).toBeVisible();
 
   const saveButton = page.getByRole('button', { name: 'Save' });
 
@@ -1377,7 +1376,9 @@ export const verifyDataProductsCount = async (
         },
       },
     });
-    const searchUrl = `/api/v1/search/query?q=&index=data_product_search_index&from=0&size=0&deleted=false&query_filter=${encodeURIComponent(queryFilter)}`;
+    const searchUrl = `/api/v1/search/query?q=&index=data_product_search_index&from=0&size=0&deleted=false&query_filter=${encodeURIComponent(
+      queryFilter
+    )}`;
 
     await expect
       .poll(
@@ -1467,10 +1468,8 @@ export const verifyPortCounts = async (
   expectedOutputCount: number
 ) => {
   const portsTab = page.getByTestId('input-output-ports-tab');
-  const inputPortCount = portsTab
-    .getByTestId('input-port-count')
-  const outputPortCount = portsTab
-     .getByTestId('output-port-count')
+  const inputPortCount = portsTab.getByTestId('input-port-count');
+  const outputPortCount = portsTab.getByTestId('output-port-count');
 
   await expect
     .poll(
@@ -1786,4 +1785,34 @@ export const verifyEndOfDescriptionReachable = async (
   await page.waitForTimeout(300);
 
   await expect(lateContent).toBeInViewport();
+};
+
+export const openDataProductDrawer = async (page: Page, domain: Domain) => {
+  await sidebarClick(page, SidebarItem.DATA_PRODUCT);
+  await page.getByTestId('add-entity-button').click();
+  await expect(page.getByTestId('form-heading')).toContainText(
+    'Add Data Product'
+  );
+
+  await page.getByTestId('name').locator('input').fill(`test-dp-${Date.now()}`);
+
+  const descriptionEditor = page.locator('[contenteditable="true"]').first();
+  await descriptionEditor.waitFor({ state: 'visible', timeout: 10000 });
+  await descriptionEditor.click();
+  await page.keyboard.type('Test data product description');
+
+  const domainInput = page.getByTestId('domain-select');
+  await domainInput.scrollIntoViewIfNeeded();
+  await domainInput.waitFor({ state: 'visible' });
+  await domainInput.click();
+
+  const searchDomain = page.waitForResponse(
+    /\/api\/v1\/search\/query\?q=.*index=domain.*/
+  );
+  await domainInput.fill(domain.data.displayName);
+  await searchDomain;
+
+  const domainOption = page.getByText(domain.data.displayName);
+  await domainOption.waitFor({ state: 'visible', timeout: 5000 });
+  await domainOption.click();
 };

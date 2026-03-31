@@ -14,8 +14,8 @@ import { expect, test } from '@playwright/test';
 import { GlobalSettingOptions } from '../../constant/settings';
 import { TableClass } from '../../support/entity/TableClass';
 import { createNewPage, redirectToHomePage } from '../../utils/common';
-import { settingClick } from '../../utils/sidebar';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { settingClick } from '../../utils/sidebar';
 
 const table = new TableClass();
 
@@ -64,9 +64,9 @@ test.describe('Schema search', { tag: '@ingestion' }, () => {
 
     await waitForAllLoadersToDisappear(page);
 
-    await expect(
-      page.locator('[data-testid="entity-header-name"]')
-    ).toHaveText(serviceName);
+    await expect(page.locator('[data-testid="entity-header-name"]')).toHaveText(
+      serviceName
+    );
 
     const schemaResponse = page.waitForResponse('/api/v1/databaseSchemas?**');
     await page.click('[data-testid="databases"]');

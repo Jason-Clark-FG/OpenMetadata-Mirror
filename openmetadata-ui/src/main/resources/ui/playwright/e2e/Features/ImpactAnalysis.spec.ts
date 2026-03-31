@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -362,11 +362,11 @@ test.describe('Impact Analysis', () => {
     await page.getByTestId('search-dropdown-Tier').click();
 
     await expect(
-      page.getByTitle(EntityDataClass.tierTag1.responseData.displayName)
+      page.getByTitle(EntityDataClass.tierTag1.responseData.fullyQualifiedName)
     ).toBeVisible();
 
     await page
-      .getByTitle(EntityDataClass.tierTag1.responseData.displayName)
+      .getByTitle(EntityDataClass.tierTag1.responseData.fullyQualifiedName)
       .click();
     const filterResponse = page.waitForResponse(
       (response) =>

@@ -28,6 +28,7 @@ import {
   redirectToHomePage,
   toastNotification,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   createColumnRowDetails,
   createCustomPropertiesForEntity,
@@ -413,9 +414,9 @@ test.describe('Bulk Import Export', () => {
         state: 'visible',
       });
       await page.click('[data-testid="import-button-title"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + dbEntity.entity.name + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles(['downloads/' + dbEntity.entity.name + '.csv']);
 
       // Wait for upload widget to be hidden indicating file is loaded
       await page.getByTestId('upload-file-widget').waitFor({
@@ -622,9 +623,9 @@ test.describe('Bulk Import Export', () => {
 
       await page.click('[data-testid="manage-button"] > .anticon');
       await page.click('[data-testid="import-button-title"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + dbSchemaEntity.entity.name + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles(['downloads/' + dbSchemaEntity.entity.name + '.csv']);
 
       // Wait for upload widget to be hidden indicating file is loaded
       await page.getByTestId('upload-file-widget').waitFor({
@@ -782,9 +783,9 @@ test.describe('Bulk Import Export', () => {
       await tableEntity.visitEntityPage(page);
       await page.click('[data-testid="manage-button"]');
       await page.click('[data-testid="import-button-title"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + tableEntity.entity.name + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles(['downloads/' + tableEntity.entity.name + '.csv']);
 
       // Wait for upload widget to be hidden indicating file is loaded
       await page.getByTestId('upload-file-widget').waitFor({
@@ -865,9 +866,9 @@ test.describe('Bulk Import Export', () => {
 
       await page.click('[data-testid="manage-button"] > .anticon');
       await page.click('[data-testid="import-button-title"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + dbEntity.entity.name + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles(['downloads/' + dbEntity.entity.name + '.csv']);
 
       await page.getByTestId('add-row-btn').waitFor({
         state: 'visible',
@@ -945,9 +946,11 @@ test.describe('Bulk Import Export', () => {
     await test.step('Perform Column Select and Delete Operation', async () => {
       await page.click('[data-testid="manage-button"] > .anticon');
       await page.click('[data-testid="import-button-title"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + `${dbEntity.entity.name}-delete` + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles([
+          'downloads/' + `${dbEntity.entity.name}-delete` + '.csv',
+        ]);
 
       await page.getByTestId('add-row-btn').waitFor({
         state: 'visible',
@@ -1007,7 +1010,14 @@ test.describe('Bulk Import Export', () => {
     });
 
     await test.step('should verify the removed value from entity', async () => {
-      await page.getByTestId('column-name').first().click();
+      await page.getByTestId('alert-bar').waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
+      const columnNameLink = page
+        .getByTestId('column-name')
+        .first()
+        .locator('a');
+      await columnNameLink.waitFor({ state: 'visible' });
+      await columnNameLink.click();
 
       await expect(
         page
@@ -1057,9 +1067,9 @@ test.describe('Bulk Import Export', () => {
       await dbEntity.visitEntityPage(page);
       await page.click('[data-testid="manage-button"] > .anticon');
       await page.click('[data-testid="import-button-description"]');
-      await page.locator('[type="file"]').setInputFiles([
-        'downloads/' + dbEntity.entity.name + '.csv',
-      ]);
+      await page
+        .locator('[type="file"]')
+        .setInputFiles(['downloads/' + dbEntity.entity.name + '.csv']);
       // Wait for upload widget to be hidden indicating file is loaded
       await page.getByTestId('upload-file-widget').waitFor({
         state: 'hidden',

@@ -21,12 +21,12 @@ import {
   toastNotification,
   uuid,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   getElementWithPagination,
   removePolicyFromRole,
 } from '../../utils/roles';
 import { settingClick } from '../../utils/sidebar';
-import { waitForAllLoadersToDisappear } from '../../utils/entity';
 
 const policies = {
   dataConsumerPolicy: 'Data Consumer Policy',
@@ -563,7 +563,9 @@ test.describe('Roles page tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     await manageButton.click();
 
     const deleteButton = page
-      .locator('[data-testid="delete-button"], [data-testid="delete-button-title"]')
+      .locator(
+        '[data-testid="delete-button"], [data-testid="delete-button-title"]'
+      )
       .first();
     await expect(deleteButton).toBeVisible();
     await deleteButton.click();
