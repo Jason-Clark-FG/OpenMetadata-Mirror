@@ -22,6 +22,7 @@ import {
 } from '@antv/g6';
 import { ReactNode as AntVReactNode } from '@antv/g6-extension-react';
 import {
+  Box,
   Card,
   Divider,
   SlideoutMenu,
@@ -37,9 +38,11 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as ExitFullScreenIcon } from '../../assets/svg/ic-exit-fullscreen.svg';
 import { ReactComponent as FitScreenIcon } from '../../assets/svg/ic-fit-screen.svg';
 import { ReactComponent as FullscreenIcon } from '../../assets/svg/ic-fullscreen.svg';
+import { ReactComponent as LineageIcon } from '../../assets/svg/ic-platform-lineage.svg';
 import { ReactComponent as ZoomInIcon } from '../../assets/svg/ic-zoom-in.svg';
 import { ReactComponent as ZoomOutIcon } from '../../assets/svg/ic-zoom-out.svg';
 import { ReactComponent as RefreshIcon } from '../../assets/svg/reload.svg';
+import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { getEntityGraphData } from '../../rest/rdfAPI';
 import { getEntityLinkFromType } from '../../utils/EntityUtils';
@@ -472,25 +475,29 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     </>
   );
 
-  const emptyContent = hasNoData ? (
-    <div className="knowledge-graph-empty">
-      <div className="tw:flex tw:items-center tw:justify-center">
-        <ErrorPlaceHolder />
-      </div>
-    </div>
-  ) : (
-    graphCanvas
-  );
-
-  const graphContent = loading ? (
+  const knowledgeGraph = loading ? (
     <div className="knowledge-graph-loading">
       <div className="tw:flex tw:items-center tw:justify-center">
         <Loader />
       </div>
     </div>
   ) : (
-    emptyContent
+    graphCanvas
   );
+
+  if (hasNoData && !loading) {
+    return (
+      <Card className="knowledge-graph-empty">
+        <ErrorPlaceHolder
+          className="tw:text-disabled"
+          icon={<LineageIcon height={SIZE.MEDIUM} width={SIZE.MEDIUM} />}
+          size={SIZE.X_SMALL}
+          type={ERROR_PLACEHOLDER_TYPE.CUSTOM}>
+          {t('message.no-knowledge-graph-data')}
+        </ErrorPlaceHolder>
+      </Card>
+    );
+  }
 
   if (!entity) {
     return (
@@ -503,7 +510,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   }
 
   return (
-    <div className="knowledge-graph-container">
+    <Card className="knowledge-graph-container">
       <Card className="knowledge-graph-controls" size="sm">
         <Card.Content className="tw:flex tw:items-center tw:gap-4">
           <Typography className="tw:text-secondary" weight="medium">
@@ -532,23 +539,30 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
           <Divider orientation="vertical" />
 
-          <div className="depth-slider-container">
+          <Box align="center" gap={5}>
             <Typography className="depth-label">
               {t('label.node-depth') + ':'}
             </Typography>
             <Slider
+              showHoverPreview
+              showRange
               className="depth-slider"
-              labelPosition="bottom"
-              maxValue={10}
+              labelPosition="top-floating"
+              maxValue={5}
               minValue={1}
+              rangeCount={3}
+              step={1}
+              style={{
+                width: '150px',
+              }}
               value={[selectedDepth]}
               onChange={handleDepthChange}
             />
-          </div>
+          </Box>
         </Card.Content>
       </Card>
 
-      {graphContent}
+      {knowledgeGraph}
 
       <div className="knowledge-graph-action-buttons">
         <Tooltip title={t('label.zoom-in')}>
@@ -597,7 +611,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
           </TooltipTrigger>
         </Tooltip>
       </div>
-    </div>
+    </Card>
   );
 };
 
