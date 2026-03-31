@@ -1404,7 +1404,7 @@ class DbtSource(DbtServiceSource):
                     get_tag_labels(
                         metadata=self.metadata,
                         tags=dbt_meta_info.openmetadata.glossary,
-                        include_tags=self.source_config.includeTags,
+                        include_tags=True,
                         tag_type=GlossaryTerm,
                     )
                     or []
@@ -1417,7 +1417,7 @@ class DbtSource(DbtServiceSource):
                         metadata=self.metadata,
                         tags=[tier_fqn.split(fqn.FQN_SEPARATOR)[-1]],
                         classification_name=tier_fqn.split(fqn.FQN_SEPARATOR)[0],
-                        include_tags=self.source_config.includeTags,
+                        include_tags=True,
                     )
                     or []
                 )

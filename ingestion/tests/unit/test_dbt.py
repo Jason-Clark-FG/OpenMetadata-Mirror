@@ -1300,6 +1300,46 @@ class DbtUnitTest(TestCase):
         # Should have 3 tags: 1 glossary + 1 tier + 1 classification
         self.assertEqual(len(dbt_meta_tags), 3)
 
+    @patch("metadata.utils.tag_utils.get_tag_label")
+    def test_dbt_glossary_and_tier_processed_when_include_tags_false(
+        self, get_tag_label
+    ):
+        """Glossary and tier must be ingested even when includeTags=False; only
+        classification tags from openmetadata.tags should be suppressed."""
+        from unittest.mock import patch as _patch
+
+        glossary_label = TagLabel(
+            tagFQN="Test_Glossary.term_one",
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Glossary.value,
+        )
+        tier_label = TagLabel(
+            tagFQN="Tier.Tier1",
+            labelType=LabelType.Automated.value,
+            state=State.Suggested.value,
+            source=TagSource.Classification.value,
+        )
+        get_tag_label.side_effect = [glossary_label, tier_label]
+
+        manifest_meta = {
+            "openmetadata": {
+                "glossary": ["Test_Glossary.term_one"],
+                "tier": "Tier.Tier1",
+                "tags": ["PII.Sensitive"],
+            }
+        }
+
+        with _patch.object(self.dbt_source_obj.source_config, "includeTags", False):
+            result = self.dbt_source_obj.process_dbt_meta(
+                manifest_meta=manifest_meta,
+                table_fqn="test_service.test_db.test_schema.test_table",
+            )
+
+        assert len(result) == 2
+        assert glossary_label in result
+        assert tier_label in result
+
     def test_dbt_classification_tags_edge_cases(self):
         """Test edge cases for classification tags processing"""
 
