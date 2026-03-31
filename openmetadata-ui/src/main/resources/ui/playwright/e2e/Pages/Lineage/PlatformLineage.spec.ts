@@ -50,7 +50,7 @@ test('Verify table search with special characters as handled', async ({
   await sidebarClick(page, SidebarItem.LINEAGE);
 
   await page.getByTestId('search-entity-select').waitFor();
-  await page.click('[data-testid="search-entity-select"]');
+  await page.getByTestId('search-entity-select').click();
 
   await page.fill(
     '[data-testid="search-entity-select"] .ant-select-selection-search-input',
