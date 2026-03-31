@@ -29,8 +29,7 @@ from metadata.generated.schema.entity.utils.common.gcpCredentialsConfig import (
 from metadata.generated.schema.entity.utils.common.mwaaAuthConfig import (
     MwaaAuthentication,
 )
-from metadata.ingestion.connections.source_api_client import TrackedREST
-from metadata.ingestion.ometa.client import ClientConfig
+from metadata.ingestion.ometa.client import REST, ClientConfig
 from metadata.ingestion.source.pipeline.airflow.api.auth import (
     build_access_token_callback,
     build_basic_auth_callback,
@@ -68,7 +67,7 @@ class AirflowApiClient:
             self.mwaa_client = MWAAClient(
                 auth_config.mwaaConfig.awsConfig, environment_name
             )
-            self.client = None  # No need for TrackedREST client with MWAA
+            self.client = None  # No need for REST client with MWAA
         else:
             # Use standard REST client for other authentication types
             self.mwaa_client = None
@@ -98,7 +97,7 @@ class AirflowApiClient:
                 auth_token_mode=auth_token_mode,
                 verify=rest_config.verifySSL,
             )
-            self.client = TrackedREST(client_config, source_name="airflow_api")
+            self.client = REST(client_config)
 
     @property
     def api_version(self) -> str:
