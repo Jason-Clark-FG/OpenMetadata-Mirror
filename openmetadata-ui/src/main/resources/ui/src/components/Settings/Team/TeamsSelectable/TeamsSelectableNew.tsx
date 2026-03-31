@@ -16,7 +16,7 @@ import { BaseOptionType } from 'antd/lib/select';
 import { AxiosError } from 'axios';
 
 import { isEmpty } from 'lodash';
-import { forwardRef, useEffect, useMemo, useState } from 'react';
+import { forwardRef, Ref, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TeamHierarchy } from '../../../../generated/entity/teams/teamHierarchy';
 import { getTeamsHierarchy } from '../../../../rest/teamsAPI';
@@ -26,7 +26,7 @@ import { showErrorToast } from '../../../../utils/ToastUtils';
 import { TagRenderer } from '../../../common/TagRenderer/TagRenderer';
 import { TeamsSelectableProps } from './TeamsSelectable.interface';
 
-const TeamsSelectableNew = forwardRef<any, TeamsSelectableProps>(
+const TeamsSelectableNew = forwardRef<HTMLDivElement, TeamsSelectableProps>(
   (
     {
       showTeamsAlert,
@@ -129,7 +129,7 @@ const TeamsSelectableNew = forwardRef<any, TeamsSelectableProps>(
           placeholder={placeholder}
           placement="bottomLeft"
           popupClassName="teams-custom-dropdown-class"
-          ref={ref as any}
+          ref={ref as Ref<unknown>}
           showCheckedStrategy={TreeSelect.SHOW_CHILD}
           style={{ width: '100%' }}
           tagRender={TagRenderer}

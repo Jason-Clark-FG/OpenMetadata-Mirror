@@ -118,7 +118,7 @@ describe('UploadFile Component', () => {
         throw new Error('File read error');
       }),
       onerror: null,
-    })) as any;
+    })) as unknown as typeof FileReader;
 
     fireEvent.drop(uploadWidget, {
       dataTransfer: {

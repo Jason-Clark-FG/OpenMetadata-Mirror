@@ -19,47 +19,26 @@ import { FeedEditor } from './FeedEditor';
 const onSave = jest.fn();
 const onChangeHandler = jest.fn();
 
-const onKeyDownHandler = jest.fn().mockImplementation((e: KeyboardEvent) => {
-  if (e.key === 'Enter') {
-    if (e.nativeEvent.isComposing || e.keyCode === 229) {
-      return;
-    }
-    if (!e.shiftKey) {
-      onSave();
-    }
-  }
-});
-
 const mockFeedEditorProp = {
   onChangeHandler: onChangeHandler,
   onSave: onSave,
 };
 
-jest.mock('quilljs-markdown', () => {
-  class MockQuillMarkdown {
-    constructor() {
-      // eslint-disable-next-line no-console
-      console.log('Markdown constructor');
-    }
-  }
+jest.unmock('./FeedEditor');
 
-  const instance = new MockQuillMarkdown();
+jest.mock('@windmillcode/quill-emoji', () => ({
+  TextAreaEmoji: jest.fn(),
+}));
 
-  return instance;
-});
+jest.mock('quill', () => ({
+  Parchment: {},
+}));
+
+jest.mock('quill-mention/autoregister', () => ({}));
 
 jest.mock('react-quill-new', () => {
   class MockQuill {
-    constructor() {
-      // eslint-disable-next-line no-console
-      console.log('Quill constructor');
-    }
-
-    register(val: string) {
-      // eslint-disable-next-line no-console
-      console.log(`Register ${val} module`);
-    }
-
+    register() {}
     import(val: string) {
       return val;
     }
@@ -68,21 +47,53 @@ jest.mock('react-quill-new', () => {
   return {
     __esModule: true,
     Quill: new MockQuill(),
-    default: jest.fn().mockImplementation(() => {
-      return (
-        <div data-testid="react-quill" onKeyDown={onKeyDownHandler}>
-          editor
-        </div>
-      );
-    }),
+    default: jest.fn().mockImplementation(
+      (props: {
+        onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
+      }) => {
+        return (
+          <div data-testid="react-quill" onKeyDown={props.onKeyDown}>
+            editor
+          </div>
+        );
+      }
+    ),
   };
 });
 
-jest.mock('../../../utils/QuillLink/QuillLink', () => {
-  return jest.fn();
-});
+jest.mock('../../../utils/QuillLink/QuillLink', () => ({
+  LinkBlot: jest.fn(),
+}));
 
-describe.skip('Test FeedEditor Component', () => {
+jest.mock('../../../hooks/useApplicationStore', () => ({
+  useApplicationStore: jest.fn().mockReturnValue({ userProfilePics: {} }),
+}));
+
+jest.mock('../../../rest/userAPI', () => ({
+  getUserByName: jest.fn(),
+}));
+
+jest.mock('../../../utils/FeedUtils', () => ({
+  HTMLToMarkdown: { turndown: jest.fn() },
+  suggestions: jest.fn(),
+  userMentionItemWithAvatar: jest.fn(),
+}));
+
+jest.mock('../../../utils/QuillUtils', () => ({
+  insertMention: jest.fn(),
+  insertRef: jest.fn(),
+}));
+
+jest.mock('../../../utils/sanitize.utils', () => ({
+  getSanitizeContent: jest.fn().mockImplementation((v: string) => v),
+}));
+
+jest.mock('../../../utils/SearchClassBase', () => ({
+  __esModule: true,
+  default: { getEntityIcon: jest.fn() },
+}));
+
+describe('Test FeedEditor Component', () => {
   it('Should render FeedEditor Component', async () => {
     const { container } = render(<FeedEditor {...mockFeedEditorProp} />, {
       wrapper: MemoryRouter,

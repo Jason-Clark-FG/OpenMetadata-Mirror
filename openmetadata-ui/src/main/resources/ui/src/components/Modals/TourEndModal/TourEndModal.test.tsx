@@ -58,7 +58,7 @@ describe('TourEndModal', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as ReturnType<typeof reactI18next.useTranslation>);
 
     render(<TourEndModal {...mockProps} />);
 

@@ -120,6 +120,34 @@ const DataProductsPage = () => {
     }
   };
 
+  const fetchVersionsInfo = async (activeDataProduct: DataProduct) => {
+    if (!activeDataProduct) {
+      return;
+    }
+
+    try {
+      const res = await getDataProductVersionsList(activeDataProduct.id);
+      setVersionList(res);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    }
+  };
+
+  const fetchActiveVersion = async (activeDataProduct: DataProduct) => {
+    if (!activeDataProduct) {
+      return;
+    }
+    try {
+      const res = await getDataProductVersionData(
+        activeDataProduct.id,
+        version
+      );
+      setSelectedVersionData(res);
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+    }
+  };
+
   const fetchDataProductByFqn = async (fqn: string) => {
     setIsMainContentLoading(true);
     try {
@@ -147,34 +175,6 @@ const DataProductsPage = () => {
       showErrorToast(error as AxiosError);
     } finally {
       setIsMainContentLoading(false);
-    }
-  };
-
-  const fetchVersionsInfo = async (activeDataProduct: DataProduct) => {
-    if (!activeDataProduct) {
-      return;
-    }
-
-    try {
-      const res = await getDataProductVersionsList(activeDataProduct.id);
-      setVersionList(res);
-    } catch (error) {
-      showErrorToast(error as AxiosError);
-    }
-  };
-
-  const fetchActiveVersion = async (activeDataProduct: DataProduct) => {
-    if (!activeDataProduct) {
-      return;
-    }
-    try {
-      const res = await getDataProductVersionData(
-        activeDataProduct.id,
-        version
-      );
-      setSelectedVersionData(res);
-    } catch (error) {
-      showErrorToast(error as AxiosError);
     }
   };
 

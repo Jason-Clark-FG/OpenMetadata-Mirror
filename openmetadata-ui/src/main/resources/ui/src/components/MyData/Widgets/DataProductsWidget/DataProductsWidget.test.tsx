@@ -97,7 +97,16 @@ const mockSearchResponse = {
   statusText: 'OK',
   headers: {},
   config: {},
-} as any;
+} as unknown as {
+  data: {
+    hits: { hits: unknown[]; total: { value: number } };
+    aggregations: Record<string, unknown>;
+  };
+  status: number;
+  statusText: string;
+  headers: Record<string, unknown>;
+  config: Record<string, unknown>;
+};
 
 // Mock API functions
 jest.mock('../../../../rest/miscAPI', () => ({

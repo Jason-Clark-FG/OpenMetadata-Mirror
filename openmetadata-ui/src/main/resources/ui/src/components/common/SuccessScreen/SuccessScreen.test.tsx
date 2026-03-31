@@ -180,7 +180,7 @@ describe('Test SuccessScreen component', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<(typeof reactI18next)['useTranslation']>);
 
     (useAirflowStatus as jest.Mock).mockImplementationOnce(() => ({
       isAirflowAvailable: false,
@@ -219,7 +219,7 @@ describe('Test SuccessScreen component', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<(typeof reactI18next)['useTranslation']>);
 
     (useAirflowStatus as jest.Mock).mockImplementationOnce(() => ({
       isAirflowAvailable: false,

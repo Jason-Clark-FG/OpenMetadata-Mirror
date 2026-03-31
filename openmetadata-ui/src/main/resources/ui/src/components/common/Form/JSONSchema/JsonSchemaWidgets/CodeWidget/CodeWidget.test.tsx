@@ -33,7 +33,7 @@ describe('CodeWidget', () => {
     disabled: false,
     name: '',
     options: {} as Partial<
-      Omit<TemplatesType<any, RJSFSchema, any>, 'ButtonTemplates'>
+      Omit<TemplatesType<unknown, RJSFSchema, unknown>, 'ButtonTemplates'>
     >,
     onBlur: jest.fn(),
     label: '',

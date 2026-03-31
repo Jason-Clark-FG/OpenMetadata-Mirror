@@ -26,10 +26,10 @@ const mockGetTaskDetailPath = jest.fn();
 
 jest.mock('../../utils/FeedUtils', () => ({
   entityDisplayName: jest.fn().mockReturnValue('database.schema.table'),
-  prepareFeedLink: (...args: any[]) => mockPrepareFeedLink(...args),
+  prepareFeedLink: (...args: unknown[]) => mockPrepareFeedLink(...args),
 }));
 jest.mock('../../utils/TasksUtils', () => ({
-  getTaskDetailPath: (...args: any[]) => mockGetTaskDetailPath(...args),
+  getTaskDetailPath: (...args: unknown[]) => mockGetTaskDetailPath(...args),
 }));
 jest.mock('../common/ProfilePicture/ProfilePicture', () => {
   return jest

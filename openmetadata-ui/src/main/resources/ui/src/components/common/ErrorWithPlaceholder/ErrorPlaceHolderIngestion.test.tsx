@@ -85,7 +85,7 @@ describe('ErrorPlaceholderIngestion', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<(typeof reactI18next)['useTranslation']>);
 
     (useAirflowStatus as jest.Mock).mockReturnValue({
       platform: PIPELINE_SERVICE_PLATFORM,
@@ -125,7 +125,7 @@ describe('ErrorPlaceholderIngestion', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<(typeof reactI18next)['useTranslation']>);
 
     (useAirflowStatus as jest.Mock).mockReturnValue({
       platform: 'Argo',

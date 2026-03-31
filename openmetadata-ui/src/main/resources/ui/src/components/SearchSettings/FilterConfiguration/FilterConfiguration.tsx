@@ -43,6 +43,14 @@ const FilterConfiguration = () => {
     []
   );
 
+  const handleCheckboxChange = (fieldName: string) => {
+    setCheckedItems((prev) =>
+      prev.includes(fieldName)
+        ? prev.filter((item) => item !== fieldName)
+        : [...prev, fieldName]
+    );
+  };
+
   const menuItems = useMemo(
     () => ({
       items: entityFields.map((field) => ({
@@ -59,14 +67,6 @@ const FilterConfiguration = () => {
     }),
     [entityFields, checkedItems]
   );
-
-  const handleCheckboxChange = (fieldName: string) => {
-    setCheckedItems((prev) =>
-      prev.includes(fieldName)
-        ? prev.filter((item) => item !== fieldName)
-        : [...prev, fieldName]
-    );
-  };
 
   return (
     <Row className="filters-configuration-row p-y-md p-x-lg" gutter={[0, 16]}>

@@ -141,7 +141,7 @@ describe('Test Add Policy Page', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<typeof reactI18next.useTranslation>);
 
     const { container } = render(<AddPolicyPage {...mockProps} />, {
       wrapper: MemoryRouter,

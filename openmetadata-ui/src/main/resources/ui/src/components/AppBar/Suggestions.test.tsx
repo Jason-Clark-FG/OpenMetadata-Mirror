@@ -26,7 +26,7 @@ jest.mock('../../context/TourProvider/TourProvider');
 jest.mock('../../utils/SearchUtils', () => ({
   filterOptionsByIndex: jest.fn((options, index) => {
     return options.filter(
-      (option: any) => option._source?.entityType === index
+      (option: { _source?: { entityType?: string } }) => option._source?.entityType === index
     );
   }),
   getGroupLabel: jest.fn((index) => `Group ${index}`),
@@ -40,7 +40,7 @@ jest.mock('../../utils/SearchClassBase', () => ({
   getEntitiesSuggestions: jest.fn(() => []),
 }));
 jest.mock('../../utils/CommonUtils', () => ({
-  Transi18next: ({ i18nKey, values }: { i18nKey: string; values: any }) => (
+  Transi18next: ({ i18nKey, values }: { i18nKey: string; values: Record<string, string> }) => (
     <span data-testid="transi18next">
       {i18nKey} {values?.keyword || ''}
     </span>
@@ -74,12 +74,12 @@ describe('Suggestions Component', () => {
     mockUseTranslation.mockReturnValue({
       t: jest.fn((key: string) => key),
       i18n: { language: 'en' },
-    } as any);
+    } as ReturnType<typeof useTranslation>);
     mockUseTourProvider.mockReturnValue({
       isTourOpen: false,
       updateTourPage: jest.fn(),
       updateTourSearch: jest.fn(),
-    } as any);
+    } as ReturnType<typeof useTourProvider>);
   });
 
   describe('AI Query Suggestions', () => {
@@ -147,7 +147,7 @@ describe('Suggestions Component', () => {
         isTourOpen: true,
         updateTourPage: jest.fn(),
         updateTourSearch: jest.fn(),
-      } as any);
+      } as ReturnType<typeof useTourProvider>);
 
       render(<Suggestions {...defaultProps} />);
 

@@ -338,7 +338,7 @@ describe('ClassificationUtils', () => {
 
       it('should handle null values correctly', () => {
         // TypeScript would normally prevent this, but testing runtime behavior
-        const result = getClassificationInfo(null as any);
+        const result = getClassificationInfo(null as unknown as Classification);
 
         expect(result).toEqual({
           currentVersion: '0.1',

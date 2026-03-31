@@ -241,7 +241,7 @@ jest.mock('../../common/CustomPropertyTable/CustomPropertyTable', () => ({
     .mockReturnValue(<p>CustomPropertyTable.component</p>),
 }));
 
-describe.skip('Test MlModel entity detail component', () => {
+describe('Test MlModel entity detail component', () => {
   it('Should render detail component', async () => {
     const { container } = render(<MlModelDetailComponent {...mockProp} />, {
       wrapper: MemoryRouter,

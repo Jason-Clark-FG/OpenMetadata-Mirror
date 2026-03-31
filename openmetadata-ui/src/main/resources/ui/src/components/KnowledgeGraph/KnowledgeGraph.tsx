@@ -140,7 +140,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
           roundness: 0.8,
         },
         chosen: {
-          edge: function (values: any) {
+          edge: function (values: { width: number; color: string }) {
             values.width = 2.5;
             values.color = '#1890ff';
             // Had to typecase to boolean to solve the type error

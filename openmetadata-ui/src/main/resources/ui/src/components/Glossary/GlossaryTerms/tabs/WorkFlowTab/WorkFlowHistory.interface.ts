@@ -15,7 +15,7 @@ interface WorkflowStage {
   startedAt: number;
   endedAt: number;
   tasks: string[];
-  variables: Record<string, any>;
+  variables: Record<string, unknown>;
 }
 
 export interface WorkflowHistoryItem {

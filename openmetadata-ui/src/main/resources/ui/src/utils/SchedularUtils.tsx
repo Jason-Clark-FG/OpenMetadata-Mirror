@@ -192,6 +192,25 @@ export const getHourMinuteSelect = ({
   />
 );
 
+export const getDefaultScheduleFromPeriod = (
+  includePeriodOptions: string[]
+) => {
+  // By order, return the default schedule as day, week, month and hour as a last resort
+  // if none of the previous options are included
+  if (includePeriodOptions.includes('day')) {
+    return DEFAULT_SCHEDULE_CRON_DAILY;
+  } else if (includePeriodOptions.includes('week')) {
+    return DEFAULT_SCHEDULE_CRON_WEEKLY;
+  } else if (includePeriodOptions.includes('month')) {
+    return DEFAULT_SCHEDULE_CRON_MONTHLY;
+  } else if (includePeriodOptions.includes('hour')) {
+    return DEFAULT_SCHEDULE_CRON_HOURLY;
+  }
+
+  // return the fallback schedule as daily
+  return DEFAULT_SCHEDULE_CRON_DAILY;
+};
+
 export const getDefaultScheduleValue = ({
   defaultSchedule,
   includePeriodOptions,
@@ -215,25 +234,6 @@ export const getDefaultScheduleValue = ({
   }
 
   return getDefaultScheduleFromPeriod(includePeriodOptions);
-};
-
-export const getDefaultScheduleFromPeriod = (
-  includePeriodOptions: string[]
-) => {
-  // By order, return the default schedule as day, week, month and hour as a last resort
-  // if none of the previous options are included
-  if (includePeriodOptions.includes('day')) {
-    return DEFAULT_SCHEDULE_CRON_DAILY;
-  } else if (includePeriodOptions.includes('week')) {
-    return DEFAULT_SCHEDULE_CRON_WEEKLY;
-  } else if (includePeriodOptions.includes('month')) {
-    return DEFAULT_SCHEDULE_CRON_MONTHLY;
-  } else if (includePeriodOptions.includes('hour')) {
-    return DEFAULT_SCHEDULE_CRON_HOURLY;
-  }
-
-  // return the fallback schedule as daily
-  return DEFAULT_SCHEDULE_CRON_DAILY;
 };
 
 // Function to update return updated state from form values

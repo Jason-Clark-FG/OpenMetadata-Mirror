@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { act, render, screen } from '@testing-library/react';
+import { CopyEvent, PasteEvent } from 'react-data-grid';
 import { getGridColumns } from './EditTableTypePropertyModal';
 import TableTypePropertyEditTable from './TableTypePropertyEditTable';
 import { TableTypePropertyEditTableProps } from './TableTypePropertyEditTable.interface';
@@ -97,8 +98,8 @@ describe('TableTypePropertyEditTable', () => {
   it('should call handleCopy and handlePaste when triggered', () => {
     render(<TableTypePropertyEditTable {...getProps()} />);
     // Simulate copy and paste by calling the prop directly
-    handleCopy({} as any);
-    handlePaste({} as any);
+    handleCopy({} as unknown as CopyEvent<Record<string, string>>);
+    handlePaste({} as unknown as PasteEvent<Record<string, string>>);
 
     expect(handleCopy).toHaveBeenCalled();
     expect(handlePaste).toHaveBeenCalled();

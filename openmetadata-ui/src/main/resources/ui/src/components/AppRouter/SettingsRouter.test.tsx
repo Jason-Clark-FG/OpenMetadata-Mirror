@@ -180,7 +180,7 @@ jest.mock('./AdminProtectedRoute', () => ({
   default: jest.fn().mockImplementation(({ children }) => children),
 }));
 
-describe.skip('SettingsRouter', () => {
+describe('SettingsRouter', () => {
   it('should render GlobalSettingPage component for exact settings route', async () => {
     render(
       <MemoryRouter initialEntries={['/settings']}>
@@ -326,7 +326,7 @@ describe.skip('SettingsRouter', () => {
     ).toBeInTheDocument();
   });
 
-  it.skip('should render CustomPageSettings component for custom page settings route', async () => {
+  it('should render CustomPageSettings component for custom page settings route', async () => {
     render(
       <MemoryRouter
         initialEntries={[`/settings/preferences/customizeLandingPage`]}>

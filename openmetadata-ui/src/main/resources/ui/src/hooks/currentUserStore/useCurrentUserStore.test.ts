@@ -11,9 +11,11 @@
  *  limitations under the License.
  */
 import { renderHook, waitFor } from '@testing-library/react';
+import { ApplicationStore } from '../../interface/store.interface';
 import { SupportedLocales } from '../../utils/i18next/LocalUtil.interface';
 import { useApplicationStore } from '../useApplicationStore';
 import {
+  UserPreferences,
   useCurrentUserPreferences,
   usePersistentStorage,
 } from './useCurrentUserStore';
@@ -48,8 +50,7 @@ describe('useCurrentUserStore', () => {
       // Default mock state with type assertion
       const mockState = {
         currentUser: null,
-        // Add other properties as needed
-      } as any;
+      } as unknown as ApplicationStore;
 
       return selector(mockState);
     });
@@ -93,7 +94,7 @@ describe('useCurrentUserStore', () => {
       mockUseApplicationStore.mockImplementation((selector) => {
         const mockState = {
           currentUser: { name: 'testUser' },
-        } as any;
+        } as unknown as ApplicationStore;
 
         return selector(mockState);
       });
@@ -119,7 +120,7 @@ describe('useCurrentUserStore', () => {
       mockUseApplicationStore.mockImplementation((selector) => {
         const mockState = {
           currentUser: { name: 'oldUser' },
-        } as any;
+        } as unknown as ApplicationStore;
 
         return selector(mockState);
       });
@@ -132,7 +133,7 @@ describe('useCurrentUserStore', () => {
             isSidebarCollapsed: true,
             selectedEntityTableColumns: { table1: ['col1', 'col2'] },
             // Note: language key is missing - simulating old user data
-          } as any,
+          } as unknown as UserPreferences,
         },
       });
 
@@ -155,7 +156,7 @@ describe('useCurrentUserStore', () => {
       mockUseApplicationStore.mockImplementation((selector) => {
         const mockState = {
           currentUser: { name: 'userWithLanguage' },
-        } as any;
+        } as unknown as ApplicationStore;
 
         return selector(mockState);
       });

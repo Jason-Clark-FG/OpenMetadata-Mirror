@@ -109,7 +109,11 @@ const isEmailVerifyField = 'isEmailVerified';
 let requestInterceptor: number | null = null;
 let responseInterceptor: number | null = null;
 
-let pendingRequests: any[] = [];
+let pendingRequests: {
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+  config: InternalAxiosRequestConfig | undefined;
+}[] = [];
 
 type AuthContextType = {
   onLoginHandler: () => void;
@@ -461,7 +465,7 @@ export const AuthProvider = ({
     }
 
     requestInterceptor = axiosClient.interceptors.request.use(async function (
-      config: InternalAxiosRequestConfig<any>
+      config: InternalAxiosRequestConfig
     ) {
       // Need to read token from local storage as it might have been updated with refresh
       const token: string = await getOidcToken();

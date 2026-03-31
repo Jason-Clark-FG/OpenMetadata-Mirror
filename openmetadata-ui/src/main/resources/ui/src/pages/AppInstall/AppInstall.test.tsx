@@ -63,7 +63,14 @@ jest.mock(
     getJSONUISchema: jest.fn().mockReturnValue({}),
     getApplicationConfigurationComponent: jest
       .fn()
-      .mockReturnValue(({ onConfigSave, onCancel }: any) => (
+      .mockReturnValue(
+        ({
+          onConfigSave,
+          onCancel,
+        }: {
+          onConfigSave: (data: { formData: Record<string, unknown> }) => void;
+          onCancel: () => void;
+        }) => (
         <div>
           FormBuilder
           <button onClick={() => onConfigSave({ formData: {} })}>

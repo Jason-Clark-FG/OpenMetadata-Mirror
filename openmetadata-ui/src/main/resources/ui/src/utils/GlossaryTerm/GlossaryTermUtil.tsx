@@ -33,6 +33,17 @@ import {
 } from '../EntityReferenceUtils';
 import { ENTITY_LINK_SEPARATOR, getEntityName } from '../EntityUtils';
 
+const GlossaryTermDomainWidget = () => {
+  const { entityRules } = useGenericContext();
+
+  return (
+    <DomainLabelV2
+      showDomainHeading
+      multiple={entityRules?.canAddMultipleDomains ?? true}
+    />
+  );
+};
+
 export const getGlossaryTermWidgetFromKey = (widgetConfig: WidgetConfig) => {
   if (
     widgetConfig.i.startsWith(GlossaryTermDetailPageWidgetKeys.WORKFLOW_HISTORY)
@@ -68,17 +79,6 @@ export const getGlossaryTermWidgetFromKey = (widgetConfig: WidgetConfig) => {
     <CommonWidgets
       entityType={EntityType.GLOSSARY_TERM}
       widgetConfig={widgetConfig}
-    />
-  );
-};
-
-const GlossaryTermDomainWidget = () => {
-  const { entityRules } = useGenericContext();
-
-  return (
-    <DomainLabelV2
-      showDomainHeading
-      multiple={entityRules?.canAddMultipleDomains ?? true}
     />
   );
 };

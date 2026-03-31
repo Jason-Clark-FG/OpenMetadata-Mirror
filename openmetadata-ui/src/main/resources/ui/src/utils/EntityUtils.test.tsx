@@ -439,8 +439,8 @@ describe('EntityUtils unit tests', () => {
       { text: null, searchText: 'test', expected: '' },
       { text: 'mockText', searchText: null, expected: 'mockText' },
       { text: null, searchText: null, expected: '' },
-      { text: 0 as any, searchText: '', expected: 0 },
-      { text: false as any, searchText: '', expected: false },
+      { text: 0 as unknown as string, searchText: '', expected: 0 },
+      { text: false as unknown as string, searchText: '', expected: false },
     ];
 
     it.each(falsyTestCases)(

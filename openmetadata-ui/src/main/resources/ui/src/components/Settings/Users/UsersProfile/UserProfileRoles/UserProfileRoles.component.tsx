@@ -14,7 +14,7 @@
 import { Button, Divider, Popover, Select, Tooltip, Typography } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, toLower } from 'lodash';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Ref, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as EditIcon } from '../../../../../assets/svg/edit-new.svg';
 import { ReactComponent as ClosePopoverIcon } from '../../../../../assets/svg/ic-popover-close.svg';
@@ -252,7 +252,7 @@ const UserProfileRoles = ({
                     open={isDropdownOpen}
                     options={useRolesOption}
                     popupClassName="roles-custom-dropdown-class"
-                    ref={dropdownRef as any}
+                    ref={dropdownRef as Ref<unknown>}
                     tagRender={TagRenderer}
                     value={selectedRoles}
                     onChange={setSelectedRoles}

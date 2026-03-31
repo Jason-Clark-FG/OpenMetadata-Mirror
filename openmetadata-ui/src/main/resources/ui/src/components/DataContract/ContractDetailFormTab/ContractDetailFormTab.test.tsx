@@ -18,7 +18,7 @@ import { ContractDetailFormTab } from './ContractDetailFormTab';
 
 jest.mock('../../../utils/formUtils', () => ({
   generateFormFields: jest.fn((fields) =>
-    fields.map((field: any) => (
+    fields.map((field: { name: string; label: string; props?: Record<string, string> }) => (
       <div data-testid={field.props?.['data-testid']} key={field.name}>
         <label>{field.label}</label>
         <input data-testid={field.props?.['data-testid']} name={field.name} />

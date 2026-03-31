@@ -56,7 +56,6 @@ interface ElasticsearchBoolQuery {
   must_not?: ElasticsearchCondition | ElasticsearchCondition[];
 }
 
-// Simple validation functions using function declarations for hoisting
 function isValidCondition(condition: ElasticsearchCondition): boolean {
   if (!condition) {
     return false;
@@ -89,6 +88,7 @@ function isValidCondition(condition: ElasticsearchCondition): boolean {
 
   // Check nested bool conditions
   if (condition.bool) {
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     return isValidBoolQuery(condition.bool);
   }
 

@@ -104,7 +104,7 @@ describe('Test Error placeholder ingestion Component', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<(typeof reactI18next)['useTranslation']>);
 
     const { container } = render(
       <ErrorPlaceHolderES

@@ -21,6 +21,7 @@ import {
   DataQualityDimensions,
   DataType,
   EntityType,
+  TestDataType,
   TestDefinition,
   TestPlatform,
 } from '../../../generated/tests/testDefinition';
@@ -62,7 +63,7 @@ const mockExternalTestDefinition: TestDefinition = {
     {
       name: 'threshold',
       displayName: 'Threshold',
-      dataType: 'INT' as any,
+      dataType: TestDataType.Int,
       description: 'Minimum count threshold',
       required: true,
     },

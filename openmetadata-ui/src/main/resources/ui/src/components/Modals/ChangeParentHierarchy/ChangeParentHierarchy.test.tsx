@@ -28,7 +28,7 @@ const mockOnCancel = jest.fn();
 const mockProps = {
   selectedData: {
     ...mockedGlossaryTerms[0],
-    children: mockedGlossaryTerms[0].children?.map((child: any) => ({
+    children: mockedGlossaryTerms[0].children?.map((child) => ({
       id: child.id,
       name: child.name,
       displayName: child.displayName,

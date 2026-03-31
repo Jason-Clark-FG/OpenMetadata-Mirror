@@ -111,7 +111,7 @@ jest.mock('../Common/WidgetHeader/WidgetHeader', () => {
                 data-testid="sort-by-dropdown"
                 value={selectedSortBy}
                 onChange={(e) => onSortChange?.(e.target.value)}>
-                {sortOptions.map((option: any) => (
+                {sortOptions.map((option: { key: string; label: string }) => (
                   <option key={option.key} value={option.key}>
                     {option.label}
                   </option>
@@ -144,7 +144,7 @@ jest.mock('recharts', () => ({
   PieChart: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="pie-chart">{children}</div>
   ),
-  Pie: ({ data }: { data: any[] }) => (
+  Pie: ({ data }: { data: { name: string; value: number }[] }) => (
     <div data-length={data.length} data-testid="pie">
       {data.map((item, index) => (
         <div data-testid={`pie-cell-${item.name}`} key={index}>

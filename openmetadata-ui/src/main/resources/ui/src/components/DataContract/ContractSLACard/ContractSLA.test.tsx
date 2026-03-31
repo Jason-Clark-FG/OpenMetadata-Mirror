@@ -23,7 +23,7 @@ import { mockTableData } from '../../../mocks/TableVersion.mock';
 import ContractSLA from './ContractSLA.component';
 
 jest.mock('../../../utils/CommonUtils', () => ({
-  Transi18next: ({ i18nKey, values }: any) => (
+  Transi18next: ({ i18nKey, values }: { i18nKey: string; values?: { label?: string; data?: string } }) => (
     <span>
       {i18nKey} - {values?.label}: {values?.data}
     </span>

@@ -116,6 +116,9 @@ const DomainTreeView = ({
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const selectedFqnRef = useRef<string | null>(null);
+  const loadDomainsRef = useRef<
+    (parentFqn?: string, isLoadMore?: boolean) => Promise<void>
+  >(() => Promise.resolve());
 
   const currentUserId = currentUser?.id ?? '';
 
@@ -198,7 +201,7 @@ const DomainTreeView = ({
       const firstDomain = selectDomain(domains, resetExpandedItems, domainFqn);
 
       if ((firstDomain?.childrenCount || 0) > 0 && shouldLoadChildren) {
-        loadDomains(firstDomain.fullyQualifiedName as string);
+        loadDomainsRef.current?.(firstDomain.fullyQualifiedName as string);
       }
     },
     [updateExpansionForFqn, searchQuery]
@@ -468,6 +471,8 @@ const DomainTreeView = ({
     },
     [loadingChildren, rootPaging, applySelection, loadChildDomains]
   );
+  loadDomainsRef.current = loadDomains;
+
   useEffect(() => {
     if (searchQuery || hasActiveFilters) {
       searchDomain(searchQuery);

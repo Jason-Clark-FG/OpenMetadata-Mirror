@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-export type TokenAttrs = Record<string, string | any>;
+export type TokenAttrs = Record<string, unknown>;
 export interface TagToken {
   tagName: string;
   outerNewLine?: boolean;

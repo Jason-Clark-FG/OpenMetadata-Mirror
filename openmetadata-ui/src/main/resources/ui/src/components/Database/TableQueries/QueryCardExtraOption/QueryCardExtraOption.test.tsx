@@ -130,7 +130,7 @@ describe('QueryCardExtraOption component test', () => {
     );
   });
 
-  it.skip('OnClick of Vote up it should un vote if logged-in user has already up voted', async () => {
+  it('OnClick of Vote up it should un vote if logged-in user has already up voted', async () => {
     render(<QueryCardExtraOption {...mockProps} />);
 
     const voteUp = await screen.findByTestId('up-vote-btn');
@@ -156,7 +156,7 @@ describe('QueryCardExtraOption component test', () => {
     );
   });
 
-  it.skip('OnClick of Vote down it should un vote if logged-in user has already down voted', async () => {
+  it('OnClick of Vote down it should un vote if logged-in user has already down voted', async () => {
     render(<QueryCardExtraOption {...mockProps} />);
 
     const voteDown = await screen.findByTestId('down-vote-btn');

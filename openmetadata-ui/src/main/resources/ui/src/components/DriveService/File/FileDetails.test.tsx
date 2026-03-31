@@ -38,7 +38,7 @@ const mockGetFeedCounts = jest.fn();
 jest.mock('../../../utils/CommonUtils', () => ({
   ...jest.requireActual('../../../utils/CommonUtils'),
   getEntityMissingError: jest.fn(),
-  getFeedCounts: (...args: any[]) => mockGetFeedCounts(...args),
+  getFeedCounts: (...args: unknown[]) => mockGetFeedCounts(...args),
 }));
 jest.mock('../../../utils/RouterUtils');
 jest.mock('../../../utils/ToastUtils');

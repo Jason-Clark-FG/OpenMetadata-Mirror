@@ -56,6 +56,13 @@ const DomainListPage = () => {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [treeRefreshToken, setTreeRefreshToken] = useState(0);
 
+  const { refetch: refetchDomainListing } = domainListing;
+
+  const refreshAllDomains = useCallback(() => {
+    refetchDomainListing();
+    setTreeRefreshToken((prev) => prev + 1);
+  }, [refetchDomainListing]);
+
   // Use the simplified domain filters configuration
   const { quickFilters, defaultFilters } = useDomainFilters({
     aggregations: domainListing.aggregations || undefined,
@@ -176,13 +183,6 @@ const DomainListPage = () => {
     onPageChange: domainListing.handlePageChange,
     loading: domainListing.loading,
   });
-
-  const { refetch: refetchDomainListing } = domainListing;
-
-  const refreshAllDomains = useCallback(() => {
-    refetchDomainListing();
-    setTreeRefreshToken((prev) => prev + 1);
-  }, [refetchDomainListing]);
 
   // Map selected IDs to actual entities for the delete hook
   const selectedDomainEntities = useMemo(

@@ -126,89 +126,7 @@ const renderFilterPattern = (
   );
 };
 
-export const getKeyValues = ({
-  obj,
-  schemaPropertyObject,
-  schema,
-  serviceCategory,
-}: KeyValuesProps): ReactNode => {
-  try {
-    return Object.keys(obj).map((key) => {
-      const value = obj[key];
-
-      // Return early if value is null or key is in DEF_UI_SCHEMA
-      if (isNull(value) || key in DEF_UI_SCHEMA) {
-        return null;
-      }
-
-      // Handle non-object and array values
-      if (!isObject(value) || isArray(value)) {
-        const { description, format, title } = schemaPropertyObject[key] ?? {};
-
-        return renderInputField(key, value, description, format, title);
-      }
-
-      const serviceType = serviceCategory.slice(0, -1);
-      const filterPatternFields =
-        FILTER_PATTERN_BY_SERVICE_TYPE[
-          serviceType as keyof typeof FILTER_PATTERN_BY_SERVICE_TYPE
-        ] ?? [];
-
-      // Handle filter pattern fields
-      if (
-        filterPatternFields.includes(
-          key as ServiceConnectionFilterPatternFields
-        )
-      ) {
-        const { description, title } = schemaPropertyObject[key] ?? {};
-
-        return renderFilterPattern(key, value, description, title);
-      }
-
-      // Handle special service configurations
-      const specialConfig = handleSpecialServiceConfig(
-        serviceType,
-        key,
-        value,
-        schemaPropertyObject,
-        schema,
-        serviceCategory
-      );
-      if (specialConfig !== null) {
-        return specialConfig;
-      }
-
-      // Handle database config source
-      if (
-        serviceType === EntityType.DATABASE_SERVICE &&
-        key === 'configSource'
-      ) {
-        const configSource = handleDatabaseConfigSource(
-          key,
-          value,
-          schemaPropertyObject,
-          schema,
-          serviceCategory
-        );
-        if (configSource !== null) {
-          return configSource;
-        }
-      }
-
-      // Default object handling
-      return getKeyValues({
-        obj: value,
-        schemaPropertyObject: schemaPropertyObject[key]?.properties ?? {},
-        schema,
-        serviceCategory,
-      });
-    });
-  } catch {
-    return <ErrorPlaceHolder className="border-default border-radius-sm" />;
-  }
-};
-
-// Handles special service type configurations
+/* eslint-disable @typescript-eslint/no-use-before-define */
 const handleSpecialServiceConfig = (
   serviceType: string,
   key: string,
@@ -359,4 +277,87 @@ const handleDatabaseConfigSource = (
   }
 
   return null;
+};
+/* eslint-enable @typescript-eslint/no-use-before-define */
+
+export const getKeyValues = ({
+  obj,
+  schemaPropertyObject,
+  schema,
+  serviceCategory,
+}: KeyValuesProps): ReactNode => {
+  try {
+    return Object.keys(obj).map((key) => {
+      const value = obj[key];
+
+      // Return early if value is null or key is in DEF_UI_SCHEMA
+      if (isNull(value) || key in DEF_UI_SCHEMA) {
+        return null;
+      }
+
+      // Handle non-object and array values
+      if (!isObject(value) || isArray(value)) {
+        const { description, format, title } = schemaPropertyObject[key] ?? {};
+
+        return renderInputField(key, value, description, format, title);
+      }
+
+      const serviceType = serviceCategory.slice(0, -1);
+      const filterPatternFields =
+        FILTER_PATTERN_BY_SERVICE_TYPE[
+          serviceType as keyof typeof FILTER_PATTERN_BY_SERVICE_TYPE
+        ] ?? [];
+
+      // Handle filter pattern fields
+      if (
+        filterPatternFields.includes(
+          key as ServiceConnectionFilterPatternFields
+        )
+      ) {
+        const { description, title } = schemaPropertyObject[key] ?? {};
+
+        return renderFilterPattern(key, value, description, title);
+      }
+
+      // Handle special service configurations
+      const specialConfig = handleSpecialServiceConfig(
+        serviceType,
+        key,
+        value,
+        schemaPropertyObject,
+        schema,
+        serviceCategory
+      );
+      if (specialConfig !== null) {
+        return specialConfig;
+      }
+
+      // Handle database config source
+      if (
+        serviceType === EntityType.DATABASE_SERVICE &&
+        key === 'configSource'
+      ) {
+        const configSource = handleDatabaseConfigSource(
+          key,
+          value,
+          schemaPropertyObject,
+          schema,
+          serviceCategory
+        );
+        if (configSource !== null) {
+          return configSource;
+        }
+      }
+
+      // Default object handling
+      return getKeyValues({
+        obj: value,
+        schemaPropertyObject: schemaPropertyObject[key]?.properties ?? {},
+        schema,
+        serviceCategory,
+      });
+    });
+  } catch {
+    return <ErrorPlaceHolder className="border-default border-radius-sm" />;
+  }
 };

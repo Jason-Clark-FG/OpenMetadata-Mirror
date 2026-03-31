@@ -101,7 +101,7 @@ const mockWithAdvanceSearch =
 
 const ComponentWithProvider = mockWithAdvanceSearch(Children);
 
-describe.skip('AdvanceSearchProvider component', () => {
+describe('AdvanceSearchProvider component', () => {
   it('should render the AdvanceSearchModal as close by default', () => {
     render(<ComponentWithProvider />);
 

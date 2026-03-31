@@ -115,7 +115,7 @@ export const customHTMLRenderer: CustomHTMLRenderer = {
     const infoWords = info ? info.split(/\s+/) : [];
     const preClasses = ['relative', 'code-block'];
 
-    const codeAttrs: Record<string, any> = {};
+    const codeAttrs: Record<string, unknown> = {};
 
     const codeText = node.literal ?? '';
 

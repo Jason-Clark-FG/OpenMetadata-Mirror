@@ -46,7 +46,7 @@ describe('TestCaseStatusModal component', () => {
     expect(await screen.findByText('label.save')).toBeInTheDocument();
   });
 
-  it.skip('should render test case reason and comment field, if status is resolved', async () => {
+  it('should render test case reason and comment field, if status is resolved', async () => {
     render(
       <TestCaseStatusModal
         {...mockProps}
@@ -78,7 +78,7 @@ describe('TestCaseStatusModal component', () => {
     expect(mockProps.onCancel).toHaveBeenCalled();
   });
 
-  it.skip('should call onSubmit function, on click of save button', async () => {
+  it('should call onSubmit function, on click of save button', async () => {
     render(<TestCaseStatusModal {...mockProps} />);
     const submitBtn = await screen.findByText('label.save');
     const status = await screen.findByLabelText('label.status');

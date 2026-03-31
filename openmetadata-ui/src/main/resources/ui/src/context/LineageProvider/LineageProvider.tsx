@@ -1032,6 +1032,48 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     [nodes, entityLineage]
   );
 
+  const onEntitySelect = (selectedEntity: EntityReference, nodeId: string) => {
+    const isExistingNode = nodes.some(
+      (n) =>
+        n.data.node.fullyQualifiedName === selectedEntity.fullyQualifiedName
+    );
+    if (isExistingNode) {
+      setNodes((es) =>
+        es
+          .map((n) =>
+            n.id.includes(nodeId)
+              ? {
+                  ...n,
+                  selectable: true,
+                  className: `${n.className} selected`,
+                }
+              : n
+          )
+          .filter((es) => es.id !== nodeId)
+      );
+      setNewAddedNode({} as Node);
+    } else {
+      setNodes((es) => {
+        return es.map((el) => {
+          if (el.id === nodeId) {
+            return {
+              ...el,
+              connectable: true,
+              selectable: true,
+              id: selectedEntity.id,
+              data: {
+                saved: false,
+                node: getNodeLineageData(selectedEntity),
+              },
+            };
+          } else {
+            return el;
+          }
+        });
+      });
+    }
+  };
+
   const onNodeDrop = (event: DragEvent, reactFlowBounds: DOMRect) => {
     event.preventDefault();
     const entityType = event.dataTransfer.getData('application/reactflow');
@@ -1220,6 +1262,12 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     }
   }, []);
 
+  const redraw = useCallback(async () => {
+    if (entityLineage) {
+      await redrawLineage(entityLineage, true);
+    }
+  }, [entityLineage, redrawLineage]);
+
   const onInitReactFlow = (reactFlowInstance: ReactFlowInstance) => {
     setReactFlowInstance(reactFlowInstance);
     if (reactFlowInstance.viewportInitialized) {
@@ -1398,48 +1446,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setShowAddEdgeModal(false);
     setSelectedEdge(undefined);
   }, []);
-
-  const onEntitySelect = (selectedEntity: EntityReference, nodeId: string) => {
-    const isExistingNode = nodes.some(
-      (n) =>
-        n.data.node.fullyQualifiedName === selectedEntity.fullyQualifiedName
-    );
-    if (isExistingNode) {
-      setNodes((es) =>
-        es
-          .map((n) =>
-            n.id.includes(nodeId)
-              ? {
-                  ...n,
-                  selectable: true,
-                  className: `${n.className} selected`,
-                }
-              : n
-          )
-          .filter((es) => es.id !== nodeId)
-      );
-      setNewAddedNode({} as Node);
-    } else {
-      setNodes((es) => {
-        return es.map((el) => {
-          if (el.id === nodeId) {
-            return {
-              ...el,
-              connectable: true,
-              selectable: true,
-              id: selectedEntity.id,
-              data: {
-                saved: false,
-                node: getNodeLineageData(selectedEntity),
-              },
-            };
-          } else {
-            return el;
-          }
-        });
-      });
-    }
-  };
 
   const onAddPipelineModalSave = useCallback(
     async (pipelineData?: EntityReference) => {
@@ -1647,12 +1653,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     },
     [nodes, edges, entityLineage]
   );
-
-  const redraw = useCallback(async () => {
-    if (entityLineage) {
-      await redrawLineage(entityLineage, true);
-    }
-  }, [entityLineage, redrawLineage]);
 
   useEffect(() => {
     redraw();

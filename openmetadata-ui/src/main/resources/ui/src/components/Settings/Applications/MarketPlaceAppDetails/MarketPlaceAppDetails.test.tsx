@@ -209,7 +209,7 @@ describe('MarketPlaceAppDetails component', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as ReturnType<typeof reactI18next.useTranslation>);
 
     const { container } = render(<MarketPlaceAppDetails />);
 

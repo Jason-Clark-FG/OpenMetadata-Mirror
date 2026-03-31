@@ -53,7 +53,11 @@ const mockDomain3: EntityReference = {
   type: 'domain',
 };
 
-const renderDomainDisplay = (props: any) =>
+const renderDomainDisplay = (props: {
+  domains: EntityReference[];
+  showIcon?: boolean;
+  className?: string;
+}) =>
   render(
     <MemoryRouter>
       <DomainDisplay {...props} />

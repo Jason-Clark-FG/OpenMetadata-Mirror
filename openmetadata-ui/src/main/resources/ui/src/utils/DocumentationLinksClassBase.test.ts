@@ -111,7 +111,7 @@ describe('DocumentationLinksClassBase', () => {
   it('should return updated documentation URLs after changing the base URL', () => {
     // Use a private method to update the base URL for testing purposes
     const newURL = 'https://new-docs-url.org/';
-    (documentationLinksClassBase as any).updateDocsBaseURL(newURL);
+    (documentationLinksClassBase as unknown as { updateDocsBaseURL: (url: string) => void }).updateDocsBaseURL(newURL);
     const docsURLs = documentationLinksClassBase.getDocsURLS();
 
     expect(docsURLs.WORKFLOWS_PROFILER_DOCS).toBe(

@@ -30,6 +30,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { PAGE_SIZE_MEDIUM } from '../../../constants/constants';
 import { FeedFilter } from '../../../enums/mydata.enum';
@@ -62,7 +63,7 @@ jest.mock('../../../rest/feedsAPI', () => ({
 }));
 
 jest.mock('../../../utils/FeedUtils', () => ({
-  getFeedListWithRelativeDays: (data: any) => ({
+  getFeedListWithRelativeDays: (data: unknown) => ({
     updatedFeedList: data,
   }),
 }));
@@ -79,7 +80,7 @@ jest.mock('../../../hooks/useApplicationStore', () => ({
 jest.mock(
   '../Widgets/Common/WidgetWrapper/WidgetWrapper',
   () =>
-    ({ children, header }: any) =>
+    ({ children, header }: { children: React.ReactNode; header: React.ReactNode }) =>
       (
         <div data-testid="widget-wrapper">
           {header}
@@ -91,7 +92,7 @@ jest.mock(
 jest.mock(
   '../Widgets/Common/WidgetHeader/WidgetHeader',
   () =>
-    ({ onSortChange, handleRemoveWidget, widgetKey }: any) =>
+    ({ onSortChange, handleRemoveWidget, widgetKey }: { onSortChange: (value: string) => void; handleRemoveWidget: (key: string) => void; widgetKey: string }) =>
       (
         <div data-testid="widget-header">
           <select
@@ -113,12 +114,12 @@ jest.mock(
   '../../ActivityFeed/ActivityFeedList/ActivityFeedListV1New.component',
   () => ({
     __esModule: true,
-    default: ({ feedList, onAfterClose }: any) => (
+    default: ({ feedList, onAfterClose }: { feedList: { message: string }[]; onAfterClose: () => void }) => (
       <div data-testid="activity-feed-list">
         <button data-testid="close-button" onClick={onAfterClose}>
           Close
         </button>
-        {feedList.map((item: any, index: number) => (
+        {feedList.map((item: { message: string }, index: number) => (
           <div data-testid={`feed-item-${index}`} key={index}>
             {item.message}
           </div>

@@ -150,7 +150,7 @@ describe('Test Add Role Page', () => {
       t: mockT,
       i18n: { language: 'en-US' },
       ready: true,
-    } as any);
+    } as unknown as ReturnType<typeof reactI18next.useTranslation>);
 
     const { container } = render(<AddRolePage {...mockProps} />, {
       wrapper: MemoryRouter,
