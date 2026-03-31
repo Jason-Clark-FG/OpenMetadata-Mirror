@@ -132,7 +132,7 @@ jobs:
         with:
           python-version: "3.10"
           args: "-d postgresql -s true"
-          ingestion_dependency: "all"
+          ingestion_dependency: "playwright"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
