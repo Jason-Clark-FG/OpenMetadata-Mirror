@@ -360,7 +360,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const redrawLineage = useCallback(
     async (
       lineageData: EntityLineageResponse,
-      recenter = true,
+      recenter?: string | boolean,
       isFirstTime = false
     ) => {
       if (!reactFlowInstance?.viewportInitialized) {
@@ -457,9 +457,15 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       }));
 
       if (recenter) {
-        const rootNode = visibleNodes.find((n) => n.data.isRootNode);
-        if (rootNode) {
-          centerNodePosition(rootNode, reactFlowInstance, zoomValue);
+        // If recenter is a string, find the node with the matching fullyQualifiedName
+        // else fallback to rootNode
+        const nodeToFocus =
+          typeof recenter === 'string'
+            ? visibleNodes.find((n) => n.data.fullyQualifiedName === recenter)
+            : visibleNodes.find((n) => n.data.isRootNode);
+
+        if (nodeToFocus) {
+          centerNodePosition(nodeToFocus, reactFlowInstance, zoomValue);
         } else if (visibleNodes.length > 0) {
           centerNodePosition(visibleNodes[0], reactFlowInstance, zoomValue);
         }
@@ -486,15 +492,11 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       newLineageData: EntityLineageResponse,
       options: {
         shouldRedraw?: boolean;
-        centerNode?: boolean;
+        centerNode?: string;
         isFirstTime?: boolean;
       } = {}
     ) => {
-      const {
-        shouldRedraw = false,
-        centerNode = false,
-        isFirstTime = false,
-      } = options;
+      const { shouldRedraw = false, centerNode, isFirstTime = false } = options;
 
       setEntityLineage(newLineageData);
 
@@ -753,7 +755,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
         updateLineageData(updatedEntityLineage, {
           shouldRedraw: true,
-          centerNode: false,
+          centerNode: currentNode?.fullyQualifiedName,
           isFirstTime: false,
         });
 
@@ -1647,7 +1649,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         },
         {
           shouldRedraw: true,
-          centerNode: false,
+          centerNode: node.data.node.fullyQualifiedName,
           isFirstTime: false,
         }
       );
