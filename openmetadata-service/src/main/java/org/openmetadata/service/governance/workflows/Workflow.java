@@ -1,5 +1,7 @@
 package org.openmetadata.service.governance.workflows;
 
+import io.github.resilience4j.retry.RetryConfig;
+import java.time.Duration;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
@@ -28,6 +30,12 @@ public class Workflow {
   public static final String GLOBAL_NAMESPACE = "global";
   public static final String SUCCESSFUL_RESULT = "success";
   public static final String FAILURE_RESULT = "failure";
+  public static final RetryConfig TASK_RETRY_CONFIG =
+      RetryConfig.custom()
+          .maxAttempts(3)
+          .waitDuration(Duration.ofMillis(500))
+          .retryExceptions(Exception.class)
+          .build();
   private final TriggerWorkflow triggerWorkflow;
   private final MainWorkflow mainWorkflow;
   private final WorkflowDefinition workflowDefinition;

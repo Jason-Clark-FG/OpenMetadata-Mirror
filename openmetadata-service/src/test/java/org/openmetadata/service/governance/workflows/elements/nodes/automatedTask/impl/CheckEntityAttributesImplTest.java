@@ -1,6 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
@@ -12,6 +12,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import org.flowable.common.engine.api.delegate.Expression;
 import org.flowable.engine.delegate.BpmnError;
 import org.flowable.engine.delegate.DelegateExecution;
@@ -27,7 +28,6 @@ import org.mockito.quality.Strictness;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -65,9 +65,8 @@ class CheckEntityAttributesImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }
@@ -91,9 +90,8 @@ class CheckEntityAttributesImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }
@@ -142,15 +140,11 @@ class CheckEntityAttributesImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () ->
-                  Entity.getEntity(
-                      any(MessageParser.EntityLink.class), anyString(), eq(Include.ALL)))
-          .thenAnswer(
-              invocation -> {
-                MessageParser.EntityLink link = invocation.getArgument(0);
-                return link.getLinkString().contains("table1") ? matchingTable : nonMatchingTable;
-              });
+          .when(() -> Entity.getEntitiesByLinks(anyList(), anyString(), eq(Include.ALL)))
+          .thenReturn(
+              Map.of(
+                  "<#E::table::test.db.table1>", matchingTable,
+                  "<#E::table::test.db.table2>", nonMatchingTable));
 
       impl.execute(execution);
     }

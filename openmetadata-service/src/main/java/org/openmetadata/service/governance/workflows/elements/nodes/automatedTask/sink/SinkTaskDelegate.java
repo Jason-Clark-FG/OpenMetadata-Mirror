@@ -20,8 +20,6 @@ import static org.openmetadata.service.governance.workflows.WorkflowHandler.getP
 
 import com.google.common.collect.Lists;
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +33,8 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 /**
  * Flowable delegate that executes sink operations within a workflow.
@@ -213,20 +211,25 @@ public class SinkTaskDelegate implements JavaDelegate {
                       context.getWorkflowName(),
                       subBatch.size());
 
-                  // Fetch entities for this sub-batch
+                  // Fetch entities for this sub-batch in a single batch query
                   List<SinkResult.SinkError> fetchErrors = new ArrayList<>();
+                  Map<String, EntityInterface> entityMap;
+                  try {
+                    entityMap = Entity.getEntitiesByLinks(subBatch, "*", Include.ALL);
+                  } catch (Exception e) {
+                    LOG.error("Failed to batch fetch sub-batch of {} entities", subBatch.size(), e);
+                    entityMap = Map.of();
+                  }
                   List<EntityInterface> entities = new ArrayList<>();
                   for (String entityLinkStr : subBatch) {
-                    try {
-                      var entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-                      entities.add(Entity.getEntity(entityLink, "*", Include.ALL));
-                    } catch (Exception e) {
-                      LOG.error("Failed to fetch entity: {}", entityLinkStr, e);
+                    EntityInterface entity = entityMap.get(entityLinkStr);
+                    if (entity != null) {
+                      entities.add(entity);
+                    } else {
                       fetchErrors.add(
                           SinkResult.SinkError.builder()
                               .entityFqn(entityLinkStr)
-                              .errorMessage("Failed to fetch entity: " + e.getMessage())
-                              .cause(e)
+                              .errorMessage("Failed to fetch entity")
                               .build());
                     }
                   }
@@ -262,28 +265,26 @@ public class SinkTaskDelegate implements JavaDelegate {
     List<String> syncedEntities = new ArrayList<>();
     List<SinkResult.SinkError> errors = new ArrayList<>();
 
-    Retry retry =
-        Retry.of(
-            "sink-list-write",
-            RetryConfig.custom()
-                .maxAttempts(3)
-                .waitDuration(Duration.ofMillis(500))
-                .retryExceptions(Exception.class)
-                .build());
+    Map<String, EntityInterface> entityMap =
+        Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+
+    Retry retry = Retry.of("sink-list-write", Workflow.TASK_RETRY_CONFIG);
 
     for (String entityLinkStr : entityList) {
-      MessageParser.EntityLink entityLink = null;
+      EntityInterface entity = entityMap.get(entityLinkStr);
+      if (entity == null) {
+        LOG.error("[{}] Failed to fetch entity: {}", context.getWorkflowName(), entityLinkStr);
+        failedCount++;
+        errors.add(
+            SinkResult.SinkError.builder()
+                .entityFqn(entityLinkStr)
+                .errorMessage("Failed to fetch entity")
+                .build());
+        continue;
+      }
       try {
-        entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-        final MessageParser.EntityLink finalLink = entityLink;
         SinkResult entityResult =
-            Retry.decorateSupplier(
-                    retry,
-                    () -> {
-                      EntityInterface entity = Entity.getEntity(finalLink, "*", Include.ALL);
-                      return sinkProvider.write(context, entity);
-                    })
-                .get();
+            Retry.decorateSupplier(retry, () -> sinkProvider.write(context, entity)).get();
         syncedCount += entityResult.getSyncedCount();
         failedCount += entityResult.getFailedCount();
         if (entityResult.getSyncedEntities() != null) {
@@ -295,10 +296,9 @@ public class SinkTaskDelegate implements JavaDelegate {
       } catch (Exception e) {
         LOG.error("[{}] Failed to process entity: {}", context.getWorkflowName(), entityLinkStr, e);
         failedCount++;
-        String entityFqn = entityLink != null ? entityLink.getEntityFQN() : entityLinkStr;
         errors.add(
             SinkResult.SinkError.builder()
-                .entityFqn(entityFqn)
+                .entityFqn(entityLinkStr)
                 .errorMessage("Failed to process entity: " + e.getMessage())
                 .cause(e)
                 .build());

@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -49,7 +49,6 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -118,9 +117,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(batchEntity);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.fqn>", batchEntity));
 
       delegate.execute(execution);
     }
@@ -151,9 +149,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(batchEntity);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.fqn>", batchEntity));
 
       delegate.execute(execution);
     }
@@ -211,9 +208,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(entity);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.fqn>", entity));
 
       delegate.execute(execution);
     }
@@ -246,9 +242,8 @@ class SinkTaskDelegateTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenThrow(new RuntimeException("Entity not found"));
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of());
 
       delegate.execute(execution);
     }

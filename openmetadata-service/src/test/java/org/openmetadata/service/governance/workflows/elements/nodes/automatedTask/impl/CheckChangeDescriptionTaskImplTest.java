@@ -1,6 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
@@ -11,6 +11,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import org.flowable.common.engine.api.delegate.Expression;
 import org.flowable.engine.delegate.BpmnError;
 import org.flowable.engine.delegate.DelegateExecution;
@@ -28,7 +29,6 @@ import org.openmetadata.schema.type.ChangeDescription;
 import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -69,9 +69,8 @@ class CheckChangeDescriptionTaskImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }
@@ -106,9 +105,8 @@ class CheckChangeDescriptionTaskImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }
@@ -143,9 +141,8 @@ class CheckChangeDescriptionTaskImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }
@@ -180,9 +177,8 @@ class CheckChangeDescriptionTaskImplTest {
 
     try (MockedStatic<Entity> entityMock = mockStatic(Entity.class)) {
       entityMock
-          .when(
-              () -> Entity.getEntity(any(MessageParser.EntityLink.class), eq("*"), eq(Include.ALL)))
-          .thenReturn(table);
+          .when(() -> Entity.getEntitiesByLinks(anyList(), eq("*"), eq(Include.ALL)))
+          .thenReturn(Map.of("<#E::table::test.db.table>", table));
 
       impl.execute(execution);
     }

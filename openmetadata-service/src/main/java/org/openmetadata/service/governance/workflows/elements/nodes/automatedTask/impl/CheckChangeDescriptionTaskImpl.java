@@ -8,8 +8,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RU
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,9 +23,9 @@ import org.openmetadata.schema.type.FieldChange;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.governance.workflows.util.FieldChangeValueExtractor;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @Slf4j
 public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
@@ -47,19 +45,21 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
       List<String> trueEntityList = new ArrayList<>();
       List<String> falseEntityList = new ArrayList<>();
 
-      Retry retry =
-          Retry.of(
-              "check-change-description",
-              RetryConfig.custom()
-                  .maxAttempts(3)
-                  .waitDuration(Duration.ofMillis(500))
-                  .retryExceptions(Exception.class)
-                  .build());
+      Map<String, EntityInterface> entityMap =
+          Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+
+      Retry retry = Retry.of("check-change-description", Workflow.TASK_RETRY_CONFIG);
 
       for (String entityLinkStr : entityList) {
+        EntityInterface entity = entityMap.get(entityLinkStr);
+        if (entity == null) {
+          falseEntityList.add(entityLinkStr);
+          continue;
+        }
         try {
           boolean passes =
-              Retry.decorateSupplier(retry, () -> checkChangeDescription(execution, entityLinkStr))
+              Retry.decorateSupplier(
+                      retry, () -> checkChangeDescription(execution, entity, entityLinkStr))
                   .get();
           if (passes) {
             trueEntityList.add(entityLinkStr);
@@ -89,11 +89,8 @@ public class CheckChangeDescriptionTaskImpl implements JavaDelegate {
     }
   }
 
-  private boolean checkChangeDescription(DelegateExecution execution, String entityLinkStr) {
-    // Parse entity
-    MessageParser.EntityLink entityLink = MessageParser.EntityLink.parse(entityLinkStr);
-    EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-
+  private boolean checkChangeDescription(
+      DelegateExecution execution, EntityInterface entity, String entityLinkStr) {
     // No changeDescription means it's a create event - return true
     ChangeDescription changeDescription = entity.getChangeDescription();
     if (changeDescription == null) {
