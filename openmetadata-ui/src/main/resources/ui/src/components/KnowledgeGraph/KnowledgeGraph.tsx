@@ -32,9 +32,18 @@ import {
   TooltipTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import { isArray } from 'lodash';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Qs from 'qs';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ReactComponent as ExitFullScreenIcon } from '../../assets/svg/ic-exit-fullscreen.svg';
 import { ReactComponent as FitScreenIcon } from '../../assets/svg/ic-fit-screen.svg';
 import { ReactComponent as FullscreenIcon } from '../../assets/svg/ic-fullscreen.svg';
@@ -42,10 +51,15 @@ import { ReactComponent as LineageIcon } from '../../assets/svg/ic-platform-line
 import { ReactComponent as ZoomInIcon } from '../../assets/svg/ic-zoom-in.svg';
 import { ReactComponent as ZoomOutIcon } from '../../assets/svg/ic-zoom-out.svg';
 import { ReactComponent as RefreshIcon } from '../../assets/svg/reload.svg';
+import { FULLSCREEN_QUERY_PARAM_KEY } from '../../constants/constants';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
+import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { getEntityGraphData } from '../../rest/rdfAPI';
-import { getEntityLinkFromType } from '../../utils/EntityUtils';
+import {
+  getEntityBreadcrumbs,
+  getEntityLinkFromType,
+} from '../../utils/EntityUtils';
 import {
   computeRadialPositions,
   findHighlightPath,
@@ -56,8 +70,10 @@ import {
 } from '../../utils/KnowledgeGraph.utils';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../common/Loader/Loader';
+import TitleBreadcrumb from '../common/TitleBreadcrumb/TitleBreadcrumb.component';
 import EntitySummaryPanel from '../Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import { SearchSourceDetails } from '../Explore/EntitySummaryPanel/EntitySummaryPanel.interface';
+import { SearchedDataProps } from '../SearchedData/SearchedData.interface';
 import CustomNode from './GraphElements/CustomNode';
 import {
   GraphData,
@@ -85,7 +101,34 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const [selectedDepth, setSelectedDepth] = useState(depth);
   const [layout, setLayout] = useState<KnowledgeGraphLayout>('dagre');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { preferences } = useCurrentUserPreferences();
+
+  const isFullscreen = useMemo(() => {
+    const params = Qs.parse(location.search, { ignoreQueryPrefix: true });
+
+    return params[FULLSCREEN_QUERY_PARAM_KEY] === 'true';
+  }, [location.search]);
+
+  const breadcrumbs = useMemo(
+    () =>
+      entity?.fullyQualifiedName
+        ? [
+            ...getEntityBreadcrumbs(
+              entity as SearchedDataProps['data'][number]['_source'],
+              entityType as EntityType,
+              isFullscreen
+            ),
+            {
+              name: t('label.knowledge-graph'),
+              url: '',
+              activeTitle: true,
+            },
+          ]
+        : [],
+    [entity?.fullyQualifiedName, entityType, t, isFullscreen]
+  );
 
   const fetchGraphData = useCallback(async () => {
     if (!entity?.id) {
@@ -112,7 +155,16 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
   const handleFit = () => {
     if (networkRef.current) {
-      void networkRef.current.fitView();
+      void networkRef.current.fitView().then(() => {
+        const currentZoom = networkRef.current?.getZoom() ?? 1;
+
+        // Since we have a floating toolbar inside the container
+        // zoom out a bit more and translate down to ensure the whole graph is visible
+        // and not obscured by the toolbar
+        networkRef.current?.zoomTo(currentZoom * 0.8).then(() => {
+          networkRef.current?.translateBy([0, 28]);
+        });
+      });
     }
   };
 
@@ -140,25 +192,13 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     }
   };
 
-  const handleFullscreen = () => {
-    const graphContainer = document.querySelector('.knowledge-graph-container');
-    if (graphContainer) {
-      if (document.fullscreenElement) {
-        void document.exitFullscreen();
-      } else {
-        void (graphContainer as HTMLElement).requestFullscreen();
-      }
-    }
-  };
-
-  useEffect(() => {
-    const onFullscreenChange = () =>
-      setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-
-    return () =>
-      document.removeEventListener('fullscreenchange', onFullscreenChange);
-  }, []);
+  const handleFullscreen = useCallback(() => {
+    navigate({
+      search: isFullscreen
+        ? ''
+        : Qs.stringify({ [FULLSCREEN_QUERY_PARAM_KEY]: true }),
+    });
+  }, [isFullscreen, navigate]);
 
   useEffect(() => {
     if (!containerRef.current || !graphData || loading) {
@@ -339,7 +379,14 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     void graph.render().then(() => {
       if (entity?.id) {
         void graph.fitView();
-        void graph.focusElement(entity.id);
+        void graph.focusElement(focusNodeId);
+        graph.updateNodeData(
+          (g6Data.nodes ?? []).map((n) => ({
+            id: n.id,
+            data: { ...n.data, highlighted: n.id === focusNodeId },
+          }))
+        );
+        void graph.draw();
       }
     });
 
@@ -424,7 +471,14 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     return () => {
       graph.destroy();
     };
-  }, [graphData, loading, layout, entity?.id, transformToG6Format]);
+  }, [
+    graphData,
+    loading,
+    layout,
+    entity?.id,
+    isFullscreen,
+    transformToG6Format,
+  ]);
 
   useEffect(() => {
     if (entity?.id) {
@@ -510,108 +564,124 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   }
 
   return (
-    <Card className="knowledge-graph-container">
-      <Card className="knowledge-graph-controls" size="sm">
-        <Card.Content className="tw:flex tw:items-center tw:gap-4">
-          <Typography className="tw:text-secondary" weight="medium">
-            {t('label.view-entity', { entity: t('label.mode') }) + ':'}
-          </Typography>
-          <Tabs
-            className="tw:w-auto"
-            selectedKey={layout}
-            onSelectionChange={(key) => setLayout(key as KnowledgeGraphLayout)}>
-            <Tabs.List
-              items={[
-                {
-                  id: 'dagre',
-                  label: t('label.hierarchical'),
-                },
-                {
-                  id: 'radial',
-                  label: t('label.radial'),
-                },
-              ]}
-              size="sm"
-              type="button-minimal">
-              {(tab) => <Tabs.Item {...tab} />}
-            </Tabs.List>
-          </Tabs>
-
-          <Divider orientation="vertical" />
-
-          <Box align="center" gap={5}>
-            <Typography className="depth-label">
-              {t('label.node-depth') + ':'}
+    <div
+      className={classNames({
+        'full-screen-knowledge-graph': isFullscreen,
+        'sidebar-collapsed': isFullscreen && preferences?.isSidebarCollapsed,
+        'sidebar-expanded': isFullscreen && !preferences?.isSidebarCollapsed,
+      })}>
+      {isFullscreen && breadcrumbs.length > 0 && (
+        <TitleBreadcrumb
+          useCustomArrow
+          className="p-b-sm"
+          titleLinks={breadcrumbs}
+        />
+      )}
+      <Card className="knowledge-graph-container">
+        <Card className="knowledge-graph-controls" size="sm">
+          <Card.Content className="tw:flex tw:items-center tw:gap-4">
+            <Typography className="tw:text-secondary" weight="medium">
+              {t('label.view-entity', { entity: t('label.mode') }) + ':'}
             </Typography>
-            <Slider
-              showHoverPreview
-              showRange
-              className="depth-slider"
-              labelPosition="top-floating"
-              maxValue={5}
-              minValue={1}
-              rangeCount={3}
-              step={1}
-              style={{
-                width: '150px',
-              }}
-              value={[selectedDepth]}
-              onChange={handleDepthChange}
-            />
-          </Box>
-        </Card.Content>
+            <Tabs
+              className="tw:w-auto"
+              selectedKey={layout}
+              onSelectionChange={(key) =>
+                setLayout(key as KnowledgeGraphLayout)
+              }>
+              <Tabs.List
+                items={[
+                  {
+                    id: 'dagre',
+                    label: t('label.hierarchical'),
+                  },
+                  {
+                    id: 'radial',
+                    label: t('label.radial'),
+                  },
+                ]}
+                size="sm"
+                type="button-minimal">
+                {(tab) => <Tabs.Item {...tab} />}
+              </Tabs.List>
+            </Tabs>
+
+            <Divider orientation="vertical" />
+
+            <Box align="center" gap={5}>
+              <Typography className="depth-label">
+                {t('label.node-depth') + ':'}
+              </Typography>
+              <Slider
+                showHoverPreview
+                showRange
+                className="depth-slider"
+                labelPosition="top-floating"
+                maxValue={5}
+                minValue={1}
+                rangeCount={3}
+                step={1}
+                style={{
+                  width: '150px',
+                }}
+                value={[selectedDepth]}
+                onChange={handleDepthChange}
+              />
+            </Box>
+          </Card.Content>
+        </Card>
+
+        {knowledgeGraph}
+
+        <div className="knowledge-graph-action-buttons">
+          <Tooltip title={t('label.zoom-in')}>
+            <TooltipTrigger
+              className="kg-control-btn"
+              data-testid="zoom-in"
+              onPress={handleZoomIn}>
+              <ZoomInIcon />
+            </TooltipTrigger>
+          </Tooltip>
+          <Tooltip title={t('label.zoom-out')}>
+            <TooltipTrigger
+              className="kg-control-btn"
+              data-testid="zoom-out"
+              onPress={handleZoomOut}>
+              <ZoomOutIcon />
+            </TooltipTrigger>
+          </Tooltip>
+          <Tooltip title={t('label.fit-to-screen')}>
+            <TooltipTrigger
+              className="kg-control-btn"
+              data-testid="fit-screen"
+              onPress={handleFit}>
+              <FitScreenIcon />
+            </TooltipTrigger>
+          </Tooltip>
+          <Tooltip
+            title={
+              isFullscreen
+                ? t('label.exit-full-screen')
+                : t('label.full-screen-view')
+            }>
+            <TooltipTrigger
+              className="kg-control-btn"
+              data-testid={isFullscreen ? 'exit-full-screen' : 'full-screen'}
+              onPress={handleFullscreen}>
+              {isFullscreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
+            </TooltipTrigger>
+          </Tooltip>
+          <Tooltip title={t('label.refresh')}>
+            <TooltipTrigger
+              className="kg-control-btn"
+              data-testid="refresh"
+              onPress={() => void fetchGraphData()}>
+              <RefreshIcon />
+            </TooltipTrigger>
+          </Tooltip>
+        </div>
       </Card>
-
-      {knowledgeGraph}
-
-      <div className="knowledge-graph-action-buttons">
-        <Tooltip title={t('label.zoom-in')}>
-          <TooltipTrigger
-            className="kg-control-btn"
-            data-testid="zoom-in"
-            onPress={handleZoomIn}>
-            <ZoomInIcon />
-          </TooltipTrigger>
-        </Tooltip>
-        <Tooltip title={t('label.zoom-out')}>
-          <TooltipTrigger
-            className="kg-control-btn"
-            data-testid="zoom-out"
-            onPress={handleZoomOut}>
-            <ZoomOutIcon />
-          </TooltipTrigger>
-        </Tooltip>
-        <Tooltip title={t('label.fit-to-screen')}>
-          <TooltipTrigger
-            className="kg-control-btn"
-            data-testid="fit-screen"
-            onPress={handleFit}>
-            <FitScreenIcon />
-          </TooltipTrigger>
-        </Tooltip>
-        <Tooltip
-          title={
-            isFullscreen
-              ? t('label.exit-full-screen')
-              : t('label.full-screen-view')
-          }>
-          <TooltipTrigger
-            className="kg-control-btn"
-            data-testid={isFullscreen ? 'exit-full-screen' : 'full-screen'}
-            onPress={handleFullscreen}>
-            {isFullscreen ? <ExitFullScreenIcon /> : <FullscreenIcon />}
-          </TooltipTrigger>
-        </Tooltip>
-        <Tooltip title={t('label.refresh')}>
-          <TooltipTrigger
-            className="kg-control-btn"
-            data-testid="refresh"
-            onPress={() => void fetchGraphData()}>
-            <RefreshIcon />
-          </TooltipTrigger>
-        </Tooltip>
-      </div>
-    </Card>
+    </div>
   );
 };
 
