@@ -157,6 +157,12 @@ export interface FieldChange {
 
 export interface WorkflowConfiguration {
     /**
+     * If True, ManualTask nodes will accept 'retrigger' as a valid non-terminal status,
+     * enabling the retrigger branch for workflow edge routing. Set automatically when the
+     * trigger uses onConflict='forward'.
+     */
+    retriggerEnabled?: boolean;
+    /**
      * If True, all the stage status will be stored in the database.
      */
     storeStageStatus: boolean;

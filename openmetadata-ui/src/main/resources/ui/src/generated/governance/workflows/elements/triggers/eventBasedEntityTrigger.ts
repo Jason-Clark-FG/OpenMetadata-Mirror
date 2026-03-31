@@ -46,6 +46,13 @@ export interface TriggerConfiguration {
      * (applied to all entity types) or an object mapping entity types to their specific filters.
      */
     filter?: FilterConditionObject | string;
+    /**
+     * Behavior when a new event fires while a workflow instance is already running for the same
+     * entity. 'restart' terminates the old instance and starts a new one (default). 'skip'
+     * keeps the existing instance and ignores the new event. 'forward' keeps the existing
+     * instance and delivers a 'retrigger' status to the active ManualTask.
+     */
+    onConflict?: OnConflictPolicy;
 }
 
 /**
@@ -65,4 +72,16 @@ export interface FilterConditionObject {
      */
     default?: string;
     [property: string]: string;
+}
+
+/**
+ * Behavior when a new event fires while a workflow instance is already running for the same
+ * entity. 'restart' terminates the old instance and starts a new one (default). 'skip'
+ * keeps the existing instance and ignores the new event. 'forward' keeps the existing
+ * instance and delivers a 'retrigger' status to the active ManualTask.
+ */
+export enum OnConflictPolicy {
+    Forward = "forward",
+    Restart = "restart",
+    Skip = "skip",
 }
