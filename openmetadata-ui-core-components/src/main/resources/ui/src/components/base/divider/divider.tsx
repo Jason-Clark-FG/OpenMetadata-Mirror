@@ -31,7 +31,7 @@ export const Divider = ({
 }: DividerProps) => {
   if (orientation === 'vertical') {
     return (
-      <div
+      <hr
         {...props}
         aria-orientation="vertical"
         className={cx(
@@ -44,7 +44,7 @@ export const Divider = ({
 
   if (!label) {
     return (
-      <div
+      <hr
         {...props}
         aria-orientation="horizontal"
         className={cx(
