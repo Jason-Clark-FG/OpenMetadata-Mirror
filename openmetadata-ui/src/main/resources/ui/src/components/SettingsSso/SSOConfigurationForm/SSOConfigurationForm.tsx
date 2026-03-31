@@ -1032,7 +1032,7 @@ const SSOConfigurationFormRJSF = ({
                       type="link">
                       {t('label.upload-lowercase')}
                     </Button>{' '}
-                    {t('label.or-drag-and-drop-a-xml-file-here')}
+                    {t('label.or-drag-and-drop-an-xml-file-here')}
                   </Typography.Text>
                 </div>
                 <Typography.Text className="text-grey-muted text-xs">
