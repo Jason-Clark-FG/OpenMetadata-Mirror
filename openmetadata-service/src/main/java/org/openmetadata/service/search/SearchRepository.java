@@ -846,10 +846,7 @@ public class SearchRepository {
           indexColumnsForTables(entities);
         }
       } catch (Exception ie) {
-        LOG.error(
-            "Issue creating entities document for entityType [{}]",
-            entityType,
-            ie);
+        LOG.error("Issue creating entities document for entityType [{}]", entityType, ie);
       } finally {
         RequestLatencyContext.endSearchOperation(searchSample);
       }
