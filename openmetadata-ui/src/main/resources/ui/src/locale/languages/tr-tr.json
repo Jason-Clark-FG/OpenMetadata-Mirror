@@ -2790,6 +2790,7 @@
     "no-input-output-ports-configured": "Henüz giriş veya çıkış portu yapılandırılmadı",
     "no-input-ports-added": "Henüz giriş portu eklenmedi",
     "no-installed-applications-found": "Şu anda yüklü uygulama yok. Bir tane yüklemek için 'Uygulama Ekle' düğmesine tıklayın.",
+    "no-knowledge-graph-data": "Bilgi grafiği verisi mevcut değil. RDF Bilgi Grafiği İndeksleme uygulamasının kurulu ve doğru yapılandırılmış olup olmadığını kontrol edin.",
     "no-kpi": "Etkileri izlemek ve daha akıllı kararlar almak için anahtar performans göstergelerini tanımlayın.",
     "no-kpi-available-add-new-one": "Kullanılabilir KPI yok. Bir tane eklemek için KPI Ekle düğmesine tıklayın.",
     "no-kpi-found": "{{name}} adında KPI bulunamadı",

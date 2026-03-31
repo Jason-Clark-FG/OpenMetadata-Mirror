@@ -2790,6 +2790,7 @@
     "no-input-output-ports-configured": "Noch keine Eingabe- oder Ausgabe-Ports konfiguriert",
     "no-input-ports-added": "Es wurden noch keine Eingabe-Ports hinzugefügt",
     "no-installed-applications-found": "Derzeit sind keine Anwendungen installiert. Klicken Sie auf die Schaltfläche 'Apps hinzufügen', um eine zu installieren.",
+    "no-knowledge-graph-data": "Keine Wissensgraph-Daten verfügbar. Bitte prüfen Sie, ob die RDF-Wissensgraph-Indexierungsanwendung installiert und korrekt konfiguriert ist.",
     "no-kpi": "Definieren Sie Schlüsselkennzahlen, um Auswirkungen zu überwachen und fundiertere Entscheidungen zu treffen.",
     "no-kpi-available-add-new-one": "Keine KPIs verfügbar. Klicken Sie auf die Schaltfläche 'KPI hinzufügen', um einen hinzuzufügen.",
     "no-kpi-found": "Kein KPI mit dem Namen {{name}} gefunden",
