@@ -273,15 +273,9 @@ test.describe('Column Level Lineage', () => {
         entities.set(key, lineageEntity);
       });
 
-      try {
-        await Promise.all(
-          Array.from(entities.values()).map((entity) =>
-            entity.create(apiContext)
-          )
-        );
-      } catch (error) {
-        console.error('Error creating entities:', error);
-      }
+      await Promise.all(
+        Array.from(entities.values()).map((entity) => entity.create(apiContext))
+      );
 
       await afterAction();
     }
