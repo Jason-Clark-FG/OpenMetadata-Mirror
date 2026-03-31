@@ -113,7 +113,9 @@ test.describe('Data asset lineage', () => {
   test.beforeAll(
     'setup lineage creation with other entity creation',
     async ({ browser }) => {
-      const { apiContext } = await getDefaultAdminAPIContext(browser);
+      const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+        browser
+      );
 
       Object.values(allEntities).forEach((EntityClass) => {
         const lineageEntity = new EntityClass();
@@ -121,12 +123,10 @@ test.describe('Data asset lineage', () => {
         entities.push(lineageEntity);
       });
 
-      try {
-        await pipeline.create(apiContext);
-        await Promise.all(entities.map((entity) => entity.create(apiContext)));
-      } catch (error) {
-        console.error('Error creating entities:', error);
-      }
+      await pipeline.create(apiContext);
+      await Promise.all(entities.map((entity) => entity.create(apiContext)));
+
+      await afterAction();
     }
   );
 
@@ -263,7 +263,9 @@ test.describe('Column Level Lineage', () => {
   test.beforeAll(
     'setup lineage creation with other entity creation',
     async ({ browser }) => {
-      const { apiContext } = await getDefaultAdminAPIContext(browser);
+      const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+        browser
+      );
 
       Object.entries(columnLevelEntities).forEach(([key, EntityClass]) => {
         const lineageEntity = new EntityClass();
@@ -280,6 +282,8 @@ test.describe('Column Level Lineage', () => {
       } catch (error) {
         console.error('Error creating entities:', error);
       }
+
+      await afterAction();
     }
   );
 
@@ -453,8 +457,12 @@ test.describe('Lineage Settings modal', () => {
   const table = new TableClass();
 
   test.beforeAll(async ({ browser }) => {
-    const { apiContext } = await getDefaultAdminAPIContext(browser);
+    const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+      browser
+    );
     await table.create(apiContext);
+
+    await afterAction();
   });
 
   test.beforeEach(async ({ page }) => {

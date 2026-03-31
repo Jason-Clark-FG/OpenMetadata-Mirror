@@ -54,7 +54,9 @@ test.describe('Verify custom properties tab visibility logic for supported entit
   ];
 
   test.beforeAll(async ({ browser }) => {
-    const { apiContext } = await getDefaultAdminAPIContext(browser);
+    const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+      browser
+    );
 
     const createEntityArray: Promise<unknown>[] = [];
 
@@ -63,6 +65,8 @@ test.describe('Verify custom properties tab visibility logic for supported entit
     });
 
     await Promise.all(createEntityArray);
+
+    await afterAction();
   });
 
   test.beforeEach(async ({ page }) => {
@@ -113,13 +117,17 @@ test.describe('Verify custom properties tab is NOT visible for unsupported entit
   ];
 
   test.beforeAll(async ({ browser }) => {
-    const { apiContext } = await getDefaultAdminAPIContext(browser);
+    const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+      browser
+    );
 
     const createEntityArray: Promise<unknown>[] = [];
     for (const { service } of unsupportedServices) {
       createEntityArray.push(service.create(apiContext));
     }
     await Promise.all(createEntityArray);
+
+    await afterAction();
   });
 
   test.beforeEach(async ({ page }) => {

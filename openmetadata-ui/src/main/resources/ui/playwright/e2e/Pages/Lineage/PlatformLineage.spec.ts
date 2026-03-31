@@ -33,8 +33,9 @@ const tableNameWithSlash = `pw-table-with/slash-${uuid()}`;
 const table = new TableClass(tableNameWithSlash);
 
 test.beforeAll(async ({ browser }) => {
-  const { apiContext } = await getDefaultAdminAPIContext(browser);
+  const { apiContext, afterAction } = await getDefaultAdminAPIContext(browser);
   await table.create(apiContext);
+  await afterAction();
 });
 
 test.beforeEach(async ({ page }) => {

@@ -123,8 +123,15 @@ export const getDefaultAdminAPIContext = async (browser: Browser) => {
 
   const page = await context.newPage();
   await redirectToHomePage(page);
+  const { apiContext } = await getApiContext(page);
 
-  return getApiContext(page);
+  const afterAction = async () => {
+    await apiContext.dispose();
+    await page.close();
+    await context.close();
+  };
+
+  return { apiContext, afterAction };
 };
 
 /**
