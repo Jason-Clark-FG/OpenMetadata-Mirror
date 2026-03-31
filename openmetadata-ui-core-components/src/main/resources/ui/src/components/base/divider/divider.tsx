@@ -35,7 +35,7 @@ export const Divider = ({
         {...props}
         aria-orientation="vertical"
         className={cx(
-          'tw:self-stretch tw:w-px tw:shrink-0 tw:bg-border-secondary',
+          'tw:self-stretch tw:w-px tw:shrink-0 tw:text-border-secondary',
           className
         )}
       />
@@ -48,7 +48,7 @@ export const Divider = ({
         {...props}
         aria-orientation="horizontal"
         className={cx(
-          'tw:w-full tw:h-px tw:shrink-0 tw:bg-border-secondary',
+          'tw:w-full tw:h-px tw:shrink-0 tw:text-border-secondary',
           className
         )}
       />
@@ -57,6 +57,7 @@ export const Divider = ({
 
   return (
     <div
+      role="separator"
       {...props}
       aria-orientation="horizontal"
       className={cx('tw:flex tw:items-center tw:w-full tw:gap-2', className)}>
