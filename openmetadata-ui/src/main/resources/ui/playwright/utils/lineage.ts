@@ -975,25 +975,6 @@ export const verifyPlatformLineageForEntity = async (
   }
 };
 
-export const getEntityColumns = (
-  entity: EntityClass,
-  entityName: string
-): Array<{ name: string; fullyQualifiedName?: string }> => {
-  if (entityName === 'Table') {
-    return get(entity, 'entityResponseData.columns', []);
-  } else if (entityName === 'Topic') {
-    return get(entity, 'entityResponseData.messageSchema.schemaFields', []);
-  } else if (entityName === 'Dashboard') {
-    return get(entity, 'entityResponseData.charts[0].columns', []);
-  } else if (entityName === 'Container') {
-    return get(entity, 'entityResponseData.dataModel.columns', []);
-  } else if (entityName === 'ApiEndpoint') {
-    return get(entity, 'entityResponseData.responseSchema.schemaFields', []);
-  }
-
-  return [];
-};
-
 export const generateColumns = (count: number, prefix: string) => {
   return Array.from({ length: count }, (_, i) => ({
     name: `${prefix}_column_${i}`,
