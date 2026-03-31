@@ -11,7 +11,50 @@
  *  limitations under the License.
  */
 import { expect, Page, Response } from '@playwright/test';
+import { SidebarItem } from '../constant/sidebar';
 import { TableClass } from '../support/entity/TableClass';
+import { redirectToHomePage } from './common';
+import { sidebarClick } from './sidebar';
+
+/** Recharts PieChart id for the Test Case Result pie on the Data Quality dashboard. */
+export const TEST_CASE_STATUS_PIE_CHART_TEST_ID = 'test-case-result-pie-chart';
+
+/** Recharts PieChart id for the Entity Health Status pie on the Data Quality dashboard. */
+export const ENTITY_HEALTH_PIE_CHART_TEST_ID = 'healthy-data-assets-pie-chart';
+
+/** Recharts PieChart id for the Data Assets Coverage pie on the Data Quality dashboard. */
+export const DATA_ASSETS_COVERAGE_PIE_CHART_TEST_ID =
+  'data-assets-coverage-pie-chart';
+
+/**
+ * Navigate to the Data Quality dashboard (Dashboard sub-tab under Data Quality).
+ */
+export async function goToDataQualityDashboard(page: Page): Promise<void> {
+  await redirectToHomePage(page);
+  const dataQualityReportResponse = page.waitForResponse(
+    '/api/v1/dataQuality/testSuites/dataQualityReport?q=*'
+  );
+  await sidebarClick(page, SidebarItem.DATA_QUALITY);
+  await page.getByTestId('dashboard').click();
+  await dataQualityReportResponse;
+}
+
+/** Clicks a segment by 0-based index (targets .custom-pie-chart-clickable path). */
+export async function clickPieChartSegmentByIndex(
+  page: Page,
+  chartTestId: string,
+  segmentIndex: number
+): Promise<void> {
+  const chart = page.locator(`#${chartTestId}`);
+  await expect(chart).toBeVisible();
+  const segmentPath = chart
+    .locator('.custom-pie-chart-clickable path')
+    .nth(segmentIndex);
+  await expect(segmentPath).toBeVisible();
+  await segmentPath.evaluate((el) => {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
 
 export enum ObservabilityFeature {
   TEST_CASE = 'Test case',
@@ -96,4 +139,129 @@ export const visitCreateTestCasePanelFromEntityPage = async (
   );
   await selectAddObservabilityFeature(page, ObservabilityFeature.TEST_CASE);
   await testCaseDoc;
+};
+
+export const addTestCaseToLogicalTestSuite = async (
+  page: Page,
+  testSuiteName: string,
+  testCaseName: string
+) => {
+  await page.goto(`test-suites/${testSuiteName}`);
+  await page.waitForSelector('[data-testid="loader"]', {
+    state: 'detached',
+  });
+  const testCaseResponse = page.waitForResponse(
+    '/api/v1/dataQuality/testCases/search/list*'
+  );
+  await page.click('[data-testid="add-test-case-btn"]');
+  await testCaseResponse;
+  await page.waitForSelector(
+    "[data-testid='test-case-selection-card'] [data-testid='loader']",
+    { state: 'detached' }
+  );
+
+  const getTestCase = page.waitForResponse(
+    `/api/v1/dataQuality/testCases/search/list?*`
+  );
+  await page.fill('[data-testid="searchbar"]', testCaseName);
+  await getTestCase;
+
+  await page.click(`[data-testid="${testCaseName}"]`);
+  const updateTestCase = page.waitForResponse(
+    '/api/v1/dataQuality/testCases/logicalTestCases/bulk'
+  );
+  await page.click('[data-testid="submit"]');
+  await updateTestCase;
+  await page.waitForSelector('[data-testid="test-case-selection-card"]', {
+    state: 'detached',
+  });
+};
+
+export const removeTestCasesFromLogicalTestSuite = async (
+  page: Page,
+  testCaseNames: string[]
+) => {
+  for (const name of testCaseNames) {
+    await page.getByTestId(`action-dropdown-${name}`).click();
+    await page.click(`[data-testid="remove-${name}"]`);
+    const removeResponse = page.waitForResponse(
+      '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
+    );
+    await page.click('[data-testid="save-button"]');
+    await removeResponse;
+  }
+};
+
+const ACTION_DROPDOWN_PREFIX = 'action-dropdown-';
+
+export const removeFirstNTestCasesFromLogicalTestSuite = async (
+  page: Page,
+  count: number
+) => {
+  const rowActionDropdown = page
+    .locator('.ant-table-tbody')
+    .locator(`[data-testid^="${ACTION_DROPDOWN_PREFIX}"]`);
+
+  for (let i = 0; i < count; i++) {
+    const trigger = rowActionDropdown.first();
+    await trigger.waitFor({ state: 'visible' });
+    const fullTestId = await trigger.getAttribute('data-testid');
+    const name = fullTestId?.slice(ACTION_DROPDOWN_PREFIX.length) ?? '';
+
+    await trigger.click();
+    await page.getByTestId(`remove-${name}`).click();
+    const removeResponse = page.waitForResponse(
+      '/api/v1/dataQuality/testCases/logicalTestCases/*/*'
+    );
+    await page.getByTestId('save-button').click();
+    await removeResponse;
+  }
+};
+
+export const addTestSuitePipeline = async (page: Page) => {
+  const pipelineTab = page.getByRole('tab', { name: 'Pipeline' });
+  await expect(pipelineTab).toBeVisible();
+  await pipelineTab.click();
+  const testSuiteByNameResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/dataQuality/testSuites/name/') &&
+      res.url().includes('fields=owners') &&
+      res.status() === 200
+  );
+  const addPlaceholderButton = page.getByTestId('add-placeholder-button');
+  const addPipelineButton = page.getByTestId('add-pipeline-button');
+  const addButton = addPlaceholderButton.or(addPipelineButton);
+  await expect(addButton).toBeVisible();
+  await addButton.click();
+  await testSuiteByNameResponse;
+
+  const selectAllTestCases = page
+    .getByTestId('select-all-test-cases')
+    .and(page.getByRole('switch'));
+  await expect(selectAllTestCases).toBeVisible();
+  await selectAllTestCases.click();
+
+  await expect(page.getByTestId('cron-type').getByText('Day')).toBeAttached();
+
+  const deployResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/services/ingestionPipelines/deploy') &&
+      res.request().method() === 'POST' &&
+      res.status() === 200
+  );
+  await page.getByTestId('deploy-button').click();
+  await deployResponse;
+
+  await expect(page.getByTestId('view-service-button')).toBeVisible();
+  await expect(page.getByTestId('success-line')).toContainText(
+    /has been created and deployed successfully/
+  );
+
+  const testSuiteDetailsResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes('/api/v1/dataQuality/testSuites/name/') &&
+      res.status() === 200
+  );
+  await page.getByTestId('view-service-button').click();
+  await testSuiteDetailsResponse;
 };

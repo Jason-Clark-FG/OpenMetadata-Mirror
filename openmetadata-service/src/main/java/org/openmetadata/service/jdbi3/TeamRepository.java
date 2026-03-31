@@ -43,7 +43,6 @@ import static org.openmetadata.service.exception.CatalogExceptionMessage.invalid
 import static org.openmetadata.service.exception.CatalogExceptionMessage.invalidParentCount;
 import static org.openmetadata.service.util.EntityUtil.*;
 
-import com.google.gson.Gson;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -59,6 +58,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVPrinter;
@@ -103,8 +103,6 @@ import org.openmetadata.service.search.QueryFilterBuilder;
 import org.openmetadata.service.security.policyevaluator.SubjectCache;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.EntityUtil;
-import org.openmetadata.service.util.EntityUtil.Fields;
-import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.RestUtil;
 
 @Slf4j
@@ -522,58 +520,18 @@ public class TeamRepository extends EntityRepository<Team> {
 
   @Override
   public void storeEntity(Team team, boolean update) {
-    List<EntityReference> users = team.getUsers();
-    List<EntityReference> defaultRoles = team.getDefaultRoles();
-    EntityReference defaultPersona = team.getDefaultPersona();
-    List<EntityReference> parents = team.getParents();
-    List<EntityReference> policies = team.getPolicies();
-
-    team.withUsers(null)
-        .withDefaultRoles(null)
-        .withDefaultPersona(null)
-        .withParents(null)
-        .withPolicies(null)
-        .withInheritedRoles(null);
-
     store(team, update);
+  }
 
-    team.withUsers(users)
-        .withDefaultRoles(defaultRoles)
-        .withDefaultPersona(defaultPersona)
-        .withParents(parents)
-        .withPolicies(policies);
+  @Override
+  protected List<String> getFieldsStrippedFromStorageJson() {
+    return List.of(
+        "users", "defaultRoles", "defaultPersona", "parents", "policies", "inheritedRoles");
   }
 
   @Override
   public void storeEntities(List<Team> entities) {
-    List<Team> entitiesToStore = new ArrayList<>();
-    Gson gson = new Gson();
-
-    for (Team team : entities) {
-      List<EntityReference> users = team.getUsers();
-      List<EntityReference> defaultRoles = team.getDefaultRoles();
-      EntityReference defaultPersona = team.getDefaultPersona();
-      List<EntityReference> parents = team.getParents();
-      List<EntityReference> policies = team.getPolicies();
-
-      team.withUsers(null)
-          .withDefaultRoles(null)
-          .withDefaultPersona(null)
-          .withParents(null)
-          .withPolicies(null)
-          .withInheritedRoles(null);
-
-      String jsonCopy = gson.toJson(team);
-      entitiesToStore.add(gson.fromJson(jsonCopy, Team.class));
-
-      team.withUsers(users)
-          .withDefaultRoles(defaultRoles)
-          .withDefaultPersona(defaultPersona)
-          .withParents(parents)
-          .withPolicies(policies);
-    }
-
-    storeMany(entitiesToStore);
+    storeMany(entities);
   }
 
   /**
@@ -662,7 +620,7 @@ public class TeamRepository extends EntityRepository<Team> {
           == 1) { // Only parent is being deleted, move the parent to Organization
         addRelationship(
             organization.getId(), childTeam.getId(), TEAM, TEAM, Relationship.PARENT_OF);
-        LOG.info("Moving parent of team " + childTeam.getId() + " to organization");
+        LOG.info("Moving parent of team {} to organization", childTeam.getId());
       }
     }
   }
@@ -781,13 +739,11 @@ public class TeamRepository extends EntityRepository<Team> {
         }
       }
     }
-    List<TeamHierarchy> topLevelNodes =
-        hierarchyMap.values().stream()
-            .filter(node -> !childIds.contains(node.getId()))
-            .sorted(Comparator.comparing(TeamHierarchy::getName))
-            .collect(Collectors.toList());
 
-    return topLevelNodes;
+    return hierarchyMap.values().stream()
+        .filter(node -> !childIds.contains(node.getId()))
+        .sorted(Comparator.comparing(TeamHierarchy::getName))
+        .collect(Collectors.toList());
   }
 
   private List<EntityReference> getUsers(Team team) {
@@ -1307,22 +1263,61 @@ public class TeamRepository extends EntityRepository<Team> {
           throw new IllegalArgumentException(INVALID_GROUP_TEAM_CHILDREN_UPDATE);
         }
       }
-      recordChange("profile", original.getProfile(), updated.getProfile(), true);
-      recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable());
-      recordChange("teamType", original.getTeamType(), updated.getTeamType());
+      compareAndUpdate(
+          "profile",
+          () -> recordChange("profile", original.getProfile(), updated.getProfile(), true));
+      compareAndUpdate(
+          "isJoinable",
+          () -> recordChange("isJoinable", original.getIsJoinable(), updated.getIsJoinable()));
+      compareAndUpdate(
+          "teamType",
+          () -> recordChange("teamType", original.getTeamType(), updated.getTeamType()));
       // If the team is empty then email should be null, not be empty
       if (CommonUtil.nullOrEmpty(updated.getEmail())) {
         updated.setEmail(null);
       }
-      recordChange("email", original.getEmail(), updated.getEmail());
-      updateUsers(original, updated);
-      updateDefaultRoles(original, updated);
-      updateDefaultPersona(original, updated);
-      updateParents(original, updated);
-      updateChildren(original, updated);
-      updatePolicies(original, updated);
-      // Invalidate policy cache when team roles/policies/hierarchy changes
-      SubjectCache.invalidateAll();
+      compareAndUpdate(
+          "email", () -> recordChange("email", original.getEmail(), updated.getEmail()));
+      AtomicBoolean hierarchyOrPolicyChanged = new AtomicBoolean(false);
+      compareAndUpdate(
+          "users",
+          () -> {
+            updateUsers(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "defaultRoles",
+          () -> {
+            updateDefaultRoles(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "defaultPersona",
+          () -> {
+            updateDefaultPersona(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "parents",
+          () -> {
+            updateParents(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "children",
+          () -> {
+            updateChildren(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      compareAndUpdate(
+          "policies",
+          () -> {
+            updatePolicies(original, updated);
+            hierarchyOrPolicyChanged.set(true);
+          });
+      if (hierarchyOrPolicyChanged.get()) {
+        SubjectCache.invalidateAll();
+      }
     }
 
     private void updateUsers(Team origTeam, Team updatedTeam) {

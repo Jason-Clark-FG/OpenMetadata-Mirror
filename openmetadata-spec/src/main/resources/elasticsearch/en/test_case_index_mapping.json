@@ -74,6 +74,12 @@
   },
   "mappings": {
     "properties": {
+      "changeDescription": {
+        "enabled": false
+      },
+      "incrementalChangeDescription": {
+        "enabled": false
+      },
       "id": {
         "type": "text"
       },
@@ -488,7 +494,8 @@
           "state": {
             "type": "keyword"
           }
-        }
+        },
+        "type": "nested"
       },
       "tier": {
         "properties": {

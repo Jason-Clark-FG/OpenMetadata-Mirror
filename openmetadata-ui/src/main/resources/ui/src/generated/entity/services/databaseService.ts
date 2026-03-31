@@ -216,6 +216,8 @@ export interface DatabaseConnection {
  *
  * Mssql Database Connection Config
  *
+ * Microsoft Access Database Connection Config
+ *
  * Mysql Database Connection Config
  *
  * SQLite Database Connection Config
@@ -291,6 +293,8 @@ export interface DatabaseConnection {
  * Microsoft Fabric Warehouse and Lakehouse Connection Config
  *
  * BurstIQ LifeGraph Database Connection Config
+ *
+ * IBM Informix Database Connection Config
  */
 export interface ConfigObject {
     /**
@@ -382,6 +386,8 @@ export interface ConfigObject {
      *
      * Host and port of the Microsoft Fabric SQL endpoint (e.g.,
      * your-workspace.datawarehouse.fabric.microsoft.com:1433).
+     *
+     * Host and port of the Informix service.
      */
     hostPort?: string;
     /**
@@ -548,6 +554,9 @@ export interface ConfigObject {
      *
      * Ingest data from all databases (Warehouses and Lakehouses) in Microsoft Fabric. You can
      * use databaseFilterPattern on top of this.
+     *
+     * Ingest data from all databases in Informix. You can use databaseFilterPattern on top of
+     * this.
      */
     ingestAllDatabases?: boolean;
     /**
@@ -604,6 +613,8 @@ export interface ConfigObject {
      * Password to connect to ServiceNow.
      *
      * Password to connect to BurstIQ.
+     *
+     * Password to connect to Informix.
      */
     password?: string;
     /**
@@ -707,6 +718,9 @@ export interface ConfigObject {
      *
      * Username to connect to BurstIQ. This user should have privileges to read all the metadata
      * in BurstIQ LifeGraph.
+     *
+     * Username to connect to Informix. This user should have privileges to read all the
+     * metadata in Informix.
      */
     username?: string;
     /**
@@ -792,8 +806,16 @@ export interface ConfigObject {
      *
      * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
      * client certificate, and private key for mutual TLS authentication.
+     *
+     * SSL Configuration details. Provide the CA certificate to validate the Informix server
+     * certificate. Paste the PEM content directly or upload the certificate file.
      */
-    sslConfig?:                     Config;
+    sslConfig?: Config;
+    /**
+     * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+     * without certificate verification, or 'verify-ca' to validate the server certificate
+     * against the provided CA certificate.
+     */
     sslMode?:                       SSLMode;
     supportsViewLineageExtraction?: boolean;
     /**
@@ -842,6 +864,13 @@ export interface ConfigObject {
      */
     trustServerCertificate?: boolean;
     /**
+     * Choose between local file system path (object) or S3 bucket location (object) for Access
+     * database files.
+     *
+     * Choose between Database connection or HDB User Store connection.
+     */
+    connection?: AccessDatabaseLocationLocalPathOrS3;
+    /**
      * Use slow logs to extract lineage.
      */
     useSlowLogs?: boolean;
@@ -873,6 +902,11 @@ export interface ConfigObject {
      * re-ingesting.
      */
     preserveIdentifierCase?: boolean;
+    /**
+     * Use Oracle DBA_* tables instead of ALL_* tables for metadata ingestion. Requires DBA
+     * privileges.
+     */
+    useDBATable?: boolean;
     /**
      * Custom OpenMetadata Classification name for Postgres policy tags.
      *
@@ -1041,10 +1075,6 @@ export interface ConfigObject {
      */
     sourcePythonClass?: string;
     /**
-     * Choose between Database connection or HDB User Store connection.
-     */
-    connection?: SAPHanaConnection;
-    /**
      * Couchbase connection Bucket options.
      */
     bucket?: string;
@@ -1158,6 +1188,11 @@ export interface ConfigObject {
      * BurstIQ Keycloak realm name (e.g., 'ems' from https://auth.burstiq.com/realms/ems).
      */
     realmName?: string;
+    /**
+     * Informix server name as defined in the sqlhosts file or INFORMIXSERVER environment
+     * variable.
+     */
+    serverName?: string;
     [property: string]: any;
 }
 
@@ -1925,13 +1960,47 @@ export interface GCPImpersonateServiceAccountValues {
 }
 
 /**
+ * Choose between local file system path (object) or S3 bucket location (object) for Access
+ * database files.
+ *
+ * Local filesystem path to a single Access database file or a directory containing Access
+ * files.
+ *
+ * S3 Connection.
+ *
  * Choose between Database connection or HDB User Store connection.
  *
  * Sap Hana Database SQL Connection Config
  *
  * Sap Hana Database HDB User Store Connection Config
  */
-export interface SAPHanaConnection {
+export interface AccessDatabaseLocationLocalPathOrS3 {
+    /**
+     * Absolute path to the .accdb or .mdb file, or a directory. Supports ~ expansion (e.g.
+     * ~/data/sales.accdb). All .accdb and .mdb files found recursively in a directory will be
+     * ingested.
+     */
+    localFilePath?: string;
+    awsConfig?:     AWSCredentials;
+    /**
+     * Bucket Names of the data source.
+     */
+    bucketNames?:         string[];
+    connectionArguments?: { [key: string]: any };
+    connectionOptions?:   { [key: string]: string };
+    /**
+     * Console EndPoint URL for S3-compatible services
+     */
+    consoleEndpointURL?: string;
+    /**
+     * Regex to only fetch containers that matches the pattern.
+     */
+    containerFilterPattern?:     FilterPattern;
+    supportsMetadataExtraction?: boolean;
+    /**
+     * Service Type
+     */
+    type?: S3Type;
     /**
      * Database of the data source.
      */
@@ -1962,23 +2031,6 @@ export interface SAPHanaConnection {
 }
 
 /**
- * GCP Credentials
- *
- * GCP credentials configs.
- */
-export interface GCPCredentials {
-    /**
-     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
-     * Credentials Path
-     */
-    gcpConfig: GCPCredentialsConfiguration;
-    /**
-     * we enable the authenticated service account to impersonate another service account
-     */
-    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
-}
-
-/**
  * Regex to only include/exclude databases that matches the pattern.
  *
  * Regex to only fetch entities that matches the pattern.
@@ -1988,6 +2040,8 @@ export interface GCPCredentials {
  * Regex to only include/exclude stored procedures that matches the pattern.
  *
  * Regex to only include/exclude tables that matches the pattern.
+ *
+ * Regex to only fetch containers that matches the pattern.
  *
  * Regex to only include/exclude schemas that matches the pattern. System schemas
  * (information_schema, _statistics_, sys) are excluded by default.
@@ -2015,6 +2069,32 @@ export interface FilterPattern {
      * List of strings/regex patterns to match and include only database entities that match.
      */
     includes?: string[];
+}
+
+/**
+ * Service Type
+ *
+ * S3 service type
+ */
+export enum S3Type {
+    S3 = "S3",
+}
+
+/**
+ * GCP Credentials
+ *
+ * GCP credentials configs.
+ */
+export interface GCPCredentials {
+    /**
+     * We support two ways of authenticating to GCP i.e via GCP Credentials Values or GCP
+     * Credentials Path
+     */
+    gcpConfig: GCPCredentialsConfiguration;
+    /**
+     * we enable the authenticated service account to impersonate another service account
+     */
+    gcpImpersonateServiceAccount?: GCPImpersonateServiceAccountValues;
 }
 
 /**
@@ -2266,6 +2346,9 @@ export enum HiveMetastoreConnectionDetailsScheme {
  * SSL/TLS certificate configuration for client authentication. Provide CA certificate,
  * client certificate, and private key for mutual TLS authentication.
  *
+ * SSL Configuration details. Provide the CA certificate to validate the Informix server
+ * certificate. Paste the PEM content directly or upload the certificate file.
+ *
  * OpenMetadata Client configured to validate SSL certificates.
  */
 export interface Config {
@@ -2285,6 +2368,10 @@ export interface Config {
 
 /**
  * SSL Mode to connect to database.
+ *
+ * SSL Mode to connect to Informix. Use 'disable' for no SSL, 'require' for encrypted SSL
+ * without certificate verification, or 'verify-ca' to validate the server certificate
+ * against the provided CA certificate.
  */
 export enum SSLMode {
     Allow = "allow",
@@ -2354,6 +2441,7 @@ export enum ConfigScheme {
     Ibmi = "ibmi",
     Impala = "impala",
     Impala4 = "impala4",
+    Informix = "informix",
     Mongodb = "mongodb",
     MongodbSrv = "mongodb+srv",
     MssqlPymssql = "mssql+pymssql",
@@ -2429,7 +2517,9 @@ export enum ConfigType {
     Hive = "Hive",
     Iceberg = "Iceberg",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
+    MicrosoftAccess = "MicrosoftAccess",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
     Mssql = "Mssql",
@@ -2532,6 +2622,7 @@ export interface EntityReference {
  */
 export enum EntityStatus {
     Approved = "Approved",
+    Archived = "Archived",
     Deprecated = "Deprecated",
     Draft = "Draft",
     InReview = "In Review",
@@ -2570,7 +2661,9 @@ export enum DatabaseServiceType {
     Hive = "Hive",
     Iceberg = "Iceberg",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
+    MicrosoftAccess = "MicrosoftAccess",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
     Mssql = "Mssql",
@@ -2680,6 +2773,10 @@ export enum LabelType {
  * was applied.
  */
 export interface TagLabelMetadata {
+    /**
+     * Epoch time in milliseconds when the certification tag expires
+     */
+    expiryDate?: number;
     /**
      * Metadata about the recognizer that automatically applied this tag
      */

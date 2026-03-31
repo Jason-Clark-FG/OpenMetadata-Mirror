@@ -70,6 +70,12 @@
   },
   "mappings": {
     "properties": {
+      "changeDescription": {
+        "enabled": false
+      },
+      "incrementalChangeDescription": {
+        "enabled": false
+      },
       "originEntityFQN": {
         "type": "keyword",
         "normalizer": "lowercase_normalizer"
@@ -169,7 +175,8 @@
           "state": {
             "type": "keyword"
           }
-        }
+        },
+        "type": "nested"
       },
       "tier": {
         "properties": {

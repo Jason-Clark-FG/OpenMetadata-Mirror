@@ -321,6 +321,10 @@ export enum LabelType {
  */
 export interface TagLabelMetadata {
     /**
+     * Epoch time in milliseconds when the certification tag expires
+     */
+    expiryDate?: number;
+    /**
      * Metadata about the recognizer that automatically applied this tag
      */
     recognizer?: TagLabelRecognizerMetadata;
@@ -1078,6 +1082,7 @@ export enum ModelType {
  */
 export enum EntityStatus {
     Approved = "Approved",
+    Archived = "Archived",
     Deprecated = "Deprecated",
     Draft = "Draft",
     InReview = "In Review",
@@ -1375,7 +1380,9 @@ export enum DatabaseServiceType {
     Hive = "Hive",
     Iceberg = "Iceberg",
     Impala = "Impala",
+    Informix = "Informix",
     MariaDB = "MariaDB",
+    MicrosoftAccess = "MicrosoftAccess",
     MicrosoftFabric = "MicrosoftFabric",
     MongoDB = "MongoDB",
     Mssql = "Mssql",
