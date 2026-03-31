@@ -215,9 +215,16 @@ public class SinkTaskDelegate implements JavaDelegate {
                   List<SinkResult.SinkError> fetchErrors = new ArrayList<>();
                   Map<String, EntityInterface> entityMap;
                   try {
-                    entityMap = Entity.getEntitiesByLinks(subBatch, "*", Include.ALL);
+                    entityMap =
+                        Retry.decorateSupplier(
+                                Retry.of("sink-batch-fetch", Workflow.TASK_RETRY_CONFIG),
+                                () -> Entity.getEntitiesByLinks(subBatch, "*", Include.ALL))
+                            .get();
                   } catch (Exception e) {
-                    LOG.error("Failed to batch fetch sub-batch of {} entities", subBatch.size(), e);
+                    LOG.error(
+                        "Failed to batch fetch sub-batch of {} entities after retries",
+                        subBatch.size(),
+                        e);
                     entityMap = Map.of();
                   }
                   List<EntityInterface> entities = new ArrayList<>();
@@ -265,8 +272,21 @@ public class SinkTaskDelegate implements JavaDelegate {
     List<String> syncedEntities = new ArrayList<>();
     List<SinkResult.SinkError> errors = new ArrayList<>();
 
-    Map<String, EntityInterface> entityMap =
-        Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+    Map<String, EntityInterface> entityMap;
+    try {
+      entityMap =
+          Retry.decorateSupplier(
+                  Retry.of("sink-list-fetch", Workflow.TASK_RETRY_CONFIG),
+                  () -> Entity.getEntitiesByLinks(entityList, "*", Include.ALL))
+              .get();
+    } catch (Exception e) {
+      LOG.error(
+          "[{}] Batch fetch failed for {} entities after retries",
+          context.getWorkflowName(),
+          entityList.size(),
+          e);
+      entityMap = Map.of();
+    }
 
     Retry retry = Retry.of("sink-list-write", Workflow.TASK_RETRY_CONFIG);
 

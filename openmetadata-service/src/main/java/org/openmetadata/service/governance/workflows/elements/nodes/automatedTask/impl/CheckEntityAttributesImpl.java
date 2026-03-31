@@ -7,7 +7,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
-import io.github.resilience4j.retry.Retry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +20,6 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.rules.RuleEngine;
 
@@ -46,8 +44,6 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
       Map<String, EntityInterface> entityMap =
           Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
 
-      Retry retry = Retry.of("check-entity-attributes", Workflow.TASK_RETRY_CONFIG);
-
       for (String entityLinkStr : entityList) {
         EntityInterface entity = entityMap.get(entityLinkStr);
         if (entity == null) {
@@ -56,17 +52,7 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
         }
         try {
           boolean passes =
-              Retry.decorateSupplier(
-                      retry,
-                      () -> {
-                        try {
-                          return (boolean)
-                              RuleEngine.getInstance().apply(rules, JsonUtils.getMap(entity));
-                        } catch (Exception e) {
-                          throw new RuntimeException(e);
-                        }
-                      })
-                  .get();
+              (boolean) RuleEngine.getInstance().apply(rules, JsonUtils.getMap(entity));
           if (passes) {
             trueEntityList.add(entityLinkStr);
           } else {
@@ -75,7 +61,7 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
         } catch (Exception e) {
           falseEntityList.add(entityLinkStr);
           LOG.error(
-              "[{}] Failed entity '{}' after retries: {}",
+              "[{}] Failed to evaluate rules for entity '{}': {}",
               getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()),
               entityLinkStr,
               e.getMessage(),
