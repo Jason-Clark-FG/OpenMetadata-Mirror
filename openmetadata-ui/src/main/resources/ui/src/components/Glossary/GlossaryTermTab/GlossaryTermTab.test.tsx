@@ -21,8 +21,8 @@ import {
 import { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  mockedGlossaryTerms,
   MOCK_PERMISSIONS,
+  mockedGlossaryTerms,
 } from '../../../mocks/Glossary.mock';
 import { findExpandableKeysForArray } from '../../../utils/GlossaryUtils';
 import GlossaryTermTab from './GlossaryTermTab.component';
@@ -118,7 +118,7 @@ jest.mock('../../../utils/EntityStatusUtils', () => ({
       Deprecated: 'warning',
     };
 
-    return statusMap[status] || 'warning';
+    return statusMap[status as keyof typeof statusMap] || 'warning';
   }),
 }));
 
@@ -126,7 +126,7 @@ jest.mock('../../common/ErrorWithPlaceholder/ErrorPlaceHolder', () =>
   jest
     .fn()
     .mockImplementation(({ onClick }) => (
-      <div onClick={onClick}>ErrorPlaceHolder</div>
+      <button onClick={onClick}>ErrorPlaceHolder</button>
     ))
 );
 
@@ -207,14 +207,14 @@ jest.mock('../../../constants/docs.constants', () => ({
 }));
 
 // Mock IntersectionObserver
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
+globalThis.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }));
 
 // Mock MutationObserver
-global.MutationObserver = jest.fn().mockImplementation(() => ({
+globalThis.MutationObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   disconnect: jest.fn(),
 }));

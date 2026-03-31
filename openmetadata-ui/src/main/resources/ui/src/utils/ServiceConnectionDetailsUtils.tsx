@@ -13,7 +13,15 @@
 
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Col, Input, Row, Select, Space, Tooltip, Typography } from 'antd';
-import { get, isArray, isEmpty, isNull, isObject, startCase } from 'lodash';
+import {
+  get,
+  isArray,
+  isEmpty,
+  isNull,
+  isObject,
+  isUndefined,
+  startCase,
+} from 'lodash';
 import { ReactNode } from 'react';
 import ErrorPlaceHolder from '../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { FILTER_PATTERN_BY_SERVICE_TYPE } from '../constants/ServiceConnection.constants';
@@ -137,15 +145,22 @@ export const getKeyValues = ({
       const value = obj[key];
 
       // Return early if value is null or key is in DEF_UI_SCHEMA
-      if (isNull(value) || key in DEF_UI_SCHEMA) {
+      if (isNull(value) || isUndefined(value) || key in DEF_UI_SCHEMA) {
         return null;
       }
 
       // Handle non-object and array values
       if (!isObject(value) || isArray(value)) {
-        const { description, format, title } = schemaPropertyObject[key] ?? {};
+        const { description, format, title } = (schemaPropertyObject[key] ??
+          {}) as { description?: string; format?: string; title?: string };
 
-        return renderInputField(key, value, description, format, title);
+        return renderInputField(
+          key,
+          value as string,
+          description,
+          format,
+          title
+        );
       }
 
       const serviceType = serviceCategory.slice(0, -1);
@@ -160,16 +175,24 @@ export const getKeyValues = ({
           key as ServiceConnectionFilterPatternFields
         )
       ) {
-        const { description, title } = schemaPropertyObject[key] ?? {};
+        const { description, title } = (schemaPropertyObject[key] ?? {}) as {
+          description?: string;
+          title?: string;
+        };
 
-        return renderFilterPattern(key, value, description, title);
+        return renderFilterPattern(
+          key,
+          value as { includes: string[]; excludes: string[] },
+          description,
+          title
+        );
       }
 
       // Handle special service configurations
       const specialConfig = handleSpecialServiceConfig(
         serviceType,
         key,
-        value,
+        value as Record<string, unknown>,
         schemaPropertyObject,
         schema,
         serviceCategory
@@ -185,7 +208,7 @@ export const getKeyValues = ({
       ) {
         const configSource = handleDatabaseConfigSource(
           key,
-          value,
+          value as Record<string, unknown>,
           schemaPropertyObject,
           schema,
           serviceCategory
@@ -197,8 +220,13 @@ export const getKeyValues = ({
 
       // Default object handling
       return getKeyValues({
-        obj: value,
-        schemaPropertyObject: schemaPropertyObject[key]?.properties ?? {},
+        obj: value as Record<string, unknown>,
+        schemaPropertyObject:
+          (
+            schemaPropertyObject[key] as {
+              properties?: Record<string, unknown>;
+            }
+          )?.properties ?? {},
         schema,
         serviceCategory,
       });
@@ -212,7 +240,7 @@ export const getKeyValues = ({
 const handleSpecialServiceConfig = (
   serviceType: string,
   key: string,
-  value: unknown,
+  value: Record<string, unknown>,
   schemaPropertyObject: Record<string, unknown>,
   schema: Record<string, unknown>,
   serviceCategory: string
@@ -221,10 +249,14 @@ const handleSpecialServiceConfig = (
   if (
     serviceType === EntityType.PIPELINE_SERVICE &&
     key === 'connection' &&
-    value.type?.toLowerCase() === 'airflow'
+    (value.type as string)?.toLowerCase() === 'airflow'
   ) {
-    const airflowSchema = schemaPropertyObject[key].oneOf.find(
-      (item: { title: string }) => item.title === `${value.type}Connection`
+    const airflowSchema = (
+      schemaPropertyObject[key] as {
+        oneOf: { title: string; properties: Record<string, unknown> }[];
+      }
+    ).oneOf.find(
+      (item) => item.title === `${value.type}Connection`
     )?.properties;
 
     return (
@@ -240,7 +272,11 @@ const handleSpecialServiceConfig = (
 
   // Database service - GCP credentials
   if (serviceType === EntityType.DATABASE_SERVICE && key === 'credentials') {
-    const gcpSchema = schemaPropertyObject[key].definitions.gcpCredentialsPath;
+    const gcpSchema = (
+      schemaPropertyObject[key] as {
+        definitions: { gcpCredentialsPath: Record<string, unknown> };
+      }
+    ).definitions.gcpCredentialsPath;
 
     return getKeyValues({
       obj: value,
@@ -252,7 +288,11 @@ const handleSpecialServiceConfig = (
 
   // Metadata service - Security config
   if (serviceType === EntityType.METADATA_SERVICE && key === 'securityConfig') {
-    const jwtSchema = schemaPropertyObject[key].oneOf.find(
+    const jwtSchema = (
+      schemaPropertyObject[key] as {
+        oneOf: { title: string; properties: Record<string, unknown> }[];
+      }
+    ).oneOf.find(
       (item: { title: string }) => item.title === JWT_CONFIG
     )?.properties;
 
@@ -272,7 +312,11 @@ const handleSpecialServiceConfig = (
     serviceType === EntityType.DASHBOARD_SERVICE &&
     key === 'githubCredentials'
   ) {
-    const githubSchema = schemaPropertyObject[key].oneOf.find(
+    const githubSchema = (
+      schemaPropertyObject[key] as {
+        oneOf: { title: string; properties: Record<string, unknown> }[];
+      }
+    ).oneOf.find(
       (item: { title: string }) => item.title === 'GitHubCredentials'
     )?.properties;
 
@@ -293,7 +337,7 @@ const handleSpecialServiceConfig = (
 // Handles database service config source
 const handleDatabaseConfigSource = (
   key: string,
-  value: unknown,
+  value: Record<string, unknown>,
   schemaPropertyObject: Record<string, unknown>,
   schema: Record<string, unknown>,
   serviceCategory: string
@@ -302,8 +346,10 @@ const handleDatabaseConfigSource = (
     return null;
   }
 
-  if (value.securityConfig.gcpConfig) {
-    const gcpConfigSchema = isObject(value.securityConfig.gcpConfig)
+  const securityConfig = value.securityConfig as Record<string, unknown>;
+
+  if (securityConfig.gcpConfig) {
+    const gcpConfigSchema = isObject(securityConfig.gcpConfig)
       ? get(
           schema,
           'definitions.GCPConfig.properties.securityConfig.definitions.GCPValues.properties',
@@ -316,10 +362,10 @@ const handleDatabaseConfigSource = (
         );
 
     return getKeyValues({
-      obj: isObject(value.securityConfig.gcpConfig)
-        ? value.securityConfig.gcpConfig
+      obj: isObject(securityConfig.gcpConfig)
+        ? (securityConfig.gcpConfig as Record<string, unknown>)
         : value,
-      schemaPropertyObject: gcpConfigSchema,
+      schemaPropertyObject: gcpConfigSchema as Record<string, unknown>,
       schema,
       serviceCategory,
     });
@@ -329,24 +375,33 @@ const handleDatabaseConfigSource = (
   const oneOf = 'oneOf';
 
   if (
-    Object.keys(schemaPropertyObject[key]).includes(oneOf) &&
-    (value.securityConfig?.awsAccessKeyId ||
-      value.securityConfig?.awsSecretAccessKey)
+    Object.keys(schemaPropertyObject[key] as Record<string, unknown>).includes(
+      oneOf
+    ) &&
+    (securityConfig?.awsAccessKeyId || securityConfig?.awsSecretAccessKey)
   ) {
     return getKeyValues({
-      obj: value.securityConfig,
+      obj: securityConfig,
       schemaPropertyObject: get(
         schema,
         'definitions.S3Config.properties.securityConfig.properties',
         {}
-      ),
+      ) as Record<string, unknown>,
       schema,
       serviceCategory,
     });
   }
 
-  if (Object.keys(schemaPropertyObject[key]).includes(internalRef)) {
-    const definition = schemaPropertyObject[key][internalRef]
+  if (
+    Object.keys(schemaPropertyObject[key] as Record<string, unknown>).includes(
+      internalRef
+    )
+  ) {
+    const definition = (
+      (schemaPropertyObject[key] as Record<string, unknown>)[
+        internalRef
+      ] as string
+    )
       .split('/')
       .splice(2);
 

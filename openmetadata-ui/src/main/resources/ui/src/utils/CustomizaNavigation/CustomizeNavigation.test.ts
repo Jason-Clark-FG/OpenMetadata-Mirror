@@ -11,6 +11,8 @@
  *  limitations under the License.
  */
 
+import { LeftSidebarItem } from '../../components/MyData/LeftSidebar/LeftSidebar.interface';
+import { LeftSidebarItemExample } from '../../components/Settings/Applications/plugins/AppPlugin';
 import { NavigationItem } from '../../generated/system/ui/uiCustomization';
 import leftSidebarClassBase from '../LeftSidebarClassBase';
 import {
@@ -425,17 +427,17 @@ describe('CustomizeNavigation Utils', () => {
   });
 
   describe('mergePluginSidebarItems', () => {
-    const mockBaseItems = [
+    const mockBaseItems: LeftSidebarItem[] = [
       {
         key: 'home',
         title: 'Home',
-        icon: 'home-icon',
+        icon: () => 'home-icon',
         dataTestId: 'home',
       },
       {
         key: 'explore',
         title: 'Explore',
-        icon: 'explore-icon',
+        icon: () => 'explore-icon',
         dataTestId: 'explore',
       },
     ];
@@ -451,23 +453,26 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
         },
       ];
 
-      const result = mergePluginSidebarItems(mockBaseItems, pluginItems);
+      const result = mergePluginSidebarItems(
+        mockBaseItems,
+        pluginItems as unknown as LeftSidebarItemExample[]
+      );
 
       expect(result).toHaveLength(3);
       expect(result[2].key).toBe('plugin1');
     });
 
     it('should insert plugin items at specified index', () => {
-      const pluginItems = [
+      const pluginItems: LeftSidebarItemExample[] = [
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 1,
         },
@@ -486,7 +491,7 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 0,
         },
@@ -505,22 +510,23 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin2',
           title: 'Plugin 2',
-          icon: 'plugin-icon-2',
+          icon: () => 'plugin-icon-2',
           dataTestId: 'plugin2',
           index: 2,
         },
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon-1',
+          icon: () => 'plugin-icon-1',
           dataTestId: 'plugin1',
           index: 0,
         },
         {
           key: 'plugin3',
           title: 'Plugin 3',
-          icon: 'plugin-icon-3',
+          icon: () => 'plugin-icon-3',
           dataTestId: 'plugin3',
+          index: 1,
         },
       ];
 
@@ -539,7 +545,7 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 999,
         },
@@ -556,7 +562,7 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 1,
         },
@@ -582,11 +588,11 @@ describe('CustomizeNavigation Utils', () => {
     });
 
     it('should include plugin items that are marked as not hidden in navigationItems', () => {
-      const pluginItems = [
+      const pluginItems: LeftSidebarItemExample[] = [
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 1,
         },
@@ -616,7 +622,7 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 1,
         },
@@ -633,7 +639,7 @@ describe('CustomizeNavigation Utils', () => {
         {
           key: 'plugin1',
           title: 'Plugin 1',
-          icon: 'plugin-icon',
+          icon: () => 'plugin-icon',
           dataTestId: 'plugin1',
           index: 1,
         },

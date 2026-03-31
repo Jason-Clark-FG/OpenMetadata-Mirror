@@ -12,13 +12,14 @@
  */
 
 /* eslint-disable max-len */
+import { ModifiedGlossaryTerm } from '../components/Glossary/GlossaryTermTab/GlossaryTermTab.interface';
 import { OperationPermission } from '../context/PermissionProvider/PermissionProvider.interface';
 import {
   EntityStatus,
   ProviderType,
 } from '../generated/entity/data/glossaryTerm';
 
-export const mockedGlossaryTerms = [
+export const mockedGlossaryTerms: ModifiedGlossaryTerm[] = [
   {
     id: 'a5a97523-2229-41e5-abbe-65f61a534c34',
     name: 'Clothing',
@@ -55,6 +56,10 @@ export const mockedGlossaryTerms = [
             childrenCount: 0,
             children: [],
             entityStatus: EntityStatus.Approved,
+            glossary: {
+              id: 'mocked-glossary-id',
+              type: 'glossary',
+            },
           },
           {
             id: 'child-1-2-clothing',
@@ -67,9 +72,17 @@ export const mockedGlossaryTerms = [
             childrenCount: 0,
             children: [],
             entityStatus: EntityStatus.Draft,
+            glossary: {
+              id: 'mocked-glossary-id',
+              type: 'glossary',
+            },
           },
         ],
         entityStatus: EntityStatus.Approved,
+        glossary: {
+          id: 'mocked-glossary-id',
+          type: 'glossary',
+        },
       },
       {
         id: 'child-2-clothing',
@@ -90,8 +103,16 @@ export const mockedGlossaryTerms = [
             childrenCount: 0,
             children: [],
             entityStatus: EntityStatus.InReview,
+            glossary: {
+              id: 'mocked-glossary-id',
+              type: 'glossary',
+            },
           },
         ],
+        glossary: {
+          id: 'mocked-glossary-id',
+          type: 'glossary',
+        },
         entityStatus: EntityStatus.Approved,
       },
     ],
@@ -141,6 +162,10 @@ export const mockedGlossaryTerms = [
             childrenCount: 0,
             children: [],
             entityStatus: EntityStatus.Approved,
+            glossary: {
+              id: 'mocked-glossary-id',
+              type: 'glossary',
+            },
           },
           {
             id: 'child-1-2-sales',
@@ -152,8 +177,16 @@ export const mockedGlossaryTerms = [
             childrenCount: 0,
             children: [],
             entityStatus: EntityStatus.Approved,
+            glossary: {
+              id: 'mocked-glossary-id',
+              type: 'glossary',
+            },
           },
         ],
+        glossary: {
+          id: 'mocked-glossary-id',
+          type: 'glossary',
+        },
         entityStatus: EntityStatus.Approved,
       },
     ],

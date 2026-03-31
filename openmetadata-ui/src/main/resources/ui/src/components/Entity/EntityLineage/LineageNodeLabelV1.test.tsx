@@ -12,9 +12,10 @@
  */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EntityType } from '../../../enums/entity.enum';
-import { ModelType } from '../../../generated/entity/data/table';
+import { DataType, ModelType } from '../../../generated/entity/data/table';
 import { useLineageStore } from '../../../hooks/useLineageStore';
 import { getTestCaseExecutionSummary } from '../../../rest/testAPI';
+import { LineageNodeType } from '../../Lineage/Lineage.interface';
 import LineageNodeLabelV1 from './LineageNodeLabelV1';
 
 jest.mock('../../../hooks/useLineageStore', () => ({
@@ -63,7 +64,7 @@ jest.mock('../../../utils/EntityLineageUtils', () => ({
 }));
 
 jest.mock('../../../utils/EntityUtils', () => ({
-  getBreadcrumbsFromFqn: jest.fn((fqn) => {
+  getBreadcrumbsFromFqn: jest.fn((fqn: string) => {
     if (!fqn) {
       return [];
     }
@@ -77,16 +78,17 @@ jest.mock('../../../utils/EntityUtils', () => ({
 const mockToggleColumnsList = jest.fn();
 const mockToggleOnlyShowColumnsWithLineageFilterActive = jest.fn();
 
-const mockBasicNode = {
+const mockBasicNode: LineageNodeType = {
   id: 'test-node-id',
   fullyQualifiedName: 'sample_data.ecommerce_db.shopify.dim_customer',
   name: 'dim_customer',
   entityType: EntityType.TABLE,
   deleted: false,
+  type: 'table',
   columns: [
-    { name: 'col1', dataType: 'VARCHAR', fullyQualifiedName: 'col1' },
-    { name: 'col2', dataType: 'VARCHAR', fullyQualifiedName: 'col2' },
-    { name: 'col3', dataType: 'VARCHAR', fullyQualifiedName: 'col3' },
+    { name: 'col1', dataType: DataType.Varchar, fullyQualifiedName: 'col1' },
+    { name: 'col2', dataType: DataType.Varchar, fullyQualifiedName: 'col2' },
+    { name: 'col3', dataType: DataType.Varchar, fullyQualifiedName: 'col3' },
   ],
 };
 
@@ -656,10 +658,14 @@ describe('LineageNodeLabelV1', () => {
     });
 
     it('should handle node with single column', () => {
-      const nodeWithOneColumn = {
+      const nodeWithOneColumn: LineageNodeType = {
         ...mockBasicNode,
         columns: [
-          { name: 'col1', dataType: 'VARCHAR', fullyQualifiedName: 'col1' },
+          {
+            name: 'col1',
+            dataType: DataType.Varchar,
+            fullyQualifiedName: 'col1',
+          },
         ],
       };
 

@@ -13,6 +13,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { EventType } from '../../generated/type/changeEvent';
 import { AuditLogEntry } from '../../types/auditLogs.interface';
 import AuditLogList from './AuditLogList.component';
 
@@ -48,7 +49,8 @@ describe('AuditLogList', () => {
       entityFQN: 'sample_data.ecommerce_db.shopify.orders',
       changeEvent: {
         id: 'ce-1',
-        eventType: 'entityCreated',
+        entityId: '1234',
+        eventType: EventType.EntityCreated,
         entityType: 'table',
         entityFullyQualifiedName: 'sample_data.ecommerce_db.shopify.orders',
         entity: {
@@ -75,7 +77,8 @@ describe('AuditLogList', () => {
       entityFQN: 'sample_data.ecommerce_db.shopify.products',
       changeEvent: {
         id: 'ce-2',
-        eventType: 'entityUpdated',
+        entityId: '1234',
+        eventType: EventType.EntityUpdated,
         entityType: 'table',
         entityFullyQualifiedName: 'sample_data.ecommerce_db.shopify.products',
         entity: {
@@ -187,7 +190,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -224,7 +228,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -267,7 +272,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -306,7 +312,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -345,7 +352,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -384,7 +392,8 @@ describe('AuditLogList', () => {
         entityType: 'user',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'user',
           changeDescription: {
             fieldsAdded: [
@@ -466,7 +475,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [
@@ -512,7 +522,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [],
@@ -549,7 +560,8 @@ describe('AuditLogList', () => {
         entityType: 'glossaryTerm',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'glossaryTerm',
           changeDescription: {
             fieldsAdded: [
@@ -592,7 +604,8 @@ describe('AuditLogList', () => {
         entityType: 'domain',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'domain',
           changeDescription: {
             fieldsAdded: [
@@ -633,7 +646,8 @@ describe('AuditLogList', () => {
         entityType: 'glossaryTerm',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'glossaryTerm',
           changeDescription: {
             fieldsAdded: [
@@ -676,7 +690,8 @@ describe('AuditLogList', () => {
         entityType: 'table',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'table',
           changeDescription: {
             fieldsAdded: [],
@@ -720,7 +735,8 @@ describe('AuditLogList', () => {
         entityFQN: 'sample_data.ecommerce_db.shopify.orders',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityCreated',
+          entityId: '1234',
+          eventType: EventType.EntityCreated,
           entityType: 'table',
           entityFullyQualifiedName: 'sample_data.ecommerce_db.shopify.orders',
           entity: {
@@ -760,7 +776,8 @@ describe('AuditLogList', () => {
         entityType: 'user',
         changeEvent: {
           id: 'ce-1',
-          eventType: 'entityUpdated',
+          entityId: '1234',
+          eventType: EventType.EntityUpdated,
           entityType: 'user',
           entity: {
             id: 'user-1',

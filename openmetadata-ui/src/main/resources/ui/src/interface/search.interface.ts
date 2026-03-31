@@ -38,7 +38,7 @@ import { Query } from '../generated/entity/data/query';
 import { SearchIndex as SearchIndexEntity } from '../generated/entity/data/searchIndex';
 import { Spreadsheet } from '../generated/entity/data/spreadsheet';
 import { StoredProcedure } from '../generated/entity/data/storedProcedure';
-import { Column as TableColumn, Table } from '../generated/entity/data/table';
+import { Table, Column as TableColumn } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
 import { Worksheet } from '../generated/entity/data/worksheet';
 import { DataProduct } from '../generated/entity/domains/dataProduct';
@@ -49,6 +49,7 @@ import { DatabaseService } from '../generated/entity/services/databaseService';
 import { DriveService } from '../generated/entity/services/driveService';
 import { IngestionPipeline } from '../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { MessagingService } from '../generated/entity/services/messagingService';
+import { MetadataService } from '../generated/entity/services/metadataService';
 import { MlmodelService } from '../generated/entity/services/mlmodelService';
 import { PipelineService } from '../generated/entity/services/pipelineService';
 import { SearchService } from '../generated/entity/services/searchService';
@@ -213,6 +214,10 @@ export interface DriveServiceSearchSource
   extends SearchSourceBase,
     DriveService {}
 
+export interface MetadataServiceSearchSource
+  extends SearchSourceBase,
+    MetadataService {}
+
 export interface APICollectionSearchSource
   extends SearchSourceBase,
     APICollection {}
@@ -294,6 +299,7 @@ export type SearchIndexSearchSourceMapping = {
   [SearchIndex.SEARCH_SERVICE]: SearchServiceSearchSource;
   [SearchIndex.STORAGE_SERVICE]: StorageServiceSearchSource;
   [SearchIndex.DRIVE_SERVICE]: DriveServiceSearchSource;
+  [SearchIndex.METADATA_SERVICE]: MetadataServiceSearchSource;
   [SearchIndex.DOMAIN]: DomainSearchSource;
   [SearchIndex.SEARCH_INDEX]: SearchIndexSearchSource;
   [SearchIndex.STORED_PROCEDURE]: StoredProcedureSearchSource;

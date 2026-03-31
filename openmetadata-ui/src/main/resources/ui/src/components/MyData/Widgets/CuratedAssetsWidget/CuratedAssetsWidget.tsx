@@ -39,6 +39,7 @@ import { AssetCertification } from '../../../../generated/type/assetCertificatio
 import {
   SearchIndexSearchSourceMapping,
   SearchSourceAlias,
+  TableSearchSource,
 } from '../../../../interface/search.interface';
 import {
   WidgetCommonProps,
@@ -106,13 +107,13 @@ const CuratedAssetsWidget = ({
     [curatedAssetsWidth]
   );
 
-  const queryFilter = useMemo(
-    () => get(curatedAssetsConfig, 'queryFilter', '{}'),
+  const queryFilter: string = useMemo(
+    () => get(curatedAssetsConfig, 'queryFilter', '{}') as string,
     [curatedAssetsConfig]
   );
 
-  const selectedResource = useMemo(
-    () => get(curatedAssetsConfig, 'resources', []),
+  const selectedResource: Array<string> = useMemo(
+    () => get(curatedAssetsConfig, 'resources', []) as Array<string>,
     [curatedAssetsConfig]
   );
 
@@ -236,7 +237,7 @@ const CuratedAssetsWidget = ({
         ];
 
     // Update layout if handleLayoutUpdate is provided
-    handleLayoutUpdate && handleLayoutUpdate(updatedLayout as Layout[]);
+    handleLayoutUpdate?.(updatedLayout as Layout[]);
 
     // Automatically save layout after updating
     if (handleSaveLayout) {
@@ -395,7 +396,7 @@ const CuratedAssetsWidget = ({
     return isFullSize ? (
       <Row className="curated-assets-grid">
         {data.map((item) => (
-          <Col key={item.id} span={12}>
+          <Col key={(item as TableSearchSource).id ?? item.name} span={12}>
             {entityListLinkItem(item)}
           </Col>
         ))}
