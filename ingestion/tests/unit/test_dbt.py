@@ -1468,9 +1468,9 @@ class DbtUnitTest(TestCase):
         self, mock_fqn
     ):
         """fqn.split must not be called for meta.openmetadata.tags when includeTags=False"""
+        from unittest.mock import patch as _patch
+
         mock_fqn.FQN_SEPARATOR = "."
-        original = self.dbt_source_obj.source_config.includeTags
-        self.dbt_source_obj.source_config.includeTags = False
 
         manifest_column = SimpleNamespace(
             name="col",
@@ -1481,13 +1481,12 @@ class DbtUnitTest(TestCase):
         )
         manifest_node = SimpleNamespace(columns={"col": manifest_column})
 
-        columns = self.dbt_source_obj.parse_data_model_columns(
-            manifest_node=manifest_node, catalog_node=None
-        )
+        with _patch.object(self.dbt_source_obj.source_config, "includeTags", False):
+            columns = self.dbt_source_obj.parse_data_model_columns(
+                manifest_node=manifest_node, catalog_node=None
+            )
         mock_fqn.split.assert_not_called()
         assert len(columns) == 1
-
-        self.dbt_source_obj.source_config.includeTags = original
 
     def test_parse_exposure_node_exposure_absent(self):
         _, dbt_objects = self.get_dbt_object_files(MOCK_SAMPLE_MANIFEST_V8)

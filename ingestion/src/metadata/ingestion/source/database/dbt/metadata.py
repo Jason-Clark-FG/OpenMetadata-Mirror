@@ -1114,10 +1114,11 @@ class DbtSource(DbtServiceSource):
                                 continue
                             try:
                                 tag_parts = fqn.split(tag_fqn)
-                            except Exception:  # pylint: disable=broad-except
+                            except Exception as exc:  # pylint: disable=broad-except
+                                logger.debug(traceback.format_exc())
                                 logger.warning(
                                     f"Failed to parse tag FQN {tag_fqn!r} for column"
-                                    f" {column_name}, skipping"
+                                    f" {column_name}: {exc}"
                                 )
                                 continue
                             if len(tag_parts) >= 2:
@@ -1403,7 +1404,7 @@ class DbtSource(DbtServiceSource):
                     get_tag_labels(
                         metadata=self.metadata,
                         tags=dbt_meta_info.openmetadata.glossary,
-                        include_tags=True,
+                        include_tags=self.source_config.includeTags,
                         tag_type=GlossaryTerm,
                     )
                     or []
@@ -1416,7 +1417,7 @@ class DbtSource(DbtServiceSource):
                         metadata=self.metadata,
                         tags=[tier_fqn.split(fqn.FQN_SEPARATOR)[-1]],
                         classification_name=tier_fqn.split(fqn.FQN_SEPARATOR)[0],
-                        include_tags=True,
+                        include_tags=self.source_config.includeTags,
                     )
                     or []
                 )
@@ -1439,10 +1440,11 @@ class DbtSource(DbtServiceSource):
                         continue
                     try:
                         tag_parts = fqn.split(tag_fqn)
-                    except Exception:  # pylint: disable=broad-except
+                    except Exception as exc:  # pylint: disable=broad-except
+                        logger.debug(traceback.format_exc())
                         logger.warning(
                             f"Failed to parse tag FQN {tag_fqn!r} for table"
-                            f" {table_fqn}, skipping"
+                            f" {table_fqn}: {exc}"
                         )
                         continue
                     if len(tag_parts) >= 2:
@@ -1453,7 +1455,7 @@ class DbtSource(DbtServiceSource):
                                 metadata=self.metadata,
                                 tags=[tag_name],
                                 classification_name=classification_name,
-                                include_tags=True,
+                                include_tags=self.source_config.includeTags,
                             )
                             or []
                         )
