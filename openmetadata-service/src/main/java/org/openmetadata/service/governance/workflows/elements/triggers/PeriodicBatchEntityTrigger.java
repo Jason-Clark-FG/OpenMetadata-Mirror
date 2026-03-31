@@ -1,5 +1,6 @@
 package org.openmetadata.service.governance.workflows.elements.triggers;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
@@ -45,8 +46,7 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
 
   @Getter private final String triggerWorkflowId;
   private final boolean singleExecutionMode;
-  public static String HAS_FINISHED_VARIABLE = "hasFinished";
-  public static String COLLECTION_VARIABLE = "entityList";
+  public static final String HAS_FINISHED_VARIABLE = "hasFinished";
   private static final String NUMBER_OF_ENTITIES_VARIABLE = "numberOfEntities";
 
   public PeriodicBatchEntityTrigger(
@@ -128,7 +128,7 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
     MultiInstanceLoopCharacteristics multiInstance =
         new MultiInstanceLoopCharacteristicsBuilder()
             .loopCardinality(cardinality)
-            .inputDataItem(COLLECTION_VARIABLE)
+            .inputDataItem(ENTITY_LIST_VARIABLE)
             .elementVariable(RELATED_ENTITY_VARIABLE)
             .build();
 
@@ -151,16 +151,16 @@ public class PeriodicBatchEntityTrigger implements TriggerInterface {
     List<IOParameter> inParameters;
     if (singleExecution) {
       IOParameter entityListParameter = new IOParameter();
-      entityListParameter.setSource(COLLECTION_VARIABLE);
+      entityListParameter.setSource(ENTITY_LIST_VARIABLE);
       entityListParameter.setTarget(
-          getNamespacedVariableName(GLOBAL_NAMESPACE, COLLECTION_VARIABLE));
+          getNamespacedVariableName(GLOBAL_NAMESPACE, ENTITY_LIST_VARIABLE));
       inParameters = List.of(relatedEntityParameter, entityListParameter);
     } else {
       IOParameter entityListParameter = new IOParameter();
       entityListParameter.setSourceExpression(
           String.format("${entityToListMap[%s]}", RELATED_ENTITY_VARIABLE));
       entityListParameter.setTarget(
-          getNamespacedVariableName(GLOBAL_NAMESPACE, COLLECTION_VARIABLE));
+          getNamespacedVariableName(GLOBAL_NAMESPACE, ENTITY_LIST_VARIABLE));
       inParameters = List.of(relatedEntityParameter, entityListParameter);
     }
 

@@ -18,6 +18,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -442,6 +443,34 @@ class MigrationUtilTest {
   }
 
   @Test
+  void addEntityListToNamespaceMap_doesNotOverwriteEntityListWhenIncomingEdgesFromCheckNode()
+      throws Exception {
+    String json =
+        """
+        {
+          "name": "SetField",
+          "inputNamespaceMap": {
+            "entityList": "global",
+            "relatedEntity": "legacy",
+            "updatedBy": "approvalNode"
+          }
+        }
+        """;
+    JsonNode node = MAPPER.readTree(json);
+    List<String[]> incoming = Collections.singletonList(new String[] {"CheckOwner", "true"});
+    Map<String, String> nodeSubType = Map.of("CheckOwner", "checkEntityAttributesTask");
+    JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
+
+    JsonNode nsMap = result.get("inputNamespaceMap");
+    assertTrue(nsMap.has("entityList"), "existing entityList should be preserved");
+    assertEquals("global", nsMap.get("entityList").asText(), "entityList value must not change");
+    assertFalse(
+        nsMap.has("true_entityList"), "must not add conditional key when entityList exists");
+    assertFalse(nsMap.has("relatedEntity"), "relatedEntity should be removed");
+    assertEquals("approvalNode", nsMap.get("updatedBy").asText(), "updatedBy preserved");
+  }
+
+  @Test
   void addEntityListToNamespaceMap_usesGlobalWhenNoRelatedEntityPresent() throws Exception {
     String json =
         """
@@ -474,7 +503,7 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    String[] incoming = {"CheckOwner", "true"};
+    List<String[]> incoming = Collections.singletonList(new String[] {"CheckOwner", "true"});
     Map<String, String> nodeSubType = Map.of("CheckOwner", "checkEntityAttributesTask");
     JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
 
@@ -498,7 +527,7 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    String[] incoming = {"CheckOwner", "false"};
+    List<String[]> incoming = Collections.singletonList(new String[] {"CheckOwner", "false"});
     Map<String, String> nodeSubType = Map.of("CheckOwner", "checkEntityAttributesTask");
     JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
 
@@ -520,7 +549,8 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    String[] incoming = {"DataCompletenessNode", "gold"};
+    List<String[]> incoming =
+        Collections.singletonList(new String[] {"DataCompletenessNode", "gold"});
     Map<String, String> nodeSubType = Map.of("DataCompletenessNode", "dataCompletenessTask");
     JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
 
@@ -542,7 +572,7 @@ class MigrationUtilTest {
         }
         """;
     JsonNode node = MAPPER.readTree(json);
-    String[] incoming = {"StartEvent", null};
+    List<String[]> incoming = Collections.singletonList(new String[] {"StartEvent", null});
     Map<String, String> nodeSubType = Map.of("StartEvent", "startEvent");
     JsonNode result = MigrationUtil.addEntityListToNamespaceMap(node, incoming, nodeSubType);
 
