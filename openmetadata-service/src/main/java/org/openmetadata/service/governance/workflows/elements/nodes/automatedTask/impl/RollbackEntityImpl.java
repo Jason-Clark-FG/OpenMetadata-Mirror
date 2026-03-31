@@ -6,8 +6,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_IN
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,9 +23,9 @@ import org.openmetadata.schema.type.EntityStatus;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.jdbi3.EntityRepository;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @Slf4j
 public class RollbackEntityImpl implements JavaDelegate {
@@ -59,27 +57,25 @@ public class RollbackEntityImpl implements JavaDelegate {
       List<String> entityList =
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
 
-      Retry retry =
-          Retry.of(
-              "rollback-entity",
-              RetryConfig.custom()
-                  .maxAttempts(3)
-                  .waitDuration(Duration.ofMillis(500))
-                  .retryExceptions(Exception.class)
-                  .build());
+      Map<String, EntityInterface> entityMap =
+          Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+
+      Retry retry = Retry.of("rollback-entity", Workflow.TASK_RETRY_CONFIG);
 
       List<String> failedEntities = new ArrayList<>();
       Map<String, String> entityErrors = new LinkedHashMap<>();
 
       for (String entityLinkStr : entityList) {
+        EntityInterface entity = entityMap.get(entityLinkStr);
+        if (entity == null) {
+          failedEntities.add(entityLinkStr);
+          entityErrors.put(entityLinkStr, "Entity not found");
+          continue;
+        }
         try {
           Retry.decorateRunnable(
                   retry,
-                  () -> {
-                    MessageParser.EntityLink entityLink =
-                        MessageParser.EntityLink.parse(entityLinkStr);
-                    rollbackEntity(entityLink, resolvedUpdatedBy, workflowInstanceExecutionId);
-                  })
+                  () -> rollbackEntity(entity, resolvedUpdatedBy, workflowInstanceExecutionId))
               .run();
         } catch (Exception e) {
           failedEntities.add(entityLinkStr);
@@ -114,8 +110,7 @@ public class RollbackEntityImpl implements JavaDelegate {
   }
 
   private void rollbackEntity(
-      MessageParser.EntityLink entityLink, String updatedBy, String workflowInstanceExecutionId) {
-    EntityInterface currentEntity = Entity.getEntity(entityLink, "*", Include.ALL);
+      EntityInterface currentEntity, String updatedBy, String workflowInstanceExecutionId) {
     String entityType = currentEntity.getEntityReference().getType();
     UUID entityId = currentEntity.getId();
 

@@ -6,8 +6,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RU
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +21,7 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.util.EntityFieldUtils;
@@ -61,27 +60,27 @@ public class SetEntityAttributeImpl implements JavaDelegate {
       List<String> entityList =
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
 
-      Retry retry =
-          Retry.of(
-              "set-entity-attribute",
-              RetryConfig.custom()
-                  .maxAttempts(3)
-                  .waitDuration(Duration.ofMillis(500))
-                  .retryExceptions(Exception.class)
-                  .build());
+      Map<String, EntityInterface> entityMap =
+          Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+
+      Retry retry = Retry.of("set-entity-attribute", Workflow.TASK_RETRY_CONFIG);
 
       List<String> failedEntities = new ArrayList<>();
       Map<String, String> entityErrors = new LinkedHashMap<>();
 
       for (String entityLinkStr : entityList) {
+        EntityInterface entity = entityMap.get(entityLinkStr);
+        if (entity == null) {
+          failedEntities.add(entityLinkStr);
+          entityErrors.put(entityLinkStr, "Entity not found");
+          continue;
+        }
+        String entityType = MessageParser.EntityLink.parse(entityLinkStr).getEntityType();
         try {
           Retry.decorateRunnable(
                   retry,
                   () -> {
-                    MessageParser.EntityLink entityLink =
-                        MessageParser.EntityLink.parse(entityLinkStr);
-                    String entityType = entityLink.getEntityType();
-                    EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+                    String GOVERNANCE_BOT = "governance-bot";
                     if (actualUser != null && !actualUser.isEmpty()) {
                       EntityFieldUtils.setEntityField(
                           entity,
@@ -90,12 +89,12 @@ public class SetEntityAttributeImpl implements JavaDelegate {
                           fieldName,
                           resolvedFieldValue,
                           true,
-                          "governance-bot");
+                          GOVERNANCE_BOT);
                     } else {
                       EntityFieldUtils.setEntityField(
                           entity,
                           entityType,
-                          "governance-bot",
+                          GOVERNANCE_BOT,
                           fieldName,
                           resolvedFieldValue,
                           true,

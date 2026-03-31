@@ -7,8 +7,6 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RU
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
 import io.github.resilience4j.retry.Retry;
-import io.github.resilience4j.retry.RetryConfig;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -25,8 +23,8 @@ import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
-import org.openmetadata.service.resources.feeds.MessageParser;
 
 @Slf4j
 public class DataCompletenessImpl implements JavaDelegate {
@@ -55,34 +53,31 @@ public class DataCompletenessImpl implements JavaDelegate {
       List<String> entityList =
           WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
 
+      Map<String, EntityInterface> entityMap =
+          Entity.getEntitiesByLinks(entityList, "*", Include.ALL);
+
       // Per-band entity lists and per-entity results
       Map<String, List<String>> entitiesByBand = new LinkedHashMap<>();
       Map<String, Object> entityResults = new LinkedHashMap<>();
       DataCompletenessResult lastResult = null;
 
-      Retry retry =
-          Retry.of(
-              "data-completeness",
-              RetryConfig.custom()
-                  .maxAttempts(3)
-                  .waitDuration(Duration.ofMillis(500))
-                  .retryExceptions(Exception.class)
-                  .build());
+      Retry retry = Retry.of("data-completeness", Workflow.TASK_RETRY_CONFIG);
 
       List<String> failedEntities = new ArrayList<>();
 
       for (String entityLinkStr : entityList) {
+        EntityInterface entity = entityMap.get(entityLinkStr);
+        if (entity == null) {
+          failedEntities.add(entityLinkStr);
+          continue;
+        }
         try {
           DataCompletenessResult result =
               Retry.decorateSupplier(
                       retry,
-                      () -> {
-                        MessageParser.EntityLink entityLink =
-                            MessageParser.EntityLink.parse(entityLinkStr);
-                        EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
-                        return calculateCompleteness(
-                            JsonUtils.getMap(entity), fieldsToCheck, qualityBands);
-                      })
+                      () ->
+                          calculateCompleteness(
+                              JsonUtils.getMap(entity), fieldsToCheck, qualityBands))
                   .get();
           lastResult = result;
 

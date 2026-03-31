@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +16,6 @@ import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.Workflow;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
-import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.util.EntityUtil;
 
@@ -65,6 +65,7 @@ public class MigrationUtil {
     int fixedCount = 0;
     int offset = 0;
     final int PAGE_SIZE = 100;
+    Set<String> migratedFqns = new HashSet<>();
     List<String> rawPage;
     do {
       rawPage = repository.getDao().listAfterWithOffset(PAGE_SIZE, offset);
@@ -76,6 +77,7 @@ public class MigrationUtil {
             UUID id = UUID.fromString(originalNode.get("id").asText());
             String fqn = originalNode.get("fullyQualifiedName").asText();
             repository.getDao().update(id, fqn, MAPPER.writeValueAsString(migrated));
+            migratedFqns.add(fqn);
             fixedCount++;
             LOG.info("Fixed workflow JSON for '{}'", fqn);
           }
@@ -88,22 +90,22 @@ public class MigrationUtil {
 
     LOG.info("Phase 1 complete: {} workflow JSON records updated", fixedCount);
 
-    // Phase 2: Reload all workflows (now safe to deserialize) and redeploy BPMN processes.
-    List<WorkflowDefinition> allWorkflows =
-        repository.listAll(EntityUtil.Fields.EMPTY_FIELDS, new ListFilter());
+    if (migratedFqns.isEmpty()) {
+      LOG.info("No workflows required migration, skipping BPMN redeploy");
+      return;
+    }
 
+    // Phase 2: Reload and redeploy only the workflows whose JSON was changed in Phase 1.
     int totalRedeployed = 0;
-    for (WorkflowDefinition workflow : allWorkflows) {
+    for (String fqn : migratedFqns) {
       try {
+        WorkflowDefinition workflow =
+            repository.getByName(null, fqn, EntityUtil.Fields.EMPTY_FIELDS);
         WorkflowHandler.getInstance().deploy(new Workflow(workflow));
         totalRedeployed++;
-        LOG.info("Redeployed workflow to Flowable: {}", workflow.getFullyQualifiedName());
+        LOG.info("Redeployed workflow to Flowable: {}", fqn);
       } catch (Exception e) {
-        LOG.error(
-            "Error redeploying workflow '{}': {}",
-            workflow.getFullyQualifiedName(),
-            e.getMessage(),
-            e);
+        LOG.error("Error redeploying workflow '{}': {}", fqn, e.getMessage(), e);
       }
     }
 
