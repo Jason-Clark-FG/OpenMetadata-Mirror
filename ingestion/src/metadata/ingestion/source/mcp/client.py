@@ -90,10 +90,22 @@ class StdioTransport:
             self._message_id += 1
             return self._message_id
 
+    _SENSITIVE_ENV_VARS = {
+        "PATH",
+        "LD_PRELOAD",
+        "LD_LIBRARY_PATH",
+        "DYLD_INSERT_LIBRARIES",
+    }
+
     def connect(self) -> None:
         """Start the MCP server subprocess"""
         full_env = os.environ.copy()
         if self.env:
+            overridden = self._SENSITIVE_ENV_VARS & self.env.keys()
+            if overridden:
+                logger.warning(
+                    f"MCP server '{self.command}' overrides sensitive env vars: {overridden}"
+                )
             full_env.update(self.env)
 
         try:
@@ -293,7 +305,7 @@ class HttpTransport:
                     f"MCP error: {result['error'].get('message', 'Unknown error')}"
                 )
             return result.get("result", {})
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             raise McpProtocolError(f"HTTP request failed: {e}")
 
     def close(self) -> None:
@@ -426,7 +438,9 @@ class McpClient:
         self._initialized = False
 
 
-def parse_claude_desktop_config(config_path: str) -> List[McpServerInfo]:
+def parse_claude_desktop_config(
+    config_path: str, config: Optional[Dict] = None
+) -> List[McpServerInfo]:
     """
     Parse Claude Desktop configuration file to extract MCP server definitions.
 
@@ -441,17 +455,18 @@ def parse_claude_desktop_config(config_path: str) -> List[McpServerInfo]:
         }
     }
     """
-    path = Path(config_path).expanduser()
-    if not path.exists():
-        logger.warning(f"Config file not found: {config_path}")
-        return []
+    if config is None:
+        path = Path(config_path).expanduser()
+        if not path.exists():
+            logger.warning(f"Config file not found: {config_path}")
+            return []
 
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-    except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse config file {config_path}: {e}")
-        return []
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse config file {config_path}: {e}")
+            return []
 
     servers = []
     mcp_servers = config.get("mcpServers", {})
@@ -470,7 +485,9 @@ def parse_claude_desktop_config(config_path: str) -> List[McpServerInfo]:
     return servers
 
 
-def parse_vscode_config(config_path: str) -> List[McpServerInfo]:
+def parse_vscode_config(
+    config_path: str, config: Optional[Dict] = None
+) -> List[McpServerInfo]:
     """
     Parse VS Code settings.json to extract MCP server definitions.
 
@@ -485,17 +502,18 @@ def parse_vscode_config(config_path: str) -> List[McpServerInfo]:
         }
     }
     """
-    path = Path(config_path).expanduser()
-    if not path.exists():
-        logger.warning(f"VS Code settings not found: {config_path}")
-        return []
+    if config is None:
+        path = Path(config_path).expanduser()
+        if not path.exists():
+            logger.warning(f"VS Code settings not found: {config_path}")
+            return []
 
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-    except json.JSONDecodeError as e:
-        logger.warning(f"Failed to parse VS Code settings {config_path}: {e}")
-        return []
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse VS Code settings {config_path}: {e}")
+            return []
 
     servers = []
     mcp_servers = config.get("mcp.servers", {})
@@ -537,9 +555,9 @@ def discover_servers_from_config_files(
                 config = json.load(f)
 
             if "mcpServers" in config:
-                servers = parse_claude_desktop_config(config_path)
+                servers = parse_claude_desktop_config(config_path, config)
             elif "mcp.servers" in config:
-                servers = parse_vscode_config(config_path)
+                servers = parse_vscode_config(config_path, config)
             else:
                 logger.warning(f"Unknown config format in {config_path}")
                 continue
