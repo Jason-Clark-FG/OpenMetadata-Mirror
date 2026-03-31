@@ -49,6 +49,7 @@ from metadata.ingestion.source.database.dbt.dbt_utils import (
     get_dbt_compiled_query,
     get_dbt_raw_query,
     get_manifest_column_name,
+    get_snapshot_effective_schema_and_database,
     validate_custom_property_value,
     validate_date_time_format,
     validate_email_format,
@@ -116,6 +117,8 @@ MOCK_SAMPLE_MANIFEST_VERSIONLESS_BROKEN_EXPOSURES = (
 MOCK_SAMPLE_MANIFEST_NULL_DB = "resources/datasets/manifest_null_db.json"
 
 MOCK_SAMPLE_MANIFEST_TEST_NODE = "resources/datasets/manifest_test_node.json"
+
+MOCK_SAMPLE_MANIFEST_SNAPSHOT = "resources/datasets/manifest_snapshot.json"
 
 EXPECTED_DATA_MODEL_FQNS = [
     "dbt_test.dev.dbt_jaffle.customers",
@@ -2419,6 +2422,68 @@ class DbtUnitTest(TestCase):
 
         self.assertEqual(len(tag_names_used), 1)
         self.assertEqual(tag_names_used[0], "process_tag")
+
+    def test_dbt_snapshot_columns_none(self):
+        """parse_data_model_columns returns [] without raising when manifest columns is None."""
+        manifest_node = SimpleNamespace(columns=None)
+        columns = self.dbt_source_obj.parse_data_model_columns(
+            manifest_node=manifest_node, catalog_node=None
+        )
+        assert columns == []
+
+    def test_dbt_snapshot_target_schema_override(self):
+        """Snapshot config.target_schema and target_database take precedence over node-level fields."""
+        manifest_node = SimpleNamespace(
+            schema_="jaffle_shop",
+            database="dev",
+            config=SimpleNamespace(
+                target_schema="snapshots", target_database="warehouse"
+            ),
+        )
+        location = get_snapshot_effective_schema_and_database(manifest_node)
+        assert location.schema_ == "snapshots"
+        assert location.database == "warehouse"
+
+    def test_dbt_snapshot_no_target_schema_override(self):
+        """When target_schema/target_database are None the node-level values are used."""
+        manifest_node = SimpleNamespace(
+            schema_="jaffle_shop",
+            database="dev",
+            config=SimpleNamespace(target_schema=None, target_database=None),
+        )
+        location = get_snapshot_effective_schema_and_database(manifest_node)
+        assert location.schema_ == "jaffle_shop"
+        assert location.database == "dev"
+
+    @patch("metadata.ingestion.source.database.dbt.metadata.DbtSource.get_dbt_owner")
+    @patch("metadata.ingestion.ometa.mixins.es_mixin.ESMixin.es_search_from_fqn")
+    def test_dbt_snapshot_datamodel(self, es_search_from_fqn, get_dbt_owner):
+        """Snapshot nodes with columns=null and target_schema produce a DataModelLink, not an error."""
+        get_dbt_owner.return_value = None
+        es_search_from_fqn.return_value = [
+            Table(
+                id=uuid.uuid4(),
+                name="snap_orders",
+                databaseSchema=EntityReference(id=uuid.uuid4(), type="databaseSchema"),
+                fullyQualifiedName="dbt_test.dev.snapshots.snap_orders",
+                columns=[],
+            )
+        ]
+
+        _, dbt_objects = self.get_dbt_object_files(MOCK_SAMPLE_MANIFEST_SNAPSHOT)
+        data_model_links = []
+        errors = []
+        for result in self.dbt_source_obj.yield_data_models(dbt_objects=dbt_objects):
+            if isinstance(result, Either) and result.right:
+                data_model_links.append(result.right)
+            elif isinstance(result, Either) and result.left:
+                errors.append(result.left)
+
+        assert errors == [], f"Expected no errors but got: {errors}"
+        assert len(data_model_links) == 1
+        snapshot_dm = data_model_links[0].datamodel
+        assert snapshot_dm.resourceType == "snapshot"
+        assert snapshot_dm.columns == []
 
 
 class TestDownloadDbtFiles(TestCase):
