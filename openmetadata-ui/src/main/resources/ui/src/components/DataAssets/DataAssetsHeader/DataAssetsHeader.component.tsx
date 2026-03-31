@@ -60,7 +60,6 @@ import { Table } from '../../../generated/entity/data/table';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useEntityRules } from '../../../hooks/useEntityRules';
-import { SearchSourceAlias } from '../../../interface/search.interface';
 import {
   AnnouncementEntity,
   getActiveAnnouncements,
@@ -179,12 +178,13 @@ export const DataAssetsHeader = ({
       <img
         alt={get(dataAsset, 'service.displayName', '')}
         className="header-icon"
-        src={serviceUtilClassBase.getServiceTypeLogo(
-          dataAsset as SearchSourceAlias
-        )}
+        src={serviceUtilClassBase.getServiceTypeLogo({
+          ...dataAsset,
+          entityType,
+        })}
       />
     ) : null;
-  }, [dataAsset]);
+  }, [dataAsset, entityType]);
 
   const excludeEntityService = useMemo(() => {
     const filteredServiceTypes = SERVICE_TYPES.filter(
