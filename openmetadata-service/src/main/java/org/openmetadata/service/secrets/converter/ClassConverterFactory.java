@@ -36,6 +36,7 @@ import org.openmetadata.schema.services.connections.database.DeltaLakeConnection
 import org.openmetadata.schema.services.connections.database.DremioConnection;
 import org.openmetadata.schema.services.connections.database.GreenplumConnection;
 import org.openmetadata.schema.services.connections.database.HiveConnection;
+import org.openmetadata.schema.services.connections.database.MicrosoftAccessConnection;
 import org.openmetadata.schema.services.connections.database.MssqlConnection;
 import org.openmetadata.schema.services.connections.database.MysqlConnection;
 import org.openmetadata.schema.services.connections.database.PostgresConnection;
