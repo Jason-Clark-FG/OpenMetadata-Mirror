@@ -26,18 +26,14 @@ export const searchAndClickOnOption = async (
   filter: { key: string; label: string; value?: string },
   checkedAfterClick: boolean
 ) => {
-  let testId = (filter.value ?? '').toLowerCase();
+  const testId = (filter.value ?? '').toLowerCase();
   // Filtering for tiers is done on client side, so no API call will be triggered
-  if (filter.key !== 'tier.tagFQN') {
-    const searchRes = page.waitForResponse(
-      `/api/v1/search/aggregate?index=dataAsset&field=${filter.key}**`
-    );
+  const searchRes = page.waitForResponse(
+    `/api/v1/search/aggregate?index=dataAsset&field=${filter.key}**`
+  );
 
-    await page.fill('[data-testid="search-input"]', filter.value ?? '');
-    await searchRes;
-  } else {
-    testId = filter.value ?? '';
-  }
+  await page.fill('[data-testid="search-input"]', filter.value ?? '');
+  await searchRes;
 
   await page.getByTestId(testId).click();
 
@@ -67,10 +63,7 @@ export const selectNullOption = async (
                   ? [
                       {
                         term: {
-                          [filter.key]:
-                            filter.key === 'tier.tagFQN'
-                              ? filter.value
-                              : filter.value.toLowerCase(),
+                          [filter.key]: filter.value.toLowerCase(),
                         },
                       },
                     ]

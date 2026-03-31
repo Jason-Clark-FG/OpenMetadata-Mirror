@@ -2209,15 +2209,7 @@ export const checkExploreSearchFilter = async (
   entity?: EntityClass
 ) => {
   await sidebarClick(page, SidebarItem.EXPLORE);
-  if (filterKey === 'tier.tagFQN') {
-    const tierList = page.waitForResponse(
-      `/api/v1/search/aggregate?index=dataAsset&field=tier.tagFQN**`
-    );
-    await page.click(`[data-testid="search-dropdown-${filterLabel}"]`);
-    await tierList;
-  } else {
-    await page.click(`[data-testid="search-dropdown-${filterLabel}"]`);
-  }
+  await page.getByTestId(`search-dropdown-${filterLabel}`).click();
   await searchAndClickOnOption(
     page,
     {
@@ -2228,17 +2220,11 @@ export const checkExploreSearchFilter = async (
     true
   );
 
-  const rawFilterValue = (filterValue ?? '').replace(/ /g, '+').toLowerCase();
-
-  // Escape double quotes before encoding
-  const escapedValue = rawFilterValue.replace(/"/g, '\\"');
-
-  const filterValueForSearchURL =
-    filterKey === 'tier.tagFQN'
-      ? filterValue
-      : /["%]/.test(filterValue ?? '')
-      ? escapedValue
-      : rawFilterValue;
+  const rawFilterValue = (filterValue ?? '').replaceAll(' ', '+').toLowerCase();
+  const escapedValue = JSON.stringify(rawFilterValue).slice(1, -1);
+  const filterValueForSearchURL = /["%]/.test(filterValue ?? '')
+    ? escapedValue
+    : rawFilterValue;
 
   // Use a predicate to check the response URL contains the correct filter
   const queryRes = page.waitForResponse(
