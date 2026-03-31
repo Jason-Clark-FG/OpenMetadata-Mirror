@@ -11,33 +11,27 @@
  *  limitations under the License.
  */
 
-import {
-  Checkbox,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from '@mui/material';
+import { Table } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Selection } from 'react-aria-components';
 import Loader from '../../Loader/Loader';
 import { TableViewConfig } from '../shared/types';
-import { useTableRow } from './useTableRow';
+import { useCellRenderer } from './useCellRenderer';
 
-export const useDataTable = <T extends { id: string }>(
+export const useDataTable = <T extends { id: string; name?: string }>(
   config: TableViewConfig<T>
 ) => {
   const { t } = useTranslation();
-  const {
-    listing,
-    enableSelection = true,
-    entityLabelKey = 'Items',
-    customTableRow,
-  } = config;
+  const { listing, enableSelection = true, entityLabelKey = 'Items' } = config;
 
-  // Check if filters or search are active
+  const { renderCell } = useCellRenderer({
+    columns: listing.columns,
+    renderers: listing.renderers,
+    chipSize: 'large',
+  });
+
   const hasActiveSearch = listing.urlState?.searchQuery?.trim();
   const hasActiveFilters =
     listing.urlState?.filters &&
@@ -47,91 +41,87 @@ export const useDataTable = <T extends { id: string }>(
     );
   const hasActiveFiltersOrSearch = hasActiveSearch || hasActiveFilters;
 
-  const dataTable = useMemo(
-    () => (
-      <Table data-testid="table-view-container">
-        <TableHead>
-          <TableRow>
-            {enableSelection && (
-              <TableCell padding="checkbox">
-                <Checkbox
-                  checked={listing.isAllSelected}
-                  indeterminate={listing.isIndeterminate}
-                  size="medium"
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    listing.handleSelectAll(e.target.checked);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              </TableCell>
-            )}
-            {listing.columns.map((column) => (
-              <TableCell key={column.key}>{t(column.labelKey)}</TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {listing.loading ? (
-            <TableRow>
-              <TableCell
-                align="center"
-                colSpan={listing.columns.length + (enableSelection ? 1 : 0)}>
-                <Loader />
-              </TableCell>
-            </TableRow>
-          ) : isEmpty(listing.entities) && hasActiveFiltersOrSearch ? (
-            <TableRow>
-              <TableCell
-                align="center"
-                colSpan={listing.columns.length + (enableSelection ? 1 : 0)}>
-                {t('server.no-records-found')}
-              </TableCell>
-            </TableRow>
-          ) : (
-            listing.entities.map((entity) => {
-              if (customTableRow) {
-                const CustomTableRow = customTableRow;
-
-                return (
-                  <CustomTableRow
-                    entity={entity}
-                    isSelected={listing.isSelected(entity.id)}
-                    key={entity.id}
-                    onEntityClick={
-                      listing.actionHandlers.onEntityClick || (() => {})
-                    }
-                    onSelect={listing.handleSelect}
-                  />
-                );
-              }
-
-              // Use useTableRow hook instead of EntityTableRow component
-              const TableRowHook = () => {
-                const { tableRow } = useTableRow({
-                  entity,
-                  columns: listing.columns,
-                  renderers: listing.renderers,
-                  isSelected: listing.isSelected(entity.id),
-                  onSelect: listing.handleSelect,
-                  onEntityClick:
-                    listing.actionHandlers.onEntityClick || (() => {}),
-                  enableSelection,
-                });
-
-                return tableRow;
-              };
-
-              return <TableRowHook key={entity.id} />;
-            })
-          )}
-        </TableBody>
-      </Table>
-    ),
-    [listing, enableSelection, hasActiveFiltersOrSearch, customTableRow, t]
+  const selectedKeys: Selection = useMemo(
+    () => new Set(listing.selectedEntities),
+    [listing.selectedEntities]
   );
+
+  const dataTable = useMemo(() => {
+    const handleSelectionChange = (keys: Selection) => {
+      if (keys === 'all') {
+        listing.handleSelectAll(true);
+      } else {
+        const newKeys = new Set(keys as Set<string>);
+        const prevKeys = new Set(listing.selectedEntities);
+
+        for (const key of newKeys) {
+          if (!prevKeys.has(key as string)) {
+            listing.handleSelect(key as string, true);
+          }
+        }
+        for (const key of prevKeys) {
+          if (!newKeys.has(key)) {
+            listing.handleSelect(key, false);
+          }
+        }
+      }
+    };
+
+    if (listing.loading) {
+      return (
+        <div data-testid="table-view-container">
+          <Loader />
+        </div>
+      );
+    }
+
+    return (
+      <Table
+        aria-label={t(entityLabelKey)}
+        data-testid="table-view-container"
+        selectedKeys={selectedKeys}
+        selectionBehavior={enableSelection ? 'toggle' : undefined}
+        selectionMode={enableSelection ? 'multiple' : 'none'}
+        onSelectionChange={handleSelectionChange}>
+        <Table.Header columns={listing.columns}>
+          {(column) => (
+            <Table.Head id={column.key} key={column.key} label={t(column.labelKey)} />
+          )}
+        </Table.Header>
+        <Table.Body
+          items={listing.entities}
+          renderEmptyState={() =>
+            hasActiveFiltersOrSearch ? (
+              <span>{t('server.no-records-found')}</span>
+            ) : null
+          }>
+          {(entity) => (
+            <Table.Row
+              columns={listing.columns}
+              id={entity.id}
+              key={entity.id}
+              onAction={() =>
+                listing.actionHandlers.onEntityClick?.(entity)
+              }>
+              {(column) => (
+                <Table.Cell key={column.key}>
+                  {renderCell(entity, column)}
+                </Table.Cell>
+              )}
+            </Table.Row>
+          )}
+        </Table.Body>
+      </Table>
+    );
+  }, [
+    listing,
+    enableSelection,
+    hasActiveFiltersOrSearch,
+    selectedKeys,
+    renderCell,
+    entityLabelKey,
+    t,
+  ]);
 
   return {
     dataTable,

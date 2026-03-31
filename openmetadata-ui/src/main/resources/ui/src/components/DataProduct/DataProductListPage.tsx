@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Box, Paper, TableContainer, useTheme } from '@mui/material';
+import { Box, Card } from '@openmetadata/ui-core-components';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useSnackbar } from 'notistack';
@@ -39,7 +39,7 @@ import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { useCardView } from '../common/atoms/table/useCardView';
-import { useDataTable } from '../common/atoms/table/useDataTable';
+import EntityListingTable from '../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
@@ -47,21 +47,18 @@ import { useDataProductListingData } from './hooks/useDataProductListingData';
 
 const DataProductListPage = () => {
   const dataProductListing = useDataProductListingData();
-  const theme = useTheme();
   const { t } = useTranslation();
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { permissions } = usePermissionProvider();
   const [form] = useForm();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Use the simplified data product filters configuration
   const { quickFilters, defaultFilters } = useDataProductFilters({
     aggregations: dataProductListing.aggregations || undefined,
     parsedFilters: dataProductListing.parsedFilters,
     onFilterChange: dataProductListing.handleFilterChange,
   });
 
-  // Use the filter selection hook for displaying selected filters
   const { filterSelectionDisplay } = useFilterSelection({
     urlState: dataProductListing.urlState,
     filterConfigs: defaultFilters,
@@ -82,9 +79,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => {
-          // No-op: Drawer close and form reset handled by useFormDrawerWithRef
-        }}
+        onCancel={() => {}}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -110,14 +105,10 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {
-      // This is called by the drawer button, but actual submission
-      // happens via formRef.submit() which triggers form.onFinish
-    },
+    onSubmit: () => {},
     loading: isLoading,
   });
 
-  // Composable hooks for each UI component
   const { breadcrumbs } = useBreadcrumbs({
     items: [{ name: t('label.data-product-plural'), url: '/dataProduct' }],
   });
@@ -146,12 +137,6 @@ const DataProductListPage = () => {
   const { view, viewToggle } = useViewToggle();
   const { dataProductCardTemplate } = useDomainCardTemplates();
 
-  const { dataTable } = useDataTable({
-    listing: dataProductListing,
-    enableSelection: true,
-    entityLabelKey: 'label.data-product',
-  });
-
   const { cardView } = useCardView({
     listing: dataProductListing,
     cardTemplate: dataProductCardTemplate,
@@ -166,7 +151,6 @@ const DataProductListPage = () => {
     loading: dataProductListing.loading,
   });
 
-  // Map selected IDs to actual entities for the delete hook
   const selectedDataProductEntities = useMemo(
     () =>
       dataProductListing.entities.filter((entity) =>
@@ -187,7 +171,6 @@ const DataProductListPage = () => {
 
   const hasActiveSearchOrFilter = useCallback(() => {
     const { searchQuery, filters } = dataProductListing.urlState;
-
     const hasActiveFilters =
       filters &&
       Object.values(filters).some(
@@ -229,7 +212,15 @@ const DataProductListPage = () => {
     if (view === 'table') {
       return (
         <>
-          {dataTable}
+          <EntityListingTable
+            ariaLabel={t('label.data-product')}
+            entities={dataProductListing.entities}
+            loading={dataProductListing.loading}
+            selectedEntities={dataProductListing.selectedEntities}
+            onEntityClick={dataProductListing.actionHandlers.onEntityClick}
+            onSelect={dataProductListing.handleSelect}
+            onSelectAll={dataProductListing.handleSelectAll}
+          />
           {paginationControls}
         </>
       );
@@ -244,9 +235,10 @@ const DataProductListPage = () => {
   }, [
     dataProductListing.loading,
     dataProductListing.entities,
+    dataProductListing.selectedEntities,
+    dataProductListing.actionHandlers,
     hasActiveSearchOrFilter,
     view,
-    dataTable,
     cardView,
     paginationControls,
     openDrawer,
@@ -259,29 +251,26 @@ const DataProductListPage = () => {
       {breadcrumbs}
       {pageHeader}
 
-      <TableContainer component={Paper} sx={{ mb: 5 }}>
+      <Card style={{ marginBottom: 20 }} variant="elevated">
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            px: 6,
-            py: 4,
-            borderBottom: `1px solid`,
-            borderColor: theme.palette.allShades?.gray?.[200],
+          direction="col"
+          gap={4}
+          style={{
+            padding: '16px 24px',
+            borderBottom: '1px solid var(--color-border-secondary)',
           }}>
-          <Box sx={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+          <Box align="center" direction="row" gap={5}>
             {titleAndCount}
             {search}
             {quickFilters}
-            <Box ml="auto" />
+            <Box style={{ marginLeft: 'auto' }} />
             {viewToggle}
             {deleteIconButton}
           </Box>
           {filterSelectionDisplay}
         </Box>
         {content}
-      </TableContainer>
+      </Card>
       {deleteModal}
       {formDrawer}
     </>

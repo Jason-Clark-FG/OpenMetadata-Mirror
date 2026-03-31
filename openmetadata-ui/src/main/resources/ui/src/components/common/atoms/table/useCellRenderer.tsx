@@ -11,8 +11,7 @@
  *  limitations under the License.
  */
 
-import { AvatarGroup, Box, Typography, useTheme } from '@mui/material';
-import { Avatar } from '@openmetadata/ui-core-components';
+import { Avatar, Box, Typography } from '@openmetadata/ui-core-components';
 import { Globe01 } from '@untitledui/icons';
 import { ReactNode, useMemo } from 'react';
 import { EntityType } from '../../../../enums/entity.enum';
@@ -37,7 +36,6 @@ export const useCellRenderer = <
   props: UseCellRendererProps<T>
 ) => {
   const { renderers = {}, chipSize = 'large' } = props;
-  const theme = useTheme();
 
   const defaultRenderers: CellRenderer<T> = useMemo(
     () => ({
@@ -45,19 +43,11 @@ export const useCellRenderer = <
         const entityName = getEntityName(entity);
 
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box align="center" direction="row" gap={1}>
             <Avatar size="lg" {...getEntityAvatarProps(entity)} />
-            <Box>
-              <Typography
-                sx={{
-                  fontWeight: 500,
-                  color: 'text.primary',
-                  fontSize: '0.875rem',
-                  lineHeight: '20px',
-                }}>
-                {entityName}
-              </Typography>
-            </Box>
+            <Typography size="text-sm" weight="medium">
+              {entityName}
+            </Typography>
           </Box>
         );
       },
@@ -68,7 +58,7 @@ export const useCellRenderer = <
 
         if (!owners || owners.length === 0) {
           return (
-            <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+            <Typography size="text-sm">
               {EMPTY_VALUE_INDICATOR}
             </Typography>
           );
@@ -79,7 +69,7 @@ export const useCellRenderer = <
           const isTeam = owner.type === EntityType.TEAM;
 
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box align="center" direction="row" gap={1}>
               <ProfilePicture
                 avatarType="solid"
                 displayName={owner.displayName}
@@ -87,7 +77,7 @@ export const useCellRenderer = <
                 name={owner.name || ''}
                 size={16}
               />
-              <Typography sx={{ fontSize: '0.875rem' }}>
+              <Typography size="text-sm">
                 {owner.displayName || owner.name}
               </Typography>
             </Box>
@@ -95,31 +85,21 @@ export const useCellRenderer = <
         }
 
         return (
-          <Box sx={{ display: 'flex', alignItems: 'left' }}>
-            <AvatarGroup
-              max={5}
-              sx={{
-                '& .MuiAvatar-root': {
-                  width: 24,
-                  height: 24,
-                  fontSize: '0.75rem',
-                },
-              }}>
-              {owners.map((owner: EntityReference, index: number) => {
-                const isTeam = owner.type === EntityType.TEAM;
+          <Box align="center" direction="row">
+            {owners.slice(0, 5).map((owner: EntityReference, index: number) => {
+              const isTeam = owner.type === EntityType.TEAM;
 
-                return (
-                  <ProfilePicture
-                    avatarType="solid"
-                    displayName={owner.displayName}
-                    isTeam={isTeam}
-                    key={owner.id || index}
-                    name={owner.name || ''}
-                    size={24}
-                  />
-                );
-              })}
-            </AvatarGroup>
+              return (
+                <ProfilePicture
+                  avatarType="solid"
+                  displayName={owner.displayName}
+                  isTeam={isTeam}
+                  key={owner.id || index}
+                  name={owner.name || ''}
+                  size={24}
+                />
+              );
+            })}
           </Box>
         );
       },
@@ -130,7 +110,7 @@ export const useCellRenderer = <
 
         if (!tags || tags.length === 0) {
           return (
-            <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+            <Typography size="text-sm">
               {EMPTY_VALUE_INDICATOR}
             </Typography>
           );
@@ -144,7 +124,7 @@ export const useCellRenderer = <
           : (entity as Record<string, unknown>)[column?.key || ''];
 
         return (
-          <Typography sx={{ fontSize: '0.875rem' }}>
+          <Typography size="text-sm">
             {value || EMPTY_VALUE_INDICATOR}
           </Typography>
         );
@@ -155,7 +135,7 @@ export const useCellRenderer = <
         }
 
         return (
-          <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+          <Typography size="text-sm">
             {EMPTY_VALUE_INDICATOR}
           </Typography>
         );
@@ -167,7 +147,7 @@ export const useCellRenderer = <
 
         if (!domains || domains.length === 0) {
           return (
-            <Typography sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+            <Typography size="text-sm">
               {EMPTY_VALUE_INDICATOR}
             </Typography>
           );
@@ -176,19 +156,16 @@ export const useCellRenderer = <
         const domain = domains[0];
 
         return (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box align="center" direction="row" gap={1}>
             <Globe01 size={16} style={{ flexShrink: 0 }} />
-            <Typography
-              sx={{
-                fontSize: '0.875rem',
-              }}>
+            <Typography size="text-sm">
               {domain.displayName || domain.name}
             </Typography>
           </Box>
         );
       },
     }),
-    [renderers, theme, chipSize]
+    [renderers, chipSize]
   );
 
   const renderCell = useMemo(
