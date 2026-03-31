@@ -13,6 +13,7 @@
 Redshift E2E tests
 """
 from typing import List, Tuple
+from unittest import skip
 
 from sqlalchemy import text
 
@@ -254,6 +255,10 @@ class RedshiftCliTest(CliCommonDB.TestSuite, SQACommonMethods):
             UPDATE e2e_cli_tests.dbt_jaffle.persons SET full_name = 'Bruce Wayne' WHERE person_id = 3
             """,
         ]
+
+    @skip("Skipped due to Redshift instance issue")
+    def test_profiler_with_time_partition(self) -> None:
+        pass
 
     def get_system_profile_cases(self) -> List[Tuple[str, List[SystemProfile]]]:
         return [
