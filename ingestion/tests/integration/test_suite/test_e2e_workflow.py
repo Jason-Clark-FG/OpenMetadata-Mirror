@@ -143,6 +143,7 @@ class TestE2EWorkflow(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """set up class"""
+        cls.addClassCleanup(cls.tearDownClass)
         service: DatabaseService = cls.metadata.create_or_update(
             CreateDatabaseServiceRequest(
                 name="test_suite_service_test",

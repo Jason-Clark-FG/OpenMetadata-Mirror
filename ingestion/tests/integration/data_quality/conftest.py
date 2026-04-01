@@ -35,7 +35,7 @@ def mysql_container():
         yield container
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="package")
 def ingest_mysql_service(mysql_container: MySqlContainer, metadata: OpenMetadata):
     workflow_config = {
         "source": {
@@ -100,7 +100,7 @@ def postgres_service(db_service):
     return db_service
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def ingest_postgres_metadata(
     postgres_service, metadata: OpenMetadata, sink_config, workflow_config, run_workflow
 ):

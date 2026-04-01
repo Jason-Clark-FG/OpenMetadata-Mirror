@@ -201,9 +201,12 @@ def create_data(engine, session):
 
 @pytest.fixture
 def ingest(service_name, create_data, metadata, engine, session):
-    ingestion_config["source"]["serviceName"] = service_name
+    config = {
+        **ingestion_config,
+        "source": {**ingestion_config["source"], "serviceName": service_name},
+    }
 
-    ingestion_workflow = MetadataWorkflow.create(ingestion_config)
+    ingestion_workflow = MetadataWorkflow.create(config)
     ingestion_workflow.execute()
     ingestion_workflow.raise_from_status()
     ingestion_workflow.print_status()
