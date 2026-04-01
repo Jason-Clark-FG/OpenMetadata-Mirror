@@ -105,6 +105,23 @@ public class OpenSearchVectorService implements VectorIndexService {
         semanticWeight);
   }
 
+  public boolean isHybridSearchPipelineAvailable() {
+    try {
+      OpenSearchGenericClient genericClient = client.generic();
+      var request =
+          Requests.builder()
+              .endpoint("/_search/pipeline/" + HYBRID_PIPELINE_NAME)
+              .method("GET")
+              .build();
+      try (var response = genericClient.execute(request)) {
+        return response.getStatus() < 400;
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to check hybrid search pipeline: {}", e.getMessage());
+      return false;
+    }
+  }
+
   @Override
   public Map<String, Object> generateEmbeddingFields(EntityInterface entity) {
     return VectorDocBuilder.buildEmbeddingFields(entity, embeddingClient);

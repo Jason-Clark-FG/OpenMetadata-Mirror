@@ -484,6 +484,13 @@ public class SearchRepository {
     }
   }
 
+  public boolean isHybridSearchPipelineAvailable() {
+    if (vectorIndexService instanceof OpenSearchVectorService openSearchVectorService) {
+      return openSearchVectorService.isHybridSearchPipelineAvailable();
+    }
+    return false;
+  }
+
   public IndexMapping getIndexMapping(String entityType) {
     return entityIndexMap.get(entityType);
   }

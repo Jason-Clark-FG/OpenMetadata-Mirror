@@ -1,6 +1,7 @@
 package org.openmetadata.service.search.vector;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -472,6 +473,36 @@ class OpenSearchVectorServiceTest {
     assertTrue(
         body.contains("\"weights\":[0.3,0.7]"),
         "Pipeline body should contain custom weights [0.3,0.7]");
+  }
+
+  @Test
+  void testIsHybridSearchPipelineAvailableReturnsTrue() throws IOException {
+    mockOpenSearchResponse("{\"hybrid-rrf\":{}}");
+
+    assertTrue(
+        vectorService.isHybridSearchPipelineAvailable(),
+        "Pipeline should be available when OpenSearch returns 200");
+  }
+
+  @Test
+  void testIsHybridSearchPipelineAvailableReturnsFalseOn404() throws IOException {
+    Response mockResponse = mock(Response.class);
+    when(mockResponse.getStatus()).thenReturn(404);
+    when(mockResponse.getBody()).thenReturn(Optional.empty());
+    when(mockGenericClient.execute(any())).thenReturn(mockResponse);
+
+    assertFalse(
+        vectorService.isHybridSearchPipelineAvailable(),
+        "Pipeline should not be available when OpenSearch returns 404");
+  }
+
+  @Test
+  void testIsHybridSearchPipelineAvailableReturnsFalseOnException() throws IOException {
+    when(mockGenericClient.execute(any())).thenThrow(new IOException("Connection refused"));
+
+    assertFalse(
+        vectorService.isHybridSearchPipelineAvailable(),
+        "Pipeline should not be available when OpenSearch throws exception");
   }
 
   private void mockOpenSearchResponse(String responseJson) throws IOException {

@@ -576,15 +576,24 @@ public class SystemRepository {
     String configMessage = getEmbeddingConfigurationMessage(applicationConfig);
 
     if (searchRepository.getVectorIndexService() == null) {
-      return embeddingsValidation
-          .withDescription(description)
-          .withMessage("Embeddings are not configured properly. " + configMessage)
-          .withPassed(false);
+      return retryInitAndReportError(
+          searchRepository, embeddingsValidation, description, configMessage);
     }
 
     try {
-      return validateEmbeddingGeneration(
-          searchRepository.getEmbeddingClient(), embeddingsValidation, description, configMessage);
+      StepValidation embeddingResult =
+          validateEmbeddingGeneration(
+              searchRepository.getEmbeddingClient(),
+              embeddingsValidation,
+              description,
+              configMessage);
+
+      if (Boolean.FALSE.equals(embeddingResult.getPassed())) {
+        return embeddingResult;
+      }
+
+      return validateHybridSearchPipeline(
+          searchRepository, embeddingResult, description, configMessage);
     } catch (Exception e) {
       LOG.error("Error during embedding generation validation", e);
       return embeddingsValidation
@@ -592,6 +601,67 @@ public class SystemRepository {
           .withMessage("Embedding generation failed: " + e.getMessage() + ". " + configMessage)
           .withPassed(false);
     }
+  }
+
+  private StepValidation retryInitAndReportError(
+      SearchRepository searchRepository,
+      StepValidation embeddingsValidation,
+      String description,
+      String configMessage) {
+    try {
+      searchRepository.initializeVectorSearchService();
+    } catch (Exception e) {
+      LOG.error("Vector search service initialization failed during validation", e);
+    }
+
+    if (searchRepository.getVectorIndexService() != null) {
+      return validateHybridSearchPipeline(
+          searchRepository,
+          embeddingsValidation.withDescription(description).withPassed(true),
+          description,
+          configMessage);
+    }
+
+    if (searchRepository.getEmbeddingClient() == null) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              "Embedding client could not be initialized. "
+                  + "Check the embedding provider configuration. "
+                  + configMessage)
+          .withPassed(false);
+    }
+
+    return embeddingsValidation
+        .withDescription(description)
+        .withMessage(
+            "Vector search service could not be initialized. "
+                + "The embedding client is configured but the OpenSearch vector service failed to start. "
+                + configMessage)
+        .withPassed(false);
+  }
+
+  private StepValidation validateHybridSearchPipeline(
+      SearchRepository searchRepository,
+      StepValidation embeddingsValidation,
+      String description,
+      String configMessage) {
+    if (!searchRepository.isHybridSearchPipelineAvailable()) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              "Embeddings are working but the hybrid search pipeline (hybrid-rrf) "
+                  + "is not available. Run a reindex to create it. "
+                  + configMessage)
+          .withPassed(false);
+    }
+
+    return embeddingsValidation
+        .withDescription(description)
+        .withMessage(
+            String.format(
+                "Embeddings and hybrid search pipeline are working correctly. %s", configMessage))
+        .withPassed(true);
   }
 
   private StepValidation validateEmbeddingGeneration(
