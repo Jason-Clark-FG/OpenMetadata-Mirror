@@ -1,6 +1,6 @@
 package org.openmetadata.it.tests;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -261,17 +261,20 @@ public class QueryVisibilityPolicyIT {
     createPolicy.setRules(List.of(denyCertifiedRule));
 
     Policy policy = adminClient.policies().create(createPolicy);
+    assertNotNull(policy, "Policy should be created");
     try {
       CreateRole createRole = new CreateRole();
       createRole.setName(p + "_certRole");
       createRole.setPolicies(List.of(policy.getFullyQualifiedName()));
       Role role = adminClient.roles().create(createRole);
+      assertNotNull(role, "Role should be created");
       try {
         CreateTeam createTeam = new CreateTeam();
         createTeam.setName(p + "_certTeam");
         createTeam.setTeamType(CreateTeam.TeamType.GROUP);
         createTeam.setDefaultRoles(List.of(role.getId()));
         Team team = adminClient.teams().create(createTeam);
+        assertNotNull(team, "Team should be created");
         try {
           String userEmail = p + "_certuser@test.openmetadata.org";
           CreateUser createUser = new CreateUser();
@@ -279,10 +282,13 @@ public class QueryVisibilityPolicyIT {
           createUser.setEmail(userEmail);
           createUser.setTeams(List.of(team.getId()));
           User testUser = adminClient.users().create(createUser);
+          assertNotNull(testUser, "User should be created");
           try {
             DatabaseService dbService = DatabaseServiceTestFactory.createPostgres(ns);
+            assertNotNull(dbService, "Database service should be created");
             try {
               DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, dbService);
+              assertNotNull(schema, "Database schema should be created");
               Column column = new Column().withName("id").withDataType(ColumnDataType.INT);
 
               Table tableNoCert =
@@ -298,10 +304,12 @@ public class QueryVisibilityPolicyIT {
                 // Before the fix, this threw NPE (500) in matchAnyCertification
                 // when the entity had no certification. After the fix, the condition
                 // evaluates to false, the deny rule does not fire, and the GET succeeds.
-                assertDoesNotThrow(
-                    () -> testUserClient.tables().get(tableNoCert.getId().toString()),
-                    "GET table should not throw when entity has no certification "
-                        + "and matchAnyCertification policy is evaluated");
+                Table fetched = testUserClient.tables().get(tableNoCert.getId().toString());
+                assertNotNull(fetched, "GET should return the table, not fail with NPE");
+                assertEquals(
+                    tableNoCert.getId(),
+                    fetched.getId(),
+                    "Returned table should match the requested table");
               } finally {
                 adminClient.tables().delete(tableNoCert.getId());
               }
