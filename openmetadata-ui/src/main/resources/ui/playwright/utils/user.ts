@@ -707,7 +707,7 @@ export const addUser = async (
     personas?: string[];
   }
 ) => {
-  waitForAllLoadersToDisappear(page);
+  await waitForAllLoadersToDisappear(page);
   await page.click('[data-testid="add-user"]');
 
   await page.waitForResponse('/api/v1/roles?default=false&limit=100&fields=');
