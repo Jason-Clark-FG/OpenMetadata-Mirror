@@ -308,11 +308,11 @@ export default defineConfig(({ mode }) => {
             'vendor-analytics': ['analytics', 'use-analytics'],
           }),
           assetFileNames: (assetInfo) => {
-            const fileName = assetInfo.names || '';
-            
-            const ext = fileName.at(-1) ?? '';
+            const names = assetInfo.names ?? [];
+            const fileName = names.length > 0 ? names[0] : '';
+            const ext = fileName ? path.extname(fileName).toLowerCase() : '';
 
-            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(ext)) {
               return `images/[name]-[hash][extname]`;
             }
 
