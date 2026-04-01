@@ -38,47 +38,65 @@ export const useChangeSummary = (
   const [totalEntries, setTotalEntries] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
-  const fetchData = useCallback(async () => {
-    if (!entityType || !entityId) {
-      return;
-    }
+  const refetch = useCallback(() => {
+    setRefetchCount((c) => c + 1);
+  }, []);
 
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const response: ChangeSummaryResponse = await getChangeSummary(
-        entityType,
-        entityId,
-        params
-      );
-      setChangeSummary(response.changeSummary ?? {});
-      setTotalEntries(response.totalEntries ?? 0);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error(String(err)));
-      setChangeSummary({});
-      setTotalEntries(0);
-    } finally {
-      setIsLoading(false);
-    }
+    const fetchData = async () => {
+      if (!entityType || !entityId) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response: ChangeSummaryResponse = await getChangeSummary(
+          entityType,
+          entityId,
+          params
+        );
+        if (!cancelled) {
+          setChangeSummary(response.changeSummary ?? {});
+          setTotalEntries(response.totalEntries ?? 0);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setChangeSummary({});
+          setTotalEntries(0);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     entityType,
     entityId,
     params?.fieldPrefix,
     params?.limit,
     params?.offset,
+    refetchCount,
   ]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   return {
     changeSummary,
     totalEntries,
     isLoading,
     error,
-    refetch: fetchData,
+    refetch,
   };
 };
