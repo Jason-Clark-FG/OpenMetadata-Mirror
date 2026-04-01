@@ -6302,6 +6302,7 @@ public class DataContractResourceIT extends BaseEntityIT<DataContract, CreateDat
         validation.getConstraintErrors() == null || validation.getConstraintErrors().isEmpty(),
         "Expected constraintErrors to be null or empty");
   }
+
   @Test
   void testValidateContractWithEmptySemanticsRuleDoesNotThrowNPE(TestNamespace ns) {
     Table table = createTestTable(ns);
