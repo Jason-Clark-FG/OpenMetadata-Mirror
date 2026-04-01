@@ -560,7 +560,7 @@ public class SystemRepository {
   public void addExtraValidations(
       OpenMetadataApplicationConfig applicationConfig, ValidationResponse validation) {}
 
-  private StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
+  StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
     StepValidation embeddingsValidation = new StepValidation();
     String description = "Embeddings are used to allow Semantic Search";
     SearchRepository searchRepository = Entity.getSearchRepository();
