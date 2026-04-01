@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
@@ -105,7 +106,7 @@ public class OpenSearchVectorService implements VectorIndexService {
         semanticWeight);
   }
 
-  public boolean isHybridSearchPipelineAvailable() {
+  public Optional<String> checkHybridSearchPipeline() {
     try {
       OpenSearchGenericClient genericClient = client.generic();
       var request =
@@ -114,11 +115,26 @@ public class OpenSearchVectorService implements VectorIndexService {
               .method("GET")
               .build();
       try (var response = genericClient.execute(request)) {
-        return response.getStatus() < 400;
+        int status = response.getStatus();
+        if (status < 400) {
+          return Optional.empty();
+        }
+        if (status == 404) {
+          return Optional.of(
+              "Hybrid search pipeline '"
+                  + HYBRID_PIPELINE_NAME
+                  + "' not found. Run a reindex to create it.");
+        }
+        return Optional.of(
+            "Unexpected status "
+                + status
+                + " when checking hybrid search pipeline '"
+                + HYBRID_PIPELINE_NAME
+                + "'.");
       }
     } catch (Exception e) {
-      LOG.warn("Failed to check hybrid search pipeline: {}", e.getMessage());
-      return false;
+      LOG.error("Failed to check hybrid search pipeline '{}'", HYBRID_PIPELINE_NAME, e);
+      return Optional.of("Failed to check hybrid search pipeline: " + e.getMessage());
     }
   }
 

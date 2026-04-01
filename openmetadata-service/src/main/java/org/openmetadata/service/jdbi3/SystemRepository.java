@@ -608,25 +608,43 @@ public class SystemRepository {
       StepValidation embeddingsValidation,
       String description,
       String configMessage) {
+    String initError = null;
     try {
       searchRepository.initializeVectorSearchService();
     } catch (Exception e) {
       LOG.error("Vector search service initialization failed during validation", e);
+      initError = e.getMessage();
     }
 
     if (searchRepository.getVectorIndexService() != null) {
-      return validateHybridSearchPipeline(
-          searchRepository,
-          embeddingsValidation.withDescription(description).withPassed(true),
-          description,
-          configMessage);
+      try {
+        StepValidation embeddingResult =
+            validateEmbeddingGeneration(
+                searchRepository.getEmbeddingClient(),
+                embeddingsValidation,
+                description,
+                configMessage);
+        if (Boolean.FALSE.equals(embeddingResult.getPassed())) {
+          return embeddingResult;
+        }
+        return validateHybridSearchPipeline(
+            searchRepository, embeddingResult, description, configMessage);
+      } catch (Exception e) {
+        LOG.error("Error during embedding generation validation after retry", e);
+        return embeddingsValidation
+            .withDescription(description)
+            .withMessage("Embedding generation failed: " + e.getMessage() + ". " + configMessage)
+            .withPassed(false);
+      }
     }
 
+    String errorSuffix = initError != null ? " Error: " + initError + ". " : " ";
     if (searchRepository.getEmbeddingClient() == null) {
       return embeddingsValidation
           .withDescription(description)
           .withMessage(
-              "Embedding client could not be initialized. "
+              "Embedding client could not be initialized."
+                  + errorSuffix
                   + "Check the embedding provider configuration. "
                   + configMessage)
           .withPassed(false);
@@ -636,7 +654,8 @@ public class SystemRepository {
         .withDescription(description)
         .withMessage(
             "Vector search service could not be initialized. "
-                + "The embedding client is configured but the OpenSearch vector service failed to start. "
+                + "The embedding client is configured but the OpenSearch vector service failed to start."
+                + errorSuffix
                 + configMessage)
         .withPassed(false);
   }
@@ -646,12 +665,14 @@ public class SystemRepository {
       StepValidation embeddingsValidation,
       String description,
       String configMessage) {
-    if (!searchRepository.isHybridSearchPipelineAvailable()) {
+    Optional<String> pipelineError = searchRepository.checkHybridSearchPipeline();
+    if (pipelineError.isPresent()) {
       return embeddingsValidation
           .withDescription(description)
           .withMessage(
-              "Embeddings are working but the hybrid search pipeline (hybrid-rrf) "
-                  + "is not available. Run a reindex to create it. "
+              "Embeddings are working but the hybrid search pipeline check failed: "
+                  + pipelineError.get()
+                  + " "
                   + configMessage)
           .withPassed(false);
     }

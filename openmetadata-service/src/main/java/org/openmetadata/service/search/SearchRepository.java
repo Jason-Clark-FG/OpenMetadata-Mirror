@@ -78,6 +78,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -484,11 +485,11 @@ public class SearchRepository {
     }
   }
 
-  public boolean isHybridSearchPipelineAvailable() {
+  public Optional<String> checkHybridSearchPipeline() {
     if (vectorIndexService instanceof OpenSearchVectorService openSearchVectorService) {
-      return openSearchVectorService.isHybridSearchPipelineAvailable();
+      return openSearchVectorService.checkHybridSearchPipeline();
     }
-    return false;
+    return Optional.empty();
   }
 
   public IndexMapping getIndexMapping(String entityType) {
