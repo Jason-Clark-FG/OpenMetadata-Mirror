@@ -190,37 +190,32 @@ test.describe('Search Export', () => {
       }
     });
 
-    await test.step(
-      'Simulate WebSocket progress and completion',
-      async () => {
-        const { getWebSocketMock } = await import(
-          '../../utils/websocket'
-        );
-        const wsMock = getWebSocketMock();
+    await test.step('Simulate WebSocket progress and completion', async () => {
+      const { getWebSocketMock } = await import('../../utils/websocket');
+      const wsMock = getWebSocketMock();
 
-        // Send progress event
-        wsMock.emit('csvExportChannel', {
-          jobId: 'test-job-123',
-          status: 'IN_PROGRESS',
-          progress: 50,
-          total: 100,
-          message: 'Exporting 50 of 100 items',
-          data: '',
-          error: null,
-        });
+      // Send progress event
+      wsMock.emit('csvExportChannel', {
+        jobId: 'test-job-123',
+        status: 'IN_PROGRESS',
+        progress: 50,
+        total: 100,
+        message: 'Exporting 50 of 100 items',
+        data: '',
+        error: null,
+      });
 
-        // Send completion event with CSV data
-        wsMock.emit('csvExportChannel', {
-          jobId: 'test-job-123',
-          status: 'COMPLETED',
-          data: 'Entity Type,Service Name\ntable,mysql',
-          error: null,
-          progress: 100,
-          total: 100,
-          message: 'Export completed',
-        });
-      }
-    );
+      // Send completion event with CSV data
+      wsMock.emit('csvExportChannel', {
+        jobId: 'test-job-123',
+        status: 'COMPLETED',
+        data: 'Entity Type,Service Name\ntable,mysql',
+        error: null,
+        progress: 100,
+        total: 100,
+        message: 'Export completed',
+      });
+    });
 
     cleanupWebSocketMock();
   });
