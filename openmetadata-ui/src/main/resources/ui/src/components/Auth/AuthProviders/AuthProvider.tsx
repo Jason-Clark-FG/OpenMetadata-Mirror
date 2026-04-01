@@ -78,12 +78,14 @@ import { showErrorToast, showInfoToast } from '../../../utils/ToastUtils';
 import { checkIfUpdateRequired } from '../../../utils/UserDataUtils';
 import { resetWebAnalyticSession } from '../../../utils/WebAnalyticsUtils';
 import Loader from '../../common/Loader/Loader';
-import Auth0Authenticator from '../AppAuthenticators/Auth0Authenticator';
-import BasicAuthAuthenticator from '../AppAuthenticators/BasicAuthAuthenticator';
-import { GenericAuthenticator } from '../AppAuthenticators/GenericAuthenticator';
-import MsalAuthenticator from '../AppAuthenticators/MsalAuthenticator';
-import OidcAuthenticator from '../AppAuthenticators/OidcAuthenticator';
-import OktaAuthenticator from '../AppAuthenticators/OktaAuthenticator';
+import {
+  LazyAuth0Authenticator,
+  LazyBasicAuthAuthenticator,
+  LazyGenericAuthenticator,
+  LazyMsalAuthenticator,
+  LazyOidcAuthenticator,
+  LazyOktaAuthenticator,
+} from '../AppAuthenticators/LazyAuthenticators';
 import { AuthenticatorRef, OidcUser } from './AuthProvider.interface';
 import BasicAuthProvider from './BasicAuthProvider';
 import OktaAuthProvider from './OktaAuthProvider';
@@ -609,7 +611,6 @@ export const AuthProvider = ({
   };
 
   const getProtectedApp = () => {
-    // Show loader if application is loading or authenticating
     const childElement =
       isApplicationLoading || isAuthenticating ? (
         <Loader fullScreen />
@@ -617,15 +618,14 @@ export const AuthProvider = ({
         children
       );
 
-    // Handling for SAML moved to GenericAuthenticator
     if (
       clientType === ClientType.Confidential ||
       authConfig?.provider === AuthProviderEnum.Saml
     ) {
       return (
-        <GenericAuthenticator ref={authenticatorRef}>
+        <LazyGenericAuthenticator ref={authenticatorRef}>
           {childElement}
-        </GenericAuthenticator>
+        </LazyGenericAuthenticator>
       );
     }
     switch (authConfig?.provider) {
@@ -633,9 +633,9 @@ export const AuthProvider = ({
       case AuthProviderEnum.Basic: {
         return (
           <BasicAuthProvider>
-            <BasicAuthAuthenticator ref={authenticatorRef}>
+            <LazyBasicAuthAuthenticator ref={authenticatorRef}>
               {childElement}
-            </BasicAuthAuthenticator>
+            </LazyBasicAuthAuthenticator>
           </BasicAuthProvider>
         );
       }
@@ -647,18 +647,18 @@ export const AuthProvider = ({
             clientId={authConfig.clientId?.toString() ?? ''}
             domain={authConfig.authority?.toString() ?? ''}
             redirectUri={authConfig.callbackUrl?.toString()}>
-            <Auth0Authenticator ref={authenticatorRef}>
+            <LazyAuth0Authenticator ref={authenticatorRef}>
               {childElement}
-            </Auth0Authenticator>
+            </LazyAuth0Authenticator>
           </Auth0Provider>
         );
       }
       case AuthProviderEnum.Okta: {
         return (
           <OktaAuthProvider>
-            <OktaAuthenticator ref={authenticatorRef}>
+            <LazyOktaAuthenticator ref={authenticatorRef}>
               {childElement}
-            </OktaAuthenticator>
+            </LazyOktaAuthenticator>
           </OktaAuthProvider>
         );
       }
@@ -666,20 +666,20 @@ export const AuthProvider = ({
       case AuthProviderEnum.CustomOidc:
       case AuthProviderEnum.AwsCognito: {
         return (
-          <OidcAuthenticator
+          <LazyOidcAuthenticator
             childComponentType={childComponentType}
             ref={authenticatorRef}
             userConfig={userConfig}>
             {childElement}
-          </OidcAuthenticator>
+          </LazyOidcAuthenticator>
         );
       }
       case AuthProviderEnum.Azure: {
         return msalInstance ? (
           <MsalProvider instance={msalInstance}>
-            <MsalAuthenticator ref={authenticatorRef}>
+            <LazyMsalAuthenticator ref={authenticatorRef}>
               {childElement}
-            </MsalAuthenticator>
+            </LazyMsalAuthenticator>
           </MsalProvider>
         ) : (
           <Loader fullScreen />

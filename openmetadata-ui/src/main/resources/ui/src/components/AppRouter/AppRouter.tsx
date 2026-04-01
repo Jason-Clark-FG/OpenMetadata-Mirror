@@ -26,7 +26,14 @@ import { useApplicationsProvider } from '../Settings/Applications/ApplicationsPr
 import { RoutePosition } from '../Settings/Applications/plugins/AppPlugin';
 import withSuspenseFallback from './withSuspenseFallback';
 
-// Lazy-load the entire authenticated shell so login page users never download it
+const AuthenticatedApp = withSuspenseFallback(
+  lazy(() => import('./AuthenticatedApp'))
+);
+
+const UnauthenticatedApp = withSuspenseFallback(
+  lazy(() => import('./UnauthenticatedApp'))
+);
+
 const AppContainer = withSuspenseFallback(
   lazy(() => import('../AppContainer/AppContainer'))
 );
@@ -125,47 +132,65 @@ const AppRouter = () => {
     return <Loader fullScreen />;
   }
 
+  if (isAuthenticated) {
+    return (
+      <AuthenticatedApp>
+        <Routes>
+          <Route element={<PageNotFound />} path={ROUTES.NOT_FOUND} />
+          <Route element={<LogoutPage />} path={ROUTES.LOGOUT} />
+          <Route
+            element={<AccessNotAllowedPage />}
+            path={ROUTES.UNAUTHORISED}
+          />
+          <Route
+            element={
+              isEmpty(currentUser) ? (
+                <SignUpPage />
+              ) : (
+                <Navigate replace to={ROUTES.HOME} />
+              )
+            }
+            path={ROUTES.SIGNUP}
+          />
+          <Route element={<SamlCallback />} path={ROUTES.AUTH_CALLBACK} />
+
+          {plugins?.flatMap((plugin) => {
+            const routes = plugin.getRoutes?.() || [];
+            const appRoutes = routes.filter(
+              (route) => route.position === RoutePosition.APP
+            );
+
+            return appRoutes.map((route, idx) => (
+              <Route key={`${plugin.name}-app-${idx}`} {...route} />
+            ));
+          })}
+
+          <Route element={<AppContainer />} path="*" />
+        </Routes>
+      </AuthenticatedApp>
+    );
+  }
+
   return (
-    <Routes>
-      <Route element={<PageNotFound />} path={ROUTES.NOT_FOUND} />
-      <Route element={<LogoutPage />} path={ROUTES.LOGOUT} />
-      <Route element={<AccessNotAllowedPage />} path={ROUTES.UNAUTHORISED} />
-      <Route
-        element={
-          isEmpty(currentUser) ? (
-            <SignUpPage />
-          ) : (
-            <Navigate replace to={ROUTES.HOME} />
-          )
-        }
-        path={ROUTES.SIGNUP}
-      />
-      {/* When authenticating from an SSO provider page (e.g., SAML Apps), if the user is already logged in,
-       * the callbacks should be available. This ensures consistent behavior across different authentication scenarios.
-       */}
-      <Route element={<SamlCallback />} path={ROUTES.AUTH_CALLBACK} />
-
-      {/* Render APP position plugin routes (they handle their own layouts) */}
-      {isAuthenticated &&
-        plugins?.flatMap((plugin) => {
-          const routes = plugin.getRoutes?.() || [];
-          // Filter routes with APP position
-          const appRoutes = routes.filter(
-            (route) => route.position === RoutePosition.APP
-          );
-
-          return appRoutes.map((route, idx) => (
-            <Route key={`${plugin.name}-app-${idx}`} {...route} />
-          ));
-        })}
-
-      {/* Default authenticated and unauthenticated routes */}
-      {isAuthenticated ? (
-        <Route element={<AppContainer />} path="*" />
-      ) : (
+    <UnauthenticatedApp>
+      <Routes>
+        <Route element={<PageNotFound />} path={ROUTES.NOT_FOUND} />
+        <Route element={<LogoutPage />} path={ROUTES.LOGOUT} />
+        <Route element={<AccessNotAllowedPage />} path={ROUTES.UNAUTHORISED} />
+        <Route
+          element={
+            isEmpty(currentUser) ? (
+              <SignUpPage />
+            ) : (
+              <Navigate replace to={ROUTES.HOME} />
+            )
+          }
+          path={ROUTES.SIGNUP}
+        />
+        <Route element={<SamlCallback />} path={ROUTES.AUTH_CALLBACK} />
         <Route element={<UnAuthenticatedAppRouter />} path="*" />
-      )}
-    </Routes>
+      </Routes>
+    </UnauthenticatedApp>
   );
 };
 
