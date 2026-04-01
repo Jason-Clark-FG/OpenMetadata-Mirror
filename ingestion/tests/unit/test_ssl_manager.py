@@ -212,6 +212,135 @@ class CassandraSourceSSLTest(TestCase):
         )
 
 
+class PostgresSSLManagerTest(TestCase):
+    """
+    Tests for PostgreSQL SSL Manager functionality, including mutual TLS (client cert auth)
+    """
+
+    def test_check_ssl_and_init_with_ca_only(self):
+        from metadata.generated.schema.entity.services.connections.database.postgresConnection import (
+            PostgresConnection,
+        )
+        from metadata.generated.schema.security.ssl.verifySSLConfig import SslMode
+        from metadata.utils.ssl_manager import check_ssl_and_init
+
+        connection = PostgresConnection(
+            username="user",
+            hostPort="localhost:5432",
+            database="testdb",
+            sslMode=SslMode.verify_ca,
+            sslConfig={"caCertificate": "caCertificateData"},
+        )
+
+        ssl_manager = check_ssl_and_init(connection)
+
+        assert ssl_manager is not None
+        assert ssl_manager.ca_file_path is not None
+        assert ssl_manager.cert_file_path is None
+        assert ssl_manager.key_file_path is None
+
+        ssl_manager.cleanup_temp_files()
+
+    def test_check_ssl_and_init_with_client_certs(self):
+        from metadata.generated.schema.entity.services.connections.database.postgresConnection import (
+            PostgresConnection,
+        )
+        from metadata.generated.schema.security.ssl.verifySSLConfig import SslMode
+        from metadata.utils.ssl_manager import check_ssl_and_init
+
+        connection = PostgresConnection(
+            username="user",
+            hostPort="localhost:5432",
+            database="testdb",
+            sslMode=SslMode.verify_ca,
+            sslConfig={
+                "caCertificate": "caCertificateData",
+                "sslCertificate": "clientCertData",
+                "sslKey": "clientKeyData",
+            },
+        )
+
+        ssl_manager = check_ssl_and_init(connection)
+
+        assert ssl_manager is not None
+        assert ssl_manager.ca_file_path is not None
+        assert ssl_manager.cert_file_path is not None
+        assert ssl_manager.key_file_path is not None
+
+        ssl_manager.cleanup_temp_files()
+
+    def test_setup_ssl_sets_sslcert_and_sslkey(self):
+        from metadata.generated.schema.entity.services.connections.database.postgresConnection import (
+            PostgresConnection,
+        )
+        from metadata.generated.schema.security.ssl.verifySSLConfig import SslMode
+        from metadata.utils.ssl_manager import check_ssl_and_init
+
+        connection = PostgresConnection(
+            username="user",
+            hostPort="localhost:5432",
+            database="testdb",
+            sslMode=SslMode.verify_ca,
+            sslConfig={
+                "caCertificate": "caCertificateData",
+                "sslCertificate": "clientCertData",
+                "sslKey": "clientKeyData",
+            },
+        )
+
+        ssl_manager = check_ssl_and_init(connection)
+        updated = ssl_manager.setup_ssl(connection)
+
+        assert updated.connectionArguments.root["sslmode"] == "verify-ca"
+        assert updated.connectionArguments.root["sslrootcert"] is not None
+        assert updated.connectionArguments.root["sslcert"] is not None
+        assert updated.connectionArguments.root["sslkey"] is not None
+
+        ssl_manager.cleanup_temp_files()
+
+    def test_setup_ssl_ca_only_no_client_cert_keys(self):
+        from metadata.generated.schema.entity.services.connections.database.postgresConnection import (
+            PostgresConnection,
+        )
+        from metadata.generated.schema.security.ssl.verifySSLConfig import SslMode
+        from metadata.utils.ssl_manager import check_ssl_and_init
+
+        connection = PostgresConnection(
+            username="user",
+            hostPort="localhost:5432",
+            database="testdb",
+            sslMode=SslMode.verify_ca,
+            sslConfig={"caCertificate": "caCertificateData"},
+        )
+
+        ssl_manager = check_ssl_and_init(connection)
+        updated = ssl_manager.setup_ssl(connection)
+
+        assert updated.connectionArguments.root["sslmode"] == "verify-ca"
+        assert updated.connectionArguments.root["sslrootcert"] is not None
+        assert "sslcert" not in updated.connectionArguments.root
+        assert "sslkey" not in updated.connectionArguments.root
+
+        ssl_manager.cleanup_temp_files()
+
+    def test_create_temp_file_normalizes_escaped_newlines(self):
+        ssl_manager = SSLManager()
+        escaped = SecretStr(
+            "-----BEGIN CERTIFICATE-----\\nMIIBtest\\n-----END CERTIFICATE-----"
+        )
+        temp_file = ssl_manager.create_temp_file(escaped)
+
+        with open(temp_file, "r", encoding="UTF-8") as f:
+            content = f.read()
+
+        assert "\\n" not in content
+        assert "\n" in content
+        assert "-----BEGIN CERTIFICATE-----" in content
+        assert "-----END CERTIFICATE-----" in content
+
+        ssl_manager.cleanup_temp_files()
+
+
 class MssqlSSLManagerTest(TestCase):
     """
     Tests for MSSQL SSL Manager functionality
