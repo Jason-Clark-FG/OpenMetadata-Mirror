@@ -28,6 +28,7 @@ import {
   redirectToHomePage,
   toastNotification,
 } from '../../utils/common';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   createColumnRowDetails,
   createCustomPropertiesForEntity,
@@ -1020,8 +1021,14 @@ test.describe('Bulk Import Export', () => {
     });
 
     await test.step('should verify the removed value from entity', async () => {
-      await page.getByTestId('column-name').first().click();
-      await page.waitForLoadState('networkidle');
+      await page.getByTestId('alert-bar').waitFor({ state: 'detached' });
+      await waitForAllLoadersToDisappear(page);
+      const columnNameLink = page
+        .getByTestId('column-name')
+        .first()
+        .locator('a');
+      await columnNameLink.waitFor({ state: 'visible' });
+      await columnNameLink.click();
 
       await expect(
         page
