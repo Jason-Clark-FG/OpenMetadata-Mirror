@@ -155,7 +155,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
   const {
     isEditMode,
     lineageConfig,
-    setLineageConfig,
     tracedColumns,
     setTracedColumns,
     addTracedColumns,
@@ -1713,13 +1712,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
   useEffect(() => {
     if (defaultLineageConfig) {
-      setLineageConfig({
-        upstreamDepth: defaultLineageConfig.upstreamDepth,
-        downstreamDepth: defaultLineageConfig.downstreamDepth,
-        pipelineViewMode: defaultLineageConfig.pipelineViewMode,
-        nodesPerLayer: 50,
-      });
-
       setActiveLayer(
         defaultLineageConfig.lineageLayer === LineageLayer.EntityLineage
           ? []
@@ -1727,6 +1719,8 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
       );
     }
   }, [defaultLineageConfig]);
+
+  console.log('rendering lineage context with entity lineage', lineageConfig);
 
   useEffect(() => {
     if (!isEditMode && updatedEntityLineage !== null) {

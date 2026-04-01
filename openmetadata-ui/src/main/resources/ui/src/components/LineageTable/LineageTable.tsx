@@ -97,7 +97,13 @@ import { useLineageTableState } from './useLineageTableState';
 const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   const { selectedQuickFilters, setSelectedQuickFilters, updateEntityData } =
     useLineageProvider();
-  const { lineageConfig } = useLineageStore();
+  const upstreamDepth = useLineageStore(
+    (state) => state.lineageConfig.upstreamDepth
+  );
+  const downstreamDepth = useLineageStore(
+    (state) => state.lineageConfig.downstreamDepth
+  );
+  const lineageConfig = useLineageStore((state) => state.lineageConfig);
   const { fqn } = useFqn();
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
   const { t } = useTranslation();
@@ -144,8 +150,8 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
 
     const directionalDepth =
       lineageDirection === LineageDirection.Downstream
-        ? lineageConfig.downstreamDepth
-        : lineageConfig.upstreamDepth;
+        ? downstreamDepth
+        : upstreamDepth;
 
     const nodeDepth = Number.isNaN(Number(queryParams['depth']))
       ? directionalDepth
@@ -156,11 +162,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
       nodeDepth,
       lineageDirection,
     };
-  }, [
-    location.search,
-    lineageConfig.downstreamDepth,
-    lineageConfig.upstreamDepth,
-  ]);
+  }, [location.search, upstreamDepth, downstreamDepth]);
 
   const updateURLParams = useCallback(
     (
@@ -347,7 +349,6 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   }, [selectedQuickFilters, searchValue, impactLevel, columnLevelFilterKeys]);
 
   // Column filter for column-level filtering (filters edges by column)
-  // For Table-level: only Column dropdown goes to column_filter
   // For Column-level: search value + column filters (Column, Tag, Glossary)
   // Format: "columnName:val1,columnName:val2,tag:PII,glossary:Term"
   const columnFilterValue = useMemo(() => {
@@ -444,58 +445,73 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     streamButtonGroup,
   ]);
 
-  // Function to fetch nodes based on current filters and pagination
-  const fetchNodes = useCallback(async () => {
+  const fetchColumnLevelLineage = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const columnLevelConfig = {
+        ...lineageConfig,
+        upstreamDepth:
+          lineageDirection === LineageDirection.Upstream ? nodeDepth : 0,
+        downstreamDepth:
+          lineageDirection === LineageDirection.Downstream ? nodeDepth : 0,
+      };
 
-      if (impactLevel === EImpactLevel.ColumnLevel) {
-        const columnLevelConfig = {
-          ...lineageConfig,
-          upstreamDepth:
-            lineageDirection === LineageDirection.Upstream ? nodeDepth : 0,
-          downstreamDepth:
-            lineageDirection === LineageDirection.Downstream ? nodeDepth : 0,
-        };
+      const res = await getLineageDataByFQN({
+        fqn,
+        entityType,
+        config: columnLevelConfig,
+        queryFilter,
+        columnFilter: columnFilterValue,
+      });
 
-        const res = await getLineageDataByFQN({
-          fqn,
-          entityType,
-          config: columnLevelConfig,
-          queryFilter,
-          columnFilter: columnFilterValue,
-          direction: lineageDirection,
-        });
+      const upstreamEdges = map(res.upstreamEdges ?? [], (edge) => edge);
+      const downstreamEdges = map(res.downstreamEdges ?? [], (edge) => edge);
+      if (res.nodes) {
+        const upstreamNodes = prepareUpstreamColumnLevelNodesFromUpstreamEdges(
+          upstreamEdges,
+          res.nodes as unknown as Record<string, LineageNodeType>
+        );
 
-        const upstreamEdges = map(res.upstreamEdges ?? [], (edge) => edge);
-        const downstreamEdges = map(res.downstreamEdges ?? [], (edge) => edge);
-        if (res.nodes) {
-          const upstreamNodes =
-            prepareUpstreamColumnLevelNodesFromUpstreamEdges(
-              upstreamEdges,
-              res.nodes as unknown as Record<string, LineageNodeType>
-            );
+        const downstreamNodes =
+          prepareDownstreamColumnLevelNodesFromDownstreamEdges(
+            downstreamEdges,
+            res.nodes as unknown as Record<string, LineageNodeType>
+          );
 
-          const downstreamNodes =
-            prepareDownstreamColumnLevelNodesFromDownstreamEdges(
-              downstreamEdges,
-              res.nodes as unknown as Record<string, LineageNodeType>
-            );
+        setColumnLineageNodes(upstreamNodes, downstreamNodes);
+        handlePagingChange({
+          total:
+            lineageDirection === LineageDirection.Upstream
+              ? upstreamNodes.length
+              : downstreamNodes.length,
+        } as Paging);
+      }
+    } catch (error) {
+      showErrorToast(error as AxiosError);
+      setColumnLineageNodes([], []);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    lineageDirection,
+    nodeDepth,
+    currentPage,
+    pageSize,
+    impactLevel,
+    lineageConfig,
+    columnFilterValue,
+  ]);
 
-          setColumnLineageNodes(upstreamNodes, downstreamNodes);
-          handlePagingChange({
-            total:
-              lineageDirection === LineageDirection.Upstream
-                ? upstreamNodes.length
-                : downstreamNodes.length,
-          } as Paging);
-        }
-      } else {
+  const fetchNodes = useCallback(
+    async () => {
+      try {
+        setLoading(true);
+
         const paginationInfoKey = JSON.stringify({
           fqn,
           entityType,
-          upstreamDepth: lineageConfig.upstreamDepth,
-          downstreamDepth: lineageConfig.downstreamDepth,
+          upstreamDepth: upstreamDepth,
+          downstreamDepth: downstreamDepth,
           queryFilter,
           columnFilterValue,
         });
@@ -508,8 +524,8 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
           direction: lineageDirection,
           nodeDepth,
           maxDepth: nodeDepth,
-          upstreamDepth: lineageConfig.upstreamDepth,
-          downstreamDepth: lineageConfig.downstreamDepth,
+          upstreamDepth: upstreamDepth,
+          downstreamDepth: downstreamDepth,
           from: (currentPage - 1) * pageSize,
           size: pageSize,
           query_filter: queryFilter,
@@ -539,45 +555,44 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
             'nodeDepth'
           )
         );
-      }
-    } catch (error) {
-      showErrorToast(error as AxiosError);
-      setFilterNodes([]);
-      setColumnLineageNodes([], []);
-      if (impactLevel === EImpactLevel.TableLevel) {
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+        setFilterNodes([]);
+
         paginationInfoKeyRef.current = null;
         setLineagePagingInfo(null);
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    lineageDirection,
-    queryFilter,
-    entityType,
-    fqn,
-    nodeDepth,
-    currentPage,
-    pageSize,
-    impactLevel,
-    lineageConfig,
-    columnFilterValue,
-    setLineagePagingInfo,
-  ]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      lineageDirection,
+      queryFilter,
+      entityType,
+      fqn,
+      nodeDepth,
+      currentPage,
+      pageSize,
+      upstreamDepth,
+      downstreamDepth,
+      columnFilterValue,
+    ]
+  );
 
   // Table-level lineage: fetch on all dependencies
   useEffect(() => {
     if (impactLevel === EImpactLevel.TableLevel) {
-      void fetchNodes();
+      fetchNodes();
     }
   }, [fetchNodes, impactLevel]);
 
   // Column-level lineage: fetch only when switching to column mode
   useEffect(() => {
     if (impactLevel === EImpactLevel.ColumnLevel) {
-      void fetchNodes();
+      fetchColumnLevelLineage();
     }
-  }, [fetchNodes, impactLevel, lineageDirection]);
+  }, [fetchColumnLevelLineage, impactLevel]);
 
   useEffect(() => {
     updateEntityData(entityType, entity, false);
@@ -588,14 +603,10 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
     updateURLParams({
       depth:
         lineageDirection === LineageDirection.Upstream
-          ? lineageConfig.upstreamDepth
-          : lineageConfig.downstreamDepth,
+          ? upstreamDepth
+          : downstreamDepth,
     });
-  }, [
-    lineageConfig.upstreamDepth,
-    lineageConfig.downstreamDepth,
-    lineageDirection,
-  ]);
+  }, [upstreamDepth, downstreamDepth, lineageDirection, updateURLParams]);
 
   const nodeDepthOptions = useMemo(() => {
     return (
