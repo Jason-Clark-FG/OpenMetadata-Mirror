@@ -667,7 +667,9 @@ export const TaskTabNew = ({
 
     updateTaskData(
       {
-        newValue: isApprovalWorkflowTask ? taskHandler.rejectedValue : undefined,
+        newValue: isApprovalWorkflowTask
+          ? taskHandler.rejectedValue
+          : undefined,
       },
       TaskResolutionType.Rejected,
       rejectedTransition?.id

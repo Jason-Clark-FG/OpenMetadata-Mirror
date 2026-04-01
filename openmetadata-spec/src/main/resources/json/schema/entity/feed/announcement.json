@@ -16,8 +16,7 @@
         {"name": "Active"},
         {"name": "Expired"},
         {"name": "Scheduled"}
-      ],
-      "default": "Scheduled"
+      ]
     }
   },
   "properties": {

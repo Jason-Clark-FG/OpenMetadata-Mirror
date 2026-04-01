@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +37,6 @@ import {
   Typography,
 } from 'antd';
 import { useMemo } from 'react';
-import TaskPayloadSchemaFields from '../../TasksPage/shared/TaskPayloadSchemaFields';
 import { JsonSchemaObject } from '../../../rest/taskFormSchemasAPI';
 import {
   buildDesignerSchema,
@@ -33,6 +44,7 @@ import {
   getDesignerPreviewPayload,
   TaskFormDesignerField,
 } from '../../../utils/TaskFormDesignerUtils';
+import TaskPayloadSchemaFields from '../../TasksPage/shared/TaskPayloadSchemaFields';
 
 interface TaskFormBuilderSectionProps {
   title: string;
@@ -59,10 +71,7 @@ const JSON_SCHEMA_TYPE_OPTIONS = [
   { label: 'Array', value: 'array' },
 ];
 
-const FIELD_TYPE_LABEL_MAP: Record<
-  TaskFormDesignerField['type'],
-  string
-> = {
+const FIELD_TYPE_LABEL_MAP: Record<TaskFormDesignerField['type'], string> = {
   shortText: 'Single line text',
   longText: 'Multiline text',
   number: 'Numeric field',
@@ -94,7 +103,11 @@ const TaskFormBuilderSection = ({
     index: number,
     updater: (field: TaskFormDesignerField) => TaskFormDesignerField
   ) => {
-    onChange(fields.map((field, currentIndex) => (currentIndex === index ? updater(field) : field)));
+    onChange(
+      fields.map((field, currentIndex) =>
+        currentIndex === index ? updater(field) : field
+      )
+    );
   };
 
   return (
@@ -115,7 +128,7 @@ const TaskFormBuilderSection = ({
           icon={<PlusOutlined />}
           onClick={() => onChange([...fields, createEmptyDesignerField()])}>
           Add field
-          </Button>
+        </Button>
       </div>
 
       <div className="task-form-builder-section__workspace">

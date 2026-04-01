@@ -4,6 +4,18 @@
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+/*
+ *  Copyright 2026 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,10 +25,7 @@
  */
 
 import { cloneDeep } from 'lodash';
-import {
-  JsonSchemaObject,
-  TaskFormSchema,
-} from '../rest/taskFormSchemasAPI';
+import { JsonSchemaObject, TaskFormSchema } from '../rest/taskFormSchemasAPI';
 
 export type TaskFormDesignerFieldType =
   | 'shortText'
@@ -67,14 +76,10 @@ const createDesignerKey = (prefix: string) =>
 const getObjectRecord = (
   value?: JsonSchemaObject
 ): Record<string, JsonSchemaObject> =>
-  ((value?.properties as Record<string, JsonSchemaObject> | undefined) ?? {});
+  (value?.properties as Record<string, JsonSchemaObject> | undefined) ?? {};
 
 const getRequiredFields = (value?: JsonSchemaObject) =>
-  new Set(
-    Array.isArray(value?.required)
-      ? (value.required as string[])
-      : []
-  );
+  new Set(Array.isArray(value?.required) ? (value.required as string[]) : []);
 
 const getFieldWidget = (
   fieldName: string,
@@ -120,7 +125,9 @@ const inferFieldType = (
 
 const getFieldOptions = (property: JsonSchemaObject) => {
   if (Array.isArray(property.enum)) {
-    return property.enum.filter((value): value is string => typeof value === 'string');
+    return property.enum.filter(
+      (value): value is string => typeof value === 'string'
+    );
   }
 
   if (
@@ -186,14 +193,18 @@ const buildFieldProperty = (field: TaskFormDesignerField) => {
       delete nextProperty.enum;
 
       if (nextProperty.type === 'array') {
-        nextProperty.items =
-          (nextProperty.items as JsonSchemaObject | undefined) ?? {
-            type: 'string',
-          };
+        nextProperty.items = (nextProperty.items as
+          | JsonSchemaObject
+          | undefined) ?? {
+          type: 'string',
+        };
       } else if (
         nextProperty.type === 'object' &&
         !Object.prototype.hasOwnProperty.call(nextProperty, 'properties') &&
-        !Object.prototype.hasOwnProperty.call(nextProperty, 'additionalProperties')
+        !Object.prototype.hasOwnProperty.call(
+          nextProperty,
+          'additionalProperties'
+        )
       ) {
         nextProperty.additionalProperties = true;
       }
@@ -206,15 +217,12 @@ const buildFieldProperty = (field: TaskFormDesignerField) => {
 
 const buildFieldUiSchema = (field: TaskFormDesignerField) => {
   const nextUiConfig = cloneDeep(field.uiConfig ?? {});
-  const widget =
-    field.hidden
-      ? 'hidden'
-      : (field.widget && field.widget !== 'hidden'
-          ? field.widget
-          : undefined) ??
-        (field.type === 'longText' || field.type === 'json'
-          ? 'textarea'
-          : undefined);
+  const widget = field.hidden
+    ? 'hidden'
+    : (field.widget && field.widget !== 'hidden' ? field.widget : undefined) ??
+      (field.type === 'longText' || field.type === 'json'
+        ? 'textarea'
+        : undefined);
 
   if (widget) {
     nextUiConfig['ui:widget'] = widget;
@@ -388,7 +396,9 @@ export const parseTransitionForms = (
 ) =>
   Object.entries(transitionForms ?? {}).map(([transitionId, config]) => {
     const transitionConfig = cloneDeep(config ?? {});
-    const formSchema = transitionConfig.formSchema as JsonSchemaObject | undefined;
+    const formSchema = transitionConfig.formSchema as
+      | JsonSchemaObject
+      | undefined;
     const uiSchema = transitionConfig.uiSchema as JsonSchemaObject | undefined;
 
     return {

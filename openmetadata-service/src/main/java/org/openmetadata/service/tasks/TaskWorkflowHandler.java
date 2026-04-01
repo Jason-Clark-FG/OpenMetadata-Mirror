@@ -19,13 +19,17 @@ import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.governance.workflows.elements.EdgeDefinition;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.TagLabel;
@@ -162,6 +166,13 @@ public class TaskWorkflowHandler {
     boolean workflowSuccess = workflowHandler.resolveTask(taskId, namespacedVariables);
 
     if (!workflowSuccess) {
+      if (!workflowHandler.hasActiveRuntimeTask(taskId)) {
+        LOG.warn(
+            "[TaskWorkflowHandler] No active Flowable runtime task found for '{}'; applying direct task resolution fallback",
+            taskId);
+        return applyTaskResolution(
+            task, resolutionType, selectedTransition, newValue, resolvedPayload, user);
+      }
       throw new IllegalStateException(
           String.format(
               "Workflow resolution failed for task '%s' on transition '%s'",
@@ -169,7 +180,7 @@ public class TaskWorkflowHandler {
     }
 
     // Check if multi-approval task is still waiting for more votes
-    if (workflowHandler.isTaskStillOpen(taskId)) {
+    if (workflowHandler.isAwaitingAdditionalVotes(taskId)) {
       LOG.info("[TaskWorkflowHandler] Task '{}' still open, waiting for more approvals", taskId);
       persistEditedWorkflowPayload(task, resolvedPayload, newValue, user);
       updateTaskVotes(task, user, isPositiveResolution(resolutionType));
@@ -1029,6 +1040,11 @@ public class TaskWorkflowHandler {
       return transitionId;
     }
 
+    String workflowDefinitionTransition = resolveWorkflowDefinitionTransition(task, resolutionType);
+    if (workflowDefinitionTransition != null) {
+      return workflowDefinitionTransition;
+    }
+
     String defaultTransitionId =
         TaskWorkflowLifecycleResolver.defaultTransitionId(task, resolutionType);
     if (defaultTransitionId != null) {
@@ -1071,6 +1087,49 @@ public class TaskWorkflowHandler {
       return TaskResolutionType.Rejected;
     }
     return TaskResolutionType.Approved;
+  }
+
+  private String resolveWorkflowDefinitionTransition(Task task, TaskResolutionType resolutionType) {
+    if (task == null || task.getWorkflowDefinitionId() == null || resolutionType == null) {
+      return null;
+    }
+
+    try {
+      WorkflowDefinition workflowDefinition =
+          Entity.getEntity(
+              Entity.WORKFLOW_DEFINITION,
+              task.getWorkflowDefinitionId(),
+              "edges",
+              Include.NON_DELETED);
+      if (workflowDefinition == null || workflowDefinition.getEdges() == null) {
+        return null;
+      }
+
+      Set<String> conditions = new HashSet<>();
+      for (EdgeDefinition edge : workflowDefinition.getEdges()) {
+        if (edge.getCondition() != null && !edge.getCondition().isBlank()) {
+          conditions.add(edge.getCondition());
+        }
+      }
+
+      String namedResult = defaultWorkflowResult(resolutionType);
+      if (conditions.contains(namedResult)) {
+        return namedResult;
+      }
+
+      String booleanResult = isPositiveResolution(resolutionType) ? "true" : "false";
+      if (conditions.contains(booleanResult)) {
+        return booleanResult;
+      }
+    } catch (Exception e) {
+      LOG.debug(
+          "[TaskWorkflowHandler] Unable to inspect workflow definition '{}' for task '{}': {}",
+          task.getWorkflowDefinitionId(),
+          task.getId(),
+          e.getMessage());
+    }
+
+    return null;
   }
 
   private Object serializeWorkflowVariable(Object value) {

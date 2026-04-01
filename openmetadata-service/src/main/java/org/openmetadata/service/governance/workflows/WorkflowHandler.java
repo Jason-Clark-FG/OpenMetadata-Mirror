@@ -1102,6 +1102,45 @@ public class WorkflowHandler {
     return isTaskStillOpen(customTaskId);
   }
 
+  public boolean isAwaitingAdditionalVotes(UUID customTaskId) {
+    try {
+      Task task = getTaskFromCustomTaskId(customTaskId);
+      if (task == null || task.isSuspended()) {
+        return false;
+      }
+
+      TaskService taskService = processEngine.getTaskService();
+      Integer approvalThreshold =
+          (Integer) taskService.getVariable(task.getId(), "approvalThreshold");
+      Integer rejectionThreshold =
+          (Integer) taskService.getVariable(task.getId(), "rejectionThreshold");
+
+      int effectiveApprovalThreshold = approvalThreshold != null ? approvalThreshold : 1;
+      int effectiveRejectionThreshold = rejectionThreshold != null ? rejectionThreshold : 1;
+      if (effectiveApprovalThreshold <= 1 && effectiveRejectionThreshold <= 1) {
+        return false;
+      }
+
+      @SuppressWarnings("unchecked")
+      List<String> approversList =
+          (List<String>) taskService.getVariable(task.getId(), "approversList");
+      @SuppressWarnings("unchecked")
+      List<String> rejectersList =
+          (List<String>) taskService.getVariable(task.getId(), "rejectersList");
+
+      int approvalCount = approversList != null ? approversList.size() : 0;
+      int rejectionCount = rejectersList != null ? rejectersList.size() : 0;
+      return approvalCount < effectiveApprovalThreshold
+          && rejectionCount < effectiveRejectionThreshold;
+    } catch (Exception e) {
+      LOG.debug(
+          "Could not determine multi-approval vote state for task {}: {}",
+          customTaskId,
+          e.getMessage());
+      return false;
+    }
+  }
+
   /**
    * Returns workflow instance ID (if available as runtime variable) for an active task.
    * Returns null if task is not active or the variable is missing.

@@ -34,6 +34,7 @@ import org.flowable.identitylink.api.IdentityLink;
 import org.flowable.task.service.delegate.DelegateTask;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.entity.tasks.Task;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.type.ChangeEvent;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.EventType;
@@ -229,6 +230,23 @@ public class CreateTaskImpl implements TaskListener {
         : processDefinitionKey;
   }
 
+  private UUID resolveWorkflowDefinitionId(
+      DelegateTask delegateTask, String workflowDefinitionIdValue) {
+    if (workflowDefinitionIdValue != null && !workflowDefinitionIdValue.isBlank()) {
+      return UUID.fromString(workflowDefinitionIdValue);
+    }
+
+    String workflowDefinitionRef = inferWorkflowDefinitionRef(delegateTask);
+    if (workflowDefinitionRef == null || workflowDefinitionRef.isBlank()) {
+      return null;
+    }
+
+    WorkflowDefinition workflowDefinition =
+        Entity.findByNameOrNull(
+            Entity.WORKFLOW_DEFINITION, workflowDefinitionRef, Include.NON_DELETED);
+    return workflowDefinition != null ? workflowDefinition.getId() : null;
+  }
+
   private UUID getWorkflowInstanceId(DelegateTask delegateTask) {
     // First prefer an explicit runtime variable when one is present.
     Object workflowInstanceIdObj = delegateTask.getVariable("workflowInstanceId");
@@ -347,6 +365,8 @@ public class CreateTaskImpl implements TaskListener {
     EntityReference requestedCreatedBy = entityReferenceVariable(delegateTask, "taskCreatedBy");
     String requestedUpdatedBy = stringVariable(delegateTask, "taskUpdatedBy");
     String workflowDefinitionId = stringVariable(delegateTask, "workflowDefinitionId");
+    UUID resolvedWorkflowDefinitionId =
+        resolveWorkflowDefinitionId(delegateTask, workflowDefinitionId);
     String taskFormSchemaId = stringVariable(delegateTask, "taskFormSchemaId");
     Double taskFormSchemaVersion = doubleVariable(delegateTask, "taskFormSchemaVersion");
     String workflowStageId = stringExpression(stageIdExpr, delegateTask);
@@ -400,8 +420,8 @@ public class CreateTaskImpl implements TaskListener {
       existingTask.setUpdatedBy(updatedBy);
       existingTask.setPayload(
           requestedPayload != null ? requestedPayload : existingTask.getPayload());
-      if (workflowDefinitionId != null && !workflowDefinitionId.isBlank()) {
-        existingTask.setWorkflowDefinitionId(UUID.fromString(workflowDefinitionId));
+      if (resolvedWorkflowDefinitionId != null) {
+        existingTask.setWorkflowDefinitionId(resolvedWorkflowDefinitionId);
       }
       if (taskFormSchemaId != null && !taskFormSchemaId.isBlank()) {
         existingTask.setTaskFormSchemaId(UUID.fromString(taskFormSchemaId));
@@ -471,8 +491,8 @@ public class CreateTaskImpl implements TaskListener {
     if (taskDisplayName != null && !taskDisplayName.isBlank()) {
       task.setDisplayName(taskDisplayName);
     }
-    if (workflowDefinitionId != null && !workflowDefinitionId.isBlank()) {
-      task.setWorkflowDefinitionId(UUID.fromString(workflowDefinitionId));
+    if (resolvedWorkflowDefinitionId != null) {
+      task.setWorkflowDefinitionId(resolvedWorkflowDefinitionId);
     }
     if (taskFormSchemaId != null && !taskFormSchemaId.isBlank()) {
       task.setTaskFormSchemaId(UUID.fromString(taskFormSchemaId));

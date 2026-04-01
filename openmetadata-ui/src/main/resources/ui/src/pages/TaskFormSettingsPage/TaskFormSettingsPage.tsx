@@ -54,14 +54,14 @@ import {
   updateTaskFormSchema,
 } from '../../rest/taskFormSchemasAPI';
 import {
-  createOrUpdateWorkflowDefinition,
-  getWorkflowDefinitionByName,
-} from '../../rest/workflowDefinitionsAPI';
-import {
   TaskCategory,
   TaskEntityStatus,
   TaskEntityType,
 } from '../../rest/tasksAPI';
+import {
+  createOrUpdateWorkflowDefinition,
+  getWorkflowDefinitionByName,
+} from '../../rest/workflowDefinitionsAPI';
 import { getSettingPageEntityBreadCrumb } from '../../utils/GlobalSettingsUtils';
 import {
   buildDesignerSchema,
@@ -204,10 +204,7 @@ const TaskFormSettingsPage = () => {
   );
   const [workflowDefinitionValue, setWorkflowDefinitionValue] = useState('{}');
   const [resolveFields, setResolveFields] = useState(
-    parseSchemaToDesignerFields(
-      EMPTY_SCHEMA.formSchema,
-      EMPTY_SCHEMA.uiSchema
-    )
+    parseSchemaToDesignerFields(EMPTY_SCHEMA.formSchema, EMPTY_SCHEMA.uiSchema)
   );
   const [createFields, setCreateFields] = useState(
     parseSchemaToDesignerFields(
@@ -320,7 +317,9 @@ const TaskFormSettingsPage = () => {
     const taskCategory = currentValues.taskCategory as TaskCategory | undefined;
 
     if (!taskType || !taskCategory) {
-      showErrorToast('Select a task type and category before loading a template');
+      showErrorToast(
+        'Select a task type and category before loading a template'
+      );
 
       return;
     }
@@ -393,8 +392,10 @@ const TaskFormSettingsPage = () => {
     const mergedTransitions = transitions.map((transition) => ({
       ...transition,
       config:
-        (existingConfigs?.[transition.transitionId] as Record<string, unknown>) ??
-        transition.config,
+        (existingConfigs?.[transition.transitionId] as Record<
+          string,
+          unknown
+        >) ?? transition.config,
     }));
     const nextTransitionForms = buildTransitionForms(mergedTransitions);
 
@@ -494,9 +495,14 @@ const TaskFormSettingsPage = () => {
 
   return (
     <PageLayoutV1 pageTitle="Task Forms">
-      <div className="task-form-settings-page" data-testid="task-form-settings-page">
+      <div
+        className="task-form-settings-page"
+        data-testid="task-form-settings-page">
         <TitleBreadcrumb titleLinks={breadcrumbs} />
-        <Form<TaskFormSchema> form={form} layout="vertical" onFinish={handleSave}>
+        <Form<TaskFormSchema>
+          form={form}
+          layout="vertical"
+          onFinish={handleSave}>
           <div className="task-form-settings-shell">
             <aside className="task-form-settings-sidebar">
               <Card className="task-form-settings-sidebar-card" title="Schemas">
@@ -525,7 +531,9 @@ const TaskFormSettingsPage = () => {
                               {schema.displayName ?? schema.name}
                             </span>
                             <span className="task-form-settings-schema-item__meta">
-                              {`${schema.taskType} / ${schema.taskCategory ?? '-'}`}
+                              {`${schema.taskType} / ${
+                                schema.taskCategory ?? '-'
+                              }`}
                             </span>
                           </button>
                         );
@@ -569,7 +577,9 @@ const TaskFormSettingsPage = () => {
                     </Typography.Text>
                   ) : null}
                 </div>
-                <Space className="task-form-settings-hero__actions" size="middle">
+                <Space
+                  className="task-form-settings-hero__actions"
+                  size="middle">
                   <Button
                     data-testid="task-form-cancel-button"
                     onClick={handleDiscardChanges}>
@@ -623,7 +633,9 @@ const TaskFormSettingsPage = () => {
                       className="m-b-0"
                       label="Task Type"
                       name="taskType"
-                      rules={[{ required: true, message: 'Task type is required' }]}>
+                      rules={[
+                        { required: true, message: 'Task type is required' },
+                      ]}>
                       <Input data-testid="task-form-type-input" />
                     </Form.Item>
                     <Form.Item
@@ -633,10 +645,12 @@ const TaskFormSettingsPage = () => {
                       <Select
                         allowClear
                         data-testid="task-form-category-input"
-                        options={Object.values(TaskCategory).map((category) => ({
-                          label: category,
-                          value: category,
-                        }))}
+                        options={Object.values(TaskCategory).map(
+                          (category) => ({
+                            label: category,
+                            value: category,
+                          })
+                        )}
                       />
                     </Form.Item>
                     <Form.Item
@@ -702,7 +716,9 @@ const TaskFormSettingsPage = () => {
                                     baseFormSchema={parseJsonObject(
                                       formSchemaValue
                                     )}
-                                    baseUiSchema={parseJsonObject(uiSchemaValue)}
+                                    baseUiSchema={parseJsonObject(
+                                      uiSchemaValue
+                                    )}
                                     description="Fields shown when the task is reviewed or resolved."
                                     fields={resolveFields}
                                     testIdPrefix="task-form-resolve-builder"
@@ -726,7 +742,9 @@ const TaskFormSettingsPage = () => {
                                           Transition Forms
                                         </Typography.Title>
                                         <Typography.Paragraph className="m-b-0 text-grey-muted">
-                                          Configure additional fields for specific workflow transitions like approve, reject, or reassign.
+                                          Configure additional fields for
+                                          specific workflow transitions like
+                                          approve, reject, or reassign.
                                         </Typography.Paragraph>
                                       </div>
                                       <Button
@@ -776,7 +794,9 @@ const TaskFormSettingsPage = () => {
                                                 <Input
                                                   data-testid={`task-form-transition-id-${index}`}
                                                   placeholder="approve"
-                                                  value={transition.transitionId}
+                                                  value={
+                                                    transition.transitionId
+                                                  }
                                                   onChange={(event) =>
                                                     syncTransitionDesigner(
                                                       transitionBuilders.map(
@@ -799,16 +819,16 @@ const TaskFormSettingsPage = () => {
                                               </Form.Item>
                                               <TaskFormBuilderSection
                                                 baseFormSchema={
-                                                  (transition.config?.formSchema as
+                                                  transition.config
+                                                    ?.formSchema as
                                                     | Record<string, unknown>
-                                                    | undefined) as
-                                                    | undefined
+                                                    | undefined as undefined
                                                 }
                                                 baseUiSchema={
-                                                  (transition.config?.uiSchema as
+                                                  transition.config
+                                                    ?.uiSchema as
                                                     | Record<string, unknown>
-                                                    | undefined) as
-                                                    | undefined
+                                                    | undefined as undefined
                                                 }
                                                 description="Extra fields shown only for this transition."
                                                 fields={transition.fields}
@@ -856,7 +876,9 @@ const TaskFormSettingsPage = () => {
                                           Stage to Status Mapping
                                         </Typography.Title>
                                         <Typography.Paragraph className="m-b-0 text-grey-muted">
-                                          Map workflow stage ids to the coarse task status exposed in APIs and counts.
+                                          Map workflow stage ids to the coarse
+                                          task status exposed in APIs and
+                                          counts.
                                         </Typography.Paragraph>
                                       </div>
                                       <Button
@@ -984,146 +1006,150 @@ const TaskFormSettingsPage = () => {
                       label: 'Advanced JSON',
                       children: (
                         <div className="task-form-settings-json-pane">
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Resolve Form Schema
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-schema-editor"
-                          value={formSchemaValue}
-                          onChange={(value) => {
-                            setFormSchemaValue(value);
-                            const nextFormSchema = parseJsonObject(value);
-                            const nextUiSchema = parseJsonObject(uiSchemaValue);
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Resolve Form Schema
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-schema-editor"
+                            value={formSchemaValue}
+                            onChange={(value) => {
+                              setFormSchemaValue(value);
+                              const nextFormSchema = parseJsonObject(value);
+                              const nextUiSchema =
+                                parseJsonObject(uiSchemaValue);
 
-                            if (nextFormSchema) {
-                              setResolveFields(
-                                parseSchemaToDesignerFields(
-                                  nextFormSchema,
-                                  nextUiSchema
-                                )
+                              if (nextFormSchema) {
+                                setResolveFields(
+                                  parseSchemaToDesignerFields(
+                                    nextFormSchema,
+                                    nextUiSchema
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Resolve UI Schema
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-ui-schema-editor"
+                            value={uiSchemaValue}
+                            onChange={(value) => {
+                              setUiSchemaValue(value);
+                              const nextFormSchema =
+                                parseJsonObject(formSchemaValue);
+                              const nextUiSchema = parseJsonObject(value);
+
+                              if (nextFormSchema) {
+                                setResolveFields(
+                                  parseSchemaToDesignerFields(
+                                    nextFormSchema,
+                                    nextUiSchema
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Create Form Schema
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-create-schema-editor"
+                            value={createFormSchemaValue}
+                            onChange={(value) => {
+                              setCreateFormSchemaValue(value);
+                              const nextFormSchema = parseJsonObject(value);
+                              const nextUiSchema =
+                                parseJsonObject(createUiSchemaValue);
+
+                              if (nextFormSchema) {
+                                setCreateFields(
+                                  parseSchemaToDesignerFields(
+                                    nextFormSchema,
+                                    nextUiSchema
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Create UI Schema
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-create-ui-schema-editor"
+                            value={createUiSchemaValue}
+                            onChange={(value) => {
+                              setCreateUiSchemaValue(value);
+                              const nextFormSchema = parseJsonObject(
+                                createFormSchemaValue
                               );
+                              const nextUiSchema = parseJsonObject(value);
+
+                              if (nextFormSchema) {
+                                setCreateFields(
+                                  parseSchemaToDesignerFields(
+                                    nextFormSchema,
+                                    nextUiSchema
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Transition Forms
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-transition-forms-editor"
+                            value={transitionFormsValue}
+                            onChange={(value) => {
+                              setTransitionFormsValue(value);
+                              const nextTransitionForms =
+                                parseJsonObject(value);
+
+                              if (nextTransitionForms) {
+                                setTransitionBuilders(
+                                  parseTransitionForms(
+                                    nextTransitionForms as TaskFormSchema['transitionForms']
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Default Stage Mappings
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-stage-mappings-editor"
+                            value={defaultStageMappingsValue}
+                            onChange={(value) => {
+                              setDefaultStageMappingsValue(value);
+                              const nextStageMappings = parseJsonObject(value);
+
+                              if (nextStageMappings) {
+                                setStageMappings(
+                                  parseStageMappings(
+                                    nextStageMappings as TaskFormSchema['defaultStageMappings']
+                                  )
+                                );
+                              }
+                            }}
+                          />
+
+                          <Typography.Title className="m-b-sm" level={5}>
+                            Workflow Definition JSON
+                          </Typography.Title>
+                          <CodeEditor
+                            editorClass="task-form-workflow-definition-editor"
+                            value={workflowDefinitionValue}
+                            onChange={(value) =>
+                              setWorkflowDefinitionValue(value)
                             }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Resolve UI Schema
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-ui-schema-editor"
-                          value={uiSchemaValue}
-                          onChange={(value) => {
-                            setUiSchemaValue(value);
-                            const nextFormSchema = parseJsonObject(formSchemaValue);
-                            const nextUiSchema = parseJsonObject(value);
-
-                            if (nextFormSchema) {
-                              setResolveFields(
-                                parseSchemaToDesignerFields(
-                                  nextFormSchema,
-                                  nextUiSchema
-                                )
-                              );
-                            }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Create Form Schema
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-create-schema-editor"
-                          value={createFormSchemaValue}
-                          onChange={(value) => {
-                            setCreateFormSchemaValue(value);
-                            const nextFormSchema = parseJsonObject(value);
-                            const nextUiSchema = parseJsonObject(
-                              createUiSchemaValue
-                            );
-
-                            if (nextFormSchema) {
-                              setCreateFields(
-                                parseSchemaToDesignerFields(
-                                  nextFormSchema,
-                                  nextUiSchema
-                                )
-                              );
-                            }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Create UI Schema
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-create-ui-schema-editor"
-                          value={createUiSchemaValue}
-                          onChange={(value) => {
-                            setCreateUiSchemaValue(value);
-                            const nextFormSchema = parseJsonObject(
-                              createFormSchemaValue
-                            );
-                            const nextUiSchema = parseJsonObject(value);
-
-                            if (nextFormSchema) {
-                              setCreateFields(
-                                parseSchemaToDesignerFields(
-                                  nextFormSchema,
-                                  nextUiSchema
-                                )
-                              );
-                            }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Transition Forms
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-transition-forms-editor"
-                          value={transitionFormsValue}
-                          onChange={(value) => {
-                            setTransitionFormsValue(value);
-                            const nextTransitionForms = parseJsonObject(value);
-
-                            if (nextTransitionForms) {
-                              setTransitionBuilders(
-                                parseTransitionForms(
-                                  nextTransitionForms as TaskFormSchema['transitionForms']
-                                )
-                              );
-                            }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Default Stage Mappings
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-stage-mappings-editor"
-                          value={defaultStageMappingsValue}
-                          onChange={(value) => {
-                            setDefaultStageMappingsValue(value);
-                            const nextStageMappings = parseJsonObject(value);
-
-                            if (nextStageMappings) {
-                              setStageMappings(
-                                parseStageMappings(
-                                  nextStageMappings as TaskFormSchema['defaultStageMappings']
-                                )
-                              );
-                            }
-                          }}
-                        />
-
-                        <Typography.Title className="m-b-sm" level={5}>
-                          Workflow Definition JSON
-                        </Typography.Title>
-                        <CodeEditor
-                          editorClass="task-form-workflow-definition-editor"
-                          value={workflowDefinitionValue}
-                          onChange={(value) => setWorkflowDefinitionValue(value)}
-                        />
+                          />
                         </div>
                       ),
                     },
