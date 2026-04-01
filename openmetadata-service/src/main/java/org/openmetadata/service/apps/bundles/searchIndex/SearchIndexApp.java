@@ -108,16 +108,13 @@ public class SearchIndexApp extends AbstractNativeApplication {
         return;
       }
       AppRepository appRepository = new AppRepository();
-      appRepository
-          .getLatestAppRunsOptional(app)
-          .filter(run -> run.getStatus() == AppRunRecord.Status.RUNNING)
-          .ifPresent(
-              run -> {
-                run.withStatus(AppRunRecord.Status.STOPPED);
-                run.withEndTime(System.currentTimeMillis());
-                appRepository.updateAppStatus(app.getId(), run);
-                LOG.info("Updated app run record to STOPPED for {}", app.getName());
-              });
+      AppRunRecord run = appRepository.getLatestAppRuns(app);
+      if (run != null && run.getStatus() == AppRunRecord.Status.RUNNING) {
+        run.withStatus(AppRunRecord.Status.STOPPED);
+        run.withEndTime(System.currentTimeMillis());
+        appRepository.updateAppStatus(app.getId(), run);
+        LOG.info("Updated app run record to STOPPED for {}", app.getName());
+      }
     } catch (Exception e) {
       LOG.warn("Failed to update app run record to STOPPED", e);
     }

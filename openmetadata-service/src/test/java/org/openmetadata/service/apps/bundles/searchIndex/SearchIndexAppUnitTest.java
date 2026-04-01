@@ -20,7 +20,6 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -167,8 +166,7 @@ class SearchIndexAppUnitTest {
             Mockito.mockConstruction(
                 AppRepository.class,
                 (repo, ctx) ->
-                    when(repo.getLatestAppRunsOptional(any(App.class)))
-                        .thenReturn(Optional.of(runningRecord)))) {
+                    when(repo.getLatestAppRuns(any(App.class))).thenReturn(runningRecord))) {
 
       boolean result = searchIndexApp.tryStopOutsideQuartz();
 
@@ -178,7 +176,7 @@ class SearchIndexAppUnitTest {
       verify(coordinator).requestStop(jobId);
 
       AppRepository repo = repoMock.constructed().get(0);
-      verify(repo).getLatestAppRunsOptional(appEntity);
+      verify(repo).getLatestAppRuns(appEntity);
       verify(repo).updateAppStatus(eq(appEntity.getId()), eq(runningRecord));
       assertEquals(AppRunRecord.Status.STOPPED, runningRecord.getStatus());
     }
@@ -207,8 +205,7 @@ class SearchIndexAppUnitTest {
             Mockito.mockConstruction(
                 AppRepository.class,
                 (repo, ctx) ->
-                    when(repo.getLatestAppRunsOptional(any(App.class)))
-                        .thenReturn(Optional.empty()))) {
+                    when(repo.getLatestAppRuns(any(App.class))).thenReturn((AppRunRecord) null))) {
 
       boolean result = searchIndexApp.tryStopOutsideQuartz();
 
@@ -252,13 +249,12 @@ class SearchIndexAppUnitTest {
             Mockito.mockConstruction(
                 AppRepository.class,
                 (repo, ctx) ->
-                    when(repo.getLatestAppRunsOptional(any(App.class)))
-                        .thenReturn(Optional.of(completedRecord)))) {
+                    when(repo.getLatestAppRuns(any(App.class))).thenReturn(completedRecord))) {
 
       searchIndexApp.tryStopOutsideQuartz();
 
       AppRepository repo = repoMock.constructed().get(0);
-      verify(repo).getLatestAppRunsOptional(appEntity);
+      verify(repo).getLatestAppRuns(appEntity);
       verify(repo, never()).updateAppStatus(any(), any());
     }
   }

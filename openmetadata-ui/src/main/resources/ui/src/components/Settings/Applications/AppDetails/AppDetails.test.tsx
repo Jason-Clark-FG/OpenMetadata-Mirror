@@ -141,10 +141,6 @@ jest.mock('../AppRunsHistory/AppRunsHistory.component', () =>
   jest.fn().mockReturnValue(<div>AppRunsHistory</div>)
 );
 
-jest.mock('../AppLiveIndexing/AppLiveIndexing.component', () =>
-  jest.fn().mockReturnValue(<div>AppLiveIndexing</div>)
-);
-
 jest.mock('../AppSchedule/AppSchedule.component', () =>
   jest
     .fn()
