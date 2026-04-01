@@ -73,6 +73,7 @@ import TabsLabel from '../../../common/TabsLabel/TabsLabel.component';
 import ConfirmationModal from '../../../Modals/ConfirmationModal/ConfirmationModal';
 import PageLayoutV1 from '../../../PageLayoutV1/PageLayoutV1';
 import { useApplicationsProvider } from '../ApplicationsProvider/ApplicationsProvider';
+import AppLiveIndexing from '../AppLiveIndexing/AppLiveIndexing.component';
 import AppLogo from '../AppLogo/AppLogo.component';
 import AppRunsHistory from '../AppRunsHistory/AppRunsHistory.component';
 import AppSchedule from '../AppSchedule/AppSchedule.component';
@@ -424,6 +425,20 @@ const AppDetails = () => {
             },
           ]
         : []),
+      ...(!appData?.deleted && appData?.name === 'SearchIndexingApplication'
+        ? [
+            {
+              label: (
+                <TabsLabel
+                  id={ApplicationTabs.LIVE_INDEXING}
+                  name={t('label.live-indexing')}
+                />
+              ),
+              key: ApplicationTabs.LIVE_INDEXING,
+              children: <AppLiveIndexing appData={appData} />,
+            },
+          ]
+        : []),
     ];
   }, [appData, jsonSchema, loadingState]);
 
@@ -451,7 +466,8 @@ const AppDetails = () => {
   return (
     <PageLayoutV1
       className="app-details-page-layout"
-      pageTitle={t('label.application-plural')}>
+      pageTitle={t('label.application-plural')}
+    >
       <Row>
         <Col className="d-flex" flex="auto">
           <Button
@@ -459,7 +475,8 @@ const AppDetails = () => {
             icon={<LeftOutlined />}
             size="small"
             type="text"
-            onClick={onBrowseAppsClick}>
+            onClick={onBrowseAppsClick}
+          >
             <Typography.Text className="font-medium">
               {t('label.browse-app-plural')}
             </Typography.Text>
@@ -478,12 +495,14 @@ const AppDetails = () => {
               overlayStyle={{ width: '350px' }}
               placement="bottomRight"
               trigger={['click']}
-              onOpenChange={setShowActions}>
+              onOpenChange={setShowActions}
+            >
               <Tooltip
                 placement="topRight"
                 title={t('label.manage-entity', {
                   entity: t('label.application'),
-                })}>
+                })}
+              >
                 <Button
                   className="glossary-manage-dropdown-button p-x-xs"
                   data-testid="manage-button"
@@ -532,7 +551,8 @@ const AppDetails = () => {
                     <Typography.Link
                       className="text-xs"
                       href={appData?.developerUrl}
-                      target="_blank">
+                      target="_blank"
+                    >
                       <Space>{t('label.visit-developer-website')}</Space>
                     </Typography.Link>
                   </div>
