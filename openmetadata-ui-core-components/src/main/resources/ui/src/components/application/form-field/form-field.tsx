@@ -345,19 +345,6 @@ const getDefaultAutocompleteItems = (items: FormSelectItem[]) =>
     />
   ));
 
-const getDefaultSelectItems = (items: FormSelectItem[]) =>
-  items.map((item) => (
-    <Select.Item
-      avatarUrl={item.avatarUrl}
-      icon={item.icon}
-      id={item.id}
-      isDisabled={item.isDisabled}
-      key={item.id}
-      label={item.label}
-      supportingText={item.supportingText}
-    />
-  ));
-
 const getInputAriaLabel = (label: ReactNode, placeholder?: string) =>
   typeof label === 'string' ? label : placeholder;
 
@@ -1125,9 +1112,16 @@ const renderFieldElement = (
             );
             onSelectionChange?.(key);
           }}>
-          {typeof renderItem === 'function'
-            ? selectItems.map((item) => renderItem(item))
-            : getDefaultSelectItems(selectItems)}
+          {(item) => (
+            <Select.Item
+              avatarUrl={item.avatarUrl}
+              icon={item.icon}
+              id={item.id}
+              isDisabled={item.isDisabled}
+              supportingText={item.supportingText}>
+              {item.label}
+            </Select.Item>
+          )}
         </Select>
       );
     }

@@ -11,7 +11,9 @@
  *  limitations under the License.
  */
 import {
+  Avatar,
   Button,
+  Dot,
   FieldProp,
   FieldTypes,
   FormField,
@@ -20,6 +22,7 @@ import {
   HookForm,
   getField,
 } from '@openmetadata/ui-core-components';
+import { Users01 } from '@untitledui/icons';
 import { debounce, omit } from 'lodash';
 import {
   forwardRef,
@@ -43,7 +46,6 @@ import {
   CreateDomain,
   DomainType,
 } from '../../../generated/api/domains/createDomain';
-import { GlossaryTerm } from '../../../generated/entity/data/glossaryTerm';
 import { Operation } from '../../../generated/entity/policies/policy';
 import { EntityReference } from '../../../generated/entity/type';
 import {
@@ -53,14 +55,11 @@ import {
   TagSource,
 } from '../../../generated/type/tagLabel';
 import { searchDomains } from '../../../rest/domainAPI';
-import { searchGlossaryTermsPaginated } from '../../../rest/glossaryAPI';
 import { searchQuery } from '../../../rest/searchAPI';
 import { checkPermission } from '../../../utils/PermissionsUtils';
 import tagClassBase from '../../../utils/TagClassBase';
-import {
-  formatTeamsResponse,
-  formatUsersResponse,
-} from '../../../utils/APIUtils';
+import { formatTeamsResponse } from '../../../utils/APIUtils';
+import { getRandomColor } from '../../../utils/CommonUtils';
 import {
   getEntityName,
   getEntityReferenceListFromEntities,
@@ -73,6 +72,7 @@ import {
   DEFAULT_DOMAIN_ICON,
 } from '../../common/IconPicker';
 import RichTextEditor from '../../common/RichTextEditor/RichTextEditor';
+import MUIGlossaryTagSuggestion from '../../common/MUIGlossaryTagSuggestion/MUIGlossaryTagSuggestion';
 import '../domain.less';
 import { DomainFormType } from '../DomainPage.interface';
 import {
@@ -85,6 +85,7 @@ type FormSelectOption = {
   id: string;
   label: string;
   value: unknown;
+  avatarUrl?: string;
   supportingText?: string;
   icon?: unknown;
 };
@@ -157,6 +158,9 @@ const mapTagLabelToOption = (tagLabel: TagLabel): FormSelectOption => ({
   label:
     getTagDisplay(tagLabel.displayName || tagLabel.name) || tagLabel.tagFQN,
   supportingText: tagLabel.displayName || tagLabel.name,
+  icon: tagLabel.style?.color ? (
+    <Dot size="sm" style={{ color: tagLabel.style.color }} />
+  ) : undefined,
   value: tagLabel,
 });
 
@@ -185,9 +189,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     const { t } = useTranslation();
     const { permissions } = usePermissionProvider();
     const [tagOptions, setTagOptions] = useState<FormSelectOption[]>([]);
-    const [glossaryTermOptions, setGlossaryTermOptions] = useState<
-      FormSelectOption[]
-    >([]);
     const [domainOptions, setDomainOptions] = useState<FormSelectOption[]>([]);
     const [userTeamOptions, setUserTeamOptions] = useState<FormSelectOption[]>(
       []
@@ -292,36 +293,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       }
     }, []);
 
-    const fetchGlossaryTermOptions = useCallback(async (searchText = '') => {
-      try {
-        const response = await searchGlossaryTermsPaginated({
-          limit: PAGE_SIZE_MEDIUM,
-          q: searchText || undefined,
-        });
-        const nextOptions = response.data
-          .map((term: GlossaryTerm) => {
-            if (!term.fullyQualifiedName) {
-              return null;
-            }
-
-            return mapTagLabelToOption(
-              createTagLabel({
-                description: term.description,
-                displayName: term.displayName,
-                name: term.name,
-                source: TagSource.Glossary,
-                tagFQN: term.fullyQualifiedName,
-              })
-            );
-          })
-          .filter((option): option is FormSelectOption => option !== null);
-
-        setGlossaryTermOptions(nextOptions);
-      } catch {
-        setGlossaryTermOptions([]);
-      }
-    }, []);
-
     const fetchDomainOptions = useCallback(async (searchText = '') => {
       try {
         const domains = await searchDomains(searchText, 1);
@@ -366,20 +337,48 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           }),
         ]);
 
-        const users = getEntityReferenceListFromEntities(
-          formatUsersResponse(usersResponse.hits.hits),
-          EntityType.USER
-        );
+        const userOptions = usersResponse.hits.hits.map((hit) => {
+          const source = hit._source;
+
+          const name = getEntityName(source);
+          const { color, backgroundColor, character } = getRandomColor(
+            source.displayName ?? source.name ?? ''
+          );
+
+          return {
+            id: source.id,
+            label: name,
+            supportingText: source.fullyQualifiedName ?? EntityType.USER,
+            icon: (
+              <Avatar
+                initials={character}
+                size="xs"
+                src={source.profile?.images?.image ?? undefined}
+                style={{ color, backgroundColor }}
+              />
+            ),
+            value: {
+              id: source.id,
+              type: EntityType.USER,
+              name: source.name,
+              displayName: source.displayName,
+              fullyQualifiedName: source.fullyQualifiedName,
+            },
+          };
+        });
+
         const teams = getEntityReferenceListFromEntities(
           formatTeamsResponse(teamsResponse.hits.hits),
           EntityType.TEAM
         );
 
-        setUserTeamOptions(
-          [...users, ...teams].map((reference) =>
-            mapEntityReferenceToOption(reference)
-          )
-        );
+        setUserTeamOptions([
+          ...userOptions,
+          ...teams.map((reference) => ({
+            ...mapEntityReferenceToOption(reference),
+            icon: <Avatar placeholderIcon={Users01} size="xs" />,
+          })),
+        ]);
       } catch {
         setUserTeamOptions([]);
       }
@@ -388,10 +387,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     const handleTagFocus = useCallback(() => {
       void fetchTagOptions();
     }, [fetchTagOptions]);
-
-    const handleGlossaryTermsFocus = useCallback(() => {
-      void fetchGlossaryTermOptions();
-    }, [fetchGlossaryTermOptions]);
 
     const handleDomainFocus = useCallback(() => {
       void fetchDomainOptions();
@@ -405,15 +400,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       () =>
         debounce((searchText: string) => void fetchTagOptions(searchText), 250),
       [fetchTagOptions]
-    );
-
-    const debouncedGlossarySearch = useMemo(
-      () =>
-        debounce(
-          (searchText: string) => void fetchGlossaryTermOptions(searchText),
-          250
-        ),
-      [fetchGlossaryTermOptions]
     );
 
     const debouncedDomainSearch = useMemo(
@@ -437,13 +423,11 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     useEffect(
       () => () => {
         debouncedTagSearch.cancel();
-        debouncedGlossarySearch.cancel();
         debouncedDomainSearch.cancel();
         debouncedUserTeamSearch.cancel();
       },
       [
         debouncedDomainSearch,
-        debouncedGlossarySearch,
         debouncedTagSearch,
         debouncedUserTeamSearch,
       ]
@@ -628,25 +612,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       type: FieldTypes.TAG_SUGGESTION,
     };
 
-    const glossaryTermsField: FieldProp = {
-      id: 'root/glossaryTerms',
-      label: t('label.glossary-term-plural'),
-      name: 'glossaryTerms',
-      placeholder: t('label.select-field', {
-        field: t('label.glossary-term-plural'),
-      }),
-      props: {
-        'data-testid': 'glossary-terms',
-        filterOption: () => true,
-        multiple: true,
-        onFocus: handleGlossaryTermsFocus,
-        onSearchChange: (searchText: string) =>
-          debouncedGlossarySearch(searchText),
-        options: glossaryTermOptions,
-      },
-      type: FieldTypes.GLOSSARY_TAG_SUGGESTION,
-    };
-
     const domainTypeField: FieldProp = {
       label: t('label.domain-type'),
       name: 'domainType',
@@ -781,7 +746,21 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           </FormField>
         </div>
         <div>{getField(tagsField)}</div>
-        <div>{getField(glossaryTermsField)}</div>
+        <FormField
+          control={form.control}
+          name="glossaryTerms">
+          {({ field }) => (
+            <MUIGlossaryTagSuggestion
+              data-testid="glossary-terms"
+              label={t('label.glossary-term-plural')}
+              placeholder={t('label.select-field', {
+                field: t('label.glossary-term-plural'),
+              })}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        </FormField>
 
         {(type === DomainFormType.DOMAIN ||
           type === DomainFormType.SUBDOMAIN) && (
