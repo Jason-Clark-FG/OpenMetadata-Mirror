@@ -23,6 +23,10 @@ inputs:
     description: Whether to install Java, Node, and the OpenMetadata server
     required: false
     default: "true"
+  install-mode:
+    description: "'full' installs [all]+[test] extras; 'dev-only' installs only [dev] (sufficient for static checks)"
+    required: false
+    default: "full"
 
 runs:
   using: composite
@@ -65,6 +69,11 @@ runs:
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        cache-dependency-glob: |
+          ingestion/setup.py
+          ingestion/pyproject.toml
 
     - name: Generate Models
       run: |
@@ -76,6 +85,7 @@ runs:
       shell: bash
 
     - name: Install Python Dependencies
+      if: ${{ inputs.install-mode == 'full' }}
       run: |
         source env/bin/activate
         uv pip install "setuptools<81"
@@ -83,6 +93,13 @@ runs:
         uv pip install --no-deps "sqlalchemy-redshift==0.8.14" "sqlalchemy-databricks==0.2.0" "sqlalchemy-ibmi==0.9.3" "pydoris-custom==1.1.0"
         uv pip install "${{ github.workspace }}/ingestion[all]"
         uv pip install "${{ github.workspace }}/ingestion[test]"
+        uv pip install nox
+      shell: bash
+
+    - name: Install nox (dev-only mode)
+      if: ${{ inputs.install-mode != 'full' }}
+      run: |
+        source env/bin/activate
         uv pip install nox
       shell: bash
     # ------------------------------------------------------------------------------

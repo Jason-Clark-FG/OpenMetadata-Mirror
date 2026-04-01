@@ -154,18 +154,27 @@ def unit_tests(session):
     test_paths = [a for a in args if not a.startswith("-")]
     extra_flags = [a for a in args if a.startswith("-")]
 
+    skip_cov = "--no-cov" in args
+    if skip_cov:
+        extra_flags = [f for f in extra_flags if f != "--no-cov"]
+
     pytest_args = [
         "-c",
         "pyproject.toml",
-        "--cov=metadata",
-        "--cov-branch",
-        "--cov-config=pyproject.toml",
         "--junitxml=junit/test-results-unit.xml",
         "-n",
         "auto",
         "--dist",
         "loadfile",
+        "--durations=20",
     ]
+
+    if not skip_cov:
+        pytest_args += [
+            "--cov=metadata",
+            "--cov-branch",
+            "--cov-config=pyproject.toml",
+        ]
 
     pytest_args.extend(test_paths or ["tests/unit/"])
     pytest_args.extend(extra_flags)

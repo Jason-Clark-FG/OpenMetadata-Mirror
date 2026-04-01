@@ -56,8 +56,53 @@ jobs:
               - 'pom.xml'
               - 'Makefile'
 
+  py-static-checks:
+    name: Static Checks (Python ${{ env.MAIN_PYTHON_VERSION }})
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' }}
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Wait for the labeler
+        uses: lewagon/wait-on-check-action@v1.3.4
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: Team Label
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+
+      - name: Verify PR labels
+        uses: jesusvasquez333/verify-pr-label-action@v1.4.0
+        if: ${{ github.event_name == 'pull_request_target' }}
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          valid-labels: "safe to test"
+          pull-request-number: "${{ github.event.pull_request.number }}"
+          disable-reviews: true
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Openmetadata Test Environment
+        uses: ./.github/actions/setup-openmetadata-test-environment
+        with:
+          python-version: ${{ env.MAIN_PYTHON_VERSION }}
+          install-server: 'false'
+          install-mode: 'dev-only'
+
+      - name: Run Static Checks
+        run: |
+          source env/bin/activate
+          cd ingestion
+          nox --no-venv -s static-checks
+        shell: bash
+
   py-unit-tests:
-    name: Unit Tests & Static Checks
+    name: Unit Tests
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' }}
     timeout-minutes: 60
@@ -97,18 +142,11 @@ jobs:
           python-version: ${{ matrix.py-version }}
           install-server: 'false'
 
-      - name: Run Static Checks
-        run: |
-          source env/bin/activate
-          cd ingestion
-          nox --no-venv -s static-checks
-        shell: bash
-
       - name: Run Unit Tests
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s unit-tests
+          nox --no-venv -s unit-tests -- ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }}
         shell: bash
 
       - name: Upload coverage artifact
@@ -133,11 +171,13 @@ jobs:
           - name: "shard-1"
             nox-args: >-
               tests/integration/ometa
+          - name: "shard-2"
+            nox-args: >-
               tests/integration/postgres
               tests/integration/mysql
               tests/integration/profiler
               tests/integration/data_quality
-          - name: "shard-2"
+          - name: "shard-3"
             nox-args: >-
               --ignore=tests/integration/ometa
               --ignore=tests/integration/postgres
@@ -215,14 +255,14 @@ jobs:
   # Set "py-tests / py-tests-status" as the sole required check for this workflow.
   py-tests-status:
     name: py-tests-status
-    needs: [changes, py-unit-tests, py-integration-tests]
+    needs: [changes, py-static-checks, py-unit-tests, py-integration-tests]
     if: ${{ failure() || cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - run: exit 1
 
   py-combine-coverage:
-    needs: [changes, py-unit-tests, py-integration-tests]
+    needs: [changes, py-static-checks, py-unit-tests, py-integration-tests]
     if: ${{ needs.changes.outputs.python == 'true' && !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
