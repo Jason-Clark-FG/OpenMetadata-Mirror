@@ -84,6 +84,7 @@ import org.openmetadata.service.search.InheritedFieldEntitySearch;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldQuery;
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
 import org.openmetadata.service.security.AuthorizationException;
+import org.openmetadata.service.security.policyevaluator.PolicyConditionUpdater;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -585,6 +586,12 @@ public class TagRepository extends EntityRepository<Tag> {
     daoCollection
         .tagUsageDAO()
         .deleteTagLabels(TagSource.CLASSIFICATION.ordinal(), entity.getFullyQualifiedName());
+
+    // Remove this tag from policy rule conditions
+    PolicyConditionUpdater.updateAllPolicyConditions(
+        condition ->
+            PolicyConditionUpdater.removeFromCondition(
+                condition, entity.getFullyQualifiedName(), PolicyConditionUpdater.TAG_FUNCTIONS));
   }
 
   @Override
@@ -950,6 +957,11 @@ public class TagRepository extends EntityRepository<Tag> {
         }
 
         updateEntityLinks(oldFqn, newFqn, updated);
+
+        PolicyConditionUpdater.updateAllPolicyConditions(
+            condition ->
+                PolicyConditionUpdater.renamePrefixInCondition(
+                    condition, oldFqn, newFqn, PolicyConditionUpdater.TAG_FUNCTIONS));
       }
 
       if (classificationChanged) {
