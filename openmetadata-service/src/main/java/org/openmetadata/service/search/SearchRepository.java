@@ -224,6 +224,7 @@ public class SearchRepository {
   @Getter private EmbeddingClient embeddingClient;
   @Getter private VectorIndexService vectorIndexService;
   @Getter private VectorEmbeddingHandler vectorEmbeddingHandler;
+  @Getter private String vectorServiceInitError;
   private volatile boolean vectorServiceInitialized = false;
 
   public SearchRepository(ElasticSearchConfiguration config, int maxDBConnections) {
@@ -444,6 +445,7 @@ public class SearchRepository {
           cfg.getNaturalLanguageSearch().getEmbeddingProvider(),
           embeddingClient.getDimension());
     } catch (Exception e) {
+      this.vectorServiceInitError = e.getMessage();
       LOG.error("Failed to initialize vector search service: {}", e.getMessage(), e);
     }
   }

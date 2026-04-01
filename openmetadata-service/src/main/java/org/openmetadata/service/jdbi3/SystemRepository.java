@@ -608,13 +608,7 @@ public class SystemRepository {
       StepValidation embeddingsValidation,
       String description,
       String configMessage) {
-    String initError = null;
-    try {
-      searchRepository.initializeVectorSearchService();
-    } catch (Exception e) {
-      LOG.error("Vector search service initialization failed during validation", e);
-      initError = e.getMessage();
-    }
+    searchRepository.initializeVectorSearchService();
 
     if (searchRepository.getVectorIndexService() != null) {
       try {
@@ -638,14 +632,15 @@ public class SystemRepository {
       }
     }
 
-    String errorSuffix = initError != null ? " Error: " + initError + ". " : " ";
+    String initError = searchRepository.getVectorServiceInitError();
+    String errorSuffix = initError != null ? " Error: " + initError + "." : "";
     if (searchRepository.getEmbeddingClient() == null) {
       return embeddingsValidation
           .withDescription(description)
           .withMessage(
               "Embedding client could not be initialized."
                   + errorSuffix
-                  + "Check the embedding provider configuration. "
+                  + " Check the embedding provider configuration. "
                   + configMessage)
           .withPassed(false);
     }
@@ -656,6 +651,7 @@ public class SystemRepository {
             "Vector search service could not be initialized. "
                 + "The embedding client is configured but the OpenSearch vector service failed to start."
                 + errorSuffix
+                + " "
                 + configMessage)
         .withPassed(false);
   }
