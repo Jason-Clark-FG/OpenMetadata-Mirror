@@ -311,7 +311,14 @@ test.describe('Impact Analysis', () => {
 
     const initialLineageCount = lineageRequests.length;
 
-    await page.getByRole('button', { name: 'Upstream' }).click();
+    await page.getByTestId('lineage-config').click();
+
+    await page.getByLabel(/upstream/i).fill('5');
+
+    await page.getByRole('button', { name: /ok/i }).click();
+
+    await expect(page.locator('[role="dialog"]')).not.toBeVisible();
+
     await expect
       .poll(() => lineageRequests.length, { timeout: 10000 })
       .toBeGreaterThan(initialLineageCount);
@@ -327,9 +334,7 @@ test.describe('Impact Analysis', () => {
     expect(lineageUrl.searchParams.get('upstreamDepth')).toBeTruthy();
     expect(lineageUrl.searchParams.get('downstreamDepth')).toBeTruthy();
     expect(lineageUrl.searchParams.get('include_pagination_info')).toBe('true');
-    expect(lineageUrl.searchParams.get('upstreamDepth')).toBe(
-      lineageUrl.searchParams.get('nodeDepth')
-    );
+    expect(lineageUrl.searchParams.get('upstreamDepth')).toBe('5');
   });
 
   test('Verify Downstream connections', async ({ page }) => {
@@ -964,7 +969,9 @@ test.describe('Impact Analysis', () => {
     await page.getByTestId('search-dropdown-Tier').click();
 
     await page
-      .getByTitle(EntityDataClass.tierTag1.responseData.displayName)
+      .getByTitle(
+        EntityDataClass.tierTag1.responseData.fullyQualifiedName.toLowerCase()
+      )
       .click();
 
     await page.getByRole('button', { name: 'Update' }).click();
