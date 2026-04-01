@@ -102,7 +102,7 @@ jobs:
         shell: bash
 
   py-unit-tests:
-    name: Unit Tests
+    name: "Unit Tests (${{ matrix.shard.name }}, Python ${{ matrix.py-version }})"
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' }}
     timeout-minutes: 60
@@ -111,6 +111,11 @@ jobs:
       fail-fast: false
       matrix:
         py-version: ["3.10", "3.11", "3.12"]
+        shard:
+          - name: "shard-1"
+            nox-args: "tests/unit/topology"
+          - name: "shard-2"
+            nox-args: "--ignore=tests/unit/topology"
     steps:
 
       - name: Wait for the labeler
@@ -146,14 +151,14 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s unit-tests -- ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }}
+          nox --no-venv -s unit-tests -- ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }} ${{ matrix.shard.nox-args }}
         shell: bash
 
       - name: Upload coverage artifact
         if: ${{ matrix.py-version == env.MAIN_PYTHON_VERSION && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-unit
+          name: coverage-unit-${{ matrix.shard.name }}
           path: ingestion/.coverage
           include-hidden-files: true
 
@@ -299,7 +304,10 @@ jobs:
       - name: Prepare coverage files
         run: |
           cd ingestion
-          [ -f coverage-data/coverage-unit/.coverage ] && mv coverage-data/coverage-unit/.coverage .coverage.unit
+          for dir in coverage-data/coverage-unit-*/; do
+            shard=$(basename "$dir" | sed 's/coverage-unit-//')
+            [ -f "$dir/.coverage" ] && mv "$dir/.coverage" ".coverage.unit-$shard"
+          done
           for dir in coverage-data/coverage-integration-*/; do
             shard=$(basename "$dir" | sed 's/coverage-integration-//')
             [ -f "$dir/.coverage" ] && mv "$dir/.coverage" ".coverage.integration-$shard"
