@@ -10,18 +10,29 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { FormInstance } from 'antd';
+import { Ref } from 'react';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../../generated/api/domains/createDomain';
 import { Domain } from '../../../generated/entity/domains/domain';
 import { DomainFormType } from '../DomainPage.interface';
 
+export interface DomainFormRef {
+  submit: () => void;
+  resetFields: () => void;
+  validateFields: () => Promise<CreateDomain | CreateDataProduct>;
+}
+
+export type DomainFormRefProp =
+  | Ref<DomainFormRef>
+  | Partial<DomainFormRef>
+  | null;
+
 export interface AddDomainFormProps {
   isFormInDialog: boolean;
   onCancel: () => void;
   onSubmit: (data: CreateDomain | CreateDataProduct) => Promise<void>;
-  formRef?: FormInstance<CreateDomain | CreateDataProduct>;
+  formRef?: DomainFormRefProp;
   loading: boolean;
   type: DomainFormType;
-  parentDomain?: Domain; // Optional - present when creating from domain details
+  parentDomain?: Domain;
 }

@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import { Form } from 'antd';
 import { Domain } from '../../../generated/entity/domains/domain';
 import '../../../test/unit/mocks/mui.mock';
 import { DomainFormType } from '../DomainPage.interface';
 import AddDomainForm from './AddDomainForm.component';
+import { DomainFormRef } from './AddDomainForm.interface';
 
 // Mock i18next
 jest.mock('react-i18next', () => ({
@@ -31,11 +31,137 @@ jest.mock('../../../context/PermissionProvider/PermissionProvider', () => ({
   }),
 }));
 
-// Mock form utilities to avoid complex field rendering
-jest.mock('../../../utils/formUtils', () => ({
-  generateFormFields: jest.fn().mockReturnValue(null),
-  getField: jest.fn().mockReturnValue(null),
+jest.mock('@openmetadata/ui-core-components', () => {
+  const React = require('react');
+
+  return {
+    Button: ({
+      children,
+      onPress,
+      onClick,
+      isDisabled,
+      isLoading,
+      'data-testid': testId,
+      type,
+    }: {
+      children: React.ReactNode;
+      onPress?: () => void;
+      onClick?: () => void;
+      isDisabled?: boolean;
+      isLoading?: boolean;
+      'data-testid'?: string;
+      type?: 'submit' | 'button';
+    }) => (
+      <button
+        data-testid={testId}
+        disabled={isDisabled || isLoading}
+        type={type ?? 'button'}
+        onClick={() => {
+          onClick?.();
+          onPress?.();
+        }}>
+        {children}
+      </button>
+    ),
+    FieldTypes: {
+      COVER_IMAGE_UPLOAD: 'cover_image_upload',
+      DESCRIPTION: 'description',
+      DOMAIN_SELECT: 'domain_select',
+      GLOSSARY_TAG_SUGGESTION: 'glossary_tag_suggestion',
+      ICON_PICKER: 'icon_picker',
+      TAG_SUGGESTION: 'tag_suggestion',
+      COLOR_PICKER: 'color_picker',
+      SELECT: 'select',
+      TEXT: 'text',
+      USER_TEAM_SELECT: 'user_team_select',
+      USER_TEAM_SELECT_INPUT: 'user_team_select_input',
+    },
+    FormField: ({
+      children,
+    }: {
+      children: (controller: {
+        field: {
+          name: string;
+          onChange: (value: unknown) => void;
+          value: unknown;
+        };
+        fieldState: { error?: { message?: string } };
+      }) => React.ReactNode;
+    }) => (
+      <>
+        {children({
+          field: {
+            name: 'mock-field',
+            onChange: jest.fn(),
+            value: undefined,
+          },
+          fieldState: {},
+        })}
+      </>
+    ),
+    FormItemLabel: ({ label }: { label: React.ReactNode }) => (
+      <div>{label}</div>
+    ),
+    HintText: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    HookForm: ({
+      children,
+      onSubmit,
+      ...props
+    }: {
+      children: React.ReactNode;
+      onSubmit?: (event?: React.FormEvent<HTMLFormElement>) => void;
+      [key: string]: unknown;
+    }) => (
+      <form
+        {...props}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit?.(event);
+        }}>
+        {children}
+      </form>
+    ),
+    getField: (field: {
+      id?: string;
+      name: string;
+      label: React.ReactNode;
+      props?: { 'data-testid'?: string };
+    }) => (
+      <div data-testid={field.props?.['data-testid'] ?? field.id ?? field.name}>
+        {field.label}
+      </div>
+    ),
+    Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
+  };
+});
+
+jest.mock(
+  '../../../components/BlockEditor/Extensions/image/ImageClassBase',
+  () => ({
+    __esModule: true,
+    default: {
+      getBlockEditorAttachmentProps: jest.fn().mockReturnValue(undefined),
+    },
+  })
+);
+
+jest.mock('../../common/IconPicker', () => ({
+  AVAILABLE_ICONS: [
+    { category: 'default', component: jest.fn(), name: 'Cube01' },
+    { category: 'icons', component: jest.fn(), name: 'Globe01' },
+  ],
+  DEFAULT_DATA_PRODUCT_ICON: { name: 'data-product' },
+  DEFAULT_DOMAIN_ICON: { name: 'domain' },
 }));
+
+jest.mock('../../common/RichTextEditor/RichTextEditor', () =>
+  jest.fn().mockReturnValue(<div data-testid="description">RichTextEditor</div>)
+);
 
 const mockOnCancel = jest.fn();
 const mockOnSubmit = jest.fn();
@@ -94,7 +220,7 @@ describe('AddDomainForm', () => {
     expect(footerButtons).toBeInTheDocument();
   });
 
-  it('should initialize form with Form.useForm when no formRef is provided', () => {
+  it('should render properly when no formRef is provided', () => {
     const { container } = render(<AddDomainForm {...defaultProps} />);
 
     const formElement = container.querySelector('form');
@@ -103,17 +229,22 @@ describe('AddDomainForm', () => {
   });
 
   it('should use provided formRef when passed', () => {
-    const TestWrapper = () => {
-      const [form] = Form.useForm();
+    const providedRef = { current: null as DomainFormRef | null };
 
-      return <AddDomainForm {...defaultProps} formRef={form} />;
-    };
-
-    const { container } = render(<TestWrapper />);
+    const { container } = render(
+      <AddDomainForm {...defaultProps} formRef={providedRef} />
+    );
 
     const formElement = container.querySelector('form');
 
     expect(formElement).toBeInTheDocument();
+    expect(providedRef.current).toEqual(
+      expect.objectContaining({
+        resetFields: expect.any(Function),
+        submit: expect.any(Function),
+        validateFields: expect.any(Function),
+      })
+    );
   });
 
   it('should handle form submission', () => {

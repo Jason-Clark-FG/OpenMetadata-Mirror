@@ -320,6 +320,7 @@ export const AutocompleteBase = ({
   popoverClassName,
   renderTag,
   filterOption,
+  onFocus,
   multiple = true,
   onSearchChange,
   maxVisibleItems,
@@ -465,7 +466,14 @@ export const AutocompleteBase = ({
                   placeholder={placeholder}
                   placeholderIcon={props.placeholderIcon}
                   size="sm"
-                  onFocus={onResize}
+                  onFocus={(event) => {
+                    onResize();
+                    (
+                      onFocus as
+                        | ((focusEvent: typeof event) => void)
+                        | undefined
+                    )?.(event);
+                  }}
                   onPointerEnter={onResize}
                 />
               </div>
