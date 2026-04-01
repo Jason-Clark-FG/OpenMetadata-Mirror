@@ -7340,6 +7340,16 @@ public interface CollectionDAO {
         connectionType = POSTGRES)
     void removeTestCaseDataContractForSpecificContract(
         @Bind("id") String id, @Bind("dataContractId") String dataContractId);
+
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE test_case SET json = JSON_REMOVE(json, '$.dataContract') WHERE JSON_UNQUOTE(JSON_EXTRACT(json, '$.dataContract.id')) = :dataContractId",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlUpdate(
+        value =
+            "UPDATE test_case SET json = json - 'dataContract' WHERE json->'dataContract'->>'id' = :dataContractId",
+        connectionType = POSTGRES)
+    void removeAllTestCaseDataContractReferences(@Bind("dataContractId") String dataContractId);
   }
 
   interface WebAnalyticEventDAO extends EntityDAO<WebAnalyticEvent> {

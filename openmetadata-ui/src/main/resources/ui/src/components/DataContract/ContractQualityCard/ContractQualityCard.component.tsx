@@ -22,7 +22,6 @@ import { DataContract } from '../../../generated/entity/data/dataContract';
 import { DataContractResult } from '../../../generated/entity/datacontract/dataContractResult';
 import { TestCase, TestCaseStatus } from '../../../generated/tests/testCase';
 import { Include } from '../../../generated/type/include';
-import { useFqn } from '../../../hooks/useFqn';
 import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { getContractStatusType } from '../../../utils/DataContract/DataContractUtils';
 import { getTestCaseDetailPagePath } from '../../../utils/RouterUtils';
@@ -38,19 +37,20 @@ const ContractQualityCard: React.FC<{
   latestContractResults?: DataContractResult;
 }> = ({ contract, contractStatus, latestContractResults }) => {
   const { t } = useTranslation();
-  const { fqn } = useFqn();
   const [isTestCaseLoading, setIsTestCaseLoading] = useState(false);
   const [testCase, setTestCase] = useState<TestCase[]>([]);
 
+  const entityFqn = contract.entity?.fullyQualifiedName;
+
   const fetchTestCases = useCallback(async () => {
-    if (!fqn) {
+    if (!entityFqn) {
       return;
     }
     setIsTestCaseLoading(true);
     try {
       const { data } = await getListTestCaseBySearch({
         ...DEFAULT_SORT_ORDER,
-        entityLink: generateEntityLink(fqn),
+        entityLink: generateEntityLink(entityFqn),
         includeAllTests: true,
         limit: ES_MAX_PAGE_SIZE,
         include: Include.NonDeleted,
@@ -66,7 +66,7 @@ const ContractQualityCard: React.FC<{
     } finally {
       setIsTestCaseLoading(false);
     }
-  }, [fqn]);
+  }, [entityFqn]);
 
   const {
     showTestCaseSummaryChart,
@@ -126,8 +126,7 @@ const ContractQualityCard: React.FC<{
       return {
         id: item.id,
         name: item.name,
-        fullyQualifiedName:
-          item.fullyQualifiedName ?? (fqn ? `${fqn}.${item.name}` : item.name),
+        fullyQualifiedName: item.fullyQualifiedName ?? item.name,
         testCaseStatus:
           matchedTestCase?.testCaseStatus ??
           matchedTestCase?.testCaseResult?.testCaseStatus ??
@@ -136,7 +135,7 @@ const ContractQualityCard: React.FC<{
     });
 
     return mergedData ?? [];
-  }, [contract, testCase, fqn]);
+  }, [contract, testCase]);
 
   useEffect(() => {
     fetchTestCases();

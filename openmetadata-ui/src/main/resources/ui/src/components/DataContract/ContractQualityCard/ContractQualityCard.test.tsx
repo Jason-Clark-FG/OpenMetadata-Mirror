@@ -22,12 +22,6 @@ import { getListTestCaseBySearch } from '../../../rest/testAPI';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import ContractQualityCard from './ContractQualityCard.component';
 
-jest.mock('../../../hooks/useFqn', () => ({
-  useFqn: jest.fn(() => ({
-    fqn: 'fqn',
-  })),
-}));
-
 jest.mock('../../../rest/testAPI', () => ({
   getListTestCaseBySearch: jest.fn(),
 }));
@@ -281,15 +275,15 @@ describe('ContractQualityCard', () => {
 
       expect(links[0]).toHaveAttribute(
         'href',
-        '/test-case/fqn.CLV Must be Positive'
+        '/test-case/CLV Must be Positive'
       );
       expect(links[1]).toHaveAttribute(
         'href',
-        '/test-case/fqn.Customer ID To Be Unique'
+        '/test-case/Customer ID To Be Unique'
       );
       expect(links[2]).toHaveAttribute(
         'href',
-        '/test-case/fqn.Table Row Count To Equal'
+        '/test-case/Table Row Count To Equal'
       );
     });
   });
