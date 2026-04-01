@@ -608,7 +608,9 @@ public class SystemRepository {
       StepValidation embeddingsValidation,
       String description,
       String configMessage) {
-    searchRepository.initializeVectorSearchService();
+    if (searchRepository.getVectorServiceInitError() == null) {
+      searchRepository.initializeVectorSearchService();
+    }
 
     if (searchRepository.getVectorIndexService() != null) {
       try {

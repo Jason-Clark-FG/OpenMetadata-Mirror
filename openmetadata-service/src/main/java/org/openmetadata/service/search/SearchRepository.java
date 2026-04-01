@@ -224,7 +224,7 @@ public class SearchRepository {
   @Getter private EmbeddingClient embeddingClient;
   @Getter private VectorIndexService vectorIndexService;
   @Getter private VectorEmbeddingHandler vectorEmbeddingHandler;
-  @Getter private String vectorServiceInitError;
+  @Getter private volatile String vectorServiceInitError;
   private volatile boolean vectorServiceInitialized = false;
 
   public SearchRepository(ElasticSearchConfiguration config, int maxDBConnections) {
