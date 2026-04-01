@@ -1554,9 +1554,7 @@ public class LineageResourceIT {
     boolean found =
         rows.stream()
             .anyMatch(
-                r ->
-                    fromFqn.equals(r.get("fromEntityFQN"))
-                        && toFqn.equals(r.get("toEntityFQN")));
+                r -> fromFqn.equals(r.get("fromEntityFQN")) && toFqn.equals(r.get("toEntityFQN")));
     assertTrue(
         found, String.format("Expected edge %s -> %s not found in async CSV", fromFqn, toFqn));
   }
@@ -1618,10 +1616,7 @@ public class LineageResourceIT {
         client
             .getHttpClient()
             .executeForString(
-                HttpMethod.GET,
-                "/v1/lineage/exportByEntityCountAsync",
-                null,
-                options.build());
+                HttpMethod.GET, "/v1/lineage/exportByEntityCountAsync", null, options.build());
     JsonNode result = OBJECT_MAPPER.readTree(response);
     assertNotNull(result.get("jobId"));
     assertFalse(result.get("jobId").asText().isEmpty());
