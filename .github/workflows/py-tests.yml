@@ -113,9 +113,14 @@ jobs:
         py-version: ["3.10", "3.11", "3.12"]
         shard:
           - name: "shard-1"
-            nox-args: "tests/unit/topology"
+            nox-args: >-
+              tests/unit/topology/database
+              tests/unit/topology/dashboard
           - name: "shard-2"
-            nox-args: "--ignore=tests/unit/topology"
+            nox-args: >-
+              tests/unit
+              --ignore=tests/unit/topology/database
+              --ignore=tests/unit/topology/dashboard
     steps:
 
       - name: Wait for the labeler
@@ -193,7 +198,7 @@ jobs:
               tests/integration/mongodb
               tests/integration/ssrs
           - name: "shard-2"
-            workers: "0"
+            workers: "2"
             nox-args: >-
               tests/integration/postgres
               tests/integration/mysql
