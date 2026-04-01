@@ -277,7 +277,6 @@ public class SearchResource {
                     schema = @Schema(implementation = CSVExportResponse.class)))
       })
   public Response exportSearchResultsAsync(
-      @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
       @Parameter(description = "Search Query Text") @DefaultValue("*") @QueryParam("q")
           String query,

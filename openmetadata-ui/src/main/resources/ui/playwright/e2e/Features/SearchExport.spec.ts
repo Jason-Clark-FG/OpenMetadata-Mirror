@@ -190,9 +190,10 @@ test.describe('Search Export', () => {
       }
     });
 
-    await test.step('Simulate WebSocket progress and completion', async () => {
+    await test.step('Simulate WebSocket progress and verify UI updates', async () => {
       const { getWebSocketMock } = await import('../../utils/websocket');
       const wsMock = getWebSocketMock();
+      const modal = page.locator('.ant-modal:visible');
 
       // Send progress event
       wsMock.emit('csvExportChannel', {
@@ -205,6 +206,9 @@ test.describe('Search Export', () => {
         error: null,
       });
 
+      // Verify progress bar is shown in the modal
+      await expect(modal.locator('.ant-progress')).toBeVisible();
+
       // Send completion event with CSV data
       wsMock.emit('csvExportChannel', {
         jobId: 'test-job-123',
@@ -215,6 +219,11 @@ test.describe('Search Export', () => {
         total: 100,
         message: 'Export completed',
       });
+
+      // Verify success banner is shown after completion
+      await expect(
+        modal.locator('.message-banner-wrapper.success')
+      ).toBeVisible();
     });
 
     cleanupWebSocketMock();

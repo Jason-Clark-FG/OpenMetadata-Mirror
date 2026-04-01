@@ -12,6 +12,7 @@
  */
 
 import {
+  DownOutlined,
   ExclamationCircleOutlined,
   FilterOutlined,
   SortAscendingOutlined,
@@ -25,6 +26,7 @@ import {
   Dropdown,
   Menu,
   Row,
+  Space,
   Switch,
   Typography,
 } from 'antd';
@@ -218,14 +220,16 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const exportMenuItems = useMemo(
     () => [
       {
-        key: 'current-tab',
-        label: t('label.current-entity', { entity: t('label.tab') }),
-      },
-      {
         key: 'all-data-assets',
         label: t('label.all-entity', {
           entity: t('label.data-asset-plural'),
         }),
+        icon: <ExportIcon className="anticon" height={14} width={14} />,
+      },
+      {
+        key: 'current-tab',
+        label: t('label.current-entity', { entity: t('label.tab') }),
+        icon: <FilterOutlined />,
       },
     ],
     [t]
@@ -462,19 +466,20 @@ const ExploreV1: React.FC<ExploreProps> = ({
                                       : searchIndex
                                   ),
                               }}
+                              placement="bottomRight"
                               trigger={['click']}>
                               <Button
-                                className="cursor-pointer"
                                 data-testid="export-search-results-button"
-                                icon={
+                                type="primary">
+                                <Space>
                                   <ExportIcon
                                     className="anticon"
                                     height={14}
                                     width={14}
                                   />
-                                }
-                                type="text">
-                                {t('label.export')}
+                                  {t('label.export')}
+                                  <DownOutlined />
+                                </Space>
                               </Button>
                             </Dropdown>
                             <Button

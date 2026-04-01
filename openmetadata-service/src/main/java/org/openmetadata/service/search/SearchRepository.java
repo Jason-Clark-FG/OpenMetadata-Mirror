@@ -2436,11 +2436,8 @@ public class SearchRepository {
             .withTrackTotalHits(true)
             .withIncludeAggregations(false);
 
-    Response countResponse = searchClient.search(countRequest, subjectContext);
-    String countBody =
-        countResponse.getEntity() != null ? countResponse.getEntity().toString() : "{}";
-    JsonNode countRoot = JsonUtils.readTree(countBody);
-    int totalHits = extractTotalHits(countRoot);
+    SearchResultListMapper countResult = searchClient.searchForExport(countRequest, subjectContext);
+    int totalHits = (int) countResult.getTotal();
 
     if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
       throw new IllegalArgumentException(
@@ -2500,38 +2497,20 @@ public class SearchRepository {
                       baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
                   .withSearchAfter(searchAfter);
 
-          Response batchResponse = searchClient.search(batchRequest, subjectContext);
-          String batchBody =
-              batchResponse.getEntity() != null ? batchResponse.getEntity().toString() : "{}";
-          JsonNode batchRoot = JsonUtils.readTree(batchBody);
-          JsonNode hits = batchRoot.path("hits").path("hits");
+          SearchResultListMapper batch = searchClient.searchForExport(batchRequest, subjectContext);
 
-          if (!hits.isArray() || hits.isEmpty()) {
+          if (batch.getResults().isEmpty()) {
             break;
           }
 
-          for (JsonNode hit : hits) {
-            JsonNode sourceNode = hit.path("_source");
-            if (!sourceNode.isMissingNode()) {
-              Map<String, Object> source =
-                  JsonUtils.readValue(sourceNode.toString(), new TypeReference<>() {});
-              writer.write(SearchResultCsvExporter.toCsvRow(source));
-              writer.newLine();
-              exported++;
-            }
+          for (Map<String, Object> source : batch.getResults()) {
+            writer.write(SearchResultCsvExporter.toCsvRow(source));
+            writer.newLine();
+            exported++;
           }
 
-          JsonNode lastHit = hits.get(hits.size() - 1);
-          JsonNode sortNode = lastHit.path("sort");
-          if (sortNode.isArray() && !sortNode.isEmpty()) {
-            searchAfter = new ArrayList<>();
-            for (JsonNode sortValue : sortNode) {
-              if (sortValue.isNumber()) {
-                searchAfter.add(sortValue.numberValue());
-              } else {
-                searchAfter.add(sortValue.asText());
-              }
-            }
+          if (batch.getLastHitSortValues() != null) {
+            searchAfter = Arrays.asList(batch.getLastHitSortValues());
           } else {
             break;
           }
@@ -2546,14 +2525,6 @@ public class SearchRepository {
     } finally {
       java.nio.file.Files.deleteIfExists(tempFile);
     }
-  }
-
-  private static int extractTotalHits(JsonNode root) {
-    JsonNode total = root.path("hits").path("total");
-    if (total.has("value")) {
-      return total.get("value").asInt();
-    }
-    return total.asInt(0);
   }
 
   public Response previewSearch(
