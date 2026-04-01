@@ -437,6 +437,7 @@ public class SearchRepository {
       this.vectorEmbeddingHandler = new VectorEmbeddingHandler(vectorIndexService);
 
       vectorServiceInitialized = true;
+      this.vectorServiceInitError = null;
 
       ensureHybridSearchPipeline();
 
