@@ -230,9 +230,11 @@ public class QueryVisibilityPolicyIT {
   /**
    * Regression test for NPE in matchAnyCertification policy evaluation.
    *
-   * <p>When a policy with matchAnyCertification condition is evaluated against an entity that has no
-   * certification, it should evaluate cleanly. The bug was that
-   * resourceContext.getEntity().getCertification() NPE'd when getEntity() returned null.
+   * <p>The bug: {@code matchAnyCertification} called {@code
+   * resourceContext.getEntity().getCertification()} without null-checking {@code getEntity()}.
+   * When {@code ResourceContext.getEntity()} returned null (e.g. Settings, Team, or list
+   * operations), the chained call threw a NullPointerException (500) before any certification
+   * logic could run.
    *
    * <p>Uses a single DENY rule with matchAnyCertification condition. For an uncertified entity the
    * condition is false, so the deny rule does not fire and the entity remains viewable. Before the
