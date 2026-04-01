@@ -209,6 +209,10 @@ def integration_tests(session):
     if standalone:
         args.remove("--standalone")
 
+    skip_cov = "--no-cov" in args
+    if skip_cov:
+        args.remove("--no-cov")
+
     workers = os.environ.get("PYTEST_INTEGRATION_WORKERS", "0")
     if "--workers" in args:
         idx = args.index("--workers")
@@ -222,13 +226,17 @@ def integration_tests(session):
     pytest_args = [
         "-c",
         "pyproject.toml",
-        "--cov=metadata",
-        "--cov-branch",
-        "--cov-config=pyproject.toml",
         "--junitxml=junit/test-results-integration.xml",
     ]
 
-    if not standalone:
+    if not skip_cov:
+        pytest_args += [
+            "--cov=metadata",
+            "--cov-branch",
+            "--cov-config=pyproject.toml",
+        ]
+
+    if not standalone and not skip_cov:
         pytest_args.append("--cov-append")
     use_xdist = int(workers) > 0
     if use_xdist:

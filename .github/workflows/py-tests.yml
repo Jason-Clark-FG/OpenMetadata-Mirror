@@ -230,9 +230,10 @@ jobs:
         run: |
           source env/bin/activate
           cd ingestion
-          nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.shard.nox-args }}
+          nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }} ${{ matrix.shard.nox-args }}
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
+          PYTEST_INTEGRATION_WORKERS: "2"
         shell: bash
 
       - name: Upload coverage artifact
