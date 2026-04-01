@@ -21,8 +21,8 @@ import {
 import { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import {
-  MOCK_PERMISSIONS,
   mockedGlossaryTerms,
+  MOCK_PERMISSIONS,
 } from '../../../mocks/Glossary.mock';
 import { findExpandableKeysForArray } from '../../../utils/GlossaryUtils';
 import GlossaryTermTab from './GlossaryTermTab.component';
