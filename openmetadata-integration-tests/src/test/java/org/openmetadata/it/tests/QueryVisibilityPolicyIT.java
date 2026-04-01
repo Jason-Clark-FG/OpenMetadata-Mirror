@@ -1,8 +1,9 @@
 package org.openmetadata.it.tests;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -36,6 +37,7 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.sdk.client.OpenMetadataClient;
+import org.openmetadata.sdk.exceptions.ApiException;
 import org.openmetadata.sdk.fluent.Tables;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -294,12 +296,15 @@ public class QueryVisibilityPolicyIT {
                 OpenMetadataClient testUserClient =
                     SdkClients.createClient(userEmail, userEmail, new String[] {});
 
-                // Before the fix, this GET threw NPE in matchAnyCertification
-                // when the table had no certification attached
-                assertDoesNotThrow(
-                    () -> testUserClient.tables().get(tableNoCert.getId().toString()),
-                    "GET table should not throw NPE when entity has no certification "
-                        + "and matchAnyCertification policy is active");
+                // Before the fix, this threw NPE (500) in matchAnyCertification
+                // when the entity had no certification. After the fix, the policy
+                // evaluates cleanly and returns a proper 403 denial.
+                ApiException ex =
+                    assertThrows(
+                        ApiException.class,
+                        () -> testUserClient.tables().get(tableNoCert.getId().toString()));
+                assertEquals(
+                    403, ex.getStatusCode(), "Should get 403 Forbidden (policy deny), not 500 NPE");
               } finally {
                 adminClient.tables().delete(tableNoCert.getId());
               }
