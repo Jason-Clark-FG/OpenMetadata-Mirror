@@ -20,18 +20,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
+import org.openmetadata.schema.api.classification.CreateClassification;
+import org.openmetadata.schema.api.classification.CreateTag;
 import org.openmetadata.schema.api.policies.CreatePolicy;
 import org.openmetadata.schema.api.teams.CreateRole;
+import org.openmetadata.schema.api.teams.CreateTeam;
+import org.openmetadata.schema.entity.classification.Classification;
+import org.openmetadata.schema.entity.classification.Tag;
 import org.openmetadata.schema.entity.policies.Policy;
 import org.openmetadata.schema.entity.policies.accessControl.Rule;
 import org.openmetadata.schema.entity.policies.accessControl.Rule.Effect;
 import org.openmetadata.schema.entity.teams.Role;
+import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
@@ -482,6 +489,190 @@ public class PolicyResourceIT extends BaseEntityIT<Policy, CreatePolicy> {
     Policy fetched = client.policies().get(policy.getId().toString(), "owners");
     assertNotNull(fetched.getOwners());
     assertFalse(fetched.getOwners().isEmpty());
+  }
+
+  /**
+   * Reproduces the bug where deleting a tag that is referenced in a policy rule condition blocks
+   * future edits of that policy. The matchAnyTag condition is validated on every update, so a stale
+   * tag reference causes validation to fail even for unrelated changes like updating the
+   * description.
+   *
+   * <p>Steps: 1) Create a classification and tag 2) Create a policy with a rule condition using
+   * matchAnyTag referencing that tag 3) Hard-delete the tag 4) Attempt to edit the policy (e.g.
+   * update description) 5) The edit should succeed but currently fails because the deleted tag still
+   * appears in the condition and re-validation rejects it.
+   */
+  @Test
+  void test_editPolicyAfterReferencedTagIsDeleted(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    // Step 1: Create a classification and a tag under it
+    String classificationName = ns.prefix("TagCleanupClassification");
+    Classification classification =
+        client
+            .classifications()
+            .create(
+                new CreateClassification()
+                    .withName(classificationName)
+                    .withDescription("Classification for tag cleanup test"));
+
+    String tagName = ns.prefix("StaleTag");
+    Tag tag =
+        client
+            .tags()
+            .create(
+                new CreateTag()
+                    .withName(tagName)
+                    .withClassification(classification.getFullyQualifiedName())
+                    .withDescription("Tag that will be deleted"));
+
+    String tagFqn = tag.getFullyQualifiedName();
+
+    // Step 2: Create a policy with a rule whose condition references the tag
+    Rule tagRule =
+        new Rule()
+            .withName("tagConditionRule")
+            .withResources(List.of(ALL_RESOURCES))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Effect.ALLOW)
+            .withCondition("matchAnyTag('" + tagFqn + "')");
+
+    CreatePolicy createPolicy =
+        new CreatePolicy()
+            .withName(ns.prefix("tagRefPolicy"))
+            .withRules(List.of(tagRule))
+            .withDescription("Policy referencing a tag that will be deleted");
+
+    Policy policy = createEntity(createPolicy);
+    String policyId = policy.getId().toString();
+    assertNotNull(policy.getRules());
+    assertEquals("matchAnyTag('" + tagFqn + "')", policy.getRules().get(0).getCondition());
+
+    // Step 3: Hard-delete the tag
+    client.tags().delete(tag.getId().toString(), Map.of("hardDelete", "true"));
+
+    // Step 4: Attempt to edit the policy — this should succeed but currently fails
+    // because the deleted tag in the condition triggers validation failure
+    Policy fetched = getEntity(policyId);
+    fetched.setDescription("Updated after tag deletion");
+    Policy updated = patchEntity(policyId, fetched);
+
+    assertEquals("Updated after tag deletion", updated.getDescription());
+  }
+
+  @Test
+  void test_editPolicyAfterReferencedRoleIsDeleted(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String roleName = ns.prefix("StaleRole");
+    Role role =
+        client
+            .roles()
+            .create(
+                new CreateRole().withName(roleName).withDescription("Role that will be deleted"));
+
+    Rule roleRule =
+        new Rule()
+            .withName("roleConditionRule")
+            .withResources(List.of(ALL_RESOURCES))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Effect.ALLOW)
+            .withCondition("hasAnyRole('" + role.getName() + "')");
+
+    Policy policy =
+        createEntity(
+            new CreatePolicy()
+                .withName(ns.prefix("roleRefPolicy"))
+                .withRules(List.of(roleRule))
+                .withDescription("Policy referencing a role that will be deleted"));
+    String policyId = policy.getId().toString();
+
+    client.roles().delete(role.getId().toString(), Map.of("hardDelete", "true"));
+
+    Policy fetched = getEntity(policyId);
+    fetched.setDescription("Updated after role deletion");
+    Policy updated = patchEntity(policyId, fetched);
+
+    assertEquals("Updated after role deletion", updated.getDescription());
+  }
+
+  @Test
+  void test_editPolicyAfterReferencedTeamIsDeleted(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String teamName = ns.prefix("StaleTeam");
+    CreateTeam createTeam = new CreateTeam();
+    createTeam.setName(teamName);
+    createTeam.setDescription("Team that will be deleted");
+    createTeam.setTeamType(CreateTeam.TeamType.GROUP);
+    Team team = client.teams().create(createTeam);
+
+    Rule teamRule =
+        new Rule()
+            .withName("teamConditionRule")
+            .withResources(List.of(ALL_RESOURCES))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Effect.ALLOW)
+            .withCondition("inAnyTeam('" + team.getName() + "')");
+
+    Policy policy =
+        createEntity(
+            new CreatePolicy()
+                .withName(ns.prefix("teamRefPolicy"))
+                .withRules(List.of(teamRule))
+                .withDescription("Policy referencing a team that will be deleted"));
+    String policyId = policy.getId().toString();
+
+    client
+        .teams()
+        .delete(team.getId().toString(), Map.of("hardDelete", "true", "recursive", "true"));
+
+    Policy fetched = getEntity(policyId);
+    fetched.setDescription("Updated after team deletion");
+    Policy updated = patchEntity(policyId, fetched);
+
+    assertEquals("Updated after team deletion", updated.getDescription());
+  }
+
+  @Test
+  void test_createPolicyWithDeletedTagStillFails(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    Classification classification =
+        client
+            .classifications()
+            .create(
+                new CreateClassification()
+                    .withName(ns.prefix("CreateFailClassification"))
+                    .withDescription("Classification for create-fail test"));
+
+    Tag tag =
+        client
+            .tags()
+            .create(
+                new CreateTag()
+                    .withName(ns.prefix("DeletedTag"))
+                    .withClassification(classification.getFullyQualifiedName())
+                    .withDescription("Tag that will be deleted before policy creation"));
+
+    String tagFqn = tag.getFullyQualifiedName();
+    client.tags().delete(tag.getId().toString(), Map.of("hardDelete", "true"));
+
+    Rule tagRule =
+        new Rule()
+            .withName("staleTagRule")
+            .withResources(List.of(ALL_RESOURCES))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Effect.ALLOW)
+            .withCondition("matchAnyTag('" + tagFqn + "')");
+
+    CreatePolicy createPolicy =
+        new CreatePolicy()
+            .withName(ns.prefix("shouldFailPolicy"))
+            .withRules(List.of(tagRule))
+            .withDescription("Policy that should fail to create");
+
+    assertThrows(Exception.class, () -> createEntity(createPolicy));
   }
 
   // ===================================================================
