@@ -13,6 +13,7 @@
 import { expect } from '@playwright/test';
 import { get } from 'lodash';
 import { SidebarItem } from '../../../constant/sidebar';
+import { EntityDataClass } from '../../../support/entity/EntityDataClass';
 import { TableClass } from '../../../support/entity/TableClass';
 import {
   getDefaultAdminAPIContext,
@@ -35,16 +36,34 @@ const table = new TableClass(tableNameWithSlash);
 test.beforeAll(async ({ browser }) => {
   const { apiContext, afterAction } = await getDefaultAdminAPIContext(browser);
   await table.create(apiContext);
+
+  await table.patch({
+    apiContext,
+    patchData: [
+      {
+        op: 'add',
+        value: {
+          type: 'domain',
+          id: EntityDataClass.domain1.responseData.id,
+        },
+        path: '/domains/0',
+      },
+    ],
+  });
+
   await afterAction();
 });
 
 test.beforeEach(async ({ page }) => {
-  await redirectToHomePage(page);
+  await table.visitEntityPage(page);
+  await visitLineageTab(page);
+  await performZoomOut(page);
 });
 
 test('Verify table search with special characters as handled', async ({
   page,
 }) => {
+  await redirectToHomePage(page);
   const db = table.databaseResponseData.name;
 
   await sidebarClick(page, SidebarItem.LINEAGE);
@@ -106,10 +125,6 @@ test('Verify table search with special characters as handled', async ({
 });
 
 test('Verify service platform view', async ({ page }) => {
-  await table.visitEntityPage(page);
-  await visitLineageTab(page);
-  await performZoomOut(page);
-
   await page.getByTestId('lineage-layer-btn').click();
 
   const serviceBtn = page.getByTestId('lineage-layer-service-btn');
@@ -123,10 +138,6 @@ test('Verify service platform view', async ({ page }) => {
 });
 
 test('Verify domain platform view', async ({ page }) => {
-  await table.visitEntityPage(page);
-  await visitLineageTab(page);
-  await performZoomOut(page);
-
   await page.getByTestId('lineage-layer-btn').click();
 
   const domainBtn = page.getByTestId('lineage-layer-domain-btn');
@@ -144,10 +155,6 @@ test('Verify domain platform view', async ({ page }) => {
 });
 
 test('Verify platform view switching', async ({ page }) => {
-  await table.visitEntityPage(page);
-  await visitLineageTab(page);
-  await performZoomOut(page);
-
   await page.getByTestId('lineage-layer-btn').click();
 
   const serviceBtn = page.getByTestId('lineage-layer-service-btn');

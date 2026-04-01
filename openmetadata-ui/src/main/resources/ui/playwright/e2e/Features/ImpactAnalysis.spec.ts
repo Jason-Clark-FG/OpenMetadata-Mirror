@@ -24,6 +24,7 @@ import { redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   connectEdgeBetweenNodesViaAPI,
+  openImpactAnalysisTab,
   updateLineageConfigFromModal,
   visitLineageTab,
 } from '../../utils/lineage';
@@ -90,16 +91,6 @@ const waitForDirectionalColumnLineageResponse = (
 
     return true;
   });
-
-const openImpactAnalysisTab = async (page: Page) => {
-  const impactAnalysisTab = page.getByRole('tab', {
-    name: 'Impact Analysis',
-  });
-
-  await expect(impactAnalysisTab).toBeVisible();
-  await impactAnalysisTab.scrollIntoViewIfNeeded();
-  await impactAnalysisTab.click();
-};
 
 test.describe('Impact Analysis', () => {
   let tableColumns: string[] = [];
@@ -1061,16 +1052,7 @@ test.describe('Impact Analysis', () => {
   });
 
   test('Verify table columns visibility and content', async ({ page }) => {
-    const expectedColumns = [
-      'Name',
-      'Node Depth',
-      //   'Description',
-      //   'Domains',
-      'Owners',
-      //   'Tier',
-      //   'Tags',
-      //   'Glossary Terms',
-    ];
+    const expectedColumns = ['Name', 'Node Depth', 'Owners'];
 
     for (const columnName of expectedColumns) {
       const columnHeader = page

@@ -641,6 +641,17 @@ export const getEntityColumns = (
   return [];
 };
 
+export const openImpactAnalysisTab = async (page: Page) => {
+  const impactAnalysisTab = page.getByRole('tab', {
+    name: 'Impact Analysis',
+  });
+
+  await expect(impactAnalysisTab).toBeVisible();
+  await impactAnalysisTab.scrollIntoViewIfNeeded();
+  await impactAnalysisTab.click();
+  await waitForAllLoadersToDisappear(page);
+};
+
 export const addPipelineBetweenNodes = async (
   page: Page,
   sourceEntity: EntityClass,
@@ -849,6 +860,8 @@ export const verifyColumnLineageInCSV = async (
       (key) => row[key] === expectedRow[key as keyof LineageCSVRecord]
     )
   );
+
+  console.log('Expected Row:', expectedRow, parsedData);
 
   expect(matchingRow).toBeDefined(); // Ensure a matching row exists
 };
