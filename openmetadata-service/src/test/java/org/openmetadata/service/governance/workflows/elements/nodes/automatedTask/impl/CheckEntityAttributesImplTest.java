@@ -114,7 +114,7 @@ class CheckEntityAttributesImplTest {
     impl.execute(execution);
 
     verify(execution).setVariable(eq("process_" + HAS_TRUE_ENTITIES_VARIABLE), eq(false));
-    verify(execution).setVariable(eq("process_" + HAS_FALSE_ENTITIES_VARIABLE), eq(false));
+    verify(execution).setVariable(eq("process_" + HAS_FALSE_ENTITIES_VARIABLE), eq(true));
   }
 
   @Test

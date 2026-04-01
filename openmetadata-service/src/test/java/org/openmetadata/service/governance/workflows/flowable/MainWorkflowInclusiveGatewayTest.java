@@ -30,7 +30,7 @@ class MainWorkflowInclusiveGatewayTest {
 
   @Test
   void testSplitGatewayInserted_WhenCheckNodeHasTwoConditionalOutgoingEdges() {
-    // Workflow: start → check → cert(true) / notify(false) → independent ends
+    // Workflow: start → check → certEnd(true) / notifyEnd(false) — independent ends
     WorkflowDefinition workflow =
         createWorkflow(
             "SplitOnlyWorkflow",
@@ -41,10 +41,8 @@ class MainWorkflowInclusiveGatewayTest {
                 endEvent("notifyEnd")),
             List.of(
                 edge("start", "check", null),
-                edge("check", "cert", "true"),
-                edge("check", "notify", "false"),
-                edge("cert", "certEnd", null),
-                edge("notify", "notifyEnd", null)));
+                edge("check", "certEnd", "true"),
+                edge("check", "notifyEnd", "false")));
 
     MainWorkflow mainWorkflow = new MainWorkflow(workflow);
     Process process = mainWorkflow.getModel().getProcesses().get(0);
@@ -75,17 +73,15 @@ class MainWorkflowInclusiveGatewayTest {
 
   @Test
   void testJoinGatewayInserted_WhenBranchesConverge() {
-    // Workflow: check → cert(true) / notify(false) → converge on end
+    // Workflow: check → end(true) / end(false) — both branches converge on same end node
     WorkflowDefinition workflow =
         createWorkflow(
             "SplitJoinWorkflow",
             List.of(startEvent("start"), checkAttributesNode("check"), endEvent("end")),
             List.of(
                 edge("start", "check", null),
-                edge("check", "cert", "true"),
-                edge("check", "notify", "false"),
-                edge("cert", "end", null),
-                edge("notify", "end", null)));
+                edge("check", "end", "true"),
+                edge("check", "end", "false")));
 
     MainWorkflow mainWorkflow = new MainWorkflow(workflow);
     Process process = mainWorkflow.getModel().getProcesses().get(0);
@@ -103,7 +99,7 @@ class MainWorkflowInclusiveGatewayTest {
             .map(e -> (SequenceFlow) e)
             .filter(f -> "end_inclusiveJoin".equals(f.getTargetRef()))
             .count();
-    assertEquals(2, flowsToJoin, "Both cert and notify should flow into the join gateway");
+    assertEquals(2, flowsToJoin, "Both conditional branches should flow into the join gateway");
 
     long flowsFromJoin =
         process.getFlowElements().stream()
@@ -139,8 +135,8 @@ class MainWorkflowInclusiveGatewayTest {
             List.of(startEvent("start"), endEvent("endTrue"), endEvent("endFalse")),
             List.of(
                 edge("start", "UserApproval", null),
-                edge("UserApproval", "nextTrue", "true"),
-                edge("UserApproval", "nextFalse", "false")));
+                edge("UserApproval", "endTrue", "true"),
+                edge("UserApproval", "endFalse", "false")));
 
     MainWorkflow mainWorkflow = new MainWorkflow(workflow);
     Process process = mainWorkflow.getModel().getProcesses().get(0);
@@ -163,10 +159,8 @@ class MainWorkflowInclusiveGatewayTest {
                 endEvent("silverEnd")),
             List.of(
                 edge("start", "dataQuality", null),
-                edge("dataQuality", "goldAction", "gold"),
-                edge("dataQuality", "silverAction", "silver"),
-                edge("goldAction", "goldEnd", null),
-                edge("silverAction", "silverEnd", null)));
+                edge("dataQuality", "goldEnd", "gold"),
+                edge("dataQuality", "silverEnd", "silver")));
 
     MainWorkflow mainWorkflow = new MainWorkflow(workflow);
     Process process = mainWorkflow.getModel().getProcesses().get(0);

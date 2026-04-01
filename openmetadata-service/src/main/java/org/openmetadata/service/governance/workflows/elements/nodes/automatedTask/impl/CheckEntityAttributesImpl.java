@@ -73,7 +73,8 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
       varHandler.setNodeVariable(TRUE_ENTITY_LIST_VARIABLE, trueEntityList);
       varHandler.setNodeVariable(FALSE_ENTITY_LIST_VARIABLE, falseEntityList);
       varHandler.setNodeVariable(HAS_TRUE_ENTITIES_VARIABLE, !trueEntityList.isEmpty());
-      varHandler.setNodeVariable(HAS_FALSE_ENTITIES_VARIABLE, !falseEntityList.isEmpty());
+      varHandler.setNodeVariable(
+          HAS_FALSE_ENTITIES_VARIABLE, !falseEntityList.isEmpty() || entityList.isEmpty());
     } catch (Exception exc) {
       LOG.error(
           "[{}] Failure: ", getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()), exc);
