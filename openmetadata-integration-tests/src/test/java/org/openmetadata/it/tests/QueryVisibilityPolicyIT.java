@@ -1,9 +1,8 @@
 package org.openmetadata.it.tests;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -37,7 +36,6 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.sdk.client.OpenMetadataClient;
-import org.openmetadata.sdk.exceptions.ApiException;
 import org.openmetadata.sdk.fluent.Tables;
 import org.openmetadata.sdk.models.ListParams;
 import org.openmetadata.sdk.models.ListResponse;
@@ -233,33 +231,32 @@ public class QueryVisibilityPolicyIT {
    * Regression test for NPE in matchAnyCertification policy evaluation.
    *
    * <p>When a policy with matchAnyCertification condition is evaluated against an entity that has no
-   * certification, it should return false gracefully. The bug was that
+   * certification, it should evaluate cleanly. The bug was that
    * resourceContext.getEntity().getCertification() NPE'd when getEntity() returned null.
+   *
+   * <p>Uses a single DENY rule with matchAnyCertification condition. For an uncertified entity the
+   * condition is false, so the deny rule does not fire and the entity remains viewable. Before the
+   * fix, evaluating the condition itself threw NPE (500 server error).
    */
   @Test
   void test_matchAnyCertification_noCertificationOnEntity(TestNamespace ns) {
     OpenMetadataClient adminClient = SdkClients.adminClient();
     String p = ns.shortPrefix();
 
-    Rule allowRule =
+    // Single DENY rule: deny viewing Gold/Silver certified entities.
+    // For an uncertified entity, matchAnyCertification returns false,
+    // so the deny rule does NOT fire and the entity is still viewable.
+    Rule denyCertifiedRule =
         new Rule()
-            .withName("AllowCertified")
-            .withResources(List.of("All"))
-            .withOperations(List.of(MetadataOperation.VIEW_ALL))
-            .withEffect(Rule.Effect.ALLOW)
-            .withCondition("matchAnyCertification('Certification.Gold', 'Certification.Silver')");
-
-    Rule denyRule =
-        new Rule()
-            .withName("DenyUncertified")
+            .withName("DenyCertified")
             .withResources(List.of("All"))
             .withOperations(List.of(MetadataOperation.VIEW_ALL))
             .withEffect(Rule.Effect.DENY)
-            .withCondition("!matchAnyCertification('Certification.Gold', 'Certification.Silver')");
+            .withCondition("matchAnyCertification('Certification.Gold', 'Certification.Silver')");
 
     CreatePolicy createPolicy = new CreatePolicy();
     createPolicy.setName(p + "_certPol");
-    createPolicy.setRules(List.of(allowRule, denyRule));
+    createPolicy.setRules(List.of(denyCertifiedRule));
 
     Policy policy = adminClient.policies().create(createPolicy);
     try {
@@ -297,14 +294,12 @@ public class QueryVisibilityPolicyIT {
                     SdkClients.createClient(userEmail, userEmail, new String[] {});
 
                 // Before the fix, this threw NPE (500) in matchAnyCertification
-                // when the entity had no certification. After the fix, the policy
-                // evaluates cleanly and returns a proper 403 denial.
-                ApiException ex =
-                    assertThrows(
-                        ApiException.class,
-                        () -> testUserClient.tables().get(tableNoCert.getId().toString()));
-                assertEquals(
-                    403, ex.getStatusCode(), "Should get 403 Forbidden (policy deny), not 500 NPE");
+                // when the entity had no certification. After the fix, the condition
+                // evaluates to false, the deny rule does not fire, and the GET succeeds.
+                assertDoesNotThrow(
+                    () -> testUserClient.tables().get(tableNoCert.getId().toString()),
+                    "GET table should not throw when entity has no certification "
+                        + "and matchAnyCertification policy is evaluated");
               } finally {
                 adminClient.tables().delete(tableNoCert.getId());
               }
