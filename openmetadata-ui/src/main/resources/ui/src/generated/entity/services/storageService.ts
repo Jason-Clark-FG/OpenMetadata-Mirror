@@ -210,6 +210,7 @@ export interface Connection {
      */
     containerFilterPattern?:     FilterPattern;
     supportsMetadataExtraction?: boolean;
+    supportsProfiler?:           boolean;
     /**
      * Service Type
      *
