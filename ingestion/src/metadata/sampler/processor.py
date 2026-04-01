@@ -88,12 +88,25 @@ class SamplerProcessor(Processor):
         self._interface_type: str = config.source.type.lower()
 
         # Determine service type based on configuration
+        # First try to detect based on pipeline config type
         if isinstance(self.source_config, StorageServiceAutoClassificationPipeline):
             self.service_type = ServiceType.Storage
         elif isinstance(self.source_config, DatabaseServiceAutoClassificationPipeline):
             self.service_type = ServiceType.Database
         else:
-            self.service_type = ServiceType.Database
+            # Fallback: detect based on source type for storage services
+            # This handles cases where the package might not be updated yet
+            storage_sources = ["s3", "gcs", "azuredatalake", "customstorage"]
+            if self._interface_type in storage_sources:
+                self.service_type = ServiceType.Storage
+            else:
+                self.service_type = ServiceType.Database
+
+        logger.info(
+            f"Sampler processor initialized with service_type={self.service_type}, "
+            f"source_config_type={type(self.source_config).__name__}, "
+            f"interface_type={self._interface_type}"
+        )
 
         self.sampler_class = import_sampler_class(
             self.service_type, source_type=self._interface_type
