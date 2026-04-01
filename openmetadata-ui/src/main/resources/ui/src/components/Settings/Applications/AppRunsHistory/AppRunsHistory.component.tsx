@@ -173,6 +173,9 @@ const AppRunsHistory = forwardRef(
     }, []);
 
     const showAppRunConfig = (record: AppRunRecordWithId) => {
+      if (!jsonSchema) {
+        return;
+      }
       setShowConfigModal(true);
       setAppRunRecordConfig(record.config ?? {});
     };
@@ -193,6 +196,7 @@ const AppRunsHistory = forwardRef(
             <Button
               className="m-l-xs p-0"
               data-testid="app-historical-config"
+              disabled={!jsonSchema}
               size="small"
               type="link"
               onClick={() => showAppRunConfig(record)}>
@@ -387,6 +391,13 @@ const AppRunsHistory = forwardRef(
           }
         });
 
+        socket.on(SOCKET_EVENTS.RDF_INDEX_JOB_BROADCAST_CHANNEL, (data) => {
+          if (data) {
+            const rdfIndexJob = JSON.parse(data);
+            handleAppHistoryRecordUpdate(rdfIndexJob);
+          }
+        });
+
         socket.on(SOCKET_EVENTS.DATA_INSIGHTS_JOB_BROADCAST_CHANNEL, (data) => {
           if (data) {
             const dataInsightJob = JSON.parse(data);
@@ -405,6 +416,7 @@ const AppRunsHistory = forwardRef(
       return () => {
         if (socket) {
           socket.off(SOCKET_EVENTS.SEARCH_INDEX_JOB_BROADCAST_CHANNEL);
+          socket.off(SOCKET_EVENTS.RDF_INDEX_JOB_BROADCAST_CHANNEL);
           socket.off(SOCKET_EVENTS.DATA_INSIGHTS_JOB_BROADCAST_CHANNEL);
           socket.off(SOCKET_EVENTS.CACHE_WARMUP_JOB_BROADCAST_CHANNEL);
         }
@@ -490,22 +502,24 @@ const AppRunsHistory = forwardRef(
             </Typography.Text>
           }
           width={800}>
-          <FormBuilder
-            capitalizeOptionLabel
-            hideCancelButton
-            readonly
-            useSelectWidget
-            cancelText={t('label.back')}
-            formData={appRunRecordConfig}
-            isLoading={false}
-            okText={t('label.submit')}
-            schema={jsonSchema}
-            serviceCategory={ServiceCategory.DASHBOARD_SERVICES}
-            uiSchema={UiSchema}
-            validator={validator}
-            onCancel={noop}
-            onSubmit={noop}
-          />
+          {jsonSchema && (
+            <FormBuilder
+              capitalizeOptionLabel
+              hideCancelButton
+              readonly
+              useSelectWidget
+              cancelText={t('label.back')}
+              formData={appRunRecordConfig}
+              isLoading={false}
+              okText={t('label.submit')}
+              schema={jsonSchema}
+              serviceCategory={ServiceCategory.DASHBOARD_SERVICES}
+              uiSchema={UiSchema}
+              validator={validator}
+              onCancel={noop}
+              onSubmit={noop}
+            />
+          )}
         </Modal>
       </>
     );

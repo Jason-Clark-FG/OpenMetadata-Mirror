@@ -72,6 +72,10 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const [layout, setLayout] = useState<'hierarchical' | 'force'>(
     'hierarchical'
   );
+  const [selectedEntityTypes, setSelectedEntityTypes] = useState<string[]>([]);
+  const [selectedRelationshipTypes, setSelectedRelationshipTypes] = useState<
+    string[]
+  >([]);
   const [, setHoveredNode] = useState<GraphNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
@@ -370,18 +374,27 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
     setLoading(true);
     try {
-      const data = await getEntityGraphData(
-        entity.id,
+      const data = await getEntityGraphData({
+        entityId: entity.id,
         entityType,
-        selectedDepth
-      );
+        depth: selectedDepth,
+        entityTypes: selectedEntityTypes,
+        relationshipTypes: selectedRelationshipTypes,
+      });
       setGraphData(data);
     } catch (error) {
       showErrorToast(error as AxiosError, t('server.entity-graph-fetch-error'));
     } finally {
       setLoading(false);
     }
-  }, [entity?.id, entityType, selectedDepth, t]);
+  }, [
+    entity?.id,
+    entityType,
+    selectedDepth,
+    selectedEntityTypes,
+    selectedRelationshipTypes,
+    t,
+  ]);
 
   useEffect(() => {
     fetchGraphData();
@@ -540,13 +553,6 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     };
   }, [graphData, loading, networkOptions, entity?.id]);
 
-  // Re-fetch data when depth changes
-  useEffect(() => {
-    if (entity?.id) {
-      fetchGraphData();
-    }
-  }, [selectedDepth]);
-
   const handleFit = () => {
     networkRef.current?.fit({
       animation: {
@@ -563,6 +569,24 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const handleDepthChange = (value: number) => {
     setSelectedDepth(value);
   };
+
+  const entityTypeOptions = useMemo(
+    () =>
+      graphData?.filterOptions?.entityTypes.map((option) => ({
+        label: `${option.label} (${option.count})`,
+        value: option.id,
+      })) ?? [],
+    [graphData?.filterOptions]
+  );
+
+  const relationshipTypeOptions = useMemo(
+    () =>
+      graphData?.filterOptions?.relationshipTypes.map((option) => ({
+        label: `${option.label} (${option.count})`,
+        value: option.id,
+      })) ?? [],
+    [graphData?.filterOptions]
+  );
 
   if (!entity) {
     return <Empty description={t('message.no-entity-selected')} />;
@@ -611,6 +635,32 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
               onChange={handleDepthChange}
             />
           </div>
+          <Select
+            allowClear
+            disabled={entityTypeOptions.length === 0}
+            maxTagCount="responsive"
+            mode="multiple"
+            options={entityTypeOptions}
+            placeholder={t('label.entity-type')}
+            showSearch
+            size="small"
+            style={{ minWidth: 220 }}
+            value={selectedEntityTypes}
+            onChange={setSelectedEntityTypes}
+          />
+          <Select
+            allowClear
+            disabled={relationshipTypeOptions.length === 0}
+            maxTagCount="responsive"
+            mode="multiple"
+            options={relationshipTypeOptions}
+            placeholder={t('label.relationship-type')}
+            showSearch
+            size="small"
+            style={{ minWidth: 220 }}
+            value={selectedRelationshipTypes}
+            onChange={setSelectedRelationshipTypes}
+          />
           <Select
             options={[
               {

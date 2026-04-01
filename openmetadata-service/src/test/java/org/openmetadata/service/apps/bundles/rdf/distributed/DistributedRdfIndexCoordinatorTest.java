@@ -1,0 +1,137 @@
+/*
+ *  Copyright 2024 Collate
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package org.openmetadata.service.apps.bundles.rdf.distributed;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.openmetadata.schema.system.EventPublisherJob;
+import org.openmetadata.schema.utils.JsonUtils;
+import org.openmetadata.service.apps.bundles.searchIndex.distributed.IndexJobStatus;
+import org.openmetadata.service.apps.bundles.searchIndex.distributed.ServerIdentityResolver;
+import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.jdbi3.CollectionDAO.RdfIndexJobDAO;
+import org.openmetadata.service.jdbi3.CollectionDAO.RdfIndexJobDAO.RdfIndexJobRecord;
+import org.openmetadata.service.jdbi3.CollectionDAO.RdfIndexPartitionDAO;
+import org.openmetadata.service.jdbi3.CollectionDAO.RdfIndexPartitionDAO.RdfAggregatedStatsRecord;
+
+@ExtendWith(MockitoExtension.class)
+class DistributedRdfIndexCoordinatorTest {
+
+  private static final String TEST_SERVER_ID = "rdf-test-server";
+
+  @Mock private CollectionDAO collectionDAO;
+  @Mock private RdfIndexJobDAO jobDAO;
+  @Mock private RdfIndexPartitionDAO partitionDAO;
+  @Mock private RdfPartitionCalculator partitionCalculator;
+
+  private DistributedRdfIndexCoordinator coordinator;
+  private MockedStatic<ServerIdentityResolver> serverIdentityMock;
+
+  @BeforeEach
+  void setUp() {
+    ServerIdentityResolver resolver = mock(ServerIdentityResolver.class);
+    when(resolver.getServerId()).thenReturn(TEST_SERVER_ID);
+
+    serverIdentityMock = mockStatic(ServerIdentityResolver.class);
+    serverIdentityMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
+
+    when(collectionDAO.rdfIndexJobDAO()).thenReturn(jobDAO);
+    when(collectionDAO.rdfIndexPartitionDAO()).thenReturn(partitionDAO);
+
+    coordinator = new DistributedRdfIndexCoordinator(collectionDAO, partitionCalculator);
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (serverIdentityMock != null) {
+      serverIdentityMock.close();
+    }
+  }
+
+  @Test
+  void getJobWithAggregatedStatsKeepsCompletedAtNullForNonTerminalJob() {
+    UUID jobId = UUID.randomUUID();
+    EventPublisherJob jobConfiguration = new EventPublisherJob().withEntities(Set.of("table"));
+    RdfIndexJobRecord jobRecord =
+        new RdfIndexJobRecord(
+            jobId.toString(),
+            IndexJobStatus.READY.name(),
+            JsonUtils.pojoToJson(jobConfiguration),
+            25L,
+            0L,
+            0L,
+            0L,
+            JsonUtils.pojoToJson(
+                Map.of(
+                    "table",
+                    RdfIndexJob.EntityTypeStats.builder()
+                        .entityType("table")
+                        .totalRecords(25)
+                        .build())),
+            "admin",
+            System.currentTimeMillis(),
+            null,
+            null,
+            System.currentTimeMillis(),
+            null);
+
+    when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
+    when(partitionDAO.getAggregatedStats(jobId.toString()))
+        .thenReturn(new RdfAggregatedStatsRecord(25L, 0L, 0L, 0L, 1, 0, 0, 1, 0));
+    when(partitionDAO.getEntityStats(jobId.toString()))
+        .thenReturn(
+            List.of(
+                new CollectionDAO.RdfIndexPartitionDAO.RdfEntityStatsRecord(
+                    "table", 25L, 0L, 0L, 0L, 1, 0, 0)));
+    when(partitionDAO.getServerStats(jobId.toString())).thenReturn(List.of());
+
+    RdfIndexJob refreshed = coordinator.getJobWithAggregatedStats(jobId);
+
+    assertEquals(IndexJobStatus.RUNNING, refreshed.getStatus());
+    assertNull(refreshed.getCompletedAt());
+
+    verify(jobDAO)
+        .update(
+            eq(jobId.toString()),
+            eq(IndexJobStatus.RUNNING.name()),
+            eq(0L),
+            eq(0L),
+            eq(0L),
+            anyString(),
+            isNull(),
+            isNull(),
+            anyLong(),
+            isNull());
+  }
+}

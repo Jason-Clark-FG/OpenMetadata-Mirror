@@ -20,6 +20,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useLocation } from 'react-router-dom';
 import { PipelineServiceClientResponse } from '../../generated/entity/services/ingestionPipelines/pipelineServiceClientResponse';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { getAirflowStatus } from '../../rest/ingestionPipelineAPI';
@@ -33,7 +34,19 @@ interface Props {
   children: ReactNode;
 }
 
+const shouldFetchAirflowStatusForPath = (pathname: string) => {
+  return (
+    pathname.startsWith('/service/') ||
+    pathname.startsWith('/services/') ||
+    pathname.startsWith('/settings/services') ||
+    pathname.startsWith('/test-suites') ||
+    pathname.startsWith('/data-quality') ||
+    pathname.includes('/add-service')
+  );
+};
+
 const AirflowStatusProvider = ({ children }: Props) => {
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAirflowAvailable, setIsAirflowAvailable] = useState<boolean>(false);
   const [error, setError] = useState<AxiosError>();
@@ -42,6 +55,10 @@ const AirflowStatusProvider = ({ children }: Props) => {
   const [platform, setPlatform] =
     useState<PipelineServiceClientResponse['platform']>('unknown');
   const { currentUser } = useApplicationStore();
+  const shouldFetchStatus = useMemo(
+    () => shouldFetchAirflowStatusForPath(location.pathname),
+    [location.pathname]
+  );
 
   const fetchAirflowStatus = useCallback(async () => {
     if (!currentUser?.id) {
@@ -62,8 +79,18 @@ const AirflowStatusProvider = ({ children }: Props) => {
   }, [currentUser?.id]);
 
   useEffect(() => {
+    if (!shouldFetchStatus) {
+      setIsLoading(false);
+      setIsAirflowAvailable(false);
+      setError(undefined);
+      setReason(undefined);
+      setPlatform('unknown');
+
+      return;
+    }
+
     fetchAirflowStatus();
-  }, [fetchAirflowStatus]);
+  }, [fetchAirflowStatus, shouldFetchStatus]);
 
   const value: AirflowStatusContextType = useMemo(
     () => ({

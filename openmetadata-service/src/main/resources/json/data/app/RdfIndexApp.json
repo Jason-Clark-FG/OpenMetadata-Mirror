@@ -1,12 +1,18 @@
 {
   "name": "RdfIndexApp",
   "displayName": "RDF Knowledge Graph Indexing",
+  "allowConfiguration": true,
   "appConfiguration": {
     "entities": [
       "all"
     ],
     "recreateIndex": false,
-    "batchSize": "100"
+    "batchSize": 100,
+    "producerThreads": 2,
+    "consumerThreads": 3,
+    "queueSize": 5000,
+    "useDistributedIndexing": true,
+    "partitionSize": 10000
   },
   "appSchedule": {
     "scheduleTimeline": "Custom",

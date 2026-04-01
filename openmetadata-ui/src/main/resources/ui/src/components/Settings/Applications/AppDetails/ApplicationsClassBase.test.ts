@@ -12,6 +12,7 @@
  */
 
 import { AppType } from '../../../../generated/entity/applications/app';
+import rdfIndexAppSchema from '../../../../jsons/applicationSchemas/RdfIndexApp.json';
 import applicationsClassBase from './ApplicationsClassBase';
 
 describe('ApplicationsClassBase', () => {
@@ -45,6 +46,14 @@ describe('ApplicationsClassBase', () => {
       expect(schema.properties).toBeDefined();
       // Should not contain any $ref since schemas are pre-parsed
       expect(JSON.stringify(schema)).not.toContain('$ref');
+    });
+
+    it('should import the RDF app schema', async () => {
+      const schema = await applicationsClassBase.importSchema('RdfIndexApp');
+
+      expect(schema).toEqual(rdfIndexAppSchema);
+      expect(schema.properties.partitionSize).toBeDefined();
+      expect(schema.properties.useDistributedIndexing).toBeDefined();
     });
   });
 

@@ -20,6 +20,9 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.UUID;
 import javax.validation.constraints.NotEmpty;
 import lombok.extern.slf4j.Slf4j;
@@ -240,7 +243,13 @@ public class RdfResource {
       @Parameter(description = "Depth of relationships to explore")
           @QueryParam("depth")
           @DefaultValue("2")
-          int depth) {
+          int depth,
+      @Parameter(description = "Comma-separated entity types to keep in the graph")
+          @QueryParam("entityTypes")
+          String entityTypes,
+      @Parameter(description = "Comma-separated relationship types to keep in the graph")
+          @QueryParam("relationshipTypes")
+          String relationshipTypes) {
     authorizer.authorizeAdmin(securityContext);
     try {
       if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
@@ -249,13 +258,31 @@ public class RdfResource {
             .build();
       }
 
-      String graphData = getRdfRepository().getEntityGraph(entityId, entityType, depth);
+      String graphData =
+          getRdfRepository()
+              .getEntityGraph(
+                  entityId,
+                  entityType,
+                  depth,
+                  parseCsvFilter(entityTypes),
+                  parseCsvFilter(relationshipTypes));
       return Response.ok(graphData, MediaType.APPLICATION_JSON).build();
 
     } catch (Exception e) {
       LOG.error("Error exploring entity graph", e);
       return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
     }
+  }
+
+  private Set<String> parseCsvFilter(String values) {
+    if (values == null || values.isBlank()) {
+      return Set.of();
+    }
+
+    return Arrays.stream(values.split(","))
+        .map(String::trim)
+        .filter(value -> !value.isEmpty())
+        .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
   }
 
   @GET

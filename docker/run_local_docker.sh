@@ -57,6 +57,8 @@ cd ../
 echo "Stopping any previous Local Docker Containers"
 docker compose -f docker/development/docker-compose-postgres.yml down --remove-orphans
 docker compose -f docker/development/docker-compose.yml down --remove-orphans
+docker compose -f docker/development/docker-compose-postgres.yml -f docker/development/docker-compose-fuseki.yml down --remove-orphans
+docker compose -f docker/development/docker-compose.yml -f docker/development/docker-compose-fuseki.yml down --remove-orphans
 
 if [[ $skipMaven == "false" ]]; then
     if [[ $mode == "no-ui" ]]; then
@@ -79,6 +81,14 @@ fi
 if [[ $debugOM == "true" ]]; then
  export OPENMETADATA_DEBUG=true
 fi
+
+export RDF_ENABLED=true
+export RDF_STORAGE_TYPE=FUSEKI
+export RDF_ENDPOINT="${RDF_ENDPOINT:-http://fuseki:3030/openmetadata}"
+export RDF_REMOTE_USERNAME="${RDF_REMOTE_USERNAME:-admin}"
+export RDF_REMOTE_PASSWORD="${RDF_REMOTE_PASSWORD:-admin}"
+export RDF_BASE_URI="${RDF_BASE_URI:-https://open-metadata.org/}"
+export RDF_DATASET="${RDF_DATASET:-openmetadata}"
 
 if [[ $cleanDbVolumes == "true" ]]
 then
@@ -116,13 +126,16 @@ else
     exit 1
 fi
 
+RDF_COMPOSE_FILE="docker/development/docker-compose-fuseki.yml"
+COMPOSE_ARGS=(-f "$COMPOSE_FILE" -f "$RDF_COMPOSE_FILE")
+
 if [[ $includeIngestion == "true" ]]; then
     echo "Building all services including ingestion (dependency: ${INGESTION_DEPENDENCY:-all})"
-    docker compose -f $COMPOSE_FILE build --build-arg INGESTION_DEPENDENCY="${INGESTION_DEPENDENCY:-all}" && docker compose -f $COMPOSE_FILE up -d
+    docker compose "${COMPOSE_ARGS[@]}" build --build-arg INGESTION_DEPENDENCY="${INGESTION_DEPENDENCY:-all}" && docker compose "${COMPOSE_ARGS[@]}" up -d
 else
     echo "Building services without ingestion"
-    docker compose -f $COMPOSE_FILE build $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server && \
-    docker compose -f $COMPOSE_FILE up -d $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server
+    docker compose "${COMPOSE_ARGS[@]}" build $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server && \
+    docker compose "${COMPOSE_ARGS[@]}" up -d fuseki $SEARCH_SERVICE $DB_SERVICE execute-migrate-all openmetadata-server
 fi
 
 RESULT=$?
@@ -133,6 +146,11 @@ fi
 
 until curl -s -f "http://localhost:9200/_cat/indices/openmetadata_team_search_index"; do
   echo 'Checking if Elastic Search instance is up...\n'
+  sleep 5
+done
+
+until curl -s -f "http://localhost:3030/\$/ping" > /dev/null 2>&1; do
+  echo 'Checking if Fuseki is reachable...\n'
   sleep 5
 done
 
@@ -288,6 +306,22 @@ curl --location --request POST 'http://localhost:8585/api/v1/apps/trigger/Search
 --header 'Authorization: Bearer eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlzQm90IjpmYWxzZSwiaXNzIjoib3Blbi1tZXRhZGF0YS5vcmciLCJpYXQiOjE2NjM5Mzg0NjIsImVtYWlsIjoiYWRtaW5Ab3Blbm1ldGFkYXRhLm9yZyJ9.tS8um_5DKu7HgzGBzS1VTA5uUjKWOCU0B_j08WXBiEC0mr0zNREkqVfwFDD-d24HlNEbrqioLsBuFRiwIWKc1m_ZlVQbG7P36RUxhuv2vbSp80FKyNM-Tj93FDzq91jsyNmsQhyNv_fNr3TXfzzSPjHt8Go0FMMP66weoKMgW2PbXlhVKwEuXUHyakLLzewm9UMeQaEiRzhiTMU3UkLXcKbYEJJvfNFcLwSl9W8JCO_l0Yj3ud-qt_nQYEZwqW6u5nfdQllN133iikV4fM5QZsMCnm8Rq1mvLR0y9bmJiD7fwM1tmJ791TUWqmKaTnP49U493VanKpUAfzIiOiIbhg'
 
 sleep 60 # Sleep for 60 seconds to make sure the elasticsearch reindexing from UI finishes
+
+echo "✔running RDF reindexing"
+curl --location --request POST 'http://localhost:8585/api/v1/apps/trigger/RdfIndexApp' \
+--header 'Authorization: Bearer eyJraWQiOiJHYjM4OWEtOWY3Ni1nZGpzLWE5MmotMDI0MmJrOTQzNTYiLCJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbiIsImlzQm90IjpmYWxzZSwiaXNzIjoib3Blbi1tZXRhZGF0YS5vcmciLCJpYXQiOjE2NjM5Mzg0NjIsImVtYWlsIjoiYWRtaW5Ab3Blbm1ldGFkYXRhLm9yZyJ9.tS8um_5DKu7HgzGBzS1VTA5uUjKWOCU0B_j08WXBiEC0mr0zNREkqVfwFDD-d24HlNEbrqioLsBuFRiwIWKc1m_ZlVQbG7P36RUxhuv2vbSp80FKyNM-Tj93FDzq91jsyNmsQhyNv_fNr3TXfzzSPjHt8Go0FMMP66weoKMgW2PbXlhVKwEuXUHyakLLzewm9UMeQaEiRzhiTMU3UkLXcKbYEJJvfNFcLwSl9W8JCO_l0Yj3ud-qt_nQYEZwqW6u5nfdQllN133iikV4fM5QZsMCnm8Rq1mvLR0y9bmJiD7fwM1tmJ791TUWqmKaTnP49U493VanKpUAfzIiOiIbhg' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "entities": ["all"],
+    "recreateIndex": true,
+    "batchSize": 100,
+    "useDistributedIndexing": true,
+    "partitionSize": 10000
+}'
+
+sleep 30
 tput setaf 2
 echo "✔ OpenMetadata is up and running"
-
+echo "✔ RDF/Knowledge Graph support is enabled"
+echo "  - Fuseki UI: http://localhost:3030"
+echo "  - SPARQL endpoint: http://localhost:3030/openmetadata/sparql"

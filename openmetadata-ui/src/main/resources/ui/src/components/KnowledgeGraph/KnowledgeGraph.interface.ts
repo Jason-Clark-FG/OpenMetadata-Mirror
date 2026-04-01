@@ -35,10 +35,27 @@ export interface GraphEdge {
   from: string;
   to: string;
   label: string;
+  relationType?: string;
   arrows?: string;
+}
+
+export interface GraphFilterOption {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface GraphFilterOptions {
+  entityTypes: GraphFilterOption[];
+  relationshipTypes: GraphFilterOption[];
 }
 
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  filterOptions?: GraphFilterOptions;
+  totalNodes?: number;
+  totalEdges?: number;
+  source?: string;
+  error?: string;
 }

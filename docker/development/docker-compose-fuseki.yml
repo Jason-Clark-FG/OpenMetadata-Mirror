@@ -1,12 +1,44 @@
 version: "3.9"
 
 services:
+  execute-migrate-all:
+    environment:
+      RDF_ENABLED: ${RDF_ENABLED:-true}
+      RDF_STORAGE_TYPE: ${RDF_STORAGE_TYPE:-FUSEKI}
+      RDF_ENDPOINT: ${RDF_ENDPOINT:-http://fuseki:3030/openmetadata}
+      RDF_REMOTE_USERNAME: ${RDF_REMOTE_USERNAME:-admin}
+      RDF_REMOTE_PASSWORD: ${RDF_REMOTE_PASSWORD:-admin}
+      RDF_BASE_URI: ${RDF_BASE_URI:-https://open-metadata.org/}
+      RDF_JSONLD_ENABLED: ${RDF_JSONLD_ENABLED:-true}
+      RDF_SPARQL_ENABLED: ${RDF_SPARQL_ENABLED:-true}
+      RDF_DATASET: ${RDF_DATASET:-openmetadata}
+    depends_on:
+      fuseki:
+        condition: service_healthy
+
+  openmetadata-server:
+    environment:
+      RDF_ENABLED: ${RDF_ENABLED:-true}
+      RDF_STORAGE_TYPE: ${RDF_STORAGE_TYPE:-FUSEKI}
+      RDF_ENDPOINT: ${RDF_ENDPOINT:-http://fuseki:3030/openmetadata}
+      RDF_REMOTE_USERNAME: ${RDF_REMOTE_USERNAME:-admin}
+      RDF_REMOTE_PASSWORD: ${RDF_REMOTE_PASSWORD:-admin}
+      RDF_BASE_URI: ${RDF_BASE_URI:-https://open-metadata.org/}
+      RDF_JSONLD_ENABLED: ${RDF_JSONLD_ENABLED:-true}
+      RDF_SPARQL_ENABLED: ${RDF_SPARQL_ENABLED:-true}
+      RDF_DATASET: ${RDF_DATASET:-openmetadata}
+    depends_on:
+      fuseki:
+        condition: service_healthy
+
   fuseki:
     image: stain/jena-fuseki:5.0.0
     container_name: openmetadata-fuseki
     hostname: fuseki
     ports:
       - "3030:3030"
+    networks:
+      - local_app_net
     environment:
       - ADMIN_PASSWORD=admin
       - JVM_ARGS=-Xmx4g -Xms2g
@@ -19,6 +51,11 @@ services:
           memory: 4G
         reservations:
           memory: 2G
+    healthcheck:
+      test: "curl -s -f http://localhost:3030/\\$/ping > /dev/null || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 20
     # Create the database directory before starting Fuseki
     entrypoint: /bin/sh -c "mkdir -p /fuseki/databases/openmetadata && exec /docker-entrypoint.sh /jena-fuseki/fuseki-server --update --loc=/fuseki/databases/openmetadata /openmetadata"
 

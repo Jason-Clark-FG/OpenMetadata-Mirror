@@ -32,13 +32,33 @@ export interface GraphEdge {
   arrows?: string;
 }
 
+export interface GraphFilterOption {
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface GraphFilterOptions {
+  entityTypes: GraphFilterOption[];
+  relationshipTypes: GraphFilterOption[];
+}
+
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  filterOptions?: GraphFilterOptions;
   totalNodes?: number;
   totalEdges?: number;
   source?: string;
   error?: string;
+}
+
+export interface EntityGraphParams {
+  entityId: string;
+  entityType: string;
+  depth?: number;
+  entityTypes?: string[];
+  relationshipTypes?: string[];
 }
 
 export interface GlossaryGraphParams {
@@ -66,15 +86,24 @@ export const fetchRdfConfig = async (): Promise<{ enabled: boolean }> => {
 };
 
 export const getEntityGraphData = async (
-  entityId: string,
-  entityType: string,
-  depth = 2
+  params: EntityGraphParams
 ): Promise<GraphData> => {
+  const {
+    entityId,
+    entityType,
+    depth = 2,
+    entityTypes,
+    relationshipTypes,
+  } = params;
   const response = await APIClient.get(`/rdf/graph/explore`, {
     params: {
       entityId,
       entityType,
       depth,
+      entityTypes: entityTypes?.length ? entityTypes.join(',') : undefined,
+      relationshipTypes: relationshipTypes?.length
+        ? relationshipTypes.join(',')
+        : undefined,
     },
   });
 

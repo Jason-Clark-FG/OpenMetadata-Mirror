@@ -4,9 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -754,7 +757,13 @@ public class RdfRepository {
     return "TURTLE"; // default
   }
 
-  public String getEntityGraph(UUID entityId, String entityType, int depth) throws IOException {
+  public String getEntityGraph(
+      UUID entityId,
+      String entityType,
+      int depth,
+      Set<String> entityTypes,
+      Set<String> relationshipTypes)
+      throws IOException {
     if (!isEnabled()) {
       throw new IllegalStateException("RDF Repository is not enabled");
     }
@@ -762,35 +771,21 @@ public class RdfRepository {
     String entityUri = config.getBaseUri().toString() + "entity/" + entityType + "/" + entityId;
 
     try {
-      Set<String> visitedNodes = new HashSet<>();
-      Set<String> currentLevelNodes = new HashSet<>();
-      List<EdgeInfo> allEdges = new ArrayList<>();
+      EntityGraphTraversalResult traversalResult = traverseEntityGraph(entityUri, depth);
+      FilteredEntityGraph filteredGraph =
+          applyGraphFilters(
+              entityUri,
+              traversalResult.nodeUris(),
+              traversalResult.edges(),
+              entityTypes,
+              relationshipTypes);
 
-      currentLevelNodes.add(entityUri);
-      visitedNodes.add(entityUri);
-
-      for (int currentDepth = 0;
-          currentDepth < depth && !currentLevelNodes.isEmpty();
-          currentDepth++) {
-        Set<String> nextLevelNodes = new HashSet<>();
-
-        // For each node at current level, get its relationships
-        for (String nodeUri : currentLevelNodes) {
-          String sparql = buildSingleNodeQuery(nodeUri);
-          String results =
-              storageService.executeSparqlQuery(sparql, "application/sparql-results+json");
-
-          if (results != null && !results.trim().isEmpty()) {
-            List<EdgeInfo> edges = parseEdgesFromResults(results, visitedNodes, nextLevelNodes);
-            allEdges.addAll(edges);
-          }
-        }
-
-        currentLevelNodes = nextLevelNodes;
-        visitedNodes.addAll(nextLevelNodes);
-      }
-
-      return convertEdgesToGraphData(allEdges);
+      return convertEdgesToGraphData(
+          entityUri,
+          filteredGraph.nodeUris(),
+          filteredGraph.edges(),
+          buildEntityTypeFilterOptions(traversalResult.nodeUris()),
+          buildRelationshipFilterOptions(traversalResult.edges()));
     } catch (Exception e) {
       LOG.error("Error getting entity graph for {}", entityUri, e);
       throw new IOException("Failed to get entity graph", e);
@@ -1494,55 +1489,125 @@ public class RdfRepository {
     };
   }
 
-  private String buildSingleNodeQuery(String nodeUri) {
+  private EntityGraphTraversalResult traverseEntityGraph(String rootUri, int depth) {
+    Set<String> visitedNodes = new HashSet<>();
+    Set<String> currentLevelNodes = new HashSet<>();
+    Set<String> discoveredNodes = new HashSet<>();
+    Set<String> edgeKeys = new HashSet<>();
+    List<EdgeInfo> allEdges = new ArrayList<>();
+
+    currentLevelNodes.add(rootUri);
+    visitedNodes.add(rootUri);
+    discoveredNodes.add(rootUri);
+
+    for (int currentDepth = 0;
+        currentDepth < depth && !currentLevelNodes.isEmpty();
+        currentDepth++) {
+      String sparql = buildEntityGraphBatchQuery(currentLevelNodes);
+      String results = storageService.executeSparqlQuery(sparql, "application/sparql-results+json");
+
+      Set<String> nextLevelNodes = new HashSet<>();
+      if (results != null && !results.trim().isEmpty()) {
+        allEdges.addAll(
+            parseEntityGraphEdgesFromResults(
+                results, visitedNodes, nextLevelNodes, discoveredNodes, edgeKeys));
+      }
+
+      nextLevelNodes.removeAll(visitedNodes);
+      visitedNodes.addAll(nextLevelNodes);
+      currentLevelNodes = nextLevelNodes;
+    }
+
+    return new EntityGraphTraversalResult(discoveredNodes, allEdges);
+  }
+
+  private String buildEntityGraphBatchQuery(Set<String> nodeUris) {
+    String entityPrefix = config.getBaseUri().toString() + "entity/";
+    String valuesClause =
+        nodeUris.stream()
+            .sorted()
+            .map(uri -> "<" + uri + ">")
+            .collect(java.util.stream.Collectors.joining(" "));
+
     return "PREFIX om: <https://open-metadata.org/ontology/> "
         + "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
         + "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> "
         + "SELECT DISTINCT ?subject ?predicate ?object WHERE { "
         + "  { "
-        + "    GRAPH ?g { <"
-        + nodeUri
-        + "> ?predicate ?object . "
-        + "    FILTER(isIRI(?object) && "
-        + "           ?predicate != rdf:type && "
-        + "           ?predicate != rdfs:label) } "
-        + "    BIND(<"
-        + nodeUri
-        + "> AS ?subject) "
+        + "    VALUES ?frontier { "
+        + valuesClause
+        + " } "
+        + "    GRAPH ?g { "
+        + "      ?frontier ?predicate ?object . "
+        + "      FILTER(isIRI(?object) && "
+        + "             STRSTARTS(STR(?object), \""
+        + entityPrefix
+        + "\") && "
+        + "             ?predicate != rdf:type && "
+        + "             ?predicate != rdfs:label) "
+        + "    } "
+        + "    BIND(?frontier AS ?subject) "
         + "  } UNION { "
-        + "    GRAPH ?g { ?subject ?predicate <"
-        + nodeUri
-        + "> . "
-        + "    FILTER(isIRI(?subject) && "
-        + "           ?predicate != rdf:type && "
-        + "           ?predicate != rdfs:label) } "
-        + "    BIND(<"
-        + nodeUri
-        + "> AS ?object) "
+        + "    VALUES ?frontier { "
+        + valuesClause
+        + " } "
+        + "    GRAPH ?g { "
+        + "      ?subject ?predicate ?frontier . "
+        + "      FILTER(isIRI(?subject) && "
+        + "             STRSTARTS(STR(?subject), \""
+        + entityPrefix
+        + "\") && "
+        + "             ?predicate != rdf:type && "
+        + "             ?predicate != rdfs:label) "
+        + "    } "
+        + "    BIND(?frontier AS ?object) "
         + "  } "
-        + "} LIMIT 200";
+        + "} LIMIT 5000";
   }
 
-  private List<EdgeInfo> parseEdgesFromResults(
-      String sparqlResults, Set<String> visitedNodes, Set<String> nextLevelNodes) {
+  private List<EdgeInfo> parseEntityGraphEdgesFromResults(
+      String sparqlResults,
+      Set<String> visitedNodes,
+      Set<String> nextLevelNodes,
+      Set<String> discoveredNodes,
+      Set<String> edgeKeys) {
     List<EdgeInfo> edges = new ArrayList<>();
     com.fasterxml.jackson.databind.JsonNode resultsJson = JsonUtils.readTree(sparqlResults);
 
     if (resultsJson.has("results") && resultsJson.get("results").has("bindings")) {
       for (com.fasterxml.jackson.databind.JsonNode binding :
           resultsJson.get("results").get("bindings")) {
-        String subjectUri = binding.get("subject").get("value").asText();
-        String objectUri = binding.get("object").get("value").asText();
-        String predicate = binding.get("predicate").get("value").asText();
+        String subjectUri =
+            binding.has("subject") ? binding.get("subject").get("value").asText() : null;
+        String objectUri =
+            binding.has("object") ? binding.get("object").get("value").asText() : null;
+        String predicate =
+            binding.has("predicate") ? binding.get("predicate").get("value").asText() : null;
 
-        EdgeInfo edge = new EdgeInfo(subjectUri, objectUri, extractPredicateName(predicate));
-        edges.add(edge);
-
-        if (!visitedNodes.contains(objectUri)) {
-          nextLevelNodes.add(objectUri);
+        if (!isEntityUri(subjectUri) || !isEntityUri(objectUri)) {
+          continue;
         }
+
+        String relationType = extractEntityRelationType(predicate);
+        if (relationType == null || relationType.isBlank()) {
+          continue;
+        }
+
+        String edgeKey = subjectUri + "|" + relationType + "|" + objectUri;
+        if (!edgeKeys.add(edgeKey)) {
+          continue;
+        }
+
+        EdgeInfo edge = new EdgeInfo(subjectUri, objectUri, relationType);
+        edges.add(edge);
+        discoveredNodes.add(subjectUri);
+        discoveredNodes.add(objectUri);
+
         if (!visitedNodes.contains(subjectUri)) {
           nextLevelNodes.add(subjectUri);
+        }
+        if (!visitedNodes.contains(objectUri)) {
+          nextLevelNodes.add(objectUri);
         }
       }
     }
@@ -1562,51 +1627,273 @@ public class RdfRepository {
     }
   }
 
-  private String convertEdgesToGraphData(List<EdgeInfo> edges) {
+  private FilteredEntityGraph applyGraphFilters(
+      String rootUri,
+      Set<String> nodeUris,
+      List<EdgeInfo> edges,
+      Set<String> entityTypeFilters,
+      Set<String> relationshipTypeFilters) {
+    if ((entityTypeFilters == null || entityTypeFilters.isEmpty())
+        && (relationshipTypeFilters == null || relationshipTypeFilters.isEmpty())) {
+      return new FilteredEntityGraph(new HashSet<>(nodeUris), edges);
+    }
+
+    Set<String> normalizedEntityFilters = new HashSet<>();
+    if (entityTypeFilters != null) {
+      entityTypeFilters.stream()
+          .map(this::normalizeEntityTypeFilter)
+          .filter(value -> !value.isBlank())
+          .forEach(normalizedEntityFilters::add);
+    }
+
+    Set<String> normalizedRelationshipFilters = new HashSet<>();
+    if (relationshipTypeFilters != null) {
+      relationshipTypeFilters.stream()
+          .map(this::normalizeRelationTypeFilter)
+          .filter(value -> !value.isBlank())
+          .forEach(normalizedRelationshipFilters::add);
+    }
+
+    Set<String> allowedNodes = new HashSet<>();
+    for (String nodeUri : nodeUris) {
+      if (rootUri.equals(nodeUri)
+          || normalizedEntityFilters.isEmpty()
+          || normalizedEntityFilters.contains(
+              normalizeEntityTypeFilter(extractEntityTypeFromUri(nodeUri)))) {
+        allowedNodes.add(nodeUri);
+      }
+    }
+
+    List<EdgeInfo> filteredEdges = new ArrayList<>();
+    Set<String> connectedNodes = new HashSet<>();
+    connectedNodes.add(rootUri);
+
+    for (EdgeInfo edge : edges) {
+      boolean relationshipAllowed =
+          normalizedRelationshipFilters.isEmpty()
+              || normalizedRelationshipFilters.contains(normalizeRelationTypeFilter(edge.relation));
+      if (!relationshipAllowed) {
+        continue;
+      }
+
+      if (!allowedNodes.contains(edge.fromUri) || !allowedNodes.contains(edge.toUri)) {
+        continue;
+      }
+
+      filteredEdges.add(edge);
+      connectedNodes.add(edge.fromUri);
+      connectedNodes.add(edge.toUri);
+    }
+
+    Set<String> filteredNodes = new HashSet<>();
+    for (String nodeUri : allowedNodes) {
+      if (rootUri.equals(nodeUri) || connectedNodes.contains(nodeUri)) {
+        filteredNodes.add(nodeUri);
+      }
+    }
+    filteredNodes.add(rootUri);
+
+    return new FilteredEntityGraph(filteredNodes, filteredEdges);
+  }
+
+  private List<FilterOptionInfo> buildEntityTypeFilterOptions(Set<String> nodeUris) {
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    for (String nodeUri : nodeUris) {
+      String entityType = extractEntityTypeFromUri(nodeUri);
+      counts.merge(entityType, 1, Integer::sum);
+    }
+    return buildFilterOptions(counts);
+  }
+
+  private List<FilterOptionInfo> buildRelationshipFilterOptions(List<EdgeInfo> edges) {
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    for (EdgeInfo edge : edges) {
+      counts.merge(edge.relation, 1, Integer::sum);
+    }
+    return buildFilterOptions(counts);
+  }
+
+  private List<FilterOptionInfo> buildFilterOptions(Map<String, Integer> counts) {
+    return counts.entrySet().stream()
+        .map(
+            entry ->
+                new FilterOptionInfo(
+                    entry.getKey(), formatRelationshipLabel(entry.getKey()), entry.getValue()))
+        .sorted(
+            Comparator.comparingInt(FilterOptionInfo::count)
+                .reversed()
+                .thenComparing(FilterOptionInfo::label))
+        .toList();
+  }
+
+  private String convertEdgesToGraphData(
+      String rootUri,
+      Set<String> nodeUris,
+      List<EdgeInfo> edges,
+      List<FilterOptionInfo> entityTypeOptions,
+      List<FilterOptionInfo> relationshipTypeOptions) {
     com.fasterxml.jackson.databind.node.ObjectNode graphData =
         JsonUtils.getObjectMapper().createObjectNode();
     com.fasterxml.jackson.databind.node.ArrayNode nodes =
         JsonUtils.getObjectMapper().createArrayNode();
     com.fasterxml.jackson.databind.node.ArrayNode graphEdges =
         JsonUtils.getObjectMapper().createArrayNode();
+    com.fasterxml.jackson.databind.node.ObjectNode filterOptions =
+        JsonUtils.getObjectMapper().createObjectNode();
+    com.fasterxml.jackson.databind.node.ArrayNode entityTypeFilterOptions =
+        JsonUtils.getObjectMapper().createArrayNode();
+    com.fasterxml.jackson.databind.node.ArrayNode relationshipTypeFilterOptions =
+        JsonUtils.getObjectMapper().createArrayNode();
 
-    Set<String> addedNodes = new HashSet<>();
     Map<String, com.fasterxml.jackson.databind.node.ObjectNode> nodeMap = new HashMap<>();
 
+    List<String> orderedNodeUris =
+        nodeUris.stream()
+            .sorted(
+                Comparator.comparing((String uri) -> !rootUri.equals(uri))
+                    .thenComparing(this::extractEntityTypeFromUri)
+                    .thenComparing(uri -> uri))
+            .toList();
+
+    for (String nodeUri : orderedNodeUris) {
+      com.fasterxml.jackson.databind.node.ObjectNode node = createNodeFromUri(nodeUri);
+      nodes.add(node);
+      nodeMap.put(nodeUri, node);
+    }
+
     for (EdgeInfo edge : edges) {
-      String fromUri = edge.fromUri;
-      String toUri = edge.toUri;
-
-      if (!addedNodes.contains(fromUri)) {
-        com.fasterxml.jackson.databind.node.ObjectNode fromNode = createNodeFromUri(fromUri);
-        nodes.add(fromNode);
-        nodeMap.put(fromUri, fromNode);
-        addedNodes.add(fromUri);
-      }
-
-      if (!addedNodes.contains(toUri)) {
-        com.fasterxml.jackson.databind.node.ObjectNode toNode = createNodeFromUri(toUri);
-        nodes.add(toNode);
-        nodeMap.put(toUri, toNode);
-        addedNodes.add(toUri);
-      }
-
       com.fasterxml.jackson.databind.node.ObjectNode graphEdge =
           JsonUtils.getObjectMapper().createObjectNode();
-      graphEdge.put("from", fromUri);
-      graphEdge.put("to", toUri);
+      graphEdge.put("from", edge.fromUri);
+      graphEdge.put("to", edge.toUri);
       graphEdge.put("label", formatRelationshipLabel(edge.relation));
+      graphEdge.put("relationType", edge.relation);
       graphEdge.put("arrows", "to");
       graphEdges.add(graphEdge);
+    }
+
+    for (FilterOptionInfo filterOption : entityTypeOptions) {
+      entityTypeFilterOptions.add(createFilterOptionNode(filterOption));
+    }
+
+    for (FilterOptionInfo filterOption : relationshipTypeOptions) {
+      relationshipTypeFilterOptions.add(createFilterOptionNode(filterOption));
     }
 
     enhanceNodesWithEntityDetails(nodeMap);
 
     graphData.set("nodes", nodes);
     graphData.set("edges", graphEdges);
+    graphData.put("totalNodes", nodes.size());
+    graphData.put("totalEdges", graphEdges.size());
+    graphData.put("source", "rdf");
+
+    filterOptions.set("entityTypes", entityTypeFilterOptions);
+    filterOptions.set("relationshipTypes", relationshipTypeFilterOptions);
+    graphData.set("filterOptions", filterOptions);
 
     return JsonUtils.pojoToJson(graphData);
   }
+
+  private com.fasterxml.jackson.databind.node.ObjectNode createFilterOptionNode(
+      FilterOptionInfo filterOption) {
+    com.fasterxml.jackson.databind.node.ObjectNode option =
+        JsonUtils.getObjectMapper().createObjectNode();
+    option.put("id", filterOption.id());
+    option.put("label", filterOption.label());
+    option.put("count", filterOption.count());
+    return option;
+  }
+
+  private boolean isEntityUri(String uri) {
+    if (uri == null || !uri.startsWith(config.getBaseUri().toString() + "entity/")) {
+      return false;
+    }
+    String[] parts = uri.split("/entity/")[1].split("/");
+    return parts.length >= 2 && !parts[0].isBlank() && !parts[1].isBlank();
+  }
+
+  private String extractEntityRelationType(String predicateUri) {
+    if (predicateUri == null || predicateUri.isBlank()) {
+      return null;
+    }
+
+    String localName = extractUriLocalName(predicateUri);
+    if (localName == null || localName.isBlank()) {
+      return null;
+    }
+
+    String normalized = localName.replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ROOT);
+    return switch (normalized) {
+      case "used" -> "uses";
+      case "wasderivedfrom", "upstream" -> "upstream";
+      case "wasinfluencedby", "downstream" -> "downstream";
+      case "wasgeneratedby" -> "processedBy";
+      default -> toCanonicalIdentifier(localName);
+    };
+  }
+
+  private String normalizeEntityTypeFilter(String entityType) {
+    return entityType == null ? "" : entityType.trim().toLowerCase(Locale.ROOT);
+  }
+
+  private String normalizeRelationTypeFilter(String relationType) {
+    String canonical = toCanonicalIdentifier(relationType);
+    return canonical == null ? "" : canonical.toLowerCase(Locale.ROOT);
+  }
+
+  private String extractUriLocalName(String uri) {
+    if (uri == null || uri.isBlank()) {
+      return null;
+    }
+    if (uri.contains("#")) {
+      return uri.substring(uri.lastIndexOf('#') + 1);
+    }
+    if (uri.contains("/")) {
+      return uri.substring(uri.lastIndexOf('/') + 1);
+    }
+    return uri;
+  }
+
+  private String toCanonicalIdentifier(String value) {
+    String localName = extractUriLocalName(value);
+    if (localName == null || localName.isBlank()) {
+      return null;
+    }
+
+    if (localName.equals(localName.toUpperCase(Locale.ROOT))) {
+      return localName.toLowerCase(Locale.ROOT);
+    }
+
+    if (localName.matches("[a-z]+([A-Z][a-z0-9]+)+")) {
+      return Character.toLowerCase(localName.charAt(0)) + localName.substring(1);
+    }
+
+    String spaced =
+        localName.replaceAll("([a-z0-9])([A-Z])", "$1 $2").replace('_', ' ').replace('-', ' ');
+    String[] parts = spaced.trim().split("\\s+");
+    if (parts.length == 0) {
+      return localName;
+    }
+
+    StringBuilder builder = new StringBuilder(parts[0].toLowerCase(Locale.ROOT));
+    for (int i = 1; i < parts.length; i++) {
+      if (parts[i].isBlank()) {
+        continue;
+      }
+      String normalizedPart = parts[i].toLowerCase(Locale.ROOT);
+      builder
+          .append(Character.toUpperCase(normalizedPart.charAt(0)))
+          .append(normalizedPart.substring(1));
+    }
+    return builder.toString();
+  }
+
+  private record EntityGraphTraversalResult(Set<String> nodeUris, List<EdgeInfo> edges) {}
+
+  private record FilteredEntityGraph(Set<String> nodeUris, List<EdgeInfo> edges) {}
+
+  private record FilterOptionInfo(String id, String label, int count) {}
 
   public void executeSparqlUpdate(String update) {
     if (!isEnabled()) {
