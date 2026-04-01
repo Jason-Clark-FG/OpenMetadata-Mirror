@@ -35,7 +35,9 @@ public final class LineageFilterClassifier {
           "tags.tagFQN",
           "tier.tagFQN",
           "service.name",
-          "domain.displayName");
+          "domain.displayName",
+          "serviceType",
+          "serviceType.keyword");
 
   private LineageFilterClassifier() {}
 
