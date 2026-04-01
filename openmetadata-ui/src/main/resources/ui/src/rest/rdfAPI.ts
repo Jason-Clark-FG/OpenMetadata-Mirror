@@ -12,6 +12,7 @@
  */
 
 import APIClient from './index';
+import { GraphEdge, GraphFilterOptions } from '../types/knowledgeGraph.types';
 
 export interface GraphNode {
   id: string;
@@ -22,25 +23,6 @@ export interface GraphNode {
   fullyQualifiedName?: string;
   description?: string;
   isolated?: boolean;
-}
-
-export interface GraphEdge {
-  from: string;
-  to: string;
-  label: string;
-  relationType?: string;
-  arrows?: string;
-}
-
-export interface GraphFilterOption {
-  id: string;
-  label: string;
-  count: number;
-}
-
-export interface GraphFilterOptions {
-  entityTypes: GraphFilterOption[];
-  relationshipTypes: GraphFilterOption[];
 }
 
 export interface GraphData {

@@ -35,7 +35,7 @@ public class DistributedRdfIndexCoordinator {
   private final CollectionDAO collectionDAO;
   private final RdfPartitionCalculator partitionCalculator;
   private final String serverId;
-  private final AtomicLong claimCounter = new AtomicLong(0);
+  private final AtomicLong lastClaimTimestamp = new AtomicLong(0);
 
   public DistributedRdfIndexCoordinator(CollectionDAO collectionDAO) {
     this(collectionDAO, new RdfPartitionCalculator());
@@ -207,7 +207,7 @@ public class DistributedRdfIndexCoordinator {
   }
 
   public RdfIndexPartition claimNextPartition(UUID jobId) {
-    long claimAt = (System.currentTimeMillis() * 1000) + claimCounter.incrementAndGet();
+    long claimAt = nextClaimTimestamp();
     int updated =
         collectionDAO
             .rdfIndexPartitionDAO()
@@ -344,7 +344,7 @@ public class DistributedRdfIndexCoordinator {
         || status == IndexJobStatus.COMPLETED
         || status == IndexJobStatus.COMPLETED_WITH_ERRORS
         || status == IndexJobStatus.FAILED) {
-      completedAt = now;
+      completedAt = completedAt != null ? completedAt : now;
     }
 
     collectionDAO
@@ -450,7 +450,7 @@ public class DistributedRdfIndexCoordinator {
         || status == IndexJobStatus.COMPLETED_WITH_ERRORS
         || status == IndexJobStatus.FAILED
         || status == IndexJobStatus.STOPPED) {
-      completedAt = System.currentTimeMillis();
+      completedAt = completedAt != null ? completedAt : System.currentTimeMillis();
     }
 
     RdfIndexJob refreshed =
@@ -492,6 +492,14 @@ public class DistributedRdfIndexCoordinator {
             partitionsCompleted,
             partitionsFailed,
             System.currentTimeMillis());
+  }
+
+  private long nextClaimTimestamp() {
+    return lastClaimTimestamp.updateAndGet(
+        previous -> {
+          long now = System.currentTimeMillis();
+          return now > previous ? now : previous + 1;
+        });
   }
 
   private void insertPartition(RdfIndexPartition partition) {

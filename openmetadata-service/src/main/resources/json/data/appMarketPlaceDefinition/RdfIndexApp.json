@@ -18,9 +18,7 @@
   },
   "supportsInterrupt": true,
   "appConfiguration": {
-    "entities": [
-      "all"
-    ],
+    "entities": [],
     "recreateIndex": false,
     "batchSize": 100,
     "producerThreads": 2,

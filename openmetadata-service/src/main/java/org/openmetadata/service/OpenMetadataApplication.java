@@ -1123,7 +1123,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
           "Registered DistributedJobParticipant for distributed search indexing using {}",
           notifierType);
     } catch (Exception e) {
-      LOG.warn("Failed to register DistributedJobParticipant: {}", e.getMessage());
+      LOG.warn("Failed to register DistributedJobParticipant", e);
     }
   }
 
@@ -1134,7 +1134,7 @@ public class OpenMetadataApplication extends Application<OpenMetadataApplication
       environment.lifecycle().manage(participant);
       LOG.info("Registered RdfDistributedJobParticipant for distributed RDF indexing");
     } catch (Exception e) {
-      LOG.warn("Failed to register RdfDistributedJobParticipant: {}", e.getMessage());
+      LOG.warn("Failed to register RdfDistributedJobParticipant", e);
     }
   }
 

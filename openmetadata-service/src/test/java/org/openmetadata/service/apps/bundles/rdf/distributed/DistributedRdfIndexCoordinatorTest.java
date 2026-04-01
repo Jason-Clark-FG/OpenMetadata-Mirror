@@ -14,13 +14,17 @@
 package org.openmetadata.service.apps.bundles.rdf.distributed;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +36,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -66,8 +71,8 @@ class DistributedRdfIndexCoordinatorTest {
     serverIdentityMock = mockStatic(ServerIdentityResolver.class);
     serverIdentityMock.when(ServerIdentityResolver::getInstance).thenReturn(resolver);
 
-    when(collectionDAO.rdfIndexJobDAO()).thenReturn(jobDAO);
-    when(collectionDAO.rdfIndexPartitionDAO()).thenReturn(partitionDAO);
+    lenient().when(collectionDAO.rdfIndexJobDAO()).thenReturn(jobDAO);
+    lenient().when(collectionDAO.rdfIndexPartitionDAO()).thenReturn(partitionDAO);
 
     coordinator = new DistributedRdfIndexCoordinator(collectionDAO, partitionCalculator);
   }
@@ -131,6 +136,149 @@ class DistributedRdfIndexCoordinatorTest {
             anyString(),
             isNull(),
             isNull(),
+            anyLong(),
+            isNull());
+  }
+
+  @Test
+  void getJobWithAggregatedStatsPreservesCompletedAtForTerminalJob() {
+    UUID jobId = UUID.randomUUID();
+    long completedAt = System.currentTimeMillis() - 5000;
+    EventPublisherJob jobConfiguration = new EventPublisherJob().withEntities(Set.of("table"));
+    RdfIndexJobRecord jobRecord =
+        new RdfIndexJobRecord(
+            jobId.toString(),
+            IndexJobStatus.RUNNING.name(),
+            JsonUtils.pojoToJson(jobConfiguration),
+            25L,
+            25L,
+            25L,
+            0L,
+            JsonUtils.pojoToJson(
+                Map.of(
+                    "table",
+                    RdfIndexJob.EntityTypeStats.builder()
+                        .entityType("table")
+                        .totalRecords(25)
+                        .build())),
+            "admin",
+            System.currentTimeMillis(),
+            System.currentTimeMillis() - 10000,
+            completedAt,
+            System.currentTimeMillis(),
+            null);
+
+    when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
+    when(partitionDAO.getAggregatedStats(jobId.toString()))
+        .thenReturn(new RdfAggregatedStatsRecord(25L, 25L, 25L, 0L, 1, 1, 0, 0, 0));
+    when(partitionDAO.getEntityStats(jobId.toString()))
+        .thenReturn(
+            List.of(
+                new CollectionDAO.RdfIndexPartitionDAO.RdfEntityStatsRecord(
+                    "table", 25L, 25L, 25L, 0L, 1, 1, 0)));
+    when(partitionDAO.getServerStats(jobId.toString())).thenReturn(List.of());
+
+    RdfIndexJob refreshed = coordinator.getJobWithAggregatedStats(jobId);
+
+    assertEquals(IndexJobStatus.COMPLETED, refreshed.getStatus());
+    assertEquals(completedAt, refreshed.getCompletedAt());
+
+    verify(jobDAO)
+        .update(
+            eq(jobId.toString()),
+            eq(IndexJobStatus.COMPLETED.name()),
+            eq(25L),
+            eq(25L),
+            eq(0L),
+            anyString(),
+            eq(jobRecord.startedAt()),
+            eq(completedAt),
+            anyLong(),
+            isNull());
+  }
+
+  @Test
+  void claimNextPartitionUsesUniqueMillisecondTimestamps() {
+    UUID jobId = UUID.randomUUID();
+    when(partitionDAO.claimNextPartitionAtomic(eq(jobId.toString()), eq(TEST_SERVER_ID), anyLong()))
+        .thenReturn(1);
+    when(partitionDAO.findLatestClaimedPartition(
+            eq(jobId.toString()), eq(TEST_SERVER_ID), anyLong()))
+        .thenAnswer(
+            invocation ->
+                new CollectionDAO.RdfIndexPartitionDAO.RdfIndexPartitionRecord(
+                    UUID.randomUUID().toString(),
+                    jobId.toString(),
+                    "table",
+                    0,
+                    0L,
+                    100L,
+                    100L,
+                    100L,
+                    1,
+                    "PROCESSING",
+                    0L,
+                    0L,
+                    0L,
+                    0L,
+                    TEST_SERVER_ID,
+                    invocation.getArgument(2, Long.class),
+                    invocation.getArgument(2, Long.class),
+                    null,
+                    invocation.getArgument(2, Long.class),
+                    null,
+                    0,
+                    0L));
+
+    coordinator.claimNextPartition(jobId);
+    coordinator.claimNextPartition(jobId);
+
+    ArgumentCaptor<Long> claimTimes = ArgumentCaptor.forClass(Long.class);
+    verify(partitionDAO, times(2))
+        .claimNextPartitionAtomic(eq(jobId.toString()), eq(TEST_SERVER_ID), claimTimes.capture());
+
+    List<Long> capturedTimes = claimTimes.getAllValues();
+    assertEquals(2, capturedTimes.size());
+    assertNotEquals(capturedTimes.get(0), capturedTimes.get(1));
+    assertTrue(capturedTimes.get(1) > capturedTimes.get(0));
+  }
+
+  @Test
+  void updateJobStatusPreservesExistingCompletedAt() {
+    UUID jobId = UUID.randomUUID();
+    long completedAt = System.currentTimeMillis() - 5000;
+    EventPublisherJob jobConfiguration = new EventPublisherJob().withEntities(Set.of("table"));
+    RdfIndexJobRecord jobRecord =
+        new RdfIndexJobRecord(
+            jobId.toString(),
+            IndexJobStatus.RUNNING.name(),
+            JsonUtils.pojoToJson(jobConfiguration),
+            25L,
+            25L,
+            25L,
+            0L,
+            JsonUtils.pojoToJson(Map.of()),
+            "admin",
+            System.currentTimeMillis(),
+            System.currentTimeMillis() - 10000,
+            completedAt,
+            System.currentTimeMillis(),
+            null);
+
+    when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
+
+    coordinator.updateJobStatus(jobId, IndexJobStatus.COMPLETED, null);
+
+    verify(jobDAO)
+        .update(
+            eq(jobId.toString()),
+            eq(IndexJobStatus.COMPLETED.name()),
+            eq(25L),
+            eq(25L),
+            eq(0L),
+            anyString(),
+            eq(jobRecord.startedAt()),
+            eq(completedAt),
             anyLong(),
             isNull());
   }

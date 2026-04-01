@@ -768,7 +768,9 @@ public class RdfRepository {
       throw new IllegalStateException("RDF Repository is not enabled");
     }
 
-    String entityUri = config.getBaseUri().toString() + "entity/" + entityType + "/" + entityId;
+    String validatedEntityType = requireKnownEntityType(entityType);
+    String entityUri =
+        config.getBaseUri().toString() + "entity/" + validatedEntityType + "/" + entityId;
 
     try {
       EntityGraphTraversalResult traversalResult = traverseEntityGraph(entityUri, depth);
@@ -790,6 +792,20 @@ public class RdfRepository {
       LOG.error("Error getting entity graph for {}", entityUri, e);
       throw new IOException("Failed to get entity graph", e);
     }
+  }
+
+  private String requireKnownEntityType(String entityType) {
+    if (entityType == null || entityType.isBlank()) {
+      throw new IllegalArgumentException("Entity type is required");
+    }
+
+    String trimmedEntityType = entityType.trim();
+    if (!trimmedEntityType.matches("[A-Za-z][A-Za-z0-9]*")
+        || !Entity.hasEntityRepository(trimmedEntityType)) {
+      throw new IllegalArgumentException("Invalid entity type");
+    }
+
+    return trimmedEntityType;
   }
 
   /**

@@ -11,23 +11,23 @@
  *  limitations under the License.
  */
 import {
-  ClockCircleOutlined,
-  LeftOutlined,
-  StopOutlined,
-  UserOutlined,
+    ClockCircleOutlined,
+    LeftOutlined,
+    StopOutlined,
+    UserOutlined
 } from '@ant-design/icons';
 import Icon from '@ant-design/icons/lib/components/Icon';
 import { IChangeEvent } from '@rjsf/core';
 import { RJSFSchema } from '@rjsf/utils';
 import {
-  Button,
-  Col,
-  Dropdown,
-  Row,
-  Space,
-  Tabs,
-  Tooltip,
-  Typography,
+    Button,
+    Col,
+    Dropdown,
+    Row,
+    Space,
+    Tabs,
+    Tooltip,
+    Typography
 } from 'antd';
 import { ItemType } from 'antd/lib/menu/hooks/useItems';
 import { AxiosError } from 'axios';
@@ -45,21 +45,21 @@ import { GlobalSettingOptions } from '../../../../constants/GlobalSettings.const
 import { useLimitStore } from '../../../../context/LimitsProvider/useLimitsStore';
 import { TabSpecificField } from '../../../../enums/entity.enum';
 import {
-  App,
-  ScheduleTimeline,
-  ScheduleType,
+    App,
+    ScheduleTimeline,
+    ScheduleType
 } from '../../../../generated/entity/applications/app';
 import { EntityReference } from '../../../../generated/entity/type';
 import { Include } from '../../../../generated/type/include';
 import { useFqn } from '../../../../hooks/useFqn';
 import {
-  configureApp,
-  deployApp,
-  getApplicationByName,
-  patchApplication,
-  restoreApp,
-  triggerOnDemandApp,
-  uninstallApp,
+    configureApp,
+    deployApp,
+    getApplicationByName,
+    patchApplication,
+    restoreApp,
+    triggerOnDemandApp,
+    uninstallApp
 } from '../../../../rest/applicationAPI';
 import brandClassBase from '../../../../utils/BrandData/BrandClassBase';
 import { getRelativeTime } from '../../../../utils/date-time/DateTimeUtils';
@@ -112,7 +112,8 @@ const AppDetails = () => {
       try {
         const schema = await applicationsClassBase.importSchema(fqn);
         setJsonSchema(schema);
-      } catch (_) {
+      } catch (error) {
+        console.error(`Failed to load application schema for ${fqn}`, error);
         setJsonSchema(undefined);
         showErrorToast(
           t('message.no-application-schema-found', { appName: fqn })

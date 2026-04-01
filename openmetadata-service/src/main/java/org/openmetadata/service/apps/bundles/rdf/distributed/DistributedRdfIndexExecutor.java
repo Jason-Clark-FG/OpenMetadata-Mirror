@@ -1,11 +1,11 @@
 package org.openmetadata.service.apps.bundles.rdf.distributed;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -31,20 +31,27 @@ public class DistributedRdfIndexExecutor {
   private final DistributedRdfIndexCoordinator coordinator;
   private final String serverId;
   private final AtomicBoolean stopped = new AtomicBoolean(false);
-  private final List<RdfPartitionWorker> activeWorkers = new ArrayList<>();
+  private final List<RdfPartitionWorker> activeWorkers = new CopyOnWriteArrayList<>();
 
-  @Getter private RdfIndexJob currentJob;
+  @Getter private volatile RdfIndexJob currentJob;
   private volatile ExecutorService workerExecutor;
   private volatile Thread lockRefreshThread;
   private volatile Thread staleReclaimerThread;
   private volatile boolean coordinatorOwnedJob;
 
   public DistributedRdfIndexExecutor(CollectionDAO collectionDAO, int partitionSize) {
-    this.collectionDAO = collectionDAO;
-    this.coordinator =
+    this(
+        collectionDAO,
         new DistributedRdfIndexCoordinator(
-            collectionDAO, new RdfPartitionCalculator(partitionSize));
-    this.serverId = ServerIdentityResolver.getInstance().getServerId();
+            collectionDAO, new RdfPartitionCalculator(partitionSize)),
+        ServerIdentityResolver.getInstance().getServerId());
+  }
+
+  DistributedRdfIndexExecutor(
+      CollectionDAO collectionDAO, DistributedRdfIndexCoordinator coordinator, String serverId) {
+    this.collectionDAO = collectionDAO;
+    this.coordinator = coordinator;
+    this.serverId = serverId;
   }
 
   public static boolean isCoordinatingJob(UUID jobId) {
@@ -91,9 +98,17 @@ public class DistributedRdfIndexExecutor {
     COORDINATED_JOBS.add(currentJob.getId());
     coordinator.updateJobStatus(currentJob.getId(), IndexJobStatus.RUNNING, null);
     currentJob = coordinator.getJobWithAggregatedStats(currentJob.getId());
+    if (currentJob == null) {
+      throw new IllegalStateException("Failed to load RDF distributed job state");
+    }
 
-    startCoordinatorThreads();
-    runWorkers(jobConfiguration, true);
+    try {
+      startCoordinatorThreads();
+      runWorkers(jobConfiguration, true);
+      finalizeCoordinatorJob();
+    } finally {
+      cleanupCoordinatorExecution();
+    }
   }
 
   public void joinJob(RdfIndexJob job, EventPublisherJob jobConfiguration)
@@ -137,6 +152,8 @@ public class DistributedRdfIndexExecutor {
 
   private void runWorkers(EventPublisherJob jobConfiguration, boolean coordinatorMode)
       throws InterruptedException {
+    activeWorkers.clear();
+
     int workerCount =
         Math.max(
             1,
@@ -159,18 +176,20 @@ public class DistributedRdfIndexExecutor {
                         : "rdf-distributed-participant-",
                     0)
                 .factory());
+    try {
+      for (int i = 0; i < workerCount; i++) {
+        RdfPartitionWorker worker = new RdfPartitionWorker(coordinator, batchProcessor, batchSize);
+        activeWorkers.add(worker);
+        workerExecutor.submit(() -> workerLoop(worker));
+      }
 
-    for (int i = 0; i < workerCount; i++) {
-      RdfPartitionWorker worker = new RdfPartitionWorker(coordinator, batchProcessor, batchSize);
-      activeWorkers.add(worker);
-      workerExecutor.submit(() -> workerLoop(worker));
-    }
-
-    workerExecutor.shutdown();
-    workerExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-
-    if (coordinatorMode) {
-      finalizeCoordinatorJob();
+      workerExecutor.shutdown();
+      workerExecutor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+    } finally {
+      activeWorkers.clear();
+      if (workerExecutor != null && !workerExecutor.isShutdown()) {
+        shutdownWorkerExecutor();
+      }
     }
   }
 
@@ -199,34 +218,22 @@ public class DistributedRdfIndexExecutor {
   }
 
   private void finalizeCoordinatorJob() {
-    try {
-      currentJob = coordinator.getJobWithAggregatedStats(currentJob.getId());
-      if (currentJob == null) {
-        return;
-      }
-
-      if (stopped.get()) {
-        coordinator.updateJobStatus(currentJob.getId(), IndexJobStatus.STOPPED, null);
-      } else if (!currentJob.isTerminal()) {
-        IndexJobStatus terminalStatus =
-            currentJob.getFailedRecords() > 0
-                ? IndexJobStatus.COMPLETED_WITH_ERRORS
-                : IndexJobStatus.COMPLETED;
-        coordinator.updateJobStatus(
-            currentJob.getId(), terminalStatus, currentJob.getErrorMessage());
-      }
-
-      currentJob = coordinator.getJobWithAggregatedStats(currentJob.getId());
-    } finally {
-      if (currentJob != null && coordinatorOwnedJob) {
-        coordinator.releaseReindexLock(currentJob.getId());
-      }
-      if (currentJob != null) {
-        COORDINATED_JOBS.remove(currentJob.getId());
-      }
-      interruptThread(lockRefreshThread);
-      interruptThread(staleReclaimerThread);
+    currentJob = coordinator.getJobWithAggregatedStats(currentJob.getId());
+    if (currentJob == null) {
+      return;
     }
+
+    if (stopped.get()) {
+      coordinator.updateJobStatus(currentJob.getId(), IndexJobStatus.STOPPED, null);
+    } else if (!currentJob.isTerminal()) {
+      IndexJobStatus terminalStatus =
+          currentJob.getFailedRecords() > 0
+              ? IndexJobStatus.COMPLETED_WITH_ERRORS
+              : IndexJobStatus.COMPLETED;
+      coordinator.updateJobStatus(currentJob.getId(), terminalStatus, currentJob.getErrorMessage());
+    }
+
+    currentJob = coordinator.getJobWithAggregatedStats(currentJob.getId());
   }
 
   private void startCoordinatorThreads() {
@@ -280,6 +287,8 @@ public class DistributedRdfIndexExecutor {
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    } finally {
+      workerExecutor = null;
     }
   }
 
@@ -292,6 +301,28 @@ public class DistributedRdfIndexExecutor {
       thread.join(5_000);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
+    }
+  }
+
+  private void cleanupCoordinatorExecution() {
+    UUID jobId = currentJob != null ? currentJob.getId() : null;
+
+    shutdownWorkerExecutor();
+    interruptThread(lockRefreshThread);
+    interruptThread(staleReclaimerThread);
+    lockRefreshThread = null;
+    staleReclaimerThread = null;
+    activeWorkers.clear();
+
+    if (jobId != null && coordinatorOwnedJob) {
+      try {
+        coordinator.releaseReindexLock(jobId);
+      } catch (Exception e) {
+        LOG.warn("Failed to release RDF reindex lock for {}", jobId, e);
+      }
+    }
+    if (jobId != null) {
+      COORDINATED_JOBS.remove(jobId);
     }
   }
 }

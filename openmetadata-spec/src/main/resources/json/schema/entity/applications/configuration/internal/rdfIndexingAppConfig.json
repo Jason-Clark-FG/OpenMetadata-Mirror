@@ -21,7 +21,7 @@
     },
     "entities": {
       "title": "Entities",
-      "description": "List of entities that you need to reindex.",
+      "description": "List of entities that you need to reindex. Leave empty to index all supported entities.",
       "type": "array",
       "items": {
         "type": "string",
@@ -96,7 +96,7 @@
           "worksheet"
         ]
       },
-      "default": ["all"],
+      "default": [],
       "uiFieldType": "treeSelect",
       "uniqueItems": true
     },

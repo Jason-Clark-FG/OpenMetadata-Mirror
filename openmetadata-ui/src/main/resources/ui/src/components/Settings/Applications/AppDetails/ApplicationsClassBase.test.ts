@@ -52,6 +52,7 @@ describe('ApplicationsClassBase', () => {
       const schema = await applicationsClassBase.importSchema('RdfIndexApp');
 
       expect(schema).toEqual(rdfIndexAppSchema);
+      expect(schema.properties.entities.default).toEqual([]);
       expect(schema.properties.partitionSize).toBeDefined();
       expect(schema.properties.useDistributedIndexing).toBeDefined();
     });

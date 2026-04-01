@@ -35,8 +35,10 @@ public class RdfDistributedJobParticipant implements Managed {
 
   @Override
   public void start() {
-    if (!RdfRepository.getInstance().isEnabled()) {
-      LOG.info("Skipping RDF distributed participant registration because RDF is disabled");
+    RdfRepository rdfRepository = RdfRepository.getInstanceOrNull();
+    if (rdfRepository == null || !rdfRepository.isEnabled()) {
+      LOG.info(
+          "Skipping RDF distributed participant registration because RDF is not initialized or disabled");
       return;
     }
 

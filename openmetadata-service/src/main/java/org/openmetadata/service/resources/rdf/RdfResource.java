@@ -252,9 +252,10 @@ public class RdfResource {
           String relationshipTypes) {
     authorizer.authorizeAdmin(securityContext);
     try {
+      String validatedEntityType = validateEntityType(entityType);
       if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-            .entity("{\"error\": \"RDF service not enabled\"}")
+            .entity(buildErrorResponse("RDF service not enabled"))
             .build();
       }
 
@@ -262,16 +263,39 @@ public class RdfResource {
           getRdfRepository()
               .getEntityGraph(
                   entityId,
-                  entityType,
+                  validatedEntityType,
                   depth,
                   parseCsvFilter(entityTypes),
                   parseCsvFilter(relationshipTypes));
       return Response.ok(graphData, MediaType.APPLICATION_JSON).build();
-
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(buildErrorResponse(e.getMessage()))
+          .build();
     } catch (Exception e) {
       LOG.error("Error exploring entity graph", e);
-      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
+      return Response.serverError()
+          .entity(buildErrorResponse("An internal error occurred"))
+          .build();
     }
+  }
+
+  private String validateEntityType(String entityType) {
+    if (entityType == null || entityType.isBlank()) {
+      throw new IllegalArgumentException("Entity type is required");
+    }
+
+    String trimmedEntityType = entityType.trim();
+    if (!trimmedEntityType.matches("[A-Za-z][A-Za-z0-9]*")
+        || !Entity.hasEntityRepository(trimmedEntityType)) {
+      throw new IllegalArgumentException("Invalid entity type");
+    }
+
+    return trimmedEntityType;
+  }
+
+  private String buildErrorResponse(String message) {
+    return String.format("{\"error\": \"%s\"}", message);
   }
 
   private Set<String> parseCsvFilter(String values) {
@@ -457,25 +481,35 @@ public class RdfResource {
           String direction) {
     authorizer.authorizeAdmin(securityContext);
     try {
-      String query = buildLineageQuery(entityId, entityType, direction);
-      String results =
-          getRdfRepository() != null
-              ? getRdfRepository().executeSparqlQueryWithInference(query, SPARQL_JSON, "custom")
-              : null;
-      if (results == null) {
+      String validatedEntityType = validateEntityType(entityType);
+      if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
         return Response.status(Response.Status.SERVICE_UNAVAILABLE)
-            .entity("{\"error\": \"RDF service not enabled\"}")
+            .entity(buildErrorResponse("RDF service not enabled"))
             .build();
       }
+
+      String query =
+          buildLineageQuery(
+              entityId, validatedEntityType, direction, getRdfRepository().getBaseUri());
+      String results =
+          getRdfRepository().executeSparqlQueryWithInference(query, SPARQL_JSON, "custom");
       return Response.ok(results).build();
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(buildErrorResponse(e.getMessage()))
+          .build();
     } catch (Exception e) {
       LOG.error("Error getting lineage with inference", e);
-      return Response.serverError().entity("{\"error\": \"An internal error occurred\"}").build();
+      return Response.serverError()
+          .entity(buildErrorResponse("An internal error occurred"))
+          .build();
     }
   }
 
-  private String buildLineageQuery(UUID entityId, String entityType, String direction) {
-    String entityUri = "https://open-metadata.org/entity/" + entityType + "/" + entityId;
+  private String buildLineageQuery(
+      UUID entityId, String entityType, String direction, String baseUri) {
+    String normalizedBaseUri = baseUri.endsWith("/") ? baseUri : baseUri + "/";
+    String entityUri = normalizedBaseUri + "entity/" + entityType + "/" + entityId;
 
     return switch (direction.toLowerCase()) {
       case "upstream" -> String.format(
