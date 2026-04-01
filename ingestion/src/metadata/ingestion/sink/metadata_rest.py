@@ -351,10 +351,9 @@ class MetadataRestSink(Sink):  # pylint: disable=too-many-public-methods
                 ),
                 right=None,
             )
-
-        # Clear buffer and tracking set
-        self.buffer = []
-        self.buffered_entity_names.clear()
+        finally:
+            self.buffer = []
+            self.buffered_entity_names.clear()
 
         if result and result.status == basic.Status.success:
             self.status.scanned_all(result.successRequest)
@@ -732,7 +731,41 @@ class MetadataRestSink(Sink):  # pylint: disable=too-many-public-methods
         logger.debug(
             f"Successfully ingested test case results for test case {record.testCase.name.root}"
         )
+        self._ingest_failed_rows_sample(record)
         return Either(right=res)
+
+    def _ingest_failed_rows_sample(self, record: TestCaseResultResponse):
+        """Ingest failed row sample and inspection query if present on the record."""
+        if record.failedRowsSample is not None:
+            try:
+                self.metadata.ingest_failed_rows_sample(
+                    record.testCase,
+                    record.failedRowsSample,
+                    validate=record.validateColumns,
+                )
+                logger.debug(
+                    f"Successfully ingested failed rows sample for {record.testCase.name.root}"
+                )
+            except Exception:
+                logger.debug(traceback.format_exc())
+                logger.error(
+                    f"Failed to ingest failed rows sample for {record.testCase.name.root}"
+                )
+
+        if record.inspectionQuery is not None:
+            try:
+                self.metadata.ingest_inspection_query(
+                    record.testCase,
+                    record.inspectionQuery,
+                )
+                logger.debug(
+                    f"Successfully ingested inspection query for {record.testCase.name.root}"
+                )
+            except Exception:
+                logger.debug(traceback.format_exc())
+                logger.error(
+                    f"Failed to ingest inspection query for {record.testCase.name.root}"
+                )
 
     @_run_dispatch.register
     def write_test_case_resolution_status(
@@ -951,6 +984,7 @@ class MetadataRestSink(Sink):  # pylint: disable=too-many-public-methods
                 test_results=result.testCaseResult,
                 test_case_fqn=result.testCase.fullyQualifiedName.root,
             )
+            self._ingest_failed_rows_sample(result)
             self.status.scanned(result)
 
         return Either(right=record)
