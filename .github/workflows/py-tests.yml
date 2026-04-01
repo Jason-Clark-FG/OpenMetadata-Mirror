@@ -174,21 +174,87 @@ jobs:
         py-version: ["3.10", "3.11", "3.12"]
         shard:
           - name: "shard-1"
+            workers: "2"
             nox-args: >-
-              tests/integration/ometa
+              tests/integration/trino
+              tests/integration/datalake
+              tests/integration/ometa/test_ometa_pipeline_api.py
+              tests/integration/orm_profiler
+              tests/integration/ometa/test_ometa_tags_mixin.py
+              tests/integration/ometa/test_ometa_database_api.py
+              tests/integration/ometa/test_ometa_glossary.py
+              tests/integration/ometa/test_ometa_database_service_api.py
+              tests/integration/cockroach
+              tests/integration/ometa/test_ometa_user_api.py
+              tests/integration/kafka
+              tests/integration/automations
+              tests/integration/ometa/test_ometa_bot_rbac.py
+              tests/integration/atlas
+              tests/integration/mongodb
+              tests/integration/ssrs
           - name: "shard-2"
+            workers: "0"
             nox-args: >-
               tests/integration/postgres
               tests/integration/mysql
               tests/integration/profiler
               tests/integration/data_quality
           - name: "shard-3"
+            workers: "2"
             nox-args: >-
-              --ignore=tests/integration/ometa
-              --ignore=tests/integration/postgres
-              --ignore=tests/integration/mysql
-              --ignore=tests/integration/profiler
-              --ignore=tests/integration/data_quality
+              tests/integration/sdk
+              tests/integration/ometa/test_ometa_rest_api.py
+              tests/integration/superset
+              tests/integration/lineage
+              tests/integration/test_suite
+              tests/integration/ometa/test_ometa_chart_api.py
+              tests/integration/ometa/test_ometa_storage_api.py
+              tests/integration/ometa/test_ometa_suggestion_api.py
+              tests/integration/workflow
+              tests/integration/ometa/test_ometa_workflow_api.py
+              tests/integration/ometa/test_ometa_from_env.py
+              tests/integration/ometa/test_ometa_ingestion_pipeline.py
+              tests/integration/sources
+              tests/integration/auto_classification
+              tests/integration/powerbi
+              tests/integration/usage
+          - name: "shard-4"
+            workers: "2"
+            nox-args: >-
+              tests/integration/ometa/test_ometa_domains_api.py
+              tests/integration/ometa/test_ometa_table_api.py
+              tests/integration/ometa/test_ometa_patch.py
+              tests/integration/airflow
+              tests/integration/ometa/test_ometa_mlmodel_api.py
+              tests/integration/ometa/test_ometa_dashboard_api.py
+              tests/integration/ometa/test_ometa_topic_api.py
+              tests/integration/ometa/test_ometa_test_suite.py
+              tests/integration/ometa/test_ometa_lineage_api.py
+              tests/integration/ometa/test_ometa_topology_patch.py
+              tests/integration/alationsink
+              tests/integration/great_expectations
+              tests/integration/ometa/test_ometa_server_api.py
+              tests/integration/cassandra
+              tests/integration/s3
+          - name: "shard-5"
+            workers: "2"
+            nox-args: >-
+              tests/integration/sftp
+              tests/integration/ometa/test_ometa_role_policy_api.py
+              tests/integration/ometa/test_ometa_subscription_api.py
+              tests/integration/ometa/test_ometa_custom_properties_api.py
+              tests/integration/ometa/test_ometa_es_api.py
+              tests/integration/sql_server
+              tests/integration/ometa/test_ometa_data_contract_api.py
+              tests/integration/ometa/test_ometa_service_api.py
+              tests/integration/ometa/test_ometa_life_cycle_api.py
+              tests/integration/ometa/test_ometa_topology_restore.py
+              tests/integration/ometa/test_ometa_connection_definition_api.py
+              tests/integration/ometa/test_ometa_secrets_manager.py
+              tests/integration/ometa/test_ometa_app_api.py
+              tests/integration/amundsen
+              tests/integration/connections
+              tests/integration/sas
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -238,7 +304,7 @@ jobs:
           nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }} ${{ matrix.shard.nox-args }}
         env:
           TESTCONTAINERS_RYUK_DISABLED: true
-          PYTEST_INTEGRATION_WORKERS: "2"
+          PYTEST_INTEGRATION_WORKERS: ${{ matrix.shard.workers }}
         shell: bash
 
       - name: Upload coverage artifact
