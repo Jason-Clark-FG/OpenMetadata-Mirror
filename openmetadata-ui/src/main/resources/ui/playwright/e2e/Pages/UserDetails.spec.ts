@@ -82,34 +82,43 @@ test.describe('User with different Roles', () => {
     await afterAction();
   });
 
-  test('Admin user can get all the teams hierarchy and edit teams', PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ, async ({
-    adminPage,
-  }) => {
-    await redirectToUserPage(adminPage);
+  test(
+    'Admin user can get all the teams hierarchy and edit teams',
+    PLAYWRIGHT_SAMPLE_DATA_TAG_OBJ,
+    async ({ adminPage }) => {
+      test.slow();
+      await visitUserProfilePage(adminPage, user1.getUserName());
 
-    // Check if the avatar is visible
-    await expect(adminPage.getByTestId('user-profile-teams')).toBeVisible();
+      // Check if the avatar is visible
+      await expect(adminPage.getByTestId('user-profile-teams')).toBeVisible();
 
-    await adminPage.getByTestId('edit-teams-button').click();
+      await adminPage.getByTestId('edit-teams-button').click();
 
-    await expect(adminPage.getByTestId('team-select')).toBeVisible();
+      await expect(adminPage.getByTestId('team-select')).toBeVisible();
 
-    await adminPage.waitForSelector('.ant-tree-select-dropdown', {
-      state: 'visible',
-    });
+      await adminPage.waitForSelector('.ant-tree-select-dropdown', {
+        state: 'visible',
+      });
 
-    await adminPage
-      .locator('.ant-select-tree-title')
-      .filter({ hasText: 'Accounting' })
-      .first()
-      .click();
+      await adminPage
+        .locator('.ant-select-tree-title')
+        .filter({ hasText: 'Accounting' })
+        .first()
+        .click();
 
-    await adminPage.getByTestId('teams-edit-save-btn').click();
+      const saveTeamsResponse = adminPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/users/') &&
+          response.request().method() === 'PATCH'
+      );
 
-    await expect(adminPage.getByTestId('user-profile-teams')).toContainText(
-      'Accounting'
-    );
-  });
+      await adminPage.getByTestId('teams-edit-save-btn').click();
+      await saveTeamsResponse;
+      await expect(adminPage.getByTestId('user-profile-teams')).toContainText(
+        'Accounting'
+      );
+    }
+  );
 
   test('Create team with domain and verify visibility of inherited domain in user profile after team removal', async ({
     adminPage,
@@ -625,9 +634,7 @@ test.describe('User with different Roles', () => {
 
       await expect(incorrectAssetCard).not.toBeVisible();
 
-      await expect(
-        adminPage.getByText('No records found')
-      ).toBeVisible();
+      await expect(adminPage.getByText('No records found')).toBeVisible();
 
       const rightPanel = adminPage.getByTestId(
         'entity-summary-panel-container'
