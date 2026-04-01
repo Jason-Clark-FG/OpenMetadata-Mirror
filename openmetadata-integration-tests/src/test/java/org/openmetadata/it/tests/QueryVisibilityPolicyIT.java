@@ -1,10 +1,12 @@
 package org.openmetadata.it.tests;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
@@ -221,6 +223,103 @@ public class QueryVisibilityPolicyIT {
       }
     } finally {
       // Cleanup policy
+      adminClient.policies().delete(policy.getId());
+    }
+  }
+
+  /**
+   * Regression test for NPE in matchAnyCertification policy evaluation.
+   *
+   * <p>When a policy with matchAnyCertification condition is evaluated against an entity that has no
+   * certification, it should return false gracefully. The bug was that
+   * resourceContext.getEntity().getCertification() NPE'd when getEntity() returned null.
+   */
+  @Test
+  void test_matchAnyCertification_noCertificationOnEntity(TestNamespace ns) {
+    OpenMetadataClient adminClient = SdkClients.adminClient();
+    String p = ns.shortPrefix();
+
+    Rule allowRule =
+        new Rule()
+            .withName("AllowCertified")
+            .withResources(List.of("All"))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Rule.Effect.ALLOW)
+            .withCondition("matchAnyCertification('Certification.Gold', 'Certification.Silver')");
+
+    Rule denyRule =
+        new Rule()
+            .withName("DenyUncertified")
+            .withResources(List.of("All"))
+            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+            .withEffect(Rule.Effect.DENY)
+            .withCondition("!matchAnyCertification('Certification.Gold', 'Certification.Silver')");
+
+    CreatePolicy createPolicy = new CreatePolicy();
+    createPolicy.setName(p + "_certPol");
+    createPolicy.setRules(List.of(allowRule, denyRule));
+
+    Policy policy = adminClient.policies().create(createPolicy);
+    try {
+      CreateRole createRole = new CreateRole();
+      createRole.setName(p + "_certRole");
+      createRole.setPolicies(List.of(policy.getFullyQualifiedName()));
+      Role role = adminClient.roles().create(createRole);
+      try {
+        CreateTeam createTeam = new CreateTeam();
+        createTeam.setName(p + "_certTeam");
+        createTeam.setTeamType(CreateTeam.TeamType.GROUP);
+        createTeam.setDefaultRoles(List.of(role.getId()));
+        Team team = adminClient.teams().create(createTeam);
+        try {
+          String userEmail = p + "_certuser@test.openmetadata.org";
+          CreateUser createUser = new CreateUser();
+          createUser.setName(p + "_certuser");
+          createUser.setEmail(userEmail);
+          createUser.setTeams(List.of(team.getId()));
+          User testUser = adminClient.users().create(createUser);
+          try {
+            DatabaseService dbService = DatabaseServiceTestFactory.createPostgres(ns);
+            try {
+              DatabaseSchema schema = DatabaseSchemaTestFactory.createSimple(ns, dbService);
+              Column column = new Column().withName("id").withDataType(ColumnDataType.INT);
+
+              Table tableNoCert =
+                  Tables.create()
+                      .name(p + "_nocert")
+                      .inSchema(schema.getFullyQualifiedName())
+                      .withColumns(List.of(column))
+                      .execute();
+              try {
+                OpenMetadataClient testUserClient =
+                    SdkClients.createClient(userEmail, userEmail, new String[] {});
+
+                // Before the fix, this GET threw NPE in matchAnyCertification
+                // when the table had no certification attached
+                assertDoesNotThrow(
+                    () -> testUserClient.tables().get(tableNoCert.getId().toString()),
+                    "GET table should not throw NPE when entity has no certification "
+                        + "and matchAnyCertification policy is active");
+              } finally {
+                adminClient.tables().delete(tableNoCert.getId());
+              }
+            } finally {
+              adminClient
+                  .databaseServices()
+                  .delete(
+                      dbService.getId().toString(),
+                      Map.of("recursive", "true", "hardDelete", "true"));
+            }
+          } finally {
+            adminClient.users().delete(testUser.getId());
+          }
+        } finally {
+          adminClient.teams().delete(team.getId());
+        }
+      } finally {
+        adminClient.roles().delete(role.getId());
+      }
+    } finally {
       adminClient.policies().delete(policy.getId());
     }
   }
