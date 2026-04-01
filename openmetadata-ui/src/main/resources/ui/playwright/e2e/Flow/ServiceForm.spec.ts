@@ -366,28 +366,18 @@ test.describe('Service form functionality', PLAYWRIGHT_INGESTION_TAG_OBJ, async 
       await expect(page.locator('#name_help')).toContainText(
         'Name already exists.'
       );
-
-      await page.getByRole('link', { name: 'Database Services' }).click();
-      await page.waitForLoadState('networkidle');
-      await waitForAllLoadersToDisappear(page);
-      await page.getByTestId(`service-name-${SERVICE_NAMES.service1}`).click();
-      await page.waitForLoadState('networkidle');
-      await page.getByTestId('manage-button').click();
-      await page.getByTestId('delete-button-title').click();
-      await page.getByTestId('confirmation-text-input').fill('DELETE');
-
-      const deleteResponse = page.waitForResponse(
-        `/api/v1/services/databaseServices/async/*?hardDelete=false&recursive=true`
-      );
-      await page.getByTestId('confirm-button').click();
-      await deleteResponse;
-
-      await toastNotification(
-        page,
-        /(deleted successfully!|Delete operation initiated)/,
-        BIG_ENTITY_DELETE_TIMEOUT
-      );
     });
+
+    test.afterAll(async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      // Cleanup the created service
+      await apiContext.delete(
+          `/api/v1/services/databaseServices/name/${encodeURIComponent(
+            SERVICE_NAMES.service1
+          )}?recursive=true&hardDelete=true`
+        );
+      await afterAction();
+      });
   });
 
   test.describe('Looker', () => {
