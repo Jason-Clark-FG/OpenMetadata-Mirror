@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 
@@ -45,6 +46,7 @@ class DataContractRepositoryTest {
   @BeforeAll
   static void setup() {
     repository = mock(DataContractRepository.class);
+    doCallRealMethod().when(repository).isEntityTypeSupported(anyString());
   }
 
   @SuppressWarnings("unchecked")
@@ -333,7 +335,7 @@ class DataContractRepositoryTest {
   }
 
   private boolean invokeIsSupportedEntityType(String entityType) throws Exception {
-    return invoke("isSupportedEntityType", new Class[] {String.class}, entityType);
+    return invoke("isEntityTypeSupported", new Class[] {String.class}, entityType);
   }
 
   // --- supportsSchemaValidation ---
