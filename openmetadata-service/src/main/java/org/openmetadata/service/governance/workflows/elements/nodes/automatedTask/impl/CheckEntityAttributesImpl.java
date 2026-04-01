@@ -2,7 +2,8 @@ package org.openmetadata.service.governance.workflows.elements.nodes.automatedTa
 
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FALSE_ENTITY_LIST_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.HAS_FALSE_ENTITIES_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.HAS_TRUE_ENTITIES_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.TRUE_ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
@@ -69,10 +70,10 @@ public class CheckEntityAttributesImpl implements JavaDelegate {
         }
       }
 
-      boolean result = !trueEntityList.isEmpty();
       varHandler.setNodeVariable(TRUE_ENTITY_LIST_VARIABLE, trueEntityList);
       varHandler.setNodeVariable(FALSE_ENTITY_LIST_VARIABLE, falseEntityList);
-      varHandler.setNodeVariable(RESULT_VARIABLE, result);
+      varHandler.setNodeVariable(HAS_TRUE_ENTITIES_VARIABLE, !trueEntityList.isEmpty());
+      varHandler.setNodeVariable(HAS_FALSE_ENTITIES_VARIABLE, !falseEntityList.isEmpty());
     } catch (Exception exc) {
       LOG.error(
           "[{}] Failure: ", getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()), exc);

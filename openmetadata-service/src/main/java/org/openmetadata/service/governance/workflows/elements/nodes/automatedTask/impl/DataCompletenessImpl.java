@@ -2,7 +2,6 @@ package org.openmetadata.service.governance.workflows.elements.nodes.automatedTa
 
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
-import static org.openmetadata.service.governance.workflows.Workflow.RESULT_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
@@ -125,6 +124,7 @@ public class DataCompletenessImpl implements JavaDelegate {
       for (QualityBand band : qualityBands) {
         List<String> bandEntities = entitiesByBand.getOrDefault(band.getName(), List.of());
         varHandler.setNodeVariable(band.getName() + "_" + ENTITY_LIST_VARIABLE, bandEntities);
+        varHandler.setNodeVariable("has_" + band.getName() + "_entities", !bandEntities.isEmpty());
       }
 
       // Priority band = highest minimumScore band that has entities
@@ -142,7 +142,6 @@ public class DataCompletenessImpl implements JavaDelegate {
           priorityBand,
           entitiesByBand.keySet());
 
-      varHandler.setNodeVariable(RESULT_VARIABLE, priorityBand);
       varHandler.setNodeVariable("entityResults", entityResults);
 
       // Scalar outputs for backward compat when processing a single entity

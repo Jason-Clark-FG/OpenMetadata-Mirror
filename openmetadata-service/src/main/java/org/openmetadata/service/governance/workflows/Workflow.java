@@ -16,6 +16,8 @@ public class Workflow {
   public static final String ENTITY_LIST_VARIABLE = "entityList";
   public static final String TRUE_ENTITY_LIST_VARIABLE = "true_entityList";
   public static final String FALSE_ENTITY_LIST_VARIABLE = "false_entityList";
+  public static final String HAS_TRUE_ENTITIES_VARIABLE = "hasTrueEntities";
+  public static final String HAS_FALSE_ENTITIES_VARIABLE = "hasFalseEntities";
   public static final String BATCH_SINK_PROCESSED_VARIABLE = "batchSinkProcessed";
   public static final String TRIGGERING_OBJECT_ID_VARIABLE = "triggeringObjectId";
   public static final String RECOGNIZER_FEEDBACK = "recognizerFeedback";

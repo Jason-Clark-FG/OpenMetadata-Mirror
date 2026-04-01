@@ -1,6 +1,9 @@
 package org.openmetadata.service.governance.workflows.flowable;
 
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.HAS_FALSE_ENTITIES_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.HAS_TRUE_ENTITIES_VARIABLE;
+import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,6 +17,7 @@ import java.util.Set;
 import lombok.Getter;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.InclusiveGateway;
 import org.flowable.bpmn.model.Process;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
@@ -24,6 +28,7 @@ import org.openmetadata.service.governance.workflows.elements.Edge;
 import org.openmetadata.service.governance.workflows.elements.NodeFactory;
 import org.openmetadata.service.governance.workflows.elements.NodeInterface;
 import org.openmetadata.service.governance.workflows.elements.nodes.endEvent.EndEvent;
+import org.openmetadata.service.governance.workflows.flowable.builders.InclusiveGatewayBuilder;
 
 @Getter
 public class MainWorkflow {
@@ -45,20 +50,70 @@ public class MainWorkflow {
             .orElse(workflowDefinition.getFullyQualifiedName()));
     model.addProcess(process);
 
-    // Add Nodes
+    List<EdgeDefinition> edges = workflowDefinition.getEdges();
+
+    // Add Nodes and collect instances for gateway detection
+    Map<String, NodeInterface> nodeInstanceMap = new HashMap<>();
     for (WorkflowNodeDefinitionInterface nodeDefinitionObj : workflowDefinition.getNodes()) {
       NodeInterface node =
           NodeFactory.createNode(nodeDefinitionObj, workflowDefinition.getConfig());
+      nodeInstanceMap.put(nodeDefinitionObj.getName(), node);
       node.addToWorkflow(model, process);
 
       Optional.ofNullable(node.getRuntimeExceptionBoundaryEvent())
           .ifPresent(runtimeExceptionBoundaryEvents::add);
     }
 
-    // Add Edges
-    for (EdgeDefinition edgeDefinition : workflowDefinition.getEdges()) {
-      Edge edge = new Edge(edgeDefinition);
-      edge.addToWorkflow(model, process);
+    // Detect where inclusive gateways need to be injected
+    Map<String, List<EdgeDefinition>> outgoingEdges = buildOutgoingEdgesMap(edges);
+    Map<String, List<EdgeDefinition>> incomingEdges = buildIncomingEdgesMap(edges);
+    Set<String> splitNodes = detectSplitNodes(outgoingEdges, nodeInstanceMap);
+    Set<String> joinNodes = detectJoinNodes(incomingEdges, splitNodes);
+
+    // Add split gateways and their outgoing conditional flows
+    for (String splitNode : splitNodes) {
+      String gatewayId = splitGatewayId(splitNode);
+      InclusiveGateway gateway = new InclusiveGatewayBuilder().id(gatewayId).build();
+      process.addFlowElement(gateway);
+      process.addFlowElement(new SequenceFlow(splitNode, gatewayId));
+
+      for (EdgeDefinition edge : outgoingEdges.get(splitNode)) {
+        String targetId =
+            joinNodes.contains(edge.getTo()) ? joinGatewayId(edge.getTo()) : edge.getTo();
+        SequenceFlow flow = new SequenceFlow(gatewayId, targetId);
+        flow.setConditionExpression(buildGatewayCondition(splitNode, edge.getCondition()));
+        process.addFlowElement(flow);
+      }
+    }
+
+    // Add join gateways and their single outgoing flow to the target node
+    for (String joinNode : joinNodes) {
+      String gatewayId = joinGatewayId(joinNode);
+      InclusiveGateway gateway = new InclusiveGatewayBuilder().id(gatewayId).build();
+      process.addFlowElement(gateway);
+      process.addFlowElement(new SequenceFlow(gatewayId, joinNode));
+    }
+
+    // Add normal edges (not handled by split/join gateways)
+    for (EdgeDefinition edgeDefinition : edges) {
+      String from = edgeDefinition.getFrom();
+      String to = edgeDefinition.getTo();
+      boolean fromSplit = splitNodes.contains(from);
+      boolean toJoin = joinNodes.contains(to);
+
+      if (fromSplit) {
+        // Already wired above via the split gateway
+        continue;
+      }
+
+      if (toJoin) {
+        // Incoming to a join node — wire to the join gateway instead
+        SequenceFlow flow = new SequenceFlow(from, joinGatewayId(to));
+        process.addFlowElement(flow);
+      } else {
+        Edge edge = new Edge(edgeDefinition);
+        edge.addToWorkflow(model, process);
+      }
     }
 
     // Configure Exception Flow
@@ -66,6 +121,130 @@ public class MainWorkflow {
 
     this.model = model;
     this.workflowName = workflowName;
+  }
+
+  private Map<String, List<EdgeDefinition>> buildOutgoingEdgesMap(List<EdgeDefinition> edges) {
+    Map<String, List<EdgeDefinition>> map = new HashMap<>();
+    for (EdgeDefinition edge : edges) {
+      map.computeIfAbsent(edge.getFrom(), k -> new ArrayList<>()).add(edge);
+    }
+    return map;
+  }
+
+  private Map<String, List<EdgeDefinition>> buildIncomingEdgesMap(List<EdgeDefinition> edges) {
+    Map<String, List<EdgeDefinition>> map = new HashMap<>();
+    for (EdgeDefinition edge : edges) {
+      map.computeIfAbsent(edge.getTo(), k -> new ArrayList<>()).add(edge);
+    }
+    return map;
+  }
+
+  /**
+   * A node is a split point if it has ≥2 outgoing conditional edges AND explicitly declares
+   * multiple output ports via {@link NodeInterface#getOutputPorts()}. This ensures only batch
+   * check nodes (CheckEntityAttributes, CheckChangeDescription, DataCompleteness) get inclusive
+   * gateways — not user approval tasks or other nodes that use result-based conditional routing.
+   */
+  private Set<String> detectSplitNodes(
+      Map<String, List<EdgeDefinition>> outgoingEdges, Map<String, NodeInterface> nodeInstanceMap) {
+    Set<String> splits = new HashSet<>();
+    for (Map.Entry<String, List<EdgeDefinition>> entry : outgoingEdges.entrySet()) {
+      String nodeName = entry.getKey();
+      NodeInterface node = nodeInstanceMap.get(nodeName);
+      if (node == null || node.getOutputPorts().size() < 2) {
+        continue;
+      }
+      long conditionalEdgeCount =
+          entry.getValue().stream()
+              .filter(e -> e.getCondition() != null && !e.getCondition().isEmpty())
+              .count();
+      if (conditionalEdgeCount >= 2) {
+        splits.add(nodeName);
+      }
+    }
+    return splits;
+  }
+
+  /**
+   * A node is a join point if it has ≥2 incoming edges whose source nodes all trace back
+   * to the same split node (directly or transitively). An inclusive join gateway is needed
+   * to synchronize the parallel branches before continuing.
+   */
+  private Set<String> detectJoinNodes(
+      Map<String, List<EdgeDefinition>> incomingEdges, Set<String> splitNodes) {
+    Set<String> joins = new HashSet<>();
+    for (Map.Entry<String, List<EdgeDefinition>> entry : incomingEdges.entrySet()) {
+      String targetNode = entry.getKey();
+      List<EdgeDefinition> incoming = entry.getValue();
+      if (incoming.size() < 2) {
+        continue;
+      }
+      // Find split ancestors reachable from each source node
+      List<Set<String>> splitAncestorSets = new ArrayList<>();
+      for (EdgeDefinition edge : incoming) {
+        splitAncestorSets.add(
+            findSplitAncestors(edge.getFrom(), incomingEdges, splitNodes, new HashSet<>()));
+      }
+      // If any split node appears in ALL ancestor sets, this node needs a join gateway
+      Set<String> common = new HashSet<>(splitAncestorSets.get(0));
+      for (int i = 1; i < splitAncestorSets.size(); i++) {
+        common.retainAll(splitAncestorSets.get(i));
+      }
+      if (!common.isEmpty()) {
+        joins.add(targetNode);
+      }
+    }
+    return joins;
+  }
+
+  private Set<String> findSplitAncestors(
+      String nodeName,
+      Map<String, List<EdgeDefinition>> incomingEdges,
+      Set<String> splitNodes,
+      Set<String> visited) {
+    Set<String> ancestors = new HashSet<>();
+    if (visited.contains(nodeName)) {
+      return ancestors;
+    }
+    visited.add(nodeName);
+    if (splitNodes.contains(nodeName)) {
+      ancestors.add(nodeName);
+    }
+    List<EdgeDefinition> incoming = incomingEdges.get(nodeName);
+    if (incoming != null) {
+      for (EdgeDefinition edge : incoming) {
+        ancestors.addAll(findSplitAncestors(edge.getFrom(), incomingEdges, splitNodes, visited));
+      }
+    }
+    return ancestors;
+  }
+
+  /**
+   * Generates the inclusive gateway condition expression for an outgoing edge from a split node.
+   * Maps the edge condition value to the appropriate boolean flag variable set by the node impl.
+   */
+  private String buildGatewayCondition(String nodeName, String edgeCondition) {
+    if (edgeCondition == null || edgeCondition.isEmpty()) {
+      return null;
+    }
+    String flagVariable;
+    if ("true".equals(edgeCondition)) {
+      flagVariable = getNamespacedVariableName(nodeName, HAS_TRUE_ENTITIES_VARIABLE);
+    } else if ("false".equals(edgeCondition)) {
+      flagVariable = getNamespacedVariableName(nodeName, HAS_FALSE_ENTITIES_VARIABLE);
+    } else {
+      // DataCompleteness band name (e.g., "gold", "silver")
+      flagVariable = getNamespacedVariableName(nodeName, "has_" + edgeCondition + "_entities");
+    }
+    return String.format("${%s}", flagVariable);
+  }
+
+  private static String splitGatewayId(String nodeName) {
+    return nodeName + "_inclusiveSplit";
+  }
+
+  private static String joinGatewayId(String nodeName) {
+    return nodeName + "_inclusiveJoin";
   }
 
   private void configureRuntimeExceptionFlow(Process process) {
@@ -130,7 +309,6 @@ public class MainWorkflow {
                     "Invalid Workflow: [%s] is expecting '%s' to be an output from [%s], which it is not.",
                     nodeDefinition.getName(), variable, namespace));
           }
-          // Enhanced validation: Check for reachability instead of direct connection
           if (!validateNodeIsReachable(nodeDefinition.getName(), namespace)) {
             throw new RuntimeException(
                 String.format(
@@ -176,12 +354,9 @@ public class MainWorkflow {
      * For example: A -> B -> C, where C can use outputs from A even without a direct edge.
      */
     private boolean validateNodeIsReachable(String targetNode, String sourceNode) {
-      // First check for direct connection (fast path)
       if (validateNodeHasInput(targetNode, sourceNode)) {
         return true;
       }
-
-      // If no direct connection, check for transitive path through the graph
       return canReachThroughGraph(sourceNode, targetNode);
     }
 
@@ -206,7 +381,6 @@ public class MainWorkflow {
         }
         visited.add(current);
 
-        // Find all nodes that current node connects to
         for (Map.Entry<String, List<String>> entry : incomingEdgesMap.entrySet()) {
           if (entry.getValue().contains(current)) {
             String nextNode = entry.getKey();
