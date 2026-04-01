@@ -120,7 +120,7 @@ interface LayoutedElements {
   node: Array<
     Node & {
       nodeHeight: number;
-      childrenHeight: number;
+      childrenHeight?: number;
     }
   >;
   edge: Edge[];
@@ -1552,7 +1552,7 @@ const processEdges = (
   nodesArray: LineageNodeType[]
 ): EdgeDetails[] => {
   return edges.reduce<EdgeDetails[]>(
-    (acc: EdgeDetails[], edge: EdgeDetails) => {
+    (acc, edge) => {
       if (!edge.pipeline) {
         return [...acc, edge];
       }

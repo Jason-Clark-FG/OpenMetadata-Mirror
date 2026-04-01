@@ -1079,7 +1079,7 @@ export const hasFieldValidationErrors = (
 
   return (
     !isNil(axiosError.response?.data) &&
-    typeof axiosError.response.data === 'object' &&
+    typeof axiosError.response?.data === 'object' &&
     'errors' in axiosError.response.data
   );
 };

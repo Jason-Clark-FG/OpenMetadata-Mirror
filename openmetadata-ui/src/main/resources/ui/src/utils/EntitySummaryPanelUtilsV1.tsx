@@ -614,7 +614,6 @@ const PipelineTasksV1: React.FC<{
                 dataType={task.taskType || t('label.task')}
                 description={task.description}
                 fieldName={getEntityName(task)}
-                glossaryTerms={task.glossaryTerms}
                 isHighlighted={isHighlighted}
                 tags={task.tags}
               />
@@ -723,7 +722,7 @@ const APICollectionEndpointsV1: React.FC<{
   return (
     <div className="schema-field-cards-container">
       <Row>
-        {filteredEndpoints.map((endpoint: EntityReference) => {
+        {filteredEndpoints.map((endpoint: APIEndpoint) => {
           const isHighlighted = highlights?.apiEndpoints?.includes(
             endpoint.name
           );
@@ -889,7 +888,7 @@ const DashboardChartsV1: React.FC<{
             <Col key={chart.id} span={24}>
               <FieldCard
                 dataType="Chart"
-                description={chart.description}
+                description={chart.description ?? ''}
                 fieldName={getEntityName(chart)}
                 isHighlighted={isHighlighted}
                 tags={chart.tags}
@@ -1152,7 +1151,6 @@ const DatabaseSchemasV1: React.FC<{
                 dataType={schema.type || 'Database Schema'}
                 description={schema.description || ''}
                 fieldName={getEntityName(schema)}
-                tags={schema.tags || []}
               />
             </Col>
           );
@@ -1302,7 +1300,7 @@ export const getEntityChildDetailsV1 = (
     case EntityType.DATABASE:
       return (
         <DatabaseSchemasV1
-          entityInfo={entityInfo}
+          entityInfo={entityInfo as Database}
           highlights={highlights}
           loading={loading}
           searchText={searchText}

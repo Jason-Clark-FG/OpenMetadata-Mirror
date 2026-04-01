@@ -996,7 +996,7 @@ describe('Test GlossaryTermTab component', () => {
           name: 'Test Term',
           // Missing other required fields
         },
-      ];
+      ] as unknown as ModifiedGlossaryTerm[];
       mockUseGlossaryStore.glossaryChildTerms = incompleteTerms;
 
       render(<GlossaryTermTab isGlossary={false} />, {
@@ -1016,7 +1016,7 @@ describe('Test GlossaryTermTab component', () => {
           ...mockedGlossaryTerms[0],
           description: undefined,
         },
-      ];
+      ] as unknown as ModifiedGlossaryTerm[];
       mockUseGlossaryStore.glossaryChildTerms = termsWithUndefinedDescription;
 
       render(<GlossaryTermTab isGlossary={false} />, {
@@ -1039,7 +1039,7 @@ describe('Test GlossaryTermTab component', () => {
           ...mockedGlossaryTerms[0],
           description: null,
         },
-      ];
+      ] as unknown as ModifiedGlossaryTerm[];
       mockUseGlossaryStore.glossaryChildTerms = termsWithNullDescription;
 
       render(<GlossaryTermTab isGlossary={false} />, {

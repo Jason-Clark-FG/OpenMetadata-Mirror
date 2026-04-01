@@ -113,6 +113,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'john@example.com',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -126,6 +127,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'john@example.com',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -140,6 +142,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'alice.wonderland@example.com',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -152,6 +155,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'notanemail',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -195,6 +199,7 @@ describe('extractNameFromUserProfile', () => {
         name: '',
         email: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -207,6 +212,7 @@ describe('extractNameFromUserProfile', () => {
         picture: 'https://example.com/avatar.jpg',
         name: '',
         email: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);
@@ -280,6 +286,7 @@ describe('extractNameFromUserProfile', () => {
         name: 'Charlie Brown',
         email: 'charlie.brown@company.com',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(samlProfile);
@@ -319,6 +326,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'user@minimal-provider.com',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(minimalProfile);
@@ -363,6 +371,7 @@ describe('extractNameFromUserProfile', () => {
         email: 'different.email@example.com',
         name: '',
         picture: '',
+        sub: '',
       };
 
       const result = extractNameFromUserProfile(userProfile);

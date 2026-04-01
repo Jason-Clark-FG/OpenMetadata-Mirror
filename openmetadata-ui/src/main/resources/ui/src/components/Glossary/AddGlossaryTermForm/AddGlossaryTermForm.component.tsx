@@ -105,16 +105,16 @@ const AddGlossaryTermForm = ({
         ? relatedTerms.map((term: DefaultOptionType) => {
             if (isString(term)) {
               return glossaryTerm?.relatedTerms?.find(
-                (r) => r.fullyQualifiedName === term
-              )?.id;
+                (r) => r.term.fullyQualifiedName === term
+              )?.term.id;
             }
             if (term.data) {
               return term.data.id;
             }
 
             return glossaryTerm?.relatedTerms?.find(
-              (r) => r.fullyQualifiedName === term.value
-            )?.id;
+              (r) => r.term.fullyQualifiedName === term.value
+            )?.term.id;
           })
         : getRelatedTermFqnList(relatedTerms),
       references: references.length > 0 ? references : undefined,
@@ -155,7 +155,7 @@ const AddGlossaryTermForm = ({
         tags,
         references,
         mutuallyExclusive,
-        relatedTerms: relatedTerms?.map((r) => r.fullyQualifiedName ?? ''),
+        relatedTerms: relatedTerms?.map((r) => r.term.fullyQualifiedName ?? ''),
       });
 
       if (reviewers) {
@@ -265,8 +265,8 @@ const AddGlossaryTermForm = ({
         hasNoActionButtons: true,
         fetchOptions: fetchGlossaryList,
         initialOptions: glossaryTerm?.relatedTerms?.map((data) => ({
-          label: data.fullyQualifiedName,
-          value: data.fullyQualifiedName,
+          label: data.term.fullyQualifiedName,
+          value: data.term.fullyQualifiedName,
           data,
         })),
         filterOptions: [glossaryTerm?.fullyQualifiedName ?? ''],

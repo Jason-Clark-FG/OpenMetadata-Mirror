@@ -15,7 +15,6 @@ import { Route, Routes } from 'react-router-dom';
 import { ROUTES } from '../../constants/constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
-import i18n from '../../utils/i18next/LocalUtil';
 import { userPermissions } from '../../utils/PermissionsUtils';
 import DomainDetailPage from '../Domain/DomainDetailPage/DomainDetailPage.component';
 import DomainsListPage from '../DomainListing/DomainListPage';
@@ -35,7 +34,7 @@ const DomainRouter = () => {
         index
         element={
           <AdminProtectedRoute hasPermission={domainPermission}>
-            <DomainsListPage pageTitle={i18n.t('label.domain-plural')} />
+            <DomainsListPage />
           </AdminProtectedRoute>
         }
         path="/"
@@ -43,7 +42,7 @@ const DomainRouter = () => {
       <Route
         element={
           <AdminProtectedRoute hasPermission={domainPermission}>
-            <DomainDetailPage pageTitle={i18n.t('label.domain-plural')} />
+            <DomainDetailPage />
           </AdminProtectedRoute>
         }
         path={ROUTES.DOMAIN_DETAILS.replace(ROUTES.DOMAIN, '')}
@@ -51,7 +50,7 @@ const DomainRouter = () => {
       <Route
         element={
           <AdminProtectedRoute hasPermission={domainPermission}>
-            <DomainDetailPage pageTitle={i18n.t('label.domain-plural')} />
+            <DomainDetailPage />
           </AdminProtectedRoute>
         }
         path={ROUTES.DOMAIN_DETAILS_WITH_TAB.replace(ROUTES.DOMAIN, '')}
@@ -59,7 +58,7 @@ const DomainRouter = () => {
       <Route
         element={
           <AdminProtectedRoute hasPermission={domainPermission}>
-            <DomainDetailPage pageTitle={i18n.t('label.domain-plural')} />
+            <DomainDetailPage />
           </AdminProtectedRoute>
         }
         path={ROUTES.DOMAIN_DETAILS_WITH_SUBTAB.replace(ROUTES.DOMAIN, '')}

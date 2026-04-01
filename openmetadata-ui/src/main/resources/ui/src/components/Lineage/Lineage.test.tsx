@@ -25,7 +25,7 @@ import { EntityLineageResponse } from './Lineage.interface';
 
 const mockEntity = MOCK_EXPLORE_SEARCH_RESULTS.hits.hits[0]._source;
 
-const entityLineage: EntityLineageResponse = {
+const entityLineage = {
   entity: {
     name: 'fact_sale',
     fullyQualifiedName: 'sample_data.ecommerce_db.shopify.fact_sale',
@@ -91,7 +91,7 @@ const entityLineage: EntityLineageResponse = {
       source: 'Manual',
     },
   ],
-};
+} as unknown as EntityLineageResponse;
 
 const mockNodes = [
   {

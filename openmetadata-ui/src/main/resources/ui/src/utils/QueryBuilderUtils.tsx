@@ -534,7 +534,7 @@ export interface JsonLogic {
 const flattenAndClauses = (clauses: JsonLogic[]): JsonLogic[] => {
   return clauses.reduce((acc: JsonLogic[], clause) => {
     if (clause.and) {
-      return acc.concat(flattenAndClauses(clause.and));
+      return acc.concat(flattenAndClauses(clause.and as JsonLogic[]));
     }
 
     return acc.concat(clause);
@@ -559,7 +559,7 @@ export const elasticsearchToJsonLogic = (
 
     if (boolQuery.filter) {
       const filterClauses = boolQuery.filter.map(elasticsearchToJsonLogic);
-      jsonLogic.and = (jsonLogic.and || []).concat(
+      jsonLogic.and = ((jsonLogic.and as JsonLogic[]) || []).concat(
         flattenAndClauses(filterClauses)
       );
     }
@@ -573,7 +573,7 @@ export const elasticsearchToJsonLogic = (
         '!': elasticsearchToJsonLogic(q),
       }));
 
-      jsonLogic.and = (jsonLogic.and || []).concat(
+      jsonLogic.and = ((jsonLogic.and as JsonLogic[]) || []).concat(
         flattenAndClauses(mustNotClauses)
       );
     }
@@ -692,7 +692,7 @@ export const jsonLogicToElasticsearch = (
         must: [
           {
             bool: {
-              must: logic.and.map((item: JsonLogic) =>
+              must: (logic.and as JsonLogic[]).map((item: JsonLogic) =>
                 jsonLogicToElasticsearch(item, configFields)
               ),
             },
@@ -705,7 +705,7 @@ export const jsonLogicToElasticsearch = (
   if (logic.or) {
     return {
       bool: {
-        should: logic.or.map((item: JsonLogic) =>
+        should: (logic.or as JsonLogic[]).map((item: JsonLogic) =>
           jsonLogicToElasticsearch(
             item,
             configFields,
@@ -721,7 +721,7 @@ export const jsonLogicToElasticsearch = (
     return {
       bool: {
         must_not: jsonLogicToElasticsearch(
-          logic['!'],
+          logic['!'] as JsonLogic,
           configFields,
           undefined,
           JSONLOGIC_OPERATORS.NOT
@@ -731,7 +731,10 @@ export const jsonLogicToElasticsearch = (
   }
 
   if (logic['==']) {
-    const [field, value] = logic['=='];
+    const [field, value] = logic['=='] as [
+      { var: string },
+      string | number | boolean
+    ];
     const fieldVar = parentField ? `${parentField}.${field.var}` : field.var;
 
     const isOrNotOperator = [
@@ -770,7 +773,10 @@ export const jsonLogicToElasticsearch = (
   }
 
   if (logic['!=']) {
-    const [field, value] = logic['!='];
+    const [field, value] = logic['!='] as [
+      { var: string },
+      string | number | boolean
+    ];
     const fieldVar = parentField ? `${parentField}.${field.var}` : field.var;
 
     return {
@@ -788,8 +794,8 @@ export const jsonLogicToElasticsearch = (
 
   if (logic['!!']) {
     const field = Array.isArray(logic['!!'])
-      ? logic['!!'][0].var
-      : logic['!!'].var;
+      ? (logic['!!'] as Array<{ var: string }>)[0].var
+      : (logic['!!'] as { var: string }).var;
     const fieldVal = getNestedFieldKey(configFields, field);
 
     return {
@@ -800,7 +806,10 @@ export const jsonLogicToElasticsearch = (
   }
 
   if (logic.some) {
-    const [arrayField, condition] = logic.some;
+    const [arrayField, condition] = logic.some as [
+      { var: string },
+      JsonLogic
+    ];
     if (typeof arrayField === 'object' && arrayField.var) {
       const conditionQuery = jsonLogicToElasticsearch(
         condition,
@@ -813,7 +822,10 @@ export const jsonLogicToElasticsearch = (
   }
 
   if (logic.in) {
-    const [field, value] = logic.in;
+    const [field, value] = logic.in as [
+      { var: string },
+      string | number | boolean
+    ];
     const fieldVar = parentField ? `${parentField}.${field.var}` : field.var;
 
     return {
@@ -909,7 +921,7 @@ export const migrateJsonLogic = (
       return node;
     }
     if (!Array.isArray(node) && '!!' in node && isVarObject(node['!!'])) {
-      const varName = node['!!'].var;
+      const varName = (node['!!'] as { var: string }).var;
       const mappedField = FIELD_MAPPING[varName];
       if (mappedField) {
         return {
@@ -919,7 +931,7 @@ export const migrateJsonLogic = (
     }
     // Handle arrays
     if (Array.isArray(node)) {
-      return node.map(migrateNode);
+      return node.map(migrateNode) as unknown as JsonLogic;
     }
     // Handle objects
     const result: Record<string, JsonLogic> = {};

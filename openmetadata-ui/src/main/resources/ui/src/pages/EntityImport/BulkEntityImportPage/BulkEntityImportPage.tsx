@@ -115,9 +115,7 @@ const BulkEntityImportPage = () => {
     [t]
   );
   const [validationData, setValidationData] = useState<CSVImportResult>();
-  const [columns, setColumns] = useState<Column<Record<string, string>[]>[]>(
-    []
-  );
+  const [columns, setColumns] = useState<Column<Record<string, string>>[]>([]);
   const [dataSource, setDataSource] = useState<Record<string, string>[]>([]);
   const navigate = useNavigate();
   const { readString } = usePapaParse();
@@ -302,7 +300,7 @@ const BulkEntityImportPage = () => {
         isBulkEdit
       );
       setDataSource(dataSource);
-      setColumns(columns);
+      setColumns(columns as unknown as Column<Record<string, string>>[]);
 
       handleActiveStepChange(VALIDATION_STEP.EDIT_VALIDATE);
     },
@@ -411,7 +409,10 @@ const BulkEntityImportPage = () => {
                   },
                   false,
                   isBulkEdit
-                )
+                ) as unknown as {
+                  columns: Column<Record<string, string>>[];
+                  dataSource: Record<string, string>[];
+                }
               );
             },
           });
@@ -619,7 +620,7 @@ const BulkEntityImportPage = () => {
           className="rdg-light"
           columns={
             filterColumns as unknown as ColumnOrColumnGroup<
-              NoInfer<Record<string, string>>,
+              Record<string, string>,
               unknown
             >[]
           }

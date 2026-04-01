@@ -62,9 +62,11 @@ export const useCellRenderer = <
         );
       },
       owners: (entity: T, column?: ColumnConfig<T>) => {
-        const owners = column?.getValue
+        const owners = (column?.getValue
           ? column.getValue(entity)
-          : entity[column?.key || 'owners'];
+          : (entity as Record<string, unknown>)[
+              column?.key || 'owners'
+            ]) as EntityReference[] | undefined;
 
         if (!owners || owners.length === 0) {
           return (
@@ -124,9 +126,11 @@ export const useCellRenderer = <
         );
       },
       tags: (entity: T, column?: ColumnConfig<T>) => {
-        const tags = column?.getValue
+        const tags = (column?.getValue
           ? column.getValue(entity)
-          : entity[column?.key || 'tags'];
+          : (entity as Record<string, unknown>)[
+              column?.key || 'tags'
+            ]) as EntityReference[] | undefined;
 
         if (!tags || tags.length === 0) {
           return (
@@ -145,7 +149,7 @@ export const useCellRenderer = <
 
         return (
           <Typography sx={{ fontSize: '0.875rem' }}>
-            {value || EMPTY_VALUE_INDICATOR}
+            {(value as ReactNode) || EMPTY_VALUE_INDICATOR}
           </Typography>
         );
       },
@@ -161,9 +165,11 @@ export const useCellRenderer = <
         );
       },
       domains: (entity: T, column?: ColumnConfig<T>) => {
-        const domains = column?.getValue
+        const domains = (column?.getValue
           ? column.getValue(entity)
-          : (entity as Record<string, unknown>)[column?.key || 'domains'];
+          : (entity as Record<string, unknown>)[
+              column?.key || 'domains'
+            ]) as EntityReference[] | undefined;
 
         if (!domains || domains.length === 0) {
           return (

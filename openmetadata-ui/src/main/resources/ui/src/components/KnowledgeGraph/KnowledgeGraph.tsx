@@ -489,7 +489,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     });
 
     // Add double-click handler for navigation
-    networkRef.current.on('doubleClick', (params) => {
+    networkRef.current.on('doubleClick', (params: { nodes: IdType[] }) => {
       if (params.nodes.length > 0) {
         const nodeId = params.nodes[0];
         const node = nodes.get(nodeId) as unknown as GraphNode;
@@ -504,7 +504,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     });
 
     // Enhanced hover effects
-    networkRef.current.on('hoverNode', (params) => {
+    networkRef.current.on('hoverNode', (params: { node: IdType }) => {
       //   networkRef.current?.canvas.body.container.style.cursor = 'pointer';
       const nodeId = params.node;
       const node = nodes.get(nodeId) as unknown as GraphNode;

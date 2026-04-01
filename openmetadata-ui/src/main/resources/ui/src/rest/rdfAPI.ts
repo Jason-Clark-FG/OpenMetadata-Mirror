@@ -17,7 +17,7 @@ export interface GraphNode {
   id: string;
   label: string;
   type: string;
-  group?: string;
+  group: string;
   title?: string;
   fullyQualifiedName?: string;
   description?: string;

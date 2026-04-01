@@ -15,7 +15,10 @@ import { Edge } from 'reactflow';
 import { EdgeInteractionOverlay } from './EdgeInteractionOverlay.component';
 
 const mockUseViewport = jest.fn().mockReturnValue({ x: 0, y: 0, zoom: 1 });
-const mockUseLineageStore = {
+const mockUseLineageStore: {
+  isEditMode: boolean;
+  selectedEdge: Edge | undefined;
+} = {
   isEditMode: false,
   selectedEdge: undefined,
 };

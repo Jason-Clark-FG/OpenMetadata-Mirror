@@ -121,8 +121,8 @@ describe('RichTextEditorPreviewNew', () => {
     const style = parser.style;
 
     expect(style.display).toBe('-webkit-box');
-    expect(style.WebkitBoxOrient).toBe('vertical');
-    expect(style.WebkitLineClamp).toBe('3');
+    expect(style.webkitBoxOrient).toBe('vertical');
+    expect(style.webkitLineClamp).toBe('3');
     expect(style.overflow).toBe('hidden');
   });
 
@@ -139,7 +139,7 @@ describe('RichTextEditorPreviewNew', () => {
     const style = parser.style;
 
     expect(style.display).toBe('');
-    expect(style.WebkitBoxOrient).not.toBeDefined();
+    expect(style.webkitBoxOrient).not.toBeDefined();
     expect(style.overflow).toBe('');
   });
 
@@ -309,13 +309,13 @@ describe('RichTextEditorPreviewNew', () => {
 
     let parser = screen.getByTestId('markdown-parser');
 
-    expect(parser.style.WebkitLineClamp).toBe('2');
+    expect(parser.style.webkitLineClamp).toBe('2');
 
     rerender(<RichTextEditorPreviewNew {...mockProp} maxLineLength="5" />);
 
     parser = screen.getByTestId('markdown-parser');
 
-    expect(parser.style.WebkitLineClamp).toBe('5');
+    expect(parser.style.webkitLineClamp).toBe('5');
   });
 
   it('should observe resize events', () => {

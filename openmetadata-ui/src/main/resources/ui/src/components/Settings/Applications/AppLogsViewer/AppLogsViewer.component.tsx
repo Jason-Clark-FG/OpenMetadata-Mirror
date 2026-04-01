@@ -371,7 +371,7 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
         ),
         dataIndex: 'processedRecords',
         key: 'processedRecords',
-        render: (text: number) => (
+        render: (text: string | number) => (
           <Typography.Text className="text-primary">{text}</Typography.Text>
         ),
       },
@@ -391,7 +391,7 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
         ),
         dataIndex: 'successRecords',
         key: 'successRecords',
-        render: (text: number) => (
+        render: (text: string | number) => (
           <Typography.Text className="text-success">{text}</Typography.Text>
         ),
       },
@@ -411,7 +411,7 @@ const AppLogsViewer = ({ data, scrollHeight }: AppLogsViewerProps) => {
         ),
         dataIndex: 'failedRecords',
         key: 'failedRecords',
-        render: (text: number) => (
+        render: (text: string | number) => (
           <Typography.Text className="text-failure">{text}</Typography.Text>
         ),
       },

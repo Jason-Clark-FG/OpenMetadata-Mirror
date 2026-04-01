@@ -422,10 +422,10 @@ describe('TableProfilerUtils', () => {
     it('should handle profile with null values', () => {
       const profile: ColumnProfile = {
         name: 'name',
-        uniqueProportion: null,
-        nullProportion: null,
-        distinctProportion: null,
-        valuesCount: null,
+        uniqueProportion: undefined,
+        nullProportion: undefined,
+        distinctProportion: undefined,
+        valuesCount: undefined,
         timestamp: 1701757494892,
       };
 
@@ -459,7 +459,7 @@ describe('TableProfilerUtils', () => {
       const profile: ColumnProfile = {
         name: 'test_column',
         uniqueProportion: 0.5,
-        nullProportion: null,
+        nullProportion: undefined,
         distinctProportion: undefined,
         valuesCount: 500,
         timestamp: 1701757494892,

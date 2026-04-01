@@ -14,6 +14,7 @@ import { Typography } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import { compare, Operation } from 'fast-json-patch';
 import { omit } from 'lodash';
+import type { EnqueueSnackbar } from 'notistack';
 import imageClassBase from '../components/BlockEditor/Extensions/image/ImageClassBase';
 import { CoverImageFileValue } from '../components/common/CoverImageUpload/CoverImageUpload.interface';
 import { ERROR_MESSAGE } from '../constants/constants';
@@ -120,11 +121,8 @@ export interface CreateEntityWithCoverImageOptions<TFormData, TEntity> {
   createEntity: (cleanFormData: TFormData) => Promise<TEntity>;
   patchEntity: (entityId: string, patch: Operation[]) => Promise<TEntity>;
   onSuccess: (entity: TEntity) => void | Promise<void>;
-  enqueueSnackbar: (
-    message: React.ReactNode,
-    options?: Record<string, unknown>
-  ) => void;
-  closeSnackbar: () => void;
+  enqueueSnackbar: EnqueueSnackbar;
+  closeSnackbar: (key?: string | number) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
 
