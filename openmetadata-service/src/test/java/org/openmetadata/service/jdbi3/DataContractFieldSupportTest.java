@@ -18,14 +18,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.openmetadata.schema.type.Include.ALL;
@@ -35,10 +30,8 @@ import static org.openmetadata.service.Entity.DATA_CONTRACT;
 import static org.openmetadata.service.Entity.FIELD_DATA_CONTRACT;
 import static org.openmetadata.service.Entity.FIELD_OWNERS;
 
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +39,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openmetadata.schema.entity.Bot;
@@ -230,80 +222,6 @@ class DataContractFieldSupportTest {
   }
 
   @Test
-  void batchFetchDataContract_handlesEmptyList() throws Exception {
-    Method method = EntityRepository.class.getDeclaredMethod("batchFetchDataContract", List.class);
-    method.setAccessible(true);
-
-    @SuppressWarnings("unchecked")
-    Map<UUID, EntityReference> result =
-        (Map<UUID, EntityReference>) method.invoke(repository, Collections.emptyList());
-
-    assertTrue(result.isEmpty());
-  }
-
-  @Test
-  void batchFetchDataContract_mapsContractsToEntities() throws Exception {
-    UUID entityId = UUID.randomUUID();
-    UUID contractId = UUID.randomUUID();
-
-    Table table = new Table();
-    table.setId(entityId);
-
-    CollectionDAO.EntityRelationshipObject relObj =
-        CollectionDAO.EntityRelationshipObject.builder()
-            .fromId(entityId.toString())
-            .toId(contractId.toString())
-            .fromEntity("table")
-            .toEntity(DATA_CONTRACT)
-            .relation(Relationship.CONTAINS.ordinal())
-            .build();
-
-    when(mockRelationshipDAO.findToBatch(
-            anyList(),
-            eq("table"),
-            eq(DATA_CONTRACT),
-            eq(Relationship.CONTAINS.ordinal()),
-            eq(ALL)))
-        .thenReturn(List.of(relObj));
-
-    EntityReference contractRef = new EntityReference().withId(contractId).withType(DATA_CONTRACT);
-
-    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class, Mockito.CALLS_REAL_METHODS)) {
-      entityMock
-          .when(() -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(ALL)))
-          .thenReturn(List.of(contractRef));
-
-      Method method =
-          EntityRepository.class.getDeclaredMethod("batchFetchDataContract", List.class);
-      method.setAccessible(true);
-
-      @SuppressWarnings("unchecked")
-      Map<UUID, EntityReference> result =
-          (Map<UUID, EntityReference>) method.invoke(repository, List.of(table));
-
-      assertEquals(1, result.size());
-      assertEquals(contractRef, result.get(entityId));
-    }
-  }
-
-  @Test
-  void fetchAndSetDataContract_earlyReturnWhenFieldNotRequested() throws Exception {
-    Table table = new Table();
-    table.setId(UUID.randomUUID());
-
-    Fields fields = new Fields(Set.of(FIELD_OWNERS));
-
-    Method method =
-        EntityRepository.class.getDeclaredMethod(
-            "fetchAndSetDataContract", List.class, Fields.class);
-    method.setAccessible(true);
-    method.invoke(repository, List.of(table), fields);
-
-    verify(mockRelationshipDAO, never())
-        .findToBatch(anyList(), anyString(), anyString(), anyInt(), any(Include.class));
-  }
-
-  @Test
   void getDataContract_noArgDelegatesToIncludeOverload() {
     UUID entityId = UUID.randomUUID();
     UUID contractId = UUID.randomUUID();
@@ -342,49 +260,6 @@ class DataContractFieldSupportTest {
       assertEquals(contractId, result.getId());
     } finally {
       ReadBundleContext.pop();
-    }
-  }
-
-  @Test
-  void fetchAndSetDataContract_setsContractWhenFieldRequested() throws Exception {
-    UUID entityId = UUID.randomUUID();
-    UUID contractId = UUID.randomUUID();
-    Table table = new Table();
-    table.setId(entityId);
-
-    CollectionDAO.EntityRelationshipObject relObj =
-        CollectionDAO.EntityRelationshipObject.builder()
-            .fromId(entityId.toString())
-            .toId(contractId.toString())
-            .fromEntity("table")
-            .toEntity(DATA_CONTRACT)
-            .relation(Relationship.CONTAINS.ordinal())
-            .build();
-
-    when(mockRelationshipDAO.findToBatch(
-            anyList(),
-            eq("table"),
-            eq(DATA_CONTRACT),
-            eq(Relationship.CONTAINS.ordinal()),
-            eq(ALL)))
-        .thenReturn(List.of(relObj));
-
-    EntityReference contractRef = new EntityReference().withId(contractId).withType(DATA_CONTRACT);
-    Fields fields = new Fields(Set.of(FIELD_DATA_CONTRACT));
-
-    try (MockedStatic<Entity> entityMock = mockStatic(Entity.class, Mockito.CALLS_REAL_METHODS)) {
-      entityMock
-          .when(() -> Entity.getEntityReferencesByIds(eq(DATA_CONTRACT), anyList(), eq(ALL)))
-          .thenReturn(List.of(contractRef));
-
-      Method method =
-          EntityRepository.class.getDeclaredMethod(
-              "fetchAndSetDataContract", List.class, Fields.class);
-      method.setAccessible(true);
-      method.invoke(repository, List.of(table), fields);
-
-      assertNotNull(table.getDataContract());
-      assertEquals(contractId, table.getDataContract().getId());
     }
   }
 

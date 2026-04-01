@@ -537,8 +537,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
     fieldSupportMap.put(
         FIELD_DATA_PRODUCTS, Pair.of(supportsDataProducts, this::fetchAndSetDataProducts));
     fieldSupportMap.put(
-        FIELD_DATA_CONTRACT, Pair.of(supportsDataContract, this::fetchAndSetDataContract));
-    fieldSupportMap.put(
         FIELD_CERTIFICATION, Pair.of(supportsCertification, this::fetchAndSetCertification));
 
     for (Entry<String, Pair<Boolean, BiConsumer<List<T>, Fields>>> entry :
@@ -8400,6 +8398,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     boolean loadDomains = supportsDomains && fields.contains(FIELD_DOMAINS);
     boolean loadReviewers = supportsReviewers && fields.contains(FIELD_REVIEWERS);
     boolean loadDataProducts = supportsDataProducts && fields.contains(FIELD_DATA_PRODUCTS);
+    boolean loadDataContract = supportsDataContract && fields.contains(FIELD_DATA_CONTRACT);
     boolean loadVotes = supportsVotes && fields.contains(FIELD_VOTES);
     boolean loadChildren = supportsChildren && fields.contains(FIELD_CHILDREN);
     boolean loadExperts = supportsExperts && fields.contains(FIELD_EXPERTS);
@@ -8409,6 +8408,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         && !loadDomains
         && !loadReviewers
         && !loadDataProducts
+        && !loadDataContract
         && !loadVotes
         && !loadChildren
         && !loadExperts) {
@@ -8433,7 +8433,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     List<Integer> outgoingRelations = new ArrayList<>();
-    if (loadChildren) {
+    if (loadChildren || loadDataContract) {
       outgoingRelations.add(Relationship.CONTAINS.ordinal());
     }
     if (loadExperts) {
@@ -8468,6 +8468,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     Map<UUID, List<EntityReference>> upVotersByEntity = loadVotes ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> downVotersByEntity = loadVotes ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> childrenByEntity = loadChildren ? new HashMap<>() : null;
+    Map<UUID, EntityReference> dataContractByEntity = loadDataContract ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> expertsByEntity = loadExperts ? new HashMap<>() : null;
 
     for (CollectionDAO.EntityRelationshipObject record : incomingRecords) {
@@ -8549,6 +8550,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
         case CONTAINS -> {
           if (loadChildren && entityType.equals(targetType)) {
             childrenByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(targetRef);
+          } else if (loadDataContract && DATA_CONTRACT.equals(targetType)) {
+            dataContractByEntity.putIfAbsent(entityId, targetRef);
           }
         }
         case EXPERT -> {
@@ -8596,6 +8599,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       if (loadChildren) {
         entity.setChildren(childrenByEntity.get(entityId));
       }
+      if (loadDataContract) {
+        entity.setDataContract(dataContractByEntity.get(entityId));
+      }
       if (loadExperts) {
         entity.setExperts(expertsByEntity.getOrDefault(entityId, Collections.emptyList()));
       }
@@ -8621,6 +8627,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     if (loadChildren) {
       handledFields.add(FIELD_CHILDREN);
+    }
+    if (loadDataContract) {
+      handledFields.add(FIELD_DATA_CONTRACT);
     }
     if (loadExperts) {
       handledFields.add(FIELD_EXPERTS);
@@ -8818,18 +8827,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  private void fetchAndSetDataContract(List<T> entities, Fields fields) {
-    if (!fields.contains(FIELD_DATA_CONTRACT) || !supportsDataContract || nullOrEmpty(entities)) {
-      return;
-    }
-
-    Map<UUID, EntityReference> dataContractMap = batchFetchDataContract(entities);
-
-    for (T entity : entities) {
-      entity.setDataContract(dataContractMap.get(entity.getId()));
-    }
-  }
-
   private void fetchAndSetCertification(List<T> entities, Fields fields) {
     if (!fields.contains(FIELD_CERTIFICATION) || !supportsCertification || nullOrEmpty(entities)) {
       return;
@@ -8995,49 +8992,6 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   private Map<UUID, List<EntityReference>> batchFetchDataProducts(List<T> entities) {
     return batchFetchToIdsOneToMany(entities, Relationship.HAS, Entity.DATA_PRODUCT);
-  }
-
-  private Map<UUID, EntityReference> batchFetchDataContract(List<T> entities) {
-    Map<UUID, EntityReference> dataContractMap = new HashMap<>();
-
-    if (entities == null || entities.isEmpty()) {
-      return dataContractMap;
-    }
-    List<CollectionDAO.EntityRelationshipObject> records =
-        daoCollection
-            .relationshipDAO()
-            .findToBatch(
-                entityListToStrings(entities),
-                entityType,
-                DATA_CONTRACT,
-                Relationship.CONTAINS.ordinal(),
-                ALL);
-
-    if (records == null || records.isEmpty()) {
-      return dataContractMap;
-    }
-
-    var contractIds =
-        records.stream().map(rec -> UUID.fromString(rec.getToId())).distinct().toList();
-
-    if (contractIds.isEmpty()) {
-      return dataContractMap;
-    }
-
-    var contractRefs = Entity.getEntityReferencesByIds(DATA_CONTRACT, contractIds, ALL);
-    var contractRefMap =
-        contractRefs.stream().collect(Collectors.toMap(EntityReference::getId, ref -> ref));
-
-    for (CollectionDAO.EntityRelationshipObject rec : records) {
-      UUID fromId = UUID.fromString(rec.getFromId());
-      UUID toId = UUID.fromString(rec.getToId());
-      EntityReference contractRef = contractRefMap.get(toId);
-      if (contractRef != null) {
-        dataContractMap.putIfAbsent(fromId, contractRef);
-      }
-    }
-
-    return dataContractMap;
   }
 
   private Map<UUID, AssetCertification> batchFetchCertification(List<T> entities) {
