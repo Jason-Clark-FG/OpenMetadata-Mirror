@@ -32,10 +32,15 @@ runs:
   using: composite
   steps:
     # ---- Install Ubuntu Dependencies ---------------------------------------------
-    - name: Install Ubuntu dependencies
-      run: |
-        sudo apt-get update && sudo apt-get install -y unixodbc-dev python3-venv librdkafka-dev gcc libsasl2-dev build-essential libssl-dev libffi-dev \
-        libevent-dev python3-dev libkrb5-dev tdsodbc && ACCEPT_EULA=Y sudo apt-get -qq install -y msodbcsql18
+    - name: Cache and install Ubuntu dependencies
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: unixodbc-dev python3-venv librdkafka-dev gcc libsasl2-dev build-essential libssl-dev libffi-dev libevent-dev python3-dev libkrb5-dev tdsodbc
+        version: 1.0
+
+    - name: Install msodbcsql18
+      if: ${{ inputs.install-mode == 'full' }}
+      run: ACCEPT_EULA=Y sudo apt-get -qq install -y msodbcsql18
       shell: bash
     # ------------------------------------------------------------------------------
 
@@ -90,7 +95,21 @@ runs:
         uv pip install "${{ github.workspace }}/ingestion[dev]"
       shell: bash
 
+    - name: Cache Generated Models
+      id: cache-generated
+      uses: actions/cache@v4
+      with:
+        path: ingestion/src/metadata/generated
+        key: ${{ runner.os }}-generated-${{ hashFiles(
+               'openmetadata-spec/src/main/resources/json/schema/**',
+               'openmetadata-spec/src/main/antlr4/**/*.g4',
+               'scripts/datamodel_generation.py',
+               'ingestion/setup.py',
+               'Makefile'
+             ) }}
+
     - name: Generate Models
+      if: steps.cache-generated.outputs.cache-hit != 'true'
       run: |
         source env/bin/activate
         sudo make install_antlr_cli
