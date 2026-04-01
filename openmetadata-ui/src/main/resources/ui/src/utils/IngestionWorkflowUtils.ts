@@ -33,6 +33,7 @@ import mlModelMetadataPipeline from '../jsons/ingestionSchemas/mlmodelServiceMet
 import pipelineMetadataPipeline from '../jsons/ingestionSchemas/pipelineServiceMetadataPipeline.json';
 import searchMetadataPipeline from '../jsons/ingestionSchemas/searchServiceMetadataPipeline.json';
 import storageMetadataPipeline from '../jsons/ingestionSchemas/storageServiceMetadataPipeline.json';
+import storageAutoClassificationPipeline from '../jsons/ingestionSchemas/storageServiceAutoClassificationPipeline.json';
 import testSuitePipeline from '../jsons/ingestionSchemas/testSuitePipeline.json';
 import ProfilerConfigurationClassBase from '../pages/ProfilerConfigurationPage/ProfilerConfigurationClassBase';
 
@@ -127,9 +128,10 @@ export const getSchemaByWorkflowType = (
 
       break;
     case WorkflowType.AutoClassification:
-      schema = {
-        ...databaseAutoClassificationPipeline,
-      };
+      schema =
+        serviceCategory === ServiceCategory.STORAGE_SERVICES
+          ? { ...storageAutoClassificationPipeline }
+          : { ...databaseAutoClassificationPipeline };
 
       break;
     case WorkflowType.Usage:

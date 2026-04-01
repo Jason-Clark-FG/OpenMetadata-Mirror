@@ -157,7 +157,10 @@ export const getBreadCrumbsArray = (
   return breadCrumbsArray;
 };
 
-export const getSupportedPipelineTypes = (serviceDetails: ServicesType) => {
+export const getSupportedPipelineTypes = (
+  serviceDetails: ServicesType,
+  serviceCategory?: ServiceCategory
+) => {
   const pipelineType: PipelineType[] = [];
   const config = serviceDetails?.connection?.config as Connection;
 
@@ -180,7 +183,16 @@ export const getSupportedPipelineTypes = (serviceDetails: ServicesType) => {
 
   Object.keys(pipelineMapping).forEach((key) => {
     if (config[key as keyof Connection]) {
-      pipelineType.push(...pipelineMapping[key]);
+      let types = pipelineMapping[key];
+
+      if (
+        key === 'supportsProfiler' &&
+        serviceCategory === ServiceCategory.STORAGE_SERVICES
+      ) {
+        types = [PipelineType.AutoClassification];
+      }
+
+      pipelineType.push(...types);
     }
   });
 
