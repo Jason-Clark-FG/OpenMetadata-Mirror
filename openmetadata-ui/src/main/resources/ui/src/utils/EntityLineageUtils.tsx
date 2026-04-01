@@ -1551,31 +1551,28 @@ const processEdges = (
   edges: EdgeDetails[],
   nodesArray: LineageNodeType[]
 ): EdgeDetails[] => {
-  return edges.reduce<EdgeDetails[]>(
-    (acc, edge) => {
-      if (!edge.pipeline) {
-        return [...acc, edge];
-      }
+  return edges.reduce<EdgeDetails[]>((acc, edge) => {
+    if (!edge.pipeline) {
+      return [...acc, edge];
+    }
 
-      // Find if pipeline node exists
-      const pipelineNode = nodesArray.find(
-        (node) => node.fullyQualifiedName === edge.pipeline?.fullyQualifiedName
-      );
+    // Find if pipeline node exists
+    const pipelineNode = nodesArray.find(
+      (node) => node.fullyQualifiedName === edge.pipeline?.fullyQualifiedName
+    );
 
-      if (!pipelineNode) {
-        return [...acc, edge];
-      }
+    if (!pipelineNode) {
+      return [...acc, edge];
+    }
 
-      // Process pipeline edge to create two edges
-      const pipelineEdges = processPipelineEdge(
-        edge,
-        pipelineNode as unknown as Pipeline
-      );
+    // Process pipeline edge to create two edges
+    const pipelineEdges = processPipelineEdge(
+      edge,
+      pipelineNode as unknown as Pipeline
+    );
 
-      return [...acc, ...pipelineEdges];
-    },
-    []
-  );
+    return [...acc, ...pipelineEdges];
+  }, []);
 };
 
 const processPagination = (

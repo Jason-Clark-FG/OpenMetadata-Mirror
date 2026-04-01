@@ -79,12 +79,8 @@ describe('DomainClassBase', () => {
     it('DQ tab passes isGovernanceView as true', () => {
       const tabs = instance.getDomainDetailPageTabs(mockProps);
       const dqTab = tabs.at(-1);
-      const childProps = (
-        (dqTab?.children as ReturnType<typeof createElement>).props as Record<
-          string,
-          unknown
-        >
-      );
+      const childProps = (dqTab?.children as ReturnType<typeof createElement>)
+        .props as Record<string, unknown>;
 
       expect(childProps.isGovernanceView).toBe(true);
     });

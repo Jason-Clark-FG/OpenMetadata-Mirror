@@ -806,10 +806,7 @@ export const jsonLogicToElasticsearch = (
   }
 
   if (logic.some) {
-    const [arrayField, condition] = logic.some as [
-      { var: string },
-      JsonLogic
-    ];
+    const [arrayField, condition] = logic.some as [{ var: string }, JsonLogic];
     if (typeof arrayField === 'object' && arrayField.var) {
       const conditionQuery = jsonLogicToElasticsearch(
         condition,
