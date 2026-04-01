@@ -506,7 +506,7 @@ describe('CustomizeNavigation Utils', () => {
     });
 
     it('should handle multiple plugin items with different indices', () => {
-      const pluginItems = [
+      const pluginItems: LeftSidebarItemExample[] = [
         {
           key: 'plugin2',
           title: 'Plugin 2',
@@ -526,8 +526,7 @@ describe('CustomizeNavigation Utils', () => {
           title: 'Plugin 3',
           icon: () => 'plugin-icon-3',
           dataTestId: 'plugin3',
-          index: 1,
-        },
+        } as unknown as LeftSidebarItemExample,
       ];
 
       const result = mergePluginSidebarItems(mockBaseItems, pluginItems);
