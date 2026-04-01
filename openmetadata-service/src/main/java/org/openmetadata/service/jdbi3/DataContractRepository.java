@@ -735,9 +735,9 @@ public class DataContractRepository extends EntityRepository<DataContract> {
    * Validates entity-specific constraints for data contracts based on entity type.
    * Throws BadRequestException if any constraints are violated.
    *
-   * Supported entities: table, storedProcedure, database, databaseSchema, dashboard,
-   * dashboardDataModel, pipeline, topic, searchIndex, apiCollection, apiEndpoint, api,
-   * mlmodel, container, directory, file, spreadsheet, worksheet
+   * Supported entities: table, storedProcedure, database, databaseSchema, dashboard, chart,
+   * dashboardDataModel, pipeline, topic, searchIndex, apiCollection, apiEndpoint, api, apiService,
+   * metric, mlmodel, container, directory, file, spreadsheet, worksheet, dataProduct
    *
    * Validation support by entity type:
    * - All entities: Support semantics validation
@@ -750,7 +750,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
     List<String> violations = new ArrayList<>();
 
     // First, check if the entity type is supported for data contracts
-    if (!isSupportedEntityType(entityType)) {
+    if (!isEntityTypeSupported(entityType)) {
       violations.add(
           String.format("Entity type '%s' is not supported for data contracts", entityType));
     } else {
@@ -785,7 +785,7 @@ public class DataContractRepository extends EntityRepository<DataContract> {
   /**
    * Checks if the given entity type is supported for data contracts.
    */
-  private boolean isSupportedEntityType(String entityType) {
+  public boolean isEntityTypeSupported(String entityType) {
     return Set.of(
             Entity.TABLE,
             Entity.STORED_PROCEDURE,
@@ -800,6 +800,8 @@ public class DataContractRepository extends EntityRepository<DataContract> {
             Entity.API_COLLECTION,
             Entity.API_ENDPOINT,
             Entity.API,
+            Entity.API_SERVICE,
+            Entity.METRIC,
             Entity.MLMODEL,
             Entity.CONTAINER,
             Entity.DIRECTORY,
@@ -1329,7 +1331,13 @@ public class DataContractRepository extends EntityRepository<DataContract> {
                   .collect(Collectors.toList()));
 
     } catch (Exception e) {
-      LOG.error("Error during semantics validation", e);
+      LOG.error(
+          "Error during semantics validation for contract {}: {}",
+          dataContract.getFullyQualifiedName(),
+          e.getMessage(),
+          e);
+      int totalRules = Optional.ofNullable(dataContract.getSemantics()).map(List::size).orElse(0);
+      validation.withFailed(totalRules).withPassed(0).withTotal(totalRules);
     }
 
     return validation;
@@ -1369,19 +1377,22 @@ public class DataContractRepository extends EntityRepository<DataContract> {
     result.withContractExecutionStatus(fallbackStatus);
 
     if (!nullOrEmpty(result.getSchemaValidation())) {
-      if (result.getSchemaValidation().getFailed() > 0) {
+      Integer schemaFailed = result.getSchemaValidation().getFailed();
+      if (schemaFailed != null && schemaFailed > 0) {
         result.withContractExecutionStatus(ContractExecutionStatus.Failed);
       }
     }
 
     if (!nullOrEmpty(result.getSemanticsValidation())) {
-      if (result.getSemanticsValidation().getFailed() > 0) {
+      Integer semanticsFailed = result.getSemanticsValidation().getFailed();
+      if (semanticsFailed != null && semanticsFailed > 0) {
         result.withContractExecutionStatus(ContractExecutionStatus.Failed);
       }
     }
 
     if (!nullOrEmpty(result.getQualityValidation())) {
-      if (result.getQualityValidation().getFailed() > 0) {
+      Integer qualityFailed = result.getQualityValidation().getFailed();
+      if (qualityFailed != null && qualityFailed > 0) {
         result.withContractExecutionStatus(ContractExecutionStatus.Failed);
       }
     }
