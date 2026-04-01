@@ -782,6 +782,7 @@ public class OpenSearchClient implements SearchClient {
 
       builder.setHttpClientConfigCallback(
           httpClientBuilder -> {
+            httpClientBuilder.useSystemProperties();
             var connectionManagerBuilder = PoolingAsyncClientConnectionManagerBuilder.create();
 
             if (esConfig.getMaxConnTotal() != null && esConfig.getMaxConnTotal() > 0) {
