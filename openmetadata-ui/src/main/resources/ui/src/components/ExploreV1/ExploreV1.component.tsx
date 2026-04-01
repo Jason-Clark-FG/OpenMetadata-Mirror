@@ -17,17 +17,29 @@ import {
   SortAscendingOutlined,
   SortDescendingOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Card, Col, Menu, Row, Switch, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Dropdown,
+  Menu,
+  Row,
+  Switch,
+  Typography,
+} from 'antd';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
 import Qs from 'qs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ReactComponent as ExportIcon } from '../../assets/svg/ic-export.svg';
 import { useAdvanceSearch } from '../../components/Explore/AdvanceSearchProvider/AdvanceSearchProvider.component';
 import AppliedFilterText from '../../components/Explore/AppliedFilterText/AppliedFilterText';
 import EntitySummaryPanel from '../../components/Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import ExploreQuickFilters from '../../components/Explore/ExploreQuickFilters';
 import SortingDropDown from '../../components/Explore/SortingDropDown';
+import { ExportTypes } from '../../constants/Export.constants';
 import {
   entitySortingFields,
   SEARCH_INDEXING_APPLICATION,
@@ -35,10 +47,16 @@ import {
   TAG_FQN_KEY,
 } from '../../constants/explore.constants';
 import { SIZE, SORT_ORDER } from '../../enums/common.enum';
+import { SearchIndex } from '../../enums/search.enum';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
+import { CSVExportResponse } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
+import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
+import { QueryFilterInterface } from '../../pages/ExplorePage/ExplorePage.interface';
+import { exportSearchResultsAsync } from '../../rest/searchAPI';
 import { getDropDownItems } from '../../utils/AdvancedSearchUtils';
 import { Transi18next } from '../../utils/CommonUtils';
 import { highlightEntityNameAndDescription } from '../../utils/EntityUtils';
+import { getCombinedQueryFilterObject } from '../../utils/ExplorePage/ExplorePageUtils';
 import {
   getExploreQueryFilterMust,
   getSelectedValuesFromQuickFilter,
@@ -145,7 +163,73 @@ const ExploreV1: React.FC<ExploreProps> = ({
     [location.search]
   );
 
-  const { toggleModal, sqlQuery, onResetAllFilters } = useAdvanceSearch();
+  const { toggleModal, sqlQuery, queryFilter, onResetAllFilters } =
+    useAdvanceSearch();
+  const { showModal } = useEntityExportModalProvider();
+
+  const handleExportClick = useCallback(
+    (index: string) => {
+      const combinedQueryFilter = getCombinedQueryFilterObject(
+        quickFilters,
+        queryFilter as QueryFilterInterface | undefined
+      );
+
+      const onExport = async (
+        _name: string
+      ): Promise<CSVExportResponse | string> => {
+        const params: Record<string, string | boolean | undefined> = {
+          q: searchQueryParam || '*',
+          index,
+          sort_field: sortValue,
+          sort_order: sortOrder,
+        };
+
+        if (showDeleted !== undefined) {
+          params.deleted = showDeleted;
+        }
+
+        if (combinedQueryFilter) {
+          params.query_filter = JSON.stringify(combinedQueryFilter);
+        }
+
+        return exportSearchResultsAsync(
+          params as Parameters<typeof exportSearchResultsAsync>[0]
+        );
+      };
+
+      showModal({
+        name: t('label.search-result-plural'),
+        exportTypes: [ExportTypes.CSV],
+        onExport,
+      });
+    },
+    [
+      searchQueryParam,
+      sortValue,
+      sortOrder,
+      showDeleted,
+      quickFilters,
+      queryFilter,
+      showModal,
+      t,
+    ]
+  );
+
+  const exportMenuItems = useMemo(
+    () => [
+      {
+        key: 'current-tab',
+        label: t('label.current-entity', { entity: t('label.tab') }),
+      },
+      {
+        key: 'all-data-assets',
+        label: t('label.all-entity', {
+          entity: t('label.data-asset-plural'),
+        }),
+      },
+    ],
+    [t]
+  );
 
   const translatedSortingFields = useMemo(() => {
     const sortingFields =
@@ -368,6 +452,31 @@ const ExploreV1: React.FC<ExploreProps> = ({
                               </Typography.Text>
                             )}
 
+                            <Dropdown
+                              menu={{
+                                items: exportMenuItems,
+                                onClick: ({ key }) =>
+                                  handleExportClick(
+                                    key === 'all-data-assets'
+                                      ? SearchIndex.DATA_ASSET
+                                      : searchIndex
+                                  ),
+                              }}
+                              trigger={['click']}>
+                              <Button
+                                className="cursor-pointer"
+                                data-testid="export-search-results-button"
+                                icon={
+                                  <ExportIcon
+                                    className="anticon"
+                                    height={14}
+                                    width={14}
+                                  />
+                                }
+                                type="text">
+                                {t('label.export')}
+                              </Button>
+                            </Dropdown>
                             <Button
                               className="cursor-pointer"
                               data-testid="advance-search-button"

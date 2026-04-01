@@ -88,6 +88,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.openmetadata.csv.CsvExportProgressCallback;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
 import org.openmetadata.schema.analytics.ReportData;
@@ -2413,6 +2414,134 @@ public class SearchRepository {
 
   public Response search(SearchRequest request, SubjectContext subjectContext) throws IOException {
     return searchClient.search(request, subjectContext);
+  }
+
+  public String exportSearchResultsCsv(
+      SearchRequest baseRequest,
+      SubjectContext subjectContext,
+      CsvExportProgressCallback progressCallback)
+      throws IOException {
+    SearchRequest countRequest =
+        new SearchRequest()
+            .withQuery(baseRequest.getQuery())
+            .withIndex(baseRequest.getIndex())
+            .withQueryFilter(baseRequest.getQueryFilter())
+            .withPostFilter(baseRequest.getPostFilter())
+            .withDeleted(baseRequest.getDeleted())
+            .withDomains(baseRequest.getDomains())
+            .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
+            .withSize(0)
+            .withFrom(0)
+            .withFetchSource(false)
+            .withTrackTotalHits(true)
+            .withIncludeAggregations(false);
+
+    Response countResponse = searchClient.search(countRequest, subjectContext);
+    String countBody =
+        countResponse.getEntity() != null ? countResponse.getEntity().toString() : "{}";
+    JsonNode countRoot = JsonUtils.readTree(countBody);
+    int totalHits = extractTotalHits(countRoot);
+
+    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Search results contain %d rows which exceeds the maximum of %d. Please add filters to reduce the result set.",
+              totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
+    }
+
+    StringBuilder csv = new StringBuilder();
+    csv.append(SearchResultCsvExporter.CSV_HEADER).append("\n");
+
+    if (totalHits == 0) {
+      return csv.toString();
+    }
+
+    long startTime = System.currentTimeMillis();
+    long timeoutMs = 5 * 60 * 1000L;
+    int exported = 0;
+    List<Object> searchAfter = null;
+
+    String sortField = baseRequest.getSortFieldParam();
+    if (sortField == null || sortField.isEmpty() || "_score".equals(sortField)) {
+      sortField = "fullyQualifiedName";
+    }
+
+    while (exported < totalHits) {
+      if (System.currentTimeMillis() - startTime > timeoutMs) {
+        throw new IllegalStateException(
+            "Export timed out after 5 minutes. Please add filters to reduce the result set.");
+      }
+
+      SearchRequest batchRequest =
+          new SearchRequest()
+              .withQuery(baseRequest.getQuery())
+              .withIndex(baseRequest.getIndex())
+              .withQueryFilter(baseRequest.getQueryFilter())
+              .withPostFilter(baseRequest.getPostFilter())
+              .withDeleted(baseRequest.getDeleted())
+              .withDomains(baseRequest.getDomains())
+              .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
+              .withSize(SearchResultCsvExporter.BATCH_SIZE)
+              .withFrom(0)
+              .withFetchSource(true)
+              .withTrackTotalHits(false)
+              .withIncludeAggregations(false)
+              .withIncludeSourceFields(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS)
+              .withSortFieldParam(sortField)
+              .withSortOrder(
+                  baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
+              .withSearchAfter(searchAfter);
+
+      Response batchResponse = searchClient.search(batchRequest, subjectContext);
+      String batchBody =
+          batchResponse.getEntity() != null ? batchResponse.getEntity().toString() : "{}";
+      JsonNode batchRoot = JsonUtils.readTree(batchBody);
+      JsonNode hits = batchRoot.path("hits").path("hits");
+
+      if (!hits.isArray() || hits.isEmpty()) {
+        break;
+      }
+
+      for (JsonNode hit : hits) {
+        JsonNode sourceNode = hit.path("_source");
+        if (!sourceNode.isMissingNode()) {
+          Map<String, Object> source =
+              JsonUtils.readValue(sourceNode.toString(), new TypeReference<>() {});
+          csv.append(SearchResultCsvExporter.toCsvRow(source)).append("\n");
+          exported++;
+        }
+      }
+
+      JsonNode lastHit = hits.get(hits.size() - 1);
+      JsonNode sortNode = lastHit.path("sort");
+      if (sortNode.isArray() && !sortNode.isEmpty()) {
+        searchAfter = new ArrayList<>();
+        for (JsonNode sortValue : sortNode) {
+          if (sortValue.isNumber()) {
+            searchAfter.add(sortValue.numberValue());
+          } else {
+            searchAfter.add(sortValue.asText());
+          }
+        }
+      } else {
+        break;
+      }
+
+      if (progressCallback != null) {
+        progressCallback.onProgress(
+            exported, totalHits, String.format("Exported %d of %d rows", exported, totalHits));
+      }
+    }
+
+    return csv.toString();
+  }
+
+  private static int extractTotalHits(JsonNode root) {
+    JsonNode total = root.path("hits").path("total");
+    if (total.has("value")) {
+      return total.get("value").asInt();
+    }
+    return total.asInt(0);
   }
 
   public Response previewSearch(

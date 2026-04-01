@@ -13,6 +13,7 @@
 
 import { AxiosResponse } from 'axios';
 import { isArray, isNil } from 'lodash';
+import { CSVExportResponse } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import { SearchIndex } from '../enums/search.enum';
 import { PreviewSearchRequest } from '../generated/api/search/previewSearchRequest';
 import {
@@ -375,6 +376,23 @@ export const getSearchStats = async (): Promise<SearchStatsResponse> => {
 export const cleanOrphanIndexes = async (): Promise<OrphanCleanupResponse> => {
   const response: AxiosResponse<OrphanCleanupResponse> = await APIClient.delete(
     '/search/stats/orphan'
+  );
+
+  return response.data;
+};
+
+export const exportSearchResultsAsync = async (params: {
+  q?: string;
+  index?: string;
+  deleted?: boolean;
+  query_filter?: string;
+  post_filter?: string;
+  sort_field?: string;
+  sort_order?: string;
+}): Promise<CSVExportResponse> => {
+  const response = await APIClient.get<CSVExportResponse>(
+    '/search/exportAsync',
+    { params }
   );
 
   return response.data;

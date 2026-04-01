@@ -79,6 +79,8 @@ import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.AsyncService;
+import org.openmetadata.service.util.CSVExportResponse;
+import org.openmetadata.service.util.WebsocketNotificationHandler;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
 import org.quartz.SchedulerException;
@@ -253,6 +255,103 @@ public class SearchResource {
             .withExplain(explain)
             .withIncludeAggregations(includeAggregations);
     return searchRepository.search(request, subjectContext);
+  }
+
+  @GET
+  @Path("/exportAsync")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Operation(
+      operationId = "exportSearchResultsAsync",
+      summary = "Export search results as CSV (async)",
+      description =
+          "Exports the current search results as a CSV file asynchronously. "
+              + "Returns a job ID that can be tracked via WebSocket for progress and completion.",
+      responses = {
+        @ApiResponse(
+            responseCode = "202",
+            description = "Export job initiated",
+            content =
+                @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = CSVExportResponse.class)))
+      })
+  public Response exportSearchResultsAsync(
+      @Context UriInfo uriInfo,
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Search Query Text") @DefaultValue("*") @QueryParam("q")
+          String query,
+      @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
+          @DefaultValue("table")
+          @QueryParam("index")
+          String index,
+      @Parameter(description = "Filter documents by deleted param. By default deleted is false")
+          @QueryParam("deleted")
+          Boolean deleted,
+      @Parameter(
+              description =
+                  "Elasticsearch query that will be combined with the query_string query generator from the `query` argument")
+          @QueryParam("query_filter")
+          String queryFilter,
+      @Parameter(description = "Elasticsearch query that will be used as a post_filter")
+          @QueryParam("post_filter")
+          String postFilter,
+      @Parameter(description = "Sort the search results by field")
+          @DefaultValue("_score")
+          @QueryParam("sort_field")
+          String sortFieldParam,
+      @Parameter(
+              description = "Sort order asc for ascending or desc for descending, defaults to desc")
+          @DefaultValue("desc")
+          @QueryParam("sort_order")
+          String sortOrder) {
+
+    if (nullOrEmpty(query)) {
+      query = "*";
+    }
+
+    List<EntityReference> domains = new ArrayList<>();
+    SubjectContext subjectContext = getSubjectContext(securityContext);
+    if (!subjectContext.isAdmin()) {
+      domains = subjectContext.getUserDomains();
+    }
+
+    SearchRequest request =
+        new SearchRequest()
+            .withQuery(query)
+            .withIndex(Entity.getSearchRepository().getIndexOrAliasName(index))
+            .withQueryFilter(queryFilter)
+            .withPostFilter(postFilter)
+            .withDeleted(deleted)
+            .withSortFieldParam(sortFieldParam)
+            .withSortOrder(sortOrder)
+            .withDomains(domains)
+            .withApplyDomainFilter(
+                !subjectContext.isAdmin() && subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE));
+
+    String jobId = UUID.randomUUID().toString();
+
+    AsyncService.getInstance()
+        .getExecutorService()
+        .submit(
+            () -> {
+              try {
+                String csvData =
+                    searchRepository.exportSearchResultsCsv(
+                        request,
+                        subjectContext,
+                        (exported, total, message) ->
+                            WebsocketNotificationHandler.sendCsvExportProgressNotification(
+                                jobId, securityContext, exported, total, message));
+                WebsocketNotificationHandler.sendCsvExportCompleteNotification(
+                    jobId, securityContext, csvData);
+              } catch (Exception e) {
+                WebsocketNotificationHandler.sendCsvExportFailedNotification(
+                    jobId, securityContext, e.getMessage());
+              }
+            });
+
+    CSVExportResponse response = new CSVExportResponse(jobId, "Export initiated successfully.");
+    return Response.accepted().entity(response).type(MediaType.APPLICATION_JSON).build();
   }
 
   @POST
