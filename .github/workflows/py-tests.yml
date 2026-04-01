@@ -57,7 +57,7 @@ jobs:
               - 'Makefile'
 
   py-static-checks:
-    name: Static Checks (Python ${{ env.MAIN_PYTHON_VERSION }})
+    name: Static Checks (Python 3.10)
     needs: changes
     if: ${{ needs.changes.outputs.python == 'true' }}
     timeout-minutes: 30
