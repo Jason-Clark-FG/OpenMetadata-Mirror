@@ -1495,8 +1495,7 @@ public class SearchResourceIT {
 
   @Test
   void testExportAsyncReturnsAcceptedWithJobId(TestNamespace ns) throws Exception {
-    HttpResponse<String> response =
-        httpGet("/api/v1/search/exportAsync?q=*&index=table_search_index");
+    HttpResponse<String> response = httpGet("/v1/search/exportAsync?q=*&index=table_search_index");
 
     assertEquals(202, response.statusCode(), "Export should return HTTP 202 Accepted");
 
@@ -1509,7 +1508,7 @@ public class SearchResourceIT {
 
   @Test
   void testExportAsyncWithDataAssetIndex(TestNamespace ns) throws Exception {
-    HttpResponse<String> response = httpGet("/api/v1/search/exportAsync?q=*&index=dataAsset");
+    HttpResponse<String> response = httpGet("/v1/search/exportAsync?q=*&index=dataAsset");
 
     assertEquals(202, response.statusCode(), "Export with dataAsset index should return 202");
 
@@ -1524,8 +1523,7 @@ public class SearchResourceIT {
 
     HttpResponse<String> response =
         httpGet(
-            "/api/v1/search/exportAsync?q=*&index=table_search_index&query_filter="
-                + encodedFilter);
+            "/v1/search/exportAsync?q=*&index=table_search_index&query_filter=" + encodedFilter);
 
     assertEquals(202, response.statusCode());
 
@@ -1537,7 +1535,7 @@ public class SearchResourceIT {
   void testExportAsyncWithSortParameters(TestNamespace ns) throws Exception {
     HttpResponse<String> response =
         httpGet(
-            "/api/v1/search/exportAsync?q=*&index=table_search_index"
+            "/v1/search/exportAsync?q=*&index=table_search_index"
                 + "&sort_field=name.keyword&sort_order=asc");
 
     assertEquals(202, response.statusCode());
@@ -1549,7 +1547,7 @@ public class SearchResourceIT {
   @Test
   void testExportAsyncWithDeletedFilter(TestNamespace ns) throws Exception {
     HttpResponse<String> response =
-        httpGet("/api/v1/search/exportAsync?q=*&index=table_search_index&deleted=true");
+        httpGet("/v1/search/exportAsync?q=*&index=table_search_index&deleted=true");
 
     assertEquals(202, response.statusCode());
 
@@ -1559,10 +1557,8 @@ public class SearchResourceIT {
 
   @Test
   void testExportAsyncUniqueJobIds(TestNamespace ns) throws Exception {
-    HttpResponse<String> response1 =
-        httpGet("/api/v1/search/exportAsync?q=*&index=table_search_index");
-    HttpResponse<String> response2 =
-        httpGet("/api/v1/search/exportAsync?q=*&index=table_search_index");
+    HttpResponse<String> response1 = httpGet("/v1/search/exportAsync?q=*&index=table_search_index");
+    HttpResponse<String> response2 = httpGet("/v1/search/exportAsync?q=*&index=table_search_index");
 
     JsonNode body1 = OBJECT_MAPPER.readTree(response1.body());
     JsonNode body2 = OBJECT_MAPPER.readTree(response2.body());
@@ -1577,7 +1573,7 @@ public class SearchResourceIT {
     String[] indexes = {"table_search_index", "topic_search_index", "dashboard_search_index"};
 
     for (String index : indexes) {
-      HttpResponse<String> response = httpGet("/api/v1/search/exportAsync?q=*&index=" + index);
+      HttpResponse<String> response = httpGet("/v1/search/exportAsync?q=*&index=" + index);
 
       assertEquals(202, response.statusCode(), "Export should return 202 for index: " + index);
 
@@ -1591,7 +1587,7 @@ public class SearchResourceIT {
     createTestTable(ns, "export_test_table");
 
     HttpResponse<String> response =
-        httpGet("/api/v1/search/exportAsync?q=export_test&index=table_search_index");
+        httpGet("/v1/search/exportAsync?q=export_test&index=table_search_index");
 
     assertEquals(202, response.statusCode());
 

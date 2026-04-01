@@ -60,7 +60,7 @@ test.describe('Search Export', () => {
 
     const modal = page.locator('.ant-modal:visible');
     await expect(modal).toBeVisible();
-    await expect(modal.getByText('CSV')).toBeVisible();
+    await expect(modal.getByText('CSV', { exact: true })).toBeVisible();
 
     await modal.getByRole('button', { name: /cancel/i }).click();
     await expect(modal).not.toBeVisible();
@@ -78,7 +78,7 @@ test.describe('Search Export', () => {
 
     const modal = page.locator('.ant-modal:visible');
     await expect(modal).toBeVisible();
-    await expect(modal.getByText('CSV')).toBeVisible();
+    await expect(modal.getByText('CSV', { exact: true })).toBeVisible();
 
     await modal.getByRole('button', { name: /cancel/i }).click();
     await expect(modal).not.toBeVisible();
