@@ -7,6 +7,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.getFlowable
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,7 @@ public class DataCompletenessTask implements NodeInterface {
   public DataCompletenessTask(
       DataCompletenessTaskDefinition nodeDefinition, WorkflowConfiguration workflowConfig) {
     this.outputPorts =
-        nodeDefinition.getConfig().getQualityBands().stream()
+        Optional.ofNullable(nodeDefinition.getConfig().getQualityBands()).orElse(List.of()).stream()
             .map(QualityBand::getName)
             .collect(Collectors.toSet());
     String subProcessId = nodeDefinition.getName();

@@ -5,16 +5,10 @@ import org.flowable.bpmn.model.InclusiveGateway;
 public class InclusiveGatewayBuilder extends FlowableElementBuilder<InclusiveGatewayBuilder> {
 
   private boolean async = true;
-  private boolean exclusive = true;
   private String defaultFlow;
 
   public InclusiveGatewayBuilder setAsync(boolean async) {
     this.async = async;
-    return this;
-  }
-
-  public InclusiveGatewayBuilder exclusive(boolean exclusive) {
-    this.exclusive = exclusive;
     return this;
   }
 
@@ -29,7 +23,7 @@ public class InclusiveGatewayBuilder extends FlowableElementBuilder<InclusiveGat
     gateway.setId(id);
     gateway.setName(id);
     gateway.setAsynchronous(async);
-    gateway.setExclusive(exclusive);
+    gateway.setExclusive(true);
     if (defaultFlow != null) {
       gateway.setDefaultFlow(defaultFlow);
     }

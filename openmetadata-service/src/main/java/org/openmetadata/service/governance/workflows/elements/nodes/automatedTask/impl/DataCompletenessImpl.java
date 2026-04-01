@@ -124,7 +124,7 @@ public class DataCompletenessImpl implements JavaDelegate {
       for (QualityBand band : qualityBands) {
         List<String> bandEntities = entitiesByBand.getOrDefault(band.getName(), List.of());
         varHandler.setNodeVariable(band.getName() + "_" + ENTITY_LIST_VARIABLE, bandEntities);
-        varHandler.setNodeVariable("has_" + band.getName() + "_entities", !bandEntities.isEmpty());
+        varHandler.setNodeVariable(bandFlagVariable(band.getName()), !bandEntities.isEmpty());
       }
 
       // If no entities were assigned to any band (empty input or all failed), activate the
@@ -134,7 +134,7 @@ public class DataCompletenessImpl implements JavaDelegate {
       if (!anyBandActive) {
         qualityBands.stream()
             .min(Comparator.comparingDouble(QualityBand::getMinimumScore))
-            .ifPresent(b -> varHandler.setNodeVariable("has_" + b.getName() + "_entities", true));
+            .ifPresent(b -> varHandler.setNodeVariable(bandFlagVariable(b.getName()), true));
       }
 
       // Priority band = highest minimumScore band that has entities
@@ -172,6 +172,10 @@ public class DataCompletenessImpl implements JavaDelegate {
       varHandler.setGlobalVariable(EXCEPTION_VARIABLE, ExceptionUtils.getStackTrace(exc));
       throw new BpmnError(WORKFLOW_RUNTIME_EXCEPTION, exc.getMessage());
     }
+  }
+
+  public static String bandFlagVariable(String bandName) {
+    return "has_" + bandName + "_entities";
   }
 
   private void storeFieldList(

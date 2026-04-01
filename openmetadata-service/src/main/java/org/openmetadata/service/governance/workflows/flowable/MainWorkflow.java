@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.InclusiveGateway;
@@ -27,10 +28,12 @@ import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.governance.workflows.elements.Edge;
 import org.openmetadata.service.governance.workflows.elements.NodeFactory;
 import org.openmetadata.service.governance.workflows.elements.NodeInterface;
+import org.openmetadata.service.governance.workflows.elements.nodes.automatedTask.impl.DataCompletenessImpl;
 import org.openmetadata.service.governance.workflows.elements.nodes.endEvent.EndEvent;
 import org.openmetadata.service.governance.workflows.flowable.builders.InclusiveGatewayBuilder;
 
 @Getter
+@Slf4j
 public class MainWorkflow {
   private final BpmnModel model;
   private final String workflowName;
@@ -108,6 +111,14 @@ public class MainWorkflow {
 
       if (toJoin) {
         // Incoming to a join node — wire to the join gateway instead
+        if (edgeDefinition.getCondition() != null && !edgeDefinition.getCondition().isEmpty()) {
+          LOG.warn(
+              "[WorkflowEdge] Edge from='{}' to='{}' has condition='{}' but '{}' is a join node; condition is ignored",
+              from,
+              to,
+              edgeDefinition.getCondition(),
+              to);
+        }
         SequenceFlow flow = new SequenceFlow(from, joinGatewayId(to));
         process.addFlowElement(flow);
       } else {
@@ -234,7 +245,8 @@ public class MainWorkflow {
       flagVariable = getNamespacedVariableName(nodeName, HAS_FALSE_ENTITIES_VARIABLE);
     } else {
       // DataCompleteness band name (e.g., "gold", "silver")
-      flagVariable = getNamespacedVariableName(nodeName, "has_" + edgeCondition + "_entities");
+      flagVariable =
+          getNamespacedVariableName(nodeName, DataCompletenessImpl.bandFlagVariable(edgeCondition));
     }
     return String.format("${%s}", flagVariable);
   }
