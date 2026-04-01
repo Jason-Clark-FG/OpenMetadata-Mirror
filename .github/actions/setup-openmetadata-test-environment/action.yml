@@ -75,17 +75,30 @@ runs:
           ingestion/setup.py
           ingestion/pyproject.toml
 
-    - name: Generate Models
+    - name: Restore Python venv cache
+      id: cache-venv
+      uses: actions/cache@v4
+      with:
+        path: env/
+        key: venv-${{ runner.os }}-py${{ inputs.python-version }}-${{ inputs.install-mode }}-${{ hashFiles('ingestion/setup.py', 'ingestion/pyproject.toml') }}
+
+    - name: Create venv and install dev dependencies
+      if: steps.cache-venv.outputs.cache-hit != 'true'
       run: |
         python3 -m venv env
         source env/bin/activate
-        sudo make install_antlr_cli
         uv pip install "${{ github.workspace }}/ingestion[dev]"
+      shell: bash
+
+    - name: Generate Models
+      run: |
+        source env/bin/activate
+        sudo make install_antlr_cli
         make generate
       shell: bash
 
     - name: Install Python Dependencies
-      if: ${{ inputs.install-mode == 'full' }}
+      if: ${{ inputs.install-mode == 'full' && steps.cache-venv.outputs.cache-hit != 'true' }}
       run: |
         source env/bin/activate
         uv pip install "setuptools<81"
@@ -97,7 +110,7 @@ runs:
       shell: bash
 
     - name: Install nox (dev-only mode)
-      if: ${{ inputs.install-mode != 'full' }}
+      if: ${{ inputs.install-mode != 'full' && steps.cache-venv.outputs.cache-hit != 'true' }}
       run: |
         source env/bin/activate
         uv pip install nox pandas
