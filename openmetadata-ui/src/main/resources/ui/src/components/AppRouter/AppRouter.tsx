@@ -30,8 +30,7 @@ import withSuspenseFallback from './withSuspenseFallback';
 const AppContainer = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "AppContainer" */ '../AppContainer/AppContainer'
+      import( '../AppContainer/AppContainer'
       )
   )
 );
@@ -40,8 +39,7 @@ const AppContainer = withSuspenseFallback(
 const AccessNotAllowedPage = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "AccessNotAllowedPage" */ '../../pages/AccessNotAllowedPage/AccessNotAllowedPage'
+      import( '../../pages/AccessNotAllowedPage/AccessNotAllowedPage'
       )
   )
 );
@@ -49,8 +47,7 @@ const AccessNotAllowedPage = withSuspenseFallback(
 const LogoutPage = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "LogoutPage" */ '../../pages/LogoutPage/LogoutPage'
+      import( '../../pages/LogoutPage/LogoutPage'
       ).then((m) => ({ default: m.LogoutPage }))
   )
 );
@@ -58,8 +55,7 @@ const LogoutPage = withSuspenseFallback(
 const PageNotFound = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "PageNotFound" */ '../../pages/PageNotFound/PageNotFound'
+      import( '../../pages/PageNotFound/PageNotFound'
       )
   )
 );
@@ -67,8 +63,7 @@ const PageNotFound = withSuspenseFallback(
 const SamlCallback = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "SamlCallback" */ '../../pages/SamlCallback'
+      import( '../../pages/SamlCallback'
       )
   )
 );
@@ -76,8 +71,7 @@ const SamlCallback = withSuspenseFallback(
 const SignUpPage = withSuspenseFallback(
   lazy(
     () =>
-      import(
-        /* webpackChunkName: "SignUpPage" */ '../../pages/SignUp/SignUpPage'
+      import( '../../pages/SignUp/SignUpPage'
       )
   )
 );
