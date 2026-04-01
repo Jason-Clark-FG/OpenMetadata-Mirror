@@ -18,10 +18,7 @@ import { ROUTES } from '../../constants/constants';
 import { AuthProvider } from '../../generated/configuration/authenticationConfiguration';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import useCustomLocation from '../../hooks/useCustomLocation/useCustomLocation';
-import PageNotFound from '../../pages/PageNotFound/PageNotFound';
-import AccountActivationConfirmation from '../../pages/SignUp/account-activation-confirmation.component';
 import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
-import Auth0Callback from '../Auth/AppCallbacks/Auth0Callback/Auth0Callback';
 import withSuspenseFallback from './withSuspenseFallback';
 
 const SigninPage = withSuspenseFallback(
@@ -38,6 +35,18 @@ const ResetPassword = withSuspenseFallback(
 
 const BasicSignupPage = withSuspenseFallback(
   lazy(() => import('../../pages/SignUp/BasicSignup.component'))
+);
+
+const PageNotFound = withSuspenseFallback(
+  lazy(() => import('../../pages/PageNotFound/PageNotFound'))
+);
+
+const AccountActivationConfirmation = withSuspenseFallback(
+  lazy(() => import('../../pages/SignUp/account-activation-confirmation.component'))
+);
+
+const Auth0Callback = withSuspenseFallback(
+  lazy(() => import('../Auth/AppCallbacks/Auth0Callback/Auth0Callback'))
 );
 
 export const UnAuthenticatedAppRouter = () => {

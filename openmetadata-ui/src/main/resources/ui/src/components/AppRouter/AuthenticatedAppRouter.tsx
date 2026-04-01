@@ -30,95 +30,55 @@ import withSuspenseFallback from './withSuspenseFallback';
 // Previously statically imported — lazify so they stay out of the main chunk
 const AddCustomMetricPage = withSuspenseFallback(
   React.lazy(
-    () =>
-      import( '../../pages/AddCustomMetricPage/AddCustomMetricPage'
-      )
+    () => import('../../pages/AddCustomMetricPage/AddCustomMetricPage')
   )
 );
 
 const CustomizablePage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../../pages/CustomizablePage/CustomizablePage'
-      ).then((m) => ({ default: m.CustomizablePage }))
+  React.lazy(() =>
+    import('../../pages/CustomizablePage/CustomizablePage').then((m) => ({
+      default: m.CustomizablePage,
+    }))
   )
 );
 
 const DataQualityPage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../../pages/DataQuality/DataQualityPage'
-      )
-  )
+  React.lazy(() => import('../../pages/DataQuality/DataQualityPage'))
 );
 
 const ForbiddenPage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../../pages/ForbiddenPage/ForbiddenPage'
-      )
-  )
+  React.lazy(() => import('../../pages/ForbiddenPage/ForbiddenPage'))
 );
 
 const PlatformLineage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../../pages/PlatformLineage/PlatformLineage'
-      )
-  )
+  React.lazy(() => import('../../pages/PlatformLineage/PlatformLineage'))
 );
 
 const TagPage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../../pages/TagPage/TagPage'
-      )
-  )
+  React.lazy(() => import('../../pages/TagPage/TagPage'))
 );
 
 const DomainRouter = withSuspenseFallback(
-  React.lazy(
-    () => import( './DomainRouter')
-  )
+  React.lazy(() => import('./DomainRouter'))
 );
 const DataProductListPage = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( '../DataProduct/DataProductListPage'
-      )
-  )
+  React.lazy(() => import('../DataProduct/DataProductListPage'))
 );
 const SettingsRouter = withSuspenseFallback(
-  React.lazy(
-    () => import( './SettingsRouter')
-  )
+  React.lazy(() => import('./SettingsRouter'))
 );
 const EntityRouter = withSuspenseFallback(
-  React.lazy(
-    () => import( './EntityRouter')
-  )
+  React.lazy(() => import('./EntityRouter'))
 );
 const ClassificationRouter = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( './ClassificationRouter'
-      )
-  )
+  React.lazy(() => import('./ClassificationRouter'))
 );
 const GlossaryRouter = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( './GlossaryRouter/GlossaryRouter'
-      )
-  )
+  React.lazy(() => import('./GlossaryRouter/GlossaryRouter'))
 );
 
 const GlossaryTermRouter = withSuspenseFallback(
-  React.lazy(
-    () =>
-      import( './GlossaryTermRouter/GlossaryTermRouter'
-      )
-  )
+  React.lazy(() => import('./GlossaryTermRouter/GlossaryTermRouter'))
 );
 
 const MyDataPage = withSuspenseFallback(

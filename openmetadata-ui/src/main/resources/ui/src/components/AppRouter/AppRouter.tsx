@@ -28,52 +28,32 @@ import withSuspenseFallback from './withSuspenseFallback';
 
 // Lazy-load the entire authenticated shell so login page users never download it
 const AppContainer = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../AppContainer/AppContainer'
-      )
-  )
+  lazy(() => import('../AppContainer/AppContainer'))
 );
 
 // Lazy-load infrequently-visited unauthenticated pages
 const AccessNotAllowedPage = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../../pages/AccessNotAllowedPage/AccessNotAllowedPage'
-      )
-  )
+  lazy(() => import('../../pages/AccessNotAllowedPage/AccessNotAllowedPage'))
 );
 
 const LogoutPage = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../../pages/LogoutPage/LogoutPage'
-      ).then((m) => ({ default: m.LogoutPage }))
+  lazy(() =>
+    import('../../pages/LogoutPage/LogoutPage').then((m) => ({
+      default: m.LogoutPage,
+    }))
   )
 );
 
 const PageNotFound = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../../pages/PageNotFound/PageNotFound'
-      )
-  )
+  lazy(() => import('../../pages/PageNotFound/PageNotFound'))
 );
 
 const SamlCallback = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../../pages/SamlCallback'
-      )
-  )
+  lazy(() => import('../../pages/SamlCallback'))
 );
 
 const SignUpPage = withSuspenseFallback(
-  lazy(
-    () =>
-      import( '../../pages/SignUp/SignUpPage'
-      )
-  )
+  lazy(() => import('../../pages/SignUp/SignUpPage'))
 );
 
 const AppRouter = () => {
