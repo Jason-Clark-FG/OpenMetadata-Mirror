@@ -12,11 +12,11 @@
  */
 
 import { expect } from '@playwright/test';
-import { test } from '../fixtures/pages';
 import { TableClass } from '../../support/entity/TableClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { test } from '../fixtures/pages';
 
 const table = new TableClass();
 
@@ -75,14 +75,12 @@ test.describe(
       const changeSummaryData = await changeSummaryResponse.json();
 
       expect(changeSummaryData.changeSummary).toHaveProperty('description');
-      expect(
-        changeSummaryData.changeSummary.description.changeSource
-      ).toBe('Suggested');
+      expect(changeSummaryData.changeSummary.description.changeSource).toBe(
+        'Suggested'
+      );
 
       expect(
-        changeSummaryData.changeSummary[
-          `columns.${columnName}.description`
-        ]
+        changeSummaryData.changeSummary[`columns.${columnName}.description`]
       ).toBeDefined();
 
       await afterAction();
@@ -102,8 +100,8 @@ test.describe(
       await redirectToHomePage(page);
 
       await test.step('Navigate to entity page and verify AI badge', async () => {
-        const changeSummaryResponse = page.waitForResponse(
-          (response) => response.url().includes('/api/v1/changeSummary/')
+        const changeSummaryResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/changeSummary/')
         );
 
         await table.visitEntityPage(page);
@@ -116,7 +114,9 @@ test.describe(
 
         await expect(descriptionContainer).toBeVisible();
 
-        const badge = descriptionContainer.getByTestId('ai-suggested-badge');
+        const badge = descriptionContainer
+          .getByTestId('ai-suggested-badge')
+          .first();
 
         await expect(badge).toBeVisible();
       });
@@ -124,7 +124,8 @@ test.describe(
       await test.step('Verify badge tooltip shows metadata', async () => {
         const badge = page
           .getByTestId('asset-description-container')
-          .getByTestId('ai-suggested-badge');
+          .getByTestId('ai-suggested-badge')
+          .first();
 
         await badge.hover();
 
@@ -142,8 +143,8 @@ test.describe(
       await redirectToHomePage(page);
 
       await test.step('Navigate to entity page and verify column badge', async () => {
-        const changeSummaryResponse = page.waitForResponse(
-          (response) => response.url().includes('/api/v1/changeSummary/')
+        const changeSummaryResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/changeSummary/')
         );
 
         await table.visitEntityPage(page);
@@ -194,8 +195,8 @@ test.describe(
       await test.step('Navigate and verify no AI badge', async () => {
         await redirectToHomePage(page);
 
-        const changeSummaryResponse = page.waitForResponse(
-          (response) => response.url().includes('/api/v1/changeSummary/')
+        const changeSummaryResponse = page.waitForResponse((response) =>
+          response.url().includes('/api/v1/changeSummary/')
         );
 
         await manualTable.visitEntityPage(page);
