@@ -16,6 +16,7 @@ package org.openmetadata.service.resources.search;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.jdbi3.RoleRepository.DOMAIN_ONLY_ACCESS_ROLE;
 import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
+import static org.openmetadata.service.util.WebsocketNotificationHandler.getUserIdFromSecurityContext;
 
 import es.co.elastic.clients.elasticsearch.core.SearchResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -329,6 +330,7 @@ public class SearchResource {
                 !subjectContext.isAdmin() && subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE));
 
     String jobId = UUID.randomUUID().toString();
+    UUID userId = getUserIdFromSecurityContext(securityContext);
 
     AsyncService.getInstance()
         .getExecutorService()
@@ -341,12 +343,13 @@ public class SearchResource {
                         subjectContext,
                         (exported, total, message) ->
                             WebsocketNotificationHandler.sendCsvExportProgressNotification(
-                                jobId, securityContext, exported, total, message));
+                                jobId, userId, exported, total, message));
                 WebsocketNotificationHandler.sendCsvExportCompleteNotification(
-                    jobId, securityContext, csvData);
+                    jobId, userId, csvData);
               } catch (Exception e) {
+                String errorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
                 WebsocketNotificationHandler.sendCsvExportFailedNotification(
-                    jobId, securityContext, e.getMessage());
+                    jobId, userId, errorMessage);
               }
             });
 

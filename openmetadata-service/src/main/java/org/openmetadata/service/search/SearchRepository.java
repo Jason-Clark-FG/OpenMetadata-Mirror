@@ -2449,91 +2449,103 @@ public class SearchRepository {
               totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
     }
 
-    StringBuilder csv = new StringBuilder();
-    csv.append(SearchResultCsvExporter.CSV_HEADER).append("\n");
-
     if (totalHits == 0) {
-      return csv.toString();
+      return SearchResultCsvExporter.CSV_HEADER + "\n";
     }
 
-    long startTime = System.currentTimeMillis();
-    long timeoutMs = 5 * 60 * 1000L;
-    int exported = 0;
-    List<Object> searchAfter = null;
+    java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("csv-export-", ".csv");
+    try (java.io.BufferedWriter writer =
+        java.nio.file.Files.newBufferedWriter(tempFile, java.nio.charset.StandardCharsets.UTF_8)) {
+      writer.write(SearchResultCsvExporter.CSV_HEADER);
+      writer.newLine();
 
-    String sortField = baseRequest.getSortFieldParam();
-    if (sortField == null || sortField.isEmpty() || "_score".equals(sortField)) {
-      sortField = "fullyQualifiedName";
-    }
+      long startTime = System.currentTimeMillis();
+      long timeoutMs = 5 * 60 * 1000L;
+      int exported = 0;
+      int maxIterations = (totalHits / SearchResultCsvExporter.BATCH_SIZE) + 2;
+      int iteration = 0;
+      List<Object> searchAfter = null;
 
-    while (exported < totalHits) {
-      if (System.currentTimeMillis() - startTime > timeoutMs) {
-        throw new IllegalStateException(
-            "Export timed out after 5 minutes. Please add filters to reduce the result set.");
+      String sortField = baseRequest.getSortFieldParam();
+      if (sortField == null || sortField.isEmpty() || "_score".equals(sortField)) {
+        sortField = "fullyQualifiedName";
       }
 
-      SearchRequest batchRequest =
-          new SearchRequest()
-              .withQuery(baseRequest.getQuery())
-              .withIndex(baseRequest.getIndex())
-              .withQueryFilter(baseRequest.getQueryFilter())
-              .withPostFilter(baseRequest.getPostFilter())
-              .withDeleted(baseRequest.getDeleted())
-              .withDomains(baseRequest.getDomains())
-              .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
-              .withSize(SearchResultCsvExporter.BATCH_SIZE)
-              .withFrom(0)
-              .withFetchSource(true)
-              .withTrackTotalHits(false)
-              .withIncludeAggregations(false)
-              .withIncludeSourceFields(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS)
-              .withSortFieldParam(sortField)
-              .withSortOrder(
-                  baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
-              .withSearchAfter(searchAfter);
-
-      Response batchResponse = searchClient.search(batchRequest, subjectContext);
-      String batchBody =
-          batchResponse.getEntity() != null ? batchResponse.getEntity().toString() : "{}";
-      JsonNode batchRoot = JsonUtils.readTree(batchBody);
-      JsonNode hits = batchRoot.path("hits").path("hits");
-
-      if (!hits.isArray() || hits.isEmpty()) {
-        break;
-      }
-
-      for (JsonNode hit : hits) {
-        JsonNode sourceNode = hit.path("_source");
-        if (!sourceNode.isMissingNode()) {
-          Map<String, Object> source =
-              JsonUtils.readValue(sourceNode.toString(), new TypeReference<>() {});
-          csv.append(SearchResultCsvExporter.toCsvRow(source)).append("\n");
-          exported++;
+      while (exported < totalHits && iteration < maxIterations) {
+        iteration++;
+        if (System.currentTimeMillis() - startTime > timeoutMs) {
+          throw new IllegalStateException(
+              "Export timed out after 5 minutes. Please add filters to reduce the result set.");
         }
-      }
 
-      JsonNode lastHit = hits.get(hits.size() - 1);
-      JsonNode sortNode = lastHit.path("sort");
-      if (sortNode.isArray() && !sortNode.isEmpty()) {
-        searchAfter = new ArrayList<>();
-        for (JsonNode sortValue : sortNode) {
-          if (sortValue.isNumber()) {
-            searchAfter.add(sortValue.numberValue());
-          } else {
-            searchAfter.add(sortValue.asText());
+        SearchRequest batchRequest =
+            new SearchRequest()
+                .withQuery(baseRequest.getQuery())
+                .withIndex(baseRequest.getIndex())
+                .withQueryFilter(baseRequest.getQueryFilter())
+                .withPostFilter(baseRequest.getPostFilter())
+                .withDeleted(baseRequest.getDeleted())
+                .withDomains(baseRequest.getDomains())
+                .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
+                .withSize(SearchResultCsvExporter.BATCH_SIZE)
+                .withFrom(0)
+                .withFetchSource(true)
+                .withTrackTotalHits(false)
+                .withIncludeAggregations(false)
+                .withIncludeSourceFields(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS)
+                .withSortFieldParam(sortField)
+                .withSortOrder(
+                    baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
+                .withSearchAfter(searchAfter);
+
+        Response batchResponse = searchClient.search(batchRequest, subjectContext);
+        String batchBody =
+            batchResponse.getEntity() != null ? batchResponse.getEntity().toString() : "{}";
+        JsonNode batchRoot = JsonUtils.readTree(batchBody);
+        JsonNode hits = batchRoot.path("hits").path("hits");
+
+        if (!hits.isArray() || hits.isEmpty()) {
+          break;
+        }
+
+        for (JsonNode hit : hits) {
+          JsonNode sourceNode = hit.path("_source");
+          if (!sourceNode.isMissingNode()) {
+            Map<String, Object> source =
+                JsonUtils.readValue(sourceNode.toString(), new TypeReference<>() {});
+            writer.write(SearchResultCsvExporter.toCsvRow(source));
+            writer.newLine();
+            exported++;
           }
         }
-      } else {
-        break;
-      }
 
-      if (progressCallback != null) {
-        progressCallback.onProgress(
-            exported, totalHits, String.format("Exported %d of %d rows", exported, totalHits));
+        JsonNode lastHit = hits.get(hits.size() - 1);
+        JsonNode sortNode = lastHit.path("sort");
+        if (sortNode.isArray() && !sortNode.isEmpty()) {
+          searchAfter = new ArrayList<>();
+          for (JsonNode sortValue : sortNode) {
+            if (sortValue.isNumber()) {
+              searchAfter.add(sortValue.numberValue());
+            } else {
+              searchAfter.add(sortValue.asText());
+            }
+          }
+        } else {
+          break;
+        }
+
+        if (progressCallback != null) {
+          progressCallback.onProgress(
+              exported, totalHits, String.format("Exported %d of %d rows", exported, totalHits));
+        }
       }
     }
 
-    return csv.toString();
+    try {
+      return java.nio.file.Files.readString(tempFile, java.nio.charset.StandardCharsets.UTF_8);
+    } finally {
+      java.nio.file.Files.deleteIfExists(tempFile);
+    }
   }
 
   private static int extractTotalHits(JsonNode root) {
