@@ -46,9 +46,9 @@ const MarketplaceItemCard = ({
         }
       }}>
       <div
-        className="tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 tw:min-w-10 tw:rounded-lg [&_img]:tw:w-5 [&_img]:tw:h-5 [&_svg]:tw:w-5 [&_svg]:tw:h-5"
+        className="tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 tw:min-w-10 tw:rounded-lg tw:text-white"
         style={{ backgroundColor: backgroundColor ?? '#E0E7FF' }}>
-        <span className="tw:w-5 tw:h-5 tw:min-w-5">{icon}</span>
+        <span className="tw:w-6 tw:h-6 tw:flex tw:items-center tw:justify-center">{icon}</span>
       </div>
       <div className="tw:flex tw:flex-col tw:min-w-0 tw:gap-0.5">
         <Typography
