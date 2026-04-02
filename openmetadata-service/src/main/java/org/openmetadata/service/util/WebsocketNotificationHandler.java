@@ -269,7 +269,7 @@ public class WebsocketNotificationHandler {
     }
   }
 
-  public static UUID getUserIdFromSecurityContext(SecurityContext securityContext) {
+  private static UUID getUserIdFromSecurityContext(SecurityContext securityContext) {
     try {
       String username = securityContext.getUserPrincipal().getName();
       User user =
