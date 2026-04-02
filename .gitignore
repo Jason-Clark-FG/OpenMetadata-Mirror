@@ -196,3 +196,4 @@ ingestion/.claude/agents
 .claude/audit-results/
 .claude/connector-audit.json
 
+test-results/
