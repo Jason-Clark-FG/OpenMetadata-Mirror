@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { AxiosError } from 'axios';
 import { isEmpty } from 'lodash';
 import {
   ComponentType,
@@ -38,12 +39,22 @@ import {
   getWidgetsFromKey,
 } from '../../utils/CustomizePage/CustomizePageUtils';
 import dataMarketplaceClassBase from '../../utils/DataMarketplace/DataMarketplaceClassBase';
+import { showErrorToast } from '../../utils/ToastUtils';
 import { WidgetConfig } from '../CustomizablePage/CustomizablePage.interface';
 import './data-marketplace-page.less';
 
 const ReactGridLayout = WidthProvider(RGL) as ComponentType<
   ReactGridLayoutProps & { children?: ReactNode }
 >;
+
+const normalizeLayout = (l: WidgetConfig[]) =>
+  l
+    .map((widget) => ({
+      ...widget,
+      w: TAB_GRID_MAX_COLUMNS,
+      x: 0,
+    }))
+    .sort((a, b) => a.y - b.y);
 
 const DataMarketplacePage = () => {
   const { selectedPersona } = useApplicationStore();
@@ -63,40 +74,34 @@ const DataMarketplacePage = () => {
   const fetchDocument = useCallback(async () => {
     try {
       setIsLoading(true);
-      if (selectedPersona) {
-        const pageFQN = `${EntityType.PERSONA}.${selectedPersona.fullyQualifiedName}`;
-        const docData = await getDocumentByFQN(pageFQN);
+      if (!selectedPersona) {
+        setLayout(defaultLayout);
 
-        const pageData = docData.data?.pages?.find(
-          (p: Page) => p.pageType === PageType.DataMarketplace
-        );
+        return;
+      }
 
-        const tabLayout = getLayoutFromCustomizedPage(
-          PageType.DataMarketplace,
-          EntityTabs.OVERVIEW,
-          pageData
-        ) as WidgetConfig[];
+      const pageFQN = `${EntityType.PERSONA}.${selectedPersona.fullyQualifiedName}`;
+      const docData = await getDocumentByFQN(pageFQN);
 
-        const normalizeLayout = (l: WidgetConfig[]) =>
-          l
-            .map((widget) => ({
-              ...widget,
-              w: TAB_GRID_MAX_COLUMNS,
-              x: 0,
-            }))
-            .sort((a, b) => a.y - b.y);
+      const pageData = docData.data?.pages?.find(
+        (p: Page) => p.pageType === PageType.DataMarketplace
+      );
 
-        if (!isEmpty(tabLayout)) {
-          setLayout(normalizeLayout(tabLayout));
-        } else if (!isEmpty(pageData?.layout)) {
-          setLayout(normalizeLayout(pageData?.layout as WidgetConfig[]));
-        } else {
-          setLayout(defaultLayout);
-        }
+      const tabLayout = getLayoutFromCustomizedPage(
+        PageType.DataMarketplace,
+        EntityTabs.OVERVIEW,
+        pageData
+      ) as WidgetConfig[];
+
+      if (!isEmpty(tabLayout)) {
+        setLayout(normalizeLayout(tabLayout));
+      } else if (pageData && !isEmpty(pageData.layout)) {
+        setLayout(normalizeLayout(pageData.layout as WidgetConfig[]));
       } else {
         setLayout(defaultLayout);
       }
     } catch (error) {
+      showErrorToast(error as AxiosError);
       setLayout(defaultLayout);
     } finally {
       setIsLoading(false);
