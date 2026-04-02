@@ -63,10 +63,16 @@ const AnnouncementItemV2 = ({
       data-testid={`announcement-item-${announcement.id}`}
       role="button"
       tabIndex={0}
-      onClick={onClick}>
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}>
       <AnnouncementCardV1Content
         columnName={columnName}
-        currentBackgroundColor="theme(--color-utility-blue-100)"
+        currentBackgroundColor="var(--color-utility-blue-100)"
         description={description}
         entityFQN={entityFQN}
         entityIcon={entityIcon}

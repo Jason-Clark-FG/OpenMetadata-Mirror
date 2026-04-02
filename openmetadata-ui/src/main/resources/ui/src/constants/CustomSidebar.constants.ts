@@ -22,17 +22,19 @@ import {
   Home02,
   Settings01,
 } from '@untitledui/icons';
-import { t } from '../utils/i18next/LocalUtil';
+import { TFunction } from 'i18next';
 import { ROUTES } from './constants';
 
 export const CUSTOM_SIDEBAR_ROUTES = [ROUTES.DATA_MARKETPLACE];
 
-interface SidebarConfig {
+export interface SidebarConfig {
   items: (NavItemType | NavItemDividerType)[];
   bottomItems?: (NavItemType | NavItemDividerType)[];
 }
 
-export const MARKETPLACE_SIDEBAR_CONFIG: SidebarConfig = {
+export const getMarketplaceSidebarConfig = (
+  t: TFunction
+): SidebarConfig => ({
   items: [
     { label: t('label.home'), href: ROUTES.MY_DATA, icon: Home02 },
     {
@@ -58,4 +60,4 @@ export const MARKETPLACE_SIDEBAR_CONFIG: SidebarConfig = {
       icon: Settings01,
     },
   ],
-};
+});

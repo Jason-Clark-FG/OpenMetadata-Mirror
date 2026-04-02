@@ -41,7 +41,7 @@ const MarketplaceNav = () => {
     <Dropdown.Root>
       <AriaButton className="tw:flex tw:items-center tw:gap-1 tw:cursor-pointer tw:border-none tw:bg-transparent tw:p-0 tw:text-xl tw:font-semibold tw:text-brand-secondary tw:outline-none">
         {t('label.data-marketplace')}
-        <ChevronDown className="tw:size-5 tw:font-semilbold" />
+        <ChevronDown className="tw:size-5 tw:font-semibold" />
       </AriaButton>
       <Dropdown.Popover>
         <Dropdown.Menu onAction={handleAction}>

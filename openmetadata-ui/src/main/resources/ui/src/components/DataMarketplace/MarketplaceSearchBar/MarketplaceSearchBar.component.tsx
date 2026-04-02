@@ -179,7 +179,8 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 tabIndex={0}
                 onClick={() => handleDataProductClick(dp)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     handleDataProductClick(dp);
                   }
                 }}>
@@ -210,7 +211,8 @@ const MarketplaceSearchBar = ({ isEditView }: { isEditView?: boolean }) => {
                 tabIndex={0}
                 onClick={() => handleDomainClick(domain)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
                     handleDomainClick(domain);
                   }
                 }}>

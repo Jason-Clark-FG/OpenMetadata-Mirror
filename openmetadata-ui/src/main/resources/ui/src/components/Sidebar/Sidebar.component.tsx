@@ -18,8 +18,9 @@ import {
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
-import { MARKETPLACE_SIDEBAR_CONFIG } from '../../constants/CustomSidebar.constants';
+import { getMarketplaceSidebarConfig } from '../../constants/CustomSidebar.constants';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import BrandImage from '../common/BrandImage/BrandImage';
@@ -49,12 +50,13 @@ const COLLAPSED_WIDTH = 72;
 const EXPANDED_WIDTH = 197;
 
 const Sidebar = ({ className }: SidebarProps) => {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const {
     preferences: { isSidebarCollapsed: collapsed },
   } = useCurrentUserPreferences();
 
-  const config = MARKETPLACE_SIDEBAR_CONFIG;
+  const config = useMemo(() => getMarketplaceSidebarConfig(t), [t]);
 
   const allItems = useMemo(
     () => [...config.items, ...(config.bottomItems ?? [])],

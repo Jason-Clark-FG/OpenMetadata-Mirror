@@ -156,7 +156,7 @@ const MarketplaceNavBar = () => {
         }
       }
     },
-    [hasTaskNotification]
+    [hasTaskNotification, hasMentionNotification, activeTab]
   );
 
   const handleActiveTab = (key: string) => {
