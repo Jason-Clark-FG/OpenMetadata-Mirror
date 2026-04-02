@@ -4,8 +4,11 @@ on:
   schedule:
     - cron: '15 4 * * *'
   workflow_dispatch:
+permissions:
+  contents: read
+
 concurrency:
-  group: trivy-ingestion-base-slim-scan-${{ github.run_id }}
+  group: ${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
