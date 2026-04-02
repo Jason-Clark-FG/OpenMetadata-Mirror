@@ -114,6 +114,9 @@ export const GenericProvider = <T extends Omit<EntityReference, 'type'>>({
 
   const { entityRules } = useEntityRules(type);
 
+  // limit=1000 is the backend max. Entities with more tracked field changes
+  // will have entries beyond this limit silently omitted. Use fieldPrefix
+  // filtering when targeting a specific section (e.g., 'columns.').
   const { changeSummary } = useChangeSummary(
     isVersionView ? '' : type,
     isVersionView ? '' : data.id ?? '',
