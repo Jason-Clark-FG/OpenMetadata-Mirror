@@ -27,10 +27,12 @@ import static org.openmetadata.schema.type.Include.DELETED;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.schema.utils.EntityInterfaceUtil.quoteName;
 import static org.openmetadata.service.Entity.ADMIN_USER_NAME;
+import static org.openmetadata.service.Entity.DATA_CONTRACT;
 import static org.openmetadata.service.Entity.DATA_PRODUCT;
 import static org.openmetadata.service.Entity.DOMAIN;
 import static org.openmetadata.service.Entity.FIELD_CERTIFICATION;
 import static org.openmetadata.service.Entity.FIELD_CHILDREN;
+import static org.openmetadata.service.Entity.FIELD_DATA_CONTRACT;
 import static org.openmetadata.service.Entity.FIELD_DATA_PRODUCTS;
 import static org.openmetadata.service.Entity.FIELD_DELETED;
 import static org.openmetadata.service.Entity.FIELD_DESCRIPTION;
@@ -70,7 +72,6 @@ import static org.openmetadata.service.util.EntityUtil.entityReferenceMatch;
 import static org.openmetadata.service.util.EntityUtil.fieldAdded;
 import static org.openmetadata.service.util.EntityUtil.fieldDeleted;
 import static org.openmetadata.service.util.EntityUtil.fieldUpdated;
-import static org.openmetadata.service.util.EntityUtil.getColumnField;
 import static org.openmetadata.service.util.EntityUtil.getEntityReferences;
 import static org.openmetadata.service.util.EntityUtil.getExtensionField;
 import static org.openmetadata.service.util.EntityUtil.isNullOrEmptyChangeDescription;
@@ -378,6 +379,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   protected final boolean supportsVotes;
   @Getter protected final boolean supportsDomains;
   protected final boolean supportsDataProducts;
+  protected final boolean supportsDataContract;
   @Getter protected final boolean supportsReviewers;
   @Getter protected final boolean supportsExperts;
   @Getter protected final boolean supportsEntityStatus;
@@ -498,6 +500,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       this.patchFields.addField(allowedFields, FIELD_DATA_PRODUCTS);
       this.putFields.addField(allowedFields, FIELD_DATA_PRODUCTS);
     }
+    this.supportsDataContract = allowedFields.contains(FIELD_DATA_CONTRACT);
     this.supportsStyle = allowedFields.contains(FIELD_STYLE);
     if (supportsStyle) {
       this.patchFields.addField(allowedFields, FIELD_STYLE);
@@ -2261,8 +2264,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     for (T e : entities) {
       prepareInternal(e, false);
     }
-    List<T> createdEntities = createManyEntities(entities);
-    return createdEntities;
+    return createManyEntities(entities);
   }
 
   public final T create(UriInfo uriInfo, T entity) {
@@ -2546,6 +2548,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
         fields.contains(FIELD_DATA_PRODUCTS)
             ? getDataProducts(entity, relationIncludes.getIncludeFor(FIELD_DATA_PRODUCTS))
             : entity.getDataProducts());
+    entity.setDataContract(
+        fields.contains(FIELD_DATA_CONTRACT)
+            ? getDataContract(entity, relationIncludes.getIncludeFor(FIELD_DATA_CONTRACT))
+            : entity.getDataContract());
     entity.setFollowers(
         fields.contains(FIELD_FOLLOWERS)
             ? getFollowers(entity, relationIncludes.getIncludeFor(FIELD_FOLLOWERS))
@@ -2605,31 +2611,13 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  /**
-   * Count how many relationship fields are requested to determine if batch fetching is beneficial
-   */
-  private int countRelationshipFields(Fields fields) {
-    int count = 0;
-    if (fields.contains(FIELD_OWNERS)) count++;
-    if (fields.contains(FIELD_TAGS)) count++;
-    if (fields.contains(FIELD_CERTIFICATION)) count++;
-    if (fields.contains(FIELD_EXTENSION)) count++;
-    if (fields.contains(FIELD_DOMAINS)) count++;
-    if (fields.contains(FIELD_DATA_PRODUCTS)) count++;
-    if (fields.contains(FIELD_FOLLOWERS)) count++;
-    if (fields.contains(FIELD_CHILDREN)) count++;
-    if (fields.contains(FIELD_EXPERTS)) count++;
-    if (fields.contains(FIELD_REVIEWERS)) count++;
-    if (fields.contains(FIELD_VOTES)) count++;
-    return count;
-  }
-
   public final void clearFieldsInternal(T entity, Fields fields) {
     entity.setOwners(fields.contains(FIELD_OWNERS) ? entity.getOwners() : null);
     entity.setTags(fields.contains(FIELD_TAGS) ? entity.getTags() : null);
     entity.setExtension(fields.contains(FIELD_EXTENSION) ? entity.getExtension() : null);
     entity.setDomains(fields.contains(FIELD_DOMAINS) ? entity.getDomains() : null);
     entity.setDataProducts(fields.contains(FIELD_DATA_PRODUCTS) ? entity.getDataProducts() : null);
+    entity.setDataContract(fields.contains(FIELD_DATA_CONTRACT) ? entity.getDataContract() : null);
     entity.setFollowers(fields.contains(FIELD_FOLLOWERS) ? entity.getFollowers() : null);
     entity.setChildren(fields.contains(FIELD_CHILDREN) ? entity.getChildren() : null);
     entity.setExperts(fields.contains(FIELD_EXPERTS) ? entity.getExperts() : null);
@@ -3850,6 +3838,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
           "tags",
           "domains",
           "dataProducts",
+          "dataContract",
           "followers",
           "experts",
           "reviewers",
@@ -4537,7 +4526,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
             TagLabel.LabelType.AUTOMATED.ordinal(),
             TagLabel.State.CONFIRMED.ordinal(),
             null,
-            null,
+            entity.getUpdatedBy(),
             metadata);
   }
 
@@ -4572,6 +4561,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
               .withTagFQN(cert.getTagLabel().getTagFQN())
               .withLabelType(TagLabel.LabelType.AUTOMATED)
               .withState(TagLabel.State.CONFIRMED)
+              .withAppliedBy(entity.getUpdatedBy())
               .withMetadata(new TagLabelMetadata().withExpiryDate(cert.getExpiryDate()));
       certTagsByTarget.put(entity.getFullyQualifiedName(), List.of(tagLabel));
     }
@@ -4725,9 +4715,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   public final Map<String, List<TagLabel>> getTagsByPrefix(String prefix, String postfix) {
-    return !supportsTags
-        ? null
-        : daoCollection.tagUsageDAO().getTagsByPrefix(prefix, postfix, true);
+    if (!supportsTags) {
+      return null;
+    }
+    Map<String, List<TagLabel>> result =
+        daoCollection.tagUsageDAO().getTagsByPrefix(prefix, postfix, true);
+    String certClassification = getCertificationClassification();
+    if (certClassification != null && result != null) {
+      result
+          .values()
+          .forEach(
+              tags ->
+                  tags.removeIf(
+                      tag ->
+                          certClassification.equals(
+                              FullyQualifiedName.getParentFQN(tag.getTagFQN()))));
+    }
+    return result;
   }
 
   protected List<EntityReference> getFollowers(T entity) {
@@ -5388,6 +5392,27 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return findFrom(entityId, entityType, Relationship.HAS, DATA_PRODUCT, include);
   }
 
+  protected EntityReference getDataContract(T entity) {
+    return getDataContract(entity, NON_DELETED);
+  }
+
+  protected EntityReference getDataContract(T entity, Include include) {
+    if (!supportsDataContract) {
+      return null;
+    }
+
+    Optional<List<EntityReference>> bundleDataContract =
+        getRelationsFromReadBundle(entity, FIELD_DATA_CONTRACT, include);
+    if (bundleDataContract.isPresent()) {
+      List<EntityReference> refs = bundleDataContract.get();
+      return (refs == null || refs.isEmpty()) ? null : refs.get(0);
+    }
+
+    List<EntityReference> refs =
+        findTo(entity.getId(), entityType, Relationship.CONTAINS, DATA_CONTRACT, include);
+    return refs.isEmpty() ? null : refs.get(0);
+  }
+
   public EntityInterface getParentEntity(T entity, String fields) {
     return null;
   }
@@ -5885,10 +5910,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     return domainFqns.stream()
-        .map(
-            domainFqn -> {
-              return Entity.getEntityReferenceByName(DOMAIN, domainFqn, NON_DELETED);
-            })
+        .map(domainFqn -> Entity.getEntityReferenceByName(DOMAIN, domainFqn, NON_DELETED))
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
   }
@@ -5902,10 +5924,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     return domains.stream()
-        .map(
-            domain -> {
-              return Entity.getEntityReferenceById(DOMAIN, domain.getId(), NON_DELETED);
-            })
+        .map(domain -> Entity.getEntityReferenceById(DOMAIN, domain.getId(), NON_DELETED))
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
   }
@@ -7878,14 +7897,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
               entityType, original.getChangeDescription().getPreviousVersion());
       String json =
           daoCollection.entityExtensionDAO().getExtension(original.getId(), extensionName);
-      T previousVersion = JsonUtils.readValue(json, entityClass);
 
       // IMPORTANT: Do NOT call setFieldsInternal here!
       // The JSON already contains the correct historical state of all fields including experts.
       // Calling setFieldsInternal would fetch current relationships from DB which is wrong.
       // The version history JSON is a complete snapshot of the entity at that point in time.
-
-      return previousVersion;
+      return JsonUtils.readValue(json, entityClass);
     }
   }
 
@@ -7958,23 +7975,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
               stored.getFullyQualifiedName(), updated.getFullyQualifiedName());
         }
 
-        updateColumnDescription(fieldName, stored, updated);
-        updateColumnDisplayName(stored, updated);
-        updateColumnDataLength(stored, updated);
-        updateColumnPrecision(stored, updated);
-        updateColumnScale(stored, updated);
+        String columnPrefix =
+            EntityUtil.getFieldName(fieldName, FullyQualifiedName.quoteName(updated.getName()));
+        updateColumnDescription(columnPrefix, stored, updated);
+        updateColumnDisplayName(columnPrefix, stored, updated);
+        updateColumnDataLength(columnPrefix, stored, updated);
+        updateColumnPrecision(columnPrefix, stored, updated);
+        updateColumnScale(columnPrefix, stored, updated);
         updateTags(
             stored.getFullyQualifiedName(),
-            EntityUtil.getFieldName(fieldName, updated.getName(), FIELD_TAGS),
+            EntityUtil.getFieldName(columnPrefix, FIELD_TAGS),
             stored.getTags(),
             updated.getTags());
-        updateColumnConstraint(stored, updated);
+        updateColumnConstraint(columnPrefix, stored, updated);
         updateColumnExtension(stored, updated);
 
         if (updated.getChildren() != null && stored.getChildren() != null) {
-          String childrenFieldName = EntityUtil.getFieldName(fieldName, updated.getName());
-          updateColumns(
-              childrenFieldName, stored.getChildren(), updated.getChildren(), columnMatch);
+          updateColumns(columnPrefix, stored.getChildren(), updated.getChildren(), columnMatch);
         }
       }
 
@@ -7990,30 +8007,35 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     private void updateColumnDescription(
-        String fieldName, Column origColumn, Column updatedColumn) {
+        String fieldPrefix, Column origColumn, Column updatedColumn) {
       if (operation.isPut() && !nullOrEmpty(origColumn.getDescription()) && updatedByBot()) {
-        // Revert the non-empty task description if being updated by a bot
         updatedColumn.setDescription(origColumn.getDescription());
         return;
       }
-      String columnField =
-          EntityUtil.getFieldName(fieldName, origColumn.getName(), FIELD_DESCRIPTION);
-      recordChange(columnField, origColumn.getDescription(), updatedColumn.getDescription());
+      recordChange(
+          EntityUtil.getFieldName(fieldPrefix, FIELD_DESCRIPTION),
+          origColumn.getDescription(),
+          updatedColumn.getDescription());
     }
 
-    private void updateColumnDisplayName(Column origColumn, Column updatedColumn) {
+    private void updateColumnDisplayName(
+        String fieldPrefix, Column origColumn, Column updatedColumn) {
       if (operation.isPut() && !nullOrEmpty(origColumn.getDisplayName()) && updatedByBot()) {
-        // Revert the non-empty task display name if being updated by a bot
         updatedColumn.setDisplayName(origColumn.getDisplayName());
         return;
       }
-      String columnField = getColumnField(origColumn, FIELD_DISPLAY_NAME);
-      recordChange(columnField, origColumn.getDisplayName(), updatedColumn.getDisplayName());
+      recordChange(
+          EntityUtil.getFieldName(fieldPrefix, FIELD_DISPLAY_NAME),
+          origColumn.getDisplayName(),
+          updatedColumn.getDisplayName());
     }
 
-    private void updateColumnConstraint(Column origColumn, Column updatedColumn) {
-      String columnField = getColumnField(origColumn, "constraint");
-      recordChange(columnField, origColumn.getConstraint(), updatedColumn.getConstraint());
+    private void updateColumnConstraint(
+        String fieldPrefix, Column origColumn, Column updatedColumn) {
+      recordChange(
+          EntityUtil.getFieldName(fieldPrefix, "constraint"),
+          origColumn.getConstraint(),
+          updatedColumn.getConstraint());
     }
 
     private void updateColumnExtension(Column origColumn, Column updatedColumn) {
@@ -8029,9 +8051,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       }
     }
 
-    protected void updateColumnDataLength(Column origColumn, Column updatedColumn) {
-      String columnField = getColumnField(origColumn, "dataLength");
-
+    protected void updateColumnDataLength(
+        String fieldPrefix, Column origColumn, Column updatedColumn) {
+      String columnField = EntityUtil.getFieldName(fieldPrefix, "dataLength");
       boolean updated =
           recordChange(columnField, origColumn.getDataLength(), updatedColumn.getDataLength());
 
@@ -8039,37 +8061,33 @@ public abstract class EntityRepository<T extends EntityInterface> {
         Integer origDataLength = origColumn.getDataLength();
         Integer updatedDataLength = updatedColumn.getDataLength();
 
-        // Ensure safe comparison when one of them is null
         if (origDataLength == null
             || (updatedDataLength != null && updatedDataLength < origDataLength)) {
-          // The data length of a column was reduced or added. Treat it as backward-incompatible
-          // change
           majorVersionChange = true;
         }
       }
     }
 
-    private void updateColumnPrecision(Column origColumn, Column updatedColumn) {
-      String columnField = getColumnField(origColumn, "precision");
+    private void updateColumnPrecision(
+        String fieldPrefix, Column origColumn, Column updatedColumn) {
+      String columnField = EntityUtil.getFieldName(fieldPrefix, "precision");
       boolean updated =
           recordChange(columnField, origColumn.getPrecision(), updatedColumn.getPrecision());
       if (origColumn.getPrecision() != null
           && updated
           && (updatedColumn.getPrecision() == null
               || updatedColumn.getPrecision() < origColumn.getPrecision())) {
-        // Previously set precision was reduced or removed. Treat it as backward-incompatible change
         majorVersionChange = true;
       }
     }
 
-    private void updateColumnScale(Column origColumn, Column updatedColumn) {
-      String columnField = getColumnField(origColumn, "scale");
+    private void updateColumnScale(String fieldPrefix, Column origColumn, Column updatedColumn) {
+      String columnField = EntityUtil.getFieldName(fieldPrefix, "scale");
       boolean updated = recordChange(columnField, origColumn.getScale(), updatedColumn.getScale());
       if (origColumn.getScale() != null
           && updated
           && (updatedColumn.getScale() == null
               || updatedColumn.getScale() < origColumn.getScale())) {
-        // Previously set scale was reduced or removed. Treat it as backward-incompatible change
         majorVersionChange = true;
       }
     }
@@ -8395,6 +8413,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     boolean loadDomains = supportsDomains && fields.contains(FIELD_DOMAINS);
     boolean loadReviewers = supportsReviewers && fields.contains(FIELD_REVIEWERS);
     boolean loadDataProducts = supportsDataProducts && fields.contains(FIELD_DATA_PRODUCTS);
+    boolean loadDataContract = supportsDataContract && fields.contains(FIELD_DATA_CONTRACT);
     boolean loadVotes = supportsVotes && fields.contains(FIELD_VOTES);
     boolean loadChildren = supportsChildren && fields.contains(FIELD_CHILDREN);
     boolean loadExperts = supportsExperts && fields.contains(FIELD_EXPERTS);
@@ -8404,6 +8423,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         && !loadDomains
         && !loadReviewers
         && !loadDataProducts
+        && !loadDataContract
         && !loadVotes
         && !loadChildren
         && !loadExperts) {
@@ -8428,7 +8448,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
 
     List<Integer> outgoingRelations = new ArrayList<>();
-    if (loadChildren) {
+    if (loadChildren || loadDataContract) {
       outgoingRelations.add(Relationship.CONTAINS.ordinal());
     }
     if (loadExperts) {
@@ -8463,6 +8483,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     Map<UUID, List<EntityReference>> upVotersByEntity = loadVotes ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> downVotersByEntity = loadVotes ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> childrenByEntity = loadChildren ? new HashMap<>() : null;
+    Map<UUID, EntityReference> dataContractByEntity = loadDataContract ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> expertsByEntity = loadExperts ? new HashMap<>() : null;
 
     for (CollectionDAO.EntityRelationshipObject record : incomingRecords) {
@@ -8544,6 +8565,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
         case CONTAINS -> {
           if (loadChildren && entityType.equals(targetType)) {
             childrenByEntity.computeIfAbsent(entityId, ignored -> new ArrayList<>()).add(targetRef);
+          } else if (loadDataContract && DATA_CONTRACT.equals(targetType)) {
+            dataContractByEntity.putIfAbsent(entityId, targetRef);
           }
         }
         case EXPERT -> {
@@ -8591,6 +8614,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
       if (loadChildren) {
         entity.setChildren(childrenByEntity.get(entityId));
       }
+      if (loadDataContract) {
+        entity.setDataContract(dataContractByEntity.get(entityId));
+      }
       if (loadExperts) {
         entity.setExperts(expertsByEntity.getOrDefault(entityId, Collections.emptyList()));
       }
@@ -8616,6 +8642,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
     if (loadChildren) {
       handledFields.add(FIELD_CHILDREN);
+    }
+    if (loadDataContract) {
+      handledFields.add(FIELD_DATA_CONTRACT);
     }
     if (loadExperts) {
       handledFields.add(FIELD_EXPERTS);
@@ -9064,15 +9093,24 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     Map<String, List<TagLabel>> targetHashToTagLabel =
         populateTagLabel(listOrEmpty(daoCollection.tagUsageDAO().getTagsInternalBatch(entityFQNs)));
+    String certClassification = getCertificationClassification();
     return entityFQNs.stream()
         .collect(
             Collectors.toMap(
                 Function.identity(),
                 fqn -> {
                   String targetFQNHash = FullyQualifiedName.buildHash(fqn);
-                  return Optional.ofNullable(targetHashToTagLabel.get(targetFQNHash))
-                      .filter(list -> !list.isEmpty())
-                      .orElseGet(ArrayList::new);
+                  List<TagLabel> tags =
+                      Optional.ofNullable(targetHashToTagLabel.get(targetFQNHash))
+                          .filter(list -> !list.isEmpty())
+                          .orElseGet(ArrayList::new);
+                  if (certClassification != null) {
+                    tags.removeIf(
+                        tag ->
+                            certClassification.equals(
+                                FullyQualifiedName.getParentFQN(tag.getTagFQN())));
+                  }
+                  return tags;
                 },
                 (a, b) -> a));
   }
@@ -9698,10 +9736,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
     BULK_JOBS.put(jobId, mergedJob);
 
     mergedJob.whenComplete(
-        (result, throwable) -> {
-          CompletableFuture.delayedExecutor(1, TimeUnit.HOURS)
-              .execute(() -> BULK_JOBS.remove(jobId));
-        });
+        (result, throwable) ->
+            CompletableFuture.delayedExecutor(1, TimeUnit.HOURS)
+                .execute(() -> BULK_JOBS.remove(jobId)));
 
     return mergedJob;
   }
