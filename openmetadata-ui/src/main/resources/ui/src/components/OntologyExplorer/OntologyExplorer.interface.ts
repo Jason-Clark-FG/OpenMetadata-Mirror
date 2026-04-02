@@ -30,6 +30,7 @@ export interface OntologyNode {
   id: string;
   label: string;
   originalLabel?: string;
+  assetCount?: number;
   type: string;
   fullyQualifiedName?: string;
   description?: string;
@@ -59,9 +60,11 @@ import {
   LayoutType,
   type LayoutEngineType,
 } from './OntologyExplorer.constants';
+import type { GraphSearchHighlightInput } from './utils/graphSearchHighlight';
 
 export type LayoutAlgorithm = LayoutType;
 export type { LayoutEngineType } from './OntologyExplorer.constants';
+export type { GraphSearchHighlightInput } from './utils/graphSearchHighlight';
 export type GraphViewMode = 'overview' | 'hierarchy' | 'crossGlossary';
 
 export interface GraphSettings {
@@ -85,6 +88,8 @@ export interface OntologyGraphHandle {
   runLayout: () => void;
   focusNode: (nodeId: string) => void;
   getNodePositions: () => Record<string, { x: number; y: number }>;
+  exportAsPng: () => Promise<void>;
+  exportAsSvg: () => Promise<void>;
 }
 
 export interface HierarchyComboInfo {
@@ -101,14 +106,17 @@ export interface OntologyGraphProps {
   settings: GraphSettings;
   nodePositions?: Record<string, { x: number; y: number }>;
   selectedNodeId?: string | null;
+  expandedTermIds?: Set<string>;
   glossaryColorMap: Record<string, string>;
   dataSignature?: string;
   explorationMode?: ExplorationMode;
   hierarchyCombos?: HierarchyComboInfo[];
   focusNodeId?: string | null;
+  graphSearchHighlight?: GraphSearchHighlightInput | null;
   onNodeClick: (
     node: OntologyNode,
-    position?: { x: number; y: number }
+    position?: { x: number; y: number },
+    meta?: { dataModeAssetBadgeClick?: boolean }
   ) => void;
   onNodeDoubleClick: (node: OntologyNode) => void;
   onNodeContextMenu: (
@@ -118,22 +126,13 @@ export interface OntologyGraphProps {
   onPaneClick: () => void;
 }
 
-export interface EnhancedDetailsPanelProps {
-  node: OntologyNode | null;
-  position?: { x: number; y: number };
-  onClose: () => void;
-  edges?: OntologyEdge[];
-  nodes?: OntologyNode[];
-  relationTypes?: GlossaryTermRelationType[];
-  onNodeClick?: (nodeId: string) => void;
-}
-
 export interface FilterToolbarProps {
   filters: GraphFilters;
   glossaries: Glossary[];
   relationTypes: GlossaryTermRelationType[];
   onFiltersChange: (filters: GraphFilters) => void;
   onViewModeChange?: (viewMode: GraphViewMode) => void;
+  onClearAll?: () => void;
   viewModeDisabled?: boolean;
 }
 
@@ -213,9 +212,11 @@ export interface BuildGraphDataProps {
   explorationMode: ExplorationMode;
   settings: GraphSettings;
   selectedNodeId: string | null;
+  expandedTermIds?: Set<string>;
   clickedEdgeId: string | null;
   nodePositions?: Record<string, { x: number; y: number }>;
   glossaryColorMap: Record<string, string>;
   layoutType: LayoutEngineType;
   hierarchyCombos?: HierarchyComboInfo[];
+  graphSearchHighlight?: GraphSearchHighlightInput | null;
 }
