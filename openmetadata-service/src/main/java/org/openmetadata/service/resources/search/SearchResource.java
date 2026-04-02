@@ -275,7 +275,7 @@ public class SearchResource {
       @Context SecurityContext securityContext,
       @Parameter(description = "Search Query Text") @DefaultValue("*") @QueryParam("q")
           String query,
-      @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
+      @Parameter(description = "ElasticSearch Index name, defaults to table")
           @DefaultValue("table")
           @QueryParam("index")
           String index,
