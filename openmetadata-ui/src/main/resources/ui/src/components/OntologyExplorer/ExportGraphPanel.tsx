@@ -34,7 +34,7 @@ const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({
 
   const items = [
     { id: EXPORT_PNG, label: t('label.png-uppercase') },
-    { id: EXPORT_SVG, label: t('label.svg-uppercase') },
+    { id: EXPORT_SVG, label: `${t('label.svg-uppercase')} (raster)` },
   ];
 
   const handleAction = async (key: Key) => {

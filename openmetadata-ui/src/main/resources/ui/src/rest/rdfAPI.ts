@@ -43,6 +43,8 @@ export interface EntityGraphParams {
   relationshipTypes?: string[];
 }
 
+export type EntityGraphExportFormat = 'turtle' | 'jsonld';
+
 export interface GlossaryGraphParams {
   glossaryId?: string;
   relationTypes?: string;
@@ -90,6 +92,68 @@ export const getEntityGraphData = async (
   });
 
   return response.data;
+};
+
+export const exportEntityGraph = async (
+  params: EntityGraphParams & {
+    format?: EntityGraphExportFormat;
+  }
+): Promise<Blob> => {
+  const {
+    entityId,
+    entityType,
+    depth = 2,
+    entityTypes,
+    relationshipTypes,
+    format = 'turtle',
+  } = params;
+
+  const response = await APIClient.get('/rdf/graph/explore/export', {
+    params: {
+      entityId,
+      entityType,
+      depth,
+      entityTypes: entityTypes?.length ? entityTypes.join(',') : undefined,
+      relationshipTypes: relationshipTypes?.length
+        ? relationshipTypes.join(',')
+        : undefined,
+      format,
+    },
+    responseType: 'blob',
+    headers: {
+      Accept: format === 'jsonld' ? 'application/ld+json' : 'text/turtle',
+    },
+  });
+
+  return response.data;
+};
+
+export const downloadEntityGraph = async (
+  params: EntityGraphParams & {
+    entityName: string;
+    format?: EntityGraphExportFormat;
+  }
+): Promise<void> => {
+  const { entityName, format = 'turtle', ...graphParams } = params;
+  const blob = await exportEntityGraph({ ...graphParams, format });
+  const safeFilename = entityName.replace(/[^a-zA-Z0-9-_]/g, '_');
+  const extension = format === 'jsonld' ? 'jsonld' : 'ttl';
+  const filename = `${safeFilename}_knowledge_graph.${extension}`;
+  const downloadBlob =
+    blob instanceof Blob ? blob : new Blob([blob], { type: 'text/plain' });
+
+  const url = window.URL.createObjectURL(downloadBlob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => {
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }, 100);
 };
 
 export const getGlossaryTermGraph = async (

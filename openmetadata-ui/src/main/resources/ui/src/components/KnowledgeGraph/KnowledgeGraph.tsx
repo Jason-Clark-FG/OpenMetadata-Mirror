@@ -13,17 +13,22 @@
 
 import {
     AimOutlined,
+    ExportOutlined,
     FullscreenOutlined,
     NodeCollapseOutlined,
     PartitionOutlined,
     ReloadOutlined,
+    SearchOutlined,
     ZoomInOutlined,
     ZoomOutOutlined
 } from '@ant-design/icons';
 import {
     Button,
     Card,
+    Dropdown,
     Empty,
+    Input,
+    MenuProps,
     Select,
     Slider,
     Space,
@@ -48,7 +53,11 @@ import {
     NodeChosenNodeFunction,
     Options
 } from 'vis-network';
-import { getEntityGraphData } from '../../rest/rdfAPI';
+import {
+    downloadEntityGraph,
+    EntityGraphExportFormat,
+    getEntityGraphData
+} from '../../rest/rdfAPI';
 import { showErrorToast } from '../../utils/ToastUtils';
 import {
     GraphData,
@@ -76,8 +85,43 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
   const [selectedRelationshipTypes, setSelectedRelationshipTypes] = useState<
     string[]
   >([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [, setHoveredNode] = useState<GraphNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+
+  const normalizedSearchQuery = useMemo(
+    () => searchQuery.trim().toLowerCase(),
+    [searchQuery]
+  );
+
+  const searchMatches = useMemo(() => {
+    if (!graphData || !normalizedSearchQuery) {
+      return [];
+    }
+
+    return graphData.nodes.filter((node) => {
+      const searchText = [
+        node.label,
+        node.name,
+        node.fullyQualifiedName,
+        node.description,
+        node.type,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchText.includes(normalizedSearchQuery);
+    });
+  }, [graphData, normalizedSearchQuery]);
+
+  const matchingNodeIds = useMemo(
+    () => new Set(searchMatches.map((node) => node.id)),
+    [searchMatches]
+  );
+
+  const firstMatchingNodeId = searchMatches[0]?.id;
 
   const networkOptions: Options = useMemo(
     () => ({
@@ -408,6 +452,9 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     // Enhance nodes with better tooltips and styling
     const enhancedNodes = graphData.nodes.map((node) => {
       const isCurrentEntity = node.id.includes(entity?.id ?? '');
+      const hasActiveSearch = normalizedSearchQuery.length > 0;
+      const isMatchingSearch = matchingNodeIds.has(node.id);
+      const isSearchDimmed = hasActiveSearch && !isMatchingSearch;
 
       // Get icon for node type
       const getNodeIcon = (type: string) => {
@@ -445,12 +492,40 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         title: false, // Disable default HTML tooltip
         font: {
           size: isCurrentEntity ? 12 : 11,
+          color: isSearchDimmed ? '#bfbfbf' : '#262626',
           multi: true,
           bold: {
             size: isCurrentEntity ? 13 : 12,
           },
         },
         borderWidth: isCurrentEntity ? 3 : 1,
+        color: hasActiveSearch
+          ? isMatchingSearch
+            ? {
+                background: '#f0f7ff',
+                border: isCurrentEntity ? '#0958d9' : '#1890ff',
+                highlight: {
+                  background: '#d6e4ff',
+                  border: isCurrentEntity ? '#0958d9' : '#1890ff',
+                },
+                hover: {
+                  background: '#d6e4ff',
+                  border: isCurrentEntity ? '#0958d9' : '#1890ff',
+                },
+              }
+            : {
+                background: '#fafafa',
+                border: '#d9d9d9',
+                highlight: {
+                  background: '#fafafa',
+                  border: '#d9d9d9',
+                },
+                hover: {
+                  background: '#fafafa',
+                  border: '#d9d9d9',
+                },
+              }
+          : undefined,
         margin: {
           top: 10,
           bottom: 10,
@@ -551,7 +626,35 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     return () => {
       networkRef.current?.destroy();
     };
-  }, [graphData, loading, networkOptions, entity?.id]);
+  }, [
+    graphData,
+    loading,
+    matchingNodeIds,
+    networkOptions,
+    normalizedSearchQuery,
+    entity?.id,
+  ]);
+
+  useEffect(() => {
+    if (!networkRef.current) {
+      return;
+    }
+
+    if (!normalizedSearchQuery || !firstMatchingNodeId) {
+      networkRef.current.unselectAll();
+
+      return;
+    }
+
+    networkRef.current.selectNodes([firstMatchingNodeId]);
+    networkRef.current.focus(firstMatchingNodeId, {
+      scale: 1.25,
+      animation: {
+        duration: 600,
+        easingFunction: 'easeInOutQuad',
+      },
+    });
+  }, [firstMatchingNodeId, normalizedSearchQuery]);
 
   const handleFit = () => {
     networkRef.current?.fit({
@@ -612,6 +715,58 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       }
     }
   };
+
+  const handleExportGraph = useCallback(
+    async (format: EntityGraphExportFormat) => {
+      if (!entity?.id) {
+        return;
+      }
+
+      setExporting(true);
+      try {
+        await downloadEntityGraph({
+          entityId: entity.id,
+          entityName: entity.displayName || entity.name || entity.id,
+          entityType,
+          depth: selectedDepth,
+          entityTypes: selectedEntityTypes,
+          relationshipTypes: selectedRelationshipTypes,
+          format,
+        });
+      } catch (error) {
+        showErrorToast(
+          error as AxiosError,
+          t('server.entity-graph-fetch-error')
+        );
+      } finally {
+        setExporting(false);
+      }
+    },
+    [
+      entity?.displayName,
+      entity?.id,
+      entity?.name,
+      entityType,
+      selectedDepth,
+      selectedEntityTypes,
+      selectedRelationshipTypes,
+      t,
+    ]
+  );
+
+  const exportMenuItems = useMemo<MenuProps['items']>(
+    () => [
+      {
+        key: 'turtle',
+        label: 'TTL',
+      },
+      {
+        key: 'jsonld',
+        label: 'JSON-LD',
+      },
+    ],
+    []
+  );
 
   return (
     <div className="knowledge-graph-container">
@@ -736,6 +891,31 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         ) : (
           <>
             <div className="knowledge-graph-canvas" ref={containerRef} />
+            <div className="knowledge-graph-footer-controls">
+              <Input
+                allowClear
+                className="knowledge-graph-search"
+                placeholder={t('label.search-in-graph')}
+                prefix={<SearchOutlined />}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+              <Dropdown.Button
+                className="knowledge-graph-export-button"
+                disabled={exporting}
+                loading={exporting}
+                menu={{
+                  items: exportMenuItems,
+                  onClick: ({ key }) =>
+                    void handleExportGraph(key as EntityGraphExportFormat),
+                }}
+                onClick={() => void handleExportGraph('turtle')}>
+                <Space size={8}>
+                  <ExportOutlined />
+                  {t('label.export-graph')}
+                </Space>
+              </Dropdown.Button>
+            </div>
 
             {/* Selected node details */}
             {selectedNode && (

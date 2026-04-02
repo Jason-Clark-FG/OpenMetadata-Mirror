@@ -794,6 +794,45 @@ public class RdfRepository {
     }
   }
 
+  public String exportEntityGraph(
+      UUID entityId,
+      String entityType,
+      int depth,
+      Set<String> entityTypes,
+      Set<String> relationshipTypes,
+      String format)
+      throws IOException {
+    if (!isEnabled()) {
+      throw new IllegalStateException("RDF Repository is not enabled");
+    }
+
+    String validatedEntityType = requireKnownEntityType(entityType);
+    String normalizedFormat = normalizeEntityGraphExportFormat(format);
+    String entityUri =
+        config.getBaseUri().toString() + "entity/" + validatedEntityType + "/" + entityId;
+
+    try {
+      EntityGraphTraversalResult traversalResult = traverseEntityGraph(entityUri, depth);
+      FilteredEntityGraph filteredGraph =
+          applyGraphFilters(
+              entityUri,
+              traversalResult.nodeUris(),
+              traversalResult.edges(),
+              entityTypes,
+              relationshipTypes);
+
+      Model model = buildEntityGraphExportModel(filteredGraph.nodeUris(), filteredGraph.edges());
+
+      java.io.StringWriter writer = new java.io.StringWriter();
+      model.write(writer, normalizedFormat);
+
+      return writer.toString();
+    } catch (Exception e) {
+      LOG.error("Error exporting entity graph for {}", entityUri, e);
+      throw new IOException("Failed to export entity graph", e);
+    }
+  }
+
   private String requireKnownEntityType(String entityType) {
     if (entityType == null || entityType.isBlank()) {
       throw new IllegalArgumentException("Entity type is required");
@@ -1614,7 +1653,7 @@ public class RdfRepository {
           continue;
         }
 
-        EdgeInfo edge = new EdgeInfo(subjectUri, objectUri, relationType);
+        EdgeInfo edge = new EdgeInfo(subjectUri, objectUri, relationType, predicate);
         edges.add(edge);
         discoveredNodes.add(subjectUri);
         discoveredNodes.add(objectUri);
@@ -1635,11 +1674,13 @@ public class RdfRepository {
     final String fromUri;
     final String toUri;
     final String relation;
+    final String predicateUri;
 
-    EdgeInfo(String fromUri, String toUri, String relation) {
+    EdgeInfo(String fromUri, String toUri, String relation, String predicateUri) {
       this.fromUri = fromUri;
       this.toUri = toUri;
       this.relation = relation;
+      this.predicateUri = predicateUri;
     }
   }
 
@@ -1740,6 +1781,134 @@ public class RdfRepository {
                 .reversed()
                 .thenComparing(FilterOptionInfo::label))
         .toList();
+  }
+
+  private Model buildEntityGraphExportModel(Set<String> nodeUris, List<EdgeInfo> edges) {
+    Model model = ModelFactory.createDefaultModel();
+    configureEntityGraphPrefixes(model);
+
+    Map<String, com.fasterxml.jackson.databind.node.ObjectNode> nodeMap = new HashMap<>();
+    List<String> orderedNodeUris = nodeUris.stream().sorted().toList();
+
+    for (String nodeUri : orderedNodeUris) {
+      com.fasterxml.jackson.databind.node.ObjectNode node = createNodeFromUri(nodeUri);
+      nodeMap.put(nodeUri, node);
+    }
+
+    enhanceNodesWithEntityDetails(nodeMap);
+
+    for (String nodeUri : orderedNodeUris) {
+      addEntityGraphNodeToModel(model, nodeUri, nodeMap.get(nodeUri));
+    }
+
+    for (EdgeInfo edge : edges) {
+      if (edge.predicateUri == null || edge.predicateUri.isBlank()) {
+        continue;
+      }
+
+      Resource fromResource = model.createResource(edge.fromUri);
+      Resource toResource = model.createResource(edge.toUri);
+      Property predicate = model.createProperty(edge.predicateUri);
+      fromResource.addProperty(predicate, toResource);
+    }
+
+    return model;
+  }
+
+  private void configureEntityGraphPrefixes(Model model) {
+    model.setNsPrefix("om", "https://open-metadata.org/ontology/");
+    model.setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    model.setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
+    model.setNsPrefix("dcat", "http://www.w3.org/ns/dcat#");
+    model.setNsPrefix("prov", "http://www.w3.org/ns/prov#");
+    model.setNsPrefix("foaf", "http://xmlns.com/foaf/0.1/");
+    model.setNsPrefix("skos", "http://www.w3.org/2004/02/skos/core#");
+    model.setNsPrefix("dprod", "https://ekgf.github.io/dprod/");
+  }
+
+  private void addEntityGraphNodeToModel(
+      Model model, String nodeUri, com.fasterxml.jackson.databind.node.ObjectNode node) {
+    Resource resource = model.createResource(nodeUri);
+    String entityType =
+        node != null
+            ? node.path("type").asText(extractEntityTypeFromUri(nodeUri))
+            : extractEntityTypeFromUri(nodeUri);
+    String rdfTypeUri = resolvePrefixedUri(RdfUtils.getRdfType(entityType));
+
+    if (rdfTypeUri != null) {
+      resource.addProperty(
+          model.createProperty("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "type"),
+          model.createResource(rdfTypeUri));
+    }
+
+    if (node == null) {
+      return;
+    }
+
+    addLiteralIfPresent(
+        resource,
+        model.createProperty("http://www.w3.org/2000/01/rdf-schema#", "label"),
+        node.path("label").asText(null));
+    addLiteralIfPresent(
+        resource,
+        model.createProperty("https://open-metadata.org/ontology/", "name"),
+        node.path("name").asText(null));
+    addLiteralIfPresent(
+        resource,
+        model.createProperty("https://open-metadata.org/ontology/", "fullyQualifiedName"),
+        node.path("fullyQualifiedName").asText(null));
+    addLiteralIfPresent(
+        resource,
+        model.createProperty("https://open-metadata.org/ontology/", "description"),
+        node.path("description").asText(null));
+  }
+
+  private void addLiteralIfPresent(Resource resource, Property property, String value) {
+    if (value != null && !value.isBlank()) {
+      resource.addProperty(property, value);
+    }
+  }
+
+  private String resolvePrefixedUri(String value) {
+    if (value == null || value.isBlank()) {
+      return null;
+    }
+
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      return value;
+    }
+
+    int separatorIndex = value.indexOf(':');
+    if (separatorIndex <= 0 || separatorIndex == value.length() - 1) {
+      return value;
+    }
+
+    String prefix = value.substring(0, separatorIndex);
+    String localName = value.substring(separatorIndex + 1);
+
+    return switch (prefix) {
+      case "om" -> "https://open-metadata.org/ontology/" + localName;
+      case "rdf" -> "http://www.w3.org/1999/02/22-rdf-syntax-ns#" + localName;
+      case "rdfs" -> "http://www.w3.org/2000/01/rdf-schema#" + localName;
+      case "dcat" -> "http://www.w3.org/ns/dcat#" + localName;
+      case "prov" -> "http://www.w3.org/ns/prov#" + localName;
+      case "foaf" -> "http://xmlns.com/foaf/0.1/" + localName;
+      case "skos" -> "http://www.w3.org/2004/02/skos/core#" + localName;
+      case "dprod" -> "https://ekgf.github.io/dprod/" + localName;
+      default -> value;
+    };
+  }
+
+  private String normalizeEntityGraphExportFormat(String format) {
+    if (format == null || format.isBlank()) {
+      return "TURTLE";
+    }
+
+    return switch (format.trim().toLowerCase(Locale.ROOT)) {
+      case "jsonld", "json-ld" -> "JSON-LD";
+      case "turtle", "ttl" -> "TURTLE";
+      default -> throw new IllegalArgumentException("Unsupported export format");
+    };
   }
 
   private String convertEdgesToGraphData(

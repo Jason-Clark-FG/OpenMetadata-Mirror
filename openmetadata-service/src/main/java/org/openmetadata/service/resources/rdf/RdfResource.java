@@ -22,6 +22,7 @@ import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import javax.validation.constraints.NotEmpty;
@@ -280,6 +281,75 @@ public class RdfResource {
     }
   }
 
+  @GET
+  @Path("/graph/explore/export")
+  @Operation(
+      operationId = "exportEntityGraph",
+      summary = "Export explored entity graph",
+      description = "Export the currently explored entity graph in Turtle or JSON-LD format",
+      responses = {
+        @ApiResponse(responseCode = "200", description = "Entity graph exported successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "503", description = "RDF service not enabled")
+      })
+  public Response exportEntityGraph(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Entity ID", required = true) @QueryParam("entityId") UUID entityId,
+      @Parameter(description = "Entity type", required = true) @QueryParam("entityType")
+          String entityType,
+      @Parameter(description = "Depth of relationships to explore")
+          @QueryParam("depth")
+          @DefaultValue("2")
+          int depth,
+      @Parameter(description = "Comma-separated entity types to keep in the graph")
+          @QueryParam("entityTypes")
+          String entityTypes,
+      @Parameter(description = "Comma-separated relationship types to keep in the graph")
+          @QueryParam("relationshipTypes")
+          String relationshipTypes,
+      @Parameter(description = "Export format: turtle or jsonld")
+          @QueryParam("format")
+          @DefaultValue("turtle")
+  String format) {
+    authorizer.authorizeAdmin(securityContext);
+    try {
+      String validatedEntityType = validateEntityType(entityType);
+      String normalizedFormat = validateEntityGraphExportFormat(format);
+      if (getRdfRepository() == null || !getRdfRepository().isEnabled()) {
+        return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity(buildErrorResponse("RDF service not enabled"))
+            .build();
+      }
+
+      String result =
+          getRdfRepository()
+              .exportEntityGraph(
+                  entityId,
+                  validatedEntityType,
+                  depth,
+                  parseCsvFilter(entityTypes),
+                  parseCsvFilter(relationshipTypes),
+                  normalizedFormat);
+
+      MediaType mediaType =
+          switch (normalizedFormat) {
+            case "jsonld", "json-ld" -> MediaType.valueOf(JSON_LD);
+            default -> MediaType.valueOf(TURTLE);
+          };
+
+      return Response.ok(result, mediaType).build();
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(buildErrorResponse(e.getMessage()))
+          .build();
+    } catch (Exception e) {
+      LOG.error("Error exporting entity graph", e);
+      return Response.serverError()
+          .entity(buildErrorResponse("An internal error occurred"))
+          .build();
+    }
+  }
+
   private String validateEntityType(String entityType) {
     if (entityType == null || entityType.isBlank()) {
       throw new IllegalArgumentException("Entity type is required");
@@ -296,6 +366,18 @@ public class RdfResource {
 
   private String buildErrorResponse(String message) {
     return String.format("{\"error\": \"%s\"}", message);
+  }
+
+  private String validateEntityGraphExportFormat(String format) {
+    if (format == null || format.isBlank()) {
+      return "turtle";
+    }
+
+    return switch (format.trim().toLowerCase(Locale.ROOT)) {
+      case "jsonld", "json-ld" -> "jsonld";
+      case "turtle", "ttl" -> "turtle";
+      default -> throw new IllegalArgumentException("Unsupported export format");
+    };
   }
 
   private Set<String> parseCsvFilter(String values) {

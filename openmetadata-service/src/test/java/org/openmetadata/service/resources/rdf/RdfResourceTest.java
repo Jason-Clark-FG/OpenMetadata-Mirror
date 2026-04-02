@@ -58,4 +58,13 @@ class RdfResourceTest {
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     assertTrue(String.valueOf(response.getEntity()).contains("Invalid entity type"));
   }
+
+  @Test
+  void exportEntityGraphRejectsUnsupportedFormat() {
+    Response response =
+        rdfResource.exportEntityGraph(
+            securityContext, UUID.randomUUID(), "table", 2, null, null, "rdfxml");
+
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+  }
 }
