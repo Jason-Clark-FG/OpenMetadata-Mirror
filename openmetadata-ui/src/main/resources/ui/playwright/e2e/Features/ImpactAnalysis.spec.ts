@@ -19,8 +19,10 @@ import { MlModelClass } from '../../support/entity/MlModelClass';
 import { PipelineClass } from '../../support/entity/PipelineClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
-import { performAdminLogin } from '../../utils/admin';
-import { redirectToHomePage } from '../../utils/common';
+import {
+  getDefaultAdminAPIContext,
+  redirectToHomePage,
+} from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   connectEdgeBetweenNodesViaAPI,
@@ -29,7 +31,6 @@ import {
   visitLineageTab,
 } from '../../utils/lineage';
 import { test } from '../fixtures/pages';
-
 const table = new TableClass();
 const table2 = new TableClass();
 const topic = new TopicClass();
@@ -98,7 +99,9 @@ test.describe('Impact Analysis', () => {
 
   test.beforeAll(async ({ browser }) => {
     test.slow(true);
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+    const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+      browser
+    );
 
     await Promise.all([
       table.create(apiContext),
@@ -262,7 +265,9 @@ test.describe('Impact Analysis', () => {
   });
 
   test.afterAll('Cleanup', async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+    const { apiContext, afterAction } = await getDefaultAdminAPIContext(
+      browser
+    );
     await table.delete(apiContext);
     await table2.delete(apiContext);
     await topic.delete(apiContext);
@@ -291,6 +296,9 @@ test.describe('Impact Analysis', () => {
     await expect(
       page.getByRole('button', { name: 'Downstream 5' })
     ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Upstream' }).click();
+
     await expect(
       page.getByRole('button', { name: 'Upstream 1' })
     ).toBeVisible();
@@ -529,6 +537,9 @@ test.describe('Impact Analysis', () => {
     await expect(
       page.getByRole('button', { name: 'Downstream 5' })
     ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Upstream' }).click();
+
     await expect(
       page.getByRole('button', { name: 'Upstream 0' })
     ).toBeVisible();
@@ -567,6 +578,8 @@ test.describe('Impact Analysis', () => {
     await expect(
       page.getByRole('button', { name: 'Downstream 0' })
     ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Upstream' }).click();
     await expect(
       page.getByRole('button', { name: 'Upstream 0' })
     ).toBeVisible();

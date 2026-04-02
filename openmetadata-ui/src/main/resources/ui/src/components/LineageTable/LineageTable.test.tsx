@@ -682,7 +682,7 @@ describe('LineageTable', () => {
           entityType: EntityType.TABLE,
           config: {
             downstreamDepth: 2,
-            upstreamDepth: 2,
+            upstreamDepth: 0,
           },
           direction: LineageDirection.Downstream,
           queryFilter: undefined,
