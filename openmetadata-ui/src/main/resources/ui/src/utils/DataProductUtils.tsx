@@ -51,8 +51,8 @@ import {
 } from './EntityReferenceUtils';
 
 import { getEntityName } from './EntityUtils';
-import { renderIcon } from './IconUtils';
 import { t } from './i18next/LocalUtil';
+import { renderIcon } from './IconUtils';
 import {
   getPrioritizedEditPermission,
   getPrioritizedViewPermission,

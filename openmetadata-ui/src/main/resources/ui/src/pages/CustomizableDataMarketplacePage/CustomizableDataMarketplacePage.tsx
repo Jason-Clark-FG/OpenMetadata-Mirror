@@ -102,7 +102,13 @@ const CustomizableDataMarketplacePage = ({
     } as Page);
 
     await onSaveLayout();
-  }, [defaultLayout, currentPage, currentPageType, updateCurrentPage, onSaveLayout]);
+  }, [
+    defaultLayout,
+    currentPage,
+    currentPageType,
+    updateCurrentPage,
+    onSaveLayout,
+  ]);
 
   const handleSave = async () => {
     await onSaveLayout(currentPage ?? ({ pageType: currentPageType } as Page));
