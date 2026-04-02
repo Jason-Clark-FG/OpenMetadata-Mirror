@@ -250,6 +250,6 @@ public class FilterEntityImpl implements JavaDelegate {
   }
 
   private boolean matchesField(String fieldName, String triggerField) {
-    return fieldName.equals(triggerField) || fieldName.startsWith(triggerField + ".");
+    return fieldName.equals(triggerField) || fieldName.startsWith(triggerField + Entity.SEPARATOR);
   }
 }
