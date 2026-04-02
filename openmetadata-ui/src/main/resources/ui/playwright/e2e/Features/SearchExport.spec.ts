@@ -142,6 +142,65 @@ test.describe('Search Export', { tag: ['@Features', '@Discovery'] }, () => {
     });
   });
 
+  test('Visible results export on page 2 sends correct from offset', async ({
+    page,
+  }) => {
+    test.slow();
+
+    // Navigate to page 2 via URL so parsedSearch.page = 2
+    await page.goto(`${page.url().replace(/\?.*/, '')}?page=2&size=15`);
+    await expect(page.getByTestId('explore-page')).toBeVisible();
+
+    await openExportScopeModal(page);
+    await getExportModalContent(page).getByText('Visible results').click();
+
+    await test.step('Export request includes from= offset matching page 2', async () => {
+      const exportApiPromise = page.waitForRequest(
+        (req) =>
+          req.url().includes('/api/v1/search/export') && req.method() === 'GET'
+      );
+
+      await getExportModalContent(page)
+        .getByRole('button', { name: 'Export' })
+        .click();
+
+      const request = await exportApiPromise;
+      const url = request.url();
+
+      // page=2, size=15 → from=15
+      expect(url).toContain('from=15');
+      expect(url).toContain('size=');
+    });
+  });
+
+  test('Export button is disabled while export is in progress', async ({
+    page,
+  }) => {
+    test.slow();
+
+    await page.route('**/api/v1/search/export?*', async (route) => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/csv',
+        body: 'Entity Type\ntable',
+      });
+    });
+
+    await openExportScopeModal(page);
+
+    await test.step('Export button becomes disabled and shows loading after click', async () => {
+      const exportButton = getExportModalContent(page).getByRole('button', {
+        name: 'Export',
+      });
+
+      await exportButton.click();
+
+      await expect(exportButton).toBeDisabled();
+      await expect(exportButton).toHaveClass(/ant-btn-loading/);
+    });
+  });
+
   test('Export downloads CSV and closes modal', async ({ page }) => {
     test.slow();
 

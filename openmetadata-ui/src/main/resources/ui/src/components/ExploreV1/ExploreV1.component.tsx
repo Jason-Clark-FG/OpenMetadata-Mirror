@@ -184,7 +184,6 @@ const ExploreV1: React.FC<ExploreProps> = ({
 
   const handleExportScopeConfirm = useCallback(async () => {
     const isVisibleScope = exportScope === 'visible';
-
     const combinedQueryFilter = getCombinedQueryFilterObject(
       quickFilters,
       queryFilter as QueryFilterInterface | undefined
@@ -206,7 +205,15 @@ const ExploreV1: React.FC<ExploreProps> = ({
     }
 
     if (isVisibleScope) {
+      const currentPage = isString(parsedSearch.page)
+        ? Number.parseInt(parsedSearch.page)
+        : 1;
+      const pageSize = isString(parsedSearch.size)
+        ? Number.parseInt(parsedSearch.size)
+        : visibleResultCount;
+
       params.size = visibleResultCount;
+      params.from = (currentPage - 1) * pageSize;
     }
 
     setIsExporting(true);
@@ -229,6 +236,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
     exportScope,
     searchIndex,
     visibleResultCount,
+    parsedSearch,
     searchQueryParam,
     sortValue,
     sortOrder,
