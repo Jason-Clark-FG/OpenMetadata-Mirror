@@ -116,11 +116,7 @@ test.describe('Search Export', () => {
     const modal = page.locator('.ant-modal:visible');
     await expect(modal).toBeVisible();
 
-    // Click the export/submit button in the modal
-    const exportBtn = modal.getByRole('button', { name: /csv/i });
-    if (await exportBtn.isVisible()) {
-      await exportBtn.click();
-    }
+    await modal.locator('#submit-button').click();
 
     const request = await apiPromise;
     const url = request.url();
@@ -146,10 +142,7 @@ test.describe('Search Export', () => {
     const modal = page.locator('.ant-modal:visible');
     await expect(modal).toBeVisible();
 
-    const exportBtn = modal.getByRole('button', { name: /csv/i });
-    if (await exportBtn.isVisible()) {
-      await exportBtn.click();
-    }
+    await modal.locator('#submit-button').click();
 
     const request = await apiPromise;
     expect(request.url()).toContain('index=dataAsset');
@@ -184,10 +177,7 @@ test.describe('Search Export', () => {
       const modal = page.locator('.ant-modal:visible');
       await expect(modal).toBeVisible();
 
-      const exportBtn = modal.getByRole('button', { name: /csv/i });
-      if (await exportBtn.isVisible()) {
-        await exportBtn.click();
-      }
+      await modal.locator('#submit-button').click();
     });
 
     await test.step('Simulate WebSocket progress and verify UI updates', async () => {

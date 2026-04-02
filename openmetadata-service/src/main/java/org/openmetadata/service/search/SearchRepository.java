@@ -2470,6 +2470,11 @@ public class SearchRepository {
           sortField = "fullyQualifiedName";
         }
 
+        List<String> sourceFields = new ArrayList<>(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS);
+        if (!sourceFields.contains(sortField)) {
+          sourceFields.add(sortField);
+        }
+
         while (exported < totalHits && iteration < maxIterations) {
           iteration++;
           if (System.currentTimeMillis() - startTime > timeoutMs) {
@@ -2491,7 +2496,7 @@ public class SearchRepository {
                   .withFetchSource(true)
                   .withTrackTotalHits(false)
                   .withIncludeAggregations(false)
-                  .withIncludeSourceFields(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS)
+                  .withIncludeSourceFields(sourceFields)
                   .withSortFieldParam(sortField)
                   .withSortOrder(
                       baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
