@@ -157,6 +157,10 @@ class BurstIQClient:
         if sdz_name:
             headers["biq_sdz_name"] = sdz_name
 
+        system_wallet_id = getattr(self.config, "biqSystemWalletId", None)
+        if system_wallet_id:
+            headers["biq_system_wallet_id"] = system_wallet_id
+
         return headers
 
     def _make_request(
@@ -310,6 +314,60 @@ class BurstIQClient:
         edges = data if isinstance(data, list) else [data]
         logger.info(f"Found {len(edges)} edge definitions")
         return edges
+
+    def get_chain_metrics(self) -> Dict[str, int]:
+        """
+        Fetch asset counts per chain from BurstIQ metrics endpoint.
+
+        Returns:
+            Dict mapping chain name to asset (row) count
+        """
+        logger.info("Fetching chain metrics from BurstIQ...")
+        data = self._make_request("GET", "/api/metrics/sdz")
+        if data is None:
+            return {}
+        chain_metrics = data.get("chainMetrics", {})
+        return {
+            name: metrics.get("assets", 0)
+            for name, metrics in chain_metrics.items()
+        }
+
+    def get_records_by_tql(
+        self, chain: str, limit: int, skip: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch data records from a chain using TQL (Temporal Query Language).
+
+        Args:
+            chain: Chain (dictionary) name to query
+            limit: Maximum number of records to fetch
+            skip: Number of records to skip (for pagination)
+
+        Returns:
+            List of flat record dicts (data envelope unwrapped)
+        """
+        tql = f"FROM {chain} SKIP {skip} LIMIT {limit} SELECT data.*"
+        logger.info(f"Fetching records for chain '{chain}' via TQL (limit={limit})")
+        try:
+            raw = self._make_request(
+                "POST", "/api/graphchain/query", json={"query": tql}
+            )
+        except Exception as exc:
+            logger.warning(f"TQL query failed for chain '{chain}': {exc}")
+            return []
+
+        if not isinstance(raw, list):
+            return []
+
+        records = []
+        for item in raw:
+            if isinstance(item, dict):
+                if "data" in item and isinstance(item["data"], dict):
+                    records.append(item["data"])
+                else:
+                    records.append(item)
+        logger.info(f"Fetched {len(records)} records for chain '{chain}'")
+        return records
 
     def close(self):
         """Cleanup method - no session to close when using plain requests"""

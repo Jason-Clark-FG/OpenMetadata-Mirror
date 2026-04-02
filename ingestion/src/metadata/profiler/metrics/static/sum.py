@@ -104,14 +104,11 @@ class Sum(StaticMetric):
 
         if is_quantifiable(column.type):
             try:
-                series = df[column.name].dropna()
+                series = pd.to_numeric(df[column.name], errors="coerce").dropna()
                 if not series.empty:
-                    chunk_sum = df[column.name].sum()
-            except (TypeError, ValueError):
-                try:
-                    chunk_sum = df[column.name].astype(float).sum()
-                except Exception:
-                    return None
+                    chunk_sum = series.sum()
+            except Exception:
+                return None
 
             if chunk_sum is None or pd.isnull(chunk_sum):
                 return current_sum
