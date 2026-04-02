@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -40,7 +41,8 @@ class IndexMappingNestedFieldConsistencyTest {
             continue;
           }
           String key = entity + "[" + language + "]";
-          allMappings.put(key, JsonUtils.readTree(new String(in.readAllBytes())));
+          allMappings.put(
+              key, JsonUtils.readTree(new String(in.readAllBytes(), StandardCharsets.UTF_8)));
         }
       }
     }
