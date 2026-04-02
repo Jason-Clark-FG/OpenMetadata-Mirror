@@ -15,7 +15,7 @@ Tests for GCP CloudSQL MySQL connection handling
 from unittest.mock import MagicMock, patch
 
 from metadata.generated.schema.entity.services.connections.database.common.gcpCloudSqlConfig import (
-    GcpCloudSqlConfigurationSource,
+    GcpCloudsqlConfigurationSource,
 )
 from metadata.generated.schema.entity.services.connections.database.mysqlConnection import (
     MysqlConnection,
@@ -35,7 +35,7 @@ class TestMySQLCloudSQLConnection:
         connection = MysqlConnection(
             hostPort="my-project:us-central1:my-instance",
             username="dbuser",
-            authType=GcpCloudSqlConfigurationSource(
+            authType=GcpCloudsqlConfigurationSource(
                 password="dbpassword",
             ),
         )
@@ -76,7 +76,7 @@ class TestMySQLCloudSQLConnection:
         connection = MysqlConnection(
             hostPort="my-project:us-central1:my-instance",
             username="sa@my-project.iam",
-            authType=GcpCloudSqlConfigurationSource(
+            authType=GcpCloudsqlConfigurationSource(
                 enableIamAuth=True,
             ),
         )
@@ -105,7 +105,7 @@ class TestMySQLCloudSQLConnection:
         connection = MysqlConnection(
             hostPort="my-project:us-central1:my-instance",
             username="dbuser",
-            authType=GcpCloudSqlConfigurationSource(password="pw"),
+            authType=GcpCloudsqlConfigurationSource(password="pw"),
         )
 
         from metadata.ingestion.source.database.mysql.connection import MySQLConnection
@@ -132,7 +132,7 @@ class TestMySQLCloudSQLConnection:
         connection = MysqlConnection(
             hostPort="my-project:us-central1:my-instance",
             username="dbuser",
-            authType=GcpCloudSqlConfigurationSource(
+            authType=GcpCloudsqlConfigurationSource(
                 password="pw",
                 gcpConfig=gcp_config,
             ),
@@ -160,7 +160,7 @@ class TestMySQLCloudSQLConnection:
         connection = MysqlConnection(
             hostPort="my-project:us-central1:my-instance",
             username="dbuser",
-            authType=GcpCloudSqlConfigurationSource(password="pw"),
+            authType=GcpCloudsqlConfigurationSource(password="pw"),
         )
 
         from metadata.ingestion.source.database.mysql.connection import MySQLConnection
@@ -186,7 +186,7 @@ class TestMySQLCloudSQLConnection:
             hostPort="my-project:us-central1:my-instance",
             username="dbuser",
             databaseSchema="mydb",
-            authType=GcpCloudSqlConfigurationSource(password="pw"),
+            authType=GcpCloudsqlConfigurationSource(password="pw"),
         )
 
         from metadata.ingestion.source.database.mysql.connection import MySQLConnection

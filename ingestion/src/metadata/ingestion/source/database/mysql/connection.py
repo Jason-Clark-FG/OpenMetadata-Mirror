@@ -26,7 +26,7 @@ from metadata.generated.schema.entity.services.connections.database.common.basic
     BasicAuth,
 )
 from metadata.generated.schema.entity.services.connections.database.common.gcpCloudSqlConfig import (
-    GcpCloudSqlConfigurationSource,
+    GcpCloudsqlConfigurationSource,
 )
 from metadata.generated.schema.entity.services.connections.database.mysqlConnection import (
     MysqlConnection as MySQLConnectionConfig,
@@ -68,7 +68,7 @@ class MySQLConnection(BaseConnection[MySQLConnectionConfig, Engine]):
                 get_connection_args_fn=get_connection_args_common,
             )
 
-        if isinstance(connection.authType, GcpCloudSqlConfigurationSource):
+        if isinstance(connection.authType, GcpCloudsqlConfigurationSource):
             return self._get_cloudsql_engine(connection)
 
         return create_generic_db_connection(
