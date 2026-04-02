@@ -206,10 +206,10 @@ const ExploreV1: React.FC<ExploreProps> = ({
 
     if (isVisibleScope) {
       const currentPage = isString(parsedSearch.page)
-        ? Number.parseInt(parsedSearch.page)
+        ? Number.parseInt(parsedSearch.page, 10) || 1
         : 1;
       const pageSize = isString(parsedSearch.size)
-        ? Number.parseInt(parsedSearch.size)
+        ? Number.parseInt(parsedSearch.size, 10) || visibleResultCount
         : visibleResultCount;
 
       params.size = visibleResultCount;
