@@ -23,13 +23,13 @@ import { usePaging } from '../../hooks/paging/usePaging';
 import { useFqn } from '../../hooks/useFqn';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import {
-    getLineageByEntityCount,
-    getLineageDataByFQN,
-    getLineagePagingData
+  getLineageByEntityCount,
+  getLineageDataByFQN,
+  getLineagePagingData,
 } from '../../rest/lineageAPI';
 import {
-    prepareDownstreamColumnLevelNodesFromDownstreamEdges,
-    prepareUpstreamColumnLevelNodesFromUpstreamEdges
+  prepareDownstreamColumnLevelNodesFromDownstreamEdges,
+  prepareUpstreamColumnLevelNodesFromUpstreamEdges,
 } from '../../utils/Lineage/LineageUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
@@ -223,12 +223,9 @@ describe('LineageTable', () => {
     } as unknown as LineageContextType);
 
     mockUseLineageStore.mockReturnValue({
-      lineageConfig: {
-        downstreamDepth: 2,
-        upstreamDepth: 2,
-      } as LineageConfig,
-      setLineageConfig: jest.fn(),
-    });
+      downstreamDepth: 2,
+      upstreamDepth: 2,
+    } as LineageConfig);
 
     mockUsePaging.mockReturnValue({
       currentPage: 1,
@@ -546,10 +543,9 @@ describe('LineageTable', () => {
     expect(handlePageChange).toHaveBeenCalledWith(1);
   });
 
-  it('should display correct counts for upstream and downstream', () => {
+  it('should display correct counts for downstream', () => {
     render(<LineageTable entity={mockEntity} />, { wrapper: MemoryRouter });
 
-    expect(screen.getByText('label.upstream')).toHaveTextContent('3'); // upstream count
     expect(screen.getByText('label.downstream')).toHaveTextContent('8'); // downstream count
   });
 
@@ -686,7 +682,7 @@ describe('LineageTable', () => {
           entityType: EntityType.TABLE,
           config: {
             downstreamDepth: 2,
-            upstreamDepth: 0,
+            upstreamDepth: 2,
           },
           direction: LineageDirection.Downstream,
           queryFilter: undefined,
