@@ -32,9 +32,7 @@ export interface SidebarConfig {
   bottomItems?: (NavItemType | NavItemDividerType)[];
 }
 
-export const getMarketplaceSidebarConfig = (
-  t: TFunction
-): SidebarConfig => ({
+export const getMarketplaceSidebarConfig = (t: TFunction): SidebarConfig => ({
   items: [
     { label: t('label.home'), href: ROUTES.MY_DATA, icon: Home02 },
     {
