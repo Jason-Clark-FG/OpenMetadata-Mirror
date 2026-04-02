@@ -101,6 +101,8 @@ class MySQLConnection(BaseConnection[MySQLConnectionConfig, Engine]):
                 "user": connection.username,
                 "db": connection.databaseSchema or "",
             }
+            if connection.databaseSchema:
+                connect_kwargs["db"] = connection.databaseSchema
             if enable_iam_auth:
                 connect_kwargs["enable_iam_auth"] = True
             else:
