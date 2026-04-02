@@ -41,6 +41,7 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -259,13 +260,79 @@ public class SearchResource {
   }
 
   @GET
+  @Path("/export")
+  @Produces(MediaType.APPLICATION_OCTET_STREAM)
+  @Operation(
+      operationId = "exportSearchResults",
+      summary = "Export search results as CSV (streaming)",
+      description =
+          "Exports the current search results as a streaming CSV download. "
+              + "The response is streamed directly to the client without buffering the entire result set in memory.",
+      responses = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "CSV file stream",
+            content = @Content(mediaType = "application/octet-stream"))
+      })
+  public Response exportSearchResults(
+      @Context SecurityContext securityContext,
+      @Parameter(description = "Search Query Text") @DefaultValue("*") @QueryParam("q")
+          String query,
+      @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
+          @DefaultValue("table")
+          @QueryParam("index")
+          String index,
+      @Parameter(description = "Filter documents by deleted param. By default deleted is false")
+          @QueryParam("deleted")
+          Boolean deleted,
+      @Parameter(
+              description =
+                  "Elasticsearch query that will be combined with the query_string query generator from the `query` argument")
+          @QueryParam("query_filter")
+          String queryFilter,
+      @Parameter(description = "Elasticsearch query that will be used as a post_filter")
+          @QueryParam("post_filter")
+          String postFilter,
+      @Parameter(description = "Sort the search results by field")
+          @DefaultValue("_score")
+          @QueryParam("sort_field")
+          String sortFieldParam,
+      @Parameter(
+              description = "Sort order asc for ascending or desc for descending, defaults to desc")
+          @DefaultValue("desc")
+          @QueryParam("sort_order")
+          String sortOrder) {
+
+    SearchRequest request =
+        buildExportSearchRequest(
+            securityContext,
+            query,
+            index,
+            deleted,
+            queryFilter,
+            postFilter,
+            sortFieldParam,
+            sortOrder);
+    SubjectContext subjectContext = getSubjectContext(securityContext);
+
+    StreamingOutput stream =
+        output -> searchRepository.exportSearchResultsCsvStream(request, subjectContext, output);
+
+    return Response.ok(stream)
+        .header("Content-Disposition", "attachment; filename=\"search_export.csv\"")
+        .build();
+  }
+
+  @GET
   @Path("/exportAsync")
   @Produces(MediaType.APPLICATION_JSON)
+  @Deprecated
   @Operation(
       operationId = "exportSearchResultsAsync",
       summary = "Export search results as CSV (async)",
       description =
-          "Exports the current search results as a CSV file asynchronously. "
+          "Deprecated: Use GET /v1/search/export for streaming CSV download instead. "
+              + "Exports the current search results as a CSV file asynchronously. "
               + "Returns a job ID that can be tracked via WebSocket for progress and completion.",
       responses = {
         @ApiResponse(
@@ -305,28 +372,17 @@ public class SearchResource {
           @QueryParam("sort_order")
           String sortOrder) {
 
-    if (nullOrEmpty(query)) {
-      query = "*";
-    }
-
-    List<EntityReference> domains = new ArrayList<>();
-    SubjectContext subjectContext = getSubjectContext(securityContext);
-    if (!subjectContext.isAdmin()) {
-      domains = subjectContext.getUserDomains();
-    }
-
     SearchRequest request =
-        new SearchRequest()
-            .withQuery(query)
-            .withIndex(Entity.getSearchRepository().getIndexOrAliasName(index))
-            .withQueryFilter(queryFilter)
-            .withPostFilter(postFilter)
-            .withDeleted(deleted)
-            .withSortFieldParam(sortFieldParam)
-            .withSortOrder(sortOrder)
-            .withDomains(domains)
-            .withApplyDomainFilter(
-                !subjectContext.isAdmin() && subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE));
+        buildExportSearchRequest(
+            securityContext,
+            query,
+            index,
+            deleted,
+            queryFilter,
+            postFilter,
+            sortFieldParam,
+            sortOrder);
+    SubjectContext subjectContext = getSubjectContext(securityContext);
 
     String jobId = UUID.randomUUID().toString();
     UUID userId = getUserIdFromSecurityContext(securityContext);
@@ -354,6 +410,36 @@ public class SearchResource {
 
     CSVExportResponse response = new CSVExportResponse(jobId, "Export initiated successfully.");
     return Response.accepted().entity(response).type(MediaType.APPLICATION_JSON).build();
+  }
+
+  private SearchRequest buildExportSearchRequest(
+      SecurityContext securityContext,
+      String query,
+      String index,
+      Boolean deleted,
+      String queryFilter,
+      String postFilter,
+      String sortFieldParam,
+      String sortOrder) {
+    String resolvedQuery = nullOrEmpty(query) ? "*" : query;
+
+    List<EntityReference> domains = new ArrayList<>();
+    SubjectContext subjectContext = getSubjectContext(securityContext);
+    if (!subjectContext.isAdmin()) {
+      domains = subjectContext.getUserDomains();
+    }
+
+    return new SearchRequest()
+        .withQuery(resolvedQuery)
+        .withIndex(Entity.getSearchRepository().getIndexOrAliasName(index))
+        .withQueryFilter(queryFilter)
+        .withPostFilter(postFilter)
+        .withDeleted(deleted)
+        .withSortFieldParam(sortFieldParam)
+        .withSortOrder(sortOrder)
+        .withDomains(domains)
+        .withApplyDomainFilter(
+            !subjectContext.isAdmin() && subjectContext.hasAnyRole(DOMAIN_ONLY_ACCESS_ROLE));
   }
 
   @POST

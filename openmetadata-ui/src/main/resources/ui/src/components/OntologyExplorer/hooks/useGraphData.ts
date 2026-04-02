@@ -708,9 +708,9 @@ export function useGraphDataBuilder({
     );
     mergedEdgesList.forEach((edge) => {
       if (allTermIds.has(edge.from) && allAssetIds.has(edge.to)) {
-        map[edge.to] = edge.from;
+        if (!map[edge.to]) map[edge.to] = edge.from;
       } else if (allAssetIds.has(edge.from) && allTermIds.has(edge.to)) {
-        map[edge.from] = edge.to;
+        if (!map[edge.from]) map[edge.from] = edge.to;
       }
     });
 

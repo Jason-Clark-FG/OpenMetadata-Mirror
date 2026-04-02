@@ -1155,10 +1155,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
     await graphRef.current?.exportAsPng();
   }, []);
 
-  const handleExportSvg = useCallback(async () => {
-    await graphRef.current?.exportAsSvg();
-  }, []);
-
   const handleModeChange = useCallback(
     (mode: ExplorationMode) => {
       if (mode === 'data') {
@@ -1461,10 +1457,7 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
                 setFilters((prev) => ({ ...prev, searchQuery: value }))
               }
             />
-            <ExportGraphPanel
-              onExportPng={handleExportPng}
-              onExportSvg={handleExportSvg}
-            />
+            <ExportGraphPanel onExportPng={handleExportPng} />
             <GraphSettingsPanel
               settings={settings}
               onSettingsChange={handleSettingsChange}

@@ -30,14 +30,13 @@ import {
   Switch,
   Typography,
 } from 'antd';
+import { AxiosError } from 'axios';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
 import Qs from 'qs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ReactComponent as ExportIcon } from '../../assets/svg/ic-export.svg';
-import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
-import { CSVExportResponse } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.interface';
 import { useAdvanceSearch } from '../../components/Explore/AdvanceSearchProvider/AdvanceSearchProvider.component';
 import AppliedFilterText from '../../components/Explore/AppliedFilterText/AppliedFilterText';
 import EntitySummaryPanel from '../../components/Explore/EntitySummaryPanel/EntitySummaryPanel.component';
@@ -49,14 +48,14 @@ import {
   SUPPORTED_EMPTY_FILTER_FIELDS,
   TAG_FQN_KEY,
 } from '../../constants/explore.constants';
-import { ExportTypes } from '../../constants/Export.constants';
 import { SIZE, SORT_ORDER } from '../../enums/common.enum';
 import { SearchIndex } from '../../enums/search.enum';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { QueryFilterInterface } from '../../pages/ExplorePage/ExplorePage.interface';
-import { exportSearchResultsAsync } from '../../rest/searchAPI';
+import { exportSearchResultsCsvStream } from '../../rest/searchAPI';
 import { getDropDownItems } from '../../utils/AdvancedSearchUtils';
 import { Transi18next } from '../../utils/CommonUtils';
+import { getCurrentISODate } from '../../utils/date-time/DateTimeUtils';
 import { highlightEntityNameAndDescription } from '../../utils/EntityUtils';
 import { getCombinedQueryFilterObject } from '../../utils/ExplorePage/ExplorePageUtils';
 import {
@@ -65,6 +64,7 @@ import {
 } from '../../utils/ExploreUtils';
 import { getApplicationDetailsPath } from '../../utils/RouterUtils';
 import searchClassBase from '../../utils/SearchClassBase';
+import { showErrorToast } from '../../utils/ToastUtils';
 import FilterErrorPlaceHolder from '../common/ErrorWithPlaceholder/FilterErrorPlaceHolder';
 import Loader from '../common/Loader/Loader';
 import ResizableLeftPanels from '../common/ResizablePanels/ResizableLeftPanels';
@@ -167,18 +167,21 @@ const ExploreV1: React.FC<ExploreProps> = ({
 
   const { toggleModal, sqlQuery, queryFilter, onResetAllFilters } =
     useAdvanceSearch();
-  const { showModal } = useEntityExportModalProvider();
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleExportClick = useCallback(
-    (index: string) => {
-      const combinedQueryFilter = getCombinedQueryFilterObject(
-        quickFilters,
-        queryFilter as QueryFilterInterface | undefined
-      );
+    async (index: string) => {
+      if (isExporting) {
+        return;
+      }
+      setIsExporting(true);
 
-      const onExport = async (
-        _name: string
-      ): Promise<CSVExportResponse | string> => {
+      try {
+        const combinedQueryFilter = getCombinedQueryFilterObject(
+          quickFilters,
+          queryFilter as QueryFilterInterface | undefined
+        );
+
         const params: Record<string, string | boolean | undefined> = {
           q: searchQueryParam || '*',
           index,
@@ -194,26 +197,30 @@ const ExploreV1: React.FC<ExploreProps> = ({
           params.query_filter = JSON.stringify(combinedQueryFilter);
         }
 
-        return exportSearchResultsAsync(
-          params as Parameters<typeof exportSearchResultsAsync>[0]
+        const blob = await exportSearchResultsCsvStream(
+          params as Parameters<typeof exportSearchResultsCsvStream>[0]
         );
-      };
 
-      showModal({
-        name: t('label.search-result-plural'),
-        exportTypes: [ExportTypes.CSV],
-        onExport,
-      });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `search_export_${getCurrentISODate()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        showErrorToast(error as AxiosError);
+      } finally {
+        setIsExporting(false);
+      }
     },
     [
+      isExporting,
       searchQueryParam,
       sortValue,
       sortOrder,
       showDeleted,
       quickFilters,
       queryFilter,
-      showModal,
-      t,
     ]
   );
 
@@ -457,6 +464,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                             )}
 
                             <Dropdown
+                              disabled={isExporting}
                               menu={{
                                 items: exportMenuItems,
                                 onClick: ({ key }) =>
@@ -470,6 +478,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                               trigger={['click']}>
                               <Button
                                 data-testid="export-search-results-button"
+                                loading={isExporting}
                                 type="primary">
                                 <Space>
                                   <ExportIcon
