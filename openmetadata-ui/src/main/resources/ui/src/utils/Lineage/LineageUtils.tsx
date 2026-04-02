@@ -54,7 +54,7 @@ export const LINEAGE_DEPENDENCY_OPTIONS = [
   },
 ];
 
-const findColumnInList = (
+export const findColumnInList = (
   columns: Column[],
   columnFqn: string
 ): Column | undefined => {

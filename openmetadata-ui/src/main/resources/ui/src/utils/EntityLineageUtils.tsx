@@ -113,6 +113,7 @@ import { getEntityName, getEntityReferenceFromEntity } from './EntityUtils';
 import Fqn from './Fqn';
 import { t } from './i18next/LocalUtil';
 import ELKLayout from './Lineage/Layout/ELKUtil/ELKUtil';
+import { findColumnInList } from './Lineage/LineageUtils';
 import { jsonToCSV } from './StringsUtils';
 import { showErrorToast } from './ToastUtils';
 
@@ -269,32 +270,13 @@ export const getELKLayoutedElements = async (
   }
 };
 
-const findColumnRecursive = (
-  columns: Column[],
-  columnFqn: string
-): Column | undefined => {
-  for (const col of columns) {
-    if (col.fullyQualifiedName === columnFqn) {
-      return col;
-    }
-    if (col.children) {
-      const childMatch = findColumnRecursive(col.children, columnFqn);
-      if (childMatch) {
-        return childMatch;
-      }
-    }
-  }
-
-  return undefined;
-};
-
 const findColumnDisplayName = (
   columnFqn: string,
   nodes: Node[]
 ): string | undefined => {
   for (const node of nodes) {
     const columns: Column[] = node.data?.node?.columns ?? [];
-    const match = findColumnRecursive(columns, columnFqn);
+    const match = findColumnInList(columns, columnFqn);
     if (match) {
       return match.displayName || match.name;
     }
