@@ -26,6 +26,10 @@ from metadata.generated.antlr.EntityLinkLexer import EntityLinkLexer
 from metadata.generated.antlr.EntityLinkParser import EntityLinkParser
 from metadata.generated.schema.entity.data.table import Table
 from metadata.ingestion.models.custom_pydantic import BaseModel
+from metadata.utils.column_name_hash import (
+    hash_column_name,
+    is_hashed_column_fqn_segment,
+)
 from metadata.utils.constants import ENTITY_REFERENCE_TYPE_MAP
 from metadata.utils.dispatch import class_register
 
@@ -98,11 +102,6 @@ def get_table_or_column_fqn(entity_link: str) -> str:
     if len(split_entity_link) == 2:
         return split_entity_link[1]
     if len(split_entity_link) == 4 and split_entity_link[2] == "columns":
-        from metadata.utils.column_name_hash import (
-            hash_column_name,
-            is_hashed_column_fqn_segment,
-        )
-
         col_segment = unquote_plus(split_entity_link[3])
         if not is_hashed_column_fqn_segment(col_segment):
             col_segment = hash_column_name(col_segment)

@@ -53,6 +53,7 @@ from metadata.generated.schema.entity.teams.team import Team
 from metadata.generated.schema.entity.teams.user import User
 from metadata.generated.schema.tests.testCase import TestCase
 from metadata.generated.schema.tests.testSuite import TestSuite
+from metadata.utils.column_name_hash import hash_column_name
 from metadata.utils.dispatch import class_register
 from metadata.utils.elasticsearch import get_entity_from_es_result
 from metadata.utils.logger import utils_logger
@@ -493,8 +494,6 @@ def _(
     table_name: str,
     column_name: str,
 ) -> str:
-    from metadata.utils.column_name_hash import hash_column_name
-
     hashed_column = hash_column_name(column_name)
     return _build(service_name, database_name, schema_name, table_name, hashed_column)
 
