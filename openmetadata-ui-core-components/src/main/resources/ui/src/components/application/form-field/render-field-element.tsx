@@ -85,16 +85,13 @@ const getItems = (props: FieldPropsMap): FormSelectItem[] =>
   props.items ?? props.options ?? [];
 
 const getSelectedItems = (
-  value: string | string[],
-  items: FormSelectItem[]
+  value: FormSelectItem | FormSelectItem[]
 ): FormSelectItem[] => {
   if (!Array.isArray(value)) {
-    return [];
+    return value ? [value] : [];
   }
 
-  return value
-    .map((id) => items.find((item) => item.id === id) ?? null)
-    .filter((item): item is FormSelectItem => item !== null);
+  return value;
 };
 
 const getDefaultAutocompleteItems = (items: FormSelectItem[]) =>
@@ -158,10 +155,7 @@ export const renderFieldElement = (
 
   if (AUTOCOMPLETE_FIELD_TYPES.has(type)) {
     const multiple = isMultipleSelection(type, field.value, props);
-    const selectedAutocompleteItems = getSelectedItems(
-      field.value,
-      selectItems
-    );
+    const selectedAutocompleteItems = getSelectedItems(field.value);
 
     const handleInsert = (key: Key) => {
       const selectedItem = selectItems.find((item) => item.id === String(key));
@@ -173,9 +167,9 @@ export const renderFieldElement = (
       if (multiple) {
         const nextItems = [...selectedAutocompleteItems, selectedItem];
 
-        field.onChange(nextItems.map((item) => item.id));
+        field.onChange(nextItems);
       } else {
-        field.onChange(selectedItem.id);
+        field.onChange(selectedItem);
       }
       onItemInserted?.(key);
     };
@@ -185,7 +179,7 @@ export const renderFieldElement = (
         (item) => item.id !== String(key)
       );
 
-      field.onChange(multiple ? nextItems.map((item) => item.id) : null);
+      field.onChange(multiple ? nextItems : null);
       onItemCleared?.(key);
     };
 
@@ -396,8 +390,7 @@ export const renderFieldElement = (
       );
 
     case FieldTypes.SELECT_NATIVE: {
-      const selectedKey =
-        typeof field.value === 'string' ? field.value : null;
+      const nativeSelectedItem = field.value as FormSelectItem | null;
 
       return (
         <NativeSelect
@@ -409,7 +402,7 @@ export const renderFieldElement = (
             value: item.id,
             disabled: item.isDisabled,
           }))}
-          value={selectedKey ?? ''}
+          value={nativeSelectedItem?.id ?? ''}
           {...rest}
           onBlur={() => {
             field.onBlur();
@@ -420,7 +413,7 @@ export const renderFieldElement = (
               (item) => item.id === event.target.value
             );
 
-            field.onChange(nextItem?.id ?? null);
+            field.onChange(nextItem ?? null);
             onChange?.(nextItem?.id ?? '');
           }}
         />
@@ -428,8 +421,7 @@ export const renderFieldElement = (
     }
 
     case FieldTypes.SELECT: {
-      const selectedKey =
-        typeof field.value === 'string' ? field.value : null;
+      const selectedItem = field.value as FormSelectItem | null;
 
       return (
         <Select
@@ -439,14 +431,14 @@ export const renderFieldElement = (
           items={selectItems}
           name={field.name}
           placeholder={placeholder}
-          selectedKey={selectedKey}
+          selectedKey={selectedItem?.id ?? null}
           {...rest}
           onSelectionChange={(key) => {
             const nextItem = selectItems.find(
               (item) => item.id === String(key)
             );
 
-            field.onChange(nextItem?.id ?? null);
+            field.onChange(nextItem ?? null);
             onSelectionChange?.(key);
           }}>
           {(item) => (

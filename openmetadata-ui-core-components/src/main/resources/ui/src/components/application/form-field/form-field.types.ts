@@ -70,10 +70,13 @@ export interface FieldPropsMap {
   defaultCamera?: 'environment' | 'user';
   defaultIcon?: { component: FC };
   disabled?: boolean;
+  filterOption?: (option: FormSelectItem, searchText: string) => boolean;
+  fontSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   initialValue?: string;
   items?: FormSelectItem[];
   multiple?: boolean;
   onBlur?: () => void;
+  onFocus?: () => void;
   onChange?: (value: string) => void;
   onItemCleared?: (key: Key) => void;
   onItemInserted?: (key: Key) => void;
@@ -83,6 +86,7 @@ export interface FieldPropsMap {
   options?: FormSelectItem[];
   renderItem?: (item: FormSelectItem) => ReactNode;
   selectedItems?: FormSelectItem[];
+  size?: 'sm' | 'md';
 }
 
 export interface FieldProp {

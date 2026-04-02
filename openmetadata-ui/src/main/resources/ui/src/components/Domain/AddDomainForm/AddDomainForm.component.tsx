@@ -18,6 +18,7 @@ import {
   FieldTypes,
   FormField,
   FormItemLabel,
+  FormSelectItem,
   HintText,
   HookForm,
   getField,
@@ -82,14 +83,9 @@ import {
   DomainFormRefProp,
 } from './AddDomainForm.interface';
 
-type FormSelectOption = {
-  id: string;
-  label: string;
-  value: unknown;
-  avatarUrl?: string;
-  supportingText?: string;
-  icon?: unknown;
-};
+interface DomainFormSelectItem extends FormSelectItem {
+  value: TagLabel | EntityReference | DomainType | string;
+}
 
 const COVER_IMAGE_ACCEPTED_TYPES = [
   'image/svg+xml',
@@ -154,7 +150,7 @@ const createTagLabel = ({
   tagFQN,
 });
 
-const mapTagLabelToOption = (tagLabel: TagLabel): FormSelectOption => ({
+const mapTagLabelToOption = (tagLabel: TagLabel): DomainFormSelectItem => ({
   id: tagLabel.tagFQN,
   label:
     getTagDisplay(tagLabel.displayName || tagLabel.name) || tagLabel.tagFQN,
@@ -167,7 +163,7 @@ const mapTagLabelToOption = (tagLabel: TagLabel): FormSelectOption => ({
 
 const mapEntityReferenceToOption = (
   reference: EntityReference
-): FormSelectOption => ({
+): DomainFormSelectItem => ({
   id: reference.id,
   label: getEntityName(reference),
   supportingText: reference.fullyQualifiedName || reference.type,
@@ -189,12 +185,12 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
   ) => {
     const { t } = useTranslation();
     const { permissions } = usePermissionProvider();
-    const [tagOptions, setTagOptions] = useState<FormSelectOption[]>([]);
-    const [domainOptions, setDomainOptions] = useState<FormSelectOption[]>([]);
-    const [userTeamOptions, setUserTeamOptions] = useState<FormSelectOption[]>(
+    const [tagOptions, setTagOptions] = useState<DomainFormSelectItem[]>([]);
+    const [domainOptions, setDomainOptions] = useState<DomainFormSelectItem[]>([]);
+    const [userTeamOptions, setUserTeamOptions] = useState<DomainFormSelectItem[]>(
       []
     );
-    const [userOnlyOptions, setUserOnlyOptions] = useState<FormSelectOption[]>(
+    const [userOnlyOptions, setUserOnlyOptions] = useState<DomainFormSelectItem[]>(
       []
     );
     const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
@@ -244,7 +240,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       [type]
     );
 
-    const iconOptions = useMemo<FormSelectOption[]>(() => {
+    const iconOptions = useMemo<DomainFormSelectItem[]>(() => {
       return [
         defaultIcon,
         ...AVAILABLE_ICONS.filter((icon) => icon.name !== defaultIcon.name),
@@ -289,7 +285,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
               })
             );
           })
-          .filter((option): option is FormSelectOption => option !== null);
+          .filter((option): option is DomainFormSelectItem => option !== null);
 
         setTagOptions(nextOptions);
       } catch {
@@ -441,12 +437,32 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
 
     const handleFormSubmit = useCallback(
       (formData: Record<string, unknown>) => {
-        const tags = formData.tags as TagLabel[];
-        const glossaryTerms = formData.glossaryTerms as TagLabel[];
-        const expertsList = (formData.experts as EntityReference[]) ?? [];
-        const ownersList = (formData.owners as EntityReference[]) ?? [];
+        const tagItems = (formData.tags as DomainFormSelectItem[]) ?? [];
+        const glossaryTerms = (formData.glossaryTerms as TagLabel[]) ?? [];
+        const expertItems = (formData.experts as DomainFormSelectItem[]) ?? [];
+        const ownerItems = (formData.owners as DomainFormSelectItem[]) ?? [];
 
-        const updatedData = omit(formData, 'color', 'iconURL', 'glossaryTerms');
+        const tags = tagItems.map((item) => item.value as TagLabel);
+        const expertsList = expertItems.map(
+          (item) => item.value as EntityReference
+        );
+        const ownersList = ownerItems.map(
+          (item) => item.value as EntityReference
+        );
+
+        const domainTypeItem = formData.domainType as DomainFormSelectItem | null;
+
+        const updatedData = omit(
+          formData,
+          'color',
+          'iconURL',
+          'glossaryTerms',
+          'tags',
+          'owners',
+          'experts',
+          'domains',
+          'domainType'
+        );
         const style = {
           color: formData.color as string,
           iconURL: formData.iconURL as string,
@@ -454,17 +470,19 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
 
         const data: CreateDomain | CreateDataProduct = {
           ...updatedData,
+          domainType: (domainTypeItem?.value as DomainType) ?? undefined,
           experts: expertsList.map((item) => item.name ?? ''),
           owners: ownersList,
           style,
-          tags: [...(tags ?? []), ...(glossaryTerms ?? [])],
+          tags: [...tags, ...glossaryTerms],
         } as CreateDomain | CreateDataProduct;
 
         if (type === DomainFormType.DATA_PRODUCT) {
-          const domains = formData.domains as EntityReference | undefined;
-          if (domains) {
+          const domainItem = formData.domains as DomainFormSelectItem | undefined;
+          const domainRef = domainItem?.value as EntityReference | undefined;
+          if (domainRef?.fullyQualifiedName) {
             (data as CreateDataProduct).domains = [
-              domains.fullyQualifiedName as string,
+              domainRef.fullyQualifiedName,
             ];
           } else if (parentDomain?.fullyQualifiedName) {
             (data as CreateDataProduct).domains = [
