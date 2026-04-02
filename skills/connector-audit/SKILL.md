@@ -108,7 +108,7 @@ Each prompt is a self-contained investigation guide in `prompts/`:
 /connector-audit mysql
 ```
 
-1. **Stale results check**: List existing files in `audit-results/`, ask user what to keep/delete, wait for answer
+1. **Stale results check**: List existing files in `.claude/audit-results/`, ask user what to keep/delete, wait for answer
 2. **Setup**: Ask user for connector name (if not provided), find source directory, write `.claude/connector-audit.json`
 3. **Static pre-check**: Run `analyze_connector.py` for mechanical baseline
 4. **P1-P5**: For each prompt:
@@ -116,7 +116,7 @@ Each prompt is a self-contained investigation guide in `prompts/`:
    b. Follow its instructions — read the actual connector source code, analyze it against the standards, produce findings with file:line references
    c. Present a summary to the user for review
    d. Save the report to `.claude/audit-results/` after user approval
-5. **P6**: Read all reports from `audit-results/`, synthesize, present implementation plan, save after approval
+5. **P6**: Read all reports from `.claude/audit-results/`, synthesize, present implementation plan, save after approval
 6. **P7**: Read P6 plan, implement fixes (or `--dry-run` for plan only), save after approval
 
 Each prompt is a detailed investigation guide — it tells you exactly which files to read, what to look for, how to rate findings, and what format to present them in. You must actually read the connector's source code and do the analysis, not summarize previous results.
