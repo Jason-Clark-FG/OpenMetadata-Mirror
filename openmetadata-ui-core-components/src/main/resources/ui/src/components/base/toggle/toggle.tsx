@@ -1,7 +1,7 @@
+import { cx } from '@/utils/cx';
 import type { ReactNode } from 'react';
 import type { SwitchProps as AriaSwitchProps } from 'react-aria-components';
 import { Switch as AriaSwitch } from 'react-aria-components';
-import { cx } from '@/utils/cx';
 
 interface ToggleBaseProps {
   size?: 'sm' | 'md';
@@ -86,10 +86,10 @@ export const ToggleBase = ({
 };
 
 export interface ToggleProps extends AriaSwitchProps {
-    size?: "sm" | "md";
-    label?: string;
-    hint?: ReactNode;
-    slim?: boolean;
+  size?: 'sm' | 'md';
+  label?: string;
+  hint?: ReactNode;
+  slim?: boolean;
 }
 
 export const Toggle = ({
