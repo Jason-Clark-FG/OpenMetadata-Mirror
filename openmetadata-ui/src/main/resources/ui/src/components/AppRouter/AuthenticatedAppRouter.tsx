@@ -492,7 +492,7 @@ const AuthenticatedAppRouter: FunctionComponent = () => {
         }
         path={ROUTES.MARKETPLACE_APP_INSTALL}
       />
-      <Route element={<MarketplaceLayout />} path="/data-marketplace">
+      <Route element={<MarketplaceLayout />} path={ROUTES.DATA_MARKETPLACE}>
         <Route index element={<DataMarketplacePage />} />
         <Route element={<MarketplaceSubPageLayout />}>
           <Route element={<PureDataProductListPage />} path="data-products" />

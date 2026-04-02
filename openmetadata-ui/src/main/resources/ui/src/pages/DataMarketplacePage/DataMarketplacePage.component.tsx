@@ -48,8 +48,9 @@ const ReactGridLayout = WidthProvider(RGL) as ComponentType<
 const DataMarketplacePage = () => {
   const { selectedPersona } = useApplicationStore();
 
-  const defaultLayout = dataMarketplaceClassBase.getDefaultLayout(
-    EntityTabs.OVERVIEW
+  const defaultLayout = useMemo(
+    () => dataMarketplaceClassBase.getDefaultLayout(EntityTabs.OVERVIEW),
+    []
   );
 
   const [isLoading, setIsLoading] = useState(true);
@@ -100,7 +101,7 @@ const DataMarketplacePage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPersona]);
+  }, [selectedPersona, defaultLayout]);
 
   useEffect(() => {
     fetchDocument();
