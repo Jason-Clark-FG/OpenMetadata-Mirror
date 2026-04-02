@@ -1071,7 +1071,8 @@ public class OpenSearchSearchManager implements SearchManagementClient {
         }
         Hit<JsonData> lastHit = hits.getLast();
         if (lastHit.sort() != null && !lastHit.sort().isEmpty()) {
-          lastHitSortValues = lastHit.sort().toArray();
+          lastHitSortValues =
+              lastHit.sort().stream().map(fv -> fv == null ? null : fv._get()).toArray();
         }
       }
 
