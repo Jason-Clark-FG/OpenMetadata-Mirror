@@ -9,7 +9,6 @@ import org.openmetadata.schema.entity.data.Container;
 import org.openmetadata.schema.entity.data.DashboardDataModel;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.tests.TestCase;
-import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.jdbi3.ColumnUtil;
@@ -191,7 +190,6 @@ public class MigrationUtil {
 
     LOG.info("Migrated entity links to hashed column names for {} TestCase entities", totalFixed);
   }
-
 
   public static void updateOwnerChartFormulas() {
     DataInsightSystemChartRepository repository = new DataInsightSystemChartRepository();
