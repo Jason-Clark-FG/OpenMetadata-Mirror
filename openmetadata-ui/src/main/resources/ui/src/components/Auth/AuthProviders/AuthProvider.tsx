@@ -154,7 +154,9 @@ export const AuthProvider = ({
   const [msalInstance, setMsalInstance] = useState<IPublicClientApplication>();
 
   const authenticatorRef = useRef<AuthenticatorRef>(null);
-  const loginRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loginRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const isMountedRef = useRef(true);
 
   useEffect(() => {
