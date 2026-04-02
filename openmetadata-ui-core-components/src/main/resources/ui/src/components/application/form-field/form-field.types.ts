@@ -11,8 +11,10 @@
  *  limitations under the License.
  */
 
-import type { ReactNode } from 'react';
+import type { FC, ReactNode } from 'react';
+import type { Key } from 'react-aria-components';
 import type { RegisterOptions } from 'react-hook-form';
+import type { SelectItemType } from '@/components/base/select/select';
 
 export enum HelperTextType {
   ALERT = 'alert',
@@ -54,6 +56,35 @@ export enum FieldTypes {
   COMPONENT = 'component',
 }
 
+export type FormSelectItem = SelectItemType;
+
+export interface FieldPropsMap {
+  acceptDirectory?: boolean;
+  acceptedFileTypes?: string[];
+  allowsMultiple?: boolean;
+  allowUrl?: boolean;
+  backgroundColor?: string;
+  children?: ReactNode;
+  colors?: string[];
+  'data-testid'?: string;
+  defaultCamera?: 'environment' | 'user';
+  defaultIcon?: { component: FC };
+  disabled?: boolean;
+  initialValue?: string;
+  items?: FormSelectItem[];
+  multiple?: boolean;
+  onBlur?: () => void;
+  onChange?: (value: string) => void;
+  onItemCleared?: (key: Key) => void;
+  onItemInserted?: (key: Key) => void;
+  onSearchChange?: (value: string) => void;
+  onSelect?: (files: FileList | null) => void;
+  onSelectionChange?: (key: Key | null) => void;
+  options?: FormSelectItem[];
+  renderItem?: (item: FormSelectItem) => ReactNode;
+  selectedItems?: FormSelectItem[];
+}
+
 export interface FieldProp {
   name: string;
   label: ReactNode;
@@ -62,7 +93,7 @@ export interface FieldProp {
   rules?: RegisterOptions;
   id?: string;
   placeholder?: string;
-  props?: Record<string, unknown> & { children?: ReactNode };
+  props?: FieldPropsMap;
   helperText?: ReactNode;
   helperTextType?: HelperTextType;
   showHelperText?: boolean;
