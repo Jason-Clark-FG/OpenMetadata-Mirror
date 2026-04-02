@@ -1,5 +1,5 @@
 /*
- *  Copyright 2024 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -11,29 +11,14 @@
  *  limitations under the License.
  */
 import { test as teardown } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
-import { performAdminLogin } from '../utils/admin';
+import { performAdminLogin } from '../../utils/admin';
+import { enableDisableSearchRBAC } from '../../utils/searchRBAC';
 
-teardown('cleanup entity data prerequisites', async ({ browser }) => {
-  teardown.setTimeout(300 * 1000);
-
-  const { afterAction } = await performAdminLogin(browser);
+teardown('disable search RBAC after tests', async ({ browser }) => {
+  const { apiContext, afterAction } = await performAdminLogin(browser);
 
   try {
-    const filePath = path.join(
-      __dirname,
-      '..',
-      'output',
-      'entity-response-data.json'
-    );
-
-    // Remove file if it exists using synchronous deletion with force option
-    try {
-      fs.rmSync(filePath, { force: true });
-    } catch (err) {
-      // Ignore any errors during file deletion
-    }
+    await enableDisableSearchRBAC(apiContext, false);
   } finally {
     await afterAction();
   }
