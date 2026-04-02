@@ -165,6 +165,7 @@ jobs:
             echo "🔹 Running common chromium tests on shard ${CHROMIUM_SHARD}/5"
             npx playwright test \
               --project=chromium \
+              --project=SearchRBAC \
               --grep-invert @dataAssetRules \
               --shard=${CHROMIUM_SHARD}/5
           fi
