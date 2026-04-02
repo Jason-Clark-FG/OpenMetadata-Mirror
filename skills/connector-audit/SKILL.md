@@ -1,9 +1,6 @@
 ---
 name: connector-audit
 description: Deep reliability audit for OpenMetadata connectors — runs 7 investigation prompts (metadata, errors, auth, lineage, scale, synthesis, implementation) against connector standards
-user-invocable: true
-argument-hint: "<connector-name> [--prompt N | --prompts N,M | --from N | --setup-only | --dry-run]"
-allowed-tools: []
 ---
 
 # OpenMetadata Connector Reliability Audit
@@ -93,11 +90,11 @@ Each prompt is a self-contained investigation guide in `prompts/`:
 | # | File | Focus | Standards |
 |---|---|---|---|
 | 1 | `01-metadata-ingestion.md` | Metadata coverage by tier, ingestion completeness | Tiers 1-3, Standard 1 |
-| 2 | `02-error-resilience.md` | Error handling, fault tolerance, observability | Standards 4, 5, 7 |
+| 2 | `02-error-handling.md` | Error handling, fault tolerance, observability | Standards 4, 5, 7 |
 | 3 | `03-connection-auth.md` | Auth methods, test connection, SSL/TLS | Standard 3 |
 | 4 | `04-lineage.md` | SQL dialect, FQN resolution, column lineage | Standard 2 |
-| 5 | `05-scale-memory.md` | Memory patterns, pagination, generators, lookups | Standard 6 |
-| 6 | `06-synthesis.md` | Cross-validate, cluster root causes, PR scoping | All standards |
+| 5 | `05-scale-performance.md` | Memory patterns, pagination, generators, lookups | Standard 6 |
+| 6 | `06-refactor-plan.md` | Cross-validate, cluster root causes, PR scoping | All standards |
 | 7 | `07-implementation.md` | Implement fixes (or `--dry-run` for plan only) | All standards |
 
 ## How to Run
