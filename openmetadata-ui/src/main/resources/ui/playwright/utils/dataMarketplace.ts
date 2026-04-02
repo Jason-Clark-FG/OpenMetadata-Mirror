@@ -67,6 +67,7 @@ export const createAnnouncementViaApi = async (
       announcementDetails: { description, startTime, endTime },
     },
   });
+  expect(response.ok()).toBeTruthy();
 
   return response.json();
 };
