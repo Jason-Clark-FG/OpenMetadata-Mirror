@@ -125,6 +125,7 @@ import org.openmetadata.service.resources.databases.TableResource;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.mask.PIIMasker;
+import org.openmetadata.service.util.ColumnNameHash;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
@@ -645,7 +646,8 @@ public class TableRepository extends EntityRepository<Table> {
     // With all validation done, add new joins
     for (ColumnJoin join : joins.getColumnJoins()) {
       String columnFQN =
-          FullyQualifiedName.add(table.getFullyQualifiedName(), join.getColumnName());
+          FullyQualifiedName.add(
+              table.getFullyQualifiedName(), ColumnNameHash.hashColumnName(join.getColumnName()));
       addJoinedWith(
           joins.getStartDate(), columnFQN, FIELD_RELATION_COLUMN_TYPE, join.getJoinedWith());
     }
@@ -2173,7 +2175,8 @@ public class TableRepository extends EntityRepository<Table> {
                 rethrowFunction(
                     er ->
                         Triple.of(
-                            getColumnName(er.getLeft()),
+                            ColumnNameHash.resolveColumnName(
+                                table.getColumns(), getColumnName(er.getLeft())),
                             er.getMiddle(),
                             JsonUtils.readObjects(er.getRight(), DailyCount.class))))
             .toList();

@@ -152,8 +152,10 @@ def build(
     :param kwargs: required to build the FQN
     :return: FQN as a string
     """
-    # Transform table_name and column_name if they exist and contain special characters
-    if kwargs.get("table_name") or kwargs.get("column_name"):
+    # Transform table_name if it exists and contains special characters.
+    # Column names no longer need reserved-keyword encoding since the FQN
+    # segment is now a deterministic hash of the raw column name.
+    if kwargs.get("table_name"):
         from metadata.ingestion.models.custom_basemodel_validation import (  # pylint: disable=import-outside-toplevel
             replace_separators,
         )
@@ -161,10 +163,6 @@ def build(
         table_name = kwargs.get("table_name")
         if table_name and isinstance(table_name, str):
             kwargs["table_name"] = replace_separators(table_name)
-
-        column_name = kwargs.get("column_name")
-        if column_name and isinstance(column_name, str):
-            kwargs["column_name"] = replace_separators(column_name)
 
     func = fqn_build_registry.registry.get(entity_type.__name__)
     try:
@@ -495,7 +493,10 @@ def _(
     table_name: str,
     column_name: str,
 ) -> str:
-    return _build(service_name, database_name, schema_name, table_name, column_name)
+    from metadata.utils.column_name_hash import hash_column_name
+
+    hashed_column = hash_column_name(column_name)
+    return _build(service_name, database_name, schema_name, table_name, hashed_column)
 
 
 @fqn_build_registry.add(User)

@@ -336,7 +336,20 @@ class TestCaseRunner(Processor):
                 result.append(tc)
                 continue
             column_name = entity_link.get_decoded_column(tc.entityLink.root)
-            column = next(c for c in table.columns if c.name.root == column_name)
+            column = next(
+                (c for c in table.columns if c.name.root == column_name), None
+            )
+            if column is None:
+                from metadata.utils.column_name_hash import hash_column_name
+
+                column = next(
+                    (
+                        c
+                        for c in table.columns
+                        if hash_column_name(c.name.root) == column_name
+                    ),
+                    None,
+                )
 
             if column.dataType not in test_definition.supportedDataTypes:
                 self.status.failed(

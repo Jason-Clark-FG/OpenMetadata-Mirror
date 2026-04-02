@@ -1992,7 +1992,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
               setShowDeleteModal(false);
             }}
             onOk={onRemove}>
-            {getModalBodyText(selectedEdge as Edge)}
+            {getModalBodyText(selectedEdge as Edge, nodes)}
           </Modal>
         )}
         {showAddEdgeModal && (

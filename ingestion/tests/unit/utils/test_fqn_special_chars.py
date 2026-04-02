@@ -27,6 +27,7 @@ from metadata.ingestion.models.custom_basemodel_validation import (
     RESERVED_QUOTE_KEYWORD,
 )
 from metadata.utils import fqn
+from metadata.utils.column_name_hash import hash_column_name
 from metadata.utils.fqn import FQNBuildingException
 
 
@@ -105,7 +106,8 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             column_name='data "value"',
         )
 
-        expected = f"mysql.test_db.public.users.data {RESERVED_QUOTE_KEYWORD}value{RESERVED_QUOTE_KEYWORD}"
+        col_hash = hash_column_name('data "value"')
+        expected = f"mysql.test_db.public.users.{col_hash}"
         self.assertEqual(result, expected)
 
     def test_column_name_with_multiple_special_chars(self):
@@ -120,10 +122,8 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             column_name='metric::type>"category"',
         )
 
-        expected = (
-            f"postgres.analytics.public.metrics.metric{RESERVED_COLON_KEYWORD}"
-            f"type{RESERVED_ARROW_KEYWORD}{RESERVED_QUOTE_KEYWORD}category{RESERVED_QUOTE_KEYWORD}"
-        )
+        col_hash = hash_column_name('metric::type>"category"')
+        expected = f"postgres.analytics.public.metrics.{col_hash}"
         self.assertEqual(result, expected)
 
     def test_both_table_and_column_with_special_chars(self):
@@ -141,9 +141,7 @@ class TestFQNSpecialCharacters(unittest.TestCase):
         table_transformed = (
             f"table {RESERVED_QUOTE_KEYWORD}2024{RESERVED_QUOTE_KEYWORD}"
         )
-        column_transformed = (
-            f"column{RESERVED_COLON_KEYWORD}data{RESERVED_ARROW_KEYWORD}info"
-        )
+        column_transformed = hash_column_name("column::data>info")
         expected = f"mysql.test.schema.{table_transformed}.{column_transformed}"
         self.assertEqual(result, expected)
 
@@ -174,7 +172,7 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             table_name="users",
             column_name="::",
         )
-        expected = f"mysql.test.public.users.{RESERVED_COLON_KEYWORD}"
+        expected = f"mysql.test.public.users.{hash_column_name('::')}"
         self.assertEqual(result, expected)
 
     def test_consecutive_special_chars(self):
@@ -224,7 +222,7 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             table_name="table",
             column_name="column_name::",
         )
-        expected = f"mysql.db.schema.table.column_name{RESERVED_COLON_KEYWORD}"
+        expected = f"mysql.db.schema.table.{hash_column_name('column_name::')}"
         self.assertEqual(result, expected)
 
     def test_unicode_with_special_chars(self):
@@ -255,8 +253,8 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             column_name='🚀::rocket>"launch"',
         )
 
-        transformed = f"🚀{RESERVED_COLON_KEYWORD}rocket{RESERVED_ARROW_KEYWORD}{RESERVED_QUOTE_KEYWORD}launch{RESERVED_QUOTE_KEYWORD}"
-        expected = f"postgres.fun.emoji.data.{transformed}"
+        col_hash = hash_column_name('🚀::rocket>"launch"')
+        expected = f"postgres.fun.emoji.data.{col_hash}"
         self.assertEqual(result, expected)
 
     # ========== NULL/NONE HANDLING ==========
@@ -368,7 +366,7 @@ class TestFQNSpecialCharacters(unittest.TestCase):
             table_name="table",
             column_name="normal_column_name",
         )
-        expected = "postgres.db.schema.table.normal_column_name"
+        expected = f"postgres.db.schema.table.{hash_column_name('normal_column_name')}"
         self.assertEqual(result, expected)
 
     def test_dots_in_names_still_quoted(self):
@@ -525,9 +523,7 @@ class TestFQNSpecialCharsRealWorldScenarios(unittest.TestCase):
             column_name="typname::text",
         )
 
-        expected = (
-            f"postgres.mydb.pg_catalog.pg_type.typname{RESERVED_COLON_KEYWORD}text"
-        )
+        expected = f"postgres.mydb.pg_catalog.pg_type.{hash_column_name('typname::text')}"
         self.assertEqual(result, expected)
 
     def test_bigquery_dataset_table_notation(self):
@@ -559,7 +555,8 @@ class TestFQNSpecialCharsRealWorldScenarios(unittest.TestCase):
             column_name='"order-date"',  # Backticks converted to quotes
         )
 
-        expected = f"mysql.test.public.orders.{RESERVED_QUOTE_KEYWORD}order-date{RESERVED_QUOTE_KEYWORD}"
+        col_hash = hash_column_name('"order-date"')
+        expected = f"mysql.test.public.orders.{col_hash}"
         self.assertEqual(result, expected)
 
 

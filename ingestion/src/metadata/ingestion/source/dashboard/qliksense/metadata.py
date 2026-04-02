@@ -54,7 +54,6 @@ from metadata.ingestion.source.dashboard.qliksense.models import (
     QlikDashboard,
     QlikTable,
 )
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.utils import fqn
 from metadata.utils.filters import filter_by_chart, filter_by_datamodel
 from metadata.utils.fqn import build_es_fqn_search_string
@@ -222,7 +221,7 @@ class QliksenseSource(DashboardServiceSource):
                 parsed_fields = {
                     "dataTypeDisplay": "Qlik Field",
                     "dataType": DataType.UNKNOWN,
-                    "name": truncate_column_name(str(field.id)),
+                    "name": str(field.id),
                     "displayName": field.name if field.name else field.id,
                 }
                 datasource_columns.append(Column(**parsed_fields))

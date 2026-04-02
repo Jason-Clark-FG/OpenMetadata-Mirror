@@ -82,7 +82,6 @@ from metadata.ingestion.source.dashboard.tableau.models import (
     TableauDashboard,
     UpstreamTable,
 )
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.ingestion.source.database.column_type_parser import ColumnTypeParser
 from metadata.utils import fqn
 from metadata.utils.filters import filter_by_chart, filter_by_datamodel
@@ -1123,7 +1122,7 @@ class TableauSource(DashboardServiceSource):
                         "dataType": ColumnTypeParser.get_column_type(
                             column.remoteType if column.remoteType else None
                         ),
-                        "name": truncate_column_name(column.id),
+                        "name": column.id,
                         "displayName": column.name if column.name else column.id,
                     }
                     if column.remoteType and column.remoteType == DataType.ARRAY.value:
@@ -1147,7 +1146,7 @@ class TableauSource(DashboardServiceSource):
                 parsed_fields = {
                     "dataTypeDisplay": "Tableau Field",
                     "dataType": DataType.RECORD,
-                    "name": truncate_column_name(field.id),
+                    "name": field.id,
                     "displayName": field.name if field.name else field.id,
                     "description": field.description,
                 }

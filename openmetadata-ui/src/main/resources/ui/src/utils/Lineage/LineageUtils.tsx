@@ -15,6 +15,7 @@ import { ChevronRight } from '@untitledui/icons';
 import { get, omit, pick } from 'lodash';
 import { ReactComponent as ColumnIcon } from '../../assets/svg/ic-column-new.svg';
 import { ReactComponent as TableIcon } from '../../assets/svg/ic-table-new.svg';
+import { Column } from '../../generated/entity/data/table';
 import { CondensedBreadcrumb } from '../../components/CondensedBreadcrumb/CondensedBreadcrumb.component';
 import {
   ColumnLevelLineageNode,
@@ -53,6 +54,19 @@ export const LINEAGE_DEPENDENCY_OPTIONS = [
   },
 ];
 
+const findColumnNameByFqn = (
+  columnFqn: string,
+  entityData: NodeData['entity']
+): string | undefined => {
+  const columns = (entityData as unknown as { columns?: Column[] }).columns;
+  if (!columns) {
+    return undefined;
+  }
+  const match = columns.find((col) => col.fullyQualifiedName === columnFqn);
+
+  return match ? match.displayName || match.name : undefined;
+};
+
 export const prepareColumnLevelNodesFromEdges = (
   edges: EdgeDetails[],
   nodes: Record<string, NodeData>,
@@ -90,12 +104,31 @@ export const prepareColumnLevelNodesFromEdges = (
           'tags' | 'tier' | 'domains' | 'description' | 'owners' | 'id'
         >; // Type assertion to Include type to ensure only these fields are
 
+        const fromEntityData = get(
+          nodes[node.fromEntity.fullyQualifiedName ?? ''],
+          'entity'
+        );
+        const toEntityData = get(
+          nodes[node.toEntity.fullyQualifiedName ?? ''],
+          'entity'
+        );
+
+        const toColumnName = col.toColumn
+          ? findColumnNameByFqn(col.toColumn, toEntityData ?? entityData)
+          : undefined;
+
         // flatten the fromColumns to create separate nodes for each
         for (const fromCol of col.fromColumns || []) {
+          const fromColumnName = fromEntityData
+            ? findColumnNameByFqn(fromCol, fromEntityData)
+            : undefined;
+
           acc.push({
             ...omit(node, 'columns'),
             fromColumn: fromCol,
             toColumn: col.toColumn,
+            fromColumnName,
+            toColumnName,
             docId: fromCol + '->' + col.toColumn,
             nodeDepth,
             ...picked,

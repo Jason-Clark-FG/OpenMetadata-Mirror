@@ -20,7 +20,6 @@ import traceback
 from typing import Any, Dict, List, Optional, Union, cast
 
 from metadata.generated.schema.entity.data.table import Column, DataType
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.parsers.json_schema_parser import parse_json_schema
 from metadata.readers.dataframe.models import (
     DatalakeColumnWrapper,
@@ -283,7 +282,7 @@ class GenericDataFrameColumnParser:
                     parsed_string = {
                         "dataTypeDisplay": data_type.value,
                         "dataType": data_type,
-                        "name": truncate_column_name(column),
+                        "name": column,
                         "displayName": column,
                     }
                     if data_type == DataType.ARRAY:
@@ -419,7 +418,7 @@ class GenericDataFrameColumnParser:
                 type_, DataType.UNKNOWN
             ).value
             column["dataType"] = cls._data_formats.get(type_, DataType.UNKNOWN).value
-            column["name"] = truncate_column_name(key)
+            column["name"] = key
             column["displayName"] = key
             if isinstance(value, dict):
                 column["children"] = cls.construct_json_column_children(value)
@@ -510,7 +509,7 @@ class ParquetDataFrameColumnParser:
             parsed_column = {
                 "dataTypeDisplay": str(column.type),
                 "dataType": self._get_pq_data_type(column),
-                "name": truncate_column_name(column.name),
+                "name": column.name,
                 "displayName": column.name,
             }
 
@@ -559,7 +558,7 @@ class ParquetDataFrameColumnParser:
             child_column = {
                 "dataTypeDisplay": str(child.type),
                 "dataType": data_type,
-                "name": truncate_column_name(child.name),
+                "name": child.name,
                 "displayName": child.name,
             }
             if data_type == DataType.STRUCT:
@@ -669,7 +668,7 @@ class JsonDataFrameColumnParser(GenericDataFrameColumnParser):
                     data_type = DataType.STRING
 
                 column = Column(
-                    name=truncate_column_name(column_name),
+                    name=column_name,
                     displayName=column_name,
                     dataType=data_type,
                     dataTypeDisplay=(
@@ -726,7 +725,7 @@ class JsonDataFrameColumnParser(GenericDataFrameColumnParser):
                     data_type = DataType.STRING
 
                 child = {
-                    "name": truncate_column_name(child_name),
+                    "name": child_name,
                     "displayName": child_name,
                     "dataType": data_type.value,
                     "dataTypeDisplay": (

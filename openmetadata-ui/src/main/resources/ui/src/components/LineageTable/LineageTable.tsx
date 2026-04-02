@@ -79,7 +79,11 @@ import Table from '../common/Table/Table';
 import TierTag from '../common/TierTag';
 import TableTags from '../Database/TableTags/TableTags.component';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
-import { EdgeFromToData, LineageNode } from '../Lineage/Lineage.interface';
+import {
+  ColumnLevelLineageNode,
+  EdgeFromToData,
+  LineageNode,
+} from '../Lineage/Lineage.interface';
 import {
   SearchedDataProps,
   SourceType,
@@ -635,14 +639,19 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
 
   // Render function for column names with search highlighting
   const columnNameRender = useCallback(
-    (column: string) => {
-      const prunedColumnName = Fqn.split(column).pop();
+    (
+      columnFqn: string,
+      record: ColumnLevelLineageNode,
+      columnNameKey: 'fromColumnName' | 'toColumnName'
+    ) => {
+      const displayName =
+        record[columnNameKey] ?? Fqn.split(columnFqn).pop();
 
       return (
         <span>
-          {isEmpty(prunedColumnName)
+          {isEmpty(displayName)
             ? NO_DATA
-            : stringToHTML(highlightSearchText(prunedColumnName, searchValue))}
+            : stringToHTML(highlightSearchText(displayName, searchValue))}
         </span>
       );
     },
@@ -675,7 +684,12 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         title: t('label.source-column-plural'),
         dataIndex: ['fromColumn'],
         key: 'fromColumn',
-        render: columnNameRender,
+        render: (columnFqn: string, record: SourceType) =>
+          columnNameRender(
+            columnFqn,
+            record as unknown as ColumnLevelLineageNode,
+            'fromColumnName'
+          ),
       },
       {
         title: t('label.impacted'),
@@ -700,7 +714,12 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         title: t('label.impacted-column-plural'),
         dataIndex: ['toColumn'],
         key: 'toColumn',
-        render: columnNameRender,
+        render: (columnFqn: string, record: SourceType) =>
+          columnNameRender(
+            columnFqn,
+            record as unknown as ColumnLevelLineageNode,
+            'toColumnName'
+          ),
       },
       ...tableColumns.slice(1),
     ],

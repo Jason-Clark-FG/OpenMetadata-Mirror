@@ -98,7 +98,7 @@ import { APIEndpoint } from '../generated/entity/data/apiEndpoint';
 import { Container } from '../generated/entity/data/container';
 import { Pipeline } from '../generated/entity/data/pipeline';
 import { SearchIndex } from '../generated/entity/data/searchIndex';
-import { Table } from '../generated/entity/data/table';
+import { Column, Table } from '../generated/entity/data/table';
 import { Topic } from '../generated/entity/data/topic';
 import { ColumnLineage, LineageDetails } from '../generated/type/entityLineage';
 import { EntityReference } from '../generated/type/entityReference';
@@ -269,7 +269,27 @@ export const getELKLayoutedElements = async (
   }
 };
 
-export const getModalBodyText = (selectedEdge: Edge) => {
+const findColumnDisplayName = (
+  columnFqn: string,
+  nodes: Node[]
+): string | undefined => {
+  for (const node of nodes) {
+    const columns: Column[] = node.data?.node?.columns ?? [];
+    const match = columns.find(
+      (col) => col.fullyQualifiedName === columnFqn
+    );
+    if (match) {
+      return match.displayName || match.name;
+    }
+  }
+
+  return undefined;
+};
+
+export const getModalBodyText = (
+  selectedEdge: Edge,
+  reactFlowNodes: Node[] = []
+) => {
   const { data } = selectedEdge;
   const { fromEntity, toEntity } = data.edge as EdgeDetails;
   const { sourceHandle = '', targetHandle = '' } = selectedEdge;
@@ -278,26 +298,36 @@ export const getModalBodyText = (selectedEdge: Edge) => {
   let sourceEntity = '';
   let targetEntity = '';
 
-  const sourceFQN = isColumnLineage
-    ? sourceHandle
-    : fromEntity.fullyQualifiedName;
-  const targetFQN = isColumnLineage
-    ? targetHandle
-    : toEntity.fullyQualifiedName;
-  const fqnPart = isColumnLineage ? FqnPart.Column : FqnPart.Table;
-
-  if (fromEntity.type === EntityType.TABLE) {
-    sourceEntity = getPartialNameFromTableFQN(sourceFQN ?? '', [fqnPart]);
+  if (isColumnLineage) {
+    const srcHandle = sourceHandle ?? '';
+    const tgtHandle = targetHandle ?? '';
+    sourceEntity =
+      findColumnDisplayName(srcHandle, reactFlowNodes) ??
+      getPartialNameFromTableFQN(srcHandle, [FqnPart.Column]);
+    targetEntity =
+      findColumnDisplayName(tgtHandle, reactFlowNodes) ??
+      getPartialNameFromTableFQN(tgtHandle, [FqnPart.Column]);
   } else {
-    const arrFqn = Fqn.split(sourceFQN ?? '');
-    sourceEntity = arrFqn[arrFqn.length - 1];
-  }
+    const sourceFQN = fromEntity.fullyQualifiedName;
+    const targetFQN = toEntity.fullyQualifiedName;
 
-  if (toEntity.type === EntityType.TABLE) {
-    targetEntity = getPartialNameFromTableFQN(targetFQN ?? '', [fqnPart]);
-  } else {
-    const arrFqn = Fqn.split(targetFQN ?? '');
-    targetEntity = arrFqn[arrFqn.length - 1];
+    if (fromEntity.type === EntityType.TABLE) {
+      sourceEntity = getPartialNameFromTableFQN(sourceFQN ?? '', [
+        FqnPart.Table,
+      ]);
+    } else {
+      const arrFqn = Fqn.split(sourceFQN ?? '');
+      sourceEntity = arrFqn[arrFqn.length - 1];
+    }
+
+    if (toEntity.type === EntityType.TABLE) {
+      targetEntity = getPartialNameFromTableFQN(targetFQN ?? '', [
+        FqnPart.Table,
+      ]);
+    } else {
+      const arrFqn = Fqn.split(targetFQN ?? '');
+      targetEntity = arrFqn[arrFqn.length - 1];
+    }
   }
 
   return t('message.remove-edge-between-source-and-target', {

@@ -98,7 +98,15 @@ def get_table_or_column_fqn(entity_link: str) -> str:
     if len(split_entity_link) == 2:
         return split_entity_link[1]
     if len(split_entity_link) == 4 and split_entity_link[2] == "columns":
-        return f"{split_entity_link[1]}.{split_entity_link[3]}"
+        from metadata.utils.column_name_hash import (
+            hash_column_name,
+            is_hashed_column_fqn_segment,
+        )
+
+        col_segment = split_entity_link[3]
+        if not is_hashed_column_fqn_segment(col_segment):
+            col_segment = hash_column_name(col_segment)
+        return f"{split_entity_link[1]}.{col_segment}"
 
     raise ValueError(
         "Invalid entity link."

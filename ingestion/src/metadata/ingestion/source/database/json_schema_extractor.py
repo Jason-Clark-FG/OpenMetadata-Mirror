@@ -16,7 +16,6 @@ import traceback
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from metadata.generated.schema.entity.data.table import Column, DataType
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
@@ -235,7 +234,7 @@ def _create_child_column(key: str, value: Any) -> Optional[Column]:
         data_type = _PYTHON_TYPE_TO_DATA_TYPE.get(type_name, DataType.STRING)
 
         column_dict = {
-            "name": truncate_column_name(key),
+            "name": key,
             "displayName": key,
             "dataType": data_type,
             "dataTypeDisplay": data_type.value.lower(),

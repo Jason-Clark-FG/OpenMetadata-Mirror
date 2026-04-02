@@ -91,10 +91,25 @@ class PandasValidatorMixin:
             SQALikeColumn: The corresponding SQALikeColumn object
         """
         first_df = next(dfs())
-        column = first_df[get_decoded_column(entity_link)]
-        _type = GenericDataFrameColumnParser.fetch_col_types(
-            first_df, get_decoded_column(entity_link)
-        )
+        decoded = get_decoded_column(entity_link)
+        raw_name = decoded
+        if decoded not in first_df.columns:
+            from metadata.utils.column_name_hash import (
+                hash_column_name,
+                is_hashed_column_fqn_segment,
+            )
+
+            if is_hashed_column_fqn_segment(decoded):
+                raw_name = next(
+                    (
+                        col
+                        for col in first_df.columns
+                        if hash_column_name(col) == decoded
+                    ),
+                    decoded,
+                )
+        column = first_df[raw_name]
+        _type = GenericDataFrameColumnParser.fetch_col_types(first_df, raw_name)
         sqa_like_column = SQALikeColumn(
             name=column.name,
             type=_type,

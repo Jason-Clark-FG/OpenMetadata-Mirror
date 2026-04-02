@@ -15,6 +15,7 @@ import org.openmetadata.schema.type.Field;
 import org.openmetadata.schema.type.SearchIndexField;
 import org.openmetadata.schema.type.TagLabel;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
+import org.openmetadata.service.util.ColumnNameHash;
 import org.openmetadata.service.util.FullyQualifiedName;
 
 public final class ColumnUtil {
@@ -52,7 +53,8 @@ public final class ColumnUtil {
   public static void setColumnFQN(String parentFQN, List<Column> columns) {
     columns.forEach(
         c -> {
-          String columnFqn = FullyQualifiedName.add(parentFQN, c.getName());
+          String hashedSegment = ColumnNameHash.hashColumnName(c.getName());
+          String columnFqn = FullyQualifiedName.add(parentFQN, hashedSegment);
           c.setFullyQualifiedName(columnFqn);
           if (c.getChildren() != null) {
             setColumnFQN(columnFqn, c.getChildren());

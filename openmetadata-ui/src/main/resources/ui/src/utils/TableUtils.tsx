@@ -1323,10 +1323,12 @@ export const findColumnByEntityLink = (
   entityLink: string
 ): Column | null => {
   for (const column of columns) {
-    const columnName = EntityLink.getTableColumnNameFromColumnFqn(
-      column.fullyQualifiedName ?? '',
-      false
-    );
+    const columnName =
+      column.name ??
+      EntityLink.getTableColumnNameFromColumnFqn(
+        column.fullyQualifiedName ?? '',
+        false
+      );
 
     // Generate the entity link for this column and compare with the target entity link
     const columnEntityLink = EntityLink.getTableEntityLink(

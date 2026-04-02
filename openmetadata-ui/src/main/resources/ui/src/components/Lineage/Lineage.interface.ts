@@ -76,6 +76,8 @@ export interface ColumnLevelLineageNode
   toEntity: EdgeFromToData;
   fromColumn?: string;
   toColumn?: string;
+  fromColumnName?: string;
+  toColumnName?: string;
   pipeline?: EntityReference;
   source?: string;
   sqlQuery?: string;

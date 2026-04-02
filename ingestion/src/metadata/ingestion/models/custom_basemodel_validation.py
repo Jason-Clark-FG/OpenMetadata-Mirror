@@ -65,15 +65,16 @@ def _initialize_transformable_entities():
         DashboardDataModel,
     )
     from metadata.generated.schema.entity.data.table import (
-        ColumnName,
-        ColumnProfile,
         Table,
         TableData,
     )
     from metadata.profiler.api.models import ProfilerResponse
-    from metadata.utils.entity_link import CustomColumnName
 
-    # Now populate the dictionary with the imported classes
+    # Now populate the dictionary with the imported classes.
+    # Note: ColumnName, ColumnProfile, and CustomColumnName entries have been
+    # removed — column FQN segments are now hashed, making reserved-keyword
+    # encoding unnecessary for column names. Table-level transforms are kept
+    # for backward compatibility with existing encoded data in the database.
     TRANSFORMABLE_ENTITIES.update(
         {
             # Fetch models - decode reserved keywords back to original characters
@@ -85,27 +86,18 @@ def _initialize_transformable_entities():
                 "fields": {"name", "columns", "children"},
                 "direction": TransformDirection.DECODE,
             },
-            CustomColumnName: {
-                "fields": {"root"},
-                "direction": TransformDirection.DECODE,
-            },
             # Create/Store models - encode special characters to reserved keywords
             ProfilerResponse: {
                 "fields": {"name", "profile"},
                 "direction": TransformDirection.ENCODE,
             },
             TableData: {"fields": {"columns"}, "direction": TransformDirection.ENCODE},
-            ColumnName: {"fields": {"root"}, "direction": TransformDirection.ENCODE},
             CreateTableRequest: {
                 "fields": {"name", "columns", "children", "tableConstraints"},
                 "direction": TransformDirection.ENCODE,
             },
             CreateDashboardDataModelRequest: {
                 "fields": {"name", "columns", "children"},
-                "direction": TransformDirection.ENCODE,
-            },
-            ColumnProfile: {
-                "fields": {"name"},
                 "direction": TransformDirection.ENCODE,
             },
         }

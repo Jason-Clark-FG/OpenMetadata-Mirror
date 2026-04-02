@@ -89,7 +89,6 @@ from metadata.ingestion.source.dashboard.powerbi.models import (
     PowerBiTable,
     ReportPage,
 )
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 from metadata.ingestion.source.database.column_type_parser import ColumnTypeParser
 from metadata.utils import fqn
 from metadata.utils.filters import (
@@ -577,7 +576,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_measure = PowerBiMeasureModel(
                     dataType=measure_type,
                     dataTypeDisplay=measure_type,
-                    name=truncate_column_name(measure.name),
+                    name=measure.name,
                     displayName=measure.name,
                     description=description_field_text,
                 )
@@ -601,7 +600,7 @@ class PowerbiSource(DashboardServiceSource):
                     "dataType": ColumnTypeParser.get_column_type(
                         column.dataType if column.dataType else None
                     ),
-                    "name": truncate_column_name(column.name),
+                    "name": column.name,
                     "displayName": column.name,
                     "description": column.description,
                 }
@@ -630,7 +629,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_table = {
                     "dataTypeDisplay": "PowerBI Table",
                     "dataType": DataType.TABLE,
-                    "name": truncate_column_name(table.name),
+                    "name": table.name,
                     "displayName": table_display_name,
                     "description": table.description,
                     "children": [],
@@ -657,7 +656,7 @@ class PowerbiSource(DashboardServiceSource):
                 parsed_table = {
                     "dataTypeDisplay": "PowerBI Table",
                     "dataType": DataType.TABLE,
-                    "name": truncate_column_name(entity.name),
+                    "name": entity.name,
                     "displayName": entity.name,
                     "description": entity.description,
                     "children": [],
@@ -674,7 +673,7 @@ class PowerbiSource(DashboardServiceSource):
                             "dataType": ColumnTypeParser.get_column_type(
                                 attribute.dataType if attribute.dataType else None
                             ),
-                            "name": truncate_column_name(attribute.name),
+                            "name": attribute.name,
                             "displayName": attribute.name,
                             "description": attribute.description,
                         }

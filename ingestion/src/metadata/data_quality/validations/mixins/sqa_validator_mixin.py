@@ -106,7 +106,7 @@ class SQAValidatorMixin:
         """Given a column name get the column object
 
         Args:
-            column_name (str): Column name
+            entity_link (str): Entity link or column name
         Returns:
             Column: Column object
         """
@@ -115,6 +115,17 @@ class SQAValidatorMixin:
             (col for col in columns if col.name == column),
             None,
         )
+        if column_obj is None:
+            from metadata.utils.column_name_hash import (
+                hash_column_name,
+                is_hashed_column_fqn_segment,
+            )
+
+            if is_hashed_column_fqn_segment(column):
+                column_obj = next(
+                    (col for col in columns if hash_column_name(col.name) == column),
+                    None,
+                )
         if column_obj is None:
             raise ValueError(f"Cannot find column {column}")
         return column_obj

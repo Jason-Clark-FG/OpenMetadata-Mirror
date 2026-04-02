@@ -242,6 +242,7 @@ import org.openmetadata.service.search.SearchSortFilter;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.AsyncService;
+import org.openmetadata.service.util.ColumnNameHash;
 import org.openmetadata.service.util.EntityETag;
 import org.openmetadata.service.util.EntityFieldUtils;
 import org.openmetadata.service.util.EntityUtil;
@@ -8372,13 +8373,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
     validateColumn(table, columnName, Boolean.TRUE);
   }
 
-  // Validate if a given column exists in the table with optional case sensitivity
+  // Validate if a given column exists in the table with optional case sensitivity.
+  // Supports both raw column names and hashed column FQN segments (md5_...).
   public static void validateColumn(Table table, String columnName, Boolean caseSensitive) {
     if (Boolean.FALSE.equals(caseSensitive)) {
       boolean validColumn =
           table.getColumns().stream()
               .filter(Objects::nonNull)
-              .anyMatch(col -> col.getName().equalsIgnoreCase(columnName));
+              .anyMatch(
+                  col ->
+                      col.getName().equalsIgnoreCase(columnName)
+                          || ColumnNameHash.hashColumnName(col.getName())
+                              .equalsIgnoreCase(columnName));
       if (!validColumn && !columnName.equalsIgnoreCase("all")) {
         throw new IllegalArgumentException("Invalid column name " + columnName);
       }
@@ -8386,7 +8392,10 @@ public abstract class EntityRepository<T extends EntityInterface> {
       boolean validColumn =
           table.getColumns().stream()
               .filter(Objects::nonNull)
-              .anyMatch(col -> col.getName().equals(columnName));
+              .anyMatch(
+                  col ->
+                      col.getName().equals(columnName)
+                          || ColumnNameHash.hashColumnName(col.getName()).equals(columnName));
       if (!validColumn && !columnName.equalsIgnoreCase("all")) {
         throw new IllegalArgumentException("Invalid column name " + columnName);
       }

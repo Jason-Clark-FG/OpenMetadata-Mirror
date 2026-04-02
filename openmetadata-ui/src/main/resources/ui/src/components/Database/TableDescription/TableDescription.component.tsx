@@ -44,10 +44,14 @@ const TableDescription = ({
       entityType === EntityType.TABLE
         ? EntityLink.getTableEntityLink(
             entityFqn,
-            EntityLink.getTableColumnNameFromColumnFqn(columnData.fqn, false)
+            columnData.record?.name ??
+              EntityLink.getTableColumnNameFromColumnFqn(
+                columnData.fqn,
+                false
+              )
           )
         : getEntityFeedLink(entityType, columnData.fqn),
-    [entityType, entityFqn]
+    [entityType, entityFqn, columnData.record?.name, columnData.fqn]
   );
 
   const suggestionData = useMemo(() => {

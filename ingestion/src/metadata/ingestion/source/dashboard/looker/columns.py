@@ -18,7 +18,6 @@ from looker_sdk.sdk.api40.models import LookmlModelExplore, LookmlModelExploreFi
 
 from metadata.generated.schema.entity.data.table import Column, DataType
 from metadata.ingestion.source.dashboard.looker.models import LookMlField, LookMlView
-from metadata.ingestion.source.database.column_helpers import truncate_column_name
 
 # Some docs on types https://cloud.google.com/looker/docs/reference/param-dimension-filter-parameter-types
 LOOKER_TYPE_MAP = {
@@ -101,7 +100,7 @@ def get_columns_from_model(
         type_ = LOOKER_TYPE_MAP.get(field.type, DataType.UNKNOWN)
         columns.append(
             Column(
-                name=truncate_column_name(field.name),
+                name=field.name,
                 displayName=getattr(field, "label_short", None) or field.label,
                 dataType=type_,
                 # We cannot get the inner type from the sdk of .lkml
