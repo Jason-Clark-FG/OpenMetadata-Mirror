@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { Ref } from 'react';
+import { MutableRefObject, RefCallback } from 'react';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../../generated/api/domains/createDomain';
 import { Domain } from '../../../generated/entity/domains/domain';
@@ -23,7 +23,8 @@ export interface DomainFormRef {
 }
 
 export type DomainFormRefProp =
-  | Ref<DomainFormRef>
+  | MutableRefObject<DomainFormRef | null>
+  | RefCallback<DomainFormRef>
   | Partial<DomainFormRef>
   | null;
 

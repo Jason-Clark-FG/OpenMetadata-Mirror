@@ -709,8 +709,8 @@ const IconPickerField = ({
         Custom icon URL
       </span>
       <Input
-        aria-label={placeholder ?? 'Enter icon URL'}
         autoFocus
+        aria-label={placeholder ?? 'Enter icon URL'}
         name={field.name}
         placeholder={placeholder ?? 'Enter icon URL'}
         value={selectedItem ? '' : rawValue}
@@ -742,11 +742,11 @@ const IconPickerField = ({
         id={id}
         style={{ backgroundColor }}
         type="button"
-        onClick={togglePicker}
         onBlur={(event) => {
           field.onBlur();
           onBlur?.(event);
         }}
+        onClick={togglePicker}
         onKeyDown={(event) => {
           if (!isDisabled && (event.key === 'Enter' || event.key === ' ')) {
             event.preventDefault();
@@ -766,9 +766,9 @@ const IconPickerField = ({
               }>
               <Tabs.List
                 fullWidth
+                className="tw:border-b tw:border-secondary_alt tw:p-1"
                 size="sm"
-                type="button-minimal"
-                className="tw:border-b tw:border-secondary_alt tw:p-1">
+                type="button-minimal">
                 <Tabs.Item id="icons" label="Icons" />
                 <Tabs.Item id="url" label="URL" />
               </Tabs.List>
@@ -1049,9 +1049,9 @@ const renderFieldElement = (
           ariaLabel={ariaLabel}
           field={field}
           id={id}
+          props={props}
           onBlur={onBlur}
           onChange={onChange}
-          props={props}
         />
       );
     }

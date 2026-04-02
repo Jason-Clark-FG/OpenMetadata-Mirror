@@ -42,6 +42,7 @@ import { ResourceEntity } from '../../../context/PermissionProvider/PermissionPr
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
+import { Domain } from '../../../generated/entity/domains/domain';
 import {
   CreateDomain,
   DomainType,
@@ -193,6 +194,9 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     const [userTeamOptions, setUserTeamOptions] = useState<FormSelectOption[]>(
       []
     );
+    const [userOnlyOptions, setUserOnlyOptions] = useState<FormSelectOption[]>(
+      []
+    );
     const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
 
     const domainTypeOptions = Object.keys(DomainType).map((key) => ({
@@ -296,7 +300,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     const fetchDomainOptions = useCallback(async (searchText = '') => {
       try {
         const domains = await searchDomains(searchText, 1);
-        const nextOptions = domains.map((domain: any) =>
+        const nextOptions = domains.map((domain: Domain) =>
           mapEntityReferenceToOption({
             displayName: domain.displayName,
             fullyQualifiedName: domain.fullyQualifiedName,
@@ -372,6 +376,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           EntityType.TEAM
         );
 
+        setUserOnlyOptions(userOptions);
         setUserTeamOptions([
           ...userOptions,
           ...teams.map((reference) => ({
@@ -380,6 +385,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           })),
         ]);
       } catch {
+        setUserOnlyOptions([]);
         setUserTeamOptions([]);
       }
     }, []);
@@ -687,7 +693,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         onFocus: handleUserTeamFocus,
         onSearchChange: (searchText: string) =>
           debouncedUserTeamSearch(searchText),
-        options: userTeamOptions,
+        options: userOnlyOptions,
       },
       type: FieldTypes.USER_TEAM_SELECT,
     };

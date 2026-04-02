@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
+import type { FormEvent, ReactNode } from 'react';
 import { Domain } from '../../../generated/entity/domains/domain';
 import '../../../test/unit/mocks/mui.mock';
 import { DomainFormType } from '../DomainPage.interface';
@@ -32,8 +33,6 @@ jest.mock('../../../context/PermissionProvider/PermissionProvider', () => ({
 }));
 
 jest.mock('@openmetadata/ui-core-components', () => {
-  const React = require('react');
-
   return {
     Button: ({
       children,
@@ -44,7 +43,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
       'data-testid': testId,
       type,
     }: {
-      children: React.ReactNode;
+      children: ReactNode;
       onPress?: () => void;
       onClick?: () => void;
       isDisabled?: boolean;
@@ -86,7 +85,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
           value: unknown;
         };
         fieldState: { error?: { message?: string } };
-      }) => React.ReactNode;
+      }) => ReactNode;
     }) => (
       <>
         {children({
@@ -99,10 +98,10 @@ jest.mock('@openmetadata/ui-core-components', () => {
         })}
       </>
     ),
-    FormItemLabel: ({ label }: { label: React.ReactNode }) => (
+    FormItemLabel: ({ label }: { label: ReactNode }) => (
       <div>{label}</div>
     ),
-    HintText: ({ children }: { children: React.ReactNode }) => (
+    HintText: ({ children }: { children: ReactNode }) => (
       <div>{children}</div>
     ),
     HookForm: ({
@@ -110,8 +109,8 @@ jest.mock('@openmetadata/ui-core-components', () => {
       onSubmit,
       ...props
     }: {
-      children: React.ReactNode;
-      onSubmit?: (event?: React.FormEvent<HTMLFormElement>) => void;
+      children: ReactNode;
+      onSubmit?: (event?: FormEvent<HTMLFormElement>) => void;
       [key: string]: unknown;
     }) => (
       <form
@@ -126,15 +125,15 @@ jest.mock('@openmetadata/ui-core-components', () => {
     getField: (field: {
       id?: string;
       name: string;
-      label: React.ReactNode;
+      label: ReactNode;
       props?: { 'data-testid'?: string };
     }) => (
       <div data-testid={field.props?.['data-testid'] ?? field.id ?? field.name}>
         {field.label}
       </div>
     ),
-    Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+    Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+    TooltipTrigger: ({ children }: { children: ReactNode }) => (
       <>{children}</>
     ),
   };
