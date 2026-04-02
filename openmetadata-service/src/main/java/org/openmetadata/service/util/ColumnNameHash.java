@@ -13,7 +13,11 @@
 
 package org.openmetadata.service.util;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
+import lombok.SneakyThrows;
+import org.apache.commons.codec.binary.Hex;
 import org.openmetadata.schema.type.Column;
 
 /**
@@ -31,13 +35,18 @@ public final class ColumnNameHash {
   private ColumnNameHash() {}
 
   /**
-   * Hash a raw column name for use as the column segment in a fully qualified name.
+   * Hash a raw column name for use as the column segment in a fully qualified name. Uses explicit
+   * UTF-8 encoding to guarantee identical output to the Python implementation regardless of JVM
+   * default charset.
    *
    * @param rawColumnName the original column name from the source system
    * @return a fixed-length identifier in the format "md5_&lt;32 hex chars&gt;"
    */
+  @SneakyThrows
   public static String hashColumnName(String rawColumnName) {
-    return HASH_PREFIX + EntityUtil.hash(rawColumnName);
+    byte[] checksum =
+        MessageDigest.getInstance("MD5").digest(rawColumnName.getBytes(StandardCharsets.UTF_8));
+    return HASH_PREFIX + Hex.encodeHexString(checksum);
   }
 
   /**

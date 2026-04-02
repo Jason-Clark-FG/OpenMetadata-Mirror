@@ -50,9 +50,6 @@ public class MigrationUtil {
           if (table == null || nullOrEmpty(table.getColumns())) {
             continue;
           }
-          if (columnsAlreadyHashed(table.getColumns())) {
-            continue;
-          }
           ColumnUtil.setColumnFQN(table.getFullyQualifiedName(), table.getColumns());
           collectionDAO.tableDAO().update(table);
           totalFixed++;
@@ -86,9 +83,6 @@ public class MigrationUtil {
         try {
           DashboardDataModel dataModel = JsonUtils.readValue(json, DashboardDataModel.class);
           if (dataModel == null || nullOrEmpty(dataModel.getColumns())) {
-            continue;
-          }
-          if (columnsAlreadyHashed(dataModel.getColumns())) {
             continue;
           }
           ColumnUtil.setColumnFQN(dataModel.getFullyQualifiedName(), dataModel.getColumns());
@@ -126,9 +120,6 @@ public class MigrationUtil {
           if (container == null
               || container.getDataModel() == null
               || nullOrEmpty(container.getDataModel().getColumns())) {
-            continue;
-          }
-          if (columnsAlreadyHashed(container.getDataModel().getColumns())) {
             continue;
           }
           ColumnUtil.setColumnFQN(
@@ -201,18 +192,6 @@ public class MigrationUtil {
     LOG.info("Migrated entity links to hashed column names for {} TestCase entities", totalFixed);
   }
 
-  private static boolean columnsAlreadyHashed(List<Column> columns) {
-    if (nullOrEmpty(columns)) {
-      return false;
-    }
-    Column firstColumn = columns.get(0);
-    if (firstColumn.getFullyQualifiedName() == null) {
-      return false;
-    }
-    String fqn = firstColumn.getFullyQualifiedName();
-    String lastSegment = fqn.substring(fqn.lastIndexOf('.') + 1);
-    return ColumnNameHash.isHashedColumnFQNSegment(lastSegment);
-  }
 
   public static void updateOwnerChartFormulas() {
     DataInsightSystemChartRepository repository = new DataInsightSystemChartRepository();

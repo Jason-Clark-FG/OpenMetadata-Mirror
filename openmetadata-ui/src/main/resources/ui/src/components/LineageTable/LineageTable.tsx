@@ -80,7 +80,6 @@ import TierTag from '../common/TierTag';
 import TableTags from '../Database/TableTags/TableTags.component';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
 import {
-  ColumnLevelLineageNode,
   EdgeFromToData,
   LineageNode,
 } from '../Lineage/Lineage.interface';
@@ -641,11 +640,11 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   const columnNameRender = useCallback(
     (
       columnFqn: string,
-      record: ColumnLevelLineageNode,
+      record: Record<string, unknown>,
       columnNameKey: 'fromColumnName' | 'toColumnName'
     ) => {
       const displayName =
-        record[columnNameKey] ?? Fqn.split(columnFqn).pop();
+        (record[columnNameKey] as string) ?? Fqn.split(columnFqn).pop();
 
       return (
         <span>
@@ -687,7 +686,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         render: (columnFqn: string, record: SourceType) =>
           columnNameRender(
             columnFqn,
-            record as unknown as ColumnLevelLineageNode,
+            record as Record<string, unknown>,
             'fromColumnName'
           ),
       },
@@ -717,7 +716,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
         render: (columnFqn: string, record: SourceType) =>
           columnNameRender(
             columnFqn,
-            record as unknown as ColumnLevelLineageNode,
+            record as Record<string, unknown>,
             'toColumnName'
           ),
       },
