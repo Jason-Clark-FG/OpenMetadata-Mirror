@@ -387,10 +387,10 @@ test.describe('Lineage Interactions', () => {
       await expect(page.locator('[role="dialog"]')).toBeVisible();
 
       await expect(
-        page.getByText(topic.entityResponseData.displayName ?? '', {
-          exact: true,
-        })
-      ).toBeVisible();
+        page
+          .getByTestId('entity-summary-panel-container')
+          .getByTestId('entity-header-title')
+      ).toHaveText(topic.entityResponseData.displayName ?? '');
 
       await page.getByLabel('Close').first().click();
 

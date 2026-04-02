@@ -14,14 +14,14 @@
 import { useCallback, useReducer } from 'react';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import {
-    ColumnLevelLineageNode,
-    LineageNode
+  ColumnLevelLineageNode,
+  LineageNode,
 } from '../Lineage/Lineage.interface';
 import {
-    EImpactLevel,
-    LineagePagingInfo,
-    LineageTableAction,
-    LineageTableState
+  EImpactLevel,
+  LineagePagingInfo,
+  LineageTableAction,
+  LineageTableState,
 } from './LineageTable.interface';
 
 const initialState: LineageTableState = {

@@ -12,24 +12,24 @@
  */
 
 import {
-    Button,
-    ButtonUtility,
-    Dropdown,
-    Tabs,
-    Tooltip,
-    TooltipTrigger,
-    Typography
+  Button,
+  ButtonUtility,
+  Dropdown,
+  Tabs,
+  Tooltip,
+  TooltipTrigger,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import QueryString from 'qs';
 import {
-    FC,
-    memo,
-    MouseEventHandler,
-    useCallback,
-    useEffect,
-    useMemo,
-    useState
+  FC,
+  memo,
+  MouseEventHandler,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -42,8 +42,8 @@ import { ReactComponent as FullscreenIcon } from '../../../assets/svg/ic-fullscr
 import { ReactComponent as SettingsOutlined } from '../../../assets/svg/ic-settings-gear.svg';
 import { getLineageDropdownItems } from '../../../constants/AdvancedSearch.constants';
 import {
-    AGGREGATE_PAGE_SIZE_LARGE,
-    FULLSCREEN_QUERY_PARAM_KEY
+  AGGREGATE_PAGE_SIZE_LARGE,
+  FULLSCREEN_QUERY_PARAM_KEY,
 } from '../../../constants/constants';
 import { ExportTypes } from '../../../constants/Export.constants';
 import { SERVICE_TYPES } from '../../../constants/Services.constant';

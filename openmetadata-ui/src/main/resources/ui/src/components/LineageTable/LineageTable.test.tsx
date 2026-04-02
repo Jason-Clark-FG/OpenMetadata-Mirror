@@ -223,9 +223,12 @@ describe('LineageTable', () => {
     } as unknown as LineageContextType);
 
     mockUseLineageStore.mockReturnValue({
-      downstreamDepth: 2,
-      upstreamDepth: 2,
-    } as LineageConfig);
+      lineageConfig: {
+        downstreamDepth: 2,
+        upstreamDepth: 2,
+      } as LineageConfig,
+      setLineageConfig: jest.fn(),
+    });
 
     mockUsePaging.mockReturnValue({
       currentPage: 1,

@@ -17,10 +17,10 @@ import { ReactComponent as ColumnIcon } from '../../assets/svg/ic-column-new.svg
 import { ReactComponent as TableIcon } from '../../assets/svg/ic-table-new.svg';
 import { CondensedBreadcrumb } from '../../components/CondensedBreadcrumb/CondensedBreadcrumb.component';
 import {
-    ColumnLevelLineageNode,
-    EdgeDetails,
-    LineageNodeType,
-    NodeData
+  ColumnLevelLineageNode,
+  EdgeDetails,
+  LineageNodeType,
+  NodeData,
 } from '../../components/Lineage/Lineage.interface';
 import { EImpactLevel } from '../../components/LineageTable/LineageTable.interface';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';

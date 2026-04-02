@@ -23,8 +23,8 @@ import { TagLabel } from '../../generated/tests/testCase';
 import { APISchema } from '../../generated/type/apiSchema';
 import { ColumnLineage } from '../../generated/type/entityLineage';
 import {
-    SearchSourceAlias,
-    TableSearchSource
+  SearchSourceAlias,
+  TableSearchSource,
 } from '../../interface/search.interface';
 import { FormattedDatabaseServiceType } from '../../utils/EntityUtils.interface';
 import { EntityChildren } from '../Entity/EntityLineage/NodeChildren/NodeChildren.interface';

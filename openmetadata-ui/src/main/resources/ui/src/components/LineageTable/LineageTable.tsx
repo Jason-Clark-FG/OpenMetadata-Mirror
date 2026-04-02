@@ -98,7 +98,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
   const { selectedQuickFilters, setSelectedQuickFilters, updateEntityData } =
     useLineageProvider();
 
-  const lineageConfig = useLineageStore((state) => state.lineageConfig);
+  const { lineageConfig } = useLineageStore();
   const { fqn } = useFqn();
   const { entityType } = useRequiredParams<{ entityType: EntityType }>();
   const { t } = useTranslation();
@@ -501,6 +501,7 @@ const LineageTable: FC<{ entity: SourceType }> = ({ entity }) => {
           upstreamDepth: lineageConfig.upstreamDepth,
           downstreamDepth: lineageConfig.downstreamDepth,
           queryFilter,
+          lineageDirection,
           columnFilterValue,
         });
         const shouldIncludePaginationInfo =
