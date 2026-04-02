@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { ReactComponent as AutomatedTagIcon } from '../../../assets/svg/automated-tag.svg';
 import { ReactComponent as AutomatorBotIcon } from '../../../assets/svg/automator-bot.svg';
 import { ReactComponent as CheckCircleIcon } from '../../../assets/svg/ic-check-circle-colored.svg';
-import { ReactComponent as SuggestionsIcon } from '../../../assets/svg/ic-suggestions.svg';
+import { ReactComponent as StarIcon } from '../../../assets/svg/ic-suggestions-coloured.svg';
 import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import {
   formatDate,
@@ -34,15 +34,17 @@ interface BadgeConfig {
   icon: React.ReactNode;
   className: string;
   testId: string;
+  iconOnly?: boolean;
 }
 
 const BADGE_CONFIG: Partial<Record<ChangeSource, BadgeConfig>> = {
   [ChangeSource.Suggested]: {
     labelKey: 'label.ai',
     tooltipKey: 'label.ai-suggested',
-    icon: <SuggestionsIcon height={12} width={12} />,
+    icon: <StarIcon width={16} />,
     className: 'badge-suggested',
     testId: 'ai-suggested-badge',
+    iconOnly: true,
   },
   [ChangeSource.Automated]: {
     labelKey: 'label.automated',
@@ -124,16 +126,27 @@ const DescriptionSourceBadge = ({
       className="description-source-container"
       data-testid="description-source-container">
       {showBadge && config ? (
-        <Tooltip title={tooltipContent}>
-          <Tag
-            className={classNames('description-source-badge', config.className)}
-            data-testid={config.testId}
-            role="status"
-            tabIndex={0}>
-            {config.icon}
-            <span>{t(config.labelKey)}</span>
-          </Tag>
-        </Tooltip>
+        config.iconOnly ? (
+          <Tooltip title={t(config.tooltipKey)}>
+            <span data-testid={config.testId} role="status" tabIndex={0}>
+              {config.icon}
+            </span>
+          </Tooltip>
+        ) : (
+          <Tooltip title={tooltipContent}>
+            <Tag
+              className={classNames(
+                'description-source-badge',
+                config.className
+              )}
+              data-testid={config.testId}
+              role="status"
+              tabIndex={0}>
+              {config.icon}
+              <span>{t(config.labelKey)}</span>
+            </Tag>
+          </Tooltip>
+        )
       ) : null}
       {(actorInfo || timestampInfo) && (
         <div className="description-source-metadata">

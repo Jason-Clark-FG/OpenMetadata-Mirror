@@ -27,7 +27,7 @@ jest.mock('../../../utils/date-time/DateTimeUtils', () => ({
   getShortRelativeTime: jest.fn((ts: number) => `relative-${ts}`),
 }));
 
-jest.mock('../../../assets/svg/ic-suggestions.svg', () => ({
+jest.mock('../../../assets/svg/ic-suggestions-coloured.svg', () => ({
   ReactComponent: () => <div data-testid="badge-icon" />,
 }));
 
@@ -79,7 +79,7 @@ describe('DescriptionSourceBadge', () => {
     );
   });
 
-  it('should render purple AI badge for Suggested changeSource', () => {
+  it('should render sparkle icon for Suggested changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -93,8 +93,8 @@ describe('DescriptionSourceBadge', () => {
     const badge = screen.getByTestId('ai-suggested-badge');
 
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('badge-suggested');
-    expect(screen.getByText('label.ai')).toBeInTheDocument();
+    expect(badge.tagName).toBe('SPAN');
+    expect(screen.queryByText('label.ai')).not.toBeInTheDocument();
   });
 
   it('should render green Automated badge for Automated changeSource', () => {
