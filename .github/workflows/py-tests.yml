@@ -114,13 +114,12 @@ jobs:
         shard:
           - name: "shard-1"
             nox-args: >-
-              tests/unit/topology/database
-              tests/unit/topology/dashboard
+              tests/unit
+              --ignore=tests/unit/topology/database/test_databricks.py
           - name: "shard-2"
             nox-args: >-
-              tests/unit
-              --ignore=tests/unit/topology/database
-              --ignore=tests/unit/topology/dashboard
+              tests/unit/topology/database/test_databricks.py
+              --dist=load
     steps:
 
       - name: Wait for the labeler

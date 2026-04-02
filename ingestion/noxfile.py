@@ -158,16 +158,23 @@ def unit_tests(session):
     if skip_cov:
         extra_flags = [f for f in extra_flags if f != "--no-cov"]
 
+    # Allow callers to override --dist via posargs (e.g. --dist=load for a
+    # file that contains tests safe to run across workers). Strip the default
+    # "--dist loadfile" pair when a --dist flag is already in extra_flags so
+    # pytest doesn't receive conflicting values.
+    has_dist_override = any(f == "--dist" or f.startswith("--dist=") for f in extra_flags)
+
     pytest_args = [
         "-c",
         "pyproject.toml",
         "--junitxml=junit/test-results-unit.xml",
         "-n",
         "auto",
-        "--dist",
-        "loadfile",
         "--durations=20",
     ]
+
+    if not has_dist_override:
+        pytest_args += ["--dist", "loadfile"]
 
     if not skip_cov:
         pytest_args += [
