@@ -125,12 +125,26 @@ public class OpenSearchVectorService implements VectorIndexService {
                   + HYBRID_PIPELINE_NAME
                   + "' not found. Run a reindex to create it.");
         }
+        String detail =
+            response
+                .getBody()
+                .map(
+                    b -> {
+                      try {
+                        String body = new String(b.bodyAsBytes(), StandardCharsets.UTF_8);
+                        return body.length() > 200 ? body.substring(0, 200) : body;
+                      } catch (Exception ignored) {
+                        return "";
+                      }
+                    })
+                .orElse("");
         return Optional.of(
             "Unexpected status "
                 + status
                 + " when checking hybrid search pipeline '"
                 + HYBRID_PIPELINE_NAME
-                + "'.");
+                + "'."
+                + (detail.isEmpty() ? "" : " Response: " + detail));
       }
     } catch (Exception e) {
       LOG.error("Failed to check hybrid search pipeline '{}'", HYBRID_PIPELINE_NAME, e);

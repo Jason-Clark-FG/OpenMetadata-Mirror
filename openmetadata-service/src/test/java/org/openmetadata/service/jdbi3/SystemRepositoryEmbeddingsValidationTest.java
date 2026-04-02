@@ -87,7 +87,7 @@ class SystemRepositoryEmbeddingsValidationTest {
   }
 
   @Test
-  void testEmbeddingsPassButPipelineMissing() {
+  void testEmbeddingsFailWhenPipelineMissing() {
     VectorIndexService vectorService = mock(VectorIndexService.class);
     EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
     when(searchRepository.getVectorIndexService()).thenReturn(vectorService);

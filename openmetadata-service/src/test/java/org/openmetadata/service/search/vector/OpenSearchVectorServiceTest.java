@@ -490,7 +490,7 @@ class OpenSearchVectorServiceTest {
     when(mockResponse.getBody()).thenReturn(Optional.empty());
     when(mockGenericClient.execute(any())).thenReturn(mockResponse);
 
-    java.util.Optional<String> result = vectorService.checkHybridSearchPipeline();
+    Optional<String> result = vectorService.checkHybridSearchPipeline();
     assertTrue(result.isPresent(), "Should return error when pipeline not found");
     assertTrue(result.get().contains("not found"), "Error should mention pipeline not found");
   }
@@ -502,7 +502,7 @@ class OpenSearchVectorServiceTest {
     when(mockResponse.getBody()).thenReturn(Optional.empty());
     when(mockGenericClient.execute(any())).thenReturn(mockResponse);
 
-    java.util.Optional<String> result = vectorService.checkHybridSearchPipeline();
+    Optional<String> result = vectorService.checkHybridSearchPipeline();
     assertTrue(result.isPresent(), "Should return error on server error");
     assertTrue(result.get().contains("Unexpected status 500"), "Error should mention status code");
   }
@@ -511,7 +511,7 @@ class OpenSearchVectorServiceTest {
   void testCheckHybridSearchPipelineReturnsErrorOnException() throws IOException {
     when(mockGenericClient.execute(any())).thenThrow(new IOException("Connection refused"));
 
-    java.util.Optional<String> result = vectorService.checkHybridSearchPipeline();
+    Optional<String> result = vectorService.checkHybridSearchPipeline();
     assertTrue(result.isPresent(), "Should return error when exception occurs");
     assertTrue(
         result.get().contains("Connection refused"), "Error should include exception message");
