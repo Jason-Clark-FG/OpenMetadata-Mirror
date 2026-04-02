@@ -27,6 +27,11 @@ public record TestCaseResultIndex(TestCaseResult testCaseResult) implements Sear
   }
 
   @Override
+  public String getEntityTypeName() {
+    return Entity.TEST_CASE_RESULT;
+  }
+
+  @Override
   public void removeNonIndexableFields(Map<String, Object> esDoc) {
     SearchIndex.super.removeNonIndexableFields(esDoc);
     List<Map<String, Object>> testSuites = (List<Map<String, Object>>) esDoc.get("testSuites");

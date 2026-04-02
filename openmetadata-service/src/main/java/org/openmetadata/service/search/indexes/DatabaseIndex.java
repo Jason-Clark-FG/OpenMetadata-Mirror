@@ -10,9 +10,12 @@ public record DatabaseIndex(Database database) implements SearchIndex {
     return database;
   }
 
+  @Override
+  public String getEntityTypeName() {
+    return Entity.DATABASE;
+  }
+
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes = getCommonAttributesMap(database, Entity.DATABASE);
-    doc.putAll(commonAttributes);
     return doc;
   }
 }

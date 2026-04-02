@@ -10,8 +10,6 @@ import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.EntityNotFoundException;
-import org.openmetadata.service.search.ParseTags;
-import org.openmetadata.service.search.SearchIndexUtils;
 
 public record TestSuiteIndex(TestSuite testSuite) implements SearchIndex {
   private static final Set<String> excludeFields = Set.of("summary", "testCaseResultSummary");
@@ -22,18 +20,16 @@ public record TestSuiteIndex(TestSuite testSuite) implements SearchIndex {
   }
 
   @Override
+  public String getEntityTypeName() {
+    return Entity.TEST_SUITE;
+  }
+
+  @Override
   public Set<String> getExcludedFields() {
     return excludeFields;
   }
 
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-
-    doc.put("fqnParts", getFQNParts(testSuite.getFullyQualifiedName()));
-    doc.put("entityType", Entity.TEST_SUITE);
-    doc.put("owners", getEntitiesWithDisplayName(testSuite.getOwners()));
-    doc.put("followers", SearchIndexUtils.parseFollowers(testSuite.getFollowers()));
-    ParseTags parseTags = new ParseTags(Entity.getEntityTags(Entity.TEST_SUITE, testSuite));
-    doc.put("tags", parseTags.getTags());
     setParentRelationships(doc, testSuite);
 
     List<ResultSummary> resultSummaries = testSuite.getTestCaseResultSummary();

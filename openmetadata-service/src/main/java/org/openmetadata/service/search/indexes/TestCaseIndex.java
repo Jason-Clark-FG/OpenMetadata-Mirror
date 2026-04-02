@@ -24,6 +24,11 @@ public record TestCaseIndex(TestCase testCase) implements SearchIndex {
   }
 
   @Override
+  public String getEntityTypeName() {
+    return Entity.TEST_CASE;
+  }
+
+  @Override
   public void removeNonIndexableFields(Map<String, Object> esDoc) {
     SearchIndex.super.removeNonIndexableFields(esDoc);
     List<Map<String, Object>> testSuites = (List<Map<String, Object>>) esDoc.get("testSuites");
@@ -36,11 +41,6 @@ public record TestCaseIndex(TestCase testCase) implements SearchIndex {
 
   @SneakyThrows
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    doc.put("fqnParts", getFQNParts(testCase.getFullyQualifiedName()));
-    doc.put("entityType", Entity.TEST_CASE);
-    doc.put("owners", getEntitiesWithDisplayName(testCase.getOwners()));
-    doc.put("tags", testCase.getTags());
-    doc.put("followers", SearchIndexUtils.parseFollowers(testCase.getFollowers()));
     doc.put(
         "originEntityFQN", MessageParser.EntityLink.parse(testCase.getEntityLink()).getEntityFQN());
     try {

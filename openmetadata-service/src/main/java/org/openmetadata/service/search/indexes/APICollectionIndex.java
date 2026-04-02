@@ -11,10 +11,12 @@ public record APICollectionIndex(APICollection apiCollection) implements SearchI
     return apiCollection;
   }
 
+  @Override
+  public String getEntityTypeName() {
+    return Entity.API_COLLECTION;
+  }
+
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes =
-        getCommonAttributesMap(apiCollection, Entity.API_COLLECTION);
-    doc.putAll(commonAttributes);
     return doc;
   }
 }

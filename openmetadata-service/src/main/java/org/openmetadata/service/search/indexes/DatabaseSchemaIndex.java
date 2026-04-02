@@ -11,10 +11,12 @@ public record DatabaseSchemaIndex(DatabaseSchema databaseSchema) implements Sear
     return databaseSchema;
   }
 
+  @Override
+  public String getEntityTypeName() {
+    return Entity.DATABASE_SCHEMA;
+  }
+
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes =
-        getCommonAttributesMap(databaseSchema, Entity.DATABASE_SCHEMA);
-    doc.putAll(commonAttributes);
     return doc;
   }
 }

@@ -1968,6 +1968,11 @@ class SearchRepositoryBehaviorTest {
     }
 
     @Override
+    public String getEntityTypeName() {
+      return "stub";
+    }
+
+    @Override
     public Map<String, Object> buildSearchIndexDoc() {
       return document;
     }

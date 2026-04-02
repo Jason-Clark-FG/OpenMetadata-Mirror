@@ -18,11 +18,12 @@ public class GlossaryTermIndex implements SearchIndex {
     return glossaryTerm;
   }
 
-  public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes =
-        getCommonAttributesMap(glossaryTerm, Entity.GLOSSARY_TERM);
-    doc.putAll(commonAttributes);
+  @Override
+  public String getEntityTypeName() {
+    return Entity.GLOSSARY_TERM;
+  }
 
+  public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
     if (doc.containsKey("glossary") && glossaryTerm.getGlossary() != null) {
       @SuppressWarnings("unchecked")
       Map<String, Object> glossaryMap = (Map<String, Object>) doc.get("glossary");

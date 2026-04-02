@@ -11,9 +11,12 @@ public record TagIndex(Tag tag) implements SearchIndex {
     return tag;
   }
 
+  @Override
+  public String getEntityTypeName() {
+    return Entity.TAG;
+  }
+
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes = getCommonAttributesMap(tag, Entity.TAG);
-    doc.putAll(commonAttributes);
     if (tag.getDisabled() != null && tag.getDisabled()) {
       doc.put("disabled", tag.getDisabled());
     } else {

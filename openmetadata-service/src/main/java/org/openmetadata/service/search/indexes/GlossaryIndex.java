@@ -16,9 +16,12 @@ public class GlossaryIndex implements SearchIndex {
     return glossary;
   }
 
+  @Override
+  public String getEntityTypeName() {
+    return Entity.GLOSSARY;
+  }
+
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    Map<String, Object> commonAttributes = getCommonAttributesMap(glossary, Entity.GLOSSARY);
-    doc.putAll(commonAttributes);
     return doc;
   }
 }
