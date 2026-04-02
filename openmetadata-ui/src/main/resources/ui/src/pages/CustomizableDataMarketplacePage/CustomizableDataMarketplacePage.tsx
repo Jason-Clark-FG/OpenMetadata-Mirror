@@ -80,8 +80,29 @@ const CustomizableDataMarketplacePage = ({
   useGridLayoutDirection();
 
   const handleReset = useCallback(async () => {
+    const resetLayout = defaultLayout.map((widget) => ({
+      ...widget,
+      w: TAB_GRID_MAX_COLUMNS,
+      x: 0,
+    }));
+    setLayout(resetLayout);
+
+    const tabs = currentPage?.tabs ?? [
+      {
+        ...dataMarketplaceClassBase.getDataMarketplaceDetailPageTabsIds()[0],
+      },
+    ];
+
+    updateCurrentPage({
+      ...currentPage,
+      pageType: currentPageType as PageType,
+      tabs: tabs.map((tab, i) =>
+        i === 0 ? { ...tab, layout: resetLayout } : tab
+      ),
+    } as Page);
+
     await onSaveLayout();
-  }, [onSaveLayout]);
+  }, [defaultLayout, currentPage, currentPageType, updateCurrentPage, onSaveLayout]);
 
   const handleSave = async () => {
     await onSaveLayout(currentPage ?? ({ pageType: currentPageType } as Page));
