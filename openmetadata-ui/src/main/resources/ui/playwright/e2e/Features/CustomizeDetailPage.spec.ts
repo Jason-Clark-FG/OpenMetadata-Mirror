@@ -59,18 +59,23 @@ const test = base.extend<{
   userPage: Page;
 }>({
   adminPage: async ({ browser }, use) => {
-    const adminPage = await browser.newPage();
-    await adminUser.login(adminPage);
+    const context = await browser.newContext({
+      storageState: 'playwright/.auth/admin.json',
+    });
+    const adminPage = await context.newPage();
     await use(adminPage);
-    await adminPage.close();
+    await context.close();
   },
   userPage: async ({ browser }, use) => {
-    const page = await browser.newPage();
+    const context = await browser.newContext();
+    const page = await context.newPage();
     await user.login(page);
     await use(page);
-    await page.close();
+    await context.close();
   },
 });
+
+test.describe.configure({ mode: 'serial' });
 
 test.beforeAll('Setup Customize tests', async ({ browser }) => {
   const { apiContext, afterAction } = await performAdminLogin(browser);

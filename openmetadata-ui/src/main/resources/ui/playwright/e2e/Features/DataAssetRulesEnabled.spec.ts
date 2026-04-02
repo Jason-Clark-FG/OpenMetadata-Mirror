@@ -251,14 +251,9 @@ test.describe(
         await testGlossary.create(apiContext);
         await testGlossaryTerm.create(apiContext);
 
-        // Navigate to glossary term page with full page load
-        await page.goto(
-          `/glossary/${encodeURIComponent(
-            testGlossaryTerm.responseData.fullyQualifiedName
-          )}`
-        );
-
-        await page.waitForLoadState('domcontentloaded');
+        // Use the glossary term helper rather than building a URL from a
+        // response field that can still be unset right after create.
+        await testGlossaryTerm.visitEntityPage(page);
         await waitForAllLoadersToDisappear(page);
 
         // Open domain selector to verify single-select mode (no checkboxes)

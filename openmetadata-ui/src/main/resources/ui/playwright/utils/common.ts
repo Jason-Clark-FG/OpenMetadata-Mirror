@@ -48,8 +48,29 @@ export const getToken = async (page: Page) => {
   return await getTokenFromStorage(page);
 };
 
-export const getAuthContext = async (token: string) => {
+const getPlaywrightBaseUrl = (page?: Page) => {
+  const pageUrl = page?.url();
+
+  if (pageUrl && /^https?:\/\//.test(pageUrl)) {
+    return new URL(pageUrl).origin;
+  }
+
+  return process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585';
+};
+
+const ensurePageOnAppOrigin = async (page: Page) => {
+  if (/^https?:\/\//.test(page.url())) {
+    return;
+  }
+
+  await page.goto('/my-data');
+  await page.waitForURL((url) => /^https?:\/\//.test(url.href));
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+};
+
+export const getAuthContext = async (token: string, page?: Page) => {
   return await request.newContext({
+    baseURL: getPlaywrightBaseUrl(page),
     // Default timeout is 30s making it to 1m for AUTs
     timeout: 90000,
     extraHTTPHeaders: {
@@ -127,7 +148,7 @@ export const createNewPage = async (browser: Browser) => {
   const token = await getToken(page);
 
   // create a new context with the token
-  const apiContext = await getAuthContext(token);
+  const apiContext = await getAuthContext(token, page);
 
   const afterAction = async () => {
     await apiContext.dispose();
@@ -143,11 +164,13 @@ export const createNewPage = async (browser: Browser) => {
  * @returns An object containing the API context and a cleanup function.
  */
 export const getApiContext = async (page: Page) => {
+  await ensurePageOnAppOrigin(page);
   const token = await getToken(page);
   const storageState = await page.context().storageState({ indexedDB: true });
+  const baseURL = getPlaywrightBaseUrl(page);
   const apiContext = token
     ? await request.newContext({
-        baseURL: new URL(page.url() || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585').origin,
+        baseURL,
         storageState,
         // Default timeout is 30s making it to 1m for AUTs
         timeout: 90000,
@@ -157,7 +180,7 @@ export const getApiContext = async (page: Page) => {
         },
       })
     : await request.newContext({
-        baseURL: new URL(page.url() || process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585').origin,
+        baseURL,
         storageState,
         timeout: 90000,
       });
@@ -312,7 +335,25 @@ export const assignSingleSelectDomain = async (
   const tagSelector = page.getByTestId(`tag-${domain.fullyQualifiedName}`);
   await tagSelector.waitFor({ state: 'visible' });
 
+  const patchReq = page
+    .waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        response.url().includes('/api/v1/'),
+      { timeout: 5000 }
+    )
+    .catch(() => undefined);
   await tagSelector.click();
+  const saveButton = domainSelector.getByTestId('saveAssociatedTag');
+  const requiresExplicitSave = await saveButton
+    .isVisible({ timeout: 1000 })
+    .catch(() => false);
+
+  if (requiresExplicitSave) {
+    await saveButton.click();
+  }
+  await patchReq;
+  await waitForAllLoadersToDisappear(page).catch(() => undefined);
 
   await expect(page.getByTestId('domain-link')).toContainText(
     domain.displayName

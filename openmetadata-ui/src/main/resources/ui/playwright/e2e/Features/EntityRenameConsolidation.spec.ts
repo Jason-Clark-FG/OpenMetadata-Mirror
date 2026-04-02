@@ -34,6 +34,7 @@ import { sidebarClick } from '../../utils/sidebar';
 const adminUser = new UserClass();
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
+test.describe.configure({ mode: 'serial' });
 
 /**
  * These tests verify that when an entity is renamed and then another field is updated

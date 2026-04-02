@@ -17,6 +17,8 @@ export const DB_NAME = 'AppDataStore';
 export const STORE_NAME = 'keyValueStore';
 export const APP_STATE_KEY = 'app_state';
 export const OIDC_TOKEN_KEY = 'primary';
+const LOGGED_IN_USER_STORAGE_KEY = 'loggedInUsers';
+const AUTH_STORAGE_BOOTSTRAP_PATH = '/api/v1/system/version';
 
 /**
  * Execute token storage operations in browser context.
@@ -197,4 +199,145 @@ export const getToken = async (page: Page): Promise<string> => {
 
 export const setToken = async (page: Page, token: string): Promise<void> => {
   await executeTokenOperation(page, 'set', token);
+};
+
+export const seedAuthStorage = async ({
+  page,
+  token,
+  username,
+}: {
+  page: Page;
+  token: string;
+  username?: string;
+}): Promise<void> => {
+  await page.goto(AUTH_STORAGE_BOOTSTRAP_PATH, {
+    waitUntil: 'domcontentloaded',
+  });
+
+  await page.evaluate(
+    async ({
+      dbName,
+      storeName,
+      appStateKey,
+      oidcTokenKey,
+      loggedInUserStorageKey,
+      token,
+      username,
+    }) => {
+      const stateValue = JSON.stringify({ [oidcTokenKey]: token });
+
+      const persistToIndexedDb = async () => {
+        await new Promise<void>((resolve, reject) => {
+          const request = indexedDB.open(dbName, 1);
+
+          request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName);
+            }
+          };
+
+          request.onsuccess = () => {
+            const db = request.result;
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
+            store.put(stateValue, appStateKey);
+
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => reject(transaction.error);
+          };
+
+          request.onerror = () => reject(request.error);
+        });
+      };
+
+      try {
+        if ('serviceWorker' in navigator && 'indexedDB' in window) {
+          await persistToIndexedDb();
+        } else {
+          localStorage.setItem(appStateKey, stateValue);
+        }
+      } catch {
+        localStorage.setItem(appStateKey, stateValue);
+      }
+
+      if (username) {
+        const existingUsers = localStorage
+          .getItem(loggedInUserStorageKey)
+          ?.split(',')
+          .filter(Boolean);
+        const users = existingUsers ?? [];
+
+        if (!users.includes(username)) {
+          users.push(username);
+          localStorage.setItem(loggedInUserStorageKey, users.join(','));
+        }
+      }
+    },
+    {
+      dbName: DB_NAME,
+      storeName: STORE_NAME,
+      appStateKey: APP_STATE_KEY,
+      oidcTokenKey: OIDC_TOKEN_KEY,
+      loggedInUserStorageKey: LOGGED_IN_USER_STORAGE_KEY,
+      token,
+      username,
+    }
+  );
+
+  await page.waitForFunction(
+    async ({
+      dbName,
+      storeName,
+      appStateKey,
+      loggedInUserStorageKey,
+      token,
+      username,
+    }) => {
+      const readPersistedToken = async (): Promise<string | null> => {
+        try {
+          if ('serviceWorker' in navigator && 'indexedDB' in window) {
+            return await new Promise<string | null>((resolve) => {
+              const request = indexedDB.open(dbName, 1);
+
+              request.onupgradeneeded = () => resolve(null);
+              request.onerror = () => resolve(null);
+              request.onsuccess = () => {
+                const db = request.result;
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const getRequest = store.get(appStateKey);
+
+                getRequest.onerror = () => resolve(null);
+                getRequest.onsuccess = () => resolve(getRequest.result ?? null);
+              };
+            });
+          }
+
+          return localStorage.getItem(appStateKey);
+        } catch {
+          return localStorage.getItem(appStateKey);
+        }
+      };
+
+      const persistedToken = await readPersistedToken();
+      const hasLoggedInUser =
+        !username ||
+        localStorage
+          .getItem(loggedInUserStorageKey)
+          ?.split(',')
+          .filter(Boolean)
+          .includes(username);
+
+      return persistedToken?.includes(token) && hasLoggedInUser;
+    },
+    {
+      dbName: DB_NAME,
+      storeName: STORE_NAME,
+      appStateKey: APP_STATE_KEY,
+      loggedInUserStorageKey: LOGGED_IN_USER_STORAGE_KEY,
+      token,
+      username,
+    }
+  );
 };

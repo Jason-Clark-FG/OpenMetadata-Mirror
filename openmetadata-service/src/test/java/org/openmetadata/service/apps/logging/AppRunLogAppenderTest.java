@@ -1,5 +1,6 @@
 package org.openmetadata.service.apps.logging;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -69,6 +70,17 @@ class AppRunLogAppenderTest {
     assertTrue(pending.get(0).contains("hello world"));
 
     AppRunLogAppender.stopCapture("TestApp", runId);
+  }
+
+  @Test
+  void startCaptureFallsBackForNonNumericRunId() {
+    String runId = "run-abc";
+
+    assertDoesNotThrow(
+        () -> AppRunLogAppender.startCapture(runId, "app-id-1", "FallbackApp", "server1"));
+    assertNotNull(AppRunLogAppender.getBuffer("FallbackApp", runId));
+
+    AppRunLogAppender.stopCapture("FallbackApp", runId);
   }
 
   @Test

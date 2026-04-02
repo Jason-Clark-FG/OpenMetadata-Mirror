@@ -25,6 +25,7 @@ import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.WorkflowVariableHandler;
+import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.util.FullyQualifiedName;
 
@@ -49,7 +50,10 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
               (String)
                   varHandler.getNamespacedVariable(
                       inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
-      EntityInterface entity = Entity.getEntity(entityLink, "*", Include.ALL);
+      EntityRepository<?> entityRepository = Entity.getEntityRepository(entityLink.getEntityType());
+      boolean entitySupportsReviewers = entityRepository.isSupportsReviewers();
+      String relationshipFields = entitySupportsReviewers ? "reviewers,owners" : "owners";
+      EntityInterface entity = Entity.getEntity(entityLink, relationshipFields, Include.ALL);
 
       Set<String> assignees = new LinkedHashSet<>();
 
@@ -59,9 +63,6 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       // Process addReviewers flag
       Boolean addReviewers = (Boolean) assigneesConfig.getOrDefault("addReviewers", true);
       if (addReviewers) {
-        boolean entitySupportsReviewers =
-            Entity.getEntityRepository(entityLink.getEntityType()).isSupportsReviewers();
-
         if (entitySupportsReviewers
             && entity.getReviewers() != null
             && !entity.getReviewers().isEmpty()) {

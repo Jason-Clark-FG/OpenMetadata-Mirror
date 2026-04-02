@@ -28,6 +28,7 @@ import static org.openmetadata.service.security.mask.PIIMasker.maskSampleData;
 
 import com.google.common.collect.Lists;
 import jakarta.ws.rs.core.Response;
+import java.sql.SQLException;
 import jakarta.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1017,20 +1018,28 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
 
     String tableName = daoCollection.testCaseDAO().getTableName();
     if (nullOrEmpty(excludedTestCaseIds)) {
-      daoCollection
-          .relationshipDAO()
-          .bulkInsertAllToRelationship(
-              testSuite.getId(), TEST_SUITE, TEST_CASE, Relationship.CONTAINS.ordinal(), tableName);
+      executeWithDeadlockRetry(
+          () ->
+              daoCollection
+                  .relationshipDAO()
+                  .bulkInsertAllToRelationship(
+                      testSuite.getId(),
+                      TEST_SUITE,
+                      TEST_CASE,
+                      Relationship.CONTAINS.ordinal(),
+                      tableName));
     } else {
-      daoCollection
-          .relationshipDAO()
-          .bulkInsertAllToRelationshipWithExclusions(
-              excludedTestCaseIds.stream().map(UUID::toString).toList(),
-              testSuite.getId(),
-              TEST_SUITE,
-              TEST_CASE,
-              Relationship.CONTAINS.ordinal(),
-              tableName);
+      executeWithDeadlockRetry(
+          () ->
+              daoCollection
+                  .relationshipDAO()
+                  .bulkInsertAllToRelationshipWithExclusions(
+                      excludedTestCaseIds.stream().map(UUID::toString).toList(),
+                      testSuite.getId(),
+                      TEST_SUITE,
+                      TEST_CASE,
+                      Relationship.CONTAINS.ordinal(),
+                      tableName));
     }
 
     List<EntityReference> updatedTestCaseReferences =
@@ -1051,6 +1060,40 @@ public class TestCaseRepository extends EntityRepository<TestCase> {
     updateLogicalTestSuite(testSuite.getId());
 
     return new RestUtil.PutResponse<>(Response.Status.OK, testSuite, LOGICAL_TEST_CASE_ADDED);
+  }
+
+  private void executeWithDeadlockRetry(Runnable operation) {
+    int maxAttempts = 3;
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        operation.run();
+        return;
+      } catch (RuntimeException ex) {
+        if (!isTransientDeadlock(ex) || attempt == maxAttempts) {
+          throw ex;
+        }
+        LOG.debug(
+            "Retrying logical test suite bulk insert after transient deadlock (attempt {}/{})",
+            attempt + 1,
+            maxAttempts);
+      }
+    }
+  }
+
+  private boolean isTransientDeadlock(Throwable throwable) {
+    for (Throwable current = throwable; current != null; current = current.getCause()) {
+      if (current instanceof SQLException sqlException) {
+        int errorCode = sqlException.getErrorCode();
+        String sqlState = sqlException.getSQLState();
+        if (errorCode == 1213
+            || errorCode == 1205
+            || "40001".equals(sqlState)
+            || "40P01".equals(sqlState)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Transaction

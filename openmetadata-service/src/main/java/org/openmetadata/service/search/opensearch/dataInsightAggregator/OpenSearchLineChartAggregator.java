@@ -222,6 +222,9 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       SearchResponse<JsonData> searchResponse,
       List<FormulaHolder> formulas,
       Map metricFormulaHolder) {
+    @SuppressWarnings("unchecked")
+    Map<String, MetricFormulaHolder> typedMetricFormulaHolder =
+        (Map<String, MetricFormulaHolder>) metricFormulaHolder;
     DataInsightCustomChartResultList resultList = new DataInsightCustomChartResultList();
     LineChart lineChart = JsonUtils.convertValue(diChart.getChartDetails(), LineChart.class);
     Map<String, Aggregate> aggregationMap =
@@ -248,13 +251,9 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
               diChartResults.addAll(
                   processAggregations(
                       singleAggMap,
-                      ((Map<String, MetricFormulaHolder>) metricFormulaHolder)
-                          .get(subAggName)
-                          .formula,
+                      typedMetricFormulaHolder.get(subAggName).formula,
                       group,
-                      ((Map<String, MetricFormulaHolder>) metricFormulaHolder)
-                          .get(subAggName)
-                          .holders,
+                      typedMetricFormulaHolder.get(subAggName).holders,
                       getMetricName(lineChart, subAggName)));
             }
           }
@@ -270,7 +269,7 @@ public class OpenSearchLineChartAggregator implements OpenSearchDynamicChartAggr
       MetricFormulaHolder formulaHolder =
           metricFormulaHolder.get(aggName) == null
               ? new MetricFormulaHolder()
-              : ((Map<String, MetricFormulaHolder>) metricFormulaHolder).get(aggName);
+              : typedMetricFormulaHolder.get(aggName);
       String group = null;
       if (lineChart.getMetrics().size() > 1) {
         group = getMetricName(lineChart, aggName);

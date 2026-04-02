@@ -680,9 +680,9 @@ public class WorkflowHandler {
 
         // Check if this is a multi-approval task
         Integer approvalThreshold =
-            (Integer) taskService.getVariable(task.getId(), "approvalThreshold");
+            parseThresholdValue(taskService.getVariable(task.getId(), "approvalThreshold"));
         Integer rejectionThreshold =
-            (Integer) taskService.getVariable(task.getId(), "rejectionThreshold");
+            parseThresholdValue(taskService.getVariable(task.getId(), "rejectionThreshold"));
         if ((approvalThreshold != null && approvalThreshold > 1)
             || (rejectionThreshold != null && rejectionThreshold > 1)) {
           // This is a multi-reviewer approval task
@@ -1111,9 +1111,9 @@ public class WorkflowHandler {
 
       TaskService taskService = processEngine.getTaskService();
       Integer approvalThreshold =
-          (Integer) taskService.getVariable(task.getId(), "approvalThreshold");
+          parseThresholdValue(taskService.getVariable(task.getId(), "approvalThreshold"));
       Integer rejectionThreshold =
-          (Integer) taskService.getVariable(task.getId(), "rejectionThreshold");
+          parseThresholdValue(taskService.getVariable(task.getId(), "rejectionThreshold"));
 
       int effectiveApprovalThreshold = approvalThreshold != null ? approvalThreshold : 1;
       int effectiveRejectionThreshold = rejectionThreshold != null ? rejectionThreshold : 1;
@@ -1133,10 +1133,7 @@ public class WorkflowHandler {
       return approvalCount < effectiveApprovalThreshold
           && rejectionCount < effectiveRejectionThreshold;
     } catch (Exception e) {
-      LOG.debug(
-          "Could not determine multi-approval vote state for task {}: {}",
-          customTaskId,
-          e.getMessage());
+      LOG.warn("Could not determine multi-approval vote state for task {}", customTaskId, e);
       return false;
     }
   }
@@ -1702,5 +1699,25 @@ public class WorkflowHandler {
 
   public RuntimeService getRuntimeService() {
     return processEngine.getRuntimeService();
+  }
+
+  private Integer parseThresholdValue(Object value) {
+    if (value == null) {
+      return null;
+    }
+    if (value instanceof Integer integerValue) {
+      return integerValue;
+    }
+    if (value instanceof Number numericValue) {
+      return numericValue.intValue();
+    }
+    if (value instanceof String stringValue && !stringValue.isBlank()) {
+      try {
+        return Integer.parseInt(stringValue.trim());
+      } catch (NumberFormatException e) {
+        LOG.warn("Invalid threshold value '{}'", stringValue);
+      }
+    }
+    return null;
   }
 }

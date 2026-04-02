@@ -10,18 +10,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+import { existsSync } from 'fs';
 import { APIRequestContext, Browser, Page, request } from '@playwright/test';
 import { DEFAULT_ADMIN_USER } from '../constant/user';
 import { getAuthContext, redirectToHomePage } from './common';
-import { setToken } from './tokenStorage';
+import { seedAuthStorage } from './tokenStorage';
+
+const ADMIN_STORAGE_STATE_FILE = 'playwright/.auth/admin.json';
 
 export const authenticateAdminPage = async (page: Page) => {
   const { accessToken } = await loginAsAdminViaApi();
 
-  await page.goto('/signin');
-  await page.waitForURL('**/signin');
-  await page.waitForLoadState('domcontentloaded');
-  await setToken(page, accessToken);
+  await seedAuthStorage({
+    page,
+    token: accessToken,
+    username: DEFAULT_ADMIN_USER.userName,
+  });
   await redirectToHomePage(page);
 
   return accessToken;
@@ -44,15 +48,44 @@ export const createAdminApiContext = async (): Promise<{
 };
 
 export const performAdminLogin = async (browser: Browser) => {
-  const page = await browser.newPage();
-  const token = await authenticateAdminPage(page);
-  const apiContext = await getAuthContext(token);
-  const afterAction = async () => {
-    await apiContext.dispose();
-    await page.close();
-  };
+  const { accessToken, afterAction: afterLogin } = await loginAsAdminViaApi();
 
-  return { page, apiContext, afterAction };
+  if (existsSync(ADMIN_STORAGE_STATE_FILE)) {
+    const context = await browser.newContext({
+      storageState: ADMIN_STORAGE_STATE_FILE,
+    });
+    const page = await context.newPage();
+
+    await redirectToHomePage(page);
+    const apiContext = await getAuthContext(accessToken);
+
+    return {
+      page,
+      apiContext,
+      afterAction: async () => {
+        await apiContext.dispose();
+        await afterLogin();
+        await context.close();
+      },
+    };
+  }
+
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await authenticateAdminPage(page);
+
+  const apiContext = await getAuthContext(accessToken);
+
+  return {
+    page,
+    apiContext,
+    afterAction: async () => {
+      await apiContext.dispose();
+      await afterLogin();
+      await context.close();
+    },
+  };
 };
 
 const loginAsAdminViaApi = async () => {

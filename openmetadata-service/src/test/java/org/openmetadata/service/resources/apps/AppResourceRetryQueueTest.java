@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -27,6 +28,8 @@ import org.openmetadata.schema.entity.app.App;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.jdbi3.AppRepository;
 import org.openmetadata.service.jdbi3.CollectionDAO;
+import org.openmetadata.service.security.Authorizer;
+import org.openmetadata.service.security.policyevaluator.OperationContext;
 import sun.misc.Unsafe;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,6 +38,8 @@ class AppResourceRetryQueueTest {
 
   @Mock private AppRepository repository;
   @Mock private UriInfo uriInfo;
+  @Mock private SecurityContext securityContext;
+  @Mock private Authorizer authorizer;
   @Mock private CollectionDAO collectionDAO;
   @Mock private CollectionDAO.SearchIndexRetryQueueDAO retryQueueDAO;
 
@@ -50,6 +55,10 @@ class AppResourceRetryQueueTest {
     Field repoField = AppResource.class.getSuperclass().getDeclaredField("repository");
     repoField.setAccessible(true);
     repoField.set(appResource, repository);
+
+    Field authorizerField = AppResource.class.getSuperclass().getDeclaredField("authorizer");
+    authorizerField.setAccessible(true);
+    unsafe.putObject(appResource, unsafe.objectFieldOffset(authorizerField), authorizer);
   }
 
   @Test
@@ -61,7 +70,8 @@ class AppResourceRetryQueueTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> appResource.listRetryQueue(uriInfo, null, "DataInsightsApplication", 10, 0));
+        () ->
+            appResource.listRetryQueue(uriInfo, securityContext, "DataInsightsApplication", 10, 0));
   }
 
   @Test
@@ -77,10 +87,11 @@ class AppResourceRetryQueueTest {
       entityMock.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
 
       Response response =
-          appResource.listRetryQueue(uriInfo, null, "SearchIndexingApplication", 10, 0);
+          appResource.listRetryQueue(uriInfo, securityContext, "SearchIndexingApplication", 10, 0);
 
       assertEquals(200, response.getStatus());
       assertNotNull(response.getEntity());
+      verify(authorizer).authorize(eq(securityContext), any(OperationContext.class), any());
       verify(retryQueueDAO).listAll(10, 0);
       verify(retryQueueDAO).countAll();
     }
@@ -99,9 +110,10 @@ class AppResourceRetryQueueTest {
       entityMock.when(Entity::getCollectionDAO).thenReturn(collectionDAO);
 
       Response response =
-          appResource.listRetryQueue(uriInfo, null, "SearchIndexingApplication", 50, 25);
+          appResource.listRetryQueue(uriInfo, securityContext, "SearchIndexingApplication", 50, 25);
 
       assertEquals(200, response.getStatus());
+      verify(authorizer).authorize(eq(securityContext), any(OperationContext.class), any());
       verify(retryQueueDAO).listAll(50, 25);
     }
   }

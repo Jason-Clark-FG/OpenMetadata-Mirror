@@ -167,6 +167,11 @@ public class TaskWorkflowHandler {
 
     if (!workflowSuccess) {
       if (!workflowHandler.hasActiveRuntimeTask(taskId)) {
+        if (task.getStatus() != TaskEntityStatus.Open
+            && task.getStatus() != TaskEntityStatus.InProgress) {
+          throw new IllegalStateException(
+              String.format("Task '%s' is already in status '%s'", taskId, task.getStatus()));
+        }
         LOG.warn(
             "[TaskWorkflowHandler] No active Flowable runtime task found for '{}'; applying direct task resolution fallback",
             taskId);

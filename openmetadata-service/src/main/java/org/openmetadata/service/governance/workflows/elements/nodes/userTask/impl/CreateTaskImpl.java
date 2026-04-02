@@ -14,6 +14,7 @@
 package org.openmetadata.service.governance.workflows.elements.nodes.userTask.impl;
 
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
+import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
 import static org.openmetadata.service.governance.workflows.Workflow.RECOGNIZER_FEEDBACK;
 import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENTITY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
@@ -402,11 +403,17 @@ public class CreateTaskImpl implements TaskListener {
       }
     }
     if (existingTask != null) {
+      List<EntityReference> resolvedAssignees =
+          !assignees.isEmpty()
+              ? assignees
+              : (requestedAssignees != null
+                          && !requestedAssignees.isEmpty()
+                          && (existingTask.getAssignees() == null
+                              || existingTask.getAssignees().isEmpty()))
+                      ? requestedAssignees
+                      : existingTask.getAssignees();
       existingTask.setStatus(stageStatus != null ? stageStatus : existingTask.getStatus());
-      existingTask.setAssignees(
-          requestedAssignees != null && !requestedAssignees.isEmpty()
-              ? requestedAssignees
-              : assignees);
+      existingTask.setAssignees(resolvedAssignees);
       if (requestedReviewers != null) {
         existingTask.setReviewers(requestedReviewers);
       }
@@ -732,10 +739,8 @@ public class CreateTaskImpl implements TaskListener {
       return null;
     }
 
-    String recognizerNamespace = inputNamespaceMap.get(RECOGNIZER_FEEDBACK);
-    if (recognizerNamespace == null) {
-      return null;
-    }
+    String recognizerNamespace =
+        inputNamespaceMap.getOrDefault(RECOGNIZER_FEEDBACK, GLOBAL_NAMESPACE);
 
     try {
       String feedbackJson =
