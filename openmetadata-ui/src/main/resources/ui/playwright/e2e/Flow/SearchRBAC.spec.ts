@@ -104,14 +104,6 @@ for (const entity of searchRBACEntities) {
       await afterAction();
     });
 
-    test.afterAll(async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
-
-      await enableDisableSearchRBAC(apiContext, false);
-
-      await afterAction();
-    });
-
     test(`User with permission`, async ({ browser }) => {
       const userWithPermissionPage = await browser.newPage();
 

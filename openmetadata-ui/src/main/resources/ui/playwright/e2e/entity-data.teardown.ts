@@ -14,13 +14,16 @@ import { test as teardown } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 import { performAdminLogin } from '../utils/admin';
+import { enableDisableSearchRBAC } from '../utils/searchRBAC';
 
 teardown('cleanup entity data prerequisites', async ({ browser }) => {
   teardown.setTimeout(300 * 1000);
 
-  const { afterAction } = await performAdminLogin(browser);
+  const { apiContext, afterAction } = await performAdminLogin(browser);
 
   try {
+    await enableDisableSearchRBAC(apiContext, false);
+
     const filePath = path.join(
       __dirname,
       '..',
