@@ -2521,6 +2521,9 @@ public class SearchRepository {
 
   private List<String> buildSourceFields(String sortField) {
     List<String> sourceFields = new ArrayList<>(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS);
+    // Dynamically include the sort field in _source so that callers can inspect it.
+    // Note: sort values for search_after come from hit.sort[], not _source, but
+    // including the field in _source is useful for debugging and completeness.
     if (!sourceFields.contains(sortField)) {
       sourceFields.add(sortField);
     }
