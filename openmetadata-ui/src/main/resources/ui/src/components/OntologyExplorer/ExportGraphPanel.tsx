@@ -20,9 +20,7 @@ export interface ExportGraphPanelProps {
   onExportPng: () => Promise<void>;
 }
 
-const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({
-  onExportPng,
-}) => {
+const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({ onExportPng }) => {
   const { t } = useTranslation();
 
   return (

@@ -11,23 +11,23 @@
  *  limitations under the License.
  */
 import {
-  forwardRef,
-  useCallback,
-  useImperativeHandle,
-  useRef,
-  useState,
+    forwardRef,
+    useCallback,
+    useImperativeHandle,
+    useRef,
+    useState
 } from 'react';
 import { useGraphDataBuilder } from './hooks/useGraphData';
 import { useOntologyGraph } from './hooks/useOntologyGraph';
 import {
-  FIT_VIEW_ZOOM_OUT,
-  FIT_VIEW_ZOOM_OUT_DATA_MODE,
-  toLayoutEngineType,
-  type LayoutEngineType,
+    FIT_VIEW_ZOOM_OUT,
+    FIT_VIEW_ZOOM_OUT_DATA_MODE,
+    toLayoutEngineType,
+    type LayoutEngineType
 } from './OntologyExplorer.constants';
 import {
-  OntologyGraphHandle,
-  OntologyGraphProps,
+    OntologyGraphHandle,
+    OntologyGraphProps
 } from './OntologyExplorer.interface';
 
 const OntologyGraph = forwardRef<OntologyGraphHandle, OntologyGraphProps>(

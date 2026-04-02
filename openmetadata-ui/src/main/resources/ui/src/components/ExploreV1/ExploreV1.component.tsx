@@ -12,23 +12,23 @@
  */
 
 import {
-  DownOutlined,
-  ExclamationCircleOutlined,
-  FilterOutlined,
-  SortAscendingOutlined,
-  SortDescendingOutlined,
+    DownOutlined,
+    ExclamationCircleOutlined,
+    FilterOutlined,
+    SortAscendingOutlined,
+    SortDescendingOutlined
 } from '@ant-design/icons';
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Dropdown,
-  Menu,
-  Row,
-  Space,
-  Switch,
-  Typography,
+    Alert,
+    Button,
+    Card,
+    Col,
+    Dropdown,
+    Menu,
+    Row,
+    Space,
+    Switch,
+    Typography
 } from 'antd';
 import { AxiosError } from 'axios';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
@@ -43,10 +43,10 @@ import EntitySummaryPanel from '../../components/Explore/EntitySummaryPanel/Enti
 import ExploreQuickFilters from '../../components/Explore/ExploreQuickFilters';
 import SortingDropDown from '../../components/Explore/SortingDropDown';
 import {
-  entitySortingFields,
-  SEARCH_INDEXING_APPLICATION,
-  SUPPORTED_EMPTY_FILTER_FIELDS,
-  TAG_FQN_KEY,
+    entitySortingFields,
+    SEARCH_INDEXING_APPLICATION,
+    SUPPORTED_EMPTY_FILTER_FIELDS,
+    TAG_FQN_KEY
 } from '../../constants/explore.constants';
 import { SIZE, SORT_ORDER } from '../../enums/common.enum';
 import { SearchIndex } from '../../enums/search.enum';
@@ -59,8 +59,8 @@ import { getCurrentISODate } from '../../utils/date-time/DateTimeUtils';
 import { highlightEntityNameAndDescription } from '../../utils/EntityUtils';
 import { getCombinedQueryFilterObject } from '../../utils/ExplorePage/ExplorePageUtils';
 import {
-  getExploreQueryFilterMust,
-  getSelectedValuesFromQuickFilter,
+    getExploreQueryFilterMust,
+    getSelectedValuesFromQuickFilter
 } from '../../utils/ExploreUtils';
 import { getApplicationDetailsPath } from '../../utils/RouterUtils';
 import searchClassBase from '../../utils/SearchClassBase';
@@ -69,9 +69,9 @@ import FilterErrorPlaceHolder from '../common/ErrorWithPlaceholder/FilterErrorPl
 import Loader from '../common/Loader/Loader';
 import ResizableLeftPanels from '../common/ResizablePanels/ResizableLeftPanels';
 import {
-  ExploreProps,
-  ExploreQuickFilterField,
-  ExploreSearchIndex,
+    ExploreProps,
+    ExploreQuickFilterField,
+    ExploreSearchIndex
 } from '../Explore/ExplorePage.interface';
 import ExploreTree from '../Explore/ExploreTree/ExploreTree';
 import SearchedData from '../SearchedData/SearchedData';

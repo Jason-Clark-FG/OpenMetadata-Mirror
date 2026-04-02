@@ -1019,15 +1019,10 @@ public class OpenSearchSearchManager implements SearchManagementClient {
 
     LOG.debug("Executing search on index: {}, query: {}", request.getIndex(), request.getQuery());
 
+    Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
     try {
-      Timer.Sample searchTimerSample = RequestLatencyContext.startSearchOperation();
-
       SearchRequest searchRequest = requestBuilder.build(request.getIndex());
       SearchResponse<JsonData> searchResponse = client.search(searchRequest, JsonData.class);
-
-      if (searchTimerSample != null) {
-        RequestLatencyContext.endSearchOperation(searchTimerSample);
-      }
 
       if (!Boolean.TRUE.equals(request.getIsHierarchy())) {
         return Response.status(OK).entity(searchResponse.toJsonString()).build();
@@ -1042,6 +1037,10 @@ public class OpenSearchSearchManager implements SearchManagementClient {
             String.format("Failed to find index %s", request.getIndex()));
       } else {
         throw buildSearchException(e);
+      }
+    } finally {
+      if (searchTimerSample != null) {
+        RequestLatencyContext.endSearchOperation(searchTimerSample);
       }
     }
   }

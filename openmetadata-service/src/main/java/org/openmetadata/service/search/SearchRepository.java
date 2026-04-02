@@ -88,7 +88,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.openmetadata.csv.CsvExportProgressCallback;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.EntityTimeSeriesInterface;
 import org.openmetadata.schema.analytics.ReportData;
@@ -2416,122 +2415,6 @@ public class SearchRepository {
     return searchClient.search(request, subjectContext);
   }
 
-  public String exportSearchResultsCsv(
-      SearchRequest baseRequest,
-      SubjectContext subjectContext,
-      CsvExportProgressCallback progressCallback)
-      throws IOException {
-    SearchRequest countRequest =
-        new SearchRequest()
-            .withQuery(baseRequest.getQuery())
-            .withIndex(baseRequest.getIndex())
-            .withQueryFilter(baseRequest.getQueryFilter())
-            .withPostFilter(baseRequest.getPostFilter())
-            .withDeleted(baseRequest.getDeleted())
-            .withDomains(baseRequest.getDomains())
-            .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
-            .withSize(0)
-            .withFrom(0)
-            .withFetchSource(false)
-            .withTrackTotalHits(true)
-            .withIncludeAggregations(false);
-
-    SearchResultListMapper countResult = searchClient.searchForExport(countRequest, subjectContext);
-    int totalHits = (int) countResult.getTotal();
-
-    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Search results contain %d rows which exceeds the maximum of %d. Please add filters to reduce the result set.",
-              totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
-    }
-
-    if (totalHits == 0) {
-      return SearchResultCsvExporter.CSV_HEADER + "\n";
-    }
-
-    java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("csv-export-", ".csv");
-    try {
-      try (java.io.BufferedWriter writer =
-          java.nio.file.Files.newBufferedWriter(
-              tempFile, java.nio.charset.StandardCharsets.UTF_8)) {
-        writer.write(SearchResultCsvExporter.CSV_HEADER);
-        writer.newLine();
-
-        long startTime = System.currentTimeMillis();
-        long timeoutMs = 5 * 60 * 1000L;
-        int exported = 0;
-        int maxIterations = (totalHits / SearchResultCsvExporter.BATCH_SIZE) + 2;
-        int iteration = 0;
-        List<Object> searchAfter = null;
-
-        String sortField = baseRequest.getSortFieldParam();
-        if (sortField == null || sortField.isEmpty() || "_score".equals(sortField)) {
-          sortField = "fullyQualifiedName";
-        }
-
-        List<String> sourceFields = new ArrayList<>(SearchResultCsvExporter.EXPORT_SOURCE_FIELDS);
-        if (!sourceFields.contains(sortField)) {
-          sourceFields.add(sortField);
-        }
-
-        while (exported < totalHits && iteration < maxIterations) {
-          iteration++;
-          if (System.currentTimeMillis() - startTime > timeoutMs) {
-            throw new IllegalStateException(
-                "Export timed out after 5 minutes. Please add filters to reduce the result set.");
-          }
-
-          SearchRequest batchRequest =
-              new SearchRequest()
-                  .withQuery(baseRequest.getQuery())
-                  .withIndex(baseRequest.getIndex())
-                  .withQueryFilter(baseRequest.getQueryFilter())
-                  .withPostFilter(baseRequest.getPostFilter())
-                  .withDeleted(baseRequest.getDeleted())
-                  .withDomains(baseRequest.getDomains())
-                  .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
-                  .withSize(SearchResultCsvExporter.BATCH_SIZE)
-                  .withFrom(0)
-                  .withFetchSource(true)
-                  .withTrackTotalHits(false)
-                  .withIncludeAggregations(false)
-                  .withIncludeSourceFields(sourceFields)
-                  .withSortFieldParam(sortField)
-                  .withSortOrder(
-                      baseRequest.getSortOrder() != null ? baseRequest.getSortOrder() : "asc")
-                  .withSearchAfter(searchAfter);
-
-          SearchResultListMapper batch = searchClient.searchForExport(batchRequest, subjectContext);
-
-          if (batch.getResults().isEmpty()) {
-            break;
-          }
-
-          for (Map<String, Object> source : batch.getResults()) {
-            writer.write(SearchResultCsvExporter.toCsvRow(source));
-            writer.newLine();
-            exported++;
-          }
-
-          if (batch.getLastHitSortValues() != null) {
-            searchAfter = Arrays.asList(batch.getLastHitSortValues());
-          } else {
-            break;
-          }
-
-          if (progressCallback != null) {
-            progressCallback.onProgress(
-                exported, totalHits, String.format("Exported %d of %d rows", exported, totalHits));
-          }
-        }
-      }
-      return java.nio.file.Files.readString(tempFile, java.nio.charset.StandardCharsets.UTF_8);
-    } finally {
-      java.nio.file.Files.deleteIfExists(tempFile);
-    }
-  }
-
   public int countSearchResults(SearchRequest baseRequest, SubjectContext subjectContext)
       throws IOException {
     SearchRequest countRequest =
@@ -2549,20 +2432,18 @@ public class SearchRepository {
             .withTrackTotalHits(true)
             .withIncludeAggregations(false);
     SearchResultListMapper countResult = searchClient.searchForExport(countRequest, subjectContext);
-    return (int) countResult.getTotal();
+    long total = countResult.getTotal();
+    if (total > Integer.MAX_VALUE) {
+      throw new IllegalStateException("Search results count exceeds supported maximum: " + total);
+    }
+    return (int) total;
   }
 
   public void exportSearchResultsCsvStream(
       SearchRequest baseRequest, SubjectContext subjectContext, java.io.OutputStream output)
       throws IOException {
     int totalHits = countSearchResults(baseRequest, subjectContext);
-
-    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Search results contain %d rows which exceeds the maximum of %d. Please add filters to reduce the result set.",
-              totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
-    }
+    validateExportSize(totalHits);
 
     java.io.BufferedWriter writer =
         new java.io.BufferedWriter(
@@ -2576,6 +2457,15 @@ public class SearchRepository {
     }
 
     writeCsvBatches(baseRequest, subjectContext, writer, totalHits);
+  }
+
+  private void validateExportSize(int totalHits) {
+    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Search results contain %d rows which exceeds the maximum of %d. Please add filters to reduce the result set.",
+              totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
+    }
   }
 
   private void writeCsvBatches(

@@ -14,37 +14,37 @@ import { ComboData, EdgeData, NodeData } from '@antv/g6';
 import { useCallback, useMemo } from 'react';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
 import {
-  DATA_MODE_ASSET_CIRCLE_SIZE,
-  DATA_MODE_ASSET_EDGE_STROKE_COLOR,
-  DATA_MODE_TERM_NODE_SIZE,
-  DIMMED_EDGE_OPACITY,
-  EDGE_LINE_APPEND_WIDTH,
-  EDGE_STROKE_COLOR,
-  LayoutEngine,
-  NODE_BORDER_COLOR,
-  RELATION_COLORS,
+    DATA_MODE_ASSET_CIRCLE_SIZE,
+    DATA_MODE_ASSET_EDGE_STROKE_COLOR,
+    DATA_MODE_TERM_NODE_SIZE,
+    DIMMED_EDGE_OPACITY,
+    EDGE_LINE_APPEND_WIDTH,
+    EDGE_STROKE_COLOR,
+    LayoutEngine,
+    NODE_BORDER_COLOR,
+    RELATION_COLORS
 } from '../OntologyExplorer.constants';
 import {
-  BuildGraphDataProps,
-  MergedEdge,
-  OntologyEdge,
-  OntologyNode,
+    BuildGraphDataProps,
+    MergedEdge,
+    OntologyEdge,
+    OntologyNode
 } from '../OntologyExplorer.interface';
 import {
-  BADGE_MIN_NODE_WIDTH,
-  estimateNodeWidth,
-  MODEL_NODE_MAX_WIDTH,
-  NODE_HEIGHT,
-  truncateNodeLabelByWidth,
+    BADGE_MIN_NODE_WIDTH,
+    estimateNodeWidth,
+    MODEL_NODE_MAX_WIDTH,
+    NODE_HEIGHT,
+    truncateNodeLabelByWidth
 } from '../utils/graphConfig';
 import {
-  buildComboStyle,
-  buildDataModeAssetNodeStyle,
-  buildDataModeTermNodeStyle,
-  buildDefaultRectNodeStyle,
-  formatRelationLabel,
-  getCanvasColor,
-  getEdgeRelationLabelStyle,
+    buildComboStyle,
+    buildDataModeAssetNodeStyle,
+    buildDataModeTermNodeStyle,
+    buildDefaultRectNodeStyle,
+    formatRelationLabel,
+    getCanvasColor,
+    getEdgeRelationLabelStyle
 } from '../utils/graphStyles';
 import { computeGlossaryGroupPositions } from '../utils/layoutCalculations';
 
@@ -708,9 +708,13 @@ export function useGraphDataBuilder({
     );
     mergedEdgesList.forEach((edge) => {
       if (allTermIds.has(edge.from) && allAssetIds.has(edge.to)) {
-        if (!map[edge.to]) map[edge.to] = edge.from;
+        if (!map[edge.to]) {
+          map[edge.to] = edge.from;
+        }
       } else if (allAssetIds.has(edge.from) && allTermIds.has(edge.to)) {
-        if (!map[edge.from]) map[edge.from] = edge.to;
+        if (!map[edge.from]) {
+          map[edge.from] = edge.to;
+        }
       }
     });
 

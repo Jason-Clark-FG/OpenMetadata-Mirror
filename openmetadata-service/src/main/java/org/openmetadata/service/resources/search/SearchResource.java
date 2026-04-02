@@ -16,7 +16,6 @@ package org.openmetadata.service.resources.search;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
 import static org.openmetadata.service.jdbi3.RoleRepository.DOMAIN_ONLY_ACCESS_ROLE;
 import static org.openmetadata.service.security.DefaultAuthorizer.getSubjectContext;
-import static org.openmetadata.service.util.WebsocketNotificationHandler.getUserIdFromSecurityContext;
 
 import es.co.elastic.clients.elasticsearch.core.SearchResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -81,8 +80,6 @@ import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.policyevaluator.SubjectContext;
 import org.openmetadata.service.util.AsyncService;
-import org.openmetadata.service.util.CSVExportResponse;
-import org.openmetadata.service.util.WebsocketNotificationHandler;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobKey;
 import org.quartz.SchedulerException;
@@ -261,7 +258,7 @@ public class SearchResource {
 
   @GET
   @Path("/export")
-  @Produces(MediaType.APPLICATION_OCTET_STREAM)
+  @Produces("text/csv")
   @Operation(
       operationId = "exportSearchResults",
       summary = "Export search results as CSV (streaming)",
@@ -272,7 +269,7 @@ public class SearchResource {
         @ApiResponse(
             responseCode = "200",
             description = "CSV file stream",
-            content = @Content(mediaType = "application/octet-stream"))
+            content = @Content(mediaType = "text/csv"))
       })
   public Response exportSearchResults(
       @Context SecurityContext securityContext,
@@ -321,95 +318,6 @@ public class SearchResource {
     return Response.ok(stream)
         .header("Content-Disposition", "attachment; filename=\"search_export.csv\"")
         .build();
-  }
-
-  @GET
-  @Path("/exportAsync")
-  @Produces(MediaType.APPLICATION_JSON)
-  @Deprecated
-  @Operation(
-      operationId = "exportSearchResultsAsync",
-      summary = "Export search results as CSV (async)",
-      description =
-          "Deprecated: Use GET /v1/search/export for streaming CSV download instead. "
-              + "Exports the current search results as a CSV file asynchronously. "
-              + "Returns a job ID that can be tracked via WebSocket for progress and completion.",
-      responses = {
-        @ApiResponse(
-            responseCode = "202",
-            description = "Export job initiated",
-            content =
-                @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = CSVExportResponse.class)))
-      })
-  public Response exportSearchResultsAsync(
-      @Context SecurityContext securityContext,
-      @Parameter(description = "Search Query Text") @DefaultValue("*") @QueryParam("q")
-          String query,
-      @Parameter(description = "ElasticSearch Index name, defaults to table_search_index")
-          @DefaultValue("table")
-          @QueryParam("index")
-          String index,
-      @Parameter(description = "Filter documents by deleted param. By default deleted is false")
-          @QueryParam("deleted")
-          Boolean deleted,
-      @Parameter(
-              description =
-                  "Elasticsearch query that will be combined with the query_string query generator from the `query` argument")
-          @QueryParam("query_filter")
-          String queryFilter,
-      @Parameter(description = "Elasticsearch query that will be used as a post_filter")
-          @QueryParam("post_filter")
-          String postFilter,
-      @Parameter(description = "Sort the search results by field")
-          @DefaultValue("_score")
-          @QueryParam("sort_field")
-          String sortFieldParam,
-      @Parameter(
-              description = "Sort order asc for ascending or desc for descending, defaults to desc")
-          @DefaultValue("desc")
-          @QueryParam("sort_order")
-          String sortOrder) {
-
-    SearchRequest request =
-        buildExportSearchRequest(
-            securityContext,
-            query,
-            index,
-            deleted,
-            queryFilter,
-            postFilter,
-            sortFieldParam,
-            sortOrder);
-    SubjectContext subjectContext = getSubjectContext(securityContext);
-
-    String jobId = UUID.randomUUID().toString();
-    UUID userId = getUserIdFromSecurityContext(securityContext);
-
-    AsyncService.getInstance()
-        .getExecutorService()
-        .submit(
-            () -> {
-              try {
-                String csvData =
-                    searchRepository.exportSearchResultsCsv(
-                        request,
-                        subjectContext,
-                        (exported, total, message) ->
-                            WebsocketNotificationHandler.sendCsvExportProgressNotification(
-                                jobId, userId, exported, total, message));
-                WebsocketNotificationHandler.sendCsvExportCompleteNotification(
-                    jobId, userId, csvData);
-              } catch (Exception e) {
-                String errorMessage = e.getMessage() != null ? e.getMessage() : e.toString();
-                WebsocketNotificationHandler.sendCsvExportFailedNotification(
-                    jobId, userId, errorMessage);
-              }
-            });
-
-    CSVExportResponse response = new CSVExportResponse(jobId, "Export initiated successfully.");
-    return Response.accepted().entity(response).type(MediaType.APPLICATION_JSON).build();
   }
 
   private SearchRequest buildExportSearchRequest(
