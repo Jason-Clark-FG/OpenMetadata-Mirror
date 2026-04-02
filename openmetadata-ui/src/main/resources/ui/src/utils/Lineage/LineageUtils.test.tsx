@@ -17,12 +17,12 @@ import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import { TagSource } from '../../generated/type/tagLabel';
 import { TableSearchSource } from '../../interface/search.interface';
 import {
-  getSearchNameEsQuery,
-  LINEAGE_DEPENDENCY_OPTIONS,
-  LINEAGE_IMPACT_OPTIONS,
-  prepareColumnLevelNodesFromEdges,
-  prepareDownstreamColumnLevelNodesFromDownstreamEdges,
-  prepareUpstreamColumnLevelNodesFromUpstreamEdges,
+    getSearchNameEsQuery,
+    LINEAGE_DEPENDENCY_OPTIONS,
+    LINEAGE_IMPACT_OPTIONS,
+    prepareColumnLevelNodesFromEdges,
+    prepareDownstreamColumnLevelNodesFromDownstreamEdges,
+    prepareUpstreamColumnLevelNodesFromUpstreamEdges
 } from './LineageUtils';
 
 describe('LineageUtils', () => {

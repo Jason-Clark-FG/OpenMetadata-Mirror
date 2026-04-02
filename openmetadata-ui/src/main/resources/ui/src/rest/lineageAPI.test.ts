@@ -15,10 +15,10 @@ import { EntityType } from '../enums/entity.enum';
 import { LineageDirection } from '../generated/api/lineage/searchLineageRequest';
 import APIClient from './index';
 import {
-  exportLineageByEntityCountAsync,
-  getLineageByEntityCount,
-  getLineageDataByFQN,
-  getLineagePagingData,
+    exportLineageByEntityCountAsync,
+    getLineageByEntityCount,
+    getLineageDataByFQN,
+    getLineagePagingData
 } from './lineageAPI';
 
 jest.mock('./index', () => ({

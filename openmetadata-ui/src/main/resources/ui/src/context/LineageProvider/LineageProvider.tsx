@@ -1720,8 +1720,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     }
   }, [defaultLineageConfig]);
 
-  console.log('rendering lineage context with entity lineage', lineageConfig);
-
   useEffect(() => {
     if (!isEditMode && updatedEntityLineage !== null) {
       // On exit of edit mode, use updatedEntityLineage and update data.

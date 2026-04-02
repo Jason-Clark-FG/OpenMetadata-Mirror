@@ -1,8 +1,8 @@
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
 import { SearchSourceAlias } from '../../interface/search.interface';
 import {
-  ColumnLevelLineageNode,
-  LineageNode,
+    ColumnLevelLineageNode,
+    LineageNode
 } from '../Lineage/Lineage.interface';
 
 /*

@@ -23,13 +23,13 @@ import { usePaging } from '../../hooks/paging/usePaging';
 import { useFqn } from '../../hooks/useFqn';
 import { useLineageStore } from '../../hooks/useLineageStore';
 import {
-  getLineageByEntityCount,
-  getLineageDataByFQN,
-  getLineagePagingData,
+    getLineageByEntityCount,
+    getLineageDataByFQN,
+    getLineagePagingData
 } from '../../rest/lineageAPI';
 import {
-  prepareDownstreamColumnLevelNodesFromDownstreamEdges,
-  prepareUpstreamColumnLevelNodesFromUpstreamEdges,
+    prepareDownstreamColumnLevelNodesFromDownstreamEdges,
+    prepareUpstreamColumnLevelNodesFromUpstreamEdges
 } from '../../utils/Lineage/LineageUtils';
 import { useRequiredParams } from '../../utils/useRequiredParams';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';

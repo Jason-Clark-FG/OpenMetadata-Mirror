@@ -66,7 +66,7 @@ const AppContainer = () => {
         lineageConfig: defaultLineageConfig,
       });
     } catch (error) {
-      // Log error
+      // eslint-disable-next-line no-console
       console.error('Error fetching app configurations:', error);
     }
   }, []);
