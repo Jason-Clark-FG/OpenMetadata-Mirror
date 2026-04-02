@@ -65,7 +65,10 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
       <Dropdown.Root>
         <Button className="tw:outline-none tw:-ml-1" color="link-color">
           <Avatar
-            className={classNames('tw:bg-brand-50 tw:ring-1 tw:ring-brand-600', fontSizeClass)}
+            className={classNames(
+              'tw:bg-brand-50 tw:ring-1 tw:ring-brand-600',
+              fontSizeClass
+            )}
             placeholder={remainingCountLabel}
             size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
           />
