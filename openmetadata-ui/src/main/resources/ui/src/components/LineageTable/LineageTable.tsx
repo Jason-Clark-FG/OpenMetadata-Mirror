@@ -79,10 +79,7 @@ import Table from '../common/Table/Table';
 import TierTag from '../common/TierTag';
 import TableTags from '../Database/TableTags/TableTags.component';
 import CustomControlsComponent from '../Entity/EntityLineage/CustomControls.component';
-import {
-  EdgeFromToData,
-  LineageNode,
-} from '../Lineage/Lineage.interface';
+import { EdgeFromToData, LineageNode } from '../Lineage/Lineage.interface';
 import {
   SearchedDataProps,
   SourceType,

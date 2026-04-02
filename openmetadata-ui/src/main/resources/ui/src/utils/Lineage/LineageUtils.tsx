@@ -15,7 +15,6 @@ import { ChevronRight } from '@untitledui/icons';
 import { get, omit, pick } from 'lodash';
 import { ReactComponent as ColumnIcon } from '../../assets/svg/ic-column-new.svg';
 import { ReactComponent as TableIcon } from '../../assets/svg/ic-table-new.svg';
-import { Column } from '../../generated/entity/data/table';
 import { CondensedBreadcrumb } from '../../components/CondensedBreadcrumb/CondensedBreadcrumb.component';
 import {
   ColumnLevelLineageNode,
@@ -24,6 +23,7 @@ import {
 } from '../../components/Lineage/Lineage.interface';
 import { EImpactLevel } from '../../components/LineageTable/LineageTable.interface';
 import { LineageDirection } from '../../generated/api/lineage/lineageDirection';
+import { Column } from '../../generated/entity/data/table';
 import { TableSearchSource } from '../../interface/search.interface';
 import { QueryFieldInterface } from '../../pages/ExplorePage/ExplorePage.interface';
 import i18n from '../i18next/LocalUtil';

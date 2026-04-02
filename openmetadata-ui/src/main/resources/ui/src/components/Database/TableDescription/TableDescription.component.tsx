@@ -45,10 +45,7 @@ const TableDescription = ({
         ? EntityLink.getTableEntityLink(
             entityFqn,
             columnData.record?.name ??
-              EntityLink.getTableColumnNameFromColumnFqn(
-                columnData.fqn,
-                false
-              )
+              EntityLink.getTableColumnNameFromColumnFqn(columnData.fqn, false)
           )
         : getEntityFeedLink(entityType, columnData.fqn),
     [entityType, entityFqn, columnData.record?.name, columnData.fqn]
