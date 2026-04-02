@@ -299,7 +299,18 @@ public class SearchResource {
               description = "Sort order asc for ascending or desc for descending, defaults to desc")
           @DefaultValue("desc")
           @QueryParam("sort_order")
-          String sortOrder)
+          String sortOrder,
+      @Parameter(
+              description =
+                  "Maximum number of rows to export. When null, exports all matching results up to the hard cap.")
+          @QueryParam("size")
+          Integer size,
+      @Parameter(
+              description =
+                  "Starting offset for export. Use with size to export a specific page of results (e.g., from=30&size=15 for page 3).")
+          @DefaultValue("0")
+          @QueryParam("from")
+          int from)
       throws IOException {
 
     SearchRequest request =
@@ -315,12 +326,16 @@ public class SearchResource {
     SubjectContext subjectContext = getSubjectContext(securityContext);
 
     int totalHits = searchRepository.countSearchResults(request, subjectContext);
-    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
+    final int effectiveTotal =
+        Math.max(
+            (size != null && size > 0) ? Math.min(size, totalHits - from) : totalHits - from, 0);
+
+    if (effectiveTotal > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
       return Response.status(Response.Status.BAD_REQUEST)
           .entity(
               String.format(
                   "Results contain %d rows, max is %d. Please add filters to reduce the result set.",
-                  totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS))
+                  effectiveTotal, SearchResultCsvExporter.MAX_EXPORT_ROWS))
           .type(MediaType.TEXT_PLAIN)
           .build();
     }
@@ -328,7 +343,7 @@ public class SearchResource {
     StreamingOutput stream =
         output ->
             searchRepository.exportSearchResultsCsvStream(
-                request, subjectContext, totalHits, output);
+                request, subjectContext, effectiveTotal, from, output);
 
     return Response.ok(stream)
         .header("Content-Disposition", "attachment; filename=\"search_export.csv\"")

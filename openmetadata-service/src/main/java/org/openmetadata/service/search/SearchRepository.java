@@ -2443,6 +2443,7 @@ public class SearchRepository {
       SearchRequest baseRequest,
       SubjectContext subjectContext,
       int totalHits,
+      int from,
       java.io.OutputStream output)
       throws IOException {
     java.io.BufferedWriter writer =
@@ -2454,7 +2455,7 @@ public class SearchRepository {
       writer.flush();
 
       if (totalHits > 0) {
-        writeCsvBatches(baseRequest, subjectContext, writer, totalHits);
+        writeCsvBatches(baseRequest, subjectContext, writer, totalHits, from);
       }
     } finally {
       writer.flush();
@@ -2465,7 +2466,8 @@ public class SearchRepository {
       SearchRequest baseRequest,
       SubjectContext subjectContext,
       java.io.BufferedWriter writer,
-      int totalHits)
+      int totalHits,
+      int from)
       throws IOException {
     long startTime = System.currentTimeMillis();
     long timeoutMs = 5 * 60 * 1000L;
@@ -2481,8 +2483,17 @@ public class SearchRepository {
       iteration++;
       enforceTimeout(startTime, timeoutMs);
 
+      int remaining = totalHits - exported;
+      int batchSize = Math.min(SearchResultCsvExporter.BATCH_SIZE, remaining);
       SearchRequest batchRequest =
-          buildBatchRequest(baseRequest, sortField, sourceFields, searchAfter);
+          buildBatchRequest(baseRequest, sortField, sourceFields, searchAfter, batchSize);
+
+      // On the first batch, use from-based pagination to skip to the requested offset.
+      // Subsequent batches use search_after (set above from the previous batch).
+      if (iteration == 1 && from > 0) {
+        batchRequest.withFrom(from);
+      }
+
       SearchResultListMapper batch = searchClient.searchForExport(batchRequest, subjectContext);
 
       if (batch.getResults().isEmpty()) {
@@ -2490,6 +2501,9 @@ public class SearchRepository {
       }
 
       for (Map<String, Object> source : batch.getResults()) {
+        if (exported >= totalHits) {
+          break;
+        }
         writer.write(SearchResultCsvExporter.toCsvRow(source));
         writer.newLine();
         exported++;
@@ -2534,7 +2548,8 @@ public class SearchRepository {
       SearchRequest baseRequest,
       String sortField,
       List<String> sourceFields,
-      List<Object> searchAfter) {
+      List<Object> searchAfter,
+      int batchSize) {
     return new SearchRequest()
         .withQuery(baseRequest.getQuery())
         .withIndex(baseRequest.getIndex())
@@ -2543,7 +2558,7 @@ public class SearchRepository {
         .withDeleted(baseRequest.getDeleted())
         .withDomains(baseRequest.getDomains())
         .withApplyDomainFilter(baseRequest.getApplyDomainFilter())
-        .withSize(SearchResultCsvExporter.BATCH_SIZE)
+        .withSize(batchSize)
         .withFrom(0)
         .withFetchSource(true)
         .withTrackTotalHits(false)

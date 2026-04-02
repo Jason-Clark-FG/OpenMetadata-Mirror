@@ -9,6 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -1463,5 +1468,133 @@ public class SearchResourceIT {
     assertNotNull(response);
     JsonNode root = OBJECT_MAPPER.readTree(response);
     assertTrue(root.has("hits"), "Response should have hits");
+  }
+
+  // ===================================================================
+  // SEARCH EXPORT TESTS (streaming CSV endpoint)
+  // ===================================================================
+
+  private static final HttpClient HTTP_CLIENT =
+      HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+
+  private HttpResponse<String> httpGetExport(String path) throws Exception {
+    String baseUrl = SdkClients.getServerUrl();
+    String token = SdkClients.getAdminToken();
+
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(baseUrl + path))
+            .header("Authorization", "Bearer " + token)
+            .header("Accept", "text/csv")
+            .timeout(Duration.ofSeconds(30))
+            .GET()
+            .build();
+
+    return HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  @Test
+  void testExportReturnsOkWithCsvContent(TestNamespace ns) throws Exception {
+    HttpResponse<String> response = httpGetExport("/v1/search/export?q=*&index=table_search_index");
+
+    assertEquals(200, response.statusCode(), "Export should return HTTP 200");
+
+    String body = response.body();
+    assertTrue(
+        body.startsWith("Entity Type,Service Name"), "Response should start with CSV header");
+  }
+
+  @Test
+  void testExportWithSizeLimitsRows(TestNamespace ns) throws Exception {
+    createTestTable(ns, "export_size_test_1");
+    createTestTable(ns, "export_size_test_2");
+    createTestTable(ns, "export_size_test_3");
+
+    Thread.sleep(2000);
+
+    HttpResponse<String> allResponse =
+        httpGetExport("/v1/search/export?q=export_size_test&index=table_search_index");
+    assertEquals(200, allResponse.statusCode());
+    int allLineCount = allResponse.body().split("\n").length;
+
+    HttpResponse<String> limitedResponse =
+        httpGetExport("/v1/search/export?q=export_size_test&index=table_search_index&size=1");
+    assertEquals(200, limitedResponse.statusCode());
+    int limitedLineCount = limitedResponse.body().split("\n").length;
+
+    // limitedResponse should have header + at most 1 data row = 2 lines
+    assertTrue(
+        limitedLineCount <= 2,
+        "Export with size=1 should have at most 2 lines (header + 1 row), got " + limitedLineCount);
+    assertTrue(
+        allLineCount >= limitedLineCount,
+        "Export without size should have >= rows than export with size=1");
+  }
+
+  @Test
+  void testExportWithoutSizeExportsAll(TestNamespace ns) throws Exception {
+    HttpResponse<String> response = httpGetExport("/v1/search/export?q=*&index=table_search_index");
+
+    assertEquals(200, response.statusCode(), "Export without size should return 200");
+    assertTrue(
+        response.body().contains("Entity Type,Service Name"), "Response should contain CSV header");
+  }
+
+  @Test
+  void testExportWithSizeAndSortParameters(TestNamespace ns) throws Exception {
+    HttpResponse<String> response =
+        httpGetExport(
+            "/v1/search/export?q=*&index=table_search_index&size=5&sort_field=name.keyword&sort_order=asc");
+
+    assertEquals(200, response.statusCode());
+    assertTrue(response.body().startsWith("Entity Type,Service Name"));
+  }
+
+  @Test
+  void testExportWithDataAssetIndex(TestNamespace ns) throws Exception {
+    HttpResponse<String> response = httpGetExport("/v1/search/export?q=*&index=dataAsset");
+
+    assertEquals(200, response.statusCode(), "Export with dataAsset index should return 200");
+    assertTrue(response.body().startsWith("Entity Type,Service Name"));
+  }
+
+  @Test
+  void testExportWithFromAndSizeForPagination(TestNamespace ns) throws Exception {
+    createTestTable(ns, "export_page_test_a");
+    createTestTable(ns, "export_page_test_b");
+    createTestTable(ns, "export_page_test_c");
+
+    Thread.sleep(2000);
+
+    HttpResponse<String> page1 =
+        httpGetExport(
+            "/v1/search/export?q=export_page_test&index=table_search_index"
+                + "&sort_field=name.keyword&sort_order=asc&from=0&size=1");
+    assertEquals(200, page1.statusCode());
+    String[] page1Lines = page1.body().split("\n");
+    assertTrue(page1Lines.length <= 2, "from=0&size=1 should return at most 2 lines");
+
+    HttpResponse<String> page2 =
+        httpGetExport(
+            "/v1/search/export?q=export_page_test&index=table_search_index"
+                + "&sort_field=name.keyword&sort_order=asc&from=1&size=1");
+    assertEquals(200, page2.statusCode());
+    String[] page2Lines = page2.body().split("\n");
+    assertTrue(page2Lines.length <= 2, "from=1&size=1 should return at most 2 lines");
+
+    if (page1Lines.length == 2 && page2Lines.length == 2) {
+      assertFalse(
+          page1Lines[1].equals(page2Lines[1]), "Page 1 and page 2 should return different rows");
+    }
+  }
+
+  @Test
+  void testExportWithFromBeyondResults(TestNamespace ns) throws Exception {
+    HttpResponse<String> response =
+        httpGetExport("/v1/search/export?q=*&index=table_search_index&from=999999&size=10");
+
+    assertEquals(200, response.statusCode());
+    String[] lines = response.body().split("\n");
+    assertEquals(1, lines.length, "Export beyond results should only contain header");
   }
 }
