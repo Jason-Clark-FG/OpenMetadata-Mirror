@@ -49,6 +49,13 @@ openmetadata:
             cpu: "100m"
             memory: "512Mi"
 
+        # Test tolerations for ingestion pods
+        tolerations:
+          - key: "dedicated"
+            operator: "Equal"
+            value: "ingestion"
+            effect: "NoSchedule"
+
         # Enable OMJob operator for guaranteed exit handler execution
         useOMJobOperator: true
 
