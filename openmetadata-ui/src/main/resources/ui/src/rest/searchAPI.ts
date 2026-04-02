@@ -388,6 +388,8 @@ export const exportSearchResultsCsvStream = async (params: {
   post_filter?: string;
   sort_field?: string;
   sort_order?: string;
+  size?: number;
+  from?: number;
 }): Promise<Blob> => {
   const response = await APIClient.get<Blob>('/search/export', {
     params,

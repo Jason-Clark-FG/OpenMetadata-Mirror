@@ -21,78 +21,126 @@ const navigateToExplorePage = async (page: Page) => {
   await expect(page.getByTestId('explore-page')).toBeVisible();
 };
 
-test.describe('Search Export', () => {
+const openExportScopeModal = async (page: Page) => {
+  await page.getByTestId('export-search-results-button').click();
+  await expect(page.getByTestId('export-scope-modal')).toBeVisible();
+};
+
+test.describe('Search Export', { tag: ['@Features', '@Discovery'] }, () => {
   test('Export button is visible on Explore page', async ({ page }) => {
     await navigateToExplorePage(page);
 
     const exportButton = page.getByTestId('export-search-results-button');
+
     await expect(exportButton).toBeVisible();
-    await expect(exportButton).toHaveText(/Export/);
+    await expect(exportButton).toContainText('Export');
   });
 
-  test('Export button shows dropdown with Current Tab and All Data Assets options', async ({
+  test('Clicking Export button opens scope selection modal', async ({
     page,
   }) => {
     await navigateToExplorePage(page);
-
-    const exportButton = page.getByTestId('export-search-results-button');
-    await exportButton.click();
-
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await expect(dropdown).toBeVisible();
-    await expect(dropdown.getByText('Current Tab')).toBeVisible();
-    await expect(dropdown.getByText('All Data Assets')).toBeVisible();
-  });
-
-  test('Current Tab export calls streaming API with index parameter', async ({
-    page,
-  }) => {
-    await navigateToExplorePage(page);
-
-    const apiPromise = page.waitForRequest(
-      (req) =>
-        req.url().includes('/api/v1/search/export') &&
-        !req.url().includes('exportAsync') &&
-        req.method() === 'GET'
-    );
 
     await page.getByTestId('export-search-results-button').click();
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await dropdown.getByText('Current Tab').click();
 
-    const request = await apiPromise;
-    const url = request.url();
-    expect(url).toContain('index=');
+    const modal = page.getByTestId('export-scope-modal');
+
+    await expect(modal).toBeVisible();
+    await expect(modal.getByText('Export')).toBeVisible();
+    await expect(modal.getByText('Export Scope')).toBeVisible();
   });
 
-  test('All Data Assets export calls streaming API with dataAsset index', async ({
+  test('Export scope modal shows Visible results and All matching assets options', async ({
     page,
   }) => {
     await navigateToExplorePage(page);
+    await openExportScopeModal(page);
 
-    const apiPromise = page.waitForRequest(
+    const modal = page.getByTestId('export-scope-modal');
+
+    await expect(modal.getByText('Visible results')).toBeVisible();
+    await expect(modal.getByText('All matching assets')).toBeVisible();
+  });
+
+  test('All matching assets is selected by default', async ({ page }) => {
+    await navigateToExplorePage(page);
+    await openExportScopeModal(page);
+
+    const allMatchingRadio = page
+      .getByTestId('export-scope-modal')
+      .locator('.ant-radio-wrapper-checked input[value="all"]');
+
+    await expect(allMatchingRadio).toBeChecked();
+  });
+
+  test('Selecting Visible results checks the visible radio option', async ({
+    page,
+  }) => {
+    await navigateToExplorePage(page);
+    await openExportScopeModal(page);
+
+    const modal = page.getByTestId('export-scope-modal');
+
+    await modal.getByText('Visible results').click();
+
+    const visibleRadio = modal.locator('input[value="visible"]');
+
+    await expect(visibleRadio).toBeChecked();
+  });
+
+  test('All matching assets export calls streaming API with dataAsset index', async ({
+    page,
+  }) => {
+    await navigateToExplorePage(page);
+    await openExportScopeModal(page);
+
+    const exportApiPromise = page.waitForRequest(
       (req) =>
-        req.url().includes('/api/v1/search/export') &&
-        !req.url().includes('exportAsync') &&
-        req.method() === 'GET'
+        req.url().includes('/api/v1/search/export') && req.method() === 'GET'
     );
 
-    await page.getByTestId('export-search-results-button').click();
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await dropdown.getByText('All Data Assets').click();
+    const modal = page.getByTestId('export-scope-modal');
 
-    const request = await apiPromise;
+    await expect(modal.locator('input[value="all"]')).toBeChecked();
+    await modal.getByRole('button', { name: 'Export' }).click();
+
+    const request = await exportApiPromise;
+
     expect(request.url()).toContain('index=dataAsset');
   });
 
-  test('Export triggers direct CSV download', async ({ page }) => {
+  test('Visible results export calls streaming API with current tab index and size', async ({
+    page,
+  }) => {
     await navigateToExplorePage(page);
+    await openExportScopeModal(page);
 
-    // Intercept the streaming export API to return mock CSV data
+    const exportApiPromise = page.waitForRequest(
+      (req) =>
+        req.url().includes('/api/v1/search/export') && req.method() === 'GET'
+    );
+
+    const modal = page.getByTestId('export-scope-modal');
+
+    await modal.getByText('Visible results').click();
+    await expect(modal.locator('input[value="visible"]')).toBeChecked();
+    await modal.getByRole('button', { name: 'Export' }).click();
+
+    const request = await exportApiPromise;
+    const url = request.url();
+
+    expect(url).toContain('index=');
+    expect(url).not.toContain('index=dataAsset');
+    expect(url).toContain('size=');
+  });
+
+  test('Export triggers CSV download', async ({ page }) => {
+    test.slow();
+
     await page.route('**/api/v1/search/export?*', async (route) => {
       await route.fulfill({
         status: 200,
-        contentType: 'application/octet-stream',
+        contentType: 'text/csv',
         headers: {
           'Content-Disposition': 'attachment; filename="search_export.csv"',
         },
@@ -100,28 +148,32 @@ test.describe('Search Export', () => {
       });
     });
 
+    await navigateToExplorePage(page);
+    await openExportScopeModal(page);
+
     const downloadPromise = page.waitForEvent('download');
 
-    await page.getByTestId('export-search-results-button').click();
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await dropdown.getByText('Current Tab').click();
+    await page
+      .getByTestId('export-scope-modal')
+      .getByRole('button', { name: 'Export' })
+      .click();
 
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toContain('search_export_');
+
+    expect(download.suggestedFilename()).toContain('Search_Results_');
     expect(download.suggestedFilename()).toContain('.csv');
   });
 
-  test('Export button shows loading state during download', async ({
+  test('Export button in modal shows loading state during download', async ({
     page,
   }) => {
-    await navigateToExplorePage(page);
+    test.slow();
 
-    // Slow down the response to observe loading state
     await page.route('**/api/v1/search/export?*', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise<void>((resolve) => setTimeout(resolve, 1500));
       await route.fulfill({
         status: 200,
-        contentType: 'application/octet-stream',
+        contentType: 'text/csv',
         headers: {
           'Content-Disposition': 'attachment; filename="search_export.csv"',
         },
@@ -129,36 +181,52 @@ test.describe('Search Export', () => {
       });
     });
 
-    await page.getByTestId('export-search-results-button').click();
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await dropdown.getByText('Current Tab').click();
+    await navigateToExplorePage(page);
+    await openExportScopeModal(page);
 
-    // Button should show loading state
-    const exportButton = page.getByTestId('export-search-results-button');
+    const modal = page.getByTestId('export-scope-modal');
+    const exportButton = modal.getByRole('button', { name: 'Export' });
+
+    await exportButton.click();
+
     await expect(exportButton).toHaveClass(/ant-btn-loading/);
   });
 
-  test('Dropdown closes after selecting an option', async ({ page }) => {
+  test('Cancel button closes the export scope modal', async ({ page }) => {
     await navigateToExplorePage(page);
+    await openExportScopeModal(page);
 
-    await page.getByTestId('export-search-results-button').click();
+    await page
+      .getByTestId('export-scope-modal')
+      .getByRole('button', { name: 'Cancel' })
+      .click();
 
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await expect(dropdown).toBeVisible();
-
-    await dropdown.getByText('Current Tab').click();
-
-    await expect(page.locator('.ant-dropdown:visible')).not.toBeVisible();
+    await expect(page.getByTestId('export-scope-modal')).not.toBeVisible();
   });
 
-  test('Export button is accessible with keyboard', async ({ page }) => {
+  test('Modal closes after successful export', async ({ page }) => {
+    test.slow();
+
+    await page.route('**/api/v1/search/export?*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/csv',
+        body: 'Entity Type\ntable',
+      });
+    });
+
     await navigateToExplorePage(page);
+    await openExportScopeModal(page);
 
-    const exportButton = page.getByTestId('export-search-results-button');
-    await exportButton.focus();
-    await page.keyboard.press('Enter');
+    const downloadPromise = page.waitForEvent('download');
 
-    const dropdown = page.locator('.ant-dropdown:visible');
-    await expect(dropdown).toBeVisible();
+    await page
+      .getByTestId('export-scope-modal')
+      .getByRole('button', { name: 'Export' })
+      .click();
+
+    await downloadPromise;
+
+    await expect(page.getByTestId('export-scope-modal')).not.toBeVisible();
   });
 });
