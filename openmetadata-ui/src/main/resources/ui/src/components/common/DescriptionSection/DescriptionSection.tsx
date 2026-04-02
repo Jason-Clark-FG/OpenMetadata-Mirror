@@ -14,7 +14,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as EditIcon } from '../../../assets/svg/edit-new.svg';
 import { DE_ACTIVE_COLOR } from '../../../constants/constants';
-import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import { ModalWithMarkdownEditor } from '../../Modals/ModalWithMarkdownEditor/ModalWithMarkdownEditor';
 import DescriptionSourceBadge from '../DescriptionSourceBadge/DescriptionSourceBadge';
 import { EntityAttachmentProvider } from '../EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
@@ -136,11 +135,7 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
 
   const canShowEditButton =
     showEditButton && hasPermission && onDescriptionUpdate;
-  const shouldShowMetadata =
-    changeSummaryEntry?.changeSource === ChangeSource.Manual ||
-    changeSummaryEntry?.changeSource === ChangeSource.Suggested ||
-    changeSummaryEntry?.changeSource === ChangeSource.Automated ||
-    changeSummaryEntry?.changeSource === ChangeSource.Propagated;
+  const shouldShowMetadata = changeSummaryEntry?.changeSource != null;
 
   const headerBadge = (
     <DescriptionSourceBadge

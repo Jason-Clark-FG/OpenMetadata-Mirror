@@ -302,6 +302,7 @@ public class SuggestionRepository {
     EntityRepository<?> repository = null;
     String origJson = null;
     SuggestionWorkflow suggestionWorkflow = null;
+    List<Suggestion> noOpSuggestions = new ArrayList<>();
 
     for (Suggestion suggestion : suggestions) {
       MessageParser.EntityLink entityLink =
@@ -318,8 +319,13 @@ public class SuggestionRepository {
       } else if (!entity.getFullyQualifiedName().equals(entityLink.getEntityFQN())) {
         throw new SuggestionException("All suggestions must be for the same entity");
       }
-      // update entity with the suggestion
+      // Track whether this suggestion changes anything
+      String beforeJson = JsonUtils.pojoToJson(entity);
       entity = suggestionWorkflow.acceptSuggestion(suggestion, entity);
+      String afterJson = JsonUtils.pojoToJson(entity);
+      if (beforeJson.equals(afterJson)) {
+        noOpSuggestions.add(suggestion);
+      }
     }
 
     // Patch the entity with the updated suggestions
@@ -333,15 +339,15 @@ public class SuggestionRepository {
           operationContext,
           new ResourceContext<>(repository.getEntityType(), entity.getId(), null));
       repository.patch(null, entity.getId(), user, patch, ChangeSource.SUGGESTED);
-    } else {
-      // All suggestions set values already present — update changeSummary only
-      for (Suggestion suggestion : suggestions) {
-        MessageParser.EntityLink link = MessageParser.EntityLink.parse(suggestion.getEntityLink());
-        String changeSummaryField = resolveChangeSummaryField(suggestion, link);
-        if (changeSummaryField != null) {
-          repository.patchChangeSummary(
-              entity.getId(), changeSummaryField, ChangeSource.SUGGESTED, user);
-        }
+    }
+
+    // Record changeSummary for no-op suggestions (value already present on entity)
+    for (Suggestion suggestion : noOpSuggestions) {
+      MessageParser.EntityLink link = MessageParser.EntityLink.parse(suggestion.getEntityLink());
+      String changeSummaryField = resolveChangeSummaryField(suggestion, link);
+      if (changeSummaryField != null) {
+        repository.patchChangeSummary(
+            entity.getId(), changeSummaryField, ChangeSource.SUGGESTED, user);
       }
     }
 
