@@ -23,7 +23,7 @@ export interface RDFIndexingAppConfig {
      */
     consumerThreads?: number;
     /**
-     * List of entities that you need to reindex.
+     * List of entities that you need to reindex. Leave empty to index all supported entities.
      */
     entities?: Entity[];
     /**
