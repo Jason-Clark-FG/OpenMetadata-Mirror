@@ -20,6 +20,7 @@ import type {
   RefAttributes,
 } from 'react';
 import {
+  Fragment,
   createContext,
   isValidElement,
   useCallback,
@@ -228,6 +229,14 @@ const InnerAutocomplete = ({
     closeTimerRef.current = setTimeout(() => setIsOverflowOpen(false), 100);
   };
 
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
   const { hoverProps: triggerHoverProps } = useHover({
     onHoverStart: () => {
       cancelClose();
@@ -245,7 +254,11 @@ const InnerAutocomplete = ({
       {!isSelectionEmpty &&
         visibleSelected.map((item) =>
           context.renderTag ? (
-            context.renderTag(item, () => context.onRemove(new Set([item.id])))
+            <Fragment key={item.id}>
+              {context.renderTag(item, () =>
+                context.onRemove(new Set([item.id]))
+              )}
+            </Fragment>
           ) : (
             <BadgeWithButton
               color="gray"
@@ -288,9 +301,11 @@ const InnerAutocomplete = ({
             <div className="tw:flex tw:min-w-48 tw:max-w-72 tw:flex-wrap tw:gap-1.5 tw:p-2">
               {overflowItems.map((item) =>
                 context.renderTag ? (
-                  context.renderTag(item, () =>
-                    context.onRemove(new Set([item.id]))
-                  )
+                  <Fragment key={item.id}>
+                    {context.renderTag(item, () =>
+                      context.onRemove(new Set([item.id]))
+                    )}
+                  </Fragment>
                 ) : (
                   <BadgeWithButton
                     color="gray"
