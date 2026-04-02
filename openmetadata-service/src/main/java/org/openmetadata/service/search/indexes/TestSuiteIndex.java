@@ -11,7 +11,7 @@ import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.exception.EntityNotFoundException;
 
-public record TestSuiteIndex(TestSuite testSuite) implements SearchIndex {
+public record TestSuiteIndex(TestSuite testSuite) implements TaggableIndex {
   private static final Set<String> excludeFields = Set.of("summary", "testCaseResultSummary");
 
   @Override

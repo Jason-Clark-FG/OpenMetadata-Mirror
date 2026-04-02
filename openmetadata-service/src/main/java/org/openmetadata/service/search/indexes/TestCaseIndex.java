@@ -14,7 +14,7 @@ import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.search.SearchIndexUtils;
 
-public record TestCaseIndex(TestCase testCase) implements SearchIndex {
+public record TestCaseIndex(TestCase testCase) implements TaggableIndex {
   private static final Set<String> excludeFields =
       Set.of("changeDescription", "failedRowsSample", "incrementalChangeDescription");
 
@@ -30,7 +30,7 @@ public record TestCaseIndex(TestCase testCase) implements SearchIndex {
 
   @Override
   public void removeNonIndexableFields(Map<String, Object> esDoc) {
-    SearchIndex.super.removeNonIndexableFields(esDoc);
+    TaggableIndex.super.removeNonIndexableFields(esDoc);
     List<Map<String, Object>> testSuites = (List<Map<String, Object>>) esDoc.get("testSuites");
     if (testSuites != null) {
       for (Map<String, Object> testSuite : testSuites) {
