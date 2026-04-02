@@ -238,7 +238,32 @@ public class PodManager {
    * Find exit handler pod for an OMJob
    */
   public Optional<Pod> findExitHandlerPod(OMJobResource omJob) {
-    return findPod(omJob, LabelBuilder.buildExitHandlerSelector(omJob));
+    Optional<Pod> pod = findPod(omJob, LabelBuilder.buildExitHandlerSelector(omJob));
+    if (pod.isPresent()) {
+      return pod;
+    }
+
+    // Fallback: try to find by pod name if it was recorded in status
+    String recordedPodName =
+        omJob.getStatus() != null ? omJob.getStatus().getExitHandlerPodName() : null;
+    if (recordedPodName != null && !recordedPodName.isEmpty()) {
+      try {
+        Pod namedPod =
+            client
+                .pods()
+                .inNamespace(omJob.getMetadata().getNamespace())
+                .withName(recordedPodName)
+                .get();
+        if (namedPod != null) {
+          LOG.info("Found exit handler pod by name for OMJob: {}", omJob.getMetadata().getName());
+          return Optional.of(namedPod);
+        }
+      } catch (Exception e) {
+        LOG.debug("Could not find pod by name {}: {}", recordedPodName, e.getMessage());
+      }
+    }
+
+    return Optional.empty();
   }
 
   /**
@@ -318,6 +343,7 @@ public class PodManager {
                 .withServiceAccountName(podSpec.getServiceAccountName())
                 .withImagePullSecrets(podSpec.getImagePullSecrets())
                 .withNodeSelector(podSpec.getNodeSelector())
+                .withTolerations(podSpec.getTolerations())
                 .withSecurityContext(podSpec.getSecurityContext())
                 .withContainers(buildContainer(omJob, podSpec, envOverride))
                 .build())
