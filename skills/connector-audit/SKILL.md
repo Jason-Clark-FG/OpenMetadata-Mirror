@@ -1,6 +1,9 @@
 ---
 name: connector-audit
 description: Deep reliability audit for OpenMetadata connectors — runs 7 investigation prompts (metadata, errors, auth, lineage, scale, synthesis, implementation) against connector standards
+user-invocable: true
+argument-hint: "<connector-name> [--prompt N | --prompts N,M | --from N | --setup-only | --dry-run]"
+allowed-tools: []
 ---
 
 # OpenMetadata Connector Reliability Audit
