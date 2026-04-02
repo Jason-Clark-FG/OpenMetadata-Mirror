@@ -269,15 +269,32 @@ export const getELKLayoutedElements = async (
   }
 };
 
+const findColumnRecursive = (
+  columns: Column[],
+  columnFqn: string
+): Column | undefined => {
+  for (const col of columns) {
+    if (col.fullyQualifiedName === columnFqn) {
+      return col;
+    }
+    if (col.children) {
+      const childMatch = findColumnRecursive(col.children, columnFqn);
+      if (childMatch) {
+        return childMatch;
+      }
+    }
+  }
+
+  return undefined;
+};
+
 const findColumnDisplayName = (
   columnFqn: string,
   nodes: Node[]
 ): string | undefined => {
   for (const node of nodes) {
     const columns: Column[] = node.data?.node?.columns ?? [];
-    const match = columns.find(
-      (col) => col.fullyQualifiedName === columnFqn
-    );
+    const match = findColumnRecursive(columns, columnFqn);
     if (match) {
       return match.displayName || match.name;
     }

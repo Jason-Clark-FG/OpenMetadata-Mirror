@@ -18,6 +18,7 @@ Algorithm must produce identical output to the Java implementation in
 ColumnNameHash.java (both use MD5 with UTF-8 encoding).
 """
 import hashlib
+from typing import Optional
 
 HASH_PREFIX = "md5_"
 HASH_LENGTH = 36  # "md5_" (4) + 32 hex chars
@@ -35,7 +36,7 @@ def hash_column_name(raw_column_name: str) -> str:
     return HASH_PREFIX + hashlib.md5(raw_column_name.encode("utf-8")).hexdigest()
 
 
-def is_hashed_column_fqn_segment(segment: str) -> bool:
+def is_hashed_column_fqn_segment(segment: Optional[str]) -> bool:
     """Check whether a string is a hashed column FQN segment."""
     return (
         segment is not None

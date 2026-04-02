@@ -351,6 +351,17 @@ class TestCaseRunner(Processor):
                     None,
                 )
 
+            if column is None:
+                self.status.failed(
+                    StackTraceError(
+                        name="Column Not Found for Test Case",
+                        error=f"Test case {tc.name.root} references column"
+                        f" '{column_name}' which was not found in table"
+                        f" {table.fullyQualifiedName.root}",
+                    )
+                )
+                continue
+
             if column.dataType not in test_definition.supportedDataTypes:
                 self.status.failed(
                     StackTraceError(

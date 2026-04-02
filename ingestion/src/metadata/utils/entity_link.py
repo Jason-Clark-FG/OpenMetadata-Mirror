@@ -103,7 +103,7 @@ def get_table_or_column_fqn(entity_link: str) -> str:
             is_hashed_column_fqn_segment,
         )
 
-        col_segment = split_entity_link[3]
+        col_segment = unquote_plus(split_entity_link[3])
         if not is_hashed_column_fqn_segment(col_segment):
             col_segment = hash_column_name(col_segment)
         return f"{split_entity_link[1]}.{col_segment}"

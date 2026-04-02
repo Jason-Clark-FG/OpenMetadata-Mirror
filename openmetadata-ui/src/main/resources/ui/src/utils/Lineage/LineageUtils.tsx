@@ -54,6 +54,25 @@ export const LINEAGE_DEPENDENCY_OPTIONS = [
   },
 ];
 
+const findColumnInList = (
+  columns: Column[],
+  columnFqn: string
+): Column | undefined => {
+  for (const col of columns) {
+    if (col.fullyQualifiedName === columnFqn) {
+      return col;
+    }
+    if (col.children) {
+      const childMatch = findColumnInList(col.children, columnFqn);
+      if (childMatch) {
+        return childMatch;
+      }
+    }
+  }
+
+  return undefined;
+};
+
 const findColumnNameByFqn = (
   columnFqn: string,
   entityData: NodeData['entity']
@@ -62,7 +81,7 @@ const findColumnNameByFqn = (
   if (!columns) {
     return undefined;
   }
-  const match = columns.find((col) => col.fullyQualifiedName === columnFqn);
+  const match = findColumnInList(columns, columnFqn);
 
   return match ? match.displayName || match.name : undefined;
 };
