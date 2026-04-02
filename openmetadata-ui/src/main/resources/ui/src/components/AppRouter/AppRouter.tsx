@@ -30,10 +30,6 @@ const AuthenticatedApp = withSuspenseFallback(
   lazy(() => import('./AuthenticatedApp'))
 );
 
-const UnauthenticatedApp = withSuspenseFallback(
-  lazy(() => import('./UnauthenticatedApp'))
-);
-
 const AppContainer = withSuspenseFallback(
   lazy(() => import('../AppContainer/AppContainer'))
 );
@@ -172,25 +168,23 @@ const AppRouter = () => {
   }
 
   return (
-    <UnauthenticatedApp>
-      <Routes>
-        <Route element={<PageNotFound />} path={ROUTES.NOT_FOUND} />
-        <Route element={<LogoutPage />} path={ROUTES.LOGOUT} />
-        <Route element={<AccessNotAllowedPage />} path={ROUTES.UNAUTHORISED} />
-        <Route
-          element={
-            isEmpty(currentUser) ? (
-              <SignUpPage />
-            ) : (
-              <Navigate replace to={ROUTES.HOME} />
-            )
-          }
-          path={ROUTES.SIGNUP}
-        />
-        <Route element={<SamlCallback />} path={ROUTES.AUTH_CALLBACK} />
-        <Route element={<UnAuthenticatedAppRouter />} path="*" />
-      </Routes>
-    </UnauthenticatedApp>
+    <Routes>
+      <Route element={<PageNotFound />} path={ROUTES.NOT_FOUND} />
+      <Route element={<LogoutPage />} path={ROUTES.LOGOUT} />
+      <Route element={<AccessNotAllowedPage />} path={ROUTES.UNAUTHORISED} />
+      <Route
+        element={
+          isEmpty(currentUser) ? (
+            <SignUpPage />
+          ) : (
+            <Navigate replace to={ROUTES.HOME} />
+          )
+        }
+        path={ROUTES.SIGNUP}
+      />
+      <Route element={<SamlCallback />} path={ROUTES.AUTH_CALLBACK} />
+      <Route element={<UnAuthenticatedAppRouter />} path="*" />
+    </Routes>
   );
 };
 

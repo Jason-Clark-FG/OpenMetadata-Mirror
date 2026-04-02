@@ -21,6 +21,7 @@ import {
   getCustomUiThemePreference,
   getSystemConfig,
 } from './rest/settingConfigAPI';
+
 import { getThemeConfig } from './utils/ThemeUtils';
 
 const App: FC = () => {
