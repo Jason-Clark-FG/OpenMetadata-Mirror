@@ -51,12 +51,10 @@ class IndexMappingNestedFieldConsistencyTest {
       if (properties == null) {
         continue;
       }
-      JsonNode owners = findFieldRecursive(properties, "owners");
-      if (owners == null) {
-        continue;
-      }
-      if (!owners.has("type") || !"nested".equals(owners.path("type").asText())) {
-        violations.add(entity);
+      List<String> paths = new ArrayList<>();
+      findViolations(properties, "owners", "", paths);
+      for (String path : paths) {
+        violations.add(entity + " (" + path + ")");
       }
     }
     assertTrue(
@@ -67,6 +65,25 @@ class IndexMappingNestedFieldConsistencyTest {
             + ". RBAC nested queries will fail on these indices.");
   }
 
+  private static void findViolations(
+      JsonNode properties, String fieldName, String currentPath, List<String> violations) {
+    Iterator<String> fieldNames = properties.fieldNames();
+    while (fieldNames.hasNext()) {
+      String name = fieldNames.next();
+      JsonNode fieldNode = properties.get(name);
+      String path = currentPath.isEmpty() ? name : currentPath + "." + name;
+      if (name.equals(fieldName) && fieldNode.has("properties")) {
+        if (!fieldNode.has("type") || !"nested".equals(fieldNode.path("type").asText())) {
+          violations.add(path);
+        }
+      }
+      JsonNode childProps = fieldNode.path("properties");
+      if (!childProps.isMissingNode()) {
+        findViolations(childProps, fieldName, path, violations);
+      }
+    }
+  }
+
   private static JsonNode getTopLevelProperties(JsonNode root) {
     JsonNode props = root.path("mappings").path("properties");
     if (!props.isMissingNode()) {
@@ -74,24 +91,5 @@ class IndexMappingNestedFieldConsistencyTest {
     }
     props = root.path("properties");
     return props.isMissingNode() ? null : props;
-  }
-
-  private static JsonNode findFieldRecursive(JsonNode properties, String fieldName) {
-    JsonNode direct = properties.path(fieldName);
-    if (!direct.isMissingNode()) {
-      return direct;
-    }
-    Iterator<String> fieldNames = properties.fieldNames();
-    while (fieldNames.hasNext()) {
-      JsonNode child = properties.get(fieldNames.next());
-      JsonNode childProps = child.path("properties");
-      if (!childProps.isMissingNode()) {
-        JsonNode found = findFieldRecursive(childProps, fieldName);
-        if (found != null) {
-          return found;
-        }
-      }
-    }
-    return null;
   }
 }
