@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.openmetadata.schema.service.configuration.elasticsearch.Bedrock;
 import org.openmetadata.schema.service.configuration.elasticsearch.ElasticSearchConfiguration;
 import org.openmetadata.schema.service.configuration.elasticsearch.NaturalLanguageSearchConfiguration;
 import org.openmetadata.schema.system.StepValidation;
@@ -53,7 +54,8 @@ class SystemRepositoryEmbeddingsValidationTest {
     when(appConfig.getElasticSearchConfiguration()).thenReturn(esConfig);
     when(esConfig.getNaturalLanguageSearch()).thenReturn(nlpConfig);
     when(nlpConfig.getEmbeddingProvider()).thenReturn("bedrock");
-    when(nlpConfig.getBedrock()).thenReturn(null);
+    Bedrock bedrockConfig = mock(Bedrock.class);
+    when(nlpConfig.getBedrock()).thenReturn(bedrockConfig);
 
     when(searchRepository.getSearchType())
         .thenReturn(ElasticSearchConfiguration.SearchType.OPENSEARCH);

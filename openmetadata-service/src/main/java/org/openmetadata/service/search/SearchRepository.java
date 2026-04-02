@@ -446,7 +446,7 @@ public class SearchRepository {
           cfg.getNaturalLanguageSearch().getEmbeddingProvider(),
           embeddingClient.getDimension());
     } catch (Exception e) {
-      this.vectorServiceInitError = e.getMessage();
+      this.vectorServiceInitError = e.toString();
       LOG.error("Failed to initialize vector search service: {}", e.getMessage(), e);
     }
   }

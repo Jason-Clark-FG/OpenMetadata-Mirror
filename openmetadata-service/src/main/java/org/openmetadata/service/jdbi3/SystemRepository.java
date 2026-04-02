@@ -8,6 +8,7 @@ import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.service.apps.bundles.insights.DataInsightsApp.getDataStreamName;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.unboundid.ldap.sdk.LDAPConnection;
 import com.unboundid.ldap.sdk.LDAPConnectionOptions;
 import com.unboundid.ldap.sdk.SearchResult;
@@ -560,6 +561,7 @@ public class SystemRepository {
   public void addExtraValidations(
       OpenMetadataApplicationConfig applicationConfig, ValidationResponse validation) {}
 
+  @VisibleForTesting
   StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
     StepValidation embeddingsValidation = new StepValidation();
     String description = "Embeddings are used to allow Semantic Search";

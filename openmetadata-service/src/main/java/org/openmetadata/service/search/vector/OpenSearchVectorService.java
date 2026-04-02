@@ -134,7 +134,7 @@ public class OpenSearchVectorService implements VectorIndexService {
       }
     } catch (Exception e) {
       LOG.error("Failed to check hybrid search pipeline '{}'", HYBRID_PIPELINE_NAME, e);
-      return Optional.of("Failed to check hybrid search pipeline: " + e.getMessage());
+      return Optional.of("Failed to check hybrid search pipeline: " + e.toString());
     }
   }
 
