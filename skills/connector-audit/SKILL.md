@@ -74,7 +74,7 @@ Each prompt:
 2. Loads connector standards via `/connector-standards`
 3. Investigates its focus area in depth
 4. Presents a summary for user review
-5. Saves its report to `.claude/audit-results/0N-{name}.md` after user approval
+5. Saves its report under `.claude/audit-results/` using the fixed filename for that prompt described in the **Output Structure** section (for example, `01-metadata-ingestion.md` for P1) after user approval
 
 **User review gate**: Each prompt presents findings and asks for confirmation before saving. This catches errors early instead of propagating them to P6.
 
