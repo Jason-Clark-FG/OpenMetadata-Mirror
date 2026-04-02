@@ -1,5 +1,6 @@
 package org.openmetadata.service.search;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,7 +19,7 @@ import org.openmetadata.search.IndexMappingLoader;
 
 class IndexMappingNestedFieldConsistencyTest {
 
-  private static final String LANGUAGE = "en";
+  private static final List<String> LANGUAGES = List.of("en", "jp", "ru", "zh");
   private static Map<String, JsonNode> allMappings;
 
   @BeforeAll
@@ -29,13 +30,17 @@ class IndexMappingNestedFieldConsistencyTest {
     for (Map.Entry<String, IndexMapping> entry : loader.getIndexMapping().entrySet()) {
       String entity = entry.getKey();
       IndexMapping indexMapping = entry.getValue();
-      String filePath = indexMapping.getIndexMappingFile(LANGUAGE);
-      try (InputStream in =
-          IndexMappingNestedFieldConsistencyTest.class
-              .getClassLoader()
-              .getResourceAsStream(filePath)) {
-        if (in != null) {
-          allMappings.put(entity, JsonUtils.readTree(new String(in.readAllBytes())));
+      for (String language : LANGUAGES) {
+        String filePath = indexMapping.getIndexMappingFile(language);
+        try (InputStream in =
+            IndexMappingNestedFieldConsistencyTest.class
+                .getClassLoader()
+                .getResourceAsStream(filePath)) {
+          if (in == null) {
+            continue;
+          }
+          String key = entity + "[" + language + "]";
+          allMappings.put(key, JsonUtils.readTree(new String(in.readAllBytes())));
         }
       }
     }
@@ -48,9 +53,9 @@ class IndexMappingNestedFieldConsistencyTest {
     for (Map.Entry<String, JsonNode> entry : allMappings.entrySet()) {
       String entity = entry.getKey();
       JsonNode properties = getTopLevelProperties(entry.getValue());
-      if (properties == null) {
-        continue;
-      }
+      assertNotNull(
+          properties,
+          "Index mapping for '" + entity + "' has no properties — mapping file may be malformed.");
       List<String> paths = new ArrayList<>();
       findViolations(properties, "owners", "", paths);
       for (String path : paths) {
