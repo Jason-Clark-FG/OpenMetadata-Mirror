@@ -162,7 +162,9 @@ def unit_tests(session):
     # file that contains tests safe to run across workers). Strip the default
     # "--dist loadfile" pair when a --dist flag is already in extra_flags so
     # pytest doesn't receive conflicting values.
-    has_dist_override = any(f == "--dist" or f.startswith("--dist=") for f in extra_flags)
+    has_dist_override = any(
+        f == "--dist" or f.startswith("--dist=") for f in extra_flags
+    )
 
     pytest_args = [
         "-c",
