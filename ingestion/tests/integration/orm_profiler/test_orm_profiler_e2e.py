@@ -246,6 +246,7 @@ def test_profiler_workflow(ingest, metadata, service_name):
     on top of the Users table
     """
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -316,6 +317,7 @@ def test_profiler_workflow(ingest, metadata, service_name):
 def test_workflow_sample_profile(ingest, metadata, service_name):
     """Test the workflow sample profile gets propagated down to the table profileSample"""
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -347,6 +349,7 @@ def test_workflow_sample_profile(ingest, metadata, service_name):
 def test_workflow_datetime_partition(ingest, metadata, service_name):
     """test workflow with partition"""
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -432,6 +435,7 @@ def test_workflow_datetime_partition(ingest, metadata, service_name):
 def test_workflow_integer_range_partition(ingest, metadata, service_name):
     """test workflow with partition"""
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -517,6 +521,7 @@ def test_workflow_integer_range_partition(ingest, metadata, service_name):
 def test_workflow_values_partition(ingest, metadata, service_name):
     """test workflow with partition"""
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -610,6 +615,7 @@ def test_profiler_workflow_with_custom_profiler_config(ingest, metadata, service
     non_metric_values = ["name", "timestamp"]
 
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "Profiler",
@@ -718,6 +724,7 @@ def test_profiler_workflow_with_custom_profiler_config(ingest, metadata, service
 def test_sample_data_ingestion(ingest, metadata, service_name):
     """test the rows of the sample data are what we expect"""
     workflow_config = deepcopy(ingestion_config)
+    workflow_config["source"]["serviceName"] = service_name
     workflow_config["source"]["sourceConfig"]["config"].update(
         {
             "type": "AutoClassification",
