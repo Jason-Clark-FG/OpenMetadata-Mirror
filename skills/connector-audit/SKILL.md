@@ -89,6 +89,7 @@ Each prompt is a self-contained investigation guide in `prompts/`:
 
 | # | File | Focus | Standards |
 |---|---|---|---|
+| 0 | `00-setup.md` | Set target connector, write context file | — |
 | 1 | `01-metadata-ingestion.md` | Metadata coverage by tier, ingestion completeness | Tiers 1-3, Standard 1 |
 | 2 | `02-error-handling.md` | Error handling, fault tolerance, observability | Standards 4, 5, 7 |
 | 3 | `03-connection-auth.md` | Auth methods, test connection, SSL/TLS | Standard 3 |
