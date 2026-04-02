@@ -523,7 +523,9 @@ class TestFQNSpecialCharsRealWorldScenarios(unittest.TestCase):
             column_name="typname::text",
         )
 
-        expected = f"postgres.mydb.pg_catalog.pg_type.{hash_column_name('typname::text')}"
+        expected = (
+            f"postgres.mydb.pg_catalog.pg_type.{hash_column_name('typname::text')}"
+        )
         self.assertEqual(result, expected)
 
     def test_bigquery_dataset_table_notation(self):

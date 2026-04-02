@@ -64,10 +64,7 @@ def _initialize_transformable_entities():
     from metadata.generated.schema.entity.data.dashboardDataModel import (
         DashboardDataModel,
     )
-    from metadata.generated.schema.entity.data.table import (
-        Table,
-        TableData,
-    )
+    from metadata.generated.schema.entity.data.table import Table, TableData
     from metadata.profiler.api.models import ProfilerResponse
 
     # Now populate the dictionary with the imported classes.
