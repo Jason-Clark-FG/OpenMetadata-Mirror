@@ -21,6 +21,7 @@ import {
   Button,
   Typography as CoreTypography,
 } from '@openmetadata/ui-core-components';
+import { Download01 } from '@untitledui/icons';
 import {
   Alert,
   Button as AntdButton,
@@ -78,7 +79,6 @@ import ExploreTree from '../Explore/ExploreTree/ExploreTree';
 import SearchedData from '../SearchedData/SearchedData';
 import { SearchedDataProps } from '../SearchedData/SearchedData.interface';
 import './exploreV1.less';
-import { Download01 } from '@untitledui/icons';
 
 const IndexNotFoundBanner = () => {
   const { theme } = useApplicationStore();
