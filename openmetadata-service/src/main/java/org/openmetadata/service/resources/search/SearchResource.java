@@ -75,6 +75,7 @@ import org.openmetadata.service.search.IndexManagementClient.IndexStats;
 import org.openmetadata.service.search.SearchClient;
 import org.openmetadata.service.search.SearchHealthStatus;
 import org.openmetadata.service.search.SearchRepository;
+import org.openmetadata.service.search.SearchResultCsvExporter;
 import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.security.Authorizer;
@@ -298,7 +299,8 @@ public class SearchResource {
               description = "Sort order asc for ascending or desc for descending, defaults to desc")
           @DefaultValue("desc")
           @QueryParam("sort_order")
-          String sortOrder) {
+          String sortOrder)
+      throws IOException {
 
     SearchRequest request =
         buildExportSearchRequest(
@@ -312,8 +314,21 @@ public class SearchResource {
             sortOrder);
     SubjectContext subjectContext = getSubjectContext(securityContext);
 
+    int totalHits = searchRepository.countSearchResults(request, subjectContext);
+    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(
+              String.format(
+                  "Results contain %d rows, max is %d. Please add filters to reduce the result set.",
+                  totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS))
+          .type(MediaType.TEXT_PLAIN)
+          .build();
+    }
+
     StreamingOutput stream =
-        output -> searchRepository.exportSearchResultsCsvStream(request, subjectContext, output);
+        output ->
+            searchRepository.exportSearchResultsCsvStream(
+                request, subjectContext, totalHits, output);
 
     return Response.ok(stream)
         .header("Content-Disposition", "attachment; filename=\"search_export.csv\"")

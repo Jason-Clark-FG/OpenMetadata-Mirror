@@ -2440,31 +2440,24 @@ public class SearchRepository {
   }
 
   public void exportSearchResultsCsvStream(
-      SearchRequest baseRequest, SubjectContext subjectContext, java.io.OutputStream output)
+      SearchRequest baseRequest,
+      SubjectContext subjectContext,
+      int totalHits,
+      java.io.OutputStream output)
       throws IOException {
-    int totalHits = countSearchResults(baseRequest, subjectContext);
-    validateExportSize(totalHits);
-
     java.io.BufferedWriter writer =
         new java.io.BufferedWriter(
             new java.io.OutputStreamWriter(output, java.nio.charset.StandardCharsets.UTF_8));
-    writer.write(SearchResultCsvExporter.CSV_HEADER);
-    writer.newLine();
-    writer.flush();
+    try {
+      writer.write(SearchResultCsvExporter.CSV_HEADER);
+      writer.newLine();
+      writer.flush();
 
-    if (totalHits == 0) {
-      return;
-    }
-
-    writeCsvBatches(baseRequest, subjectContext, writer, totalHits);
-  }
-
-  private void validateExportSize(int totalHits) {
-    if (totalHits > SearchResultCsvExporter.MAX_EXPORT_ROWS) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Search results contain %d rows which exceeds the maximum of %d. Please add filters to reduce the result set.",
-              totalHits, SearchResultCsvExporter.MAX_EXPORT_ROWS));
+      if (totalHits > 0) {
+        writeCsvBatches(baseRequest, subjectContext, writer, totalHits);
+      }
+    } finally {
+      writer.flush();
     }
   }
 
