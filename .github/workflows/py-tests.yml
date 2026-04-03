@@ -115,11 +115,6 @@ jobs:
           - name: "shard-1"
             nox-args: >-
               tests/unit
-              --ignore=tests/unit/topology/database/test_databricks.py
-          - name: "shard-2"
-            nox-args: >-
-              tests/unit/topology/database/test_databricks.py
-              --dist=load
     steps:
 
       - name: Wait for the labeler
@@ -182,7 +177,6 @@ jobs:
             nox-args: >-
               tests/integration/trino
               tests/integration/datalake
-              tests/integration/ometa/test_ometa_pipeline_api.py
               tests/integration/orm_profiler
               tests/integration/ometa/test_ometa_tags_mixin.py
               tests/integration/ometa/test_ometa_database_api.py
@@ -201,13 +195,16 @@ jobs:
             nox-args: >-
               tests/integration/postgres
               tests/integration/mysql
-              tests/integration/profiler
               tests/integration/data_quality
+              tests/integration/ometa/test_ometa_domains_api.py
+              tests/integration/ometa/test_ometa_patch.py
+              tests/integration/ometa/test_ometa_topology_patch.py
           - name: "shard-3"
             workers: "2"
             nox-args: >-
               tests/integration/sdk
               tests/integration/ometa/test_ometa_rest_api.py
+              tests/integration/ometa/test_ometa_pipeline_api.py
               tests/integration/superset
               tests/integration/lineage
               tests/integration/test_suite
@@ -225,16 +222,14 @@ jobs:
           - name: "shard-4"
             workers: "2"
             nox-args: >-
-              tests/integration/ometa/test_ometa_domains_api.py
+              tests/integration/profiler
               tests/integration/ometa/test_ometa_table_api.py
-              tests/integration/ometa/test_ometa_patch.py
               tests/integration/airflow
               tests/integration/ometa/test_ometa_mlmodel_api.py
               tests/integration/ometa/test_ometa_dashboard_api.py
               tests/integration/ometa/test_ometa_topic_api.py
               tests/integration/ometa/test_ometa_test_suite.py
               tests/integration/ometa/test_ometa_lineage_api.py
-              tests/integration/ometa/test_ometa_topology_patch.py
               tests/integration/alationsink
               tests/integration/great_expectations
               tests/integration/ometa/test_ometa_server_api.py
