@@ -171,3 +171,11 @@ class TestStarRocksTypeMappings:
     def test_unknown_type_returns_null_type(self):
         result = _get_sqlalchemy_type("UNKNOWN_CUSTOM_TYPE")
         assert isinstance(result, sqltypes.NullType)
+        
+        
+class TestStarRocksIcebergMapping(TestCase):
+    def test_iceberg_relkind_mapping(self):
+        from metadata.generated.schema.entity.data.table import TableType
+        from metadata.ingestion.source.database.starrocks.metadata import RELKIND_MAP
+
+        assert RELKIND_MAP["ICEBERG"] == TableType.Iceberg
