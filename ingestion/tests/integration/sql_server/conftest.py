@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import uuid
 
+import docker.errors
 import pytest
 from sqlalchemy import create_engine, text
 from testcontainers.mssql import SqlServerContainer
@@ -77,7 +78,13 @@ GO
         """
         )
 
-    with try_bind(container, 1433, 1433) as container:
+    try:
+        cm = try_bind(container, 1433, 1433)
+        container = cm.__enter__()
+    except (docker.errors.BuildError, docker.errors.APIError) as exc:
+        pytest.skip(f"MSSQL container unavailable: {exc}")
+
+    try:
         docker_container = container.get_wrapped_container()
         copy_dir_to_container(str(data_dir), docker_container, "/data")
         res = docker_container.exec_run(
@@ -115,6 +122,8 @@ GO
             )
             transaciton.commit()
         yield container
+    finally:
+        cm.__exit__(None, None, None)
 
 
 @pytest.fixture(
