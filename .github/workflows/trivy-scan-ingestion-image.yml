@@ -1,11 +1,7 @@
 name: Trivy Scan For OpenMetadata Ingestion Docker Image
 
 on:
-    pull_request_target:
-        types: [labeled, opened, synchronize, reopened, ready_for_review]
-        paths:
-          - "**/*.py"
-          - "ingestion/Dockerfile.ci"
+    workflow_dispatch:
     
 concurrency: 
   group: trivy-ingestion-scan-${{ github.event.pull_request.number || github.run_id }}
