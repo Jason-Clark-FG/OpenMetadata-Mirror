@@ -135,10 +135,13 @@ import TabsLabel from '../components/common/TabsLabel/TabsLabel.component';
 import { TabProps } from '../components/common/TabsLabel/TabsLabel.interface';
 import { GenericTab } from '../components/Customization/GenericTab/GenericTab';
 import { CommonWidgets } from '../components/DataAssets/CommonWidgets/CommonWidgets';
-import DataObservabilityTab from '../components/Database/Profiler/DataObservability/DataObservabilityTab';
 import SampleDataTableComponent from '../components/Database/SampleDataTable/SampleDataTable.component';
 import SchemaTable from '../components/Database/SchemaTable/SchemaTable.component';
 import TableQueries from '../components/Database/TableQueries/TableQueries';
+
+const DataObservabilityTab = lazy(
+  () => import('../components/Database/Profiler/DataObservability/DataObservabilityTab')
+);
 import { ContractTab } from '../components/DataContract/ContractTab/ContractTab';
 import { useEntityExportModalProvider } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import KnowledgeGraph from '../components/KnowledgeGraph/KnowledgeGraph';
@@ -941,10 +944,12 @@ export const getTableDetailPageBaseTabs = ({
       ),
       key: EntityTabs.PROFILER,
       children: (
-        <DataObservabilityTab
-          permissions={tablePermissions}
-          table={tableDetails}
-        />
+        <Suspense fallback={<Loader />}>
+          <DataObservabilityTab
+            permissions={tablePermissions}
+            table={tableDetails}
+          />
+        </Suspense>
       ),
     },
     {

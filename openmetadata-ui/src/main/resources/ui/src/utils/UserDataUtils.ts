@@ -17,7 +17,6 @@ import { get, isEqual } from 'lodash';
 import { OidcUser } from '../components/Auth/AuthProviders/AuthProvider.interface';
 import { updateUserDetail } from '../rest/userAPI';
 import { User } from './../generated/entity/teams/user';
-import { getImages } from './CommonUtils';
 import i18n from './i18next/LocalUtil';
 import {
   getImageWithResolutionAndFallback,
@@ -25,6 +24,28 @@ import {
 } from './ProfilerUtils';
 import { showErrorToast } from './ToastUtils';
 import userClassBase from './UserClassBase';
+
+export enum EImageTypes {
+  image = 's96-c',
+  image192 = 's192-c',
+  image24 = 's24-c',
+  image32 = 's32-c',
+  image48 = 's48-c',
+  image512 = 's512-c',
+  image72 = 's72-c',
+}
+
+export const getImages = (imageUri: string) => {
+  const imagesObj: Record<EImageTypes, string> = {} as Record<
+    EImageTypes,
+    string
+  >;
+  for (const type in EImageTypes) {
+    imagesObj[type] = imageUri.replace('s96-c', EImageTypes[type]);
+  }
+
+  return imagesObj;
+};
 
 export const getUserDataFromOidc = (
   userData: User,

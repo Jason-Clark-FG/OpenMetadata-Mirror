@@ -13,7 +13,7 @@
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'node:path';
+import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -185,7 +185,7 @@ export default defineConfig(({ mode }) => {
       minify: mode === 'production' ? 'esbuild' : false,
       cssMinify: 'esbuild',
       cssCodeSplit: true,
-      reportCompressedSize: false,
+      reportCompressedSize: true,
       chunkSizeWarningLimit: 1500,
       rollupOptions: {
         output: {
@@ -199,6 +199,19 @@ export default defineConfig(({ mode }) => {
             }
 
             return `assets/[name]-[hash][extname]`;
+          },
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('antd')) {
+                return 'vendor-antd';
+              }
+              if (id.includes('@openmetadata/ui-core-components')) {
+                return 'vendor-untitled';
+              }
+              if (id.includes('@untitledui/icons')) {
+                return 'vendor-untitled-icons';
+              }
+            }
           },
         },
       },

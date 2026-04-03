@@ -14,7 +14,6 @@
 import { SearchOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import i18next from 'i18next';
-import { isEmpty } from 'lodash';
 import { Bucket } from 'Models';
 import { Link } from 'react-router-dom';
 import { ReactComponent as GlossaryTermIcon } from '../assets/svg/book.svg';
@@ -33,7 +32,6 @@ import { ReactComponent as IconMlModal } from '../assets/svg/mlmodal.svg';
 import { ReactComponent as IconPipeline } from '../assets/svg/pipeline-grey.svg';
 import { ReactComponent as IconTag } from '../assets/svg/tag-grey.svg';
 import { ReactComponent as IconTopic } from '../assets/svg/topic-grey.svg';
-import { WILD_CARD_CHAR } from '../constants/char.constants';
 import {
   Option,
   SearchSuggestions,
@@ -45,53 +43,6 @@ import { getPartialNameFromTableFQN } from './CommonUtils';
 import { ElasticsearchQuery } from './QueryBuilderUtils';
 import searchClassBase from './SearchClassBase';
 import serviceUtilClassBase from './ServiceUtilClassBase';
-import { escapeESReservedCharacters, getEncodedFqn } from './StringsUtils';
-
-export const getSearchAPIQueryParams = (
-  queryString: string,
-  from: number,
-  size: number,
-  filters: string,
-  sortField: string,
-  sortOrder: string,
-  searchIndex: SearchIndex | SearchIndex[],
-  onlyDeleted = false,
-  trackTotalHits = false,
-  wildcard = true
-): Record<string, string | boolean | number | string[]> => {
-  const start = (from - 1) * size;
-
-  const encodedQueryString = queryString
-    ? getEncodedFqn(escapeESReservedCharacters(queryString))
-    : '';
-
-  const query =
-    wildcard && encodedQueryString !== WILD_CARD_CHAR
-      ? `*${encodedQueryString}*`
-      : encodedQueryString;
-
-  const params: Record<string, string | boolean | number | string[]> = {
-    q: query + (filters ? ` AND ${filters}` : ''),
-    from: start,
-    size,
-    index: searchIndex,
-    deleted: onlyDeleted,
-  };
-
-  if (!isEmpty(sortField)) {
-    params.sort_field = sortField;
-  }
-
-  if (!isEmpty(sortOrder)) {
-    params.sort_order = sortOrder;
-  }
-
-  if (trackTotalHits) {
-    params.track_total_hits = trackTotalHits;
-  }
-
-  return params;
-};
 
 // will add back slash "\" before quote in string if present
 export const getQueryWithSlash = (query: string): string =>

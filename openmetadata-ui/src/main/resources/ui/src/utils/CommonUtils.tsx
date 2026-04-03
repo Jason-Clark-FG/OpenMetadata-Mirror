@@ -37,7 +37,6 @@ import { ReactNode } from 'react';
 import { Trans } from 'react-i18next';
 import Loader from '../components/common/Loader/Loader';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
-import { imageTypes } from '../constants/constants';
 import { BASE_COLORS } from '../constants/DataInsight.constants';
 import { FEED_COUNT_INITIAL_DATA } from '../constants/entity.constants';
 import { VALIDATE_ESCAPE_START_END_REGEX } from '../constants/regex.constants';
@@ -343,18 +342,6 @@ export const requiredField = (label: string, excludeSpace = false) => (
     <span className="text-failure">{!excludeSpace && <>&nbsp;</>}*</span>
   </>
 );
-
-export const getImages = (imageUri: string) => {
-  const imagesObj: typeof imageTypes = imageTypes;
-  for (const type in imageTypes) {
-    imagesObj[type as keyof typeof imageTypes] = imageUri.replace(
-      's96-c',
-      imageTypes[type as keyof typeof imageTypes]
-    );
-  }
-
-  return imagesObj;
-};
 
 export const getServiceLogo = (
   serviceType: string,

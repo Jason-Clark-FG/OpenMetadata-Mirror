@@ -12,13 +12,11 @@
  */
 
 import { removeSession } from '@analytics/session-utils';
-import { Auth0Provider } from '@auth0/auth0-react';
 import {
   Configuration,
-  IPublicClientApplication,
+  type IPublicClientApplication,
   PublicClientApplication,
 } from '@azure/msal-browser';
-import { MsalProvider } from '@azure/msal-react';
 import {
   AxiosError,
   AxiosRequestHeaders,
@@ -41,7 +39,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { UN_AUTHORIZED_EXCLUDED_PATHS } from '../../../constants/Auth.constants';
-import { REDIRECT_PATHNAME, ROUTES } from '../../../constants/constants';
+import {
+  REDIRECT_PATHNAME,
+  APP_ROUTER_ROUTES as ROUTES,
+} from '../../../constants/router.constants';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { TabSpecificField } from '../../../enums/entity.enum';
 import {
@@ -50,6 +51,7 @@ import {
 } from '../../../generated/configuration/authenticationConfiguration';
 import { User } from '../../../generated/entity/teams/user';
 import { AuthProvider as AuthProviderEnum } from '../../../generated/settings/settings';
+import { withDomainFilter } from '../../../hoc/withDomainFilter';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import axiosClient from '../../../rest';
@@ -68,7 +70,6 @@ import {
   prepareUserProfileFromClaims,
   validateAuthFields,
 } from '../../../utils/AuthProvider.util';
-import { withDomainFilter } from '../../../utils/DomainUtils';
 import {
   clearOidcToken,
   getOidcToken,
@@ -87,8 +88,12 @@ import {
   LazyOktaAuthenticator,
 } from '../AppAuthenticators/LazyAuthenticators';
 import { AuthenticatorRef, OidcUser } from './AuthProvider.interface';
-import BasicAuthProvider from './BasicAuthProvider';
-import OktaAuthProvider from './OktaAuthProvider';
+import {
+  LazyAuth0ProviderWrapper,
+  LazyBasicAuthProviderWrapper,
+  LazyMsalProviderWrapper,
+  LazyOktaAuthProviderWrapper,
+} from './LazyAuthProviderWrappers';
 
 interface AuthProviderProps {
   childComponentType: ComponentType;
@@ -632,34 +637,32 @@ export const AuthProvider = ({
       case AuthProviderEnum.LDAP:
       case AuthProviderEnum.Basic: {
         return (
-          <BasicAuthProvider>
+          <LazyBasicAuthProviderWrapper>
             <LazyBasicAuthAuthenticator ref={authenticatorRef}>
               {childElement}
             </LazyBasicAuthAuthenticator>
-          </BasicAuthProvider>
+          </LazyBasicAuthProviderWrapper>
         );
       }
       case AuthProviderEnum.Auth0: {
         return (
-          <Auth0Provider
-            useRefreshTokens
-            cacheLocation="memory"
+          <LazyAuth0ProviderWrapper
             clientId={authConfig.clientId?.toString() ?? ''}
             domain={authConfig.authority?.toString() ?? ''}
             redirectUri={authConfig.callbackUrl?.toString()}>
             <LazyAuth0Authenticator ref={authenticatorRef}>
               {childElement}
             </LazyAuth0Authenticator>
-          </Auth0Provider>
+          </LazyAuth0ProviderWrapper>
         );
       }
       case AuthProviderEnum.Okta: {
         return (
-          <OktaAuthProvider>
+          <LazyOktaAuthProviderWrapper>
             <LazyOktaAuthenticator ref={authenticatorRef}>
               {childElement}
             </LazyOktaAuthenticator>
-          </OktaAuthProvider>
+          </LazyOktaAuthProviderWrapper>
         );
       }
       case AuthProviderEnum.Google:
@@ -676,11 +679,11 @@ export const AuthProvider = ({
       }
       case AuthProviderEnum.Azure: {
         return msalInstance ? (
-          <MsalProvider instance={msalInstance}>
+          <LazyMsalProviderWrapper instance={msalInstance}>
             <LazyMsalAuthenticator ref={authenticatorRef}>
               {childElement}
             </LazyMsalAuthenticator>
-          </MsalProvider>
+          </LazyMsalProviderWrapper>
         ) : (
           <Loader fullScreen />
         );

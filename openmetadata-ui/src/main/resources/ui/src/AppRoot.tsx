@@ -11,23 +11,16 @@
  *  limitations under the License.
  */
 
-import { GlobalStyles, ThemeProvider } from '@mui/material';
-import { createMuiTheme } from '@openmetadata/ui-core-components';
-import { FC, lazy, Suspense, useEffect, useMemo } from 'react';
+import { FC, useEffect } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
+import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary/ErrorBoundary';
-import Loader from './components/common/Loader/Loader';
-import { DEFAULT_THEME } from './constants/Appearance.constants';
 import AntDConfigProvider from './context/AntDConfigProvider/AntDConfigProvider';
-import { ThemeProvider as UntitledUIThemeProvider } from './context/UntitledUIThemeProvider/theme-provider';
 import { useApplicationStore } from './hooks/useApplicationStore';
 import { getBasePath } from './utils/HistoryUtils';
 import i18n from './utils/i18next/LocalUtil';
-
-const App = lazy(() => import('./App'));
 
 const AppRoot: FC = () => {
   const { initializeAuthState } = useApplicationStore();
@@ -36,36 +29,17 @@ const AppRoot: FC = () => {
     initializeAuthState();
   }, [initializeAuthState]);
 
-  const { applicationConfig } = useApplicationStore(
-    useShallow((state) => ({
-      applicationConfig: state.applicationConfig,
-    }))
-  );
-
-  const muiTheme = useMemo(
-    () => createMuiTheme(applicationConfig?.customTheme, DEFAULT_THEME),
-    [applicationConfig?.customTheme]
-  );
-
   return (
     <div className="main-container">
       <div className="content-wrapper" data-testid="content-wrapper">
         <BrowserRouter basename={getBasePath()}>
           <I18nextProvider i18n={i18n}>
             <AntDConfigProvider>
-              <UntitledUIThemeProvider
-                brandColors={applicationConfig?.customTheme}>
-                <ThemeProvider theme={muiTheme}>
-                  <GlobalStyles styles={{ html: { fontSize: '14px' } }} />
-                  <HelmetProvider>
-                    <ErrorBoundary>
-                      <Suspense fallback={<Loader fullScreen />}>
-                        <App />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </HelmetProvider>
-                </ThemeProvider>
-              </UntitledUIThemeProvider>
+              <HelmetProvider>
+                <ErrorBoundary>
+                  <App />
+                </ErrorBoundary>
+              </HelmetProvider>
             </AntDConfigProvider>
           </I18nextProvider>
         </BrowserRouter>

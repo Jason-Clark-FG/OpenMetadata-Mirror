@@ -26,9 +26,9 @@ import {
   CustomEventTypes,
 } from '../generated/analytics/webAnalyticEventType/customEvent';
 import { PageViewEvent } from '../generated/analytics/webAnalyticEventType/pageViewEvent';
+import { getPathNameFromWindowLocation } from '../hoc/withDomainFilter';
 import { postWebAnalyticEvent } from '../rest/WebAnalyticsAPI';
 import { AnalyticsData } from './../components/WebAnalytics/WebAnalytics.interface';
-import { getPathNameFromWindowLocation } from './RouterUtils';
 
 /**
  * Check if url is valid or not and return the pathname
