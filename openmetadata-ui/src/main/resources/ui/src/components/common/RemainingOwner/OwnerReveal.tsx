@@ -73,16 +73,14 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
             size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
           />
         </Button>
-        <Dropdown.Popover placement="bottom start">
+        <Dropdown.Popover className="tw:z-999!" placement="bottom start">
           <Dropdown.Menu aria-label="remaining owners">
             {owners.map((owner) => {
               const name = getEntityName(owner);
 
               return (
                 <Dropdown.Item key={owner.id} textValue={name}>
-                  <UserPopOverCard
-                    popoverZIndex={200000}
-                    userName={owner.name ?? ''}>
+                  <UserPopOverCard userName={owner.name ?? ''}>
                     <Link data-testid="owner-link" to={getOwnerPath(owner)}>
                       <div className="tw:flex tw:items-center tw:gap-2">
                         <ProfilePicture

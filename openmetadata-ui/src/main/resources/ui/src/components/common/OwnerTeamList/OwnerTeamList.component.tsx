@@ -43,37 +43,32 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
 
   return (
     <div className="tw:flex tw:items-center tw:relative">
-      <Button
-        color="link-gray"
-        data-testid="owner-link"
-        href={getOwnerPath(visibleTeam)}
-        iconLeading={
-          <IconTeamsGrey
-            className={classNames(
-              'tw:text-gray-700',
-              AVATAR_SIZE_CLASS_MAP[avatarSize]
-            )}
-          />
-        }>
-        <div className="tw:flex tw:items-center tw:gap-2 tw:max-w-full">
-          <div
-            className={classNames({
-              'tw:max-w-30': placement === 'vertical' || owners.length < 2,
-              'tw:max-w-12.5': placement !== 'vertical' && owners.length >= 2,
-            })}>
-            <Typography
-              ellipsis
-              as="p"
-              className="tw:leading-none"
-              data-testid={getEntityName(visibleTeam)}
-              size="text-xs"
-              weight="medium">
-              {ownerDisplayName?.get(visibleTeam.name ?? '') ??
-                getEntityName(visibleTeam)}
-            </Typography>
-          </div>
+      <Link
+        className="tw:flex tw:items-center tw:gap-2 tw:cursor-pointer tw:no-underline"
+        to={getOwnerPath(visibleTeam)}>
+        <IconTeamsGrey
+          className={classNames(
+            'tw:text-gray-700',
+            AVATAR_SIZE_CLASS_MAP[avatarSize]
+          )}
+        />
+
+        <div
+          className={classNames({
+            'tw:max-w-30': placement === 'vertical' || owners.length < 2,
+            'tw:max-w-16': placement !== 'vertical' && owners.length >= 2,
+          })}>
+          <Typography
+            ellipsis
+            as="p"
+            data-testid={getEntityName(visibleTeam)}
+            size="text-xs"
+            weight="medium">
+            {ownerDisplayName?.get(visibleTeam.name ?? '') ??
+              getEntityName(visibleTeam)}
+          </Typography>
         </div>
-      </Button>
+      </Link>
 
       {owners.length > 1 && (
         <Dropdown.Root>
