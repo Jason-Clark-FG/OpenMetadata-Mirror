@@ -144,20 +144,17 @@ public interface SearchIndex {
     doc.put("followers", SearchIndexUtils.parseFollowers(entity.getFollowers()));
     Optional.ofNullable(entity.getEntityStatus())
         .ifPresent(status -> doc.put("entityStatus", status.value()));
-    int totalVotes =
-        nullOrEmpty(entity.getVotes())
-            ? 0
-            : Math.max(entity.getVotes().getUpVotes() - entity.getVotes().getDownVotes(), 0);
-    doc.put("totalVotes", totalVotes);
-
     if (entity.getVotes() != null) {
+      int upVotes = entity.getVotes().getUpVotes() != null ? entity.getVotes().getUpVotes() : 0;
+      int downVotes =
+          entity.getVotes().getDownVotes() != null ? entity.getVotes().getDownVotes() : 0;
+      doc.put("totalVotes", Math.max(upVotes - downVotes, 0));
       Map<String, Object> votesMap = new HashMap<>();
-      votesMap.put(
-          "upVotes", entity.getVotes().getUpVotes() != null ? entity.getVotes().getUpVotes() : 0);
-      votesMap.put(
-          "downVotes",
-          entity.getVotes().getDownVotes() != null ? entity.getVotes().getDownVotes() : 0);
+      votesMap.put("upVotes", upVotes);
+      votesMap.put("downVotes", downVotes);
       doc.put("votes", votesMap);
+    } else {
+      doc.put("totalVotes", 0);
     }
 
     doc.put("descriptionStatus", getDescriptionStatus(entity));
@@ -172,6 +169,8 @@ public interface SearchIndex {
 
     doc.put("fqnParts", getFQNParts(entity.getFullyQualifiedName()));
     doc.put("deleted", entity.getDeleted() != null && entity.getDeleted());
+    TagLabel tierTag = new ParseTags(Entity.getEntityTags(entityType, entity)).getTierTag();
+    doc.put("tier", tierTag);
     doc.put("certification", entity.getCertification());
 
     doc.put(

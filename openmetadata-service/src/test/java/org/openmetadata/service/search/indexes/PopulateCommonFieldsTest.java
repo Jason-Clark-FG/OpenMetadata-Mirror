@@ -5,7 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,9 @@ class PopulateCommonFieldsTest {
         Mockito.mock(SearchRepository.class, Mockito.RETURNS_DEEP_STUBS);
     entityStaticMock = Mockito.mockStatic(Entity.class);
     entityStaticMock.when(Entity::getSearchRepository).thenReturn(mockSearchRepo);
+    entityStaticMock
+        .when(() -> Entity.getEntityTags(anyString(), any()))
+        .thenReturn(Collections.emptyList());
   }
 
   @AfterAll
@@ -591,7 +597,22 @@ class PopulateCommonFieldsTest {
     assertNotNull(doc.get("tierSources"));
     assertNotNull(doc.get("fqnParts"));
     assertNotNull(doc.get("deleted"));
+    assertTrue(doc.containsKey("tier"));
     assertTrue(doc.containsKey("certification"));
     assertTrue(doc.containsKey("customPropertiesTyped"));
+  }
+
+  // ==================== tier ====================
+
+  @Test
+  void testTier_populatedForAllEntities() {
+    Dashboard d =
+        new Dashboard().withId(UUID.randomUUID()).withName("d").withFullyQualifiedName("s.d");
+
+    Map<String, Object> doc = new HashMap<>();
+    createIndex(d).populateCommonFields(doc, d, Entity.DASHBOARD);
+
+    // tier is populated via ParseTags even for non-TaggableIndex entities
+    assertTrue(doc.containsKey("tier"));
   }
 }

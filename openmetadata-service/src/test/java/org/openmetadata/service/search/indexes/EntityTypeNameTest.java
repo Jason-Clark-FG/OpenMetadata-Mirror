@@ -1,6 +1,7 @@
 package org.openmetadata.service.search.indexes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -167,7 +168,6 @@ class EntityTypeNameTest {
   @ParameterizedTest(name = "{1} - getEntity")
   @MethodSource("indexEntityTypeProvider")
   void testGetEntityReturnsNonNull(SearchIndex index, String expectedType) {
-    Object entity = index.getEntity();
-    assertEquals(entity != null, true, expectedType + " getEntity() returned null");
+    assertNotNull(index.getEntity(), expectedType + " getEntity() returned null");
   }
 }
