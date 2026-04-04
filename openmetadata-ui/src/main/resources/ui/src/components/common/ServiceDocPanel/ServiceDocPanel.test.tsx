@@ -20,14 +20,6 @@ jest.mock('../Loader/Loader', () =>
   jest.fn().mockReturnValue(<div data-testid="loader">Loader</div>)
 );
 
-jest.mock('../RichTextEditor/RichTextEditorPreviewer', () =>
-  jest
-    .fn()
-    .mockImplementation(({ markdown }) => (
-      <div data-testid="requirement-text">{markdown}</div>
-    ))
-);
-
 jest.mock('../../Explore/EntitySummaryPanel/EntitySummaryPanel.component', () =>
   jest
     .fn()
@@ -113,11 +105,13 @@ describe('ServiceDocPanel Component', () => {
 
   describe('Core Functionality', () => {
     it('should render component and fetch markdown content', async () => {
-      render(<ServiceDocPanel {...defaultProps} />);
+      const { container } = render(<ServiceDocPanel {...defaultProps} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('service-requirements')).toBeInTheDocument();
-        expect(screen.getByTestId('requirement-text')).toBeInTheDocument();
+        expect(
+          container.querySelector('.service-doc-content')
+        ).not.toBeNull();
         expect(mockFetchMarkdownFile).toHaveBeenCalledWith(
           'en-US/DatabaseService/mysql.md'
         );
@@ -168,10 +162,13 @@ describe('ServiceDocPanel Component', () => {
     it('should handle fetch failures gracefully', async () => {
       mockFetchMarkdownFile.mockRejectedValue(new Error('Network error'));
 
-      render(<ServiceDocPanel {...defaultProps} />);
+      const { container } = render(<ServiceDocPanel {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('requirement-text')).toHaveTextContent('');
+        const docContent = container.querySelector('.service-doc-content');
+
+        expect(docContent).not.toBeNull();
+        expect(docContent?.innerHTML).toBe('');
       });
     });
   });
@@ -281,7 +278,7 @@ describe('ServiceDocPanel Component', () => {
       mockQuerySelector.mockReturnValue(mockElement);
       mockGetActiveFieldNameForAppDocs.mockReturnValue('application.config');
 
-      render(
+      const { container } = render(
         <ServiceDocPanel
           activeField="root/application/config"
           selectedEntity={mockSelectedEntity}
@@ -292,7 +289,9 @@ describe('ServiceDocPanel Component', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('entity-summary-panel')).toBeInTheDocument();
-        expect(screen.getByTestId('requirement-text')).toBeInTheDocument();
+        expect(
+          container.querySelector('.service-doc-content')
+        ).not.toBeNull();
         expect(mockGetActiveFieldNameForAppDocs).toHaveBeenCalledWith(
           'root/application/config'
         );

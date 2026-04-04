@@ -22,8 +22,8 @@ import {
 } from '../../../constants/regex.constants';
 import { PipelineType } from '../../../generated/entity/services/ingestionPipelines/ingestionPipeline';
 import { fetchMarkdownFile } from '../../../rest/miscAPI';
-import { SupportedLocales } from '../../../utils/i18next/LocalUtil.interface';
 import { MarkdownToHTMLConverter } from '../../../utils/FeedUtils';
+import { SupportedLocales } from '../../../utils/i18next/LocalUtil.interface';
 import { getActiveFieldNameForAppDocs } from '../../../utils/ServiceUtils';
 import EntitySummaryPanel from '../../Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import { SearchedDataProps } from '../../SearchedData/SearchedData.interface';
