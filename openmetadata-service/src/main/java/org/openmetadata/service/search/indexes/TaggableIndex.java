@@ -42,8 +42,11 @@ public interface TaggableIndex extends SearchIndex {
    * entity-level tags and any child tag sets from {@link #collectChildTags()}.
    */
   default void applyTagFields(Map<String, Object> doc) {
-    ParseTags parseTags =
-        new ParseTags(Entity.getEntityTags(getEntityTypeName(), (EntityInterface) getEntity()));
+    Object entity = getEntity();
+    if (!(entity instanceof EntityInterface ei)) {
+      return;
+    }
+    ParseTags parseTags = new ParseTags(Entity.getEntityTags(getEntityTypeName(), ei));
 
     Set<List<TagLabel>> childTagSets = collectChildTags();
     if (childTagSets != null && !childTagSets.isEmpty()) {
