@@ -196,10 +196,11 @@ class BuildSearchIndexDocTest {
 
     // LineageIndex
     assertTrue(result.containsKey("upstreamLineage"));
-    // NOT TaggableIndex
-    assertFalse(result.containsKey("classificationTags"));
-    assertFalse(result.containsKey("glossaryTags"));
-    // NOT ServiceBackedIndex
+    // TaggableIndex (service indexes now implement TaggableIndex)
+    assertTrue(result.containsKey("classificationTags"));
+    assertTrue(result.containsKey("glossaryTags"));
+    assertTrue(result.containsKey("tier"));
+    // NOT ServiceBackedIndex (it IS a service, not service-backed)
     assertFalse(result.containsKey("serviceType"));
   }
 

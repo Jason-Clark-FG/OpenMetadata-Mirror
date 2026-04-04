@@ -274,8 +274,10 @@ class MigratedIndexTest {
     // Lineage
     assertTrue(result.containsKey("upstreamLineage"));
 
-    // No tags, no service (it IS a service, not service-backed)
-    assertFalse(result.containsKey("classificationTags"));
+    // TaggableIndex (service indexes now implement TaggableIndex)
+    assertTrue(result.containsKey("classificationTags"));
+    assertTrue(result.containsKey("tier"));
+    // NOT ServiceBackedIndex (it IS a service, not service-backed)
     assertFalse(result.containsKey("serviceType"));
   }
 }
