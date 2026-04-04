@@ -9534,10 +9534,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
   /** Bulk populate field tags for multiple entities using chunked exact-match IN on field FQN hashes. */
   protected <F extends FieldInterface> void bulkPopulateEntityFieldTags(
-      List<T> entities,
-      String entityType,
-      java.util.function.Function<T, List<F>> fieldExtractor,
-      java.util.function.Function<T, String> fqnExtractor) {
+      List<T> entities, java.util.function.Function<T, List<F>> fieldExtractor) {
 
     if (entities == null || entities.isEmpty()) {
       return;

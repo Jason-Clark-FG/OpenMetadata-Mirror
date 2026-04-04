@@ -251,14 +251,11 @@ public class TagLabelUtil {
       LOG.warn(
           "Failed to batch fetch derived tags. Returning tags without derived. Error: {}",
           ex.getMessage());
-      List<TagLabel> fallback =
-          new ArrayList<>(
-              tagLabels.stream()
-                  .filter(Objects::nonNull)
-                  .filter(tag -> tag.getLabelType() != TagLabel.LabelType.DERIVED)
-                  .toList());
-      fallback.sort(compareTagLabel);
-      return fallback;
+      return tagLabels.stream()
+          .filter(Objects::nonNull)
+          .filter(tag -> tag.getLabelType() != TagLabel.LabelType.DERIVED)
+          .sorted(compareTagLabel)
+          .collect(Collectors.toList());
     }
   }
 

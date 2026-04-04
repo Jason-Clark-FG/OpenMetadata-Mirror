@@ -292,8 +292,7 @@ public class TableRepository extends EntityRepository<Table> {
     }
 
     if (fields.contains(COLUMN_FIELD)) {
-      bulkPopulateEntityFieldTags(
-          tables, entityType, Table::getColumns, Table::getFullyQualifiedName);
+      bulkPopulateEntityFieldTags(tables, Table::getColumns);
     }
   }
 
