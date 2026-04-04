@@ -5080,37 +5080,6 @@ public interface CollectionDAO {
                 parts = {":targetFQNHashPrefix", ":postfix"})
             String... targetFQNHash);
 
-    /**
-     * Batch fetch field tags for multiple entities using UNION ALL (one LIKE branch per prefix).
-     * Each branch is independently planned, avoiding OR-induced query planner degradation.
-     */
-    default Map<String, List<TagLabel>> getTagsByPrefixBatch(List<String> entityFQNs) {
-      if (entityFQNs == null || entityFQNs.isEmpty()) {
-        return Collections.emptyMap();
-      }
-      StringBuilder sql = new StringBuilder();
-      for (int i = 0; i < entityFQNs.size(); i++) {
-        if (i > 0) {
-          sql.append(" UNION ALL ");
-        }
-        String prefixHash = FullyQualifiedName.buildHash(entityFQNs.get(i)).toLowerCase();
-        sql.append(
-                "(SELECT targetFQNHash, source, tagFQN, labelType, state, reason, appliedAt, appliedBy, metadata "
-                    + "FROM tag_usage WHERE targetfqnhash_lower LIKE '")
-            .append(prefixHash)
-            .append(".%')");
-      }
-      List<TagLabelWithFQNHash> results =
-          Entity.getJdbi()
-              .withHandle(
-                  handle ->
-                      handle
-                          .createQuery(sql.toString())
-                          .map(new TagLabelWithFQNHashMapper())
-                          .list());
-      return TagLabelUtil.populateTagLabel(results);
-    }
-
     @SqlQuery("SELECT * FROM tag_usage")
     @Deprecated(since = "Release 1.1")
     @RegisterRowMapper(TagLabelMapperMigration.class)

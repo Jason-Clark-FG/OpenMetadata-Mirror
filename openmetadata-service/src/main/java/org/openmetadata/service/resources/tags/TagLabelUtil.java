@@ -239,13 +239,27 @@ public class TagLabelUtil {
     return updatedTagLabels;
   }
 
-  /** Add derived tags using a single batch query. Missing glossary terms are silently skipped. */
+  /** Add derived tags using a single batch query. Falls back to non-derived tags on failure. */
   public static List<TagLabel> addDerivedTagsGracefully(List<TagLabel> tagLabels) {
     if (nullOrEmpty(tagLabels)) {
       return tagLabels;
     }
-    Map<String, List<TagLabel>> derivedTagsMap = batchFetchDerivedTags(tagLabels);
-    return addDerivedTagsWithPreFetched(tagLabels, derivedTagsMap);
+    try {
+      Map<String, List<TagLabel>> derivedTagsMap = batchFetchDerivedTags(tagLabels);
+      return addDerivedTagsWithPreFetched(tagLabels, derivedTagsMap);
+    } catch (Exception ex) {
+      LOG.warn(
+          "Failed to batch fetch derived tags. Returning tags without derived. Error: {}",
+          ex.getMessage());
+      List<TagLabel> fallback =
+          new ArrayList<>(
+              tagLabels.stream()
+                  .filter(Objects::nonNull)
+                  .filter(tag -> tag.getLabelType() != TagLabel.LabelType.DERIVED)
+                  .toList());
+      fallback.sort(compareTagLabel);
+      return fallback;
+    }
   }
 
   private static List<TagLabel> getDerivedTags(TagLabel tagLabel) {
