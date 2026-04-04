@@ -9506,11 +9506,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     return resultMap;
   }
 
-  /**
-   * Bulk populate entity field tags for multiple entities efficiently.
-   * Collects all field FQNs across all entities and fetches their tags in a single
-   * batch query, replacing the previous N+1 pattern of one getTagsByPrefix call per entity.
-   */
+  /** Bulk populate field tags for multiple entities using chunked exact-match IN on field FQN hashes. */
   protected <F extends FieldInterface> void bulkPopulateEntityFieldTags(
       List<T> entities,
       String entityType,
@@ -9521,12 +9517,14 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return;
     }
 
-    // Collect all field FQNs across all entities for a single batch fetch
+    // Collect all field FQNs from the already-loaded entities
     List<String> allFieldFQNs = new ArrayList<>();
+    Map<T, List<F>> entityFlatFields = new HashMap<>();
     for (T entity : entities) {
       List<F> fields = fieldExtractor.apply(entity);
       if (fields != null) {
         List<F> flattenedFields = EntityUtil.getFlattenedEntityField(fields);
+        entityFlatFields.put(entity, flattenedFields);
         for (F field : listOrEmpty(flattenedFields)) {
           if (field.getFullyQualifiedName() != null) {
             allFieldFQNs.add(field.getFullyQualifiedName());
@@ -9539,7 +9537,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return;
     }
 
-    // Batch fetch all tags for all field FQNs, chunking to avoid exceeding DB query limits
+    // Batch fetch tags using exact-match IN, chunked to stay within DB limits
     int batchSize = 5000;
     Map<String, List<TagLabel>> allTags = new HashMap<>();
     for (int i = 0; i < allFieldFQNs.size(); i += batchSize) {
@@ -9548,16 +9546,15 @@ public abstract class EntityRepository<T extends EntityInterface> {
           populateTagLabel(listOrEmpty(daoCollection.tagUsageDAO().getTagsInternalBatch(chunk))));
     }
 
-    // Pre-fetch all derived tags in one batch to avoid N+1 in addDerivedTagsGracefully
+    // Pre-fetch all derived tags in one batch
     List<TagLabel> allTagLabels =
         allTags.values().stream().flatMap(List::stream).collect(Collectors.toList());
     Map<String, List<TagLabel>> derivedTagsMap = TagLabelUtil.batchFetchDerivedTags(allTagLabels);
 
-    // Apply tags to all fields of all entities
+    // Apply tags to all fields
     for (T entity : entities) {
-      List<F> fields = fieldExtractor.apply(entity);
-      if (fields != null) {
-        List<F> flattenedFields = EntityUtil.getFlattenedEntityField(fields);
+      List<F> flattenedFields = entityFlatFields.get(entity);
+      if (flattenedFields != null) {
         for (F field : listOrEmpty(flattenedFields)) {
           String fieldHash = FullyQualifiedName.buildHash(field.getFullyQualifiedName());
           List<TagLabel> fieldTags = allTags.get(fieldHash);

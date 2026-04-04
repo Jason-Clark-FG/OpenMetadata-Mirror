@@ -227,9 +227,8 @@ public class TableRepository extends EntityRepository<Table> {
     fetchAndSetFields(entities, fields);
     setInheritedFields(entities, fields);
 
-    // When columns are requested without tags, column tags are already populated
-    // from the stored JSON — no need to re-fetch from DB.
-
+    // Column tags come from tag_usage, not table JSON — fetched via fetchAndSetColumnTags when tags
+    // requested
     entities.forEach(table -> clearFieldsInternal(table, fields));
   }
 
