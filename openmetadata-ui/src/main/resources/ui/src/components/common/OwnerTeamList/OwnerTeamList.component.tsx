@@ -45,6 +45,7 @@ export const OwnerTeamList: React.FC<OwnerTeamListProps> = ({
     <div className="tw:flex tw:items-center tw:relative">
       <Link
         className="tw:flex tw:items-center tw:gap-2 tw:cursor-pointer tw:no-underline"
+        data-testid="owner-link"
         to={getOwnerPath(visibleTeam)}>
         <IconTeamsGrey
           className={classNames(
