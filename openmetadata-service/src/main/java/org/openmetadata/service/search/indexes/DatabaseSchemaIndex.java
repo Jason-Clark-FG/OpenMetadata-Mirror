@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.data.DatabaseSchema;
 import org.openmetadata.service.Entity;
 
-public record DatabaseSchemaIndex(DatabaseSchema databaseSchema) implements SearchIndex {
+public record DatabaseSchemaIndex(DatabaseSchema databaseSchema) implements TaggableIndex {
 
   @Override
   public Object getEntity() {

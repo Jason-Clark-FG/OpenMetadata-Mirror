@@ -4,7 +4,8 @@ import java.util.Map;
 import org.openmetadata.schema.entity.services.PipelineService;
 import org.openmetadata.service.Entity;
 
-public record PipelineServiceIndex(PipelineService pipelineService) implements LineageIndex {
+public record PipelineServiceIndex(PipelineService pipelineService)
+    implements TaggableIndex, LineageIndex {
   @Override
   public Object getEntity() {
     return pipelineService;

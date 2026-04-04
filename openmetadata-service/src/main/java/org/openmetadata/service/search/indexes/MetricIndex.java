@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.data.Metric;
 import org.openmetadata.service.Entity;
 
-public class MetricIndex implements LineageIndex {
+public class MetricIndex implements TaggableIndex, LineageIndex {
   final Metric metric;
 
   public MetricIndex(Metric metric) {

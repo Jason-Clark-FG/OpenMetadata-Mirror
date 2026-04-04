@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.services.McpService;
 import org.openmetadata.service.Entity;
 
-public record McpServiceIndex(McpService mcpService) implements LineageIndex {
+public record McpServiceIndex(McpService mcpService) implements TaggableIndex, LineageIndex {
 
   @Override
   public Object getEntity() {

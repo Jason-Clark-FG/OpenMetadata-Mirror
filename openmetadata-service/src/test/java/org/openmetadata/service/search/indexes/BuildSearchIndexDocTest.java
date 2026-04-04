@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.entity.data.Dashboard;
-import org.openmetadata.schema.entity.data.Metric;
 import org.openmetadata.schema.entity.data.Pipeline;
 import org.openmetadata.schema.entity.data.Query;
 import org.openmetadata.schema.entity.domains.Domain;
@@ -205,26 +204,25 @@ class BuildSearchIndexDocTest {
   }
 
   @Test
-  void testNoMixins_onlyCommonFields() {
-    Metric metric =
-        new Metric().withId(UUID.randomUUID()).withName("m").withFullyQualifiedName("svc.m");
-
-    org.openmetadata.schema.entity.data.Glossary glossary =
-        new org.openmetadata.schema.entity.data.Glossary()
+  void testBaseSearchIndexOnly_getsCommonFieldsButNoMixinFields() {
+    // UserIndex implements bare SearchIndex (no TaggableIndex, no LineageIndex)
+    org.openmetadata.schema.entity.teams.User user =
+        new org.openmetadata.schema.entity.teams.User()
             .withId(UUID.randomUUID())
-            .withName("g")
-            .withFullyQualifiedName("g");
+            .withName("alice")
+            .withFullyQualifiedName("alice");
 
     mockAllStatics();
 
-    Map<String, Object> result = new GlossaryIndex(glossary).buildSearchIndexDoc();
+    Map<String, Object> result = new UserIndex(user).buildSearchIndexDoc();
 
     // Common fields present
-    assertEquals("g", result.get("displayName"));
-    assertEquals(Entity.GLOSSARY, result.get("entityType"));
-    // No mixin-applied fields (classificationTags/glossaryTags come from TaggableIndex only)
+    assertEquals("alice", result.get("displayName"));
+    assertEquals(Entity.USER, result.get("entityType"));
+    // No mixin-applied fields
     assertFalse(result.containsKey("classificationTags"));
     assertFalse(result.containsKey("glossaryTags"));
+    assertFalse(result.containsKey("tier"));
     assertFalse(result.containsKey("upstreamLineage"));
     assertFalse(result.containsKey("service"));
   }

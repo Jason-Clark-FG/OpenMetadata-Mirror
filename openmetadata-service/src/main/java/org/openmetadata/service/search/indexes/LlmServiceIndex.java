@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.services.LLMService;
 import org.openmetadata.service.Entity;
 
-public record LlmServiceIndex(LLMService llmService) implements LineageIndex {
+public record LlmServiceIndex(LLMService llmService) implements TaggableIndex, LineageIndex {
 
   @Override
   public Object getEntity() {

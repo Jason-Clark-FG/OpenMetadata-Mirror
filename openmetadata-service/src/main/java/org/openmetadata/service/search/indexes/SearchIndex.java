@@ -169,8 +169,6 @@ public interface SearchIndex {
 
     doc.put("fqnParts", getFQNParts(entity.getFullyQualifiedName()));
     doc.put("deleted", entity.getDeleted() != null && entity.getDeleted());
-    TagLabel tierTag = new ParseTags(Entity.getEntityTags(entityType, entity)).getTierTag();
-    doc.put("tier", tierTag);
     doc.put("certification", entity.getCertification());
 
     doc.put(

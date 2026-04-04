@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.data.Glossary;
 import org.openmetadata.service.Entity;
 
-public class GlossaryIndex implements SearchIndex {
+public class GlossaryIndex implements TaggableIndex {
   final Glossary glossary;
 
   public GlossaryIndex(Glossary glossary) {

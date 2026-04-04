@@ -6,7 +6,7 @@ import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
 
-public class GlossaryTermIndex implements SearchIndex {
+public class GlossaryTermIndex implements TaggableIndex {
   final GlossaryTerm glossaryTerm;
 
   public GlossaryTermIndex(GlossaryTerm glossaryTerm) {

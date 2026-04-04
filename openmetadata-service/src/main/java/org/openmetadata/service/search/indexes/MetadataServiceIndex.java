@@ -4,7 +4,8 @@ import java.util.Map;
 import org.openmetadata.schema.entity.services.MetadataService;
 import org.openmetadata.service.Entity;
 
-public record MetadataServiceIndex(MetadataService metadataService) implements LineageIndex {
+public record MetadataServiceIndex(MetadataService metadataService)
+    implements TaggableIndex, LineageIndex {
 
   @Override
   public Object getEntity() {

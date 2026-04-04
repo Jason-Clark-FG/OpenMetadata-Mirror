@@ -597,22 +597,8 @@ class PopulateCommonFieldsTest {
     assertNotNull(doc.get("tierSources"));
     assertNotNull(doc.get("fqnParts"));
     assertNotNull(doc.get("deleted"));
-    assertTrue(doc.containsKey("tier"));
+    // tier is set by TaggableIndex.applyTagFields(), not by populateCommonFields
     assertTrue(doc.containsKey("certification"));
     assertTrue(doc.containsKey("customPropertiesTyped"));
-  }
-
-  // ==================== tier ====================
-
-  @Test
-  void testTier_populatedForAllEntities() {
-    Dashboard d =
-        new Dashboard().withId(UUID.randomUUID()).withName("d").withFullyQualifiedName("s.d");
-
-    Map<String, Object> doc = new HashMap<>();
-    createIndex(d).populateCommonFields(doc, d, Entity.DASHBOARD);
-
-    // tier is populated via ParseTags even for non-TaggableIndex entities
-    assertTrue(doc.containsKey("tier"));
   }
 }

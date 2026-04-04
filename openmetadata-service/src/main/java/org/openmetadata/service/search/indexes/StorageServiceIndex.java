@@ -4,7 +4,8 @@ import java.util.Map;
 import org.openmetadata.schema.entity.services.StorageService;
 import org.openmetadata.service.Entity;
 
-public record StorageServiceIndex(StorageService storageService) implements LineageIndex {
+public record StorageServiceIndex(StorageService storageService)
+    implements TaggableIndex, LineageIndex {
 
   @Override
   public Object getEntity() {

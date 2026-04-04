@@ -4,7 +4,7 @@ import java.util.Map;
 import org.openmetadata.schema.entity.data.Chart;
 import org.openmetadata.service.Entity;
 
-public record ChartIndex(Chart chart) implements LineageIndex {
+public record ChartIndex(Chart chart) implements TaggableIndex, LineageIndex {
   @Override
   public Object getEntity() {
     return chart;
