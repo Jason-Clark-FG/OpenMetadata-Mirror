@@ -75,11 +75,12 @@ class BigQueryTableMap:
         ]
 
     def get_all_deleted(self) -> Dict[SchemaName, List[TableName]]:
-        return {
-            schema: self.get_deleted(schema)
-            for schema in self._table_map
-            if self.get_deleted(schema)
-        }
+        result = {}
+        for schema in self._table_map:
+            deleted = self.get_deleted(schema)
+            if deleted:
+                result[schema] = deleted
+        return result
 
     def get_not_deleted(self, schema_name: SchemaName) -> List[TableName]:
         return [

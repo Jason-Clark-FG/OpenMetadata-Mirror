@@ -198,7 +198,10 @@ class BigQueryIncrementalTableProcessor:
             end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
 
-        if datasets:
+        if datasets is None:
+            logger.debug("No dataset filter — querying all datasets in project")
+            self._fetch_batch(project, start_date, end_date, dataset_filter="")
+        elif datasets:
             for batch_idx, dataset_batch in enumerate(
                 _batch(datasets, DATASET_BATCH_SIZE), start=1
             ):
@@ -217,8 +220,9 @@ class BigQueryIncrementalTableProcessor:
                 dataset_filter = _build_dataset_filter(dataset_batch)
                 self._fetch_batch(project, start_date, end_date, dataset_filter)
         else:
-            logger.debug("No dataset filter — querying all datasets in project")
-            self._fetch_batch(project, start_date, end_date, dataset_filter="")
+            logger.info(
+                "No datasets to query after filtering for project '%s'", project
+            )
 
     def get_deleted(self, schema_name: SchemaName) -> List[TableName]:
         return self._changed_tables_map.get_deleted(schema_name)
