@@ -95,6 +95,12 @@ jobs:
           install-mode: 'dev-only'
 
       - name: Run Static Checks
+        env:
+          # PYTHON_VERSIONS constrains nox to a single interpreter because the
+          # static-checks session is declared with python=get_python_versions().
+          # Without this, nox enumerates all 3 supported versions and tries to
+          # run or skip sessions for interpreters not installed on this runner.
+          PYTHON_VERSIONS: ${{ env.MAIN_PYTHON_VERSION }}
         run: |
           source env/bin/activate
           cd ingestion
@@ -152,6 +158,11 @@ jobs:
           install-server: 'false'
 
       - name: Run Unit Tests
+        env:
+          # PYTHON_VERSIONS pins nox to the matrix version because unit-tests is
+          # declared with python=get_python_versions(). Without this, nox would
+          # enumerate all supported versions and try to run or skip extra sessions.
+          PYTHON_VERSIONS: ${{ matrix.py-version }}
         run: |
           source env/bin/activate
           cd ingestion
@@ -302,13 +313,17 @@ jobs:
           ingestion_dependency: "mysql,elasticsearch,sample-data"
 
       - name: Run Integration Tests
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: true
+          PYTEST_INTEGRATION_WORKERS: ${{ matrix.shard.workers }}
+          # PYTHON_VERSIONS pins nox to the matrix version because integration-tests
+          # is declared with python=get_python_versions(). Without this, nox would
+          # enumerate all supported versions and try to run or skip extra sessions.
+          PYTHON_VERSIONS: ${{ matrix.py-version }}
         run: |
           source env/bin/activate
           cd ingestion
           nox --no-venv -s integration-tests -- --standalone --durations=5 ${{ matrix.py-version != env.MAIN_PYTHON_VERSION && '--no-cov' || '' }} ${{ matrix.shard.nox-args }}
-        env:
-          TESTCONTAINERS_RYUK_DISABLED: true
-          PYTEST_INTEGRATION_WORKERS: ${{ matrix.shard.workers }}
         shell: bash
 
       - name: Upload coverage artifact
@@ -329,13 +344,22 @@ jobs:
   # Skipped (= "Success") when all test jobs pass or are legitimately skipped.
   # Runs and exits 1 only when a test job fails or is cancelled.
   # Set "py-tests / py-tests-status" as the sole required check for this workflow.
+  #
+  # Uses if: always() instead of if: failure() || cancelled() because the latter
+  # can cause this job to be skipped when a needed job is cancelled before GitHub
+  # evaluates the condition — making the required check silently pass on failure.
+  # With always(), the job always runs and explicitly checks each dependency result.
   py-tests-status:
     name: py-tests-status
     needs: [changes, py-static-checks, py-unit-tests, py-integration-tests]
-    if: ${{ failure() || cancelled() }}
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: exit 1
+      - name: Fail if any test job failed or was cancelled
+        if: >-
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        run: exit 1
 
   py-combine-coverage:
     needs: [changes, py-static-checks, py-unit-tests, py-integration-tests]

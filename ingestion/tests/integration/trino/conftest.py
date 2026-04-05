@@ -241,21 +241,25 @@ def _verify_tables_readable(engine: Engine, table_names: list):
     This forces Trino to refresh its split cache per table with retry/backoff.
     """
     for table_name in table_names:
-        for attempt in range(15):
+        last_exc: Exception | None = None
+        for _ in range(15):
             try:
                 with engine.connect() as conn:
                     conn.execute(
                         text(f'SELECT count(*) FROM minio."my_schema"."{table_name}"')
                     ).scalar()
+                last_exc = None
                 break
-            except Exception:
-                if attempt == 14:
-                    logger.warning(
-                        "Table %s not readable after retries, proceeding anyway",
-                        table_name,
-                    )
-                    break
+            except Exception as exc:
+                last_exc = exc
                 sleep(2)
+        # Raise instead of silently logging a warning because swallowing the error
+        # here causes tests to proceed with a broken fixture, leading to confusing
+        # downstream failures rather than a clear error at setup time.
+        if last_exc is not None:
+            raise RuntimeError(
+                f"Table {table_name!r} not readable after 15 retries"
+            ) from last_exc
 
 
 def create_test_data_from_parquet(engine: Engine, file_path: Path):

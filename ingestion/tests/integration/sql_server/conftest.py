@@ -78,52 +78,53 @@ GO
         """
         )
 
+    # Using a with-statement instead of manual __enter__/__exit__ calls because
+    # the manual approach always passed (None, None, None) to __exit__ — even when
+    # an exception occurred — which prevented the context manager from doing
+    # exception-aware cleanup. The with-statement passes real exception info.
     try:
-        cm = try_bind(container, 1433, 1433)
-        container = cm.__enter__()
+        with try_bind(container, 1433, 1433) as container:
+            docker_container = container.get_wrapped_container()
+            copy_dir_to_container(str(data_dir), docker_container, "/data")
+            res = docker_container.exec_run(
+                [
+                    "bash",
+                    "-c",
+                    " ".join(
+                        [
+                            "/opt/mssql-tools*/bin/sqlcmd",
+                            "-U",
+                            container.username,
+                            "-P",
+                            f"'{container.password}'",
+                            "-d",
+                            "master",
+                            "-i",
+                            "/data/install.sql",
+                            "-C",
+                        ]
+                    ),
+                ]
+            )
+            if res[0] != 0:
+                raise Exception(
+                    "Failed to create mssql database:" + res[1].decode("utf-8")
+                )
+            engine = create_engine(
+                "mssql+pytds://" + container.get_connection_url().split("://")[1],
+                connect_args={"autocommit": True},
+            )
+            with engine.connect() as conn:
+                transaciton = conn.begin()
+                conn.execute(
+                    text(
+                        f"SELECT * INTO {db_name}.SalesLT.CustomerCopy FROM {db_name}.SalesLT.Customer;"
+                    )
+                )
+                transaciton.commit()
+            yield container
     except (docker.errors.BuildError, docker.errors.APIError) as exc:
         pytest.skip(f"MSSQL container unavailable: {exc}")
-
-    try:
-        docker_container = container.get_wrapped_container()
-        copy_dir_to_container(str(data_dir), docker_container, "/data")
-        res = docker_container.exec_run(
-            [
-                "bash",
-                "-c",
-                " ".join(
-                    [
-                        "/opt/mssql-tools*/bin/sqlcmd",
-                        "-U",
-                        container.username,
-                        "-P",
-                        f"'{container.password}'",
-                        "-d",
-                        "master",
-                        "-i",
-                        "/data/install.sql",
-                        "-C",
-                    ]
-                ),
-            ]
-        )
-        if res[0] != 0:
-            raise Exception("Failed to create mssql database:" + res[1].decode("utf-8"))
-        engine = create_engine(
-            "mssql+pytds://" + container.get_connection_url().split("://")[1],
-            connect_args={"autocommit": True},
-        )
-        with engine.connect() as conn:
-            transaciton = conn.begin()
-            conn.execute(
-                text(
-                    f"SELECT * INTO {db_name}.SalesLT.CustomerCopy FROM {db_name}.SalesLT.Customer;"
-                )
-            )
-            transaciton.commit()
-        yield container
-    finally:
-        cm.__exit__(None, None, None)
 
 
 @pytest.fixture(

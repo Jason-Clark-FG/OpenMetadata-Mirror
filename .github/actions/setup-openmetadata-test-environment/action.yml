@@ -33,14 +33,19 @@ runs:
   steps:
     # ---- Install Ubuntu Dependencies ---------------------------------------------
     - name: Cache and install Ubuntu dependencies
-      uses: awalsh128/cache-apt-pkgs-action@latest
+      uses: awalsh128/cache-apt-pkgs-action@v1.4.2
       with:
         packages: unixodbc-dev python3-venv librdkafka-dev gcc libsasl2-dev build-essential libssl-dev libffi-dev libevent-dev python3-dev libkrb5-dev tdsodbc
         version: 1.0
 
     - name: Install msodbcsql18
       if: ${{ inputs.install-mode == 'full' }}
-      run: ACCEPT_EULA=Y sudo apt-get -qq install -y msodbcsql18
+      run: |
+        # Added apt-get update before install because cache-apt-pkgs-action restores
+        # the .deb cache but does not refresh the APT index, which can cause
+        # "Unable to locate package msodbcsql18" on stale or post-update runner images.
+        sudo apt-get update -q
+        ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       shell: bash
     # ------------------------------------------------------------------------------
 
@@ -97,12 +102,17 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: ingestion/src/metadata/generated
+        # ingestion/Makefile is included in the cache key because the root Makefile
+        # includes it (line: "include ingestion/Makefile"), so changes there directly
+        # affect make generate output. Without it, stale models could be served from
+        # cache after Makefile edits.
         key: ${{ runner.os }}-generated-${{ hashFiles(
                'openmetadata-spec/src/main/resources/json/schema/**',
                'openmetadata-spec/src/main/antlr4/**/*.g4',
                'scripts/datamodel_generation.py',
                'ingestion/setup.py',
-               'Makefile'
+               'Makefile',
+               'ingestion/Makefile'
              ) }}
 
     - name: Generate Models
@@ -124,7 +134,8 @@ runs:
                'openmetadata-spec/src/main/antlr4/**/*.g4',
                'scripts/datamodel_generation.py',
                'ingestion/setup.py',
-               'Makefile'
+               'Makefile',
+               'ingestion/Makefile'
              ) }}
 
     - name: Install Python Dependencies

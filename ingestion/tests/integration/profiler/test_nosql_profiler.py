@@ -131,7 +131,6 @@ class NoSQLProfiler(TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        cls.addClassCleanup(cls.tearDownClass)
         cls.metadata = int_admin_ometa()
         cls.mongo_container = MongoDbContainer("mongo:7.0.5-jammy")
         cls.mongo_container.start()
