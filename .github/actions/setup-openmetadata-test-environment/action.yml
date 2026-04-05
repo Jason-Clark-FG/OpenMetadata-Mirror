@@ -33,7 +33,10 @@ runs:
   steps:
     # ---- Install Ubuntu Dependencies ---------------------------------------------
     - name: Cache and install Ubuntu dependencies
-      uses: awalsh128/cache-apt-pkgs-action@v1.4.2
+      # Pinned to a specific release tag because @latest is a supply-chain risk.
+      # v1.6.0+ is required: v1.4.2 and earlier internally use upload-artifact@v3
+      # which GitHub has deprecated and now blocks at job setup time.
+      uses: awalsh128/cache-apt-pkgs-action@v1.6.0
       with:
         packages: unixodbc-dev python3-venv librdkafka-dev gcc libsasl2-dev build-essential libssl-dev libffi-dev libevent-dev python3-dev libkrb5-dev tdsodbc
         version: 1.0
