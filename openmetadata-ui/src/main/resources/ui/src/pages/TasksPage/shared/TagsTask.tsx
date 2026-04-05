@@ -50,29 +50,30 @@ const TagsTask: FC<TagsTaskProps> = ({
 
   const isTaskClosed = task?.status === ThreadTaskStatus.Closed;
 
-  const parsedOldValue = useMemo<TagLabel[]>(() => {
+  const parseTagLabels = (value?: string): TagLabel[] => {
     try {
-      return JSON.parse(oldValue ?? '[]');
-    } catch {
-      return [];
-    }
-  }, [oldValue]);
+      const parsed = JSON.parse(value ?? '[]');
 
-  const parsedNewValue = useMemo<TagLabel[]>(() => {
-    try {
-      return JSON.parse(newValue ?? '[]');
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
-  }, [newValue]);
+  };
 
-  const parsedSuggestion = useMemo<TagLabel[]>(() => {
-    try {
-      return JSON.parse(suggestion ?? '[]');
-    } catch {
-      return [];
-    }
-  }, [suggestion]);
+  const parsedOldValue = useMemo<TagLabel[]>(
+    () => parseTagLabels(oldValue),
+    [oldValue]
+  );
+
+  const parsedNewValue = useMemo<TagLabel[]>(
+    () => parseTagLabels(newValue),
+    [newValue]
+  );
+
+  const parsedSuggestion = useMemo<TagLabel[]>(
+    () => parseTagLabels(suggestion),
+    [suggestion]
+  );
 
   const diffView = useMemo(() => {
     if (!oldValue && !newValue) {
