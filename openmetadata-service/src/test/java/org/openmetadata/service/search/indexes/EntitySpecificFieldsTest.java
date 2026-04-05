@@ -145,7 +145,7 @@ class EntitySpecificFieldsTest {
     Map<String, Object> doc = new HashMap<>();
     Map<String, Object> result = new TagIndex(tag).buildSearchIndexDocInternal(doc);
 
-    assertEquals("false", result.get("disabled"));
+    assertEquals(false, result.get("disabled"));
   }
 
   @Test
@@ -155,7 +155,7 @@ class EntitySpecificFieldsTest {
     Map<String, Object> doc = new HashMap<>();
     Map<String, Object> result = new TagIndex(tag).buildSearchIndexDocInternal(doc);
 
-    assertEquals("false", result.get("disabled"));
+    assertEquals(false, result.get("disabled"));
   }
 
   // ==================== User/Team isBot ====================

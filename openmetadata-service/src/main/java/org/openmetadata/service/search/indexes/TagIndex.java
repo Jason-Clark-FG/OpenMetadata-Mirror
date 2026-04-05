@@ -17,11 +17,7 @@ public record TagIndex(Tag tag) implements SearchIndex {
   }
 
   public Map<String, Object> buildSearchIndexDocInternal(Map<String, Object> doc) {
-    if (tag.getDisabled() != null && tag.getDisabled()) {
-      doc.put("disabled", tag.getDisabled());
-    } else {
-      doc.put("disabled", "false");
-    }
+    doc.put("disabled", tag.getDisabled() != null && tag.getDisabled());
     return doc;
   }
 
