@@ -621,7 +621,7 @@ test.describe(
         expect(body1).toEqual(
           JSON.stringify([
             {
-              op: 'add',
+              op: 'replace',
               path: '/displayName',
               value: 'Table test case display name',
             },

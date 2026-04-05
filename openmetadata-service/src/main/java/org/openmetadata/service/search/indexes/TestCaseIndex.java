@@ -61,7 +61,6 @@ public record TestCaseIndex(TestCase testCase) implements TaggableIndex {
   }
 
   private void setParentRelationships(Map<String, Object> doc, TestCase testCase) {
-    // denormalize the parent relationships for search
     EntityReference testSuiteEntityReference = testCase.getTestSuite();
     if (testSuiteEntityReference == null) {
       return;

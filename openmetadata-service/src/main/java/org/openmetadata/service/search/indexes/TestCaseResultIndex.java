@@ -123,6 +123,9 @@ public record TestCaseResultIndex(TestCaseResult testCaseResult) implements Sear
       esDoc.put("database", table.getDatabase());
       esDoc.put("databaseSchema", table.getDatabaseSchema());
       esDoc.put("service", table.getService());
+      if (table.getServiceType() != null) {
+        esDoc.put("serviceType", table.getServiceType());
+      }
       esDoc.put("table", table.getEntityReference());
     } catch (EntityNotFoundException ex) {
       LOG.warn(
