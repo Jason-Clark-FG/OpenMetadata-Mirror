@@ -37,13 +37,6 @@ def _make_entry(resource_name: str, metadata_keys: list, timestamp=None):
     return entry
 
 
-def _mock_pages(entries):
-    """Create a mock list_entries() return value with .pages iteration."""
-    mock = MagicMock()
-    mock.pages = [entries]
-    return mock
-
-
 class TestBatchHelper:
     def test_batch_splits_evenly(self):
         assert list(_batch(["a", "b", "c", "d"], 2)) == [["a", "b"], ["c", "d"]]
@@ -105,7 +98,7 @@ class TestBigQueryIncrementalTableProcessor:
             _make_entry("projects/proj/datasets/ds1/tables/my_table", ["tableCreation"])
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -121,7 +114,7 @@ class TestBigQueryIncrementalTableProcessor:
             _make_entry("projects/proj/datasets/ds1/tables/my_table", ["tableDeletion"])
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -136,7 +129,7 @@ class TestBigQueryIncrementalTableProcessor:
             _make_entry("projects/proj/datasets/ds1/tables/my_table", ["tableChange"])
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -154,7 +147,7 @@ class TestBigQueryIncrementalTableProcessor:
             _make_entry("projects/proj/datasets/ds3/tables/table_d", ["tableDeletion"]),
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -183,7 +176,7 @@ class TestBigQueryIncrementalTableProcessor:
             ),
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -195,7 +188,7 @@ class TestBigQueryIncrementalTableProcessor:
 
     def test_empty_results(self):
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -216,7 +209,7 @@ class TestBigQueryIncrementalTableProcessor:
             ),
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -232,7 +225,7 @@ class TestBigQueryIncrementalTableProcessor:
             _make_entry("projects/proj/datasets/ds3/tables/t3", ["tableCreation"]),
         ]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages(entries)
+        mock_client.list_entries.return_value = entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -276,7 +269,7 @@ class TestBigQueryIncrementalTableProcessor:
         mock_client = MagicMock()
         mock_client.list_entries.side_effect = [
             ResourceExhausted("quota exceeded"),
-            _mock_pages(entries),
+            entries,
         ]
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
@@ -302,7 +295,7 @@ class TestBigQueryIncrementalTableProcessor:
 
     def test_page_size_is_set_no_max_results(self):
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -310,13 +303,13 @@ class TestBigQueryIncrementalTableProcessor:
         )
 
         call_kwargs = mock_client.list_entries.call_args[1]
-        assert call_kwargs["page_size"] == 1000
+        assert call_kwargs["page_size"] == 10000
         assert "max_results" not in call_kwargs
 
     def test_datasets_are_batched(self):
         datasets = [f"ds_{i}" for i in range(DATASET_BATCH_SIZE + 10)]
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -335,7 +328,7 @@ class TestBigQueryIncrementalTableProcessor:
 
     def test_dataset_filter_uses_indexed_field(self):
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -351,7 +344,7 @@ class TestBigQueryIncrementalTableProcessor:
 
     def test_no_datasets_queries_project_wide(self):
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -364,7 +357,7 @@ class TestBigQueryIncrementalTableProcessor:
 
     def test_filter_contains_end_date(self):
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = _mock_pages([])
+        mock_client.list_entries.return_value = []
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(
@@ -403,8 +396,8 @@ class TestBigQueryIncrementalTableProcessor:
         ]
         mock_client = MagicMock()
         mock_client.list_entries.side_effect = [
-            _mock_pages(batch1),
-            _mock_pages(batch2),
+            batch1,
+            batch2,
         ]
 
         datasets = [f"ds_{i}" for i in range(DATASET_BATCH_SIZE)] + [
@@ -420,19 +413,14 @@ class TestBigQueryIncrementalTableProcessor:
         assert "t1" in processor.get_not_deleted("ds1")
         assert "t2" in processor.get_not_deleted("ds2")
 
-    def test_multiple_pages_processed(self):
-        """Entries split across multiple pages are all processed."""
-        page1 = [
+    def test_many_entries_all_processed(self):
+        """All entries from the generator are processed."""
+        all_entries = [
             _make_entry("projects/proj/datasets/ds1/tables/t1", ["tableCreation"]),
-        ]
-        page2 = [
             _make_entry("projects/proj/datasets/ds1/tables/t2", ["tableCreation"]),
         ]
-        mock_iterator = MagicMock()
-        mock_iterator.pages = [page1, page2]
-
         mock_client = MagicMock()
-        mock_client.list_entries.return_value = mock_iterator
+        mock_client.list_entries.return_value = all_entries
 
         processor = BigQueryIncrementalTableProcessor(mock_client)
         processor.set_tables_map(

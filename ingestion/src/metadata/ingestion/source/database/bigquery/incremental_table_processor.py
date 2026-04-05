@@ -43,7 +43,7 @@ logger = ingestion_logger()
 
 MAX_RETRIES = 3
 RETRY_BASE_WAIT = 60  # Cloud Logging quota resets per minute
-PAGE_SIZE = 1000
+PAGE_SIZE = 10000
 DATASET_BATCH_SIZE = 50
 
 
@@ -81,26 +81,22 @@ class BigQueryIncrementalTableProcessor:
         metadata = entry.payload.get("metadata") or {}
         return "tableDeletion" in metadata
 
-    def _process_page(self, page) -> int:
-        """Process a single page of Cloud Logging entries.
+    def _process_entry(self, entry: LogEntry):
+        """Extract dataset/table from a single Cloud Logging entry."""
+        payload = entry.payload
+        if not isinstance(payload, dict):
+            logger.debug("Skipping non-dict Cloud Logging entry payload: %s", payload)
+            return
+        resource_name = payload.get("resourceName", "")
+        parts = resource_name.split("/")
+        if len(parts) < 6:
+            return
 
-        Extracts dataset/table from resourceName and updates the table map.
-        Returns the number of entries processed.
-        """
-        count = 0
-        for entry in page:
-            count += 1
-            resource_name = entry.payload.get("resourceName", "")
-            parts = resource_name.split("/")
-            if len(parts) < 6:
-                continue
-
-            self._changed_tables_map.update(
-                schema_name=parts[3],
-                table_name=parts[5],
-                deleted=self._is_table_deleted(entry),
-            )
-        return count
+        self._changed_tables_map.update(
+            schema_name=parts[3],
+            table_name=parts[5],
+            deleted=self._is_table_deleted(entry),
+        )
 
     def _fetch_batch(
         self,
@@ -125,16 +121,17 @@ class BigQueryIncrementalTableProcessor:
 
         for attempt in range(MAX_RETRIES):
             try:
-                iterator = self._client.list_entries(
+                entries = self._client.list_entries(
                     resource_names=resource_names,
                     filter_=filters,
                     order_by=google.cloud.logging.DESCENDING,
                     page_size=PAGE_SIZE,
                 )
                 total = 0
-                for page in iterator.pages:
-                    total += self._process_page(page)
-                    if total % 10000 == 0 and total > 0:
+                for entry in entries:
+                    total += 1
+                    self._process_entry(entry)
+                    if total % 10000 == 0:
                         logger.info("Processed %d Cloud Logging entries so far", total)
                 if total > 0:
                     logger.info("Finished processing %d Cloud Logging entries", total)
