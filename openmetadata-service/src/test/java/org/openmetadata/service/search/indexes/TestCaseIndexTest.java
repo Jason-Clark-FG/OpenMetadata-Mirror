@@ -23,6 +23,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestDefinition;
+import org.openmetadata.schema.tests.TestPlatform;
 import org.openmetadata.schema.tests.TestSuite;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TagLabel;
@@ -89,7 +90,7 @@ class TestCaseIndexTest {
     TestDefinition testDef =
         new TestDefinition()
             .withId(testDefId)
-            .withTestPlatforms(List.of(TestDefinition.TestPlatform.OpenMetadata))
+            .withTestPlatforms(List.of(TestPlatform.OPEN_METADATA))
             .withEntityType("COLUMN");
 
     entityStaticMock

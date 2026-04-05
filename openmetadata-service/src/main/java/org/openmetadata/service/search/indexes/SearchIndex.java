@@ -58,10 +58,10 @@ public interface SearchIndex {
   Logger LOG = LoggerFactory.getLogger(SearchIndex.class);
 
   default Map<String, Object> buildSearchIndexDoc() {
-    Map<String, Object> esDoc = JsonUtils.getMap(getEntity());
+    Object entity = getEntity();
+    Map<String, Object> esDoc = JsonUtils.getMap(entity);
 
     // Phase 1: Common entity fields (owners, domains, displayName, etc.)
-    Object entity = getEntity();
     if (entity instanceof EntityInterface ei) {
       populateCommonFields(esDoc, ei, getEntityTypeName());
     }
@@ -162,10 +162,13 @@ public interface SearchIndex {
     Map<String, ChangeSummary> changeSummaryMap = SearchIndexUtils.getChangeSummaryMap(entity);
     doc.put(
         "descriptionSources", SearchIndexUtils.processDescriptionSources(entity, changeSummaryMap));
-    SearchIndexUtils.TagAndTierSources tagAndTierSources =
-        SearchIndexUtils.processTagAndTierSources(entity);
-    doc.put("tagSources", tagAndTierSources.getTagSources());
-    doc.put("tierSources", tagAndTierSources.getTierSources());
+    // tagSources/tierSources only for entities that support tags (TaggableIndex sets tier)
+    if (this instanceof TaggableIndex) {
+      SearchIndexUtils.TagAndTierSources tagAndTierSources =
+          SearchIndexUtils.processTagAndTierSources(entity);
+      doc.put("tagSources", tagAndTierSources.getTagSources());
+      doc.put("tierSources", tagAndTierSources.getTierSources());
+    }
 
     doc.put("fqnParts", getFQNParts(entity.getFullyQualifiedName()));
     doc.put("deleted", entity.getDeleted() != null && entity.getDeleted());
