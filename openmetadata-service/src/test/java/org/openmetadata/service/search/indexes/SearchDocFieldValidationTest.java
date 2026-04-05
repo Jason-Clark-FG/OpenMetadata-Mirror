@@ -351,7 +351,7 @@ class SearchDocFieldValidationTest {
             .withService(svc)
             .withSourceConfig(
                 new org.openmetadata.schema.metadataIngestion.SourceConfig()
-                    .withConfig(new Object()));
+                    .withConfig(new java.util.HashMap<>()));
 
     Map<String, Object> doc = new IngestionPipelineIndex(ip).buildSearchIndexDoc();
 
