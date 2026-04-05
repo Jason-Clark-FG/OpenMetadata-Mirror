@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -239,12 +240,20 @@ class SearchDocFieldValidationTest {
 
   @Test
   void testTestCaseIndex_hasCommonAndTagFields() {
+    UUID testDefId = UUID.randomUUID();
+    EntityReference testDefRef =
+        new EntityReference().withId(testDefId).withType(Entity.TEST_DEFINITION);
+    entityStaticMock
+        .when(() -> Entity.getEntity(eq(Entity.TEST_DEFINITION), eq(testDefId), anyString(), any()))
+        .thenThrow(new org.openmetadata.service.exception.EntityNotFoundException("not found"));
+
     TestCase tc =
         new TestCase()
             .withId(UUID.randomUUID())
             .withName("tc")
             .withFullyQualifiedName("svc.db.sc.t.tc")
-            .withEntityLink("<#E::table::svc.db.sc.t>");
+            .withEntityLink("<#E::table::svc.db.sc.t>")
+            .withTestDefinition(testDefRef);
 
     Map<String, Object> doc = new TestCaseIndex(tc).buildSearchIndexDoc();
 
@@ -339,7 +348,10 @@ class SearchDocFieldValidationTest {
             .withId(UUID.randomUUID())
             .withName("ingest")
             .withFullyQualifiedName("airflow.ingest")
-            .withService(svc);
+            .withService(svc)
+            .withSourceConfig(
+                new org.openmetadata.schema.metadataIngestion.SourceConfig()
+                    .withConfig(new Object()));
 
     Map<String, Object> doc = new IngestionPipelineIndex(ip).buildSearchIndexDoc();
 

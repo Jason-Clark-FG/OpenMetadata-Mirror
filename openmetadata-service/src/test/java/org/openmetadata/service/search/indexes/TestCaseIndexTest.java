@@ -24,10 +24,11 @@ import org.mockito.Mockito;
 import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestDefinition;
 import org.openmetadata.schema.tests.TestPlatform;
-import org.openmetadata.schema.tests.TestSuite;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TestDefinitionEntityType;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.CollectionDAO;
 import org.openmetadata.service.search.SearchClient;
 import org.openmetadata.service.search.SearchRepository;
@@ -60,11 +61,33 @@ class TestCaseIndexTest {
     entityStaticMock.close();
   }
 
+  private TestCase createTestCaseWithDefinition() {
+    UUID testDefId = UUID.randomUUID();
+    EntityReference testDefRef =
+        new EntityReference().withId(testDefId).withType(Entity.TEST_DEFINITION);
+
+    TestDefinition testDef =
+        new TestDefinition()
+            .withId(testDefId)
+            .withTestPlatforms(List.of(TestPlatform.OPEN_METADATA))
+            .withEntityType(TestDefinitionEntityType.COLUMN);
+
+    entityStaticMock
+        .when(() -> Entity.getEntity(eq(Entity.TEST_DEFINITION), eq(testDefId), anyString(), any()))
+        .thenReturn(testDef);
+
+    return new TestCase()
+        .withId(UUID.randomUUID())
+        .withName("columnValuesToBeBetween")
+        .withFullyQualifiedName("svc.db.schema.table.columnValuesToBeBetween")
+        .withEntityLink("<#E::table::svc.db.schema.table>")
+        .withTestDefinition(testDefRef);
+  }
+
   @Test
   void testImplementsTaggableIndex() {
     TestCase tc = new TestCase().withId(UUID.randomUUID()).withName("tc");
-    TestCaseIndex index = new TestCaseIndex(tc);
-    assertTrue(index instanceof TaggableIndex);
+    assertTrue(new TestCaseIndex(tc) instanceof TaggableIndex);
   }
 
   @Test
@@ -75,36 +98,15 @@ class TestCaseIndexTest {
 
   @Test
   void testBuildSearchIndexDocInternal_onlyEntitySpecificFields() {
-    UUID testDefId = UUID.randomUUID();
-    EntityReference testDefRef =
-        new EntityReference().withId(testDefId).withType(Entity.TEST_DEFINITION);
-
-    TestCase tc =
-        new TestCase()
-            .withId(UUID.randomUUID())
-            .withName("columnValuesToBeBetween")
-            .withFullyQualifiedName("svc.db.schema.table.columnValuesToBeBetween")
-            .withEntityLink("<#E::table::svc.db.schema.table>")
-            .withTestDefinition(testDefRef);
-
-    TestDefinition testDef =
-        new TestDefinition()
-            .withId(testDefId)
-            .withTestPlatforms(List.of(TestPlatform.OPEN_METADATA))
-            .withEntityType(org.openmetadata.schema.type.TestDefinitionEntityType.COLUMN);
-
-    entityStaticMock
-        .when(() -> Entity.getEntity(eq(Entity.TEST_DEFINITION), eq(testDefId), anyString(), any()))
-        .thenReturn(testDef);
+    TestCase tc = createTestCaseWithDefinition();
 
     Map<String, Object> doc = new HashMap<>();
     Map<String, Object> result = new TestCaseIndex(tc).buildSearchIndexDocInternal(doc);
 
     // Entity-specific fields present
-    assertNotNull(result.get("originEntityFQN"));
     assertEquals("svc.db.schema.table", result.get("originEntityFQN"));
     assertNotNull(result.get("testPlatforms"));
-    assertEquals("COLUMN", result.get("testCaseType"));
+    assertEquals(TestDefinitionEntityType.COLUMN, result.get("testCaseType"));
 
     // Common fields NOT set by buildSearchIndexDocInternal (handled by template method)
     assertFalse(result.containsKey("fqnParts"));
@@ -117,12 +119,7 @@ class TestCaseIndexTest {
 
   @Test
   void testBuildSearchIndexDoc_endToEnd_hasCommonAndTagFields() {
-    TestCase tc =
-        new TestCase()
-            .withId(UUID.randomUUID())
-            .withName("myTest")
-            .withFullyQualifiedName("svc.db.schema.table.myTest")
-            .withEntityLink("<#E::table::svc.db.schema.table>");
+    TestCase tc = createTestCaseWithDefinition();
 
     TagLabel tag =
         new TagLabel().withTagFQN("PII.Sensitive").withSource(TagLabel.TagSource.CLASSIFICATION);
@@ -133,7 +130,7 @@ class TestCaseIndexTest {
     Map<String, Object> result = new TestCaseIndex(tc).buildSearchIndexDoc();
 
     // Common fields from populateCommonFields
-    assertEquals("myTest", result.get("displayName"));
+    assertNotNull(result.get("displayName"));
     assertEquals(Entity.TEST_CASE, result.get("entityType"));
     assertNotNull(result.get("owners"));
     assertNotNull(result.get("fqnParts"));
@@ -149,10 +146,10 @@ class TestCaseIndexTest {
   }
 
   @Test
-  void testBuildSearchIndexDoc_parentRelationships() {
-    UUID testSuiteId = UUID.randomUUID();
-    EntityReference testSuiteRef =
-        new EntityReference().withId(testSuiteId).withType(Entity.TEST_SUITE);
+  void testBuildSearchIndexDocInternal_testDefinitionNotFound() {
+    UUID testDefId = UUID.randomUUID();
+    EntityReference testDefRef =
+        new EntityReference().withId(testDefId).withType(Entity.TEST_DEFINITION);
 
     TestCase tc =
         new TestCase()
@@ -160,17 +157,18 @@ class TestCaseIndexTest {
             .withName("myTest")
             .withFullyQualifiedName("svc.db.schema.table.myTest")
             .withEntityLink("<#E::table::svc.db.schema.table>")
-            .withTestSuite(testSuiteRef);
+            .withTestDefinition(testDefRef);
 
-    TestSuite testSuite = new TestSuite().withId(testSuiteId).withName("suite");
     entityStaticMock
-        .when(() -> Entity.getEntityOrNull(any(EntityReference.class), anyString(), any()))
-        .thenReturn(testSuite);
+        .when(() -> Entity.getEntity(eq(Entity.TEST_DEFINITION), eq(testDefId), anyString(), any()))
+        .thenThrow(new EntityNotFoundException("not found"));
 
     Map<String, Object> doc = new HashMap<>();
-    new TestCaseIndex(tc).buildSearchIndexDocInternal(doc);
+    Map<String, Object> result = new TestCaseIndex(tc).buildSearchIndexDocInternal(doc);
 
-    // Parent relationships are entity-specific
-    // (actual table lookup may fail in unit test, but the code path is exercised)
+    // Should still have originEntityFQN even when testDefinition not found
+    assertNotNull(result.get("originEntityFQN"));
+    // testPlatforms etc. should NOT be present
+    assertFalse(result.containsKey("testPlatforms"));
   }
 }

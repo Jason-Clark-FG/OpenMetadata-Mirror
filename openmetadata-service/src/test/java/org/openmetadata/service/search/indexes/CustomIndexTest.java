@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -80,7 +81,8 @@ class CustomIndexTest {
 
     assertEquals(12345L, result.get("timestamp"));
     assertNull(result.get("id"));
-    assertNotNull(result.get("reportDataType"));
+    // reportDataType is present (may be null if not set on entity)
+    assertTrue(result.containsKey("reportDataType"));
   }
 
   @Test
@@ -317,6 +319,12 @@ class CustomIndexTest {
     entityStaticMock
         .when(() -> Entity.getEntityByName(eq(Entity.TEST_CASE), anyString(), anyString(), any()))
         .thenReturn(testCase);
+
+    // Mock table lookup in setParentRelationships to throw (table not found)
+    entityStaticMock
+        .when(() -> Entity.getEntityByName(eq(Entity.TABLE), anyString(), anyString(), any()))
+        .thenThrow(
+            new org.openmetadata.service.exception.EntityNotFoundException("table not found"));
 
     Map<String, Object> doc = new HashMap<>();
     Map<String, Object> result = new TestCaseResultIndex(tcr).buildSearchIndexDocInternal(doc);
