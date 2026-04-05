@@ -1263,6 +1263,88 @@ public class FeedResourceIT {
   }
 
   @Test
+  void post_tagTaskWithValidJsonArrays_200(TestNamespace ns) throws Exception {
+    Table table = createTestTable(ns);
+    String about =
+        String.format("<#E::table::%s::columns::%s::tags>", table.getFullyQualifiedName(), "id");
+
+    User assigneeUser = SdkClients.adminClient().users().getByName("admin");
+    EntityReference assignee = assigneeUser.getEntityReference();
+
+    String validTagJson =
+        "[{\"tagFQN\":\"PersonalData.Personal\",\"source\":\"Classification\","
+            + "\"labelType\":\"Manual\",\"state\":\"Confirmed\"}]";
+
+    CreateTaskDetails taskDetails =
+        new CreateTaskDetails()
+            .withType(TaskType.RequestTag)
+            .withAssignees(List.of(assignee))
+            .withOldValue("[]")
+            .withSuggestion(validTagJson);
+
+    CreateThread createThread =
+        new CreateThread()
+            .withFrom(ADMIN_USER)
+            .withMessage("Add tags to column")
+            .withAbout(about)
+            .withType(ThreadType.Task)
+            .withTaskDetails(taskDetails);
+
+    Thread taskThread = createThread(createThread);
+
+    assertNotNull(taskThread);
+    assertNotNull(taskThread.getTask());
+    assertEquals(TaskType.RequestTag, taskThread.getTask().getType());
+    assertEquals(validTagJson, taskThread.getTask().getSuggestion());
+
+    deleteThread(taskThread.getId());
+  }
+
+  @Test
+  void post_conversationThreadWithTaskDetails_400(TestNamespace ns) throws Exception {
+    Table table = createTestTable(ns);
+    String about = String.format("<#E::table::%s>", table.getFullyQualifiedName());
+
+    User assigneeUser = SdkClients.adminClient().users().getByName("admin");
+    EntityReference assignee = assigneeUser.getEntityReference();
+
+    CreateTaskDetails taskDetails =
+        new CreateTaskDetails()
+            .withType(TaskType.RequestDescription)
+            .withAssignees(List.of(assignee))
+            .withOldValue("old")
+            .withSuggestion("new");
+
+    CreateThread createThread =
+        new CreateThread()
+            .withFrom(ADMIN_USER)
+            .withMessage("Conversation with task payload")
+            .withAbout(about)
+            .withType(ThreadType.Conversation)
+            .withTaskDetails(taskDetails);
+
+    assertThrows(
+        Exception.class,
+        () -> createThread(createThread),
+        "taskDetails can only be provided for threads of type Task");
+  }
+
+  @Test
+  void post_taskWithoutTaskDetails_400(TestNamespace ns) {
+    CreateThread createThread =
+        new CreateThread()
+            .withFrom(ADMIN_USER)
+            .withMessage("Task with no details")
+            .withAbout("<#E::table::some.table>")
+            .withType(ThreadType.Task);
+
+    assertThrows(
+        Exception.class,
+        () -> createThread(createThread),
+        "taskDetails is required for threads of type Task");
+  }
+
+  @Test
   void list_threadsWithPagination(TestNamespace ns) throws Exception {
     Table table = createTestTable(ns);
     String about = String.format("<#E::table::%s>", table.getFullyQualifiedName());

@@ -41,20 +41,25 @@ import static org.openmetadata.service.util.EntityUtil.fieldAdded;
 import static org.openmetadata.service.util.EntityUtil.fieldDeleted;
 import static org.openmetadata.service.util.EntityUtil.fieldUpdated;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.jsonwebtoken.lang.Collections;
 import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.Response.Status;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -126,6 +131,24 @@ public class FeedRepository {
   public static final String DELETED_TEAM_NAME = "DeletedTeam";
   public static final String DELETED_TEAM_DISPLAY = "Team was deleted";
   private static final long MAX_SECONDS_TIMESTAMP = 2147483647L;
+
+  /** Valid property names read from the taskDetails definition in thread.json. */
+  private static final Set<String> TASK_DETAILS_FIELDS = loadTaskDetailsFields();
+
+  private static Set<String> loadTaskDetailsFields() {
+    try (InputStream is =
+        FeedRepository.class
+            .getClassLoader()
+            .getResourceAsStream("json/schema/entity/feed/thread.json")) {
+      JsonNode root = JsonUtils.getObjectMapper().readTree(Objects.requireNonNull(is));
+      JsonNode properties = root.at("/definitions/taskDetails/properties");
+      Set<String> fields = new HashSet<>();
+      properties.fieldNames().forEachRemaining(fields::add);
+      return Set.copyOf(fields);
+    } catch (IOException e) {
+      throw new ExceptionInInitializerError("Failed to load task details schema: " + e);
+    }
+  }
 
   private final CollectionDAO dao;
   private static final MessageDecorator<FeedMessage> FEED_MESSAGE_FORMATTER =
@@ -1198,17 +1221,13 @@ public class FeedRepository {
     if (task == null) {
       throw new IllegalArgumentException("taskDetails is required for threads of type Task");
     }
-    TaskType taskType = task.getType();
-    if (TaskType.RequestTag.equals(taskType) || TaskType.UpdateTag.equals(taskType)) {
-      String suggestion = task.getSuggestion();
-      String oldValue = task.getOldValue();
-      if (suggestion != null && !JsonUtils.isValidJson(suggestion)) {
+    JsonNode taskNode = JsonUtils.valueToTree(task);
+    Iterator<String> fieldNames = taskNode.fieldNames();
+    while (fieldNames.hasNext()) {
+      String field = fieldNames.next();
+      if (!TASK_DETAILS_FIELDS.contains(field)) {
         throw new IllegalArgumentException(
-            "taskDetails.suggestion must be a valid JSON for task type " + taskType);
-      }
-      if (oldValue != null && !JsonUtils.isValidJson(oldValue)) {
-        throw new IllegalArgumentException(
-            "taskDetails.oldValue must be a valid JSON for task type " + taskType);
+            String.format("taskDetails.%s is not a valid field", field));
       }
     }
   }
