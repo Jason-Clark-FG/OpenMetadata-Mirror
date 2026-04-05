@@ -107,8 +107,9 @@ class BigQueryIncrementalTableProcessor:
     ):
         """Fetch Cloud Logging entries for a batch of datasets with retry logic.
 
-        Processes entries page-by-page: each page is released after processing
-        so only one page (~1K entries) is in memory at a time. On retry,
+        Iterates entries one-by-one from the Cloud Logging generator and
+        feeds each to _process_entry. On ResourceExhausted (429), retries
+        up to MAX_RETRIES times with exponential backoff. On retry,
         already-processed entries are deduplicated by BigQueryTableMap.update().
         """
         resource_names = [f"projects/{project}"]
