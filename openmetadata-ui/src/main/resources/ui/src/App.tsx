@@ -11,68 +11,11 @@
  *  limitations under the License.
  */
 
-import { isEmpty } from 'lodash';
-import { FC, useEffect } from 'react';
-import { useShallow } from 'zustand/react/shallow';
+import { FC } from 'react';
 import AppRouter from './components/AppRouter/AppRouter';
 import { AuthProvider } from './components/Auth/AuthProviders/AuthProvider';
-import { useApplicationStore } from './hooks/useApplicationStore';
-import {
-  getCustomUiThemePreference,
-  getSystemConfig,
-} from './rest/settingConfigAPI';
-
-import { getThemeConfig } from './utils/ThemeUtils';
 
 const App: FC = () => {
-  const { applicationConfig, setApplicationConfig, setRdfEnabled } =
-    useApplicationStore(
-      useShallow((state) => ({
-        applicationConfig: state.applicationConfig,
-        setApplicationConfig: state.setApplicationConfig,
-        setRdfEnabled: state.setRdfEnabled,
-      }))
-    );
-
-  const fetchApplicationConfig = async () => {
-    try {
-      const [themeData, systemConfig] = await Promise.all([
-        getCustomUiThemePreference(),
-        getSystemConfig(),
-      ]);
-
-      setApplicationConfig({
-        ...themeData,
-        customTheme: getThemeConfig(themeData.customTheme),
-      });
-
-      setRdfEnabled(systemConfig.rdfEnabled || false);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchApplicationConfig();
-  }, []);
-
-  useEffect(() => {
-    const faviconHref = isEmpty(
-      applicationConfig?.customLogoConfig?.customFaviconUrlPath
-    )
-      ? '/favicon.png'
-      : applicationConfig?.customLogoConfig?.customFaviconUrlPath ??
-        '/favicon.png';
-    const link = document.querySelectorAll('link[rel~="icon"]');
-
-    if (!isEmpty(link)) {
-      link.forEach((item) => {
-        item.setAttribute('href', faviconHref);
-      });
-    }
-  }, [applicationConfig]);
-
   return (
     <AuthProvider childComponentType={AppRouter}>
       <AppRouter />

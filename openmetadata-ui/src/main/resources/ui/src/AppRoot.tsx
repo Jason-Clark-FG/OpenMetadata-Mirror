@@ -11,16 +11,23 @@
  *  limitations under the License.
  */
 
+import { isEmpty } from 'lodash';
 import { FC, useEffect } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary/ErrorBoundary';
 import AntDConfigProvider from './context/AntDConfigProvider/AntDConfigProvider';
 import { useApplicationStore } from './hooks/useApplicationStore';
+import {
+  getCustomUiThemePreference,
+  getSystemConfig,
+} from './rest/settingConfigAPI';
 import { getBasePath } from './utils/HistoryUtils';
 import i18n from './utils/i18next/LocalUtil';
+import { getThemeConfig } from './utils/ThemeUtils';
 
 const AppRoot: FC = () => {
   const { initializeAuthState } = useApplicationStore();
@@ -28,6 +35,54 @@ const AppRoot: FC = () => {
   useEffect(() => {
     initializeAuthState();
   }, [initializeAuthState]);
+
+  const { applicationConfig, setApplicationConfig, setRdfEnabled } =
+    useApplicationStore(
+      useShallow((state) => ({
+        applicationConfig: state.applicationConfig,
+        setApplicationConfig: state.setApplicationConfig,
+        setRdfEnabled: state.setRdfEnabled,
+      }))
+    );
+
+  const fetchApplicationConfig = async () => {
+    try {
+      const [themeData, systemConfig] = await Promise.all([
+        getCustomUiThemePreference(),
+        getSystemConfig(),
+      ]);
+
+      setApplicationConfig({
+        ...themeData,
+        customTheme: getThemeConfig(themeData.customTheme),
+      });
+
+      setRdfEnabled(systemConfig.rdfEnabled || false);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchApplicationConfig();
+  }, []);
+
+  useEffect(() => {
+    const faviconHref = isEmpty(
+      applicationConfig?.customLogoConfig?.customFaviconUrlPath
+    )
+      ? '/favicon.png'
+      : applicationConfig?.customLogoConfig?.customFaviconUrlPath ??
+        '/favicon.png';
+    const link = document.querySelectorAll('link[rel~="icon"]');
+
+    if (!isEmpty(link)) {
+      link.forEach((item) => {
+        item.setAttribute('href', faviconHref);
+      });
+    }
+  }, [applicationConfig]);
 
   return (
     <div className="main-container">

@@ -33,8 +33,9 @@ import {
   setUrlPathnameExpiryAfterRoute,
 } from '../../utils/AuthProvider.util';
 import brandClassBase from '../../utils/BrandData/BrandClassBase';
-import { getImages, Transi18next } from '../../utils/CommonUtils';
+import { Transi18next } from '../../utils/CommonUtils';
 import { showErrorToast } from '../../utils/ToastUtils';
+import { getImages } from '../../utils/UserDataUtils';
 
 const cookieStorage = new CookieStorage();
 
