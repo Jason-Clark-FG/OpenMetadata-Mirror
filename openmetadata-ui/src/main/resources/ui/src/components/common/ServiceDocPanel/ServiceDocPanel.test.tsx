@@ -109,9 +109,7 @@ describe('ServiceDocPanel Component', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('service-requirements')).toBeInTheDocument();
-        expect(
-          container.querySelector('.service-doc-content')
-        ).not.toBeNull();
+        expect(container.querySelector('.service-doc-content')).not.toBeNull();
         expect(mockFetchMarkdownFile).toHaveBeenCalledWith(
           'en-US/DatabaseService/mysql.md'
         );
@@ -289,9 +287,7 @@ describe('ServiceDocPanel Component', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('entity-summary-panel')).toBeInTheDocument();
-        expect(
-          container.querySelector('.service-doc-content')
-        ).not.toBeNull();
+        expect(container.querySelector('.service-doc-content')).not.toBeNull();
         expect(mockGetActiveFieldNameForAppDocs).toHaveBeenCalledWith(
           'root/application/config'
         );
