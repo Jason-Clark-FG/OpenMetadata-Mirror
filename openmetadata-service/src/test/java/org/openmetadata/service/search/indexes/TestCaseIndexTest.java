@@ -91,7 +91,7 @@ class TestCaseIndexTest {
         new TestDefinition()
             .withId(testDefId)
             .withTestPlatforms(List.of(TestPlatform.OPEN_METADATA))
-            .withEntityType("COLUMN");
+            .withEntityType(org.openmetadata.schema.type.TestDefinitionEntityType.COLUMN);
 
     entityStaticMock
         .when(() -> Entity.getEntity(eq(Entity.TEST_DEFINITION), eq(testDefId), anyString(), any()))
