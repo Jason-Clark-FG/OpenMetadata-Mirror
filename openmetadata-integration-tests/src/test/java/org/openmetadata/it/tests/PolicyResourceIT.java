@@ -570,11 +570,26 @@ public class PolicyResourceIT extends BaseEntityIT<Policy, CreatePolicy> {
     OpenMetadataClient client = SdkClients.adminClient();
 
     String roleName = ns.prefix("StaleRole");
+    Policy helperPolicy =
+        createEntity(
+            new CreatePolicy()
+                .withName(ns.prefix("helperPolicyForRole"))
+                .withRules(
+                    List.of(
+                        new Rule()
+                            .withName("helperRule")
+                            .withResources(List.of(ALL_RESOURCES))
+                            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+                            .withEffect(Effect.ALLOW)))
+                .withDescription("Helper policy for role creation"));
     Role role =
         client
             .roles()
             .create(
-                new CreateRole().withName(roleName).withDescription("Role that will be deleted"));
+                new CreateRole()
+                    .withName(roleName)
+                    .withPolicies(List.of(helperPolicy.getFullyQualifiedName()))
+                    .withDescription("Role that will be deleted"));
 
     Rule roleRule =
         new Rule()
@@ -831,14 +846,36 @@ public class PolicyResourceIT extends BaseEntityIT<Policy, CreatePolicy> {
   void test_deletedRoleIsRemovedFromPolicyCondition(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
+    Policy helperPolicy =
+        createEntity(
+            new CreatePolicy()
+                .withName(ns.prefix("helperPolicyForRoles"))
+                .withRules(
+                    List.of(
+                        new Rule()
+                            .withName("helperRule")
+                            .withResources(List.of(ALL_RESOURCES))
+                            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+                            .withEffect(Effect.ALLOW)))
+                .withDescription("Helper policy for role creation"));
+    String helperPolicyFqn = helperPolicy.getFullyQualifiedName();
+
     Role role1 =
         client
             .roles()
-            .create(new CreateRole().withName(ns.prefix("Role1")).withDescription("First role"));
+            .create(
+                new CreateRole()
+                    .withName(ns.prefix("Role1"))
+                    .withPolicies(List.of(helperPolicyFqn))
+                    .withDescription("First role"));
     Role role2 =
         client
             .roles()
-            .create(new CreateRole().withName(ns.prefix("Role2")).withDescription("Second role"));
+            .create(
+                new CreateRole()
+                    .withName(ns.prefix("Role2"))
+                    .withPolicies(List.of(helperPolicyFqn))
+                    .withDescription("Second role"));
 
     Rule roleRule =
         new Rule()
@@ -874,13 +911,18 @@ public class PolicyResourceIT extends BaseEntityIT<Policy, CreatePolicy> {
     createTeam.setTeamType(CreateTeam.TeamType.GROUP);
     Team team = client.teams().create(createTeam);
 
-    Rule teamRule =
-        new Rule()
-            .withName("teamCleanupRule")
-            .withResources(List.of(ALL_RESOURCES))
-            .withOperations(List.of(MetadataOperation.VIEW_ALL))
-            .withEffect(Effect.ALLOW)
-            .withCondition("inAnyTeam('" + team.getName() + "') && hasAnyRole('DataSteward')");
+    Policy helperPolicy =
+        createEntity(
+            new CreatePolicy()
+                .withName(ns.prefix("helperPolicyForTeamTest"))
+                .withRules(
+                    List.of(
+                        new Rule()
+                            .withName("helperRule")
+                            .withResources(List.of(ALL_RESOURCES))
+                            .withOperations(List.of(MetadataOperation.VIEW_ALL))
+                            .withEffect(Effect.ALLOW)))
+                .withDescription("Helper policy for role creation"));
 
     Role dsSteward =
         client
@@ -888,6 +930,7 @@ public class PolicyResourceIT extends BaseEntityIT<Policy, CreatePolicy> {
             .create(
                 new CreateRole()
                     .withName(ns.prefix("DataSteward"))
+                    .withPolicies(List.of(helperPolicy.getFullyQualifiedName()))
                     .withDescription("Steward role"));
 
     Rule teamRuleWithActualRole =

@@ -379,6 +379,14 @@ public class RuleEvaluator {
     try {
       Entity.getEntityReferenceByName(entityType, fqn, NON_DELETED);
     } catch (EntityNotFoundException e) {
+      if (Entity.TAG.equals(entityType)) {
+        try {
+          Entity.getEntityReferenceByName(Entity.GLOSSARY_TERM, fqn, NON_DELETED);
+          return;
+        } catch (EntityNotFoundException ignored) {
+          // Fall through to the original handling
+        }
+      }
       if (!isUpdate) {
         throw e;
       }

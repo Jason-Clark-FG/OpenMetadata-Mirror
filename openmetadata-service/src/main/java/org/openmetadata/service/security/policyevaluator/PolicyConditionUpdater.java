@@ -130,7 +130,7 @@ public final class PolicyConditionUpdater {
           (EntityRepository<Policy>) Entity.getEntityRepository(Entity.POLICY);
       ListFilter filter = new ListFilter(Include.NON_DELETED);
       ResultList<Policy> policies =
-          policyRepo.listAfter(null, Fields.EMPTY_FIELDS, filter, Integer.MAX_VALUE, null);
+          policyRepo.listAfter(null, Fields.EMPTY_FIELDS, filter, 10000, null);
 
       boolean anyChanged = false;
       for (Policy policy : policies.getData()) {
