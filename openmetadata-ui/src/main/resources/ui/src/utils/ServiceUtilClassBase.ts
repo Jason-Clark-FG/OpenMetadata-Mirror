@@ -198,12 +198,14 @@ class ServiceUtilClassBase {
     PipelineServiceType.Snowplow,
     DriveServiceType.GoogleDrive,
     DriveServiceType.SharePoint,
+    DatabaseServiceType.Informix,
     DatabaseServiceType.ServiceNow,
     DatabaseServiceType.Dremio,
     MetadataServiceType.Collibra,
     PipelineServiceType.Mulesoft,
     DatabaseServiceType.MicrosoftFabric,
     PipelineServiceType.MicrosoftFabricPipeline,
+    DatabaseServiceType.MicrosoftAccess,
   ];
 
   DatabaseServiceTypeSmallCase = this.convertEnumToLowerCase<
