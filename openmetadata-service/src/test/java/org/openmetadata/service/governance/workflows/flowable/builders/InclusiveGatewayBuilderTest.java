@@ -1,6 +1,7 @@
 package org.openmetadata.service.governance.workflows.flowable.builders;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,12 +11,12 @@ import org.junit.jupiter.api.Test;
 class InclusiveGatewayBuilderTest {
 
   @Test
-  void testBuildDefaultsToAsyncExclusive() {
+  void testBuildDefaultsToSyncExclusive() {
     InclusiveGateway gateway = new InclusiveGatewayBuilder().id("splitGateway").build();
 
     assertEquals("splitGateway", gateway.getId());
     assertEquals("splitGateway", gateway.getName());
-    assertTrue(gateway.isAsynchronous());
+    assertFalse(gateway.isAsynchronous());
     assertTrue(gateway.isExclusive());
     assertNull(gateway.getDefaultFlow());
   }
@@ -30,10 +31,10 @@ class InclusiveGatewayBuilderTest {
   }
 
   @Test
-  void testBuildWithAsyncFalse() {
-    InclusiveGateway gateway = new InclusiveGatewayBuilder().id("g1").setAsync(false).build();
+  void testBuildWithAsyncTrue() {
+    InclusiveGateway gateway = new InclusiveGatewayBuilder().id("g1").setAsync(true).build();
 
     assertEquals("g1", gateway.getId());
-    assertTrue(!gateway.isAsynchronous());
+    assertTrue(gateway.isAsynchronous());
   }
 }

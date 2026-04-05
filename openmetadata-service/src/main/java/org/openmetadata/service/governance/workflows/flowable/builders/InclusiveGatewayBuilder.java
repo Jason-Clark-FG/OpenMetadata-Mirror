@@ -4,7 +4,7 @@ import org.flowable.bpmn.model.InclusiveGateway;
 
 public class InclusiveGatewayBuilder extends FlowableElementBuilder<InclusiveGatewayBuilder> {
 
-  private boolean async = true;
+  private boolean async = false;
   private String defaultFlow;
 
   public InclusiveGatewayBuilder setAsync(boolean async) {
