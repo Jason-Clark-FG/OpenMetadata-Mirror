@@ -106,9 +106,7 @@ const TagsTask: FC<TagsTaskProps> = ({
       );
     } else {
       return (
-        <TagsDiffView
-          diffArr={diffArrays(parsedOldValue, parsedSuggestion)}
-        />
+        <TagsDiffView diffArr={diffArrays(parsedOldValue, parsedSuggestion)} />
       );
     }
   }, [suggestion, oldValue, parsedOldValue, parsedSuggestion]);
