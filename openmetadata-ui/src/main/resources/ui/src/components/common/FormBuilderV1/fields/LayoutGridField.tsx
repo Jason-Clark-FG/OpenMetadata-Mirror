@@ -75,7 +75,11 @@ const LayoutGridField = (props: FieldProps) => {
   const placedFieldNames = new Set(
     rows.reduce<string[]>(
       (acc, row) =>
-        acc.concat(row.columns.map((column: LayoutGridColumn) => column.name)),
+        Array.isArray(row.columns)
+          ? acc.concat(
+              row.columns.map((column: LayoutGridColumn) => column.name)
+            )
+          : acc,
       []
     )
   );
@@ -160,9 +164,10 @@ const LayoutGridField = (props: FieldProps) => {
             'tw:grid tw:grid-cols-1 tw:gap-4 tw:md:grid-cols-2'
           )}
           key={`layout-row-${rowIndex}`}>
-          {row.columns.map((column: LayoutGridColumn) =>
-            renderField(column.name, column.uiSchema, column.className)
-          )}
+          {Array.isArray(row.columns) &&
+            row.columns.map((column: LayoutGridColumn) =>
+              renderField(column.name, column.uiSchema, column.className)
+            )}
         </div>
       ))}
 
