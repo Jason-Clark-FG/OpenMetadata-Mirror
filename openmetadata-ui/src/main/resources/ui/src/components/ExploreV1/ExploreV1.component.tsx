@@ -13,7 +13,6 @@
 
 import {
   ExclamationCircleOutlined,
-  ExportOutlined,
   FilterOutlined,
   SortAscendingOutlined,
   SortDescendingOutlined,
@@ -30,6 +29,7 @@ import {
   Switch,
   Typography,
 } from 'antd';
+import { Download01 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
 import Qs from 'qs';
@@ -479,11 +479,11 @@ const ExploreV1: React.FC<ExploreProps> = ({
                             <Button
                               color="secondary"
                               data-testid="export-search-results-button"
-                              icon={<ExportOutlined />}
+                              icon={<Download01 height={14} width={14} />}
                               type="default"
                               onClick={handleOpenExportScopeModal}>
                               <Typography.Text
-                                className="text-sm"
+                                className="text-sm m-l-xs"
                                 color="secondary">
                                 {t('label.export')}
                               </Typography.Text>
