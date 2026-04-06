@@ -38,16 +38,17 @@ import { useTitleAndCount } from '../../common/atoms/navigation/useTitleAndCount
 import { useViewToggle } from '../../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../../common/atoms/pagination/usePaginationControls';
 import { hasActiveSearchOrFilter } from '../../common/atoms/shared/utils/hasActiveSearchOrFilter';
-import EntityCardView from '../../common/EntityCardView/EntityCardView';
+import EntityCardView from '../../common/EntityCardView/EntityCardView.component';
 import EntityListingTable, {
   ColumnDef,
-} from '../../common/EntityListingTable/EntityListingTable';
+} from '../../common/EntityListingTable/EntityListingTable.component';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
 import TagBadgeList from '../../common/TagBadgeList/TagBadgeList';
 import { DomainTypeChip } from '../../DomainListing/components/DomainTypeChip';
 import { useSubdomainListingData } from './hooks/useSubdomainListingData';
 import { SubDomainsTableProps } from './SubDomainsTable.interface';
+import { NO_DATA } from '../../../constants/constants';
 
 const SubDomainsTable = ({
   domainFqn,
@@ -119,7 +120,7 @@ const SubDomainsTable = ({
           return entity.domainType ? (
             <DomainTypeChip domainType={entity.domainType} />
           ) : (
-            <Typography size="text-sm">-</Typography>
+            <Typography size="text-sm">{NO_DATA}</Typography>
           );
         case 'owners':
           return (

@@ -48,10 +48,10 @@ import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { hasActiveSearchOrFilter } from '../common/atoms/shared/utils/hasActiveSearchOrFilter';
-import EntityCardView from '../common/EntityCardView/EntityCardView';
+import EntityCardView from '../common/EntityCardView/EntityCardView.component';
 import EntityListingTable, {
   ColumnDef,
-} from '../common/EntityListingTable/EntityListingTable';
+} from '../common/EntityListingTable/EntityListingTable.component';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
 import TagBadgeList from '../common/TagBadgeList/TagBadgeList';
@@ -60,6 +60,7 @@ import { DomainFormType } from '../Domain/DomainPage.interface';
 import DomainTreeView from './components/DomainTreeView';
 import { DomainTypeChip } from './components/DomainTypeChip';
 import { useDomainListingData } from './hooks/useDomainListingData';
+import { NO_DATA } from '../../constants/constants';
 
 const DomainListPage = () => {
   const domainListing = useDomainListingData();
@@ -96,7 +97,7 @@ const DomainListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DOMAIN}
-        onCancel={() => {}}
+        onCancel={() => { }}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -122,7 +123,7 @@ const DomainListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {},
+    onSubmit: () => { },
     loading: isLoading,
   });
 
@@ -190,7 +191,7 @@ const DomainListPage = () => {
           return entity.domainType ? (
             <DomainTypeChip domainType={entity.domainType} />
           ) : (
-            <Typography size="text-sm">-</Typography>
+            <Typography size="text-sm">{NO_DATA}</Typography>
           );
         case 'owners':
           return (

@@ -21,5 +21,5 @@ export const hasActiveSearchOrFilter = (urlState: UrlState): boolean => {
       (values) => Array.isArray(values) && values.length > 0
     );
 
-  return Boolean(searchQuery) || Boolean(hasActiveFilters);
+  return Boolean(searchQuery?.trim()) || Boolean(hasActiveFilters);
 };

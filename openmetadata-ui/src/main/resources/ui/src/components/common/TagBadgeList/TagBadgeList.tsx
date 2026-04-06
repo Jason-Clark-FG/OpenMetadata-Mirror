@@ -18,7 +18,7 @@ import {
 } from '@openmetadata/ui-core-components';
 import { Tag01 } from '@untitledui/icons';
 import { TagLabel } from '../../../generated/type/tagLabel';
-
+import { NO_DATA } from '../../../constants/constants';
 interface TagBadgeListProps {
   tags: TagLabel[];
   size?: 'sm' | 'lg';
@@ -26,7 +26,7 @@ interface TagBadgeListProps {
 
 const TagBadgeList = ({ tags, size = 'sm' }: TagBadgeListProps) => {
   if (!tags.length) {
-    return <Typography size="text-sm">-</Typography>;
+    return <Typography size="text-sm">{NO_DATA}</Typography>;
   }
 
   const firstTag = tags[0];

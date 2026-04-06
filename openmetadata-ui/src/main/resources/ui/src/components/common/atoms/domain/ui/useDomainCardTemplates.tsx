@@ -30,6 +30,7 @@ import {
 import { DomainTypeChip } from '../../../../DomainListing/components/DomainTypeChip';
 import { OwnerLabel } from '../../../OwnerLabel/OwnerLabel.component';
 import TagBadgeList from '../../../TagBadgeList/TagBadgeList';
+import { NO_DATA } from '../../../../../constants/constants';
 
 export const useDomainCardTemplates = () => {
   const { t } = useTranslation();
@@ -62,7 +63,7 @@ export const useDomainCardTemplates = () => {
               {entity.domainType ? (
                 <DomainTypeChip domainType={entity.domainType} />
               ) : (
-                <Typography size="text-sm">-</Typography>
+                <Typography size="text-sm">{NO_DATA}</Typography>
               )}
             </Box>
           </Grid.Item>
