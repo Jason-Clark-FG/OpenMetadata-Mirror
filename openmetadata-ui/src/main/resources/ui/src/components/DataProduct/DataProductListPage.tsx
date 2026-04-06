@@ -48,6 +48,7 @@ import { useSearch } from '../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
+import { hasActiveSearchOrFilter } from '../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../common/EntityCardView/EntityCardView';
 import EntityListingTable, {
   ColumnDef,
@@ -261,20 +262,14 @@ const DataProductListPage = () => {
     },
   });
 
-  const hasActiveSearchOrFilter = useCallback(() => {
-    const { searchQuery, filters } = dataProductListing.urlState;
-    const hasActiveFilters =
-      filters &&
-      Object.values(filters).some(
-        (values) => Array.isArray(values) && values.length > 0
-      );
-
-    return Boolean(searchQuery) || hasActiveFilters;
-  }, [dataProductListing.urlState]);
+  const isSearchOrFilterActive = useCallback(
+    () => hasActiveSearchOrFilter(dataProductListing.urlState),
+    [dataProductListing.urlState]
+  );
 
   const content = useMemo(() => {
     if (!dataProductListing.loading && isEmpty(dataProductListing.entities)) {
-      if (hasActiveSearchOrFilter()) {
+      if (isSearchOrFilterActive()) {
         return (
           <ErrorPlaceHolder
             className="border-none"
@@ -336,7 +331,7 @@ const DataProductListPage = () => {
     dataProductListing.entities,
     dataProductListing.selectedEntities,
     dataProductListing.actionHandlers,
-    hasActiveSearchOrFilter,
+    isSearchOrFilterActive,
     view,
     renderDataProductCell,
     renderDataProductCard,

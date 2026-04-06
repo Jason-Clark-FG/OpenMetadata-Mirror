@@ -47,6 +47,7 @@ import { useSearch } from '../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
+import { hasActiveSearchOrFilter } from '../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../common/EntityCardView/EntityCardView';
 import EntityListingTable, {
   ColumnDef,
@@ -245,16 +246,10 @@ const DomainListPage = () => {
     },
   });
 
-  const hasActiveSearchOrFilter = useCallback(() => {
-    const { searchQuery, filters } = domainListing.urlState;
-    const hasActiveFilters =
-      filters &&
-      Object.values(filters).some(
-        (values) => Array.isArray(values) && values.length > 0
-      );
-
-    return Boolean(searchQuery) || hasActiveFilters;
-  }, [domainListing.urlState]);
+  const isSearchOrFilterActive = useCallback(
+    () => hasActiveSearchOrFilter(domainListing.urlState),
+    [domainListing.urlState]
+  );
 
   const content = useMemo(() => {
     if (isTreeView) {
@@ -271,7 +266,7 @@ const DomainListPage = () => {
     }
 
     if (!domainListing.loading && isEmpty(domainListing.entities)) {
-      if (hasActiveSearchOrFilter()) {
+      if (isSearchOrFilterActive()) {
         return (
           <ErrorPlaceHolder
             className="border-none"
@@ -336,7 +331,7 @@ const DomainListPage = () => {
     domainListing.actionHandlers,
     domainListing.urlState.filters,
     domainListing.urlState.searchQuery,
-    hasActiveSearchOrFilter,
+    isSearchOrFilterActive,
     view,
     renderDomainCell,
     renderDomainCard,

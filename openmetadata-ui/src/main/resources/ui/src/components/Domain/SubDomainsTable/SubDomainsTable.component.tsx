@@ -37,6 +37,7 @@ import { useSearch } from '../../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../../common/atoms/pagination/usePaginationControls';
+import { hasActiveSearchOrFilter } from '../../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../../common/EntityCardView/EntityCardView';
 import EntityListingTable, {
   ColumnDef,
@@ -176,20 +177,14 @@ const SubDomainsTable = ({
     }
   }, [subDomainsCount]);
 
-  const hasActiveSearchOrFilter = useCallback(() => {
-    const { searchQuery, filters } = subdomainListing.urlState;
-    const hasActiveFilters =
-      filters &&
-      Object.values(filters).some(
-        (values) => Array.isArray(values) && values.length > 0
-      );
-
-    return Boolean(searchQuery) || hasActiveFilters;
-  }, [subdomainListing.urlState]);
+  const isSearchOrFilterActive = useCallback(
+    () => hasActiveSearchOrFilter(subdomainListing.urlState),
+    [subdomainListing.urlState]
+  );
 
   const content = useMemo(() => {
     if (!subdomainListing.loading && isEmpty(subdomainListing.entities)) {
-      if (hasActiveSearchOrFilter()) {
+      if (isSearchOrFilterActive()) {
         return (
           <ErrorPlaceHolder
             className="border-none"
@@ -249,7 +244,7 @@ const SubDomainsTable = ({
     subdomainListing.entities,
     subdomainListing.selectedEntities,
     subdomainListing.actionHandlers,
-    hasActiveSearchOrFilter,
+    isSearchOrFilterActive,
     view,
     renderSubDomainCell,
     renderDomainCard,
