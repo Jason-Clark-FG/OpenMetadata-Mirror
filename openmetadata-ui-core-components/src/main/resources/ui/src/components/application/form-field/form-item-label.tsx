@@ -27,7 +27,7 @@ export interface FormItemLabelProps {
 export const FormItemLabel = ({
   label,
   isBeta = false,
-  betaLabel = 'Beta',
+  betaLabel,
   tooltip,
   required = false,
 }: FormItemLabelProps) => (

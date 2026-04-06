@@ -37,6 +37,7 @@ export interface ColorPickerFieldProps {
   colors?: string[];
   'data-testid'?: string;
   disabled?: boolean;
+  emptyStateLabel?: string;
   id?: string;
   onBlur?: () => void;
   onChange?: (value: string) => void;
@@ -48,6 +49,7 @@ export const ColorPickerField = ({
   colors,
   'data-testid': dataTestId,
   disabled = false,
+  emptyStateLabel,
   id,
   onBlur,
   onChange,
@@ -116,7 +118,7 @@ export const ColorPickerField = ({
           aria-label={ariaLabel}
           className="tw:text-sm tw:text-tertiary"
           id={id}>
-          No colors available
+          {emptyStateLabel ?? 'No colors available'}
         </span>
       )}
     </div>

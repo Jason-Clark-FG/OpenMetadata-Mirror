@@ -39,8 +39,7 @@ export const Field: FC<{ field: FieldProp }> = ({ field }) => {
 
   const effectiveRules: RegisterOptions = { ...rules };
   if (required && !effectiveRules.required) {
-    effectiveRules.required = `${typeof label === 'string' ? label : name
-      } is required`;
+    effectiveRules.required = true;
   }
 
   return (

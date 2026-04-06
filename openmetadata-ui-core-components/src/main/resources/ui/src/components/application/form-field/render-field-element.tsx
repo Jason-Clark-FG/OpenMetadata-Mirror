@@ -376,6 +376,7 @@ export const renderFieldElement = (
           colors={props.colors}
           data-testid={props['data-testid']}
           disabled={props.disabled}
+          emptyStateLabel={props.emptyStateLabel}
           id={id}
           value={field.value ?? ''}
           onBlur={() => {
@@ -466,6 +467,7 @@ export const renderFieldElement = (
           disabled={props.disabled}
           id={id}
           items={selectItems}
+          labels={props.labels}
           name={field.name}
           placeholder={placeholder}
           value={field.value ?? ''}
@@ -506,7 +508,7 @@ export const renderFieldElement = (
               children
             ) : (
               <Button color="secondary" type="button">
-                {placeholder ?? 'Upload file'}
+                {placeholder}
               </Button>
             )}
           </FileTrigger>

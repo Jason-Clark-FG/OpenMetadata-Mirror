@@ -58,6 +58,14 @@ export enum FieldTypes {
 
 export type FormSelectItem = SelectItemType;
 
+export interface IconPickerFieldLabels {
+  customIconUrl?: string;
+  emptyState?: string;
+  enterIconUrl?: string;
+  iconsTab?: string;
+  urlTab?: string;
+}
+
 export interface FieldPropsMap {
   acceptDirectory?: boolean;
   acceptedFileTypes?: string[];
@@ -72,8 +80,10 @@ export interface FieldPropsMap {
   disabled?: boolean;
   filterOption?: (option: FormSelectItem, searchText: string) => boolean;
   fontSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  emptyStateLabel?: string;
   initialValue?: string;
   items?: FormSelectItem[];
+  labels?: IconPickerFieldLabels;
   multiple?: boolean;
   onBlur?: () => void;
   onFocus?: () => void;

@@ -435,8 +435,8 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       ]
     );
 
-    const handleFormSubmit = useCallback(
-      (formData: Record<string, unknown>) => {
+    const transformFormData = useCallback(
+      (formData: Record<string, unknown>): CreateDomain | CreateDataProduct => {
         const tagItems = (formData.tags as DomainFormSelectItem[]) ?? [];
         const glossaryTerms = (formData.glossaryTerms as TagLabel[]) ?? [];
         const expertItems = (formData.experts as DomainFormSelectItem[]) ?? [];
@@ -493,6 +493,15 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           delete (data as CreateDomain & { domains?: unknown }).domains;
         }
 
+        return data;
+      },
+      [parentDomain, type]
+    );
+
+    const handleFormSubmit = useCallback(
+      (formData: Record<string, unknown>) => {
+        const data = transformFormData(formData);
+
         onSubmit(data)
           .then(() => {
             form.reset();
@@ -502,7 +511,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
             // Error is already handled by parent component
           });
       },
-      [form, onSubmit, parentDomain, type]
+      [form, onSubmit, transformFormData]
     );
 
     const submit = useCallback(() => {
@@ -521,8 +530,8 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         throw new Error('Form validation failed');
       }
 
-      return form.getValues() as CreateDomain | CreateDataProduct;
-    }, [form]);
+      return transformFormData(form.getValues() as Record<string, unknown>);
+    }, [form, transformFormData]);
 
     const imperativeFormRef = useMemo<DomainFormRef>(
       () => ({

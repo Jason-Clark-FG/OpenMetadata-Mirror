@@ -12,14 +12,14 @@
  */
 
 import type { CSSProperties, FC, ReactNode } from 'react';
-import { createElement, isValidElement, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, isValidElement, useEffect, useRef, useState } from 'react';
 import type { Key } from 'react-aria-components';
 import { normalizeHexColor } from '@/colors/colorValidation';
 import { Tabs } from '@/components/application/tabs/tabs';
 import { Input } from '@/components/base/input/input';
 import { cx } from '@/utils/cx';
 import { isReactComponent } from '@/utils/is-react-component';
-import type { FormSelectItem } from '../form-field.types';
+import type { FormSelectItem, IconPickerFieldLabels } from '../form-field.types';
 import { DEFAULT_COLOR_OPTIONS } from './color-picker-field';
 
 const looksLikeImageSource = (value: string) => {
@@ -100,6 +100,7 @@ export interface IconPickerFieldProps {
   disabled?: boolean;
   id?: string;
   items: FormSelectItem[];
+  labels?: IconPickerFieldLabels;
   name: string;
   onBlur?: () => void;
   onChange?: (value: string) => void;
@@ -117,6 +118,7 @@ export const IconPickerField = ({
   disabled = false,
   id,
   items,
+  labels,
   name,
   onBlur,
   onChange,
@@ -132,7 +134,8 @@ export const IconPickerField = ({
     (backgroundColorProp ? normalizeHexColor(backgroundColorProp) : null) ??
     DEFAULT_COLOR_OPTIONS[6];
   const hasCustomImage = allowUrl && value !== '' && !selectedItem;
-  const filteredItems = useMemo(() => items, [items]);
+  const onBlurRef = useRef(onBlur);
+  onBlurRef.current = onBlur;
 
   useEffect(() => {
     if (!isOpen) {
@@ -151,14 +154,14 @@ export const IconPickerField = ({
         !wrapperRef.current?.contains(event.target)
       ) {
         setIsOpen(false);
-        onBlur?.();
+        onBlurRef.current?.();
       }
     };
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false);
-        onBlur?.();
+        onBlurRef.current?.();
       }
     };
 
@@ -169,7 +172,7 @@ export const IconPickerField = ({
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, onBlur]);
+  }, [isOpen]);
 
   const handleIconSelection = (item: FormSelectItem) => {
     onBlur?.();
@@ -215,9 +218,9 @@ export const IconPickerField = ({
 
   const iconGrid = (
     <div className="tw:p-4">
-      {filteredItems.length > 0 ? (
+      {items.length > 0 ? (
         <div className="tw:grid tw:grid-cols-6 tw:gap-3">
-          {filteredItems.map((item) => {
+          {items.map((item) => {
             const isSelected = selectedItem?.id === item.id;
             const previewIcon = renderSelectItemIcon(
               item.icon,
@@ -257,7 +260,7 @@ export const IconPickerField = ({
           })}
         </div>
       ) : (
-        <span className="tw:text-sm tw:text-tertiary">No icons available</span>
+        <span className="tw:text-sm tw:text-tertiary">{labels?.emptyState ?? 'No icons available'}</span>
       )}
     </div>
   );
@@ -265,13 +268,13 @@ export const IconPickerField = ({
   const urlPanel = (
     <div className="tw:flex tw:flex-col tw:gap-2 tw:p-4">
       <span className="tw:text-xs tw:font-medium tw:text-tertiary">
-        Custom icon URL
+        {labels?.customIconUrl ?? 'Custom icon URL'}
       </span>
       <Input
         autoFocus
-        aria-label={placeholder ?? 'Enter icon URL'}
+        aria-label={placeholder ?? labels?.enterIconUrl ?? 'Enter icon URL'}
         name={name}
-        placeholder={placeholder ?? 'Enter icon URL'}
+        placeholder={placeholder ?? labels?.enterIconUrl ?? 'Enter icon URL'}
         value={selectedItem ? '' : value}
         onBlur={() => onBlur?.()}
         onChange={(v) => onChange?.(v)}
@@ -282,7 +285,7 @@ export const IconPickerField = ({
   return (
     <div className="tw:relative tw:w-fit" ref={wrapperRef}>
       <button
-        aria-label={ariaLabel ?? placeholder ?? 'Select icon'}
+        aria-label={ariaLabel ?? placeholder ?? labels?.emptyState ?? 'Select icon'}
         className={cx(
           'tw:flex tw:h-[34px] tw:w-[34px] tw:items-center tw:justify-center tw:rounded-[10px] tw:shadow-xs tw:outline-hidden tw:transition tw:duration-150',
           !disabled && 'tw:cursor-pointer tw:hover:scale-[1.02]',
@@ -319,8 +322,8 @@ export const IconPickerField = ({
                 className="tw:border-b tw:border-secondary_alt tw:p-1"
                 size="sm"
                 type="button-minimal">
-                <Tabs.Item id="icons" label="Icons" />
-                <Tabs.Item id="url" label="URL" />
+                <Tabs.Item id="icons" label={labels?.iconsTab ?? 'Icons'} />
+                <Tabs.Item id="url" label={labels?.urlTab ?? 'URL'} />
               </Tabs.List>
               <Tabs.Panel id="icons">{iconGrid}</Tabs.Panel>
               <Tabs.Panel id="url">{urlPanel}</Tabs.Panel>
