@@ -5779,13 +5779,17 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
       assertEquals(batchSize, result.getNumberOfRowsPassed());
     }
 
-    // Test 1: List with fields=columns,tags — verify correctness
+    // Test 1: List with fields=columns,tags — verify correctness within timeout
     ListParams paramsColumnsTags =
         new ListParams()
             .setLimit(tableCount)
             .setFields("columns,tags")
             .setDatabaseSchema(schema.getFullyQualifiedName());
-    ListResponse<Table> responseColumnsTags = client.tables().list(paramsColumnsTags);
+    ListResponse<Table> responseColumnsTags =
+        assertTimeout(
+            java.time.Duration.ofSeconds(60),
+            () -> client.tables().list(paramsColumnsTags),
+            "Listing with columns+tags should complete within 60s for " + tableCount + " tables");
 
     assertEquals(tableCount, responseColumnsTags.getData().size());
 
@@ -5800,7 +5804,7 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
       assertFalse(firstColumn.getTags().isEmpty(), "Tagged column tags should not be empty");
     }
 
-    // Test 2: List with fields=columns only — verify columns returned without tags
+    // Test 2: List with fields=columns only
     ListParams paramsColumnsOnly =
         new ListParams()
             .setLimit(tableCount)
@@ -5819,12 +5823,5 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     ListResponse<Table> responseTagsOnly = client.tables().list(paramsTagsOnly);
 
     assertEquals(tableCount, responseTagsOnly.getData().size());
-
-    // Functional assertion: columns+tags should complete within a generous absolute timeout.
-    // No ratio-based timing — just ensure it doesn't regress to N+1 scale (minutes).
-    assertTimeout(
-        java.time.Duration.ofSeconds(60),
-        () -> client.tables().list(paramsColumnsTags),
-        "Listing with columns+tags should complete within 60s for " + tableCount + " tables");
   }
 }

@@ -310,8 +310,7 @@ public class TagLabelUtil {
     for (TagLabel tagLabel : tagLabels) {
       if (tagLabel != null && tagLabel.getSource() == TagLabel.TagSource.GLOSSARY) {
         List<TagLabel> derivedTags =
-            derivedTagsMap.getOrDefault(
-                FullyQualifiedName.buildHash(tagLabel.getTagFQN()), Collections.emptyList());
+            derivedTagsMap.getOrDefault(tagLabel.getTagFQN(), Collections.emptyList());
         EntityUtil.mergeTags(updatedTagLabels, derivedTags);
       }
     }

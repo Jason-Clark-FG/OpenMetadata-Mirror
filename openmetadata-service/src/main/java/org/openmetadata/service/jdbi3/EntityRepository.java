@@ -9569,10 +9569,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
           populateTagLabel(listOrEmpty(daoCollection.tagUsageDAO().getTagsInternalBatch(chunk))));
     }
 
-    // Pre-fetch all derived tags in one batch
-    List<TagLabel> allTagLabels =
-        allTags.values().stream().flatMap(List::stream).collect(Collectors.toList());
-    Map<String, List<TagLabel>> derivedTagsMap = TagLabelUtil.batchFetchDerivedTags(allTagLabels);
+    // Pre-fetch all derived tags in one batch — skip gracefully on failure
+    Map<String, List<TagLabel>> derivedTagsMap;
+    try {
+      List<TagLabel> allTagLabels =
+          allTags.values().stream().flatMap(List::stream).collect(Collectors.toList());
+      derivedTagsMap = TagLabelUtil.batchFetchDerivedTags(allTagLabels);
+    } catch (Exception ex) {
+      LOG.warn("Failed to batch fetch derived tags for fields. Skipping derived tags.", ex);
+      derivedTagsMap = Collections.emptyMap();
+    }
 
     // Apply tags to all fields
     for (T entity : entities) {
