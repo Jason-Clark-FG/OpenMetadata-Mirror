@@ -1273,12 +1273,19 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
   private void markPipelineStatusAsStopped(
       UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
+    UUID pipelineRunId;
+    try {
+      pipelineRunId = UUID.fromString(runId);
+    } catch (IllegalArgumentException e) {
+      LOG.warn("runId '{}' is not a valid UUID, skipping DB status update", runId);
+      return;
+    }
     try {
       IngestionPipelineRepository ingestionPipelineRepository =
           (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
       PipelineStatus status =
           ingestionPipelineRepository.getPipelineStatus(
-              ingestionPipeline.getFullyQualifiedName(), UUID.fromString(runId));
+              ingestionPipeline.getFullyQualifiedName(), pipelineRunId);
       if (status == null) {
         LOG.warn("Pipeline status not found for run {}, skipping DB update", runId);
         return;
@@ -1302,6 +1309,8 @@ public class AppResource extends EntityResource<App, AppRepository> {
     try {
       IngestionPipelineRepository ingestionPipelineRepository =
           (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
+      // Limit to 20: covers any burst of concurrent runs while avoiding unbounded DB scans.
+      // This path is only hit when no specific runId is provided (fallback kill-all).
       ResultList<PipelineStatus> recentStatuses =
           ingestionPipelineRepository.listPipelineStatus(
               ingestionPipeline.getFullyQualifiedName(), null, null, 20);
