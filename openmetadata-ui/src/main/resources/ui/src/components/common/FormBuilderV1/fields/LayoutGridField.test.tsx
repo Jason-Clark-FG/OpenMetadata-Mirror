@@ -163,15 +163,17 @@ describe('LayoutGridField', () => {
             firstName: { type: 'string' as const },
           },
         }}
-        uiSchema={{
-          'ui:options': {
-            rows: [
-              {
-                columns: [{ name: 'missing' }, { name: 'firstName' }],
-              },
-            ],
-          },
-        } as unknown as UiSchema}
+        uiSchema={
+          {
+            'ui:options': {
+              rows: [
+                {
+                  columns: [{ name: 'missing' }, { name: 'firstName' }],
+                },
+              ],
+            },
+          } as unknown as UiSchema
+        }
       />
     );
 

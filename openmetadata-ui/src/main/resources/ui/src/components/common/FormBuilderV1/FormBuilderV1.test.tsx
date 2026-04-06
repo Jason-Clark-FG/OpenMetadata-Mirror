@@ -135,7 +135,9 @@ describe('FormBuilderV1', () => {
     });
 
     await waitFor(() => {
-      expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({ name: 'changed' });
+      expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({
+        name: 'changed',
+      });
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'label.cancel' }));
