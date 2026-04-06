@@ -55,6 +55,8 @@ const EntityListingTable = <T extends { id: string }>({
     (keys: Selection) => {
       if (keys === 'all') {
         onSelectAll(true);
+      } else if ((keys as Set<string>).size === 0) {
+        onSelectAll(false);
       } else {
         const newKeys = new Set(keys as Set<string>);
         const prevKeys = new Set(selectedEntities);
@@ -101,11 +103,13 @@ const EntityListingTable = <T extends { id: string }>({
         }>
         {(entity) => (
           <Table.Row
-            className="tw:border-x tw:border-secondary tw:cursor-pointer"
+            className={`tw:border-x tw:border-secondary${
+              onEntityClick ? ' tw:cursor-pointer' : ''
+            }`}
             columns={columns}
             id={entity.id}
             key={entity.id}
-            onAction={() => onEntityClick?.(entity)}>
+            onAction={onEntityClick ? () => onEntityClick(entity) : undefined}>
             {(col) => (
               <Table.Cell key={col.id}>{renderCell(entity, col.id)}</Table.Cell>
             )}

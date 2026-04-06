@@ -259,14 +259,14 @@ const DomainListPage = () => {
   const content = useMemo(() => {
     if (isTreeView) {
       return (
-        <Box className="tw:px-6 tw:pb-6">
+        <div className="tw:px-6 tw:pb-6">
           <DomainTreeView
             filters={domainListing.urlState.filters}
             openAddDomainDrawer={openDrawer}
             refreshToken={treeRefreshToken}
             searchQuery={domainListing.urlState.searchQuery}
           />
-        </Box>
+        </div>
       );
     }
 

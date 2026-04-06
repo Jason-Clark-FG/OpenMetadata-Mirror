@@ -176,8 +176,28 @@ const SubDomainsTable = ({
     }
   }, [subDomainsCount]);
 
+  const hasActiveSearchOrFilter = useCallback(() => {
+    const { searchQuery, filters } = subdomainListing.urlState;
+    const hasActiveFilters =
+      filters &&
+      Object.values(filters).some(
+        (values) => Array.isArray(values) && values.length > 0
+      );
+
+    return Boolean(searchQuery) || hasActiveFilters;
+  }, [subdomainListing.urlState]);
+
   const content = useMemo(() => {
     if (!subdomainListing.loading && isEmpty(subdomainListing.entities)) {
+      if (hasActiveSearchOrFilter()) {
+        return (
+          <ErrorPlaceHolder
+            className="border-none"
+            type={ERROR_PLACEHOLDER_TYPE.FILTER}
+          />
+        );
+      }
+
       return (
         <ErrorPlaceHolder
           buttonId="subdomain-add-button"
@@ -229,6 +249,7 @@ const SubDomainsTable = ({
     subdomainListing.entities,
     subdomainListing.selectedEntities,
     subdomainListing.actionHandlers,
+    hasActiveSearchOrFilter,
     view,
     renderSubDomainCell,
     renderDomainCard,
