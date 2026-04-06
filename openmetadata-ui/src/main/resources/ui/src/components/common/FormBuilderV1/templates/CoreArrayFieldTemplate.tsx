@@ -15,10 +15,13 @@ import { Button } from '@openmetadata/ui-core-components';
 import { ArrayFieldTemplateProps } from '@rjsf/utils';
 import { Plus, Trash01 } from '@untitledui/icons';
 import { Fragment, FunctionComponent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const CoreArrayFieldTemplate: FunctionComponent<
   ArrayFieldTemplateProps
 > = ({ title, canAdd, onAddClick, items, idSchema }) => {
+  const { t } = useTranslation();
+
   return (
     <Fragment>
       <div className="tw:flex tw:items-center tw:justify-between">
@@ -27,6 +30,7 @@ export const CoreArrayFieldTemplate: FunctionComponent<
         </label>
         {canAdd && (
           <Button
+            aria-label={t('label.add-entity', { entity: title })}
             color="primary"
             data-testid={`add-item-${title}`}
             id={`${idSchema.$id}`}
@@ -45,6 +49,7 @@ export const CoreArrayFieldTemplate: FunctionComponent<
           <div className="tw:flex-1">{element.children}</div>
           {element.hasRemove && (
             <button
+              aria-label={t('label.remove')}
               className="tw:ml-2 tw:flex tw:items-center tw:text-[var(--color-text-error-primary)] hover:tw:opacity-80"
               type="button"
               onClick={(event) =>

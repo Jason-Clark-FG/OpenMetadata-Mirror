@@ -55,6 +55,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
           </label>
           {schema.additionalProperties && (
             <Button
+              aria-label={t('label.add-entity', { entity: title })}
               color="primary"
               data-testid={`add-item-${title}`}
               id={`${idSchema.$id}`}
