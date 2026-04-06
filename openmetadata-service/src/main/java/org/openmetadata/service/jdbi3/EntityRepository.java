@@ -125,6 +125,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -9540,8 +9541,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
       return;
     }
 
-    // Collect all field FQNs from the already-loaded entities
-    List<String> allFieldFQNs = new ArrayList<>();
+    // Collect unique field FQNs from the already-loaded entities
+    Set<String> uniqueFieldFQNs = new LinkedHashSet<>();
     Map<T, List<F>> entityFlatFields = new HashMap<>();
     for (T entity : entities) {
       List<F> fields = fieldExtractor.apply(entity);
@@ -9550,17 +9551,18 @@ public abstract class EntityRepository<T extends EntityInterface> {
         entityFlatFields.put(entity, flattenedFields);
         for (F field : listOrEmpty(flattenedFields)) {
           if (field.getFullyQualifiedName() != null) {
-            allFieldFQNs.add(field.getFullyQualifiedName());
+            uniqueFieldFQNs.add(field.getFullyQualifiedName());
           }
         }
       }
     }
 
-    if (allFieldFQNs.isEmpty()) {
+    if (uniqueFieldFQNs.isEmpty()) {
       return;
     }
 
     // Batch fetch tags using exact-match IN, chunked to stay within DB limits
+    List<String> allFieldFQNs = new ArrayList<>(uniqueFieldFQNs);
     int batchSize = 5000;
     Map<String, List<TagLabel>> allTags = new HashMap<>();
     for (int i = 0; i < allFieldFQNs.size(); i += batchSize) {

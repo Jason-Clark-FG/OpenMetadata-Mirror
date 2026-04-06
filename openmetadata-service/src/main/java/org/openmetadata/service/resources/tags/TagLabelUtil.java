@@ -288,7 +288,17 @@ public class TagLabelUtil {
       return Collections.emptyMap();
     }
 
-    return Entity.getCollectionDAO().tagUsageDAO().getDerivedTagsBatch(glossaryTermFqns);
+    int batchSize = 5000;
+    if (glossaryTermFqns.size() <= batchSize) {
+      return Entity.getCollectionDAO().tagUsageDAO().getDerivedTagsBatch(glossaryTermFqns);
+    }
+    Map<String, List<TagLabel>> result = new HashMap<>();
+    for (int i = 0; i < glossaryTermFqns.size(); i += batchSize) {
+      List<String> chunk =
+          glossaryTermFqns.subList(i, Math.min(i + batchSize, glossaryTermFqns.size()));
+      result.putAll(Entity.getCollectionDAO().tagUsageDAO().getDerivedTagsBatch(chunk));
+    }
+    return result;
   }
 
   /** Add derived tags using a pre-fetched map to avoid per-tag DB lookups. */
@@ -310,7 +320,8 @@ public class TagLabelUtil {
     for (TagLabel tagLabel : tagLabels) {
       if (tagLabel != null && tagLabel.getSource() == TagLabel.TagSource.GLOSSARY) {
         List<TagLabel> derivedTags =
-            derivedTagsMap.getOrDefault(tagLabel.getTagFQN(), Collections.emptyList());
+            derivedTagsMap.getOrDefault(
+                FullyQualifiedName.buildHash(tagLabel.getTagFQN()), Collections.emptyList());
         EntityUtil.mergeTags(updatedTagLabels, derivedTags);
       }
     }

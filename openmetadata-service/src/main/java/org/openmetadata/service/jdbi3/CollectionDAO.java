@@ -5027,17 +5027,11 @@ public interface CollectionDAO {
       if (glossaryTermFqns == null || glossaryTermFqns.isEmpty()) {
         return Collections.emptyMap();
       }
-      // Map hash → raw FQN so callers can look up by raw FQN
-      Map<String, String> hashToFqn = new HashMap<>();
-      for (String fqn : glossaryTermFqns) {
-        hashToFqn.put(FullyQualifiedName.buildHash(fqn), fqn);
-      }
-
       List<TagLabelWithFQNHash> tagUsages = getTagsInternalBatch(glossaryTermFqns);
       Map<String, List<TagLabel>> result = new HashMap<>();
 
       for (TagLabelWithFQNHash usage : tagUsages) {
-        String rawFqn = hashToFqn.getOrDefault(usage.getTargetFQNHash(), usage.getTargetFQNHash());
+        String targetFqn = usage.getTargetFQNHash();
         TagLabel tagLabel =
             new TagLabel()
                 .withSource(TagLabel.TagSource.values()[usage.getSource()])
@@ -5050,7 +5044,7 @@ public interface CollectionDAO {
           tagLabel.withReason(usage.getReason());
         }
         TagLabelUtil.applyTagCommonFieldsGracefully(tagLabel);
-        result.computeIfAbsent(rawFqn, k -> new ArrayList<>()).add(tagLabel);
+        result.computeIfAbsent(targetFqn, k -> new ArrayList<>()).add(tagLabel);
       }
       return result;
     }
