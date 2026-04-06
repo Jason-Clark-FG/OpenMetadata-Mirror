@@ -423,10 +423,7 @@ describe('ExploreQuickFilters component', () => {
           'test',
           expect.any(String),
           false,
-          false,
-          undefined,
-          false,
-          ''
+          false
         );
       });
     });

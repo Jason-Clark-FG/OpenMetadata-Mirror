@@ -64,6 +64,49 @@ const mockColumns = [
   },
 ] as Column[];
 
+const mockColumnsWithNested = [
+  mockColumns[0],
+  {
+    ...mockColumns[1],
+    children: [
+      {
+        name: 'product_id',
+        dataType: 'VARCHAR',
+        dataLength: 24,
+        dataTypeDisplay: 'character varying(24)',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.product_id',
+        tags: [],
+        constraint: 'NULL',
+        ordinalPosition: 1,
+      },
+      {
+        name: 'price',
+        dataType: 'INT',
+        dataLength: 1,
+        dataTypeDisplay: 'int',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.price',
+        tags: [],
+        constraint: 'NULL',
+        ordinalPosition: 2,
+      },
+      {
+        name: 'onsale',
+        dataType: 'BOOLEAN',
+        dataLength: 1,
+        dataTypeDisplay: 'boolean',
+        fullyQualifiedName:
+          'bigquery_gcp.ecommerce.shopify.raw_product_catalog.products.onsale',
+        tags: [],
+        constraint: 'NULL',
+        ordinalPosition: 3,
+      },
+    ],
+  },
+  mockColumns[2],
+] as Column[];
+
 const mockGenericContextProps = {
   data: {
     ...MOCK_TABLE,
