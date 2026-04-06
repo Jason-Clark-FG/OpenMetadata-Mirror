@@ -279,6 +279,17 @@ const DomainListPage = () => {
     },
   });
 
+  const hasActiveSearchOrFilter = useCallback(() => {
+    const { searchQuery, filters } = domainListing.urlState;
+    const hasActiveFilters =
+      filters &&
+      Object.values(filters).some(
+        (values) => Array.isArray(values) && values.length > 0
+      );
+
+    return Boolean(searchQuery) || hasActiveFilters;
+  }, [domainListing.urlState]);
+
   const content = useMemo(() => {
     if (isTreeView) {
       return (
@@ -294,6 +305,15 @@ const DomainListPage = () => {
     }
 
     if (!domainListing.loading && isEmpty(domainListing.entities)) {
+      if (hasActiveSearchOrFilter()) {
+        return (
+          <ErrorPlaceHolder
+            className="border-none"
+            type={ERROR_PLACEHOLDER_TYPE.FILTER}
+          />
+        );
+      }
+
       return (
         <ErrorPlaceHolder
           buttonId="domain-add-button"
@@ -345,6 +365,7 @@ const DomainListPage = () => {
     domainListing.actionHandlers,
     domainListing.urlState.filters,
     domainListing.urlState.searchQuery,
+    hasActiveSearchOrFilter,
     view,
     cardView,
     paginationControls,

@@ -95,7 +95,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => {}}
+        onCancel={() => { }}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -121,7 +121,7 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {},
+    onSubmit: () => { },
     loading: isLoading,
   });
 
@@ -228,8 +228,7 @@ const DataProductListPage = () => {
         case 'glossaryTerms':
           return renderTagList(getGlossaryTags(entity.tags));
         case 'domains': {
-          const domains = (entity as unknown as { domains?: EntityReference[] })
-            .domains;
+          const domains = entity.domains
           if (!domains?.length) {
             return <Typography size="text-sm">-</Typography>;
           }

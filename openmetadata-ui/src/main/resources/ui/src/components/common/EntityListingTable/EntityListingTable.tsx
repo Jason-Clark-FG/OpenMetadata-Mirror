@@ -31,6 +31,7 @@ interface EntityListingTableProps<T extends { id: string }> {
   onSelect: (id: string, checked: boolean) => void;
   onEntityClick?: (entity: T) => void;
   ariaLabel: string;
+  emptyMessage?: string;
 }
 
 const EntityListingTable = <T extends { id: string }>({
@@ -43,6 +44,7 @@ const EntityListingTable = <T extends { id: string }>({
   onSelect,
   onEntityClick,
   ariaLabel,
+  emptyMessage,
 }: EntityListingTableProps<T>) => {
   const selectedKeys: Selection = useMemo(
     () => new Set(selectedEntities),
@@ -88,7 +90,15 @@ const EntityListingTable = <T extends { id: string }>({
         columns={columns}>
         {(col) => <Table.Head id={col.id} key={col.id} label={col.label} />}
       </Table.Header>
-      <Table.Body items={entities}>
+      <Table.Body
+        items={entities}
+        renderEmptyState={() =>
+          emptyMessage ? (
+            <div className="tw:py-12 tw:text-center tw:text-sm tw:text-tertiary">
+              {emptyMessage}
+            </div>
+          ) : null
+        }>
         {(entity) => (
           <Table.Row
             className="tw:border-x tw:border-secondary tw:cursor-pointer"
