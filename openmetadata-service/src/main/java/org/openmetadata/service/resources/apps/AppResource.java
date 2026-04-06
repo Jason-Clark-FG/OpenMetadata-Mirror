@@ -59,6 +59,7 @@ import org.openmetadata.schema.entity.app.ScheduleType;
 import org.openmetadata.schema.entity.services.ingestionPipelines.IngestionPipeline;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineServiceClientResponse;
 import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatus;
+import org.openmetadata.schema.entity.services.ingestionPipelines.PipelineStatusType;
 import org.openmetadata.schema.services.connections.metadata.OpenMetadataConnection;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
@@ -374,6 +375,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
               case SUCCESS -> AppRunRecord.Status.SUCCESS;
               case FAILED, PARTIAL_SUCCESS -> AppRunRecord.Status.FAILED;
               case RUNNING -> AppRunRecord.Status.RUNNING;
+              case STOPPED -> AppRunRecord.Status.STOPPED;
             })
         .withConfig(pipelineStatus.getConfig());
   }
@@ -1243,6 +1245,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
       } else {
         if (!app.getPipelines().isEmpty()) {
           IngestionPipeline ingestionPipeline = getIngestionPipeline(uriInfo, securityContext, app);
+          markLatestPipelineStatusAsStopped(uriInfo, ingestionPipeline);
           PipelineServiceClientResponse response =
               pipelineServiceClient.killIngestion(ingestionPipeline);
           return Response.status(response.getCode()).entity(response).build();
@@ -1250,6 +1253,38 @@ public class AppResource extends EntityResource<App, AppRepository> {
       }
     }
     throw new BadRequestException("Application does not support Interrupts.");
+  }
+
+  /**
+   * Mark the latest non-terminal pipeline status as "stopped" so the exit handler
+   * (which always receives "Failed" from Argo) will see a terminal state and skip its update.
+   */
+  private void markLatestPipelineStatusAsStopped(
+      UriInfo uriInfo, IngestionPipeline ingestionPipeline) {
+    try {
+      IngestionPipelineRepository ingestionPipelineRepository =
+          (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
+      PipelineStatus latestStatus =
+          ingestionPipelineRepository.getLatestPipelineStatus(ingestionPipeline);
+      if (latestStatus != null && !isTerminalState(latestStatus.getPipelineState())) {
+        latestStatus.setPipelineState(PipelineStatusType.STOPPED);
+        latestStatus.setEndDate(System.currentTimeMillis());
+        ingestionPipelineRepository.addPipelineStatus(
+            uriInfo, ingestionPipeline.getFullyQualifiedName(), latestStatus);
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to mark pipeline status as stopped, continuing with kill: {}", e.getMessage());
+    }
+  }
+
+  private static boolean isTerminalState(PipelineStatusType state) {
+    if (state == null) {
+      return false;
+    }
+    return state == PipelineStatusType.SUCCESS
+        || state == PipelineStatusType.FAILED
+        || state == PipelineStatusType.STOPPED
+        || state == PipelineStatusType.PARTIAL_SUCCESS;
   }
 
   @POST

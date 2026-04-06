@@ -198,8 +198,10 @@ const AppRunsHistory = forwardRef(
               onClick={() => showAppRunConfig(record)}>
               {t('label.config')}
             </Button>
-            {/* For status running or activewitherror and supportsInterrupt is true, show stop button */}
+            {/* For status running, pending, started or activewitherror and supportsInterrupt is true, show stop button */}
             {(record.status === Status.Running ||
+              record.status === Status.Pending ||
+              record.status === Status.Started ||
               record.status === Status.ActiveError) &&
               Boolean(appData?.supportsInterrupt) && (
                 <Button
