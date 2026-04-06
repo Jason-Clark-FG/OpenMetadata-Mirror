@@ -154,105 +154,133 @@ class SamplerProcessor(Processor):
         self, entity: Table, record: ProfilerSourceAndEntity
     ) -> Either[SamplerResponse]:
         """Process Table entity for sampling"""
-        schema_entity, database_entity, _ = get_context_entities(
-            entity=entity, metadata=self.metadata
-        )
+        try:
+            schema_entity, database_entity, _ = get_context_entities(
+                entity=entity, metadata=self.metadata
+            )
 
-        if database_entity is None:
+            if database_entity is None:
+                return Either(
+                    left=StackTraceError(
+                        name=record.entity.fullyQualifiedName.root,
+                        error=(
+                            f"Could not fetch database entity for [{record.entity.fullyQualifiedName.root}] "
+                            f"from Search Indexes. The search index may not be available or the entity "
+                            f"has not been indexed yet. Please ensure the Elasticsearch index is properly "
+                            f"configured and try reindexing."
+                        ),
+                        stackTrace=traceback.format_exc(),
+                    )
+                )
+
+            service_conn_config = self._copy_service_config(
+                self.config, database_entity
+            )
+
+            sampler_interface: SamplerInterface = self.sampler_class.create(
+                service_connection_config=service_conn_config,
+                ometa_client=self.metadata,
+                entity=entity,
+                schema_entity=schema_entity,
+                database_entity=database_entity,
+                table_config=get_config_for_table(entity, self.profiler_config),
+                default_sample_config=SampleConfig(),
+                default_sample_data_count=self.source_config.sampleDataCount,
+            )
+
+            settings = self.metadata.get_profiler_config_settings()
+            profiler_global_config = (
+                cast(ProfilerConfiguration, settings.config_value) if settings else None
+            )
+
+            sample_data_config = (
+                profiler_global_config.sampleDataConfig
+                if profiler_global_config
+                else None
+            )
+
+            sample_data = SampleData(
+                data=sampler_interface.generate_sample_data(
+                    sample_data_config if sample_data_config else None
+                ),
+                store=bool(
+                    self.source_config.storeSampleData
+                    and (
+                        sample_data_config is None or sample_data_config.storeSampleData
+                    )
+                ),
+            )
+            sampler_interface.close()
+            return Either(
+                right=SamplerResponse(
+                    entity=entity,
+                    sample_data=sample_data,
+                )
+            )
+        except Exception as exc:
             return Either(
                 left=StackTraceError(
-                    name=record.entity.fullyQualifiedName.root,
-                    error=(
-                        f"Could not fetch database entity for [{record.entity.fullyQualifiedName.root}] "
-                        f"from Search Indexes. The search index may not be available or the entity "
-                        f"has not been indexed yet. Please ensure the Elasticsearch index is properly "
-                        f"configured and try reindexing."
-                    ),
+                    name=entity.fullyQualifiedName.root,
+                    error=f"Unexpected exception processing entity {entity.fullyQualifiedName.root}: {exc}",
                     stackTrace=traceback.format_exc(),
                 )
             )
-
-        service_conn_config = self._copy_service_config(self.config, database_entity)
-
-        sampler_interface: SamplerInterface = self.sampler_class.create(
-            service_connection_config=service_conn_config,
-            ometa_client=self.metadata,
-            entity=entity,
-            schema_entity=schema_entity,
-            database_entity=database_entity,
-            table_config=get_config_for_table(entity, self.profiler_config),
-            default_sample_config=SampleConfig(),
-            default_sample_data_count=self.source_config.sampleDataCount,
-        )
-
-        settings = self.metadata.get_profiler_config_settings()
-        profiler_global_config = (
-            cast(ProfilerConfiguration, settings.config_value) if settings else None
-        )
-
-        sample_data_config = (
-            profiler_global_config.sampleDataConfig if profiler_global_config else None
-        )
-
-        sample_data = SampleData(
-            data=sampler_interface.generate_sample_data(
-                sample_data_config if sample_data_config else None
-            ),
-            store=bool(
-                self.source_config.storeSampleData
-                and (sample_data_config is None or sample_data_config.storeSampleData)
-            ),
-        )
-        sampler_interface.close()
-        return Either(
-            right=SamplerResponse(
-                entity=entity,
-                sample_data=sample_data,
-            )
-        )
 
     def _run_for_container(
         self, entity: Container, record: ProfilerSourceAndEntity
     ) -> Either[SamplerResponse]:
         """Process Container entity for sampling"""
-        service_conn_config = self._copy_service_config(self.config, None)
+        try:
+            service_conn_config = self._copy_service_config(self.config, None)
 
-        sampler_interface: SamplerInterface = self.sampler_class.create(
-            service_connection_config=service_conn_config,
-            ometa_client=self.metadata,
-            entity=entity,
-            schema_entity=None,
-            database_entity=None,
-            table_config=None,
-            default_sample_config=SampleConfig(),
-            default_sample_data_count=self.source_config.sampleDataCount,
-        )
-
-        settings = self.metadata.get_profiler_config_settings()
-        profiler_global_config = (
-            cast(ProfilerConfiguration, settings.config_value) if settings else None
-        )
-
-        sample_data_config = (
-            profiler_global_config.sampleDataConfig if profiler_global_config else None
-        )
-
-        sample_data = SampleData(
-            data=sampler_interface.generate_sample_data(
-                sample_data_config if sample_data_config else None
-            ),
-            store=bool(
-                self.source_config.storeSampleData
-                and (sample_data_config is None or sample_data_config.storeSampleData)
-            ),
-        )
-        sampler_interface.close()
-        return Either(
-            right=SamplerResponse(
+            sampler_interface: SamplerInterface = self.sampler_class.create(
+                service_connection_config=service_conn_config,
+                ometa_client=self.metadata,
                 entity=entity,
-                sample_data=sample_data,
+                schema_entity=None,
+                database_entity=None,
+                table_config=None,
+                default_sample_config=SampleConfig(),
+                default_sample_data_count=self.source_config.sampleDataCount,
             )
-        )
+
+            settings = self.metadata.get_profiler_config_settings()
+            profiler_global_config = (
+                cast(ProfilerConfiguration, settings.config_value) if settings else None
+            )
+
+            sample_data_config = (
+                profiler_global_config.sampleDataConfig
+                if profiler_global_config
+                else None
+            )
+
+            sample_data = SampleData(
+                data=sampler_interface.generate_sample_data(
+                    sample_data_config if sample_data_config else None
+                ),
+                store=bool(
+                    self.source_config.storeSampleData
+                    and (
+                        sample_data_config is None or sample_data_config.storeSampleData
+                    )
+                ),
+            )
+            sampler_interface.close()
+            return Either(
+                right=SamplerResponse(
+                    entity=entity,
+                    sample_data=sample_data,
+                )
+            )
+        except Exception as exc:
+            return Either(
+                left=StackTraceError(
+                    name=entity.fullyQualifiedName.root,
+                    error=f"Unexpected exception processing entity {entity.fullyQualifiedName.root}: {exc}",
+                    stackTrace=traceback.format_exc(),
+                )
+            )
 
     @classmethod
     def create(

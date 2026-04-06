@@ -37,8 +37,11 @@ import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.FullyQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PIIMasker {
+  private static final Logger LOG = LoggerFactory.getLogger(PIIMasker.class);
   public static final String SENSITIVE_PII_TAG = "PII.Sensitive";
   public static final String MASKED_VALUE = "********";
   public static final String MASKED_NAME = "[MASKED]";
@@ -63,6 +66,8 @@ public class PIIMasker {
       entityHasPiiTag = hasPiiSensitiveTag((Table) entity);
     } else if (entity instanceof Container) {
       entityHasPiiTag = hasPiiSensitiveTag((Container) entity);
+    } else {
+      LOG.warn("Unsupported entity type for PII masking: {}", entity.getClass().getName());
     }
 
     // If the entity itself is marked as PII, mask all the sample data

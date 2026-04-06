@@ -70,7 +70,7 @@ WHERE JSON_EXTRACT(json, '$.conceptMappings') IS NULL;
 
 -- Add Container permissions to AutoClassificationBotPolicy for storage auto-classification support
 UPDATE policy_entity
-SET json = JSON_INSERT(
+SET json = JSON_ARRAY_INSERT(
     json,
     '$.rules[1]',
     JSON_OBJECT(

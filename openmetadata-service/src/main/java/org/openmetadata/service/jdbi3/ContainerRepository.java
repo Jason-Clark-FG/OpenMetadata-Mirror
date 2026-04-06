@@ -549,12 +549,7 @@ public class ContainerRepository extends EntityRepository<Container> {
 
   public Container getSampleData(UUID containerId, boolean authorizePII) {
     Container container = find(containerId, NON_DELETED);
-    TableData sampleData =
-        JsonUtils.readValue(
-            daoCollection
-                .entityExtensionDAO()
-                .getExtension(container.getId(), CONTAINER_SAMPLE_DATA_EXTENSION),
-            TableData.class);
+    TableData sampleData = getSampleDataInternal(container.getId());
     container.setSampleData(sampleData);
     setFieldsInternal(container, Fields.EMPTY_FIELDS);
 
