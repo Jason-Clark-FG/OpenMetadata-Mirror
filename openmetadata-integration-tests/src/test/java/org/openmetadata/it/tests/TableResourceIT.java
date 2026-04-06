@@ -5799,15 +5799,24 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
       assertNotNull(table.getColumns(), "Table should have columns");
       assertEquals(3, table.getColumns().size());
 
-      Column firstColumn = table.getColumns().get(0);
-      assertNotNull(firstColumn.getTags(), "Tagged column should have tags populated");
+      // Verify tagged columns have the expected tag, untagged column does not
+      Column idCol = table.getColumns().get(0);
+      Column nameCol = table.getColumns().get(1);
+      Column emailCol = table.getColumns().get(2);
+
       assertTrue(
-          firstColumn.getTags().stream()
+          idCol.getTags().stream().anyMatch(t -> tag.getFullyQualifiedName().equals(t.getTagFQN())),
+          "id column should have the expected tag");
+      assertTrue(
+          emailCol.getTags().stream()
               .anyMatch(t -> tag.getFullyQualifiedName().equals(t.getTagFQN())),
-          "Column should contain the expected tag: " + tag.getFullyQualifiedName());
+          "email column should have the expected tag");
+      assertTrue(
+          nameCol.getTags() == null || nameCol.getTags().isEmpty(),
+          "name column should have no tags");
     }
 
-    // Test 2: List with fields=columns only
+    // Test 2: List with fields=columns only — columns populated, no tags
     ListParams paramsColumnsOnly =
         new ListParams()
             .setLimit(tableCount)
@@ -5816,8 +5825,12 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     ListResponse<Table> responseColumnsOnly = client.tables().list(paramsColumnsOnly);
 
     assertEquals(tableCount, responseColumnsOnly.getData().size());
+    for (Table table : responseColumnsOnly.getData()) {
+      assertNotNull(table.getColumns(), "Columns should be populated");
+      assertEquals(3, table.getColumns().size());
+    }
 
-    // Test 3: List with fields=tags only
+    // Test 3: List with fields=tags only — table tags populated
     ListParams paramsTagsOnly =
         new ListParams()
             .setLimit(tableCount)
@@ -5826,5 +5839,9 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
     ListResponse<Table> responseTagsOnly = client.tables().list(paramsTagsOnly);
 
     assertEquals(tableCount, responseTagsOnly.getData().size());
+    for (Table table : responseTagsOnly.getData()) {
+      assertNotNull(table.getTags(), "Table tags should be populated");
+      assertFalse(table.getTags().isEmpty(), "Table tags should not be empty");
+    }
   }
 }
