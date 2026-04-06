@@ -5801,7 +5801,10 @@ public class TableResourceIT extends BaseEntityIT<Table, CreateTable> {
 
       Column firstColumn = table.getColumns().get(0);
       assertNotNull(firstColumn.getTags(), "Tagged column should have tags populated");
-      assertFalse(firstColumn.getTags().isEmpty(), "Tagged column tags should not be empty");
+      assertTrue(
+          firstColumn.getTags().stream()
+              .anyMatch(t -> tag.getFullyQualifiedName().equals(t.getTagFQN())),
+          "Column should contain the expected tag: " + tag.getFullyQualifiedName());
     }
 
     // Test 2: List with fields=columns only
