@@ -24,9 +24,11 @@ public class CommitChangeEventOffsetImpl implements JavaDelegate {
   public void execute(DelegateExecution execution) {
     String workflowFqn = (String) workflowFqnExpr.getValue(execution);
     String entityType = (String) entityTypeExpr.getValue(execution);
-    String consumerId = buildConsumerId(workflowFqn, entityType);
-
     Long maxProcessedOffset = (Long) execution.getVariable(MAX_PROCESSED_OFFSET_VARIABLE);
+    commitOffset(workflowFqn, entityType, maxProcessedOffset);
+  }
+
+  static void commitOffset(String workflowFqn, String entityType, Long maxProcessedOffset) {
     if (maxProcessedOffset == null) {
       LOG.debug(
           "No events processed for workflow '{}' entity type '{}'. Offset not updated.",
@@ -34,12 +36,11 @@ public class CommitChangeEventOffsetImpl implements JavaDelegate {
           entityType);
       return;
     }
-
+    String consumerId = buildConsumerId(workflowFqn, entityType);
     String existingJson =
         Entity.getCollectionDAO()
             .eventSubscriptionDAO()
             .getSubscriberExtension(consumerId, OFFSET_EXTENSION);
-
     if (existingJson != null) {
       EventSubscriptionOffset existing =
           JsonUtils.readValue(existingJson, EventSubscriptionOffset.class);
@@ -52,19 +53,16 @@ public class CommitChangeEventOffsetImpl implements JavaDelegate {
         return;
       }
     }
-
     EventSubscriptionOffset newOffset =
         new EventSubscriptionOffset()
             .withStartingOffset(maxProcessedOffset)
             .withCurrentOffset(maxProcessedOffset)
             .withTimestamp(System.currentTimeMillis());
-
     Entity.getCollectionDAO()
         .eventSubscriptionDAO()
         .upsertSubscriberExtension(
             consumerId, OFFSET_EXTENSION, OFFSET_JSON_SCHEMA, JsonUtils.pojoToJson(newOffset));
-
-    LOG.info(
+    LOG.debug(
         "Committed offset {} for workflow '{}' entity type '{}'.",
         maxProcessedOffset,
         workflowFqn,

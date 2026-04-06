@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,8 @@ public class FetchChangeEventsImpl implements JavaDelegate {
 
   static final String CURRENT_BATCH_OFFSET_VARIABLE = "currentBatchOffset";
   static final String MAX_PROCESSED_OFFSET_VARIABLE = "maxProcessedOffset";
+  static final String PROCESSED_FQNS_VARIABLE = "processedFqnsInRun";
+  static final int PROCESSED_FQNS_MAX_SIZE = 10_000;
   private static final String CARDINALITY_VARIABLE = "numberOfEntities";
 
   private static final Set<String> ENTITIES_NEEDING_KEYWORD_FQN =
@@ -109,6 +112,9 @@ public class FetchChangeEventsImpl implements JavaDelegate {
 
     Map<String, Long> fqnToMaxOffset = deduplicateByFqn(records);
 
+    LinkedHashMap<String, Boolean> processedFqns = loadProcessedFqns(execution);
+    fqnToMaxOffset.keySet().removeAll(processedFqns.keySet());
+
     String searchFilter =
         Optional.ofNullable(searchFilterExpr)
             .map(expr -> (String) expr.getValue(execution))
@@ -120,6 +126,12 @@ public class FetchChangeEventsImpl implements JavaDelegate {
               new ArrayList<>(fqnToMaxOffset.keySet()), entityType, searchFilter);
       fqnToMaxOffset.entrySet().removeIf(e -> !matchingFqns.contains(e.getKey()));
     }
+
+    for (String fqn : fqnToMaxOffset.keySet()) {
+      processedFqns.put(fqn, Boolean.TRUE);
+    }
+    evictOverflow(processedFqns);
+    execution.setVariable(PROCESSED_FQNS_VARIABLE, processedFqns);
 
     List<String> entityList = new ArrayList<>();
     Map<String, List<String>> entityToListMap = new HashMap<>();
@@ -142,6 +154,7 @@ public class FetchChangeEventsImpl implements JavaDelegate {
     Long existingMax = (Long) execution.getVariable(MAX_PROCESSED_OFFSET_VARIABLE);
     if (existingMax == null || batchMaxOffset > existingMax) {
       execution.setVariable(MAX_PROCESSED_OFFSET_VARIABLE, batchMaxOffset);
+      CommitChangeEventOffsetImpl.commitOffset(workflowFqn, entityType, batchMaxOffset);
     }
 
     execution.setVariable(CARDINALITY_VARIABLE, entityList.size());
@@ -308,5 +321,25 @@ public class FetchChangeEventsImpl implements JavaDelegate {
           "workflowFqn must not be null or blank when building consumer ID");
     }
     return workflowFqn + "Trigger-" + entityType;
+  }
+
+  @SuppressWarnings("unchecked")
+  private LinkedHashMap<String, Boolean> loadProcessedFqns(DelegateExecution execution) {
+    Object stored = execution.getVariable(PROCESSED_FQNS_VARIABLE);
+    return stored instanceof LinkedHashMap
+        ? (LinkedHashMap<String, Boolean>) stored
+        : new LinkedHashMap<>();
+  }
+
+  private static void evictOverflow(LinkedHashMap<String, Boolean> cache) {
+    int overflow = cache.size() - PROCESSED_FQNS_MAX_SIZE;
+    if (overflow <= 0) {
+      return;
+    }
+    Iterator<String> it = cache.keySet().iterator();
+    for (int i = 0; i < overflow; i++) {
+      it.next();
+      it.remove();
+    }
   }
 }
