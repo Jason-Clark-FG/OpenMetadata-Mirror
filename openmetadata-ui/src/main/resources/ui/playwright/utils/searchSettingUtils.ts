@@ -62,19 +62,19 @@ export const mockEntitySearchConfig = {
   fieldValueBoosts: [
     {
       field: 'usageSummary.monthlyStats.count',
-      factor: 3.0,
+      factor: 0.002,
       modifier: 'log1p',
-      missing: 0.0,
+      missing: 0,
     },
     {
       field: 'usageSummary.monthlyStats.percentileRank',
-      factor: 1.0,
+      factor: 0.0005,
       modifier: 'none',
-      missing: 0.0,
+      missing: 0,
     },
   ],
   scoreMode: 'sum',
-  boostMode: 'sum',
+  boostMode: 'multiply',
 };
 
 export async function setSliderValue(
