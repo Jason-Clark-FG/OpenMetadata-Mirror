@@ -1014,7 +1014,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
             });
             allTerms.push(...termsResponse.data);
             after = termsResponse.paging?.after;
-
           } catch {
             // Continue with other glossaries if one fails
             break;
