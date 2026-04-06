@@ -1273,19 +1273,12 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
   private void markPipelineStatusAsStopped(
       UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
-    UUID pipelineRunId;
-    try {
-      pipelineRunId = UUID.fromString(runId);
-    } catch (IllegalArgumentException e) {
-      LOG.warn("runId '{}' is not a valid UUID, skipping DB status update", runId);
-      return;
-    }
     try {
       IngestionPipelineRepository ingestionPipelineRepository =
           (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
       PipelineStatus status =
           ingestionPipelineRepository.getPipelineStatus(
-              ingestionPipeline.getFullyQualifiedName(), pipelineRunId);
+              ingestionPipeline.getFullyQualifiedName(), runId);
       if (status == null) {
         LOG.warn("Pipeline status not found for run {}, skipping DB update", runId);
         return;
@@ -1296,7 +1289,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
         ingestionPipelineRepository.addPipelineStatus(
             uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       LOG.warn(
           "Failed to mark pipeline run {} as stopped, continuing with kill: {}",
           runId,
@@ -1323,7 +1316,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
               uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
         }
       }
-    } catch (Exception e) {
+    } catch (RuntimeException e) {
       LOG.warn("Failed to mark pipeline runs as stopped, continuing with kill: {}", e.getMessage());
     }
   }

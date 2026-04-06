@@ -702,13 +702,17 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
   }
 
   public PipelineStatus getPipelineStatus(String ingestionPipelineFQN, UUID pipelineStatusRunId) {
+    return getPipelineStatus(ingestionPipelineFQN, pipelineStatusRunId.toString());
+  }
+
+  public PipelineStatus getPipelineStatus(String ingestionPipelineFQN, String runId) {
     IngestionPipeline ingestionPipeline = findByName(ingestionPipelineFQN, Include.NON_DELETED);
     return JsonUtils.readValue(
         daoCollection
             .entityExtensionTimeSeriesDao()
             .getExtensionByKey(
                 RUN_ID_EXTENSION_KEY,
-                pipelineStatusRunId.toString(),
+                runId,
                 ingestionPipeline.getFullyQualifiedName(),
                 PIPELINE_STATUS_EXTENSION),
         PipelineStatus.class);

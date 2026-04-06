@@ -142,6 +142,13 @@ public class MeteredPipelineServiceClient implements PipelineServiceClientInterf
   }
 
   @Override
+  public PipelineServiceClientResponse killIngestionRun(
+      IngestionPipeline ingestionPipeline, String runId) {
+    return this.respondWithMetering(
+        KILL, () -> this.decoratedClient.killIngestionRun(ingestionPipeline, runId));
+  }
+
+  @Override
   public String getPlatform() {
     return this.decoratedClient.getPlatform();
   }
