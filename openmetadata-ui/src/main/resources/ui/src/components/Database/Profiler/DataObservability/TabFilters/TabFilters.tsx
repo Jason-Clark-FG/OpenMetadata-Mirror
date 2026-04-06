@@ -51,6 +51,7 @@ import { ProfilerTabPath } from '../../ProfilerDashboard/profilerDashboard.inter
 import ColumnPickerMenu from '../../TableProfiler/ColumnPickerMenu';
 import profilerClassBase from '../../TableProfiler/ProfilerClassBase';
 import { useTableProfiler } from '../../TableProfiler/TableProfilerProvider';
+import { usePermissionProvider } from '../../../../../context/PermissionProvider/PermissionProvider';
 
 const TabFilters = () => {
   const { isTourOpen } = useTourProvider();
@@ -110,12 +111,16 @@ const TabFilters = () => {
     table,
   } = useTableProfiler();
 
+  const { permissions: globalPermissions } = usePermissionProvider();
+
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { fqn: datasetFQN } = useFqn();
   const editDataProfile =
     permissions &&
     getPrioritizedEditPermission(permissions, Operation.EditDataProfile);
+  const createTestCasePermission =
+    permissions?.CreateTests || globalPermissions?.testCase?.Create || false;
 
   const handleTestCaseClick = () => {
     onTestCaseDrawerOpen(formType as TestLevel);
@@ -227,7 +232,7 @@ const TabFilters = () => {
         </Box>
       )}
 
-      {editDataProfile && !isTableDeleted && (
+      {(editDataProfile || createTestCasePermission) && !isTableDeleted && (
         <>
           <LimitWrapper resource="dataQuality">
             <>
@@ -256,9 +261,11 @@ const TabFilters = () => {
                   horizontal: 'right',
                 }}
                 onClose={handleMenuClose}>
-                <MenuItem onClick={handleTestCaseClick}>
-                  <TabsLabel id="test-case" name={t('label.test-case')} />
-                </MenuItem>
+                {createTestCasePermission && (
+                  <MenuItem onClick={handleTestCaseClick}>
+                    <TabsLabel id="test-case" name={t('label.test-case')} />
+                  </MenuItem>
+                )}
                 <MenuItem onClick={handleCustomMetricClick}>
                   <TabsLabel
                     id="custom-metric"
