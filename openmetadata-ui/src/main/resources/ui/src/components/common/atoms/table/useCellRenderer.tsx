@@ -58,9 +58,7 @@ export const useCellRenderer = <
 
         if (!owners || owners.length === 0) {
           return (
-            <Typography size="text-sm">
-              {EMPTY_VALUE_INDICATOR}
-            </Typography>
+            <Typography size="text-sm">{EMPTY_VALUE_INDICATOR}</Typography>
           );
         }
 
@@ -110,9 +108,7 @@ export const useCellRenderer = <
 
         if (!tags || tags.length === 0) {
           return (
-            <Typography size="text-sm">
-              {EMPTY_VALUE_INDICATOR}
-            </Typography>
+            <Typography size="text-sm">{EMPTY_VALUE_INDICATOR}</Typography>
           );
         }
 
@@ -134,11 +130,7 @@ export const useCellRenderer = <
           return renderers[column.customRenderer](entity);
         }
 
-        return (
-          <Typography size="text-sm">
-            {EMPTY_VALUE_INDICATOR}
-          </Typography>
-        );
+        return <Typography size="text-sm">{EMPTY_VALUE_INDICATOR}</Typography>;
       },
       domains: (entity: T, column?: ColumnConfig<T>) => {
         const domains = column?.getValue
@@ -147,9 +139,7 @@ export const useCellRenderer = <
 
         if (!domains || domains.length === 0) {
           return (
-            <Typography size="text-sm">
-              {EMPTY_VALUE_INDICATOR}
-            </Typography>
+            <Typography size="text-sm">{EMPTY_VALUE_INDICATOR}</Typography>
           );
         }
 

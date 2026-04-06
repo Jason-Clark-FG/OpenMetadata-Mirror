@@ -58,8 +58,8 @@ import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
-import { DomainTypeChip } from './components/DomainTypeChip';
 import DomainTreeView from './components/DomainTreeView';
+import { DomainTypeChip } from './components/DomainTypeChip';
 import { useDomainListingData } from './hooks/useDomainListingData';
 
 const DomainListPage = () => {

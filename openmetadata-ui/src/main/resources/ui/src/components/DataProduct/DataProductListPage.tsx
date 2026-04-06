@@ -32,7 +32,6 @@ import { EntityType } from '../../enums/entity.enum';
 import { CreateDataProduct } from '../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../generated/api/domains/createDomain';
 import { DataProduct } from '../../generated/entity/domains/dataProduct';
-import { EntityReference } from '../../generated/entity/type';
 import { TagLabel } from '../../generated/type/tagLabel';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { addDataProducts, patchDataProduct } from '../../rest/dataProductAPI';
@@ -95,7 +94,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => { }}
+        onCancel={() => {}}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -121,7 +120,7 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => { },
+    onSubmit: () => {},
     loading: isLoading,
   });
 
@@ -228,7 +227,7 @@ const DataProductListPage = () => {
         case 'glossaryTerms':
           return renderTagList(getGlossaryTags(entity.tags));
         case 'domains': {
-          const domains = entity.domains
+          const domains = entity.domains;
           if (!domains?.length) {
             return <Typography size="text-sm">-</Typography>;
           }
@@ -236,10 +235,7 @@ const DataProductListPage = () => {
 
           return (
             <Box align="center" direction="row" gap={1}>
-              <Globe01
-                size={16}
-                style={{ flexShrink: 0 }}
-              />
+              <Globe01 size={16} style={{ flexShrink: 0 }} />
               <Typography size="text-sm">
                 {domain.displayName || domain.name}
               </Typography>

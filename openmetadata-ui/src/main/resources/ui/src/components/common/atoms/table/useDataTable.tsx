@@ -14,8 +14,8 @@
 import { Table } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
 import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Selection } from 'react-aria-components';
+import { useTranslation } from 'react-i18next';
 import Loader from '../../Loader/Loader';
 import { TableViewConfig } from '../shared/types';
 import { useCellRenderer } from './useCellRenderer';
@@ -85,7 +85,11 @@ export const useDataTable = <T extends { id: string; name?: string }>(
         onSelectionChange={handleSelectionChange}>
         <Table.Header columns={listing.columns}>
           {(column) => (
-            <Table.Head id={column.key} key={column.key} label={t(column.labelKey)} />
+            <Table.Head
+              id={column.key}
+              key={column.key}
+              label={t(column.labelKey)}
+            />
           )}
         </Table.Header>
         <Table.Body
@@ -100,9 +104,7 @@ export const useDataTable = <T extends { id: string; name?: string }>(
               columns={listing.columns}
               id={entity.id}
               key={entity.id}
-              onAction={() =>
-                listing.actionHandlers.onEntityClick?.(entity)
-              }>
+              onAction={() => listing.actionHandlers.onEntityClick?.(entity)}>
               {(column) => (
                 <Table.Cell key={column.key}>
                   {renderCell(entity, column)}

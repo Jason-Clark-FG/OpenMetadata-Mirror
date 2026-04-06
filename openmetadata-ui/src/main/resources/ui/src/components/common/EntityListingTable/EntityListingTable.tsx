@@ -107,9 +107,7 @@ const EntityListingTable = <T extends { id: string }>({
             key={entity.id}
             onAction={() => onEntityClick?.(entity)}>
             {(col) => (
-              <Table.Cell key={col.id}>
-                {renderCell(entity, col.id)}
-              </Table.Cell>
+              <Table.Cell key={col.id}>{renderCell(entity, col.id)}</Table.Cell>
             )}
           </Table.Row>
         )}
