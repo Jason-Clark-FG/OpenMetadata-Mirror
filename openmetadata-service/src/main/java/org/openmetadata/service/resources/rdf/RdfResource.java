@@ -283,6 +283,7 @@ public class RdfResource {
 
   @GET
   @Path("/graph/explore/export")
+  @Produces({JSON_LD, TURTLE, MediaType.APPLICATION_JSON})
   @Operation(
       operationId = "exportEntityGraph",
       summary = "Export explored entity graph",
