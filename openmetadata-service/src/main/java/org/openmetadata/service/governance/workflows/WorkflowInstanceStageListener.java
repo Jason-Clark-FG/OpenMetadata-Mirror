@@ -16,6 +16,7 @@ import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.NewStageRequest;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.jdbi3.WorkflowInstanceStateRepository;
@@ -111,7 +112,7 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
             failureData.put("errorClass", exc.getClass().getSimpleName());
 
             workflowInstanceStateRepository.updateStage(
-                stageId, System.currentTimeMillis(), failureData);
+                stageId, System.currentTimeMillis(), null, failureData);
 
             LOG.warn(
                 "[STAGE_FAILED_RECORDED] Workflow: {}, ProcessInstance: {}, Stage: {}, StageId: {} - Failed stage recorded in database",
@@ -203,26 +204,46 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
   }
 
   @SuppressWarnings("unchecked")
+  private Map<String, String> getStageInputNamespaceMap(
+      String workflowDefinitionName, String stageName) {
+    WorkflowDefinitionRepository workflowDefinitionRepository =
+        (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
+    WorkflowDefinition workflowDefinition =
+        workflowDefinitionRepository.getByNameForStageProcessing(workflowDefinitionName);
+    return workflowDefinition.getNodes().stream()
+        .filter(n -> stageName.equals(n.getName()))
+        .findFirst()
+        .map(WorkflowNodeDefinitionInterface::getInputNamespaceMap)
+        .map(m -> (Map<String, String>) JsonUtils.readOrConvertValue(m, Map.class))
+        .orElse(null);
+  }
+
   private List<String> resolveStageEntityList(
       String workflowDefinitionName, String stageName, WorkflowVariableHandler varHandler) {
     try {
-      WorkflowDefinitionRepository workflowDefinitionRepository =
-          (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
-      WorkflowDefinition workflowDefinition =
-          workflowDefinitionRepository.getByNameForStageProcessing(workflowDefinitionName);
       Map<String, String> inputNamespaceMap =
-          workflowDefinition.getNodes().stream()
-              .filter(n -> stageName.equals(n.getName()))
-              .findFirst()
-              .map(WorkflowNodeDefinitionInterface::getInputNamespaceMap)
-              .map(m -> (Map<String, String>) JsonUtils.readOrConvertValue(m, Map.class))
-              .orElse(null);
+          getStageInputNamespaceMap(workflowDefinitionName, stageName);
       if (inputNamespaceMap == null) {
         return null;
       }
       return WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
-    } catch (Exception e) {
+    } catch (EntityNotFoundException e) {
       LOG.debug("Could not resolve entityList for stage '{}': {}", stageName, e.getMessage());
+      return null;
+    }
+  }
+
+  private String resolveStageUpdatedBy(
+      String workflowDefinitionName, String stageName, Map<String, Object> variables) {
+    try {
+      Map<String, String> inputNamespaceMap =
+          getStageInputNamespaceMap(workflowDefinitionName, stageName);
+      if (inputNamespaceMap == null) {
+        return null;
+      }
+      return WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables);
+    } catch (EntityNotFoundException e) {
+      LOG.debug("Could not resolve updatedBy for stage '{}': {}", stageName, e.getMessage());
       return null;
     }
   }
@@ -249,8 +270,10 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
       return;
     }
 
+    Map<String, Object> variables = execution.getVariables();
+    String updatedBy = resolveStageUpdatedBy(workflowDefinitionName, stage, variables);
     workflowInstanceStateRepository.updateStage(
-        workflowInstanceStateId, System.currentTimeMillis(), execution.getVariables());
+        workflowInstanceStateId, System.currentTimeMillis(), updatedBy, variables);
 
     LOG.debug(
         "[STAGE_UPDATED] Workflow: {}, ProcessInstance: {}, Stage: {}, StageId: {} - Stage completion recorded",

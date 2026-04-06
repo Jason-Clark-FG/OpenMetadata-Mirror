@@ -3,7 +3,6 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FAILURE_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
-import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.ArrayList;
@@ -132,7 +131,7 @@ public class WorkflowInstanceStateRepository
   }
 
   public void updateStage(
-      UUID workflowInstanceStateId, Long endedAt, Map<String, Object> variables) {
+      UUID workflowInstanceStateId, Long endedAt, String updatedBy, Map<String, Object> variables) {
     WorkflowInstanceState workflowInstanceState =
         JsonUtils.readValue(
             timeSeriesDao.getById(workflowInstanceStateId), WorkflowInstanceState.class);
@@ -140,7 +139,9 @@ public class WorkflowInstanceStateRepository
     Stage stage = workflowInstanceState.getStage();
     stage.setEndedAt(endedAt);
     stage.setVariables(variables);
-    extractUpdatedBy(stage, variables);
+    if (updatedBy != null) {
+      stage.setUpdatedBy(updatedBy);
+    }
 
     workflowInstanceState.setStage(stage);
     workflowInstanceState.setStatus(WorkflowInstance.WorkflowStatus.FINISHED);
@@ -156,14 +157,6 @@ public class WorkflowInstanceStateRepository
     }
 
     getTimeSeriesDao().update(JsonUtils.pojoToJson(workflowInstanceState), workflowInstanceStateId);
-  }
-
-  private void extractUpdatedBy(Stage stage, Map<String, Object> variables) {
-    String updatedByKey = getNamespacedVariableName(stage.getName(), UPDATED_BY_VARIABLE);
-    Object updatedBy = variables.get(updatedByKey);
-    if (updatedBy instanceof String s) {
-      stage.setUpdatedBy(s);
-    }
   }
 
   public void updateStageWithTask(UUID taskId, UUID workflowInstanceStateId) {
@@ -200,6 +193,13 @@ public class WorkflowInstanceStateRepository
           workflowInstanceId,
           e.getMessage());
     }
+  }
+
+  public List<WorkflowInstanceState> listByScheduleRunId(String scheduleRunId) {
+    return ((CollectionDAO.WorkflowInstanceStateTimeSeriesDAO) timeSeriesDao)
+        .listByScheduleRunId(scheduleRunId).stream()
+            .map(json -> JsonUtils.readValue(json, WorkflowInstanceState.class))
+            .toList();
   }
 
   public List<WorkflowInstanceState> listAllStatesForInstance(UUID workflowInstanceId) {

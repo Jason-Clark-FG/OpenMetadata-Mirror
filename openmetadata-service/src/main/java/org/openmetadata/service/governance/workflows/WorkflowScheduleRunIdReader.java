@@ -5,8 +5,10 @@ import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_SC
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.delegate.DelegateExecution;
 
+@Slf4j
 public final class WorkflowScheduleRunIdReader {
   private WorkflowScheduleRunIdReader() {}
 
@@ -22,6 +24,17 @@ public final class WorkflowScheduleRunIdReader {
   }
 
   private static UUID toUuid(Object value) {
-    return value instanceof UUID uuid ? uuid : UUID.fromString(value.toString());
+    if (value instanceof UUID uuid) {
+      return uuid;
+    }
+    try {
+      return UUID.fromString(value.toString());
+    } catch (IllegalArgumentException e) {
+      LOG.warn(
+          "[WorkflowScheduleRunIdReader] Invalid scheduleRunId value '{}': {}",
+          value,
+          e.getMessage());
+      return null;
+    }
   }
 }

@@ -17,6 +17,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.SecurityContext;
+import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.governance.workflows.WorkflowInstance;
@@ -125,13 +126,15 @@ public class WorkflowInstanceResource
     ResourceContextInterface resourceContext = ReportDataContext.builder().build();
     authorizer.authorize(securityContext, operationContext, resourceContext);
 
+    if (scheduleRunId != null) {
+      List<WorkflowInstance> items = repository.listByScheduleRunId(scheduleRunId);
+      return new ResultList<>(items, null, null, items.size());
+    }
+
     ListFilter filter = new ListFilter(null);
     filter.addQueryParam("entityFQNHash", FullyQualifiedName.buildHash(workflowDefinitionName));
     if (entityLink != null) {
       filter.addQueryParam("entityLink", entityLink);
-    }
-    if (scheduleRunId != null) {
-      filter.addQueryParam("scheduleRunId", scheduleRunId);
     }
     return repository.list(offset, startTs, endTs, limitParam, filter, latest);
   }

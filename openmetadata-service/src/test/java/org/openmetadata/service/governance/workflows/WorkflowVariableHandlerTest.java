@@ -14,6 +14,7 @@
 package org.openmetadata.service.governance.workflows;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -88,7 +89,6 @@ class WorkflowVariableHandlerTest {
 
   @Test
   void getEntityListFromVariables_bandedKeyTakesPriorityOverPlain() {
-    // When inputNamespaceMap has a banded key (e.g., silver_entityList), it should be used.
     Map<String, String> inputNamespaceMap = Map.of("silver_entityList", "dataCompleteness1");
     Map<String, Object> variables =
         Map.of(
@@ -99,5 +99,55 @@ class WorkflowVariableHandlerTest {
         WorkflowVariableHandler.getEntityListFromVariables(inputNamespaceMap, variables);
 
     assertEquals(List.of("e2"), result);
+  }
+
+  @Test
+  void getUpdatedByFromVariables_resolvesFromNamespace() {
+    Map<String, String> inputNamespaceMap = Map.of("updatedBy", "userApproval");
+    Map<String, Object> variables =
+        Map.of("userApproval_updatedBy", "alice", "global_updatedBy", "bob");
+
+    assertEquals(
+        "alice", WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables));
+  }
+
+  @Test
+  void getUpdatedByFromVariables_ignoresOtherNamespacesWhenMapPointsElsewhere() {
+    Map<String, String> inputNamespaceMap = Map.of("updatedBy", "userApproval");
+    Map<String, Object> variables =
+        Map.of(
+            "global_updatedBy", "trigger-user",
+            "userApproval_updatedBy", "approver",
+            "otherNode_updatedBy", "bot");
+
+    assertEquals(
+        "approver",
+        WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables));
+  }
+
+  @Test
+  void getUpdatedByFromVariables_namespaceMissingFromMap_returnsNull() {
+    Map<String, String> inputNamespaceMap = Map.of("entityList", "global");
+    Map<String, Object> variables = Map.of("global_updatedBy", "alice");
+
+    assertNull(WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables));
+  }
+
+  @Test
+  void getUpdatedByFromVariables_variableNotSet_returnsNull() {
+    Map<String, String> inputNamespaceMap = Map.of("updatedBy", "userApproval");
+    Map<String, Object> variables = Map.of("global_entityList", List.of("e1"));
+
+    assertNull(WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables));
+  }
+
+  @Test
+  void getUpdatedByFromVariables_globalNamespace_resolvesGlobalKey() {
+    Map<String, String> inputNamespaceMap = Map.of("updatedBy", "global");
+    Map<String, Object> variables = Map.of("global_updatedBy", "trigger-user");
+
+    assertEquals(
+        "trigger-user",
+        WorkflowVariableHandler.getUpdatedByFromVariables(inputNamespaceMap, variables));
   }
 }

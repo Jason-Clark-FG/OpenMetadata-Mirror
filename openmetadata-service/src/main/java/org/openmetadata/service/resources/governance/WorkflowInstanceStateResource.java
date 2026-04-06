@@ -18,6 +18,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.SecurityContext;
+import java.util.List;
 import java.util.UUID;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -115,10 +116,11 @@ public class WorkflowInstanceStateResource
     ResourceContextInterface resourceContext = ReportDataContext.builder().build();
     authorizer.authorize(securityContext, operationContext, resourceContext);
 
-    ListFilter filter = new ListFilter(null);
     if (scheduleRunId != null) {
-      filter.addQueryParam("scheduleRunId", scheduleRunId);
+      List<WorkflowInstanceState> items = repository.listByScheduleRunId(scheduleRunId);
+      return new ResultList<>(items, null, null, items.size());
     }
+    ListFilter filter = new ListFilter(null);
     return repository.list(offset, startTs, endTs, limitParam, filter, latest);
   }
 

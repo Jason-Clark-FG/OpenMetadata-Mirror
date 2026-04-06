@@ -3,9 +3,9 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
-import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,7 +77,7 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
     }
 
     workflowInstance.setStatus(workflowStatus);
-    workflowInstance.setUpdatedBy(extractUpdatedBy(variables));
+    workflowInstance.setUpdatedBy(WorkflowInstanceRepository.extractUpdatedByFromStates(states));
 
     Optional<String> oException =
         Optional.ofNullable(
@@ -98,13 +98,21 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
     return obj instanceof List ? (List<String>) obj : null;
   }
 
-  private String extractUpdatedBy(Map<String, Object> variables) {
-    String suffix = "_" + UPDATED_BY_VARIABLE;
-    return variables.entrySet().stream()
-        .filter(e -> e.getKey().endsWith(suffix) && e.getValue() instanceof String)
-        .map(e -> (String) e.getValue())
-        .findFirst()
+  static String extractUpdatedByFromStates(List<WorkflowInstanceState> states) {
+    return states.stream()
+        .filter(s -> s.getStage() != null && s.getStage().getUpdatedBy() != null)
+        .max(
+            Comparator.comparingLong(
+                s -> Optional.ofNullable(s.getStage().getEndedAt()).orElse(0L)))
+        .map(s -> s.getStage().getUpdatedBy())
         .orElse(null);
+  }
+
+  public List<WorkflowInstance> listByScheduleRunId(String scheduleRunId) {
+    return ((CollectionDAO.WorkflowInstanceTimeSeriesDAO) timeSeriesDao)
+        .listByScheduleRunId(scheduleRunId).stream()
+            .map(json -> JsonUtils.readValue(json, WorkflowInstance.class))
+            .toList();
   }
 
   /**

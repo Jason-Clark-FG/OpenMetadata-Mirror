@@ -5,6 +5,8 @@ import static org.flowable.common.engine.api.delegate.event.FlowableEngineEventT
 import static org.flowable.common.engine.api.delegate.event.FlowableEngineEventType.PROCESS_COMPLETED_WITH_ERROR_END_EVENT;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_SCHEDULE_RUN_ID_VARIABLE;
+import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +24,7 @@ import org.flowable.engine.runtime.ProcessInstance;
 import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.governance.workflows.elements.TriggerFactory;
+import org.openmetadata.service.jdbi3.NewStageRequest;
 import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.jdbi3.WorkflowInstanceRepository;
 import org.openmetadata.service.jdbi3.WorkflowInstanceStateRepository;
@@ -210,16 +213,17 @@ public class WorkflowFailureListener implements FlowableEventListener {
               Entity.getEntityTimeSeriesRepository(Entity.WORKFLOW_INSTANCE_STATE);
 
       UUID executionId = UUID.nameUUIDFromBytes(processInstanceId.getBytes());
+      UUID scheduleRunId = readScheduleRunIdFromProcess(processInstanceId);
 
       UUID stageId =
           stateRepository.addNewStageToInstance(
-              new org.openmetadata.service.jdbi3.NewStageRequest(
+              new NewStageRequest(
                   WORKFLOW_FAILURE_LISTENER_STAGE,
                   executionId,
                   workflowInstanceId,
                   workflowName,
                   System.currentTimeMillis(),
-                  null,
+                  scheduleRunId,
                   null));
 
       Map<String, Object> stageData = new HashMap<>();
@@ -228,7 +232,7 @@ public class WorkflowFailureListener implements FlowableEventListener {
       stageData.put("processInstanceId", processInstanceId);
       stageData.put("exception", errorMessage);
 
-      stateRepository.updateStage(stageId, System.currentTimeMillis(), stageData);
+      stateRepository.updateStage(stageId, System.currentTimeMillis(), null, stageData);
 
       LOG.info(
           "[WorkflowFailure] FAILURE_STAGE_ADDED: workflowInstanceId={}, stageId={}",
@@ -242,6 +246,30 @@ public class WorkflowFailureListener implements FlowableEventListener {
           e.getMessage(),
           e);
     }
+  }
+
+  private UUID readScheduleRunIdFromProcess(String processInstanceId) {
+    try {
+      RuntimeService runtimeService = ProcessEngines.getDefaultProcessEngine().getRuntimeService();
+      Object plain =
+          runtimeService.getVariable(processInstanceId, WORKFLOW_SCHEDULE_RUN_ID_VARIABLE);
+      if (plain instanceof UUID uuid) {
+        return uuid;
+      }
+      Object namespaced =
+          runtimeService.getVariable(
+              processInstanceId,
+              getNamespacedVariableName(GLOBAL_NAMESPACE, WORKFLOW_SCHEDULE_RUN_ID_VARIABLE));
+      if (namespaced instanceof UUID uuid) {
+        return uuid;
+      }
+    } catch (Exception e) {
+      LOG.debug(
+          "[WorkflowFailure] Could not read scheduleRunId for process {}: {}",
+          processInstanceId,
+          e.getMessage());
+    }
+    return null;
   }
 
   private boolean isStageStatusEnabled(String workflowDefinitionKey) {

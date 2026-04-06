@@ -13,6 +13,7 @@
 
 package org.openmetadata.service.governance.workflows;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -72,6 +73,13 @@ class WorkflowScheduleRunIdReaderTest {
     when(execution.getVariable(namespacedKey)).thenReturn(null);
 
     assertNull(WorkflowScheduleRunIdReader.readFrom(execution));
+  }
+
+  @Test
+  void readFrom_malformedStringVariable_returnsNullWithoutThrowing() {
+    when(execution.getVariable(WORKFLOW_SCHEDULE_RUN_ID_VARIABLE)).thenReturn("not-a-uuid");
+
+    assertDoesNotThrow(() -> assertNull(WorkflowScheduleRunIdReader.readFrom(execution)));
   }
 
   @Test

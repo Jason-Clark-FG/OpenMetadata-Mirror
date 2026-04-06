@@ -3,6 +3,7 @@ package org.openmetadata.service.governance.workflows;
 import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FAILURE_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 
 import java.util.List;
 import java.util.Map;
@@ -166,6 +167,16 @@ public class WorkflowVariableHandler {
       }
     }
     return List.of();
+  }
+
+  public static String getUpdatedByFromVariables(
+      Map<String, ?> inputNamespaceMap, Map<String, Object> variables) {
+    String namespace = (String) inputNamespaceMap.get(UPDATED_BY_VARIABLE);
+    if (namespace == null) {
+      return null;
+    }
+    Object value = variables.get(getNamespacedVariableName(namespace, UPDATED_BY_VARIABLE));
+    return value instanceof String s ? s : null;
   }
 
   public void setFailure(boolean failure) {
