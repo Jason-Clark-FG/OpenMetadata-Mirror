@@ -98,6 +98,11 @@ export const useCellRenderer = <
                 />
               );
             })}
+            {owners.length > 5 && (
+              <Typography size="text-xs" weight="medium">
+                +{owners.length - 5}
+              </Typography>
+            )}
           </Box>
         );
       },
