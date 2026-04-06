@@ -1,9 +1,12 @@
 package org.openmetadata.service.search.indexes;
 
+import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.SneakyThrows;
+import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.tests.TestCase;
 import org.openmetadata.schema.tests.TestDefinition;
 import org.openmetadata.schema.tests.TestSuite;
@@ -61,6 +64,25 @@ public record TestCaseIndex(TestCase testCase) implements TaggableIndex {
   }
 
   private void setParentRelationships(Map<String, Object> doc, TestCase testCase) {
+    // Inherit domains from linked entity if the test case has none directly
+    if (nullOrEmpty(testCase.getDomains())) {
+      try {
+        MessageParser.EntityLink entityLink =
+            MessageParser.EntityLink.parse(testCase.getEntityLink());
+        EntityInterface linkedEntity =
+            Entity.getEntityByName(
+                entityLink.getEntityType(), entityLink.getEntityFQN(), "domains", Include.ALL);
+        if (linkedEntity != null && !nullOrEmpty(linkedEntity.getDomains())) {
+          doc.put("domains", getEntitiesWithDisplayName(linkedEntity.getDomains()));
+        }
+      } catch (Exception ex) {
+        LOG.warn(
+            "Failed to inherit domains for TestCase [{}]: {}",
+            testCase.getFullyQualifiedName(),
+            ex.getMessage());
+      }
+    }
+
     EntityReference testSuiteEntityReference = testCase.getTestSuite();
     if (testSuiteEntityReference == null) {
       return;

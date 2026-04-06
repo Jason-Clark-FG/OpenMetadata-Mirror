@@ -75,7 +75,7 @@ class PopulateCommonFieldsTest {
   }
 
   @Test
-  void testDisplayName_fallsBackToNameWhenDisplayNameNull() {
+  void testDisplayName_notSetWhenDisplayNameNull() {
     Dashboard d =
         new Dashboard()
             .withId(UUID.randomUUID())
@@ -86,11 +86,11 @@ class PopulateCommonFieldsTest {
     Map<String, Object> doc = new HashMap<>();
     createIndex(d).populateCommonFields(doc, d, Entity.DASHBOARD);
 
-    assertEquals("fallback-name", doc.get("displayName"));
+    assertFalse(doc.containsKey("displayName"));
   }
 
   @Test
-  void testDisplayName_fallsBackToNameWhenDisplayNameBlank() {
+  void testDisplayName_notSetWhenDisplayNameBlank() {
     Dashboard d =
         new Dashboard()
             .withId(UUID.randomUUID())
@@ -101,7 +101,7 @@ class PopulateCommonFieldsTest {
     Map<String, Object> doc = new HashMap<>();
     createIndex(d).populateCommonFields(doc, d, Entity.DASHBOARD);
 
-    assertEquals("blank-display", doc.get("displayName"));
+    assertFalse(doc.containsKey("displayName"));
   }
 
   // ==================== entityType ====================

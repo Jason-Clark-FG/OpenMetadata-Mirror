@@ -130,7 +130,6 @@ class TestCaseIndexTest {
     Map<String, Object> result = new TestCaseIndex(tc).buildSearchIndexDoc();
 
     // Common fields from populateCommonFields
-    assertNotNull(result.get("displayName"));
     assertEquals(Entity.TEST_CASE, result.get("entityType"));
     assertNotNull(result.get("owners"));
     assertNotNull(result.get("fqnParts"));

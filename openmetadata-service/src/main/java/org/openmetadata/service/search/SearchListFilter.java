@@ -233,9 +233,7 @@ public class SearchListFilter extends Filter<SearchListFilter> {
 
     if (tier != null) {
       conditions.add(
-          String.format(
-              "{\"nested\":{\"path\":\"tags\",\"query\":{\"terms\":{\"tags.tagFQN\":[\"%s\"]}}}}",
-              escapeDoubleQuotes(tier)));
+          String.format("{\"term\":{\"tier.tagFQN\":\"%s\"}}", escapeDoubleQuotes(tier)));
     }
 
     if (serviceName != null) {

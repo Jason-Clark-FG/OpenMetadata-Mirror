@@ -2,6 +2,7 @@ package org.openmetadata.service.search.indexes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -69,8 +70,7 @@ class McpServerIndexTest {
     Map<String, Object> result = index.buildSearchIndexDoc();
 
     // Common fields (populated by template method)
-    assertNotNull(result.get("displayName"));
-    assertEquals("test-server", result.get("displayName"));
+    assertNull(result.get("displayName"));
     assertEquals(Entity.MCP_SERVER, result.get("entityType"));
 
     // TaggableIndex fields

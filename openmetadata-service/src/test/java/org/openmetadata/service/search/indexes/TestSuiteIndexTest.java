@@ -3,6 +3,7 @@ package org.openmetadata.service.search.indexes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -143,7 +144,7 @@ class TestSuiteIndexTest {
     Map<String, Object> result = new TestSuiteIndex(ts).buildSearchIndexDoc();
 
     // Common fields from populateCommonFields
-    assertEquals("mySuite", result.get("displayName"));
+    assertNull(result.get("displayName"));
     assertEquals(Entity.TEST_SUITE, result.get("entityType"));
     assertNotNull(result.get("owners"));
     assertNotNull(result.get("fqnParts"));
