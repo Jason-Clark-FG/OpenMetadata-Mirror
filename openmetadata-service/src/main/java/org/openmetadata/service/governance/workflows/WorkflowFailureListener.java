@@ -253,23 +253,21 @@ public class WorkflowFailureListener implements FlowableEventListener {
       RuntimeService runtimeService = ProcessEngines.getDefaultProcessEngine().getRuntimeService();
       Object plain =
           runtimeService.getVariable(processInstanceId, WORKFLOW_SCHEDULE_RUN_ID_VARIABLE);
-      if (plain instanceof UUID uuid) {
-        return uuid;
+      if (plain != null) {
+        return WorkflowScheduleRunIdReader.toUuid(plain);
       }
       Object namespaced =
           runtimeService.getVariable(
               processInstanceId,
               getNamespacedVariableName(GLOBAL_NAMESPACE, WORKFLOW_SCHEDULE_RUN_ID_VARIABLE));
-      if (namespaced instanceof UUID uuid) {
-        return uuid;
-      }
+      return namespaced != null ? WorkflowScheduleRunIdReader.toUuid(namespaced) : null;
     } catch (Exception e) {
       LOG.debug(
           "[WorkflowFailure] Could not read scheduleRunId for process {}: {}",
           processInstanceId,
           e.getMessage());
+      return null;
     }
-    return null;
   }
 
   private boolean isStageStatusEnabled(String workflowDefinitionKey) {

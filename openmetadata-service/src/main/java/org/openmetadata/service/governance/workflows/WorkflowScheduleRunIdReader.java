@@ -23,7 +23,7 @@ public final class WorkflowScheduleRunIdReader {
     return namespaced != null ? toUuid(namespaced) : null;
   }
 
-  private static UUID toUuid(Object value) {
+  static UUID toUuid(Object value) {
     if (value instanceof UUID uuid) {
       return uuid;
     }
