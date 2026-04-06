@@ -182,6 +182,21 @@ class SourceConnectionTest(TestCase):
         )
         assert "databricks+connector" not in url
 
+    def test_databricks_url_with_special_chars_in_catalog(self):
+        from metadata.ingestion.source.database.databricks.connection import (
+            get_connection_url,
+        )
+
+        databricks_conn_obj = DatabricksConnection(
+            scheme=DatabricksScheme.databricks,
+            hostPort="1.1.1.1:443",
+            authType=PersonalAccessToken(token="KlivDTACWXKmZVfN1qIM"),
+            httpPath="/sql/1.0/warehouses/abcdedfg",
+            catalog="my catalog&name=val",
+        )
+        url = get_connection_url(databricks_conn_obj)
+        assert url == "databricks://1.1.1.1:443?catalog=my+catalog%26name%3Dval"
+
     def test_unity_catalog_url_without_catalog(self):
         from metadata.generated.schema.entity.services.connections.database.unityCatalogConnection import (
             DatabricksScheme as UCDatabricksScheme,
@@ -224,6 +239,30 @@ class SourceConnectionTest(TestCase):
         assert (
             url
             == "databricks://my-workspace.cloud.databricks.com:443?catalog=production"
+        )
+
+    def test_unity_catalog_url_with_special_chars_in_catalog(self):
+        from metadata.generated.schema.entity.services.connections.database.unityCatalogConnection import (
+            DatabricksScheme as UCDatabricksScheme,
+        )
+        from metadata.generated.schema.entity.services.connections.database.unityCatalogConnection import (
+            UnityCatalogConnection,
+        )
+        from metadata.ingestion.source.database.unitycatalog.connection import (
+            get_connection_url,
+        )
+
+        conn_obj = UnityCatalogConnection(
+            scheme=UCDatabricksScheme.databricks,
+            hostPort="my-workspace.cloud.databricks.com:443",
+            authType=PersonalAccessToken(token="dapi1234567890"),
+            httpPath="/sql/1.0/warehouses/abc",
+            catalog="my catalog&name=val",
+        )
+        url = get_connection_url(conn_obj)
+        assert (
+            url
+            == "databricks://my-workspace.cloud.databricks.com:443?catalog=my+catalog%26name%3Dval"
         )
 
     def test_hive_url(self):

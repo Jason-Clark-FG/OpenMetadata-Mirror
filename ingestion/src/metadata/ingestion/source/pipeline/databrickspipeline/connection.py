@@ -13,7 +13,6 @@
 Source connection handler
 """
 import logging
-
 from typing import Optional
 
 from metadata.generated.schema.entity.automations.workflow import (

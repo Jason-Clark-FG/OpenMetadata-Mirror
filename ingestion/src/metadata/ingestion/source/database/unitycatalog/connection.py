@@ -16,6 +16,7 @@ import logging
 from copy import deepcopy
 from functools import partial
 from typing import Optional
+from urllib.parse import quote_plus
 
 from databricks.sdk import WorkspaceClient
 from sqlalchemy import text
@@ -71,7 +72,7 @@ logging.getLogger("databricks.sql.session").setLevel(logging.ERROR)
 def get_connection_url(connection: UnityCatalogConnection) -> str:
     url = f"{connection.scheme.value}://{connection.hostPort}"
     if connection.catalog:
-        url = f"{url}?catalog={connection.catalog}"
+        url = f"{url}?catalog={quote_plus(connection.catalog)}"
     return url
 
 

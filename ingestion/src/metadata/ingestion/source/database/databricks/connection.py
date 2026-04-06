@@ -16,6 +16,7 @@ import logging
 from copy import deepcopy
 from functools import partial
 from typing import Optional
+from urllib.parse import quote_plus
 
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -139,7 +140,7 @@ class DatabricksEngineWrapper:
 def get_connection_url(connection: DatabricksConnection) -> str:
     url = f"{connection.scheme.value}://{connection.hostPort}"
     if connection.catalog:
-        url = f"{url}?catalog={connection.catalog}"
+        url = f"{url}?catalog={quote_plus(connection.catalog)}"
     return url
 
 
