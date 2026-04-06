@@ -15,7 +15,7 @@ import { Button } from '@openmetadata/ui-core-components';
 import Form, { IChangeEvent } from '@rjsf/core';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { transformErrors } from '../../../utils/formUtils';
 import { formatFormDataForRender } from '../../../utils/JSONSchemaFormUtils';
@@ -50,6 +50,12 @@ const FormBuilderV1 = ({
   const [localFormData, setLocalFormData] = useState(
     formatFormDataForRender((formData ?? {}) as Record<string, unknown>)
   );
+
+  useEffect(() => {
+    setLocalFormData(
+      formatFormDataForRender((formData ?? {}) as Record<string, unknown>)
+    );
+  }, [formData]);
 
   const handleCancel = () => {
     setLocalFormData(

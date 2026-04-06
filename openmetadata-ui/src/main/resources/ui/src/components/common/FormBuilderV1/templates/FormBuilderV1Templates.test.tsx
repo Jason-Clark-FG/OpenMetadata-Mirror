@@ -40,6 +40,16 @@ jest.mock('@openmetadata/ui-core-components', () => ({
       </button>
     )
   ),
+  Typography: jest.fn(
+    ({
+      children,
+      as: Tag = 'span',
+      ...props
+    }: {
+      children: React.ReactNode;
+      as?: React.ElementType;
+    }) => <Tag {...props}>{children}</Tag>
+  ),
 }));
 
 jest.mock('@untitledui/icons', () => ({
@@ -127,7 +137,7 @@ describe('FormBuilderV1 templates', () => {
     expect(screen.getByText('first child')).toBeInTheDocument();
     expect(screen.getByText('second child')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'trash-icon' }));
+    fireEvent.click(screen.getByRole('button', { name: 'label.remove' }));
 
     expect(onDropIndexClick).toHaveBeenCalledWith(0);
   });

@@ -209,6 +209,26 @@ describe('FormBuilderV1', () => {
     );
   });
 
+  it('syncs localFormData when the formData prop changes', async () => {
+    const { rerender } = render(
+      <FormBuilderV1 formData={{ name: 'initial' }} schema={schema} />
+    );
+
+    expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({
+      name: 'initial',
+      formatted: true,
+    });
+
+    rerender(<FormBuilderV1 formData={{ name: 'updated' }} schema={schema} />);
+
+    await waitFor(() => {
+      expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({
+        name: 'updated',
+        formatted: true,
+      });
+    });
+  });
+
   it('hides the cancel button when requested', () => {
     render(<FormBuilderV1 hideCancelButton formData={{}} schema={schema} />);
 
