@@ -654,17 +654,15 @@ const ExploreV1: React.FC<ExploreProps> = ({
             <div className="export-scope-option-card-inner">
               <Radio value="visible" />
               <div>
-                <div className="d-flex items-center gap-2">
-                  <Typography.Text className="text-sm font-semibold">
-                    {`${t('label.visible-result-plural')} `}
-                    <Typography.Text className="text-sm" type="secondary">
-                      ({visibleResultCount} {t('label.result-plural')})
-                    </Typography.Text>
-                  </Typography.Text>
-                </div>
-                <Typography.Text className="text-sm" type="secondary">
-                  {t('message.export-visible-results-description')}
+                <Typography.Text className="text-sm font-semibold">
+                  {t('label.visible-result-plural')}
                 </Typography.Text>
+                <Typography.Text className="text-sm" type="secondary">
+                  {` (${visibleResultCount} ${t('label.result-plural')})`}
+                </Typography.Text>
+                <Typography.Paragraph className="m-b-0 m-t-xss text-sm" type="secondary">
+                  {t('message.export-visible-results-description')}
+                </Typography.Paragraph>
               </div>
             </div>
           </div>
@@ -677,16 +675,16 @@ const ExploreV1: React.FC<ExploreProps> = ({
               <Radio value="all" />
               <div>
                 <Typography.Text className="text-sm font-semibold">
-                  {`${t('label.all-matching-asset-plural')} `}
-                  {allAssetsCount !== undefined && (
-                    <Typography.Text className="text-sm" type="secondary">
-                      ({allAssetsCount} {t('label.result-plural')})
-                    </Typography.Text>
-                  )}
+                  {t('label.all-matching-asset-plural')}
                 </Typography.Text>
-                <Typography.Text className="text-sm" type="secondary">
+                {allAssetsCount !== undefined && (
+                  <Typography.Text className="text-sm" type="secondary">
+                    {` (${allAssetsCount} ${t('label.result-plural')})`}
+                  </Typography.Text>
+                )}
+                <Typography.Paragraph className="m-b-0 m-t-xss text-sm" type="secondary">
                   {t('message.export-all-matching-assets-description')}
-                </Typography.Text>
+                </Typography.Paragraph>
               </div>
             </div>
           </div>

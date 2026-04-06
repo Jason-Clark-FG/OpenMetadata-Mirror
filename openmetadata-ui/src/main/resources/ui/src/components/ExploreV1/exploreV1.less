@@ -26,14 +26,16 @@
 .export-scope-option-card {
   flex: 1;
   cursor: pointer;
+  display: flex;
 
   .export-scope-option-card-inner {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    border-radius: @border-rad-base;
+    border-radius: @border-rad-sm;
     padding: @padding-md;
     border: 1px solid @border-color;
+    width: 100%;
   }
 
   &.selected .export-scope-option-card-inner {
