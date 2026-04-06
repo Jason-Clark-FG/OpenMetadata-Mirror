@@ -20,37 +20,6 @@ import {
 import { ExploreSearchIndex } from '../Explore/ExplorePage.interface';
 import ExploreV1 from './ExploreV1.component';
 
-jest.mock('@openmetadata/ui-core-components', () => {
-  const Button = ({
-    children,
-    iconLeading,
-    onClick,
-    ...rest
-  }: {
-    children?: import('react').ReactNode;
-    iconLeading?: import('react').ReactNode;
-    onClick?: () => void;
-  } & Record<string, unknown>) => (
-    <button type="button" onClick={onClick} {...rest}>
-      {iconLeading}
-      {children}
-    </button>
-  );
-
-  const Typography = ({
-    children,
-    ...rest
-  }: {
-    children?: import('react').ReactNode;
-  } & Record<string, unknown>) => <span {...rest}>{children}</span>;
-
-  return { Button, Typography };
-});
-
-jest.mock('@untitledui/icons', () => ({
-  Download01: () => <span data-testid="download-01-icon" />,
-}));
-
 jest.mock('../../rest/searchAPI', () => ({
   exportSearchResultsCsvStream: jest
     .fn()

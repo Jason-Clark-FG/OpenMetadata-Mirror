@@ -23,6 +23,24 @@
   }
 }
 
+.export-scope-option-card {
+  flex: 1;
+  cursor: pointer;
+
+  .export-scope-option-card-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: @border-rad-base;
+    padding: @padding-md;
+    border: 1px solid @border-color;
+  }
+
+  &.selected .export-scope-option-card-inner {
+    border-color: @primary-color;
+  }
+}
+
 .explore-page {
   .sorting-dropdown-container {
     .ant-typography {
