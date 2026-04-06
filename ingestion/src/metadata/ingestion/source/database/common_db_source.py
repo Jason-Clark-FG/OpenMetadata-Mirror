@@ -533,7 +533,7 @@ class CommonDbSourceService(
         by default there will be no location path
         """
 
-def get_table_extensions(self, table_name: str):
+    def get_table_extensions(self, table_name: str):
         """
         Method to fetch the extensions of the table
         """
