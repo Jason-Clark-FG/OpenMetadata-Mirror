@@ -1,7 +1,9 @@
 package org.openmetadata.service.jdbi3;
 
+import static org.openmetadata.service.governance.workflows.Workflow.ENTITY_LIST_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.List;
@@ -33,18 +35,23 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
       String workflowDefinitionName,
       UUID workflowInstanceId,
       Long startedAt,
-      Map<String, Object> variables) {
+      Map<String, Object> variables,
+      UUID scheduleRunId) {
     WorkflowDefinitionRepository workflowDefinitionRepository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
     UUID workflowDefinitionId = workflowDefinitionRepository.getIdFromName(workflowDefinitionName);
+
+    List<String> entityList = extractEntityList(variables);
 
     createNewRecord(
         new WorkflowInstance()
             .withId(workflowInstanceId)
             .withWorkflowDefinitionId(workflowDefinitionId)
+            .withScheduleRunId(scheduleRunId)
             .withStartedAt(startedAt)
             .withStatus(WorkflowInstance.WorkflowStatus.RUNNING)
             .withVariables(variables)
+            .withEntityList(entityList)
             .withTimestamp(System.currentTimeMillis()),
         workflowDefinitionName);
   }
@@ -70,6 +77,7 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
     }
 
     workflowInstance.setStatus(workflowStatus);
+    workflowInstance.setUpdatedBy(extractUpdatedBy(variables));
 
     Optional<String> oException =
         Optional.ofNullable(
@@ -82,6 +90,21 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
     }
 
     getTimeSeriesDao().update(JsonUtils.pojoToJson(workflowInstance), workflowInstanceId);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> extractEntityList(Map<String, Object> variables) {
+    Object obj = variables.get(getNamespacedVariableName(GLOBAL_NAMESPACE, ENTITY_LIST_VARIABLE));
+    return obj instanceof List ? (List<String>) obj : null;
+  }
+
+  private String extractUpdatedBy(Map<String, Object> variables) {
+    String suffix = "_" + UPDATED_BY_VARIABLE;
+    return variables.entrySet().stream()
+        .filter(e -> e.getKey().endsWith(suffix) && e.getValue() instanceof String)
+        .map(e -> (String) e.getValue())
+        .findFirst()
+        .orElse(null);
   }
 
   /**

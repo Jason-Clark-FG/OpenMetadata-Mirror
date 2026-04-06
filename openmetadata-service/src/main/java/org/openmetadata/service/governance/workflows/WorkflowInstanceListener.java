@@ -101,12 +101,14 @@ public class WorkflowInstanceListener implements JavaDelegate {
         getMainWorkflowDefinitionNameFromTrigger(
             getProcessDefinitionKeyFromId(execution.getProcessDefinitionId()));
     UUID workflowInstanceId = UUID.fromString(execution.getProcessInstanceBusinessKey());
+    UUID scheduleRunId = WorkflowScheduleRunIdReader.readFrom(execution);
 
     workflowInstanceRepository.addNewWorkflowInstance(
         workflowDefinitionName,
         workflowInstanceId,
         System.currentTimeMillis(),
-        execution.getVariables());
+        execution.getVariables(),
+        scheduleRunId);
     LOG.debug(
         "[WORKFLOW_INSTANCE_CREATED] Workflow: {}, InstanceId: {}, ProcessInstance: {} - Workflow instance record created successfully",
         workflowDefinitionName,

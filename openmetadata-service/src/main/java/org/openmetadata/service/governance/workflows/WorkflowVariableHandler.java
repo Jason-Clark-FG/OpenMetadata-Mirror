@@ -144,6 +144,30 @@ public class WorkflowVariableHandler {
     return List.of();
   }
 
+  @SuppressWarnings("unchecked")
+  public static List<String> getEntityListFromVariables(
+      Map<String, ?> inputNamespaceMap, Map<String, Object> variables) {
+    for (Map.Entry<String, ?> entry : inputNamespaceMap.entrySet()) {
+      String key = entry.getKey();
+      String namespace = (String) entry.getValue();
+      if (key.endsWith("_" + ENTITY_LIST_VARIABLE) && namespace != null) {
+        Object obj = variables.get(getNamespacedVariableName(namespace, key));
+        if (obj instanceof List) {
+          return (List<String>) obj;
+        }
+      }
+    }
+    String entityListNamespace = (String) inputNamespaceMap.get(ENTITY_LIST_VARIABLE);
+    if (entityListNamespace != null) {
+      Object obj =
+          variables.get(getNamespacedVariableName(entityListNamespace, ENTITY_LIST_VARIABLE));
+      if (obj instanceof List) {
+        return (List<String>) obj;
+      }
+    }
+    return List.of();
+  }
+
   public void setFailure(boolean failure) {
     if (failure) {
       varScope.setTransientVariable(FAILURE_VARIABLE, true);

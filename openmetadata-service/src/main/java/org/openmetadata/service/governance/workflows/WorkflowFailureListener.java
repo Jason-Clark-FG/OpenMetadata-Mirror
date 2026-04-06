@@ -213,11 +213,14 @@ public class WorkflowFailureListener implements FlowableEventListener {
 
       UUID stageId =
           stateRepository.addNewStageToInstance(
-              WORKFLOW_FAILURE_LISTENER_STAGE,
-              executionId,
-              workflowInstanceId,
-              workflowName,
-              System.currentTimeMillis());
+              new org.openmetadata.service.jdbi3.NewStageRequest(
+                  WORKFLOW_FAILURE_LISTENER_STAGE,
+                  executionId,
+                  workflowInstanceId,
+                  workflowName,
+                  System.currentTimeMillis(),
+                  null,
+                  null));
 
       Map<String, Object> stageData = new HashMap<>();
       stageData.put("status", "FAILED");

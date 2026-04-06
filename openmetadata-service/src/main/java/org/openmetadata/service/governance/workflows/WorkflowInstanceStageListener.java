@@ -5,12 +5,19 @@ import static org.openmetadata.service.governance.workflows.Workflow.STAGE_INSTA
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_INSTANCE_EXECUTION_ID_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
+import org.openmetadata.schema.governance.workflows.WorkflowDefinition;
+import org.openmetadata.schema.governance.workflows.elements.WorkflowNodeDefinitionInterface;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.jdbi3.NewStageRequest;
+import org.openmetadata.service.jdbi3.WorkflowDefinitionRepository;
 import org.openmetadata.service.jdbi3.WorkflowInstanceStateRepository;
 
 @Slf4j
@@ -89,11 +96,14 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
             // Create a failed stage record
             UUID stageId =
                 workflowInstanceStateRepository.addNewStageToInstance(
-                    stage + "_failed",
-                    executionId,
-                    workflowInstanceId,
-                    workflowName,
-                    System.currentTimeMillis());
+                    new NewStageRequest(
+                        stage + "_failed",
+                        executionId,
+                        workflowInstanceId,
+                        workflowName,
+                        System.currentTimeMillis(),
+                        WorkflowScheduleRunIdReader.readFrom(execution),
+                        null));
 
             java.util.Map<String, Object> failureData = new java.util.HashMap<>();
             failureData.put("status", "FAILED");
@@ -172,13 +182,17 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
 
     String stage =
         Optional.ofNullable(execution.getCurrentActivityId()).orElse(workflowDefinitionName);
+    List<String> entityList = resolveStageEntityList(workflowDefinitionName, stage, varHandler);
     UUID workflowInstanceStateId =
         workflowInstanceStateRepository.addNewStageToInstance(
-            stage,
-            workflowInstanceExecutionId,
-            workflowInstanceId,
-            workflowDefinitionName,
-            System.currentTimeMillis());
+            new NewStageRequest(
+                stage,
+                workflowInstanceExecutionId,
+                workflowInstanceId,
+                workflowDefinitionName,
+                System.currentTimeMillis(),
+                WorkflowScheduleRunIdReader.readFrom(execution),
+                entityList));
     varHandler.setNodeVariable(STAGE_INSTANCE_STATE_ID_VARIABLE, workflowInstanceStateId);
     LOG.debug(
         "[STAGE_CREATED] Workflow: {}, ProcessInstance: {}, Stage: {}, StageId: {} - Stage record created successfully",
@@ -186,6 +200,31 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
         processInstanceId,
         stage,
         workflowInstanceStateId);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<String> resolveStageEntityList(
+      String workflowDefinitionName, String stageName, WorkflowVariableHandler varHandler) {
+    try {
+      WorkflowDefinitionRepository workflowDefinitionRepository =
+          (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
+      WorkflowDefinition workflowDefinition =
+          workflowDefinitionRepository.getByNameForStageProcessing(workflowDefinitionName);
+      Map<String, String> inputNamespaceMap =
+          workflowDefinition.getNodes().stream()
+              .filter(n -> stageName.equals(n.getName()))
+              .findFirst()
+              .map(WorkflowNodeDefinitionInterface::getInputNamespaceMap)
+              .map(m -> (Map<String, String>) JsonUtils.readOrConvertValue(m, Map.class))
+              .orElse(null);
+      if (inputNamespaceMap == null) {
+        return null;
+      }
+      return WorkflowVariableHandler.getEntityList(inputNamespaceMap, varHandler);
+    } catch (Exception e) {
+      LOG.debug("Could not resolve entityList for stage '{}': {}", stageName, e.getMessage());
+      return null;
+    }
   }
 
   private void updateStage(

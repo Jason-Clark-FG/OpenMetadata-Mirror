@@ -3,6 +3,7 @@ package org.openmetadata.service.jdbi3;
 import static org.openmetadata.service.governance.workflows.Workflow.EXCEPTION_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.FAILURE_VARIABLE;
 import static org.openmetadata.service.governance.workflows.Workflow.GLOBAL_NAMESPACE;
+import static org.openmetadata.service.governance.workflows.Workflow.UPDATED_BY_VARIABLE;
 import static org.openmetadata.service.governance.workflows.WorkflowVariableHandler.getNamespacedVariableName;
 
 import java.util.ArrayList;
@@ -93,48 +94,41 @@ public class WorkflowInstanceStateRepository
     return id;
   }
 
-  public UUID addNewStageToInstance(
-      String workflowInstanceStage,
-      UUID workflowInstanceExecutionId,
-      UUID workflowInstanceId,
-      String workflowDefinitionName,
-      Long startedAt) {
-
+  public UUID addNewStageToInstance(NewStageRequest request) {
     WorkflowDefinitionRepository workflowDefinitionRepository =
         (WorkflowDefinitionRepository) Entity.getEntityRepository(Entity.WORKFLOW_DEFINITION);
-    // Efficiently get the workflow definition in a single DB call and extract both ID and
-    // displayName
     WorkflowDefinition workflowDefinition =
-        workflowDefinitionRepository.getByNameForStageProcessing(workflowDefinitionName);
-    String displayName = getStageDisplayName(workflowDefinition, workflowInstanceStage);
-
-    Stage stage =
-        new Stage()
-            .withName(workflowInstanceStage)
-            .withDisplayName(displayName)
-            .withStartedAt(startedAt);
-
-    WorkflowInstanceState entityRecord =
-        new WorkflowInstanceState()
-            .withStage(stage)
-            .withWorkflowInstanceExecutionId(workflowInstanceExecutionId)
-            .withWorkflowInstanceId(workflowInstanceId)
-            .withTimestamp(System.currentTimeMillis())
-            .withStatus(WorkflowInstance.WorkflowStatus.RUNNING)
-            .withWorkflowDefinitionId(workflowDefinition.getId());
-
-    UUID stateId = getStateId(workflowInstanceId, workflowInstanceStage);
-
+        workflowDefinitionRepository.getByNameForStageProcessing(request.workflowDefinitionName());
+    String displayName = getStageDisplayName(workflowDefinition, request.workflowInstanceStage());
+    WorkflowInstanceState entityRecord = buildStateRecord(request, workflowDefinition, displayName);
+    UUID stateId = getStateId(request.workflowInstanceId(), request.workflowInstanceStage());
     if (stateId != null) {
       entityRecord.withId(stateId);
     }
-
     entityRecord =
         createOrUpdateRecord(
             entityRecord,
-            buildWorkflowInstanceFqn(workflowDefinitionName, workflowInstanceId.toString()));
-
+            buildWorkflowInstanceFqn(
+                request.workflowDefinitionName(), request.workflowInstanceId().toString()));
     return entityRecord.getId();
+  }
+
+  private WorkflowInstanceState buildStateRecord(
+      NewStageRequest request, WorkflowDefinition workflowDefinition, String displayName) {
+    Stage stage =
+        new Stage()
+            .withName(request.workflowInstanceStage())
+            .withDisplayName(displayName)
+            .withStartedAt(request.startedAt())
+            .withEntityList(request.entityList());
+    return new WorkflowInstanceState()
+        .withStage(stage)
+        .withWorkflowInstanceExecutionId(request.workflowInstanceExecutionId())
+        .withWorkflowInstanceId(request.workflowInstanceId())
+        .withScheduleRunId(request.scheduleRunId())
+        .withTimestamp(System.currentTimeMillis())
+        .withStatus(WorkflowInstance.WorkflowStatus.RUNNING)
+        .withWorkflowDefinitionId(workflowDefinition.getId());
   }
 
   public void updateStage(
@@ -146,6 +140,7 @@ public class WorkflowInstanceStateRepository
     Stage stage = workflowInstanceState.getStage();
     stage.setEndedAt(endedAt);
     stage.setVariables(variables);
+    extractUpdatedBy(stage, variables);
 
     workflowInstanceState.setStage(stage);
     workflowInstanceState.setStatus(WorkflowInstance.WorkflowStatus.FINISHED);
@@ -161,6 +156,14 @@ public class WorkflowInstanceStateRepository
     }
 
     getTimeSeriesDao().update(JsonUtils.pojoToJson(workflowInstanceState), workflowInstanceStateId);
+  }
+
+  private void extractUpdatedBy(Stage stage, Map<String, Object> variables) {
+    String updatedByKey = getNamespacedVariableName(stage.getName(), UPDATED_BY_VARIABLE);
+    Object updatedBy = variables.get(updatedByKey);
+    if (updatedBy instanceof String s) {
+      stage.setUpdatedBy(s);
+    }
   }
 
   public void updateStageWithTask(UUID taskId, UUID workflowInstanceStateId) {
