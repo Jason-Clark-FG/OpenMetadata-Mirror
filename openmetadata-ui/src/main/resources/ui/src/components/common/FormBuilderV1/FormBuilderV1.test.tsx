@@ -61,7 +61,9 @@ jest.mock('@rjsf/core', () => {
         'data-testid': 'rjsf-form',
         onSubmit: (event: React.FormEvent) => {
           event.preventDefault();
-          props.onSubmit?.({ formData: props.formData });
+          (props.onSubmit as ((data: unknown) => void) | undefined)?.({
+            formData: props.formData,
+          });
         },
       },
       props.children
@@ -86,10 +88,10 @@ jest.mock('../../../utils/formUtils', () => ({
 
 describe('FormBuilderV1', () => {
   const schema = {
-    type: 'object',
+    type: 'object' as const,
     properties: {
       name: {
-        type: 'string',
+        type: 'string' as const,
       },
     },
   };
@@ -103,7 +105,7 @@ describe('FormBuilderV1', () => {
 
     expect(mockFormatFormDataForRender).toHaveBeenCalledWith({ name: 'value' });
 
-    const lastFormProps = mockForm.mock.lastCall[0];
+    const lastFormProps = mockForm.mock.calls.at(-1)![0];
 
     expect(lastFormProps.formData).toEqual({
       name: 'value',
@@ -125,7 +127,7 @@ describe('FormBuilderV1', () => {
     );
 
     act(() => {
-      mockForm.mock.lastCall[0].onChange({
+      mockForm.mock.calls.at(-1)![0].onChange({
         formData: {
           name: 'changed',
         },
@@ -133,7 +135,7 @@ describe('FormBuilderV1', () => {
     });
 
     await waitFor(() => {
-      expect(mockForm.mock.lastCall[0].formData).toEqual({ name: 'changed' });
+      expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({ name: 'changed' });
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'label.cancel' }));
@@ -141,7 +143,7 @@ describe('FormBuilderV1', () => {
     expect(onCancel).toHaveBeenCalled();
 
     await waitFor(() => {
-      expect(mockForm.mock.lastCall[0].formData).toEqual({
+      expect(mockForm.mock.calls.at(-1)![0].formData).toEqual({
         name: 'initial',
         formatted: true,
       });
@@ -168,12 +170,12 @@ describe('FormBuilderV1', () => {
     };
 
     act(() => {
-      mockForm.mock.lastCall[0].onChange(changeEvent);
+      mockForm.mock.calls.at(-1)![0].onChange(changeEvent);
     });
 
     expect(onChange).toHaveBeenCalledWith(changeEvent);
 
-    const submittedFormData = mockForm.mock.lastCall[0].formData;
+    const submittedFormData = mockForm.mock.calls.at(-1)![0].formData;
 
     fireEvent.submit(screen.getByTestId('rjsf-form'));
 

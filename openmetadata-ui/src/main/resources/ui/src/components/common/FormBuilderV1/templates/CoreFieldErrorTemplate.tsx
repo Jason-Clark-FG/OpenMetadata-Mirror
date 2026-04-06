@@ -25,10 +25,10 @@ export const CoreFieldErrorTemplate: FC<FieldErrorProps> = (props) => {
   return (
     <div>
       <ul className="tw:mt-1 tw:list-none tw:p-0">
-        {errorList.map((error) => (
+        {errorList.map((error, index) => (
           <li
             className="tw:text-xs tw:text-[var(--color-text-error-primary)]"
-            key={error}>
+            key={typeof error === 'string' ? error : index}>
             {error}
           </li>
         ))}

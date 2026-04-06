@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { FieldProps, UiSchema } from '@rjsf/utils';
 import { fireEvent, render, screen } from '@testing-library/react';
 import LayoutGridField from './LayoutGridField';
 
@@ -18,12 +19,13 @@ const mockSchemaField = jest.fn();
 
 describe('LayoutGridField', () => {
   const baseProps = {
+    name: 'root',
     schema: {
-      type: 'object',
+      type: 'object' as const,
       properties: {
-        firstName: { type: 'string' },
-        lastName: { type: 'string' },
-        age: { type: 'integer' },
+        firstName: { type: 'string' as const },
+        lastName: { type: 'string' as const },
+        age: { type: 'integer' as const },
       },
       required: ['firstName'],
     },
@@ -111,7 +113,9 @@ describe('LayoutGridField', () => {
   });
 
   it('renders configured rows and remaining unplaced fields', () => {
-    const { container } = render(<LayoutGridField {...baseProps} />);
+    const { container } = render(
+      <LayoutGridField {...(baseProps as unknown as FieldProps)} />
+    );
 
     expect(container.firstChild).toHaveClass('grid-wrapper');
     expect(screen.getByTestId('field-firstName')).toBeInTheDocument();
@@ -130,7 +134,7 @@ describe('LayoutGridField', () => {
   });
 
   it('merges field changes back into the parent form data', () => {
-    render(<LayoutGridField {...baseProps} />);
+    render(<LayoutGridField {...(baseProps as unknown as FieldProps)} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'update-firstName' }));
 
@@ -148,15 +152,15 @@ describe('LayoutGridField', () => {
   it('skips fields without a schema or id entry', () => {
     render(
       <LayoutGridField
-        {...baseProps}
+        {...(baseProps as unknown as FieldProps)}
         idSchema={{
           $id: 'root',
           firstName: { $id: 'root_firstName' },
         }}
         schema={{
-          type: 'object',
+          type: 'object' as const,
           properties: {
-            firstName: { type: 'string' },
+            firstName: { type: 'string' as const },
           },
         }}
         uiSchema={{
@@ -167,7 +171,7 @@ describe('LayoutGridField', () => {
               },
             ],
           },
-        }}
+        } as unknown as UiSchema}
       />
     );
 

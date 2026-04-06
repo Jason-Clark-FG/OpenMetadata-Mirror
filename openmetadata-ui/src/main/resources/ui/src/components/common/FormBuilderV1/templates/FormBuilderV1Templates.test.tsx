@@ -11,6 +11,14 @@
  *  limitations under the License.
  */
 
+import {
+  ArrayFieldTemplateItemType,
+  ArrayFieldTemplateProps,
+  FieldErrorProps,
+  FieldTemplateProps,
+  ObjectFieldTemplateProps,
+  ObjectFieldTemplatePropertyType,
+} from '@rjsf/utils';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { CoreArrayFieldTemplate } from './CoreArrayFieldTemplate';
 import { CoreFieldErrorTemplate } from './CoreFieldErrorTemplate';
@@ -66,26 +74,50 @@ describe('FormBuilderV1 templates', () => {
 
     render(
       <CoreArrayFieldTemplate
-        canAdd
-        idSchema={{ $id: 'array-field' }}
-        items={[
-          {
-            children: <div>first child</div>,
-            hasRemove: true,
-            index: 0,
-            key: 'first',
-            onDropIndexClick,
-          },
-          {
-            children: <div>second child</div>,
-            hasRemove: false,
-            index: 1,
-            key: 'second',
-            onDropIndexClick,
-          },
-        ]}
-        title="Tags"
-        onAddClick={onAddClick}
+        {...({
+          canAdd: true,
+          idSchema: { $id: 'array-field' },
+          registry: {} as ArrayFieldTemplateProps['registry'],
+          schema: {},
+          title: 'Tags',
+          onAddClick,
+          items: [
+            {
+              children: <div>first child</div>,
+              className: '',
+              canAdd: false,
+              disabled: false,
+              hasCopy: false,
+              hasMoveDown: false,
+              hasMoveUp: false,
+              hasRemove: true,
+              index: 0,
+              key: 'first',
+              onCopyIndexClick: jest.fn(() => jest.fn()),
+              onDropIndexClick,
+              onReorderClick: jest.fn(() => jest.fn()),
+              readonly: false,
+              registry: {} as ArrayFieldTemplateItemType['registry'],
+            },
+            {
+              children: <div>second child</div>,
+              className: '',
+              canAdd: false,
+              disabled: false,
+              hasCopy: false,
+              hasMoveDown: false,
+              hasMoveUp: false,
+              hasRemove: false,
+              index: 1,
+              key: 'second',
+              onCopyIndexClick: jest.fn(() => jest.fn()),
+              onDropIndexClick,
+              onReorderClick: jest.fn(() => jest.fn()),
+              readonly: false,
+              registry: {} as ArrayFieldTemplateItemType['registry'],
+            },
+          ] as unknown as ArrayFieldTemplateItemType[],
+        } as unknown as ArrayFieldTemplateProps)}
       />
     );
 
@@ -101,22 +133,30 @@ describe('FormBuilderV1 templates', () => {
   });
 
   it('renders hidden and visible field templates correctly', () => {
+    const fieldTemplateBase = {
+      classNames: 'field-wrapper',
+      disabled: false,
+      id: 'field-id',
+      label: 'Field',
+      onChange: jest.fn(),
+      rawDescription: undefined,
+      rawErrors: [],
+      rawHelp: undefined,
+      readonly: false,
+      registry: {} as FieldTemplateProps['registry'],
+      required: false,
+      schema: { type: 'string' as const },
+      onDropPropertyClick: jest.fn(),
+      onKeyChange: jest.fn(),
+    } as unknown as FieldTemplateProps;
+
     const { rerender, container } = render(
       <CoreFieldTemplate
-        children={<div>content</div>}
-        classNames="field-wrapper"
+        {...fieldTemplateBase}
         hidden={false}
-        id="field-id"
-        label="Field"
-        rawDescription={undefined}
-        rawErrors={[]}
-        rawHelp={undefined}
-        required={false}
-        schema={{ type: 'string' }}
-        style={{ marginTop: 8 }}
-        onDropPropertyClick={jest.fn()}
-        onKeyChange={jest.fn()}
-      />
+        style={{ marginTop: '8px' } as unknown as FieldTemplateProps['style']}>
+        <div>content</div>
+      </CoreFieldTemplate>
     );
 
     expect(container.firstChild).toHaveClass('field-wrapper');
@@ -124,20 +164,9 @@ describe('FormBuilderV1 templates', () => {
     expect(screen.getByText('content')).toBeVisible();
 
     rerender(
-      <CoreFieldTemplate
-        hidden
-        children={<div>hidden content</div>}
-        classNames="field-wrapper"
-        id="field-id"
-        label="Field"
-        rawDescription={undefined}
-        rawErrors={[]}
-        rawHelp={undefined}
-        required={false}
-        schema={{ type: 'string' }}
-        onDropPropertyClick={jest.fn()}
-        onKeyChange={jest.fn()}
-      />
+      <CoreFieldTemplate {...fieldTemplateBase} hidden>
+        <div>hidden content</div>
+      </CoreFieldTemplate>
     );
 
     expect(container.firstChild).toHaveClass('tw:hidden');
@@ -149,20 +178,25 @@ describe('FormBuilderV1 templates', () => {
 
     render(
       <CoreObjectFieldTemplate
-        idSchema={{ $id: 'object-field' }}
-        properties={[
-          {
-            content: <div>basic property</div>,
-            name: 'name',
-          },
-          {
-            content: <div>advanced property</div>,
-            name: 'connectionOptions',
-          },
-        ]}
-        schema={{ additionalProperties: true }}
-        title="Connection"
-        onAddClick={onAddClick}
+        {...({
+          idSchema: { $id: 'object-field' },
+          registry: {} as ObjectFieldTemplateProps['registry'],
+          schema: { additionalProperties: true },
+          title: 'Connection',
+          onAddClick,
+          properties: [
+            {
+              content: <div>basic property</div>,
+              hidden: false,
+              name: 'name',
+            } as ObjectFieldTemplatePropertyType,
+            {
+              content: <div>advanced property</div>,
+              hidden: false,
+              name: 'connectionOptions',
+            } as ObjectFieldTemplatePropertyType,
+          ],
+        } as unknown as ObjectFieldTemplateProps)}
       />
     );
 
@@ -191,11 +225,16 @@ describe('FormBuilderV1 templates', () => {
   });
 
   it('renders de-duplicated field errors only when errors exist', () => {
+    const fieldErrorBase: Omit<FieldErrorProps, 'errors'> = {
+      idSchema: { $id: 'field-id' },
+      registry: {} as FieldErrorProps['registry'],
+      schema: { $id: 'schema-id' },
+    };
+
     const { rerender } = render(
       <CoreFieldErrorTemplate
+        {...fieldErrorBase}
         errors={['Required', 'Required', 'Invalid']}
-        idSchema={{ $id: 'field-id' }}
-        schema={{ $id: 'schema-id' }}
       />
     );
 
@@ -203,13 +242,7 @@ describe('FormBuilderV1 templates', () => {
     expect(screen.getByText('Required')).toBeInTheDocument();
     expect(screen.getByText('Invalid')).toBeInTheDocument();
 
-    rerender(
-      <CoreFieldErrorTemplate
-        errors={[]}
-        idSchema={{ $id: 'field-id' }}
-        schema={{ $id: 'schema-id' }}
-      />
-    );
+    rerender(<CoreFieldErrorTemplate {...fieldErrorBase} errors={[]} />);
 
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });

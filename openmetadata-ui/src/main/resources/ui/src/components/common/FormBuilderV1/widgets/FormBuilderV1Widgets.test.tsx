@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 
+import { WidgetProps } from '@rjsf/utils';
 import { fireEvent, render, screen } from '@testing-library/react';
 import CoreCheckboxWidget from './CoreCheckboxWidget';
 import CoreInputWidget from './CoreInputWidget';
@@ -80,9 +81,13 @@ jest.mock('@openmetadata/ui-core-components', () => ({
           placeholder={placeholder as string}
           type={type as string}
           value={value as string}
-          onBlur={() => onBlur?.()}
-          onChange={(event) => onChange?.(event.target.value)}
-          onFocus={() => onFocus?.()}
+          onBlur={() => (onBlur as (() => void) | undefined)?.()}
+          onChange={(event) =>
+            (onChange as ((v: string) => void) | undefined)?.(
+              event.target.value
+            )
+          }
+          onFocus={() => (onFocus as (() => void) | undefined)?.()}
         />
       </div>
     )
@@ -162,10 +167,18 @@ jest.mock('@openmetadata/ui-core-components', () => ({
             {placeholder as string}
           </div>
           <div data-testid="selected-key">{String(selectedKey)}</div>
-          <button type="button" onClick={() => onSelectionChange?.('2')}>
+          <button
+            type="button"
+            onClick={() =>
+              (onSelectionChange as ((v: unknown) => void) | undefined)?.('2')
+            }>
             choose-option
           </button>
-          <button type="button" onClick={() => onSelectionChange?.(null)}>
+          <button
+            type="button"
+            onClick={() =>
+              (onSelectionChange as ((v: unknown) => void) | undefined)?.(null)
+            }>
             clear-option
           </button>
           {(items as Array<Record<string, string>>).map((item) => (
@@ -210,9 +223,13 @@ jest.mock('@openmetadata/ui-core-components', () => ({
           placeholder={placeholder as string}
           rows={rows as number}
           value={value as string}
-          onBlur={() => onBlur?.()}
-          onChange={(event) => onChange?.(event.target.value)}
-          onFocus={() => onFocus?.()}
+          onBlur={() => (onBlur as (() => void) | undefined)?.()}
+          onChange={(event) =>
+            (onChange as ((v: string) => void) | undefined)?.(
+              event.target.value
+            )
+          }
+          onFocus={() => (onFocus as (() => void) | undefined)?.()}
         />
       </div>
     )
@@ -225,14 +242,16 @@ describe('FormBuilderV1 widgets', () => {
     hideLabel: false,
     id: 'widget-id',
     label: 'Widget label',
+    name: 'widget-name',
     onBlur: jest.fn(),
     onChange: jest.fn(),
     onFocus: jest.fn(),
     options: {},
     readonly: false,
+    registry: {} as WidgetProps['registry'],
     required: false,
-    schema: { type: 'string' },
-  };
+    schema: { type: 'string' as const },
+  } as unknown as WidgetProps;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -273,7 +292,7 @@ describe('FormBuilderV1 widgets', () => {
       <CoreInputWidget
         {...widgetBaseProps}
         options={{ emptyValue: null }}
-        schema={{ type: 'integer' }}
+        schema={{ type: 'integer' as const }}
         value={3}
         onBlur={onBlur}
         onChange={onChange}

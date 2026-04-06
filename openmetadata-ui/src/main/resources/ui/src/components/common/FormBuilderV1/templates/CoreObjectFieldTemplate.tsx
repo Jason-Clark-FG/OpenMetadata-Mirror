@@ -50,7 +50,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
         <div className="tw:flex tw:items-center tw:justify-between tw:mt-2">
           <Typography
             as="label"
-            className="tw:text-primary)"
+            className="tw:text-primary"
             id={`${idSchema.$id}__title`}
             size="text-sm"
             weight="medium">

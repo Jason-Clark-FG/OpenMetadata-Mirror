@@ -47,22 +47,18 @@ const FormBuilderV1 = ({
 }: FormBuilderV1Props) => {
   const { t } = useTranslation();
 
-  const [localFormData, setLocalFormData] = useState<Record<string, unknown>>(
-    formatFormDataForRender(
-      (formData ?? {}) as Record<string, unknown>
-    ) as Record<string, unknown>
+  const [localFormData, setLocalFormData] = useState(
+    formatFormDataForRender((formData ?? {}) as Record<string, unknown>)
   );
 
   const handleCancel = () => {
     setLocalFormData(
-      formatFormDataForRender(
-        (formData ?? {}) as Record<string, unknown>
-      ) as Record<string, unknown>
+      formatFormDataForRender((formData ?? {}) as Record<string, unknown>)
     );
     onCancel?.();
   };
 
-  const handleFormChange = (e: IChangeEvent<Record<string, unknown>>) => {
+  const handleFormChange = (e: IChangeEvent) => {
     setLocalFormData(e.formData ?? {});
     props.onChange && props.onChange(e);
   };
