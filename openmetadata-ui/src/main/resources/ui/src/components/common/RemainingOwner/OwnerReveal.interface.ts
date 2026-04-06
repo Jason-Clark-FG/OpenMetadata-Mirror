@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import { EntityReference } from '../../../generated/tests/testCase';
+import { AvatarSize } from '../OwnerLabel/OwnerLabel.interface';
 
 export interface OwnerRevealProps {
   isCompactView: boolean;
@@ -18,5 +19,5 @@ export interface OwnerRevealProps {
   remainingCount: number;
   showAllOwners: boolean;
   setShowAllOwners: React.Dispatch<React.SetStateAction<boolean>>;
-  avatarSize?: number;
+  avatarSize?: AvatarSize;
 }

@@ -20,10 +20,11 @@ import { EntityReference } from '../../../generated/entity/type';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
 import { AVATAR_SIZE_CLASS_MAP } from '../OwnerUserTeamList/OwnerUserTeamList.constants';
+import { AvatarSize } from '../OwnerLabel/OwnerLabel.interface';
 
 export interface OwnerTeamListProps {
   owners: EntityReference[];
-  avatarSize: number;
+  avatarSize: AvatarSize;
   ownerDisplayName?: Map<string, ReactNode>;
   placement?: 'vertical' | 'horizontal';
 }

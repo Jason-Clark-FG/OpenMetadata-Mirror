@@ -19,6 +19,7 @@ import { OwnerType } from '../../../enums/user.enum';
 import { EntityReference } from '../../../generated/entity/data/table';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getOwnerPath } from '../../../utils/ownerUtils';
+import { AvatarSize } from '../OwnerLabel/OwnerLabel.interface';
 import { OwnerAvatar } from '../OwnerAvtar/OwnerAvatar';
 import UserPopOverCard from '../PopOverCard/UserPopOverCard';
 interface OwnerItemProps {
@@ -26,7 +27,7 @@ interface OwnerItemProps {
   isCompactView: boolean;
   className?: string;
   ownerDisplayName?: ReactNode;
-  avatarSize?: number;
+  avatarSize?: AvatarSize;
   isAssignee?: boolean;
 }
 

@@ -39,7 +39,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
 }) => {
   const { t } = useTranslation();
   const remainingCountLabel = `+${remainingCount}`;
-  const fontSizeClass = AVATAR_FONT_SIZE_MAP[avatarSize] ?? 'tw:text-xs';
+  const fontSizeClass = AVATAR_FONT_SIZE_MAP[avatarSize];
 
   if (isCompactView) {
     return (
@@ -53,7 +53,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
           <Avatar
             className="tw:bg-brand-50 tw:ring-1 tw:ring-brand-600"
             placeholder={remainingCountLabel}
-            size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
+            size={AVATAR_SIZE_NAME_MAP[avatarSize]}
           />
         )}
       </Button>
@@ -70,7 +70,7 @@ export const OwnerReveal: React.FC<OwnerRevealProps> = ({
               fontSizeClass
             )}
             placeholder={remainingCountLabel}
-            size={AVATAR_SIZE_NAME_MAP[avatarSize] ?? 'xs'}
+            size={AVATAR_SIZE_NAME_MAP[avatarSize]}
           />
         </Button>
         <Dropdown.Popover className="tw:z-999!" placement="bottom start">

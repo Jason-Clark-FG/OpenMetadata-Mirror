@@ -17,12 +17,13 @@ import { ReactComponent as IconUser } from '../../../assets/svg/user.svg';
 import { EntityReference } from '../../../generated/entity/type';
 import { OwnerItem } from '../OwnerItem/OwnerItem';
 import { AVATAR_SIZE_CLASS_MAP } from '../OwnerUserTeamList/OwnerUserTeamList.constants';
+import { AvatarSize } from '../OwnerLabel/OwnerLabel.interface';
 import { OwnerReveal } from '../RemainingOwner/OwnerReveal';
 
 interface OwnerUserListProps {
   owners: EntityReference[];
   maxVisibleOwners: number;
-  avatarSize: number;
+  avatarSize: AvatarSize;
   className?: string;
   isCompactView: boolean;
   ownerLabelClassName?: string;

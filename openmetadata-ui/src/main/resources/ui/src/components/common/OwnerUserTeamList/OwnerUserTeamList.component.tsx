@@ -18,13 +18,14 @@ import { OwnerType } from '../../../enums/user.enum';
 import { EntityReference } from '../../../generated/entity/type';
 import { OwnerTeamList } from '../OwnerTeamList/OwnerTeamList.component';
 import OwnerUserList from '../OwnerUserList/OwnerUserList.component';
+import { AvatarSize } from '../OwnerLabel/OwnerLabel.interface';
 
 interface OwnerUserTeamListProps {
   owners: EntityReference[];
   hasPermission?: boolean;
   isAssignee?: boolean;
   onEditClick?: () => void;
-  avatarSize: number;
+  avatarSize: AvatarSize;
   className?: string;
   isCompactView: boolean;
   ownerDisplayName?: Map<string, ReactNode>;
