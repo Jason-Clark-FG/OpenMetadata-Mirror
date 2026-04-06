@@ -11,7 +11,11 @@
  *  limitations under the License.
  */
 
-import { BadgeWithIcon, Box, Typography } from '@openmetadata/ui-core-components';
+import {
+  BadgeWithIcon,
+  Box,
+  Typography,
+} from '@openmetadata/ui-core-components';
 import { Tag01 } from '@untitledui/icons';
 import { TagLabel } from '../../../generated/type/tagLabel';
 
@@ -30,11 +34,7 @@ const TagBadgeList = ({ tags, size = 'sm' }: TagBadgeListProps) => {
 
   return (
     <Box align="center" direction="row" gap={1}>
-      <BadgeWithIcon
-        color="gray"
-        iconLeading={Tag01}
-        size={size}
-        type="color">
+      <BadgeWithIcon color="gray" iconLeading={Tag01} size={size} type="color">
         {firstTag.displayName || firstTag.tagFQN}
       </BadgeWithIcon>
       {remaining > 0 && (
