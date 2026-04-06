@@ -37,7 +37,7 @@ export interface CreateThread {
     /**
      * Name of the User (regular user or bot) posting the message
      */
-    from: string;
+    from?: string;
     /**
      * Message
      */
