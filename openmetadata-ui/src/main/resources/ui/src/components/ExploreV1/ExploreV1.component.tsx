@@ -18,13 +18,8 @@ import {
   SortDescendingOutlined,
 } from '@ant-design/icons';
 import {
-  Button,
-  Typography as CoreTypography,
-} from '@openmetadata/ui-core-components';
-import { Download01 } from '@untitledui/icons';
-import {
   Alert,
-  Button as AntdButton,
+  Button,
   Card,
   Col,
   Menu,
@@ -34,6 +29,7 @@ import {
   Switch,
   Typography,
 } from 'antd';
+import { Download01 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import { isEmpty, isString, isUndefined, noop, omit } from 'lodash';
 import Qs from 'qs';
@@ -426,16 +422,12 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const exportModalTitle = () => {
     return (
       <div className="d-flex flex-col gap-1">
-        <CoreTypography className="tw:text-primary" size="text-md">
+        <Typography.Text className="text-md font-medium">
           {t('label.export')}
-        </CoreTypography>
-        <CoreTypography
-          className="tw:text-secondary"
-          size="text-xs"
-          weight="regular"
-        >
+        </Typography.Text>
+        <Typography.Text className="text-xs" type="secondary">
           {t('label.export-search-results-description')}
-        </CoreTypography>
+        </Typography.Text>
       </div>
     );
   };
@@ -461,8 +453,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
               <Row
                 className="quick-filters-container"
                 gutter={[20, 0]}
-                wrap={false}
-              >
+                wrap={false}>
                 <Col span={24}>
                   <Card className="p-md card-padding-0 m-b-box">
                     <Row>
@@ -484,24 +475,16 @@ const ExploreV1: React.FC<ExploreProps> = ({
                           </Col>
                           <Col
                             className="d-flex items-center justify-end gap-3"
-                            flex={410}
-                          >
+                            flex={410}>
                             <Button
                               color="secondary"
                               data-testid="export-search-results-button"
-                              iconLeading={
-                                <Download01 height={16} width={16} />
-                              }
-                              size="sm"
-                              onClick={handleOpenExportScopeModal}
-                            >
-                              <CoreTypography
-                                className="tw:text-secondary"
-                                size="text-sm"
-                                weight="medium"
-                              >
+                              icon={<Download01 height={14} width={14} />}
+                              type="default"
+                              onClick={handleOpenExportScopeModal}>
+                              <Typography.Text className="text-sm m-l-xs">
                                 {t('label.export')}
-                              </CoreTypography>
+                              </Typography.Text>
                             </Button>
                             <span className="flex-center">
                               <Switch
@@ -517,15 +500,14 @@ const ExploreV1: React.FC<ExploreProps> = ({
                               <Typography.Text
                                 className="text-primary self-center cursor-pointer font-medium"
                                 data-testid="clear-filters"
-                                onClick={() => clearFilters()}
-                              >
+                                onClick={() => clearFilters()}>
                                 {t('label.clear-entity', {
                                   entity: '',
                                 })}
                               </Typography.Text>
                             )}
 
-                            <AntdButton
+                            <Button
                               className="cursor-pointer"
                               data-testid="advance-search-button"
                               icon={<FilterOutlined />}
@@ -538,7 +520,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                                 handleFieldDropDown={onChangeSortValue}
                                 sortField={sortValue}
                               />
-                              <AntdButton
+                              <Button
                                 className="p-0"
                                 data-testid="sort-order-button"
                                 size="small"
@@ -549,8 +531,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                                       ? SORT_ORDER.DESC
                                       : SORT_ORDER.ASC
                                   )
-                                }
-                              >
+                                }>
                                 {isAscSortOrder ? (
                                   <SortAscendingOutlined
                                     style={{ fontSize: '14px' }}
@@ -562,7 +543,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                                     {...sortProps}
                                   />
                                 )}
-                              </AntdButton>
+                              </Button>
                             </span>
                           </Col>
                           {isElasticSearchIssue ? (
@@ -590,8 +571,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
               <Row
                 className="explore-data-container"
                 gutter={[20, 0]}
-                wrap={false}
-              >
+                wrap={false}>
                 <Col flex="auto">
                   <Card className="h-full explore-main-card">
                     <div className="h-full">
@@ -650,7 +630,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
       <Modal
         centered
         cancelText={t('label.cancel')}
-        className="search-export-modal tw:overflow-hidden"
+        className="search-export-modal"
         data-testid="export-scope-modal"
         okButtonProps={{ disabled: isExporting, loading: isExporting }}
         okText={t('label.export')}
@@ -658,58 +638,31 @@ const ExploreV1: React.FC<ExploreProps> = ({
         title={exportModalTitle()}
         width={610}
         onCancel={() => setShowExportScopeModal(false)}
-        onOk={handleExportScopeConfirm}
-      >
-        <CoreTypography
-          className="tw:text-secondary"
-          size="text-sm"
-          weight="medium"
-        >
+        onOk={handleExportScopeConfirm}>
+        <Typography.Text className="text-sm font-medium" type="secondary">
           {t('label.export-scope')}
-        </CoreTypography>
+        </Typography.Text>
         <Radio.Group
           className="d-flex gap-3 m-t-sm w-full"
           value={exportScope}
-          onChange={(e) => setExportScope(e.target.value)}
-        >
+          onChange={(e) => setExportScope(e.target.value)}>
           <div
             className={`export-scope-option-card${
               exportScope === 'visible' ? ' selected' : ''
             }`}
-            onClick={() => setExportScope('visible')}
-          >
-            <div
-              className={`d-flex items-start gap-2 border-radius-sm tw:p-4 border ${
-                exportScope === 'visible'
-                  ? 'tw:border-brand'
-                  : 'tw:border-secondary'
-              }`}
-            >
+            onClick={() => setExportScope('visible')}>
+            <div className="export-scope-option-card-inner">
               <Radio value="visible" />
               <div>
-                <div className="d-flex items-center gap-2">
-                  <CoreTypography
-                    className="tw:text-primary d-flex items-center tw:gap-0.5"
-                    size="text-sm"
-                    weight="semibold"
-                  >
-                    {`${t('label.visible-result-plural')} `}
-                    <CoreTypography
-                      className="tw:text-tertiary"
-                      size="text-sm"
-                      weight="regular"
-                    >
-                      ({visibleResultCount} {t('label.result-plural')})
-                    </CoreTypography>
-                  </CoreTypography>
-                </div>
-                <CoreTypography
-                  className="tw:text-tertiary"
-                  size="text-sm"
-                  weight="regular"
-                >
+                <Typography.Text className="text-sm font-semibold">
+                  {t('label.visible-result-plural')}
+                </Typography.Text>
+                <Typography.Text className="text-sm" type="secondary">
+                  {` (${visibleResultCount} ${t('label.result-plural')})`}
+                </Typography.Text>
+                <Typography.Paragraph className="m-b-0 m-t-xss text-sm" type="secondary">
                   {t('message.export-visible-results-description')}
-                </CoreTypography>
+                </Typography.Paragraph>
               </div>
             </div>
           </div>
@@ -717,40 +670,21 @@ const ExploreV1: React.FC<ExploreProps> = ({
             className={`export-scope-option-card${
               exportScope === 'all' ? ' selected' : ''
             }`}
-            onClick={() => setExportScope('all')}
-          >
-            <div
-              className={`d-flex items-start border-radius-sm tw:gap-1 tw:p-4 border ${
-                exportScope === 'all'
-                  ? 'tw:border-brand'
-                  : 'tw:border-secondary'
-              }`}
-            >
+            onClick={() => setExportScope('all')}>
+            <div className="export-scope-option-card-inner">
               <Radio value="all" />
               <div>
-                <CoreTypography
-                  className="tw:text-primary d-flex items-center tw:gap-0.5"
-                  size="text-sm"
-                  weight="semibold"
-                >
-                  {`${t('label.all-matching-asset-plural')} `}
-                  {allAssetsCount !== undefined && (
-                    <CoreTypography
-                      className="tw:text-tertiary"
-                      size="text-sm"
-                      weight="regular"
-                    >
-                      ({allAssetsCount} {t('label.result-plural')})
-                    </CoreTypography>
-                  )}
-                </CoreTypography>
-                <CoreTypography
-                  className="tw:text-tertiary"
-                  size="text-sm"
-                  weight="regular"
-                >
+                <Typography.Text className="text-sm font-semibold">
+                  {t('label.all-matching-asset-plural')}
+                </Typography.Text>
+                {allAssetsCount !== undefined && (
+                  <Typography.Text className="text-sm" type="secondary">
+                    {` (${allAssetsCount} ${t('label.result-plural')})`}
+                  </Typography.Text>
+                )}
+                <Typography.Paragraph className="m-b-0 m-t-xss text-sm" type="secondary">
                   {t('message.export-all-matching-assets-description')}
-                </CoreTypography>
+                </Typography.Paragraph>
               </div>
             </div>
           </div>
