@@ -50,7 +50,7 @@ import { useSearch } from '../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
-import { useCardView } from '../common/atoms/table/useCardView';
+import EntityCardView from '../common/EntityCardView/EntityCardView';
 import EntityListingTable, {
   ColumnDef,
 } from '../common/EntityListingTable/EntityListingTable';
@@ -97,7 +97,7 @@ const DomainListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DOMAIN}
-        onCancel={() => {}}
+        onCancel={() => { }}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -123,7 +123,7 @@ const DomainListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {},
+    onSubmit: () => { },
     loading: isLoading,
   });
 
@@ -156,7 +156,7 @@ const DomainListPage = () => {
   const { view, viewToggle, isTreeView } = useViewToggle({
     views: ['table', 'card', 'tree'],
   });
-  const { domainCardTemplate } = useDomainCardTemplates();
+  const { renderDomainCard } = useDomainCardTemplates();
 
   useEffect(() => {
     if (isTreeView && !isEmpty(domainListing.urlState.filters)) {
@@ -189,7 +189,7 @@ const DomainListPage = () => {
           color="gray"
           iconLeading={Tag01}
           key={firstTag.tagFQN}
-          size="lg"
+          size="sm"
           type="color">
           {firstTag.displayName || firstTag.tagFQN}
         </BadgeWithIcon>
@@ -240,10 +240,6 @@ const DomainListPage = () => {
     [renderTagList]
   );
 
-  const { cardView } = useCardView({
-    listing: domainListing,
-    cardTemplate: domainCardTemplate,
-  });
 
   const { paginationControls } = usePaginationControls({
     currentPage: domainListing.currentPage,
@@ -353,7 +349,12 @@ const DomainListPage = () => {
 
     return (
       <>
-        {cardView}
+        <EntityCardView
+          entities={domainListing.entities}
+          loading={domainListing.loading}
+          renderCard={renderDomainCard}
+          onEntityClick={domainListing.actionHandlers.onEntityClick}
+        />
         {paginationControls}
       </>
     );
@@ -367,7 +368,7 @@ const DomainListPage = () => {
     domainListing.urlState.searchQuery,
     hasActiveSearchOrFilter,
     view,
-    cardView,
+    renderDomainCard,
     paginationControls,
     treeRefreshToken,
     openDrawer,

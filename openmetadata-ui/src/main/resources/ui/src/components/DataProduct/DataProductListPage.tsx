@@ -50,7 +50,7 @@ import { useSearch } from '../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
-import { useCardView } from '../common/atoms/table/useCardView';
+import EntityCardView from '../common/EntityCardView/EntityCardView';
 import EntityListingTable, {
   ColumnDef,
 } from '../common/EntityListingTable/EntityListingTable';
@@ -150,7 +150,7 @@ const DataProductListPage = () => {
   });
 
   const { view, viewToggle } = useViewToggle();
-  const { dataProductCardTemplate } = useDomainCardTemplates();
+  const { renderDataProductCard } = useDomainCardTemplates();
 
   const dataProductColumns: ColumnDef[] = useMemo(
     () => [
@@ -260,10 +260,6 @@ const DataProductListPage = () => {
     [renderTagList]
   );
 
-  const { cardView } = useCardView({
-    listing: dataProductListing,
-    cardTemplate: dataProductCardTemplate,
-  });
 
   const { paginationControls } = usePaginationControls({
     currentPage: dataProductListing.currentPage,
@@ -353,7 +349,12 @@ const DataProductListPage = () => {
 
     return (
       <>
-        {cardView}
+        <EntityCardView
+          entities={dataProductListing.entities}
+          loading={dataProductListing.loading}
+          renderCard={renderDataProductCard}
+          onEntityClick={dataProductListing.actionHandlers.onEntityClick}
+        />
         {paginationControls}
       </>
     );
@@ -364,7 +365,7 @@ const DataProductListPage = () => {
     dataProductListing.actionHandlers,
     hasActiveSearchOrFilter,
     view,
-    cardView,
+    renderDataProductCard,
     paginationControls,
     openDrawer,
     t,

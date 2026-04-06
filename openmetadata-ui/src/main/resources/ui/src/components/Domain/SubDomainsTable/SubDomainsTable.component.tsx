@@ -11,12 +11,24 @@
  *  limitations under the License.
  */
 
-import { Box, Paper, TableContainer, useTheme } from '@mui/material';
+import {
+  Avatar,
+  BadgeWithIcon,
+  Box,
+  Card,
+  Typography,
+} from '@openmetadata/ui-core-components';
+import { Tag01 } from '@untitledui/icons';
 import { isEmpty } from 'lodash';
-import { useEffect, useMemo } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../../assets/svg/folder-empty.svg';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { Domain } from '../../../generated/entity/domains/domain';
+import { TagLabel } from '../../../generated/type/tagLabel';
+import { getEntityName } from '../../../utils/EntityUtils';
+import { getEntityAvatarProps } from '../../../utils/IconUtils';
+import { getClassificationTags, getGlossaryTags } from '../../../utils/TagsUtils';
 import { useDelete } from '../../common/atoms/actions/useDelete';
 import { useDomainCardTemplates } from '../../common/atoms/domain/ui/useDomainCardTemplates';
 import { useDomainFilters } from '../../common/atoms/domain/ui/useDomainFilters';
@@ -25,9 +37,13 @@ import { useSearch } from '../../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../../common/atoms/navigation/useTitleAndCount';
 import { useViewToggle } from '../../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../../common/atoms/pagination/usePaginationControls';
-import { useCardView } from '../../common/atoms/table/useCardView';
-import { useDataTable } from '../../common/atoms/table/useDataTable';
+import EntityCardView from '../../common/EntityCardView/EntityCardView';
+import EntityListingTable, {
+  ColumnDef,
+} from '../../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
+import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
+import { DomainTypeChip } from '../../DomainListing/components/DomainTypeChip';
 import { useSubdomainListingData } from './hooks/useSubdomainListingData';
 import { SubDomainsTableProps } from './SubDomainsTable.interface';
 
@@ -39,12 +55,10 @@ const SubDomainsTable = ({
   onDeleteSubDomain,
 }: SubDomainsTableProps) => {
   const { t } = useTranslation();
-  const theme = useTheme();
   const subdomainListing = useSubdomainListingData({
     parentDomainFqn: domainFqn,
   });
 
-  // Use the same domain filters configuration
   const { quickFilters, defaultFilters } = useDomainFilters({
     isSubDomain: true,
     aggregations: subdomainListing.aggregations || undefined,
@@ -52,7 +66,6 @@ const SubDomainsTable = ({
     onFilterChange: subdomainListing.handleFilterChange,
   });
 
-  // Use the filter selection hook for displaying selected filters
   const { filterSelectionDisplay } = useFilterSelection({
     urlState: subdomainListing.urlState,
     filterConfigs: defaultFilters,
@@ -75,18 +88,83 @@ const SubDomainsTable = ({
   });
 
   const { view, viewToggle } = useViewToggle();
-  const { domainCardTemplate } = useDomainCardTemplates();
+  const { renderDomainCard } = useDomainCardTemplates();
 
-  const { dataTable } = useDataTable({
-    listing: subdomainListing,
-    enableSelection: true,
-    entityLabelKey: 'label.sub-domain',
-  });
+  const subDomainColumns: ColumnDef[] = useMemo(
+    () => [
+      { id: 'name', label: t('label.sub-domain') },
+      { id: 'owners', label: t('label.owner-plural') },
+      { id: 'glossaryTerms', label: t('label.glossary-term-plural') },
+      { id: 'domainType', label: t('label.domain-type') },
+      { id: 'tags', label: t('label.tag-plural') },
+    ],
+    [t]
+  );
 
-  const { cardView } = useCardView({
-    listing: subdomainListing,
-    cardTemplate: domainCardTemplate,
-  });
+  const renderTagList = useCallback((tags: TagLabel[]): ReactNode => {
+    if (!tags.length) {
+      return <Typography size="text-sm">-</Typography>;
+    }
+
+    const firstTag = tags[0];
+    const remaining = tags.length - 1;
+
+    return (
+      <Box align="center" direction="row" gap={1}>
+        <BadgeWithIcon
+          color="gray"
+          iconLeading={Tag01}
+          key={firstTag.tagFQN}
+          size="lg"
+          type="color">
+          {firstTag.displayName || firstTag.tagFQN}
+        </BadgeWithIcon>
+        {remaining > 0 && (
+          <Typography size="text-xs" weight="medium">
+            +{remaining}
+          </Typography>
+        )}
+      </Box>
+    );
+  }, []);
+
+  const renderSubDomainCell = useCallback(
+    (entity: Domain, columnId: string): ReactNode => {
+      switch (columnId) {
+        case 'name':
+          return (
+            <Box align="center" direction="row" gap={3}>
+              <Avatar size="md" {...getEntityAvatarProps(entity)} />
+              <Typography size="text-sm" weight="medium">
+                {getEntityName(entity)}
+              </Typography>
+            </Box>
+          );
+        case 'domainType':
+          return entity.domainType ? (
+            <DomainTypeChip domainType={entity.domainType} />
+          ) : (
+            <Typography size="text-sm">-</Typography>
+          );
+        case 'owners':
+          return (
+            <OwnerLabel
+              isCompactView={false}
+              maxVisibleOwners={4}
+              owners={entity.owners}
+              showLabel={false}
+            />
+          );
+        case 'glossaryTerms':
+          return renderTagList(getGlossaryTags(entity.tags));
+        case 'tags':
+          return renderTagList(getClassificationTags(entity.tags));
+        default:
+          return null;
+      }
+    },
+    [renderTagList]
+  );
 
   const { paginationControls } = usePaginationControls({
     currentPage: subdomainListing.currentPage,
@@ -97,7 +175,6 @@ const SubDomainsTable = ({
     loading: subdomainListing.loading,
   });
 
-  // Map selected IDs to actual entities for the delete hook
   const selectedSubdomainEntities = useMemo(
     () =>
       subdomainListing.entities.filter((entity) =>
@@ -144,7 +221,17 @@ const SubDomainsTable = ({
     if (view === 'table') {
       return (
         <>
-          {dataTable}
+          <EntityListingTable
+            ariaLabel={t('label.sub-domain')}
+            columns={subDomainColumns}
+            entities={subdomainListing.entities}
+            loading={subdomainListing.loading}
+            renderCell={renderSubDomainCell}
+            selectedEntities={subdomainListing.selectedEntities}
+            onEntityClick={subdomainListing.actionHandlers.onEntityClick}
+            onSelect={subdomainListing.handleSelect}
+            onSelectAll={subdomainListing.handleSelectAll}
+          />
           {paginationControls}
         </>
       );
@@ -152,16 +239,23 @@ const SubDomainsTable = ({
 
     return (
       <>
-        {cardView}
+        <EntityCardView
+          entities={subdomainListing.entities}
+          loading={subdomainListing.loading}
+          renderCard={renderDomainCard}
+          onEntityClick={subdomainListing.actionHandlers.onEntityClick}
+        />
         {paginationControls}
       </>
     );
   }, [
     subdomainListing.loading,
     subdomainListing.entities,
+    subdomainListing.selectedEntities,
+    subdomainListing.actionHandlers,
     view,
-    dataTable,
-    cardView,
+    renderSubDomainCell,
+    renderDomainCard,
     paginationControls,
     permissions.Create,
     onAddSubDomain,
@@ -170,29 +264,26 @@ const SubDomainsTable = ({
 
   return (
     <>
-      <TableContainer component={Paper} sx={{ mb: 5 }}>
+      <Card style={{ marginBottom: 20 }} variant="elevated">
         <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            px: 6,
-            py: 4,
-            borderBottom: `1px solid`,
-            borderColor: theme.palette.allShades?.gray?.[200],
+          direction="col"
+          gap={4}
+          style={{
+            padding: '16px 24px',
+            borderBottom: '1px solid var(--color-border-secondary)',
           }}>
-          <Box sx={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+          <Box align="center" direction="row" gap={5}>
             {titleAndCount}
             {search}
             {quickFilters}
-            <Box ml="auto" />
+            <Box style={{ marginLeft: 'auto' }} />
             {viewToggle}
             {deleteIconButton}
           </Box>
           {filterSelectionDisplay}
         </Box>
         {content}
-      </TableContainer>
+      </Card>
       {deleteModal}
     </>
   );
