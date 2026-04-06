@@ -12,15 +12,15 @@
  */
 
 import { Button } from '@openmetadata/ui-core-components';
-import Form, { FormProps, IChangeEvent } from '@rjsf/core';
+import Form, { IChangeEvent } from '@rjsf/core';
 import { RJSFSchema } from '@rjsf/utils';
 import validator from '@rjsf/validator-ajv8';
-import { LoadingState } from 'Models';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { transformErrors } from '../../../utils/formUtils';
 import { formatFormDataForRender } from '../../../utils/JSONSchemaFormUtils';
 import LayoutGridField from './fields/LayoutGridField';
+import { FormBuilderV1Props } from './FormBuilderV1.interface';
 import { CoreArrayFieldTemplate } from './templates/CoreArrayFieldTemplate';
 import { CoreFieldErrorTemplate } from './templates/CoreFieldErrorTemplate';
 import { CoreFieldTemplate } from './templates/CoreFieldTemplate';
@@ -30,15 +30,6 @@ import CoreInputWidget from './widgets/CoreInputWidget';
 import CoreRadioWidget from './widgets/CoreRadioWidget';
 import CoreSelectWidget from './widgets/CoreSelectWidget';
 import CoreTextAreaWidget from './widgets/CoreTextAreaWidget';
-
-export interface FormBuilderV1Props extends Omit<FormProps, 'validator'> {
-  okText?: string;
-  cancelText?: string;
-  isLoading?: boolean;
-  hideCancelButton?: boolean;
-  status?: LoadingState;
-  onCancel?: () => void;
-}
 
 const FormBuilderV1 = ({
   formData,
@@ -111,13 +102,13 @@ const FormBuilderV1 = ({
         ObjectFieldTemplate: CoreObjectFieldTemplate,
         FieldErrorTemplate: CoreFieldErrorTemplate,
       }}
+      {...props}
       transformErrors={transformErrors}
       uiSchema={uiSchema}
       validator={validator}
       widgets={widgets}
       onChange={handleFormChange}
-      onSubmit={onSubmit}
-      {...props}>
+      onSubmit={onSubmit}>
       {children}
       <div className="tw:mt-4 tw:flex tw:justify-end tw:gap-2">
         {!hideCancelButton && (

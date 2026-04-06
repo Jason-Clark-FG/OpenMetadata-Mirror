@@ -17,6 +17,11 @@ import { Plus } from '@untitledui/icons';
 import { Fragment, FunctionComponent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+const ADVANCED_PROPERTIES = new Set([
+  'connectionArguments',
+  'connectionOptions',
+]);
+
 export const CoreObjectFieldTemplate: FunctionComponent<
   ObjectFieldTemplateProps
 > = ({ title, onAddClick, schema, properties, idSchema }) => {
@@ -25,8 +30,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
 
   const { normalProperties, advancedProperties } = properties.reduce(
     (acc, prop) => {
-      const ADVANCED = ['connectionArguments', 'connectionOptions'];
-      if (ADVANCED.includes(prop.name)) {
+      if (ADVANCED_PROPERTIES.has(prop.name)) {
         acc.advancedProperties.push(prop);
       } else {
         acc.normalProperties.push(prop);
@@ -63,8 +67,8 @@ export const CoreObjectFieldTemplate: FunctionComponent<
       )}
 
       <div className="tw:flex tw:flex-col tw:gap-4">
-        {normalProperties.map((element, index) => (
-          <div key={index}>{element.content}</div>
+        {normalProperties.map((element) => (
+          <div key={element.name}>{element.content}</div>
         ))}
       </div>
 
@@ -80,8 +84,8 @@ export const CoreObjectFieldTemplate: FunctionComponent<
           </button>
           {advancedOpen && (
             <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-4 tw:rounded-lg tw:border tw:border-[var(--color-border-primary)] tw:p-3">
-              {advancedProperties.map((element, index) => (
-                <div key={index}>{element.content}</div>
+              {advancedProperties.map((element) => (
+                <div key={element.name}>{element.content}</div>
               ))}
             </div>
           )}

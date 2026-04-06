@@ -11,21 +11,14 @@
  *  limitations under the License.
  */
 
-import { FieldTemplateProps } from '@rjsf/utils';
+import { FormProps } from '@rjsf/core';
+import { LoadingState } from 'Models';
 
-export const CoreFieldTemplate = ({
-  children,
-  classNames,
-  hidden,
-  style,
-}: FieldTemplateProps) => {
-  if (hidden) {
-    return <div className="tw:hidden">{children}</div>;
-  }
-
-  return (
-    <div className={classNames} style={style}>
-      {children}
-    </div>
-  );
-};
+export interface FormBuilderV1Props extends Omit<FormProps, 'validator'> {
+  okText?: string;
+  cancelText?: string;
+  isLoading?: boolean;
+  hideCancelButton?: boolean;
+  status?: LoadingState;
+  onCancel?: () => void;
+}
