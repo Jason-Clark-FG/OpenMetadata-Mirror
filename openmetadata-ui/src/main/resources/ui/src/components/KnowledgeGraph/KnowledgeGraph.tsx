@@ -51,7 +51,11 @@ import { ReactComponent as LineageIcon } from '../../assets/svg/ic-platform-line
 import { ReactComponent as ZoomInIcon } from '../../assets/svg/ic-zoom-in.svg';
 import { ReactComponent as ZoomOutIcon } from '../../assets/svg/ic-zoom-out.svg';
 import { ReactComponent as RefreshIcon } from '../../assets/svg/reload.svg';
-import { FULLSCREEN_QUERY_PARAM_KEY } from '../../constants/constants';
+import {
+  FULLSCREEN_QUERY_PARAM_KEY,
+  LITE_GRAY_COLOR,
+  WHITE_COLOR,
+} from '../../constants/constants';
 import { useTheme } from '../../context/UntitledUIThemeProvider/theme-provider';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
@@ -283,8 +287,8 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       key: 'left',
       placement: [-0.04, 0.5] as [number, number],
       r: 6,
-      fill: '#ffffff',
-      stroke: '#d9d9d9',
+      fill: WHITE_COLOR,
+      stroke: LITE_GRAY_COLOR,
       lineWidth: 1.5,
     };
 
@@ -292,8 +296,8 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
       key: 'right',
       placement: [1.04, 0.5] as [number, number],
       r: 6,
-      fill: '#ffffff',
-      stroke: '#d9d9d9',
+      fill: WHITE_COLOR,
+      stroke: LITE_GRAY_COLOR,
       lineWidth: 1.5,
     };
 
@@ -489,17 +493,24 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
     networkRef.current = graph;
 
+    const resizeObserver = new ResizeObserver(() => {
+      if (containerRef.current && networkRef.current) {
+        networkRef.current.resize(
+          containerRef.current.offsetWidth,
+          containerRef.current.offsetHeight
+        );
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+
     return () => {
+      if (networkRef.current === graph) {
+        networkRef.current = null;
+      }
       graph.destroy();
+      resizeObserver.disconnect();
     };
-  }, [
-    graphData,
-    loading,
-    layout,
-    entity?.id,
-    isFullscreen,
-    transformToG6Format,
-  ]);
+  }, [graphData, loading, layout, entity?.id, isFullscreen]);
 
   useEffect(() => {
     if (entity?.id) {
