@@ -382,7 +382,7 @@ test.describe('Lineage Filters', () => {
     await expect(page.getByTestId('search-dropdown-Tier')).not.toBeVisible();
   });
 
-  test.fixme(
+  test(
     'Verify Impact Analysis service filter selection',
     async ({ page }) => {
       await openImpactAnalysisTab(page);
@@ -471,7 +471,7 @@ test.describe('Lineage Filters', () => {
     }
   );
 
-  test.fixme('Verify lineage service filter selection', async ({ page }) => {
+  test('Verify lineage service filter selection', async ({ page }) => {
     test.slow();
     await page.locator('[aria-label="Filters"]').click();
 
@@ -555,7 +555,7 @@ test.describe('Lineage Filters', () => {
     }
   });
 
-  test.fixme(
+  test(
     'Verify Impact Analysis service type filter selection',
     async ({ page }) => {
       await openImpactAnalysisTab(page);
@@ -635,7 +635,7 @@ test.describe('Lineage Filters', () => {
     }
   );
 
-  test.fixme(
+  test(
     'Verify lineage service type filter selection',
     async ({ page }) => {
       test.slow();
