@@ -87,6 +87,7 @@ const FormBuilderV1 = ({
 
   return (
     <Form
+      {...props}
       focusOnFirstError
       noHtml5Validate
       omitExtraData
@@ -102,7 +103,6 @@ const FormBuilderV1 = ({
         ObjectFieldTemplate: CoreObjectFieldTemplate,
         FieldErrorTemplate: CoreFieldErrorTemplate,
       }}
-      {...props}
       transformErrors={transformErrors}
       uiSchema={uiSchema}
       validator={validator}

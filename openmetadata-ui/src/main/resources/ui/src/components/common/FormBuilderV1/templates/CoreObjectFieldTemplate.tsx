@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { Button } from '@openmetadata/ui-core-components';
+import { Button, Typography } from '@openmetadata/ui-core-components';
 import { ObjectFieldTemplateProps } from '@rjsf/utils';
 import { Plus } from '@untitledui/icons';
 import { Fragment, FunctionComponent, useState } from 'react';
@@ -48,11 +48,14 @@ export const CoreObjectFieldTemplate: FunctionComponent<
     <Fragment>
       {title && (
         <div className="tw:flex tw:items-center tw:justify-between tw:mt-2">
-          <label
-            className="tw:text-sm tw:font-medium tw:text-[var(--color-text-primary)]"
-            id={`${idSchema.$id}__title`}>
+          <Typography
+            as="label"
+            className="tw:text-primary)"
+            id={`${idSchema.$id}__title`}
+            size="text-sm"
+            weight="medium">
             {title}
-          </label>
+          </Typography>
           {schema.additionalProperties && (
             <Button
               aria-label={t('label.add-entity', { entity: title })}
@@ -75,16 +78,21 @@ export const CoreObjectFieldTemplate: FunctionComponent<
 
       {advancedProperties.length > 0 && (
         <div className="tw:mt-3">
-          <button
-            className="tw:flex tw:items-center tw:gap-1 tw:text-sm tw:font-medium tw:text-[var(--color-text-brand-primary)] hover:tw:underline"
-            type="button"
+          <Button
+            aria-label={
+              advancedOpen
+                ? t('label.hide-entity', { entity: t('label.advanced-config') })
+                : t('label.show-entity', { entity: t('label.advanced-config') })
+            }
+            className="tw:flex tw:items-center tw:gap-1 tw:text-sm tw:font-medium tw:text-brand-primary hover:tw:underline"
+            color="link-color"
             onClick={() => setAdvancedOpen((v) => !v)}>
             {advancedOpen
               ? t('label.hide-entity', { entity: t('label.advanced-config') })
               : t('label.show-entity', { entity: t('label.advanced-config') })}
-          </button>
+          </Button>
           {advancedOpen && (
-            <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-4 tw:rounded-lg tw:border tw:border-[var(--color-border-primary)] tw:p-3">
+            <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-4 tw:rounded-lg tw:border tw:border-primary tw:p-3">
               {advancedProperties.map((element) => (
                 <div key={element.name}>{element.content}</div>
               ))}
