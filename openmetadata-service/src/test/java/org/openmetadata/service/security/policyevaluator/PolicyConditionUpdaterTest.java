@@ -260,6 +260,14 @@ class PolicyConditionUpdaterTest {
   }
 
   @Test
+  void removeFromCondition_middleFunctionInCompoundCondition() {
+    String result =
+        PolicyConditionUpdater.removeFromCondition(
+            "hasAnyRole('R1') && matchAnyTag('A') && inAnyTeam('T1')", "A", TAG_FUNCTIONS);
+    assertEquals("hasAnyRole('R1') && inAnyTeam('T1')", result);
+  }
+
+  @Test
   void removeFromCondition_multipleTagFunctions() {
     String result =
         PolicyConditionUpdater.removeFromCondition(

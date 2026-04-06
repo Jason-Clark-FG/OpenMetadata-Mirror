@@ -135,6 +135,7 @@ public final class PolicyConditionUpdater {
       boolean anyChanged = false;
       for (Policy policy : policies.getData()) {
         if (rewritePolicyConditions(policy, conditionRewriter)) {
+          // Direct DAO update to avoid creating version history entries for automated rewrites
           policyRepo.getDao().update(policy);
           anyChanged = true;
           LOG.info("Updated policy conditions for '{}'", policy.getFullyQualifiedName());
@@ -274,6 +275,8 @@ public final class PolicyConditionUpdater {
     String previous;
     do {
       previous = result;
+      // Collapse consecutive operators: 'X &&  && Y' or 'X ||  || Y'
+      result = result.replaceAll("(&&|\\|\\|)\\s+(&&|\\|\\|)", "$1");
       // Remove leading operators: '&& X' or '|| X'
       result = result.replaceAll("^\\s*(&&|\\|\\|)\\s*", "");
       // Remove trailing operators: 'X &&' or 'X ||'

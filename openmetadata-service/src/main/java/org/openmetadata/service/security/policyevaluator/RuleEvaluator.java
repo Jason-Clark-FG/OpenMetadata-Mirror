@@ -379,12 +379,14 @@ public class RuleEvaluator {
     try {
       Entity.getEntityReferenceByName(entityType, fqn, NON_DELETED);
     } catch (EntityNotFoundException e) {
+      // Tags and glossary terms both appear as tag labels on entities,
+      // so matchAnyTag/matchAllTags conditions may reference either type.
       if (Entity.TAG.equals(entityType)) {
         try {
           Entity.getEntityReferenceByName(Entity.GLOSSARY_TERM, fqn, NON_DELETED);
           return;
         } catch (EntityNotFoundException ignored) {
-          // Fall through to the original handling
+          // Fall through to stale-reference handling
         }
       }
       if (!isUpdate) {
