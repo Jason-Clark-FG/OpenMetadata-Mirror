@@ -130,5 +130,11 @@ public interface PipelineServiceClientInterface {
   /* Get the all last run logs of a deployed pipeline */
   PipelineServiceClientResponse killIngestion(IngestionPipeline ingestionPipeline);
 
+  /* Stop a specific run of a deployed pipeline identified by its run ID (Argo workflow UID) */
+  default PipelineServiceClientResponse killIngestionRun(
+      IngestionPipeline ingestionPipeline, String runId) {
+    return killIngestion(ingestionPipeline);
+  }
+
   String getPlatform();
 }

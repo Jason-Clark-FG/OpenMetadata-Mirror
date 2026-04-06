@@ -377,7 +377,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
               case RUNNING -> AppRunRecord.Status.RUNNING;
               case STOPPED -> AppRunRecord.Status.STOPPED;
             })
-        .withConfig(pipelineStatus.getConfig());
+        .withConfig(pipelineStatus.getConfig())
+        .withProperties(
+            pipelineStatus.getRunId() != null
+                ? Map.of("pipelineRunId", pipelineStatus.getRunId())
+                : null);
   }
 
   private ResultList<AppRunRecord> sortRunsByStartTime(ResultList<AppRunRecord> runs) {
@@ -1229,7 +1233,12 @@ public class AppResource extends EntityResource<App, AppRepository> {
       @Context SecurityContext securityContext,
       @Parameter(description = "Name of the App", schema = @Schema(type = "string"))
           @PathParam("name")
-          String name) {
+          String name,
+      @Parameter(
+              description = "Pipeline run ID (Argo workflow UID) to stop a specific run",
+              schema = @Schema(type = "string"))
+          @QueryParam("runId")
+          String runId) {
     EntityUtil.Fields fields = getFields(String.format("%s,bot,pipelines", FIELD_OWNERS));
     App app = repository.getByName(uriInfo, name, fields);
     OperationContext operationContext = new OperationContext(entityType, MetadataOperation.TRIGGER);
@@ -1245,35 +1254,68 @@ public class AppResource extends EntityResource<App, AppRepository> {
       } else {
         if (!app.getPipelines().isEmpty()) {
           IngestionPipeline ingestionPipeline = getIngestionPipeline(uriInfo, securityContext, app);
-          markLatestPipelineStatusAsStopped(uriInfo, ingestionPipeline);
-          PipelineServiceClientResponse response =
-              pipelineServiceClient.killIngestion(ingestionPipeline);
-          return Response.status(response.getCode()).entity(response).build();
+          if (runId != null && !runId.isBlank()) {
+            markPipelineStatusAsStopped(uriInfo, ingestionPipeline, runId);
+            PipelineServiceClientResponse response =
+                pipelineServiceClient.killIngestionRun(ingestionPipeline, runId);
+            return Response.status(response.getCode()).entity(response).build();
+          } else {
+            markLatestPipelineStatusAsStopped(uriInfo, ingestionPipeline);
+            PipelineServiceClientResponse response =
+                pipelineServiceClient.killIngestion(ingestionPipeline);
+            return Response.status(response.getCode()).entity(response).build();
+          }
         }
       }
     }
     throw new BadRequestException("Application does not support Interrupts.");
   }
 
-  /**
-   * Mark the latest non-terminal pipeline status as "stopped" so the exit handler
-   * (which always receives "Failed" from Argo) will see a terminal state and skip its update.
-   */
+  private void markPipelineStatusAsStopped(
+      UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
+    try {
+      IngestionPipelineRepository ingestionPipelineRepository =
+          (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
+      PipelineStatus status =
+          ingestionPipelineRepository.getPipelineStatus(
+              ingestionPipeline.getFullyQualifiedName(), UUID.fromString(runId));
+      if (status == null) {
+        LOG.warn("Pipeline status not found for run {}, skipping DB update", runId);
+        return;
+      }
+      if (!isTerminalState(status.getPipelineState())) {
+        status.setPipelineState(PipelineStatusType.STOPPED);
+        status.setEndDate(System.currentTimeMillis());
+        ingestionPipelineRepository.addPipelineStatus(
+            uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
+      }
+    } catch (Exception e) {
+      LOG.warn(
+          "Failed to mark pipeline run {} as stopped, continuing with kill: {}",
+          runId,
+          e.getMessage());
+    }
+  }
+
   private void markLatestPipelineStatusAsStopped(
       UriInfo uriInfo, IngestionPipeline ingestionPipeline) {
     try {
       IngestionPipelineRepository ingestionPipelineRepository =
           (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
-      PipelineStatus latestStatus =
-          ingestionPipelineRepository.getLatestPipelineStatus(ingestionPipeline);
-      if (latestStatus != null && !isTerminalState(latestStatus.getPipelineState())) {
-        latestStatus.setPipelineState(PipelineStatusType.STOPPED);
-        latestStatus.setEndDate(System.currentTimeMillis());
-        ingestionPipelineRepository.addPipelineStatus(
-            uriInfo, ingestionPipeline.getFullyQualifiedName(), latestStatus);
+      ResultList<PipelineStatus> recentStatuses =
+          ingestionPipelineRepository.listPipelineStatus(
+              ingestionPipeline.getFullyQualifiedName(), null, null, 20);
+      long now = System.currentTimeMillis();
+      for (PipelineStatus status : recentStatuses.getData()) {
+        if (!isTerminalState(status.getPipelineState())) {
+          status.setPipelineState(PipelineStatusType.STOPPED);
+          status.setEndDate(now);
+          ingestionPipelineRepository.addPipelineStatus(
+              uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
+        }
       }
     } catch (Exception e) {
-      LOG.warn("Failed to mark pipeline status as stopped, continuing with kill: {}", e.getMessage());
+      LOG.warn("Failed to mark pipeline runs as stopped, continuing with kill: {}", e.getMessage());
     }
   }
 

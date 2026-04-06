@@ -86,6 +86,9 @@ const AppRunsHistory = forwardRef(
     >([]);
     const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([]);
     const [isStopModalOpen, setIsStopModalOpen] = useState<boolean>(false);
+    const [selectedRunId, setSelectedRunId] = useState<string | undefined>(
+      undefined
+    );
     const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
     const [appRunRecordConfig, setAppRunRecordConfig] = useState<
       AppRunRecord['config']
@@ -198,18 +201,23 @@ const AppRunsHistory = forwardRef(
               onClick={() => showAppRunConfig(record)}>
               {t('label.config')}
             </Button>
-            {/* For status running, pending, started or activewitherror and supportsInterrupt is true, show stop button */}
-            {(record.status === Status.Running ||
-              record.status === Status.Pending ||
-              record.status === Status.Started ||
-              record.status === Status.ActiveError) &&
+            {record.status !== Status.Success &&
+              record.status !== Status.Failed &&
+              record.status !== Status.Stopped &&
+              record.status !== Status.Completed &&
               Boolean(appData?.supportsInterrupt) && (
                 <Button
                   className="m-l-xs p-0"
                   data-testid="stop-button"
                   size="small"
                   type="link"
-                  onClick={() => setIsStopModalOpen(true)}>
+                  onClick={() => {
+                    const rawRunId = record.properties?.pipelineRunId;
+                    setSelectedRunId(
+                      typeof rawRunId === 'string' ? rawRunId : undefined
+                    );
+                    setIsStopModalOpen(true);
+                  }}>
                   {t('label.stop')}
                 </Button>
               )}
@@ -454,8 +462,10 @@ const AppRunsHistory = forwardRef(
             appName={fqn}
             displayName={appData?.displayName ?? ''}
             isModalOpen={isStopModalOpen}
+            runId={selectedRunId}
             onClose={() => {
               setIsStopModalOpen(false);
+              setSelectedRunId(undefined);
             }}
             onStopWorkflowsUpdate={() => {
               fetchAppHistory();

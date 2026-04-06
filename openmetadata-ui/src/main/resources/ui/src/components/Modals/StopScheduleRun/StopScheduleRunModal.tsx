@@ -23,6 +23,7 @@ const StopScheduleModal: FC<StopScheduleRunModalProps> = ({
   appName,
   isModalOpen,
   displayName,
+  runId,
   onClose,
   onStopWorkflowsUpdate,
 }) => {
@@ -32,7 +33,7 @@ const StopScheduleModal: FC<StopScheduleRunModalProps> = ({
   const handleConfirm = async () => {
     setIsLoading(true);
     try {
-      const { status } = await stopApp(appName);
+      const { status } = await stopApp(appName, runId);
       if (status === 200) {
         showSuccessToast(
           t('message.application-stop', {
