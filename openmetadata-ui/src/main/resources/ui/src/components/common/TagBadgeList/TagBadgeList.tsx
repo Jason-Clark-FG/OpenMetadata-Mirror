@@ -17,8 +17,8 @@ import {
   Typography,
 } from '@openmetadata/ui-core-components';
 import { Tag01 } from '@untitledui/icons';
-import { TagLabel } from '../../../generated/type/tagLabel';
 import { NO_DATA } from '../../../constants/constants';
+import { TagLabel } from '../../../generated/type/tagLabel';
 interface TagBadgeListProps {
   tags: TagLabel[];
   size?: 'sm' | 'lg';

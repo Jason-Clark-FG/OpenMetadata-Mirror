@@ -21,6 +21,7 @@ import { isEmpty } from 'lodash';
 import { ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../../assets/svg/folder-empty.svg';
+import { NO_DATA } from '../../../constants/constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { Domain } from '../../../generated/entity/domains/domain';
 import { getEntityName } from '../../../utils/EntityUtils';
@@ -48,7 +49,6 @@ import TagBadgeList from '../../common/TagBadgeList/TagBadgeList';
 import { DomainTypeChip } from '../../DomainListing/components/DomainTypeChip';
 import { useSubdomainListingData } from './hooks/useSubdomainListingData';
 import { SubDomainsTableProps } from './SubDomainsTable.interface';
-import { NO_DATA } from '../../../constants/constants';
 
 const SubDomainsTable = ({
   domainFqn,

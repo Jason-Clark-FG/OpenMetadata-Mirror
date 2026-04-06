@@ -24,6 +24,7 @@ import { useSnackbar } from 'notistack';
 import { ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
+import { NO_DATA } from '../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
@@ -59,7 +60,6 @@ import TagBadgeList from '../common/TagBadgeList/TagBadgeList';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
 import { useDataProductListingData } from './hooks/useDataProductListingData';
-import { NO_DATA } from '../../constants/constants';
 
 const DataProductListPage = () => {
   const dataProductListing = useDataProductListingData();
@@ -95,7 +95,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => { }}
+        onCancel={() => {}}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -121,7 +121,7 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => { },
+    onSubmit: () => {},
     loading: isLoading,
   });
 

@@ -19,6 +19,7 @@ import {
 } from '@openmetadata/ui-core-components';
 import { ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { NO_DATA } from '../../../../../constants/constants';
 import { DataProduct } from '../../../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../../../generated/entity/domains/domain';
 import { getEntityName } from '../../../../../utils/EntityUtils';
@@ -30,7 +31,6 @@ import {
 import { DomainTypeChip } from '../../../../DomainListing/components/DomainTypeChip';
 import { OwnerLabel } from '../../../OwnerLabel/OwnerLabel.component';
 import TagBadgeList from '../../../TagBadgeList/TagBadgeList';
-import { NO_DATA } from '../../../../../constants/constants';
 
 export const useDomainCardTemplates = () => {
   const { t } = useTranslation();
