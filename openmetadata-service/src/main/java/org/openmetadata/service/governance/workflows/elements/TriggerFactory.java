@@ -29,7 +29,8 @@ public class TriggerFactory {
           workflow.getName(),
           triggerWorkflowId,
           (PeriodicBatchEntityTriggerDefinition) workflow.getTrigger(),
-          hasBatchModeNodes(workflow));
+          hasBatchModeNodes(workflow),
+          workflow.getFullyQualifiedName());
     };
   }
 

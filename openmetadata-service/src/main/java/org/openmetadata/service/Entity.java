@@ -136,6 +136,7 @@ public final class Entity {
   public static final String FIELD_EXPERTS = "experts";
   public static final String FIELD_DOMAINS = "domains";
   public static final String FIELD_DATA_PRODUCTS = "dataProducts";
+  public static final String FIELD_DATA_CONTRACT = "dataContract";
   public static final String FIELD_ASSETS = "assets";
 
   public static final String FIELD_STYLE = "style";
@@ -169,6 +170,7 @@ public final class Entity {
   public static final String API_SERVICE = "apiService";
   public static final String DRIVE_SERVICE = "driveService";
   public static final String LLM_SERVICE = "llmService";
+  public static final String MCP_SERVICE = "mcpService";
   //
   // Data asset entities
   //
@@ -215,6 +217,8 @@ public final class Entity {
   public static final String PROMPT_TEMPLATE = "promptTemplate";
   public static final String AGENT_EXECUTION = "agentExecution";
   public static final String AI_GOVERNANCE_POLICY = "aiGovernancePolicy";
+  public static final String MCP_SERVER = "mcpServer";
+  public static final String MCP_EXECUTION = "mcpExecution";
   public static final String TEST_DEFINITION = "testDefinition";
   public static final String TEST_CONNECTION_DEFINITION = "testConnectionDefinition";
   public static final String TEST_SUITE = "testSuite";
@@ -319,6 +323,7 @@ public final class Entity {
     SERVICE_TYPE_ENTITY_MAP.put(ServiceType.API, API_SERVICE);
     SERVICE_TYPE_ENTITY_MAP.put(ServiceType.DRIVE, DRIVE_SERVICE);
     SERVICE_TYPE_ENTITY_MAP.put(ServiceType.LLM, LLM_SERVICE);
+    SERVICE_TYPE_ENTITY_MAP.put(ServiceType.MCP, MCP_SERVICE);
 
     ENTITY_SERVICE_TYPE_MAP.put(DATABASE, DATABASE_SERVICE);
     ENTITY_SERVICE_TYPE_MAP.put(DATABASE_SCHEMA, DATABASE_SERVICE);
@@ -341,6 +346,7 @@ public final class Entity {
     ENTITY_SERVICE_TYPE_MAP.put(SPREADSHEET, DRIVE_SERVICE);
     ENTITY_SERVICE_TYPE_MAP.put(WORKSHEET, DRIVE_SERVICE);
     ENTITY_SERVICE_TYPE_MAP.put(LLM_MODEL, LLM_SERVICE);
+    ENTITY_SERVICE_TYPE_MAP.put(MCP_SERVER, MCP_SERVICE);
 
     PARENT_ENTITY_TYPES.addAll(
         listOf(
@@ -357,6 +363,7 @@ public final class Entity {
             SECURITY_SERVICE,
             DRIVE_SERVICE,
             LLM_SERVICE,
+            MCP_SERVICE,
             DATABASE,
             DATABASE_SCHEMA,
             CLASSIFICATION,

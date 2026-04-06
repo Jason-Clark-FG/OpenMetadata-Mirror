@@ -2408,6 +2408,20 @@ public class WorkflowDefinitionResourceIT {
 
       LOG.info("Multi-entity workflow processed all entities successfully");
 
+      // Create new change events for databases so the second incremental run has events to process.
+      // (The first run committed an offset; the second run only sees events > that offset.)
+      JsonNode db1Patch =
+          MAPPER.readTree(
+              "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Pre-second-run update for database 1\"}]");
+      client.databases().patch(database1.getId(), db1Patch);
+
+      JsonNode db2Patch =
+          MAPPER.readTree(
+              "[{\"op\":\"replace\",\"path\":\"/description\",\"value\":\"Pre-second-run update for database 2\"}]");
+      client.databases().patch(database2.getId(), db2Patch);
+
+      LOG.info("Patched databases to create new change events for the second run");
+
       // Now modify workflow to only process database entities
       Map<String, Object> singleEntityTriggerConfig = new HashMap<>();
       singleEntityTriggerConfig.put("entityTypes", List.of("database"));
