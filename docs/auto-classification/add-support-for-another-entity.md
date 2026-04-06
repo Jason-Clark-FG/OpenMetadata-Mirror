@@ -80,8 +80,10 @@ Before adding support for a new entity type (e.g., Topic, Dashboard, SearchIndex
       "default": false
     },
     "storeSampleData": {
+      "description": "Option to turn on/off storing sample data. If enabled, we will ingest sample data for each entity.",
       "type": "boolean",
-      "default": false
+      "default": false,
+      "title": "Store Sample Data"
     },
     "enableAutoClassification": {
       "type": "boolean",
@@ -107,6 +109,7 @@ Before adding support for a new entity type (e.g., Topic, Dashboard, SearchIndex
 - Include entity-specific filter patterns (e.g., `bucketFilterPattern` for storage, `topicFilterPattern` for messaging)
 - Keep consistent property names: `storeSampleData`, `enableAutoClassification`, `confidence`, `sampleDataCount`
 - Reference standard filter patterns and classification languages
+- **Important:** `storeSampleData` defaults to `false` to avoid storing large datasets by default. Users must explicitly enable it.
 
 #### 1.3 Register Pipeline in Workflow Schema
 
@@ -601,20 +604,42 @@ class YourServiceSampler(SamplerInterface):
 
 **Location:** `ingestion/src/metadata/sampler/processor.py`
 
-**Add entity type detection:**
+**Add entity type detection with fallback:**
 
 ```python
 def __init__(self, config, metadata, profiler_config_class):
     # ... existing init code
 
+    self._interface_type: str = config.source.type.lower()
+
     # Determine service type based on configuration
+    # First try to detect based on pipeline config type
     if isinstance(self.source_config, StorageServiceAutoClassificationPipeline):
         self.service_type = ServiceType.Storage
     elif isinstance(self.source_config, MessagingServiceAutoClassificationPipeline):
-        self.service_type = ServiceType.Messaging  # Your new service type
+        self.service_type = ServiceType.Messaging
     else:
-        self.service_type = ServiceType.Database
+        # Fallback: detect based on source type for non-database services
+        # This handles cases where the package might not be fully updated
+        storage_sources = ["s3", "gcs", "azuredatalake", "customstorage"]
+        messaging_sources = ["kafka", "pulsar", "redpanda"]  # Example
+
+        if self._interface_type in storage_sources:
+            self.service_type = ServiceType.Storage
+        elif self._interface_type in messaging_sources:
+            self.service_type = ServiceType.Messaging
+        else:
+            self.service_type = ServiceType.Database
+
+    # Add logging to help debug service type detection issues
+    profiler_logger.info(
+        f"Sampler processor initialized with service_type={self.service_type}, "
+        f"source_config_type={type(self.source_config).__name__}, "
+        f"interface_type={self._interface_type}"
+    )
 ```
+
+**Why the fallback is important:** In environments like Airflow where the ingestion package might be cached or not fully updated, the isinstance check for the new pipeline config type can fail. The fallback ensures the correct service type is detected based on the source connector name.
 
 **Add entity processing method:**
 
@@ -1330,6 +1355,76 @@ Before submitting your PR, verify:
 6. **Frontend schema resolution**: Connection schemas must use `supportsProfiler` for the UI to show auto-classification option.
 
 7. **PII masking logic**: Ensure `maskSampleData` handles both entity-level and column-level PII tags.
+
+8. **`storeSampleData` defaults to `false`**: Sample data will NOT be ingested unless `storeSampleData: true` is explicitly set in the pipeline configuration. This is by design to avoid storing potentially large sample datasets by default. The sink only ingests sample data when `record.sample_data.store` is true.
+
+9. **Service type detection in cached environments**: If you see errors like `No module named 'metadata.ingestion.source.database.gcs'`, the service type detection failed. The system tried to load a database sampler for a storage service. Ensure the fallback pattern is implemented in the sampler processor (see section 3.5).
+
+---
+
+## Troubleshooting
+
+### Sample Data Not Appearing
+
+**Symptom:** GET `/api/v1/<entities>/{id}/sampleData` returns empty or the entity without `sampleData` field.
+
+**Possible causes:**
+
+1. **`storeSampleData` is disabled**: Check your pipeline configuration. The default is `false`.
+   ```bash
+   # Check pipeline config
+   http GET http://localhost:8585/api/v1/services/ingestionPipelines/{pipeline-id}
+
+   # Look for:
+   "sourceConfig": {
+     "config": {
+       "storeSampleData": false  # <- This must be true!
+     }
+   }
+   ```
+
+2. **Sample data not in database**: Check the `entity_extension` table:
+   ```sql
+   SELECT id, extension, jsonSchema
+   FROM entity_extension
+   WHERE extension = '<entity>.sampleData'
+   LIMIT 10;
+   ```
+
+   If no rows exist, sample data was never ingested. Check workflow logs for errors.
+
+3. **Workflow didn't run or failed**: Check ingestion pipeline execution logs for errors during sampling or PII detection.
+
+4. **Service type detection failed**: Look for import errors in logs like:
+   ```
+   Cannot import metadata.ingestion.source.database.<connector>
+   ```
+   This means the sampler processor detected the wrong service type. Verify the fallback logic is present.
+
+### Module Import Errors
+
+**Symptom:** `DynamicImportException: Cannot import metadata.ingestion.source.database.<connector>`
+
+**Cause:** The sampler processor detected `ServiceType.Database` instead of the correct service type (e.g., `ServiceType.Storage`).
+
+**Solution:**
+1. Verify the isinstance checks in sampler processor `__init__` include your pipeline config type
+2. Add your source type to the fallback list (e.g., add `"myconnector"` to `storage_sources` list)
+3. Check logs for "Sampler processor initialized" message showing wrong service_type
+
+### PII Tags Not Applied
+
+**Symptom:** Sample data is ingested but no PII tags appear on columns.
+
+**Possible causes:**
+
+1. **`enableAutoClassification` is disabled**: Check pipeline config has `enableAutoClassification: true`
+
+2. **Confidence threshold too high**: Lower the `confidence` value in pipeline config (default is 80)
+
+3. **Sample data count too low**: Increase `sampleDataCount` for better PII detection accuracy
+
+4. **Column name mismatch**: Verify column names in sample data match entity column definitions exactly
 
 ---
 
