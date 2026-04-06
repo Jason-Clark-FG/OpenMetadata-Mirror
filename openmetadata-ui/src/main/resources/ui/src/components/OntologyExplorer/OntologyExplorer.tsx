@@ -998,21 +998,28 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
         : glossariesToUse;
 
       for (const glossary of glossariesToFetch) {
-        try {
-          const termsResponse = await getGlossaryTerms({
-            glossary: glossary.id,
-            fields: [
-              TabSpecificField.RELATED_TERMS,
-              TabSpecificField.CHILDREN,
-              TabSpecificField.PARENT,
-              TabSpecificField.OWNERS,
-            ],
-            limit: 1000,
-          });
-          allTerms.push(...termsResponse.data);
-        } catch {
-          // Continue with other glossaries if one fails
-        }
+        let after: string | undefined;
+        do {
+          try {
+            const termsResponse = await getGlossaryTerms({
+              glossary: glossary.id,
+              fields: [
+                TabSpecificField.RELATED_TERMS,
+                TabSpecificField.CHILDREN,
+                TabSpecificField.PARENT,
+                TabSpecificField.OWNERS,
+              ],
+              limit: 1000,
+              after,
+            });
+            allTerms.push(...termsResponse.data);
+            after = termsResponse.paging?.after;
+
+          } catch {
+            // Continue with other glossaries if one fails
+            break;
+          }
+        } while (after);
       }
 
       return buildGraphFromAllTerms(allTerms, glossariesToFetch);
@@ -1026,8 +1033,10 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
   const fetchAllGlossaryData = useCallback(
     async (glossaryIdParam?: string) => {
       setLoading(true);
+      setAssetGraphData(null);
+      setTermAssetCounts({});
+      setSavedPositions(null);
       try {
-        // Always fetch glossaries list for export functionality
         const [glossariesResponse, metricsResponse] = await Promise.all([
           getGlossariesList({
             fields: 'owners,tags',
@@ -1057,9 +1066,6 @@ const OntologyExplorer: React.FC<OntologyExplorerProps> = ({
 
         const mergedData = mergeMetricsIntoGraph(data, metricsResponse);
         setGraphData(mergedData);
-        setAssetGraphData(null);
-        setTermAssetCounts({});
-        setSavedPositions(null);
       } catch (error) {
         showErrorToast(
           isAxiosError(error) ? error : String(error),
