@@ -73,8 +73,7 @@ const CoreRadioWidget = ({
         value={
           value === undefined || value === null ? undefined : String(value)
         }
-        onChange={(nextValue) => onChange(optionValueMap.get(nextValue))}
-      >
+        onChange={(nextValue) => onChange(optionValueMap.get(nextValue))}>
         {items.map((item) => (
           <RadioButton
             hint={item.hint}

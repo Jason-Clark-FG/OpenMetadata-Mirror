@@ -51,7 +51,9 @@ describe('FormBuilderV1 templates', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleErrorSpy = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -82,8 +84,8 @@ describe('FormBuilderV1 templates', () => {
             onDropIndexClick,
           },
         ]}
-        onAddClick={onAddClick}
         title="Tags"
+        onAddClick={onAddClick}
       />
     );
 
@@ -106,14 +108,14 @@ describe('FormBuilderV1 templates', () => {
         hidden={false}
         id="field-id"
         label="Field"
-        onDropPropertyClick={jest.fn()}
-        onKeyChange={jest.fn()}
         rawDescription={undefined}
         rawErrors={[]}
         rawHelp={undefined}
         required={false}
         schema={{ type: 'string' }}
         style={{ marginTop: 8 }}
+        onDropPropertyClick={jest.fn()}
+        onKeyChange={jest.fn()}
       />
     );
 
@@ -123,18 +125,18 @@ describe('FormBuilderV1 templates', () => {
 
     rerender(
       <CoreFieldTemplate
+        hidden
         children={<div>hidden content</div>}
         classNames="field-wrapper"
-        hidden
         id="field-id"
         label="Field"
-        onDropPropertyClick={jest.fn()}
-        onKeyChange={jest.fn()}
         rawDescription={undefined}
         rawErrors={[]}
         rawHelp={undefined}
         required={false}
         schema={{ type: 'string' }}
+        onDropPropertyClick={jest.fn()}
+        onKeyChange={jest.fn()}
       />
     );
 
@@ -148,7 +150,6 @@ describe('FormBuilderV1 templates', () => {
     render(
       <CoreObjectFieldTemplate
         idSchema={{ $id: 'object-field' }}
-        onAddClick={onAddClick}
         properties={[
           {
             content: <div>basic property</div>,
@@ -161,6 +162,7 @@ describe('FormBuilderV1 templates', () => {
         ]}
         schema={{ additionalProperties: true }}
         title="Connection"
+        onAddClick={onAddClick}
       />
     );
 

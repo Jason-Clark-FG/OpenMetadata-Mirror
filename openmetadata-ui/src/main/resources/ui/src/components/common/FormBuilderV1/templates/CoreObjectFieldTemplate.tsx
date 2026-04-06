@@ -46,8 +46,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
         <div className="tw:flex tw:items-center tw:justify-between tw:mt-2">
           <label
             className="tw:text-sm tw:font-medium tw:text-[var(--color-text-primary)]"
-            id={`${idSchema.$id}__title`}
-          >
+            id={`${idSchema.$id}__title`}>
             {title}
           </label>
           {schema.additionalProperties && (
@@ -56,8 +55,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
               data-testid={`add-item-${title}`}
               id={`${idSchema.$id}`}
               size="sm"
-              onClick={() => onAddClick(schema)()}
-            >
+              onClick={() => onAddClick(schema)()}>
               <Plus data-icon size={14} />
             </Button>
           )}
@@ -75,8 +73,7 @@ export const CoreObjectFieldTemplate: FunctionComponent<
           <button
             className="tw:flex tw:items-center tw:gap-1 tw:text-sm tw:font-medium tw:text-[var(--color-text-brand-primary)] hover:tw:underline"
             type="button"
-            onClick={() => setAdvancedOpen((v) => !v)}
-          >
+            onClick={() => setAdvancedOpen((v) => !v)}>
             {advancedOpen
               ? t('label.hide-entity', { entity: t('label.advanced-config') })
               : t('label.show-entity', { entity: t('label.advanced-config') })}

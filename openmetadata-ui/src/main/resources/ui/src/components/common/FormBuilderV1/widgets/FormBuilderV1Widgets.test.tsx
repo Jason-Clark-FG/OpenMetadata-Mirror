@@ -72,8 +72,8 @@ jest.mock('@openmetadata/ui-core-components', () => ({
         {label ? <label htmlFor={id as string}>{label as string}</label> : null}
         {hint ? <span>{hint as string}</span> : null}
         <input
-          autoFocus={autoFocus as boolean}
           aria-invalid={isInvalid as boolean}
+          autoFocus={autoFocus as boolean}
           data-required={String(Boolean(isRequired))}
           disabled={isDisabled as boolean}
           id={id as string}
@@ -94,7 +94,12 @@ jest.mock('@openmetadata/ui-core-components', () => ({
     }: {
       children: React.ReactNode;
       isRequired?: boolean;
-    }) => <div>{children}{isRequired ? '*' : ''}</div>
+    }) => (
+      <div>
+        {children}
+        {isRequired ? '*' : ''}
+      </div>
+    )
   ),
   RadioButton: jest.fn(
     ({
@@ -150,7 +155,10 @@ jest.mock('@openmetadata/ui-core-components', () => ({
         <div>
           {label ? <label>{label as string}</label> : null}
           {hint ? <span>{hint as string}</span> : null}
-          <div data-disabled={String(Boolean(isDisabled))} data-invalid={String(Boolean(isInvalid))} data-required={String(Boolean(isRequired))}>
+          <div
+            data-disabled={String(Boolean(isDisabled))}
+            data-invalid={String(Boolean(isInvalid))}
+            data-required={String(Boolean(isRequired))}>
             {placeholder as string}
           </div>
           <div data-testid="selected-key">{String(selectedKey)}</div>
@@ -161,17 +169,19 @@ jest.mock('@openmetadata/ui-core-components', () => ({
             clear-option
           </button>
           {(items as Array<Record<string, string>>).map((item) => (
-            <div key={item.id}>{(children as (item: Record<string, string>) => React.ReactNode)(item)}</div>
+            <div key={item.id}>
+              {(children as (item: Record<string, string>) => React.ReactNode)(
+                item
+              )}
+            </div>
           ))}
         </div>
       )
     ),
     {
-      Item: ({
-        children,
-      }: {
-        children: React.ReactNode;
-      }) => <span>{children}</span>,
+      Item: ({ children }: { children: React.ReactNode }) => (
+        <span>{children}</span>
+      ),
     }
   ),
   TextArea: jest.fn(
@@ -236,14 +246,14 @@ describe('FormBuilderV1 widgets', () => {
       <CoreInputWidget
         {...widgetBaseProps}
         autofocus
-        onBlur={onBlur}
-        onChange={onChange}
-        onFocus={onFocus}
+        required
         options={{ help: 'Helpful hint' }}
         placeholder="Enter text"
         rawErrors={['Invalid']}
-        required
         value="abc"
+        onBlur={onBlur}
+        onChange={onChange}
+        onFocus={onFocus}
       />
     );
 
@@ -262,12 +272,12 @@ describe('FormBuilderV1 widgets', () => {
     rerender(
       <CoreInputWidget
         {...widgetBaseProps}
-        onBlur={onBlur}
-        onChange={onChange}
-        onFocus={onFocus}
         options={{ emptyValue: null }}
         schema={{ type: 'integer' }}
         value={3}
+        onBlur={onBlur}
+        onChange={onChange}
+        onFocus={onFocus}
       />
     );
 
@@ -286,7 +296,7 @@ describe('FormBuilderV1 widgets', () => {
     render(
       <CoreSelectWidget
         {...widgetBaseProps}
-        onChange={onChange}
+        required
         options={{
           emptyValue: null,
           enumOptions: [
@@ -296,8 +306,8 @@ describe('FormBuilderV1 widgets', () => {
         }}
         placeholder="Pick one"
         rawErrors={['Required']}
-        required
         value={1}
+        onChange={onChange}
       />
     );
 
@@ -320,7 +330,7 @@ describe('FormBuilderV1 widgets', () => {
     render(
       <CoreRadioWidget
         {...widgetBaseProps}
-        onChange={onChange}
+        required
         options={{
           inline: true,
           enumOptions: [
@@ -336,8 +346,8 @@ describe('FormBuilderV1 widgets', () => {
           ],
         }}
         rawErrors={['Choose one']}
-        required
         value={1}
+        onChange={onChange}
       />
     );
 
@@ -356,9 +366,9 @@ describe('FormBuilderV1 widgets', () => {
     render(
       <CoreCheckboxWidget
         {...widgetBaseProps}
-        onChange={onChange}
-        options={{ help: 'Checkbox hint' }}
         value
+        options={{ help: 'Checkbox hint' }}
+        onChange={onChange}
       />
     );
 
@@ -379,14 +389,14 @@ describe('FormBuilderV1 widgets', () => {
       <CoreTextAreaWidget
         {...widgetBaseProps}
         autofocus
-        onBlur={onBlur}
-        onChange={onChange}
-        onFocus={onFocus}
+        required
         options={{ rows: 7 }}
         placeholder="Describe it"
         rawErrors={['Too short']}
-        required
         value="hello"
+        onBlur={onBlur}
+        onChange={onChange}
+        onFocus={onFocus}
       />
     );
 

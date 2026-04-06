@@ -117,8 +117,7 @@ const FormBuilderV1 = ({
       widgets={widgets}
       onChange={handleFormChange}
       onSubmit={onSubmit}
-      {...props}
-    >
+      {...props}>
       {children}
       <div className="tw:mt-4 tw:flex tw:justify-end tw:gap-2">
         {!hideCancelButton && (
@@ -126,8 +125,7 @@ const FormBuilderV1 = ({
             color="secondary"
             size="sm"
             type="button"
-            onClick={handleCancel}
-          >
+            onClick={handleCancel}>
             {cancelText ?? t('label.cancel')}
           </Button>
         )}
@@ -136,8 +134,7 @@ const FormBuilderV1 = ({
           data-testid="submit-btn"
           isDisabled={isSubmitting || isLoading}
           size="sm"
-          type="submit"
-        >
+          type="submit">
           {isSubmitting ? t('label.submitting') : okText ?? t('label.submit')}
         </Button>
       </div>

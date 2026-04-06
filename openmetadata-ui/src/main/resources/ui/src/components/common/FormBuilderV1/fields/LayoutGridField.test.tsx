@@ -149,18 +149,6 @@ describe('LayoutGridField', () => {
     render(
       <LayoutGridField
         {...baseProps}
-        uiSchema={{
-          'ui:options': {
-            rows: [
-              {
-                columns: [
-                  { name: 'missing' },
-                  { name: 'firstName' },
-                ],
-              },
-            ],
-          },
-        }}
         idSchema={{
           $id: 'root',
           firstName: { $id: 'root_firstName' },
@@ -169,6 +157,15 @@ describe('LayoutGridField', () => {
           type: 'object',
           properties: {
             firstName: { type: 'string' },
+          },
+        }}
+        uiSchema={{
+          'ui:options': {
+            rows: [
+              {
+                columns: [{ name: 'missing' }, { name: 'firstName' }],
+              },
+            ],
           },
         }}
       />

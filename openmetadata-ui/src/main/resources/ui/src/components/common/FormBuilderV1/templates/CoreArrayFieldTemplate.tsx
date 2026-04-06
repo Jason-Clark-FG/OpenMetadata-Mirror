@@ -31,8 +31,7 @@ export const CoreArrayFieldTemplate: FunctionComponent<
             data-testid={`add-item-${title}`}
             id={`${idSchema.$id}`}
             size="sm"
-            onClick={onAddClick}
-          >
+            onClick={onAddClick}>
             <Plus data-icon size={14} />
           </Button>
         )}
@@ -42,8 +41,7 @@ export const CoreArrayFieldTemplate: FunctionComponent<
           className={`tw:flex tw:w-full tw:items-center${
             index > 0 ? ' tw:mt-2' : ''
           }`}
-          key={`${element.key}-${index}`}
-        >
+          key={`${element.key}-${index}`}>
           <div className="tw:flex-1">{element.children}</div>
           {element.hasRemove && (
             <button
@@ -51,8 +49,7 @@ export const CoreArrayFieldTemplate: FunctionComponent<
               type="button"
               onClick={(event) =>
                 element.onDropIndexClick(element.index)(event)
-              }
-            >
+              }>
               <Trash01 size={16} />
             </button>
           )}

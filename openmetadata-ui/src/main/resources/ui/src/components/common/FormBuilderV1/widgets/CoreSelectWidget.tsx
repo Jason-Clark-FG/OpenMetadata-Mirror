@@ -67,8 +67,7 @@ const CoreSelectWidget = ({
         }
 
         onChange(optionValueMap.get(String(key)));
-      }}
-    >
+      }}>
       {(item) => (
         <Select.Item id={item.id} key={item.id} textValue={item.label}>
           {item.label}

@@ -28,8 +28,7 @@ export const CoreFieldErrorTemplate: FC<FieldErrorProps> = (props) => {
         {errorList.map((error) => (
           <li
             className="tw:text-xs tw:text-[var(--color-text-error-primary)]"
-            key={`${props.schema.$id}-${props.idSchema.$id}`}
-          >
+            key={`${props.schema.$id}-${props.idSchema.$id}`}>
             {error}
           </li>
         ))}

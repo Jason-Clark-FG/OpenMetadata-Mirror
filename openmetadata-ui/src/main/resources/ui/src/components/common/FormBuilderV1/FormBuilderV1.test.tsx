@@ -11,7 +11,13 @@
  *  limitations under the License.
  */
 
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import FormBuilderV1 from './FormBuilderV1';
 
 const mockForm = jest.fn();
@@ -111,7 +117,11 @@ describe('FormBuilderV1', () => {
     const onCancel = jest.fn();
 
     render(
-      <FormBuilderV1 formData={{ name: 'initial' }} schema={schema} onCancel={onCancel} />
+      <FormBuilderV1
+        formData={{ name: 'initial' }}
+        schema={schema}
+        onCancel={onCancel}
+      />
     );
 
     act(() => {
@@ -129,6 +139,7 @@ describe('FormBuilderV1', () => {
     fireEvent.click(screen.getByRole('button', { name: 'label.cancel' }));
 
     expect(onCancel).toHaveBeenCalled();
+
     await waitFor(() => {
       expect(mockForm.mock.lastCall[0].formData).toEqual({
         name: 'initial',
@@ -161,6 +172,7 @@ describe('FormBuilderV1', () => {
     });
 
     expect(onChange).toHaveBeenCalledWith(changeEvent);
+
     const submittedFormData = mockForm.mock.lastCall[0].formData;
 
     fireEvent.submit(screen.getByTestId('rjsf-form'));
@@ -184,7 +196,7 @@ describe('FormBuilderV1', () => {
     expect(screen.getByTestId('submit-btn')).toHaveTextContent('Save');
 
     rerender(
-      <FormBuilderV1 formData={{}} isLoading schema={schema} status="waiting" />
+      <FormBuilderV1 isLoading formData={{}} schema={schema} status="waiting" />
     );
 
     expect(screen.getByTestId('submit-btn')).toBeDisabled();
@@ -194,7 +206,7 @@ describe('FormBuilderV1', () => {
   });
 
   it('hides the cancel button when requested', () => {
-    render(<FormBuilderV1 formData={{}} hideCancelButton schema={schema} />);
+    render(<FormBuilderV1 hideCancelButton formData={{}} schema={schema} />);
 
     expect(
       screen.queryByRole('button', { name: 'label.cancel' })

@@ -152,16 +152,14 @@ const LayoutGridField = (props: FieldProps) => {
       className={getClassName(
         uiOptions.className,
         'tw:flex tw:flex-col tw:gap-4'
-      )}
-    >
+      )}>
       {rows.map((row, rowIndex) => (
         <div
           className={getClassName(
             row.className ?? uiOptions.rowClassName,
             'tw:grid tw:grid-cols-1 tw:gap-4 tw:md:grid-cols-2'
           )}
-          key={`layout-row-${rowIndex}`}
-        >
+          key={`layout-row-${rowIndex}`}>
           {row.columns.map((column: LayoutGridColumn) =>
             renderField(column.name, column.uiSchema, column.className)
           )}
@@ -173,8 +171,7 @@ const LayoutGridField = (props: FieldProps) => {
           className={getClassName(
             uiOptions.unplacedFieldsClassName,
             'tw:flex tw:flex-col tw:gap-4'
-          )}
-        >
+          )}>
           {unplacedFields.map((propertyName) => renderField(propertyName))}
         </div>
       )}
