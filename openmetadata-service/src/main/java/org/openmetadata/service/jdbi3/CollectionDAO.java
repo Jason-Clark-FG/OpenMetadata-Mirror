@@ -6804,6 +6804,34 @@ public interface CollectionDAO {
     @RegisterRowMapper(ChangeEventRecordMapper.class)
     List<ChangeEventRecord> listWithOffset(
         @Bind("limit") int limit, @Bind("afterOffset") long afterOffset);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT `offset`, json FROM change_event "
+                + "WHERE `offset` > :afterOffset AND entityType IN (<entityTypes>) "
+                + "ORDER BY `offset` ASC LIMIT :limit",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT \"offset\", json FROM change_event "
+                + "WHERE \"offset\" > :afterOffset AND entityType IN (<entityTypes>) "
+                + "ORDER BY \"offset\" ASC LIMIT :limit",
+        connectionType = POSTGRES)
+    @RegisterRowMapper(ChangeEventRecordMapper.class)
+    List<ChangeEventRecord> listByEntityTypesWithOffset(
+        @BindList("entityTypes") List<String> entityTypes,
+        @Bind("afterOffset") long afterOffset,
+        @Bind("limit") int limit);
+
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COALESCE(MIN(`offset`), 0) FROM change_event WHERE entityType IN (<entityTypes>)",
+        connectionType = MYSQL)
+    @ConnectionAwareSqlQuery(
+        value =
+            "SELECT COALESCE(MIN(\"offset\"), 0) FROM change_event WHERE entityType IN (<entityTypes>)",
+        connectionType = POSTGRES)
+    long getMinOffsetForEntityTypes(@BindList("entityTypes") List<String> entityTypes);
   }
 
   class ChangeEventRecordMapper implements RowMapper<ChangeEventDAO.ChangeEventRecord> {
