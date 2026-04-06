@@ -69,6 +69,6 @@
       "default": null
     }
   },
-  "required": ["message", "from", "about"],
+  "required": ["message", "about"],
   "additionalProperties": false
 }

@@ -14,6 +14,6 @@
       "type": "string"
     }
   },
-  "required": ["message", "from"],
+  "required": ["message"],
   "additionalProperties": false
 }

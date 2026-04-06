@@ -50,7 +50,7 @@ public class CatalogGenericExceptionMapper implements ExceptionMapper<Throwable>
     } else if (ex instanceof ProcessingException
         || ex instanceof IllegalArgumentException
         || ex instanceof BadRequestException) {
-      return getResponse(Response.status(Response.Status.BAD_REQUEST).build(), ex);
+      return getResponse(BAD_REQUEST, "Invalid request parameter");
     } else if (ex instanceof UnableToExecuteStatementException) {
       if (ex.getCause() instanceof SQLIntegrityConstraintViolationException
           || ex.getCause() instanceof PSQLException
@@ -93,7 +93,7 @@ public class CatalogGenericExceptionMapper implements ExceptionMapper<Throwable>
 
     LOG.info("exception ", ex);
     logUnhandledException(ex);
-    return new UnhandledServerException(ex.getMessage()).getResponse();
+    return new UnhandledServerException("An unexpected error occurred").getResponse();
   }
 
   public Response getResponse(Response response, Throwable ex) {
