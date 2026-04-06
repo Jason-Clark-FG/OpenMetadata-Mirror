@@ -41,7 +41,10 @@ public class DataCompletenessTask implements NodeInterface {
   public DataCompletenessTask(
       DataCompletenessTaskDefinition nodeDefinition, WorkflowConfiguration workflowConfig) {
     this.outputPorts =
-        Optional.ofNullable(nodeDefinition.getConfig().getQualityBands()).orElse(List.of()).stream()
+        Optional.ofNullable(nodeDefinition.getConfig())
+            .map(c -> c.getQualityBands())
+            .orElse(List.of())
+            .stream()
             .map(QualityBand::getName)
             .collect(Collectors.toSet());
     String subProcessId = nodeDefinition.getName();
