@@ -13,7 +13,7 @@
 
 import { FC, lazy } from 'react';
 import { UnAuthenticatedAppRouter } from '../components/AppRouter/UnAuthenticatedAppRouter';
-import { isProtectedRoute } from '../constants/router.constants';
+import { UNPROTECTED_ROUTES } from '../constants/router.constants';
 
 const AuthenticatedAppRouter = lazy(
   () => import('../components/AppRouter/AuthenticatedAppRouter')
@@ -29,7 +29,7 @@ class ApplicationRoutesClassBase {
   }
 
   public isProtectedRoute(pathname: string): boolean {
-    return isProtectedRoute(pathname);
+    return !UNPROTECTED_ROUTES.has(pathname);
   }
 }
 

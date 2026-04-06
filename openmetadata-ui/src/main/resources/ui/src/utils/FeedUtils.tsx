@@ -26,12 +26,12 @@ import { ReactComponent as UpdatedIcon } from '../assets/svg/updated-icon.svg';
 import { MentionSuggestionsItem } from '../components/ActivityFeed/FeedEditor/FeedEditor.interface';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import {
+  ENTITY_URL_MAP,
   EntityField,
   entityLinkRegEx,
   EntityRegEx,
   entityRegex,
   EntityUrlMapType,
-  ENTITY_URL_MAP,
   hashtagRegEx,
   linkRegEx,
   mentionRegEx,
@@ -62,7 +62,6 @@ import {
   getPartialNameFromFQN,
   getPartialNameFromTableFQN,
   getRandomColor,
-  Transi18next,
 } from './CommonUtils';
 import { getRelativeCalendar } from './date-time/DateTimeUtils';
 import EntityLink from './EntityLink';
@@ -73,7 +72,7 @@ import {
   getEntityName,
 } from './EntityUtils';
 import Fqn from './Fqn';
-import { t } from './i18next/LocalUtil';
+import { t, Transi18next } from './i18next/LocalUtil';
 import {
   getImageWithResolutionAndFallback,
   ImageQuality,

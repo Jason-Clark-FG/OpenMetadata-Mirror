@@ -33,7 +33,7 @@ import {
   setUrlPathnameExpiryAfterRoute,
 } from '../../utils/AuthProvider.util';
 import brandClassBase from '../../utils/BrandData/BrandClassBase';
-import { Transi18next } from '../../utils/CommonUtils';
+import { Transi18next } from '../../utils/i18next/LocalUtil';
 import { showErrorToast } from '../../utils/ToastUtils';
 import { getImages } from '../../utils/UserDataUtils';
 

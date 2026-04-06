@@ -65,8 +65,8 @@ import { SearchIndex } from '../../../../enums/search.enum';
 import { ServiceCategory } from '../../../../enums/service.enum';
 import { TagSource } from '../../../../generated/api/domains/createDataProduct';
 import {
-  CreateIngestionPipeline,
   FluffyType as ConfigType,
+  CreateIngestionPipeline,
   PipelineType,
 } from '../../../../generated/api/services/ingestionPipelines/createIngestionPipeline';
 import { CreateTestCase } from '../../../../generated/api/tests/createTestCase';
@@ -99,7 +99,6 @@ import {
 import {
   filterSelectOptions,
   replaceAllSpacialCharWith_,
-  Transi18next,
 } from '../../../../utils/CommonUtils';
 import {
   convertSearchSourceToTable,
@@ -111,6 +110,7 @@ import {
   generateFormFields,
   getPopupContainer,
 } from '../../../../utils/formUtils';
+import { Transi18next } from '../../../../utils/i18next/LocalUtil';
 import { getScheduleOptionsFromSchedules } from '../../../../utils/SchedularUtils';
 import { getIngestionName } from '../../../../utils/ServiceUtils';
 import {

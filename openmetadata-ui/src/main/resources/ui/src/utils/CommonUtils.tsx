@@ -34,7 +34,6 @@ import {
   RecentlyViewedData,
 } from 'Models';
 import { ReactNode } from 'react';
-import { Trans } from 'react-i18next';
 import Loader from '../components/common/Loader/Loader';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import { BASE_COLORS } from '../constants/DataInsight.constants';
@@ -51,7 +50,7 @@ import { getFeedCount } from '../rest/feedsAPI';
 import brandClassBase from './BrandData/BrandClassBase';
 import { getEntityFeedLink } from './EntityUtils';
 import Fqn from './Fqn';
-import i18n, { t } from './i18next/LocalUtil';
+import i18n, { t, Transi18next } from './i18next/LocalUtil';
 import serviceUtilClassBase from './ServiceUtilClassBase';
 import { showErrorToast } from './ToastUtils';
 
@@ -633,21 +632,6 @@ export const getTrimmedContent = (content: string, limit: number) => {
 
   return refinedContent.join(' ');
 };
-
-export const Transi18next = ({
-  i18nKey,
-  values,
-  renderElement,
-  ...otherProps
-}: {
-  i18nKey: string;
-  values?: object;
-  renderElement: ReactNode;
-}): JSX.Element => (
-  <Trans i18nKey={i18nKey} values={values} {...otherProps}>
-    {renderElement}
-  </Trans>
-);
 
 export const getEntityDeleteMessage = (entity: string, dependents: string) => {
   if (dependents) {

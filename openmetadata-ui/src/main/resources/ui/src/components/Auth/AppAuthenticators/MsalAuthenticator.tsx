@@ -29,7 +29,7 @@ import {
   parseMSALResponse,
 } from '../../../utils/AuthProvider.util';
 import { getPopupSettingLink } from '../../../utils/BrowserUtils';
-import { Transi18next } from '../../../utils/CommonUtils';
+import { Transi18next } from '../../../utils/i18next/LocalUtil';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import Loader from '../../common/Loader/Loader';
 import { useAuthProvider } from '../AuthProviders/AuthProvider';

@@ -26,11 +26,11 @@ import { TabSpecificField } from '../../../../enums/entity.enum';
 import { Team } from '../../../../generated/entity/teams/team';
 import { Include } from '../../../../generated/type/include';
 import { getTeamByName, patchTeamDetail } from '../../../../rest/teamsAPI';
-import { Transi18next } from '../../../../utils/CommonUtils';
 import {
   getEntityName,
   highlightSearchText,
 } from '../../../../utils/EntityUtils';
+import { Transi18next } from '../../../../utils/i18next/LocalUtil';
 import { getTeamsWithFqnPath } from '../../../../utils/RouterUtils';
 import { stringToHTML } from '../../../../utils/StringsUtils';
 import { descriptionTableObject } from '../../../../utils/TableColumn.util';

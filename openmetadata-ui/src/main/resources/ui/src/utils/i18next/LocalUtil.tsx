@@ -13,7 +13,8 @@
 
 import i18n, { t as i18nextT } from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import { initReactI18next } from 'react-i18next';
+import { ReactNode } from 'react';
+import { initReactI18next, Trans } from 'react-i18next';
 import { getInitOptions, languageMap } from './i18nextUtil';
 import { SupportedLocales } from './LocalUtil.interface';
 
@@ -78,5 +79,20 @@ export const translateWithNestedKeys = (
 
   return t(label, translatedParams);
 };
+
+export const Transi18next = ({
+  i18nKey,
+  values,
+  renderElement,
+  ...otherProps
+}: {
+  i18nKey: string;
+  values?: object;
+  renderElement: ReactNode;
+}): JSX.Element => (
+  <Trans i18nKey={i18nKey} values={values} {...otherProps}>
+    {renderElement}
+  </Trans>
+);
 
 export default i18n;

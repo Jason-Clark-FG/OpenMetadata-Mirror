@@ -26,8 +26,8 @@ import { useLimitStore } from '../../../context/LimitsProvider/useLimitsStore';
 import { FormSubmitType } from '../../../enums/form.enum';
 import { IngestionActionMessage } from '../../../enums/ingestion.enum';
 import {
-  CreateIngestionPipeline,
   FluffyType as ConfigType,
+  CreateIngestionPipeline,
   PipelineType,
 } from '../../../generated/api/services/ingestionPipelines/createIngestionPipeline';
 import {
@@ -43,9 +43,9 @@ import {
 import {
   getNameFromFQN,
   replaceAllSpacialCharWith_,
-  Transi18next,
 } from '../../../utils/CommonUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
+import { Transi18next } from '../../../utils/i18next/LocalUtil';
 import { getScheduleOptionsFromSchedules } from '../../../utils/SchedularUtils';
 import { getIngestionName } from '../../../utils/ServiceUtils';
 import { generateUUID } from '../../../utils/StringsUtils';

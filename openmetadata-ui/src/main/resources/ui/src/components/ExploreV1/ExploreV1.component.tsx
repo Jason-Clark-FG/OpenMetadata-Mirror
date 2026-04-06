@@ -37,12 +37,12 @@ import {
 import { SIZE, SORT_ORDER } from '../../enums/common.enum';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { getDropDownItems } from '../../utils/AdvancedSearchUtils';
-import { Transi18next } from '../../utils/CommonUtils';
 import { highlightEntityNameAndDescription } from '../../utils/EntityUtils';
 import {
   getExploreQueryFilterMust,
   getSelectedValuesFromQuickFilter,
 } from '../../utils/ExploreUtils';
+import { Transi18next } from '../../utils/i18next/LocalUtil';
 import { getApplicationDetailsPath } from '../../utils/RouterUtils';
 import searchClassBase from '../../utils/SearchClassBase';
 import FilterErrorPlaceHolder from '../common/ErrorWithPlaceholder/FilterErrorPlaceHolder';

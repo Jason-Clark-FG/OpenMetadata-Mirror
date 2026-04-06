@@ -28,7 +28,7 @@ export const APP_ROUTER_ROUTES = {
   ACCOUNT_ACTIVATION: '/account-activation',
 } as const;
 
-const UNPROTECTED_ROUTES = [
+export const UNPROTECTED_ROUTES: Set<string> = new Set([
   APP_ROUTER_ROUTES.SIGNUP,
   APP_ROUTER_ROUTES.SIGNIN,
   APP_ROUTER_ROUTES.FORGOT_PASSWORD,
@@ -41,10 +41,6 @@ const UNPROTECTED_ROUTES = [
   APP_ROUTER_ROUTES.AUTH_CALLBACK,
   APP_ROUTER_ROUTES.NOT_FOUND,
   APP_ROUTER_ROUTES.LOGOUT,
-];
-
-export const isProtectedRoute = (pathname: string): boolean => {
-  return UNPROTECTED_ROUTES.indexOf(pathname) === -1;
-};
+]);
 
 export const REDIRECT_PATHNAME = 'redirectUrlPath';
