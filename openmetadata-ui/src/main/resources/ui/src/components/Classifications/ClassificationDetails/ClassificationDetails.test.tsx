@@ -433,7 +433,9 @@ describe('ClassificationDetails', () => {
   });
 
   it('should disable tag toggles when user lacks EditAll permission or classification is disabled', async () => {
-    // With EditAll permission - toggles should be enabled
+    const getTag1SwitchInput = () =>
+      screen.getByTestId('tag-disable-toggle-Tag1').querySelector('input');
+
     const { unmount } = await act(async () => {
       return render(
         <MemoryRouter>
@@ -442,13 +444,11 @@ describe('ClassificationDetails', () => {
       );
     });
 
-    const enabledToggle = screen.getByTestId('tag-disable-toggle-Tag1');
-
-    expect(enabledToggle).not.toBeDisabled();
+    expect(getTag1SwitchInput()).not.toBeNull();
+    expect(getTag1SwitchInput()).not.toBeDisabled();
 
     unmount();
 
-    // Without EditAll permission - toggles should be disabled
     const noEditPermissions = {
       ...ENTITY_PERMISSIONS,
       EditAll: false,
@@ -465,14 +465,11 @@ describe('ClassificationDetails', () => {
       );
     });
 
-    expect(screen.getByTestId('tag-disable-toggle-Tag1')).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    expect(getTag1SwitchInput()).not.toBeNull();
+    expect(getTag1SwitchInput()).toBeDisabled();
 
     unmount2();
 
-    // With disabled classification - toggles should be disabled
     const disabledClassification = { ...mockClassification, disabled: true };
 
     await act(async () => {
@@ -486,9 +483,7 @@ describe('ClassificationDetails', () => {
       );
     });
 
-    expect(screen.getByTestId('tag-disable-toggle-Tag1')).toHaveAttribute(
-      'aria-disabled',
-      'true'
-    );
+    expect(getTag1SwitchInput()).not.toBeNull();
+    expect(getTag1SwitchInput()).toBeDisabled();
   });
 });
