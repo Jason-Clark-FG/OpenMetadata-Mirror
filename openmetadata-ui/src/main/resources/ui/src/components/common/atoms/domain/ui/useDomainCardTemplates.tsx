@@ -13,17 +13,14 @@
 
 import {
   Avatar,
-  BadgeWithIcon,
   Box,
   Grid,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Tag01 } from '@untitledui/icons';
 import { ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DataProduct } from '../../../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import { TagLabel } from '../../../../../generated/type/tagLabel';
 import { getEntityName } from '../../../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../../../utils/IconUtils';
 import {
@@ -32,33 +29,7 @@ import {
 } from '../../../../../utils/TagsUtils';
 import { DomainTypeChip } from '../../../../DomainListing/components/DomainTypeChip';
 import { OwnerLabel } from '../../../OwnerLabel/OwnerLabel.component';
-
-const CardTagList = ({ tags }: { tags: TagLabel[] }) => {
-  if (!tags.length) {
-    return <Typography size="text-sm">-</Typography>;
-  }
-
-  const firstTag = tags[0];
-  const remaining = tags.length - 1;
-
-  return (
-    <Box align="center" direction="row" gap={1}>
-      <BadgeWithIcon
-        color="gray"
-        iconLeading={Tag01}
-        key={firstTag.tagFQN}
-        size="sm"
-        type="color">
-        {firstTag.displayName || firstTag.tagFQN}
-      </BadgeWithIcon>
-      {remaining > 0 && (
-        <Typography size="text-xs" weight="medium">
-          +{remaining}
-        </Typography>
-      )}
-    </Box>
-  );
-};
+import TagBadgeList from '../../../TagBadgeList/TagBadgeList';
 
 export const useDomainCardTemplates = () => {
   const { t } = useTranslation();
@@ -76,9 +47,7 @@ export const useDomainCardTemplates = () => {
         <Grid gap="4">
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
-              <Typography size="text-xs">
-                {t('label.owner')}
-              </Typography>
+              <Typography size="text-xs">{t('label.owner')}</Typography>
               <OwnerLabel
                 isCompactView={false}
                 maxVisibleOwners={4}
@@ -89,9 +58,7 @@ export const useDomainCardTemplates = () => {
           </Grid.Item>
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
-              <Typography size="text-xs">
-                {t('label.domain-type')}
-              </Typography>
+              <Typography size="text-xs">{t('label.domain-type')}</Typography>
               {entity.domainType ? (
                 <DomainTypeChip domainType={entity.domainType} />
               ) : (
@@ -107,15 +74,13 @@ export const useDomainCardTemplates = () => {
               <Typography size="text-xs">
                 {t('label.glossary-term-plural')}
               </Typography>
-              <CardTagList tags={getGlossaryTags(entity.tags)} />
+              <TagBadgeList tags={getGlossaryTags(entity.tags)} />
             </Box>
           </Grid.Item>
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
-              <Typography size="text-xs">
-                {t('label.tag-plural')}
-              </Typography>
-              <CardTagList tags={getClassificationTags(entity.tags)} />
+              <Typography size="text-xs">{t('label.tag-plural')}</Typography>
+              <TagBadgeList tags={getClassificationTags(entity.tags)} />
             </Box>
           </Grid.Item>
         </Grid>
@@ -128,9 +93,7 @@ export const useDomainCardTemplates = () => {
     (entity: DataProduct): ReactNode => {
       const entityName = getEntityName(entity);
       const showName =
-        entity.displayName &&
-        entity.name &&
-        entity.displayName !== entity.name;
+        entity.displayName && entity.name && entity.displayName !== entity.name;
 
       return (
         <Box direction="col" gap={4}>
@@ -181,15 +144,13 @@ export const useDomainCardTemplates = () => {
                 <Typography size="text-xs">
                   {t('label.glossary-term-plural')}
                 </Typography>
-                <CardTagList tags={getGlossaryTags(entity.tags)} />
+                <TagBadgeList tags={getGlossaryTags(entity.tags)} />
               </Box>
             </Grid.Item>
             <Grid.Item span={12}>
               <Box direction="col" gap={1}>
-                <Typography size="text-xs">
-                  {t('label.tag-plural')}
-                </Typography>
-                <CardTagList tags={getClassificationTags(entity.tags)} />
+                <Typography size="text-xs">{t('label.tag-plural')}</Typography>
+                <TagBadgeList tags={getClassificationTags(entity.tags)} />
               </Box>
             </Grid.Item>
           </Grid>

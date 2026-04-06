@@ -13,22 +13,22 @@
 
 import {
   Avatar,
-  BadgeWithIcon,
   Box,
   Card,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Tag01 } from '@untitledui/icons';
 import { isEmpty } from 'lodash';
 import { ReactNode, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../../assets/svg/folder-empty.svg';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { Domain } from '../../../generated/entity/domains/domain';
-import { TagLabel } from '../../../generated/type/tagLabel';
 import { getEntityName } from '../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../utils/IconUtils';
-import { getClassificationTags, getGlossaryTags } from '../../../utils/TagsUtils';
+import {
+  getClassificationTags,
+  getGlossaryTags,
+} from '../../../utils/TagsUtils';
 import { useDelete } from '../../common/atoms/actions/useDelete';
 import { useDomainCardTemplates } from '../../common/atoms/domain/ui/useDomainCardTemplates';
 import { useDomainFilters } from '../../common/atoms/domain/ui/useDomainFilters';
@@ -43,6 +43,7 @@ import EntityListingTable, {
 } from '../../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
+import TagBadgeList from '../../common/TagBadgeList/TagBadgeList';
 import { DomainTypeChip } from '../../DomainListing/components/DomainTypeChip';
 import { useSubdomainListingData } from './hooks/useSubdomainListingData';
 import { SubDomainsTableProps } from './SubDomainsTable.interface';
@@ -101,33 +102,6 @@ const SubDomainsTable = ({
     [t]
   );
 
-  const renderTagList = useCallback((tags: TagLabel[]): ReactNode => {
-    if (!tags.length) {
-      return <Typography size="text-sm">-</Typography>;
-    }
-
-    const firstTag = tags[0];
-    const remaining = tags.length - 1;
-
-    return (
-      <Box align="center" direction="row" gap={1}>
-        <BadgeWithIcon
-          color="gray"
-          iconLeading={Tag01}
-          key={firstTag.tagFQN}
-          size="lg"
-          type="color">
-          {firstTag.displayName || firstTag.tagFQN}
-        </BadgeWithIcon>
-        {remaining > 0 && (
-          <Typography size="text-xs" weight="medium">
-            +{remaining}
-          </Typography>
-        )}
-      </Box>
-    );
-  }, []);
-
   const renderSubDomainCell = useCallback(
     (entity: Domain, columnId: string): ReactNode => {
       switch (columnId) {
@@ -156,14 +130,16 @@ const SubDomainsTable = ({
             />
           );
         case 'glossaryTerms':
-          return renderTagList(getGlossaryTags(entity.tags));
+          return <TagBadgeList size="lg" tags={getGlossaryTags(entity.tags)} />;
         case 'tags':
-          return renderTagList(getClassificationTags(entity.tags));
+          return (
+            <TagBadgeList size="lg" tags={getClassificationTags(entity.tags)} />
+          );
         default:
           return null;
       }
     },
-    [renderTagList]
+    []
   );
 
   const { paginationControls } = usePaginationControls({
@@ -266,17 +242,14 @@ const SubDomainsTable = ({
     <>
       <Card style={{ marginBottom: 20 }} variant="elevated">
         <Box
+          className="tw:px-6 tw:py-4 tw:border-b tw:border-secondary"
           direction="col"
-          gap={4}
-          style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid var(--color-border-secondary)',
-          }}>
+          gap={4}>
           <Box align="center" direction="row" gap={5}>
             {titleAndCount}
             {search}
             {quickFilters}
-            <Box style={{ marginLeft: 'auto' }} />
+            <Box className="tw:ml-auto" />
             {viewToggle}
             {deleteIconButton}
           </Box>

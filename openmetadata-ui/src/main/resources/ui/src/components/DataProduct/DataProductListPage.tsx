@@ -13,12 +13,11 @@
 
 import {
   Avatar,
-  BadgeWithIcon,
   Box,
   Card,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Globe01, Tag01 } from '@untitledui/icons';
+import { Globe01 } from '@untitledui/icons';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useSnackbar } from 'notistack';
@@ -32,7 +31,6 @@ import { EntityType } from '../../enums/entity.enum';
 import { CreateDataProduct } from '../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../generated/api/domains/createDomain';
 import { DataProduct } from '../../generated/entity/domains/dataProduct';
-import { TagLabel } from '../../generated/type/tagLabel';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { addDataProducts, patchDataProduct } from '../../rest/dataProductAPI';
 import { createEntityWithCoverImage } from '../../utils/CoverImageUploadUtils';
@@ -56,6 +54,7 @@ import EntityListingTable, {
 } from '../common/EntityListingTable/EntityListingTable';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
+import TagBadgeList from '../common/TagBadgeList/TagBadgeList';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
 import { useDataProductListingData } from './hooks/useDataProductListingData';
@@ -164,33 +163,6 @@ const DataProductListPage = () => {
     [t]
   );
 
-  const renderTagList = useCallback((tags: TagLabel[]): ReactNode => {
-    if (!tags.length) {
-      return <Typography size="text-sm">-</Typography>;
-    }
-
-    const firstTag = tags[0];
-    const remaining = tags.length - 1;
-
-    return (
-      <Box align="center" direction="row" gap={1}>
-        <BadgeWithIcon
-          color="gray"
-          iconLeading={Tag01}
-          key={firstTag.tagFQN}
-          size="lg"
-          type="color">
-          {firstTag.displayName || firstTag.tagFQN}
-        </BadgeWithIcon>
-        {remaining > 0 && (
-          <Typography size="text-xs" weight="medium">
-            +{remaining}
-          </Typography>
-        )}
-      </Box>
-    );
-  }, []);
-
   const renderDataProductCell = useCallback(
     (entity: DataProduct, columnId: string): ReactNode => {
       switch (columnId) {
@@ -225,7 +197,7 @@ const DataProductListPage = () => {
             />
           );
         case 'glossaryTerms':
-          return renderTagList(getGlossaryTags(entity.tags));
+          return <TagBadgeList size="lg" tags={getGlossaryTags(entity.tags)} />;
         case 'domains': {
           const domains = entity.domains;
           if (!domains?.length) {
@@ -243,7 +215,9 @@ const DataProductListPage = () => {
           );
         }
         case 'tags':
-          return renderTagList(getClassificationTags(entity.tags));
+          return (
+            <TagBadgeList size="sm" tags={getClassificationTags(entity.tags)} />
+          );
         case 'experts':
           return (
             <OwnerLabel
@@ -257,9 +231,8 @@ const DataProductListPage = () => {
           return null;
       }
     },
-    [renderTagList]
+    []
   );
-
 
   const { paginationControls } = usePaginationControls({
     currentPage: dataProductListing.currentPage,
@@ -365,6 +338,7 @@ const DataProductListPage = () => {
     dataProductListing.actionHandlers,
     hasActiveSearchOrFilter,
     view,
+    renderDataProductCell,
     renderDataProductCard,
     paginationControls,
     openDrawer,
@@ -379,17 +353,14 @@ const DataProductListPage = () => {
 
       <Card style={{ marginBottom: 20 }} variant="elevated">
         <Box
+          className="tw:px-6 tw:py-4 tw:border-b tw:border-secondary"
           direction="col"
-          gap={4}
-          style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid var(--color-border-secondary)',
-          }}>
+          gap={4}>
           <Box align="center" direction="row" gap={5}>
             {titleAndCount}
             {search}
             {quickFilters}
-            <Box style={{ marginLeft: 'auto' }} />
+            <Box className="tw:ml-auto" />
             {viewToggle}
             {deleteIconButton}
           </Box>
