@@ -422,7 +422,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const exportModalTitle = () => {
     return (
       <div className="d-flex flex-col gap-1">
-        <Typography.Text className="text-md font-medium" color="">
+        <Typography.Text className="text-md font-medium">
           {t('label.export')}
         </Typography.Text>
         <Typography.Text className="text-xs" type="secondary">
@@ -482,9 +482,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                               icon={<Download01 height={14} width={14} />}
                               type="default"
                               onClick={handleOpenExportScopeModal}>
-                              <Typography.Text
-                                className="text-sm m-l-xs"
-                                color="secondary">
+                              <Typography.Text className="text-sm m-l-xs">
                                 {t('label.export')}
                               </Typography.Text>
                             </Button>
