@@ -108,13 +108,6 @@ public class WorkflowInstanceRepository extends EntityTimeSeriesRepository<Workf
         .orElse(null);
   }
 
-  public List<WorkflowInstance> listByScheduleRunId(String scheduleRunId) {
-    return ((CollectionDAO.WorkflowInstanceTimeSeriesDAO) timeSeriesDao)
-        .listByScheduleRunId(scheduleRunId).stream()
-            .map(json -> JsonUtils.readValue(json, WorkflowInstance.class))
-            .toList();
-  }
-
   /**
    * Marks a workflow instance as FAILED with the given reason.
    * Preserves audit trail instead of deleting the instance.

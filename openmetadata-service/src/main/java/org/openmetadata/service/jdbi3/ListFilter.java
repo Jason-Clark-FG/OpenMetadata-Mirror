@@ -72,6 +72,7 @@ public class ListFilter extends Filter<ListFilter> {
     conditions.add(getProviderCondition(tableName));
     conditions.add(getEntityStatusCondition(tableName));
     conditions.add(getServerIdCondition());
+    conditions.add(getScheduleRunIdCondition());
     String condition = addCondition(conditions);
     return condition.isEmpty() ? "WHERE TRUE" : "WHERE " + condition;
   }
@@ -402,6 +403,11 @@ public class ListFilter extends Filter<ListFilter> {
   private String getServerIdCondition() {
     String serverId = queryParams.get("serverId");
     return serverId == null ? "" : "serverId = :serverId";
+  }
+
+  private String getScheduleRunIdCondition() {
+    String scheduleRunId = queryParams.get("scheduleRunId");
+    return scheduleRunId == null ? "" : "scheduleRunId = :scheduleRunId";
   }
 
   private String getEntityFQNHashCondition() {

@@ -195,13 +195,6 @@ public class WorkflowInstanceStateRepository
     }
   }
 
-  public List<WorkflowInstanceState> listByScheduleRunId(String scheduleRunId) {
-    return ((CollectionDAO.WorkflowInstanceStateTimeSeriesDAO) timeSeriesDao)
-        .listByScheduleRunId(scheduleRunId).stream()
-            .map(json -> JsonUtils.readValue(json, WorkflowInstanceState.class))
-            .toList();
-  }
-
   public List<WorkflowInstanceState> listAllStatesForInstance(UUID workflowInstanceId) {
     List<WorkflowInstanceState> states = new ArrayList<>();
     List<String> jsons =
