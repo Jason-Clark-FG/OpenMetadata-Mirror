@@ -1963,16 +1963,20 @@ public class WorkflowDefinitionResourceIT {
    * picked up and executed. These jobs are ephemeral (complete in &lt;100ms) but if the deployment
    * is deleted while one is in flight the Flowable job executor NPEs when it tries to resolve the
    * process definition. Returns immediately for event-based workflows that have no
-   * "&lt;name&gt;Trigger-*" process definitions deployed, or for periodic-batch workflows whose
+   * "&lt;name&gt;Trigger%" process definitions deployed, or for periodic-batch workflows whose
    * trigger PDs currently have no pending jobs.
    */
   private void waitForWorkflowIdle(String workflowFqn) {
     RepositoryService repositoryService = WorkflowHandler.getInstance().getRepositoryService();
+    String triggerWorkflowId = TriggerFactory.getTriggerWorkflowId(workflowFqn);
     List<ProcessDefinition> triggerPDs =
         repositoryService
             .createProcessDefinitionQuery()
-            .processDefinitionKeyLike(TriggerFactory.getTriggerWorkflowId(workflowFqn) + "%")
-            .list();
+            .processDefinitionKeyLike(triggerWorkflowId + "%")
+            .list()
+            .stream()
+            .filter(pd -> pd.getKey() != null && pd.getKey().startsWith(triggerWorkflowId))
+            .toList();
     if (triggerPDs.isEmpty()) {
       return;
     }

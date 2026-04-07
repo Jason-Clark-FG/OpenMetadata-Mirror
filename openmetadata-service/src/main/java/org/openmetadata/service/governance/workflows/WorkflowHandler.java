@@ -1025,33 +1025,14 @@ public class WorkflowHandler {
               .processVariableValueEquals("customTaskId", customTaskId.toString())
               .list();
       for (Task task : tasks) {
-        // Find the correct termination message for this task
-        String terminationMessageName = findTerminationMessageName(runtimeService, task);
-        if (terminationMessageName != null) {
-          Execution execution =
-              runtimeService
-                  .createExecutionQuery()
-                  .processInstanceId(task.getProcessInstanceId())
-                  .messageEventSubscriptionName(terminationMessageName)
-                  .singleResult();
-          if (execution != null) {
-            runtimeService.messageEventReceived(terminationMessageName, execution.getId());
-            LOG.debug(
-                "Terminated task {} using message '{}'", customTaskId, terminationMessageName);
-          } else {
-            LOG.warn(
-                "No execution found for termination message '{}' for task {}",
-                terminationMessageName,
-                customTaskId);
-          }
-        }
+        terminateTask(runtimeService, task, customTaskId);
       }
     } catch (FlowableObjectNotFoundException ex) {
       LOG.debug("Flowable Task for Task ID {} not found.", customTaskId);
     }
   }
 
-  private String findTerminationMessageName(RuntimeService runtimeService, Task task) {
+  private void terminateTask(RuntimeService runtimeService, Task task, UUID customTaskId) {
     try {
       String taskDefinitionKey = task.getTaskDefinitionKey();
       int lastDot = taskDefinitionKey.lastIndexOf('.');
@@ -1059,29 +1040,27 @@ public class WorkflowHandler {
         LOG.warn(
             "Task definition key '{}' has no '.' separator; cannot derive termination message",
             taskDefinitionKey);
-        return null;
+        return;
       }
-      String subProcessId = taskDefinitionKey.substring(0, lastDot);
-      String messageName = subProcessId + ".terminateProcess";
-      boolean hasSubscription =
+      String messageName = taskDefinitionKey.substring(0, lastDot) + ".terminateProcess";
+      Execution execution =
           runtimeService
-                  .createExecutionQuery()
-                  .processInstanceId(task.getProcessInstanceId())
-                  .messageEventSubscriptionName(messageName)
-                  .count()
-              > 0;
-      if (hasSubscription) {
-        return messageName;
+              .createExecutionQuery()
+              .processInstanceId(task.getProcessInstanceId())
+              .messageEventSubscriptionName(messageName)
+              .singleResult();
+      if (execution != null) {
+        runtimeService.messageEventReceived(messageName, execution.getId());
+        LOG.debug("Terminated task {} using message '{}'", customTaskId, messageName);
+      } else {
+        LOG.warn(
+            "No termination message subscription '{}' found for task {} (definition key '{}')",
+            messageName,
+            task.getId(),
+            taskDefinitionKey);
       }
-      LOG.warn(
-          "No termination message subscription '{}' found for task {} (definition key '{}')",
-          messageName,
-          task.getId(),
-          taskDefinitionKey);
-      return null;
     } catch (Exception e) {
-      LOG.error("Error finding termination message for task {}", task.getId(), e);
-      return null;
+      LOG.error("Error terminating task {}", task.getId(), e);
     }
   }
 

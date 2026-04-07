@@ -135,25 +135,13 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
     String workflowDefinitionName =
         getProcessDefinitionKeyFromId(execution.getProcessDefinitionId());
     String processInstanceId = execution.getProcessInstanceId();
-    if (isUnknownFlowableProcess(workflowDefinitionName)) {
+    String businessKey = execution.getProcessInstanceBusinessKey();
+    if (businessKey == null || businessKey.isEmpty()) {
       LOG.debug(
-          "[STAGE_SKIP] ProcessInstance: {} - process key '{}' is not an OM workflow, skipping stage tracking",
+          "[STAGE_SKIP] ProcessInstance: {} (workflow: {}) - no business key, not an OM-managed process instance",
           processInstanceId,
           workflowDefinitionName);
       return;
-    }
-
-    // Check business key first - critical for stage tracking
-    String businessKey = execution.getProcessInstanceBusinessKey();
-    if (businessKey == null || businessKey.isEmpty()) {
-      LOG.error(
-          "[STAGE_MISSING_KEY] Workflow: {}, ProcessInstance: {} - Business key is missing for stage creation",
-          workflowDefinitionName,
-          processInstanceId);
-      throw new IllegalStateException(
-          String.format(
-              "Business key is missing for stage creation in workflow: %s",
-              workflowDefinitionName));
     }
     UUID workflowInstanceId = UUID.fromString(businessKey);
 
@@ -202,13 +190,6 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
     String workflowDefinitionName =
         getProcessDefinitionKeyFromId(execution.getProcessDefinitionId());
     String processInstanceId = execution.getProcessInstanceId();
-    if (isUnknownFlowableProcess(workflowDefinitionName)) {
-      LOG.debug(
-          "[STAGE_SKIP] ProcessInstance: {} - process key '{}' is not an OM workflow, skipping stage tracking",
-          processInstanceId,
-          workflowDefinitionName);
-      return;
-    }
     String stage =
         Optional.ofNullable(execution.getCurrentActivityId()).orElse(workflowDefinitionName);
 
@@ -235,7 +216,4 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
         workflowInstanceStateId);
   }
 
-  private boolean isUnknownFlowableProcess(String processKey) {
-    return processKey.matches("\\d+");
-  }
 }
