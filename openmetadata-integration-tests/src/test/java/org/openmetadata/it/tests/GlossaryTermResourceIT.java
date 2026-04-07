@@ -3154,14 +3154,14 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
     OpenMetadataClient client = SdkClients.adminClient();
     Glossary glossary = getOrCreateGlossary(ns);
 
-    String userName = ns.prefix("reviewer_list");
+    String userName = ns.shortPrefix("reviewer_list");
     User reviewer =
         client
             .users()
             .create(
                 new CreateUser()
                     .withName(userName)
-                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withEmail(userName + "@test.openmetadata.org")
                     .withDescription("Reviewer user for glossary soft-delete list test"));
 
     CreateGlossaryTerm create =

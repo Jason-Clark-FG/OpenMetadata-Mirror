@@ -2881,14 +2881,14 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     OpenMetadataClient client = SdkClients.adminClient();
     Domain domain = getOrCreateDomain(ns);
 
-    String userName = ns.prefix("expert_user");
+    String userName = ns.shortPrefix("expert_user");
     User expert =
         client
             .users()
             .create(
                 new CreateUser()
                     .withName(userName)
-                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withEmail(userName + "@test.openmetadata.org")
                     .withDescription("Expert user for soft-delete test"));
 
     CreateDataProduct create =
@@ -2917,14 +2917,14 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     OpenMetadataClient client = SdkClients.adminClient();
     Domain domain = getOrCreateDomain(ns);
 
-    String userName = ns.prefix("expert_list_user");
+    String userName = ns.shortPrefix("expert_list_user");
     User expert =
         client
             .users()
             .create(
                 new CreateUser()
                     .withName(userName)
-                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withEmail(userName + "@test.openmetadata.org")
                     .withDescription("Expert user for bulk soft-delete test"));
 
     CreateDataProduct create =

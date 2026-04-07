@@ -1160,14 +1160,14 @@ public class DomainResourceIT extends BaseEntityIT<Domain, CreateDomain> {
   void softDeletedExpert_notReturnedInSingleGet(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    String userName = ns.prefix("domain_expert");
+    String userName = ns.shortPrefix("domain_expert");
     User expert =
         client
             .users()
             .create(
                 new CreateUser()
                     .withName(userName)
-                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withEmail(userName + "@test.openmetadata.org")
                     .withDescription("Expert user for domain soft-delete test"));
 
     CreateDomain create =
@@ -1195,14 +1195,14 @@ public class DomainResourceIT extends BaseEntityIT<Domain, CreateDomain> {
   void softDeletedExpert_notReturnedInListEndpoint(TestNamespace ns) {
     OpenMetadataClient client = SdkClients.adminClient();
 
-    String userName = ns.prefix("domain_expert_list");
+    String userName = ns.shortPrefix("domain_expert_list");
     User expert =
         client
             .users()
             .create(
                 new CreateUser()
                     .withName(userName)
-                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withEmail(userName + "@test.openmetadata.org")
                     .withDescription("Expert user for domain list soft-delete test"));
 
     CreateDomain create =
