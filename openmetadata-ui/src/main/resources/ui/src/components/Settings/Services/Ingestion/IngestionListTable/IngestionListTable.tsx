@@ -377,7 +377,7 @@ function IngestionListTable({
         title: t('label.recent-run-plural'),
         dataIndex: 'recentRuns',
         key: 'recentRuns',
-        width: 150,
+        width: 180,
         render: (_: string, record: IngestionPipeline) => (
           <IngestionRecentRuns
             appRuns={recentRunStatuses[record.name]}
