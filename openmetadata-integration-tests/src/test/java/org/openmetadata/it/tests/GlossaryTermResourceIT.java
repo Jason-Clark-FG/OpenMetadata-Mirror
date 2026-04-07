@@ -3174,7 +3174,11 @@ public class GlossaryTermResourceIT extends BaseEntityIT<GlossaryTerm, CreateGlo
 
     client.users().delete(reviewer.getId().toString());
 
-    ListParams params = new ListParams().setFields("reviewers").withLimit(100);
+    ListParams params =
+        new ListParams()
+            .setFields("reviewers")
+            .withLimit(100)
+            .addFilter("glossary", glossary.getId().toString());
     ListResponse<GlossaryTerm> list = listEntities(params);
     GlossaryTerm listed =
         list.getData().stream()
