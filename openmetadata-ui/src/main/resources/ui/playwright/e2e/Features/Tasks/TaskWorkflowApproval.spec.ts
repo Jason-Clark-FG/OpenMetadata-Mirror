@@ -24,16 +24,13 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page, request } from '@playwright/test';
-import { test } from '../../fixtures/pages';
 import { DEFAULT_ADMIN_USER } from '../../../constant/user';
 import { ClassificationClass } from '../../../support/tag/ClassificationClass';
 import { TagClass } from '../../../support/tag/TagClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { getAuthContext, toastNotification } from '../../../utils/common';
-import {
-  CreatedTask,
-  openTaskDetails,
-} from '../../../utils/taskWorkflow';
+import { CreatedTask, openTaskDetails } from '../../../utils/taskWorkflow';
+import { test } from '../../fixtures/pages';
 
 type ReviewerReference = {
   id: string;
@@ -179,7 +176,9 @@ const fetchTaskById = async (
   apiContext: APIRequestContext,
   taskId: string
 ): Promise<TaskState | null> => {
-  const response = await apiContext.get(`/api/v1/tasks/${taskId}?fields=assignees`);
+  const response = await apiContext.get(
+    `/api/v1/tasks/${taskId}?fields=assignees`
+  );
 
   if (!response.ok()) {
     return null;
@@ -330,7 +329,10 @@ test.describe.serial('Task Workflow Approval', () => {
     try {
       logWorkflowDebug('classification:create:start', classification.data.name);
       await classification.create(apiContext);
-      logWorkflowDebug('classification:create:done', classification.responseData.id);
+      logWorkflowDebug(
+        'classification:create:done',
+        classification.responseData.id
+      );
 
       logWorkflowDebug('workflow:create:start', workflowName);
       const workflowResponse = await apiContext.post(
@@ -362,7 +364,10 @@ test.describe.serial('Task Workflow Approval', () => {
       tag.responseData = await tagResponse.json();
       logWorkflowDebug('tag:create:done', tag.responseData.fullyQualifiedName);
 
-      logWorkflowDebug('task:create:wait:start', tag.responseData.fullyQualifiedName);
+      logWorkflowDebug(
+        'task:create:wait:start',
+        tag.responseData.fullyQualifiedName
+      );
       await expect
         .poll(
           async () => {
@@ -376,7 +381,8 @@ test.describe.serial('Task Workflow Approval', () => {
           {
             timeout: 120000,
             intervals: [1000, 2000, 5000],
-            message: 'Timed out waiting for the tag approval task to be created',
+            message:
+              'Timed out waiting for the tag approval task to be created',
           }
         )
         .not.toBe('');
@@ -391,7 +397,8 @@ test.describe.serial('Task Workflow Approval', () => {
       };
       logWorkflowDebug('task:fetched', createdTask.taskId, createdTask.id);
 
-      const taskAssignees = createdTask.assignees?.map((assignee) => assignee.name) ?? [];
+      const taskAssignees =
+        createdTask.assignees?.map((assignee) => assignee.name) ?? [];
       expect(taskAssignees.length).toBeGreaterThanOrEqual(2);
       const [reviewer1Name, reviewer2Name] = taskAssignees;
       const assignedReviewer1 = new UserClass({
@@ -409,7 +416,11 @@ test.describe.serial('Task Workflow Approval', () => {
 
       await assignedReviewer1.login(reviewer1Page);
       await assignedReviewer2.login(reviewer2Page);
-      logWorkflowDebug('assignee-reviewers:ready', reviewer1Name, reviewer2Name);
+      logWorkflowDebug(
+        'assignee-reviewers:ready',
+        reviewer1Name,
+        reviewer2Name
+      );
 
       logWorkflowDebug('reviewer1:approve:start', createdTask.taskId);
       await approveTaskFromEntityPage(reviewer1Page, createdTask);
@@ -436,7 +447,11 @@ test.describe.serial('Task Workflow Approval', () => {
 
       logWorkflowDebug('reviewer2:approve:start', createdTask.taskId);
       await approveTaskFromEntityPage(reviewer2Page, createdTask);
-      await toastNotification(reviewer2Page, /Task resolved successfully/i, 10000);
+      await toastNotification(
+        reviewer2Page,
+        /Task resolved successfully/i,
+        10000
+      );
       logWorkflowDebug('reviewer2:approve:done', createdTask.taskId);
 
       logWorkflowDebug('reviewer2:state:wait:start');
@@ -450,7 +465,8 @@ test.describe.serial('Task Workflow Approval', () => {
           {
             timeout: 120000,
             intervals: [1000, 2000, 5000],
-            message: 'Timed out waiting for the second approval to resolve the task',
+            message:
+              'Timed out waiting for the second approval to resolve the task',
           }
         )
         .toBe('Approved');

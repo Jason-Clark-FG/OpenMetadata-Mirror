@@ -24,15 +24,15 @@
  */
 
 import test from '@playwright/test';
+import { SidebarItem } from '../../../constant/sidebar';
 import { Domain } from '../../../support/domain/Domain';
 import { getApiContext, redirectToHomePage } from '../../../utils/common';
+import { selectDomain } from '../../../utils/domain';
 import {
   createAnnouncement,
   deleteAnnouncement,
   editAnnouncement,
 } from '../../../utils/entity';
-import { selectDomain } from '../../../utils/domain';
-import { SidebarItem } from '../../../constant/sidebar';
 import { sidebarClick } from '../../../utils/sidebar';
 
 test.use({ storageState: 'playwright/.auth/admin.json' });
@@ -62,7 +62,10 @@ const createSeedAnnouncement = async (
   }
 };
 
-const visitDomainPage = async (page: Parameters<typeof test>[0]['page'], domain: Domain) => {
+const visitDomainPage = async (
+  page: Parameters<typeof test>[0]['page'],
+  domain: Domain
+) => {
   await redirectToHomePage(page);
   await sidebarClick(page, SidebarItem.DOMAIN);
   await selectDomain(page, domain.responseData);

@@ -333,7 +333,11 @@ test.describe('Task Suggestion APIs', () => {
       );
       const taskData = await verifyTask.json();
       expect(taskData.assignees).toBeDefined();
-      expect(taskData.assignees.some((a: { name: string }) => a.name === newAssignee.responseData.name)).toBe(true);
+      expect(
+        taskData.assignees.some(
+          (a: { name: string }) => a.name === newAssignee.responseData.name
+        )
+      ).toBe(true);
 
       // Cleanup
       await newAssignee.delete(apiContext);
@@ -422,7 +426,8 @@ test.describe('Task Suggestion APIs', () => {
         (r: { taskId: string }) => r.taskId === validTask.id
       );
       const failedResult = bulkResult.results.find(
-        (r: { taskId: string }) => r.taskId === '00000000-0000-0000-0000-000000000000'
+        (r: { taskId: string }) =>
+          r.taskId === '00000000-0000-0000-0000-000000000000'
       );
 
       expect(successResult?.status).toBe('success');

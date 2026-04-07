@@ -13,7 +13,6 @@
 
 import { expect, Page, test } from '@playwright/test';
 import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
-import { SidebarItem } from '../../constant/sidebar';
 import { Glossary } from '../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../support/glossary/GlossaryTerm';
 import { ClassificationClass } from '../../support/tag/ClassificationClass';
@@ -27,14 +26,12 @@ import {
 } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { selectActiveGlossaryTerm } from '../../utils/glossary';
-import { sidebarClick } from '../../utils/sidebar';
 import { visitClassificationPage } from '../../utils/tag';
 
 const adminUser = new UserClass();
 
 const logRenameDebug = (...messages: Array<string | number>) => {
   if (process.env.PW_RENAME_DEBUG) {
-    // eslint-disable-next-line no-console -- opt-in playwright debug logging
     console.log('[PW_RENAME_DEBUG]', ...messages);
   }
 };
@@ -49,9 +46,7 @@ async function performRename(
 ): Promise<Record<string, unknown> | undefined> {
   logRenameDebug('performRename:start', apiEndpoint, newName);
   const renameModal = page.locator('.ant-modal').filter({
-    has: page
-      .getByTestId('header')
-      .filter({ hasText: /Edit (Display )?Name/ }),
+    has: page.getByTestId('header').filter({ hasText: /Edit (Display )?Name/ }),
   });
   const modalHeader = renameModal.getByTestId('header');
   const nameInput = renameModal.locator('input#name');
@@ -67,8 +62,12 @@ async function performRename(
       .getByRole('menuitem', { name: /Rename.*Name/i })
       .getByTestId('rename-button'),
     page.locator('[data-testid="rename-button-title"]'),
-    page.locator('.glossary-manage-dropdown-list-container [data-testid="rename-button"]'),
-    page.locator('[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'),
+    page.locator(
+      '.glossary-manage-dropdown-list-container [data-testid="rename-button"]'
+    ),
+    page.locator(
+      '[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'
+    ),
     page.getByTestId('rename-button'),
   ];
 
@@ -175,13 +174,11 @@ async function performRename(
   );
   await expect(saveButton).toBeVisible();
   logRenameDebug('performRename:saveVisible');
-  await saveButton
-    .click({ force: true })
-    .catch(async () =>
-      saveButton.evaluate((node) => {
-        (node as HTMLElement).click();
-      })
-    );
+  await saveButton.click({ force: true }).catch(async () =>
+    saveButton.evaluate((node) => {
+      (node as HTMLElement).click();
+    })
+  );
   logRenameDebug('performRename:saveClicked');
   const patchResult = await patchResponse;
   const patchData = (await patchResult.json()) as Record<string, unknown>;
@@ -377,7 +374,8 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     });
     let page = await context.newPage();
     let currentDisplayName =
-      classification.responseData.displayName ?? classification.data.displayName;
+      classification.responseData.displayName ??
+      classification.data.displayName;
     const openCurrentClassification = async () => {
       await visitClassificationPage(
         page,
@@ -394,13 +392,17 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
       // Perform 3 consecutive renames
       for (let i = 1; i <= 3; i++) {
-        logRenameDebug('classification:cycle:start', i, classification.responseData.name);
+        logRenameDebug(
+          'classification:cycle:start',
+          i,
+          classification.responseData.name
+        );
         await openCurrentClassification();
         await waitForAllLoadersToDisappear(page);
         logRenameDebug('classification:cycle:visited', i, currentDisplayName);
-        await expect(page.getByTestId('entity-header-display-name')).toContainText(
-          currentDisplayName
-        );
+        await expect(
+          page.getByTestId('entity-header-display-name')
+        ).toContainText(currentDisplayName);
 
         const newName = `renamed-class-${i}-${uuid()}`;
 
@@ -435,9 +437,9 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await patchResponse;
         await expect(renameModal).toBeHidden();
         await waitForAllLoadersToDisappear(page);
-        await expect(page.getByTestId('entity-header-display-name')).toContainText(
-          newName
-        );
+        await expect(
+          page.getByTestId('entity-header-display-name')
+        ).toContainText(newName);
         logRenameDebug('classification:cycle:renamed', i, newName);
 
         const classificationResponse = await apiContext.get(
@@ -454,12 +456,13 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         logRenameDebug(
           'classification:cycle:revisited',
           i,
-          classification.responseData.displayName ?? classification.responseData.name
+          classification.responseData.displayName ??
+            classification.responseData.name
         );
         // Verify the header shows the new name
-        await expect(page.getByTestId('entity-header-display-name')).toContainText(
-          newName
-        );
+        await expect(
+          page.getByTestId('entity-header-display-name')
+        ).toContainText(newName);
 
         currentDisplayName =
           classification.responseData.displayName ??
@@ -508,7 +511,8 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     const page = await context.newPage();
     const openCurrentTag = async () => {
       tag.data.name = tag.responseData.name ?? tag.data.name;
-      tag.data.displayName = tag.responseData.displayName ?? tag.data.displayName;
+      tag.data.displayName =
+        tag.responseData.displayName ?? tag.data.displayName;
 
       await tag.visitPage(page);
     };
@@ -546,8 +550,11 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
         await page.getByTestId('save-button').click();
         await patchResponse;
 
-        const tagResponse = await apiContext.get(`/api/v1/tags/${tag.responseData.id}`);
-        tag.responseData = (await tagResponse.json()) as typeof tag.responseData;
+        const tagResponse = await apiContext.get(
+          `/api/v1/tags/${tag.responseData.id}`
+        );
+        tag.responseData =
+          (await tagResponse.json()) as typeof tag.responseData;
         await openCurrentTag();
         await waitForAllLoadersToDisappear(page);
 

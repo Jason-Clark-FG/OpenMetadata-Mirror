@@ -15,6 +15,7 @@ import { expect, test } from '@playwright/test';
 import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
+import { waitForPageLoaded } from '../../../utils/polling';
 
 /**
  * Task Comments Tests
@@ -87,19 +88,19 @@ test.describe('Task Comments - Add Comment', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     // Click on task to open detail drawer
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       // Find comment input in drawer
       const drawer = page.locator('.ant-drawer-content');
@@ -138,18 +139,18 @@ test.describe('Task Comments - Add Comment', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -164,7 +165,7 @@ test.describe('Task Comments - Add Comment', () => {
           const sendBtn = drawer.getByTestId('send-comment');
           if (await sendBtn.isVisible()) {
             await sendBtn.click();
-            await page.waitForLoadState('networkidle');
+            await waitForPageLoaded(page);
 
             // Comment should be added or access denied
             // (depends on permission model)
@@ -179,18 +180,18 @@ test.describe('Task Comments - Add Comment', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -205,9 +206,11 @@ test.describe('Task Comments - Add Comment', () => {
           const sendBtn = drawer.getByTestId('send-comment');
           if (await sendBtn.isVisible()) {
             await sendBtn.click();
-            await page.waitForLoadState('networkidle');
+            await waitForPageLoaded(page);
 
-            await expect(drawer.getByText('Admin comment on task')).toBeVisible();
+            await expect(
+              drawer.getByText('Admin comment on task')
+            ).toBeVisible();
           }
         }
       }
@@ -269,18 +272,18 @@ test.describe('Task Comments - @Mention', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -292,7 +295,7 @@ test.describe('Task Comments - @Mention', () => {
         if (await commentInput.isVisible()) {
           await commentInput.click();
           await page.keyboard.type('@');
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Should show mention dropdown
           const mentionDropdown = page.locator(
@@ -313,18 +316,18 @@ test.describe('Task Comments - @Mention', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -354,7 +357,7 @@ test.describe('Task Comments - @Mention', () => {
             const sendBtn = drawer.getByTestId('send-comment');
             if (await sendBtn.isVisible()) {
               await sendBtn.click();
-              await page.waitForLoadState('networkidle');
+              await waitForPageLoaded(page);
             }
           }
         }
@@ -424,18 +427,18 @@ test.describe('Task Comments - Edit/Delete', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -465,18 +468,18 @@ test.describe('Task Comments - Edit/Delete', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -494,15 +497,19 @@ test.describe('Task Comments - Edit/Delete', () => {
             await editBtn.click();
 
             // Edit comment text
-            const editInput = drawer.locator('[data-testid="edit-comment-input"]');
+            const editInput = drawer.locator(
+              '[data-testid="edit-comment-input"]'
+            );
             if (await editInput.isVisible()) {
               await editInput.fill('Updated comment text');
 
               const saveBtn = drawer.getByTestId('save-comment');
               await saveBtn.click();
-              await page.waitForLoadState('networkidle');
+              await waitForPageLoaded(page);
 
-              await expect(drawer.getByText('Updated comment text')).toBeVisible();
+              await expect(
+                drawer.getByText('Updated comment text')
+              ).toBeVisible();
             }
           }
         }
@@ -515,18 +522,18 @@ test.describe('Task Comments - Edit/Delete', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -545,10 +552,12 @@ test.describe('Task Comments - Edit/Delete', () => {
             await deleteBtn.click();
 
             // Confirm deletion
-            const confirmBtn = page.getByRole('button', { name: /confirm|yes|delete/i });
+            const confirmBtn = page.getByRole('button', {
+              name: /confirm|yes|delete/i,
+            });
             if (await confirmBtn.isVisible()) {
               await confirmBtn.click();
-              await page.waitForLoadState('networkidle');
+              await waitForPageLoaded(page);
 
               // Comment count should decrease
               const newCount = await comments.count();
@@ -565,18 +574,18 @@ test.describe('Task Comments - Edit/Delete', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
     if (await taskCard.isVisible()) {
       await taskCard.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const drawer = page.locator('.ant-drawer-content');
 
@@ -652,11 +661,14 @@ test.describe('Task Comments - API Validation', () => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
-      const response = await apiContext.post(`/api/v1/tasks/${taskId}/comments`, {
-        data: {
-          message: 'API test comment',
-        },
-      });
+      const response = await apiContext.post(
+        `/api/v1/tasks/${taskId}/comments`,
+        {
+          data: {
+            message: 'API test comment',
+          },
+        }
+      );
 
       expect(response.ok()).toBe(true);
 

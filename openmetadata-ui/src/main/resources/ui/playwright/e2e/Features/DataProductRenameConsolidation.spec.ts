@@ -125,10 +125,9 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
     }
 
     const descriptionBoxLocator = () =>
-      (
-        hasModalEditor
-          ? dialog.locator('.om-block-editor[contenteditable="true"]')
-          : page.locator('.om-block-editor[contenteditable="true"]')
+      (hasModalEditor
+        ? dialog.locator('.om-block-editor[contenteditable="true"]')
+        : page.locator('.om-block-editor[contenteditable="true"]')
       ).first();
 
     let descriptionUpdated = false;

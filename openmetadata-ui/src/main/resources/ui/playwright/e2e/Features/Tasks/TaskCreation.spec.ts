@@ -15,7 +15,6 @@ import { expect, test } from '@playwright/test';
 import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
-import { redirectToHomePage } from '../../../utils/common';
 
 /**
  * Task Creation Tests
@@ -110,7 +109,9 @@ test.describe('Task Creation - Request Description', () => {
     await expect(taskCard).toBeVisible({ timeout: 10000 });
   });
 
-  test('should create request description task for column', async ({ page }) => {
+  test('should create request description task for column', async ({
+    page,
+  }) => {
     await tableWithOwner.visitEntityPage(page);
 
     // Expand columns section and find a column
@@ -148,7 +149,9 @@ test.describe('Task Creation - Request Description', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="task-feed-card"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
     }
@@ -188,7 +191,9 @@ test.describe('Task Creation - Request Description', () => {
     await submitBtn.click();
     await taskResponse;
 
-    await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+    await expect(
+      page.locator('[data-testid="task-feed-card"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
   });
@@ -274,7 +279,9 @@ test.describe('Task Creation - Request Tags', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="task-feed-card"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
     }
@@ -338,7 +345,9 @@ test.describe('Task Creation - Suggest Description', () => {
       const descriptionEditor = page.locator('.toastui-editor-contents');
       if (await descriptionEditor.isVisible()) {
         await descriptionEditor.click();
-        await page.keyboard.type('This is a suggested description for the table.');
+        await page.keyboard.type(
+          'This is a suggested description for the table.'
+        );
       }
 
       // Submit
@@ -432,7 +441,9 @@ test.describe('Task Creation - Suggest Tags', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="task-feed-card"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
     }

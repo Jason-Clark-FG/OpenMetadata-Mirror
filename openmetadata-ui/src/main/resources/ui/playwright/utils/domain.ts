@@ -1660,7 +1660,9 @@ export const selectDomainFromNavbar = async (
       {
         timeout: 60000,
         intervals: [1000, 2000, 5000],
-        message: `Timed out waiting for domain ${domain.displayName ?? domain.name} to appear in navbar selector`,
+        message: `Timed out waiting for domain ${
+          domain.displayName ?? domain.name
+        } to appear in navbar selector`,
       }
     )
     .toBe(true);

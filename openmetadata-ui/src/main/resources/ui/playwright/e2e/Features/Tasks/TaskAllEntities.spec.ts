@@ -12,6 +12,8 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { DataProduct } from '../../../support/domain/DataProduct';
+import { Domain } from '../../../support/domain/Domain';
 import { ContainerClass } from '../../../support/entity/ContainerClass';
 import { DashboardClass } from '../../../support/entity/DashboardClass';
 import { DirectoryClass } from '../../../support/entity/DirectoryClass';
@@ -22,8 +24,6 @@ import { PipelineClass } from '../../../support/entity/PipelineClass';
 import { SearchIndexClass } from '../../../support/entity/SearchIndexClass';
 import { TableClass } from '../../../support/entity/TableClass';
 import { TopicClass } from '../../../support/entity/TopicClass';
-import { DataProduct } from '../../../support/domain/DataProduct';
-import { Domain } from '../../../support/domain/Domain';
 import { Glossary } from '../../../support/glossary/Glossary';
 import { GlossaryTerm } from '../../../support/glossary/GlossaryTerm';
 import { UserClass } from '../../../support/user/UserClass';
@@ -88,7 +88,10 @@ async function createAndResolveTask(
   };
 
   // For description updates, pass the new value
-  if (taskType === 'DescriptionUpdate' && (payload.newDescription || payload.suggestedValue)) {
+  if (
+    taskType === 'DescriptionUpdate' &&
+    (payload.newDescription || payload.suggestedValue)
+  ) {
     resolveData.newValue = payload.newDescription || payload.suggestedValue;
   }
 
@@ -1571,16 +1574,19 @@ test.describe('Task Resolution - Metric Entity (All Task Types)', () => {
       await domain.create(apiContext);
 
       await metric.create(apiContext);
-      await apiContext.patch(`/api/v1/metrics/${metric.entityResponseData?.id}`, {
-        data: [
-          {
-            op: 'add',
-            path: '/owners',
-            value: [{ id: ownerUser.responseData.id, type: 'user' }],
-          },
-        ],
-        headers: { 'Content-Type': 'application/json-patch+json' },
-      });
+      await apiContext.patch(
+        `/api/v1/metrics/${metric.entityResponseData?.id}`,
+        {
+          data: [
+            {
+              op: 'add',
+              path: '/owners',
+              value: [{ id: ownerUser.responseData.id, type: 'user' }],
+            },
+          ],
+          headers: { 'Content-Type': 'application/json-patch+json' },
+        }
+      );
     } finally {
       await afterAction();
     }

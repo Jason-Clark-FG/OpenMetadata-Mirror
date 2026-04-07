@@ -176,7 +176,9 @@ const openAddDetailsWidgetModal = async (page: Page) => {
     }
   }
 
-  throw new Error('Add widget modal did not open from empty widget placeholder.');
+  throw new Error(
+    'Add widget modal did not open from empty widget placeholder.'
+  );
 };
 
 const saveCustomizeDetailsLayout = async (page: Page) => {

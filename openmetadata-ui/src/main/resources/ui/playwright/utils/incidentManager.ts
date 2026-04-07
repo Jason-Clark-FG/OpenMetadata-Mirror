@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
+import { getEncodedFqn } from '../../src/utils/StringsUtils';
 import { SidebarItem } from '../constant/sidebar';
 import { ResponseDataType } from '../support/entity/Entity.interface';
 import { TableClass } from '../support/entity/TableClass';
-import { getEncodedFqn } from '../../src/utils/StringsUtils';
+import { waitForAllLoadersToDisappear } from './entity';
 import { makeRetryRequest } from './serviceIngestion';
 import { sidebarClick } from './sidebar';
-import { waitForAllLoadersToDisappear } from './entity';
 
 export const visitProfilerTab = async (page: Page, table: TableClass) => {
   await page.goto(
@@ -125,7 +125,9 @@ export const assignIncident = async (data: {
         const incidentRow = page
           .getByRole('row', { name: new RegExp(testCaseName, 'i') })
           .first();
-        const incidentLink = page.getByRole('link', { name: testCaseName }).first();
+        const incidentLink = page
+          .getByRole('link', { name: testCaseName })
+          .first();
 
         return (
           (await incidentRow.isVisible().catch(() => false)) ||

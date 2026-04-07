@@ -105,9 +105,9 @@ export const navigateToPersonaWithPagination = async (
     resolvedPersonaName = personaName;
   }
 
-  const personaDetailsPath = `/settings/${GlobalSettingOptions.PERSONA}/${getEncodedFqn(
-    resolvedPersonaName
-  )}#customize-ui`;
+  const personaDetailsPath = `/settings/${
+    GlobalSettingOptions.PERSONA
+  }/${getEncodedFqn(resolvedPersonaName)}#customize-ui`;
 
   if (click && resolvedPersonaName) {
     await page.goto(personaDetailsPath, { waitUntil: 'domcontentloaded' });
@@ -143,7 +143,9 @@ export const navigateToPersonaWithPagination = async (
         await page
           .waitForURL(`**${personaDetailsPath}`, { timeout: 30000 })
           .catch(() => undefined);
-        await expect(page.getByRole('tab', { name: 'Customize UI' })).toBeVisible();
+        await expect(
+          page.getByRole('tab', { name: 'Customize UI' })
+        ).toBeVisible();
       }
 
       return;
@@ -160,7 +162,9 @@ export const navigateToPersonaWithPagination = async (
       break;
     }
 
-    const getPersonas = page.waitForResponse('/api/v1/personas*').catch(() => undefined);
+    const getPersonas = page
+      .waitForResponse('/api/v1/personas*')
+      .catch(() => undefined);
     const clickResult = await nextBtn
       .click({ timeout: 5000 })
       .then(() => 'clicked')

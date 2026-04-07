@@ -10,8 +10,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { existsSync } from 'fs';
 import { APIRequestContext, Browser, Page, request } from '@playwright/test';
+import { existsSync } from 'fs';
 import { DEFAULT_ADMIN_USER } from '../constant/user';
 import { getAuthContext, redirectToHomePage } from './common';
 import { seedAuthStorage } from './tokenStorage';

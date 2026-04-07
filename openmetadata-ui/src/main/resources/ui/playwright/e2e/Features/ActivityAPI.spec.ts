@@ -15,13 +15,10 @@ import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { TableClass } from '../../support/entity/TableClass';
 import { TagClass } from '../../support/tag/TagClass';
 import { UserClass } from '../../support/user/UserClass';
-import {
-  navigateToActivityFeedTab,
-  waitForActivityFeedLoad,
-} from '../../utils/activityFeed';
 import { performAdminLogin } from '../../utils/admin';
 import { descriptionBox, redirectToHomePage, uuid } from '../../utils/common';
 import { addOwner } from '../../utils/entity';
+import { waitForPageLoaded } from '../../utils/polling';
 
 const test = base;
 
@@ -58,7 +55,7 @@ test.describe('Activity API - Entity Changes', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   });
 
   test('Activity event is created when description is updated', async ({
@@ -86,7 +83,7 @@ test.describe('Activity API - Entity Changes', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check if there are any feed items
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -153,7 +150,7 @@ test.describe('Activity API - Entity Changes', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check if there are any feed items - activity may not appear immediately
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -198,7 +195,7 @@ test.describe('Activity API - Entity Changes', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check if there are any feed items
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -262,7 +259,7 @@ test.describe('Activity API - Entity Changes', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check if there are any feed items
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -294,7 +291,7 @@ test.describe('Activity API - Entity Changes', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check if there are any feed items
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -336,27 +333,30 @@ test.describe('Activity API - Reactions', () => {
   const adminUser = new UserClass();
   const testTable = new TableClass();
 
-  test.beforeAll('Setup: create entities and conversation', async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+  test.beforeAll(
+    'Setup: create entities and conversation',
+    async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
 
-    try {
-      await adminUser.create(apiContext);
-      await adminUser.setAdminRole(apiContext);
-      await testTable.create(apiContext);
+      try {
+        await adminUser.create(apiContext);
+        await adminUser.setAdminRole(apiContext);
+        await testTable.create(apiContext);
 
-      // Create a conversation thread to have something to react to
-      const entityLink = `<#E::table::${testTable.entityResponseData.fullyQualifiedName}>`;
-      await apiContext.post('/api/v1/feed', {
-        data: {
-          message: 'Test conversation for reactions',
-          about: entityLink,
-          from: adminUser.responseData.name,
-        },
-      });
-    } finally {
-      await afterAction();
+        // Create a conversation thread to have something to react to
+        const entityLink = `<#E::table::${testTable.entityResponseData.fullyQualifiedName}>`;
+        await apiContext.post('/api/v1/feed', {
+          data: {
+            message: 'Test conversation for reactions',
+            about: entityLink,
+            from: adminUser.responseData.name,
+          },
+        });
+      } finally {
+        await afterAction();
+      }
     }
-  });
+  );
 
   test.afterAll('Cleanup: delete entities', async ({ browser }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
@@ -372,7 +372,7 @@ test.describe('Activity API - Reactions', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   });
 
   test('User can add reaction to feed item', async ({ page }) => {
@@ -381,7 +381,7 @@ test.describe('Activity API - Reactions', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Wait for feed to load
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -451,7 +451,7 @@ test.describe('Activity API - Reactions', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Wait for feed to load
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -533,27 +533,30 @@ test.describe('Activity API - Comments', () => {
   const adminUser = new UserClass();
   const testTable = new TableClass();
 
-  test.beforeAll('Setup: create entities and conversation', async ({ browser }) => {
-    const { apiContext, afterAction } = await performAdminLogin(browser);
+  test.beforeAll(
+    'Setup: create entities and conversation',
+    async ({ browser }) => {
+      const { apiContext, afterAction } = await performAdminLogin(browser);
 
-    try {
-      await adminUser.create(apiContext);
-      await adminUser.setAdminRole(apiContext);
-      await testTable.create(apiContext);
+      try {
+        await adminUser.create(apiContext);
+        await adminUser.setAdminRole(apiContext);
+        await testTable.create(apiContext);
 
-      // Create a conversation thread to have something to comment on
-      const entityLink = `<#E::table::${testTable.entityResponseData.fullyQualifiedName}>`;
-      await apiContext.post('/api/v1/feed', {
-        data: {
-          message: 'Test conversation for comments',
-          about: entityLink,
-          from: adminUser.responseData.name,
-        },
-      });
-    } finally {
-      await afterAction();
+        // Create a conversation thread to have something to comment on
+        const entityLink = `<#E::table::${testTable.entityResponseData.fullyQualifiedName}>`;
+        await apiContext.post('/api/v1/feed', {
+          data: {
+            message: 'Test conversation for comments',
+            about: entityLink,
+            from: adminUser.responseData.name,
+          },
+        });
+      } finally {
+        await afterAction();
+      }
     }
-  });
+  );
 
   test.afterAll('Cleanup: delete entities', async ({ browser }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
@@ -569,7 +572,7 @@ test.describe('Activity API - Comments', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   });
 
   test('User can add comment to feed item', async ({ page }) => {
@@ -580,7 +583,7 @@ test.describe('Activity API - Comments', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Wait for feed to load
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -606,7 +609,7 @@ test.describe('Activity API - Comments', () => {
 
     // Click on the feed card to open detail view
     await feedContainer.first().click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Wait for comment input to appear
     const commentInput = page.locator('[data-testid="comments-input-field"]');
@@ -649,7 +652,7 @@ test.describe('Activity API - Comments', () => {
 
     // Navigate to Activity Feed tab
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Wait for feed to load
     const feedContainer = page.locator('[data-testid="message-container"]');
@@ -675,7 +678,7 @@ test.describe('Activity API - Comments', () => {
 
     // Click on feed card to open detail view
     await feedContainer.first().click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Verify layout elements are visible
     // Feed card sidebar (at least one should be visible)
@@ -743,7 +746,7 @@ test.describe('Activity API - Homepage Widget', () => {
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   });
 
   test('Activity Feed widget displays feed items', async ({ page }) => {
@@ -754,8 +757,10 @@ test.describe('Activity API - Homepage Widget', () => {
     const widgetExists = await feedWidget.isVisible().catch(() => false);
     const activityFeedText = page.getByText('Activity Feed');
     const hasActivityFeedHeader =
-      (await activityFeedText.first().isVisible().catch(() => false)) ||
-      widgetExists;
+      (await activityFeedText
+        .first()
+        .isVisible()
+        .catch(() => false)) || widgetExists;
 
     if (!hasActivityFeedHeader) {
       test.info().annotations.push({
@@ -778,9 +783,9 @@ test.describe('Activity API - Homepage Widget', () => {
 
     // Either we have messages or empty state
     const hasMessages = (await messageContainers.count()) > 0;
-    const hasNoRecentActivity = await noRecentActivity.isVisible().catch(
-      () => false
-    );
+    const hasNoRecentActivity = await noRecentActivity
+      .isVisible()
+      .catch(() => false);
     const hasEmpty = (await emptyState.count()) > 0;
 
     expect(hasMessages || hasNoRecentActivity || hasEmpty).toBe(true);

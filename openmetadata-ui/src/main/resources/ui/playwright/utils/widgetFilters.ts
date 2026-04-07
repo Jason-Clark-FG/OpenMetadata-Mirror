@@ -337,12 +337,9 @@ export const verifyTaskFilters = async (page: Page, widgetKey: string) => {
       );
     });
 
-  await page
-    .getByTestId(widgetKey)
-    .locator('entity-list-skeleton')
-    .waitFor({
-      state: 'detached',
-    });
+  await page.getByTestId(widgetKey).locator('entity-list-skeleton').waitFor({
+    state: 'detached',
+  });
 
   await expect(
     page.getByTestId(widgetKey).getByTestId('widget-sort-by-dropdown')

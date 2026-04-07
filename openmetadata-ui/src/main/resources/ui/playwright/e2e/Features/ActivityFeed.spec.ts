@@ -271,7 +271,9 @@ test.describe('FeedWidget on landing page', () => {
     // When there's no feed data, the widget shows empty state instead of cards
     if ((await messageContainers.count()) === 0) {
       // Verify empty state is shown
-      const emptyState = container.locator('[data-testid="widget-empty-state"]');
+      const emptyState = container.locator(
+        '[data-testid="widget-empty-state"]'
+      );
       const placeholderContainer = container.locator(
         '[data-testid="no-data-placeholder-container"]'
       );
@@ -441,7 +443,9 @@ test.describe('Mention notifications in Notification Box', () => {
       );
     });
 
-    await page.goto(`/table/${encodeURIComponent(entityFqn)}/activity_feed/all`);
+    await page.goto(
+      `/table/${encodeURIComponent(entityFqn)}/activity_feed/all`
+    );
     await feedPromise;
     await waitForAllLoadersToDisappear(page);
     await expect(page.getByTestId('entity-header-name')).toBeVisible();
@@ -607,12 +611,12 @@ test.describe('Mention notifications in Notification Box', () => {
       const firstNotificationText = await firstNotificationItem.textContent();
 
       expect(
-        firstNotificationText?.toLowerCase().includes(
-          user1.responseData.displayName.toLowerCase()
-        ) ||
-          firstNotificationText?.toLowerCase().includes(
-            user1.responseData.name.toLowerCase()
-          )
+        firstNotificationText
+          ?.toLowerCase()
+          .includes(user1.responseData.displayName.toLowerCase()) ||
+          firstNotificationText
+            ?.toLowerCase()
+            .includes(user1.responseData.name.toLowerCase())
       ).toBe(true);
       expect(firstNotificationText?.toLowerCase()).not.toContain(
         adminUser.responseData.name.toLowerCase()

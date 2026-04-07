@@ -17,6 +17,7 @@ import { TeamClass } from '../../../support/team/TeamClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { redirectToHomePage } from '../../../utils/common';
+import { waitForPageLoaded } from '../../../utils/polling';
 
 /**
  * Team Activity Tests
@@ -98,7 +99,7 @@ test.describe('Team Activity - Membership Changes', () => {
     const page = await browser.newPage();
     await teamMember.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check activity feed for team changes
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
@@ -119,7 +120,9 @@ test.describe('Team Activity - Membership Changes', () => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     // Get current team state
-    const teamResponse = await apiContext.get(`/api/v1/teams/${team.responseData.id}`);
+    const teamResponse = await apiContext.get(
+      `/api/v1/teams/${team.responseData.id}`
+    );
     const currentTeam = await teamResponse.json();
     const userIndex = currentTeam.users?.findIndex(
       (u: { id: string }) => u.id === newMember.responseData.id
@@ -143,7 +146,7 @@ test.describe('Team Activity - Membership Changes', () => {
     const page = await browser.newPage();
     await teamMember.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Activity feed should reflect team changes
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
@@ -239,7 +242,7 @@ test.describe('Team Activity - Team Owned Entities', () => {
     const page = await browser.newPage();
     await teamMember1.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Should see activity related to team's entities
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
@@ -253,7 +256,7 @@ test.describe('Team Activity - Team Owned Entities', () => {
   }) => {
     await nonTeamMember.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
 
@@ -265,7 +268,7 @@ test.describe('Team Activity - Team Owned Entities', () => {
 
       if (await myDataFilter.isVisible()) {
         await myDataFilter.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Should not see team-owned entity activity
         // (unless entity is public or user has access)
@@ -350,14 +353,14 @@ test.describe('Team Activity - Tasks Assigned to Team', () => {
   }) => {
     await teamMember1.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
     const tasksFilter = feedWidget.getByRole('button', { name: /tasks/i });
 
     if (await tasksFilter.isVisible()) {
       await tasksFilter.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       // Team member should see tasks assigned to their team
       const taskCards = feedWidget.locator('[data-testid="task-feed-card"]');
@@ -372,14 +375,14 @@ test.describe('Team Activity - Tasks Assigned to Team', () => {
   }) => {
     await teamMember2.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
     const tasksFilter = feedWidget.getByRole('button', { name: /tasks/i });
 
     if (await tasksFilter.isVisible()) {
       await tasksFilter.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const taskCards = feedWidget.locator('[data-testid="task-feed-card"]');
       const count = await taskCards.count();
@@ -393,7 +396,7 @@ test.describe('Team Activity - Tasks Assigned to Team', () => {
   }) => {
     await nonTeamMember.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check notification box for task assignments
     const notificationBell = page.getByTestId('task-notifications');
@@ -408,7 +411,7 @@ test.describe('Team Activity - Tasks Assigned to Team', () => {
 
         if (await tasksTab.isVisible()) {
           await tasksTab.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Non-team member should NOT see team-assigned tasks
           // (unless they're also assigned personally)
@@ -424,12 +427,12 @@ test.describe('Team Activity - Tasks Assigned to Team', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -513,10 +516,8 @@ test.describe('Team Activity - Team Page Feed', () => {
     await adminUser.login(page);
 
     // Navigate to team page
-    await page.goto(
-      `/settings/members/teams/${team.responseData.name}`
-    );
-    await page.waitForLoadState('networkidle');
+    await page.goto(`/settings/members/teams/${team.responseData.name}`);
+    await waitForPageLoaded(page);
 
     // Team page should have activity feed section
     const activityFeedSection = page.locator(
@@ -593,7 +594,7 @@ test.describe('Team Activity - Notifications', () => {
   }) => {
     await teamMember.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Check notification bell
     const notificationBell = page.getByTestId('task-notifications');
@@ -621,7 +622,7 @@ test.describe('Team Activity - Notifications', () => {
 
         if (await tasksTab.isVisible()) {
           await tasksTab.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Should see team-assigned task
           const taskItems = notificationBox.locator(

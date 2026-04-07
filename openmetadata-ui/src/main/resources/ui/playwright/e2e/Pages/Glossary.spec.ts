@@ -99,10 +99,7 @@ import {
   verifyWorkflowInstanceExists,
 } from '../../utils/glossary';
 import { sidebarClick } from '../../utils/sidebar';
-import {
-  TaskDetails,
-  waitForTaskResolveResponse,
-} from '../../utils/task';
+import { TaskDetails, waitForTaskResolveResponse } from '../../utils/task';
 import { performUserLogin } from '../../utils/user';
 
 const user1 = new UserClass();
@@ -471,9 +468,7 @@ test.describe('Glossary tests', () => {
         'Approved'
       );
 
-      const taskResolve2 = page1.waitForResponse(
-        '/api/v1/tasks/*/resolve'
-      );
+      const taskResolve2 = page1.waitForResponse('/api/v1/tasks/*/resolve');
       await page1
         .getByTestId(`${glossary1.data.terms[1].data.name}-reject-btn`)
         .click();

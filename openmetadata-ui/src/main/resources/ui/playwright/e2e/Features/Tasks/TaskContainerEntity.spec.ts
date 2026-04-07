@@ -12,8 +12,8 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { ContainerClass } from '../../../support/entity/ContainerClass';
 import { Domain } from '../../../support/domain/Domain';
+import { ContainerClass } from '../../../support/entity/ContainerClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 

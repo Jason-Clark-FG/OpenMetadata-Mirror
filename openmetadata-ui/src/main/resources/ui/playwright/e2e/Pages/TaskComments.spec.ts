@@ -10,10 +10,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { APIRequestContext, expect, Page, test } from '@playwright/test';
+import { APIRequestContext, expect, test } from '@playwright/test';
 import { TableClass } from '../../support/entity/TableClass';
 import { UserClass } from '../../support/user/UserClass';
 import { getApiContext, redirectToHomePage } from '../../utils/common';
+import { waitForPageLoaded } from '../../utils/polling';
 import { performUserLogin } from '../../utils/user';
 
 const adminFile = 'playwright/.auth/admin.json';
@@ -367,8 +368,9 @@ test.describe('Task Comments - Permission Tests', () => {
     const adminPage = await adminContext.newPage();
     await adminPage.goto('/');
     await adminPage.waitForURL('**/my-data');
-    const { apiContext: adminApiContext, afterAction } =
-      await getApiContext(adminPage);
+    const { apiContext: adminApiContext, afterAction } = await getApiContext(
+      adminPage
+    );
 
     const task = await createTaskViaAPI(
       adminApiContext,
@@ -415,8 +417,9 @@ test.describe('Task Comments - Permission Tests', () => {
     const adminPage = await adminContext.newPage();
     await adminPage.goto('/');
     await adminPage.waitForURL('**/my-data');
-    const { apiContext: adminApiContext, afterAction } =
-      await getApiContext(adminPage);
+    const { apiContext: adminApiContext, afterAction } = await getApiContext(
+      adminPage
+    );
 
     const task = await createTaskViaAPI(
       adminApiContext,
@@ -508,10 +511,14 @@ test.describe('Task Comments - UI Tests', () => {
     );
 
     try {
-      await addCommentViaAPI(apiContext, task.id, 'Test comment for UI display');
+      await addCommentViaAPI(
+        apiContext,
+        task.id,
+        'Test comment for UI display'
+      );
 
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       await page.click('[data-testid="activity_feed"]');
 
@@ -526,7 +533,9 @@ test.describe('Task Comments - UI Tests', () => {
       await page.waitForTimeout(1000);
 
       // Look for the task card - could be task-feed-card or feed-card-v2
-      const taskCard = page.locator('[data-testid="task-feed-card"], .task-feed-card-v1-new').first();
+      const taskCard = page
+        .locator('[data-testid="task-feed-card"], .task-feed-card-v1-new')
+        .first();
       await expect(taskCard).toBeVisible({ timeout: 10000 });
     } finally {
       await deleteTaskViaAPI(apiContext, task.id);

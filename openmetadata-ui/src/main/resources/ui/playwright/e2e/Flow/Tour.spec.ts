@@ -200,10 +200,9 @@ test.describe(
         .click()
         .catch(() => undefined);
 
-      const welcomeTourCta = page.getByTestId('welcome-screen').getByRole(
-        'link',
-        { name: 'Take a product tour to get started!' }
-      );
+      const welcomeTourCta = page
+        .getByTestId('welcome-screen')
+        .getByRole('link', { name: 'Take a product tour to get started!' });
 
       if (await welcomeTourCta.isVisible().catch(() => false)) {
         await welcomeTourCta.click();

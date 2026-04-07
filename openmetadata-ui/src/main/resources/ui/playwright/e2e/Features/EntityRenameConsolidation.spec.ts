@@ -55,10 +55,16 @@ async function performRename(
 ): Promise<void> {
   const renameInput = page.locator('#name');
   const renameActions = [
-    page.locator('.glossary-manage-dropdown-list-container [data-testid="rename-button"]'),
-    page.locator('[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'),
+    page.locator(
+      '.glossary-manage-dropdown-list-container [data-testid="rename-button"]'
+    ),
+    page.locator(
+      '[data-testid="manage-dropdown-list-container"] [data-testid="rename-button"]'
+    ),
     page.locator('[data-testid="rename-button-title"]'),
-    page.getByRole('menuitem', { name: /Rename.*Name/i }).getByTestId('rename-button'),
+    page
+      .getByRole('menuitem', { name: /Rename.*Name/i })
+      .getByTestId('rename-button'),
   ];
 
   const openRenameModal = async () => {
@@ -159,10 +165,9 @@ async function updateDescription(
   }
 
   const descriptionBoxLocator = () =>
-    (
-      hasModalEditor
-        ? dialog.locator(editorSelector)
-        : descriptionContainer.locator(editorSelector)
+    (hasModalEditor
+      ? dialog.locator(editorSelector)
+      : descriptionContainer.locator(editorSelector)
     ).first();
 
   let descriptionUpdated = false;
@@ -197,13 +202,11 @@ async function updateDescription(
     : page.getByTestId('save');
   await expect(saveButton).toBeVisible();
   await saveButton.scrollIntoViewIfNeeded().catch(() => undefined);
-  await saveButton
-    .click({ force: true })
-    .catch(async () =>
-      saveButton.evaluate((node) => {
-        (node as HTMLElement).click();
-      })
-    );
+  await saveButton.click({ force: true }).catch(async () =>
+    saveButton.evaluate((node) => {
+      (node as HTMLElement).click();
+    })
+  );
   await patchResponse;
   if (hasModalEditor) {
     await expect(dialog).toBeHidden();
@@ -427,7 +430,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await page.goto(
+          `/tags/${encodeURIComponent(classification.data.name)}`
+        );
         await waitForAllLoadersToDisappear(page);
         await expect(page.getByTestId('entity-header-name')).toContainText(
           classification.data.name
@@ -487,7 +492,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await page.goto(
+          `/tags/${encodeURIComponent(classification.data.name)}`
+        );
         await waitForAllLoadersToDisappear(page);
         await expect(page.getByTestId('entity-header-name')).toContainText(
           classification.data.name
@@ -547,7 +554,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await page.goto(
+          `/tags/${encodeURIComponent(classification.data.name)}`
+        );
         await waitForAllLoadersToDisappear(page);
         await page.getByText(tag.data.name).first().click();
 
@@ -595,7 +604,9 @@ test.describe(
       try {
         await redirectToHomePage(page);
 
-        await page.goto(`/tags/${encodeURIComponent(classification.data.name)}`);
+        await page.goto(
+          `/tags/${encodeURIComponent(classification.data.name)}`
+        );
         await waitForAllLoadersToDisappear(page);
         await page.getByText(tag.data.name).first().click();
 

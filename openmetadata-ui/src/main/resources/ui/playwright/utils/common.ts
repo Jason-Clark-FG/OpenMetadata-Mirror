@@ -86,7 +86,9 @@ export const redirectToHomePage = async (
 ) => {
   const navigateToHome = async () => {
     await page.goto('/my-data');
-    await page.waitForURL((url) => /\/(my-data|signin)(?:[/?#]|$)/.test(url.href));
+    await page.waitForURL((url) =>
+      /\/(my-data|signin)(?:[/?#]|$)/.test(url.href)
+    );
   };
 
   await navigateToHome();
@@ -336,9 +338,7 @@ export const assignSingleSelectDomain = async (
   domain: { name: string; displayName: string; fullyQualifiedName?: string }
 ) => {
   const domainSelector = page.getByTestId('domain-selectable-tree');
-  const selectorVisible = await domainSelector
-    .isVisible()
-    .catch(() => false);
+  const selectorVisible = await domainSelector.isVisible().catch(() => false);
 
   if (!selectorVisible) {
     await page.getByTestId('add-domain').click();
@@ -852,14 +852,18 @@ export const testPaginationNavigation = async (
   }
   await waitForAllLoadersToDisappear(page);
 
-  const firstVisibleRow = page.locator('tbody > tr[data-row-key]:visible').first();
+  const firstVisibleRow = page
+    .locator('tbody > tr[data-row-key]:visible')
+    .first();
   let page1FirstItemName: string | null = null;
 
   if ((await firstVisibleRow.count()) > 0) {
-    const firstCellText = (await firstVisibleRow.locator('td').nth(0).textContent())
-      ?.trim();
-    const secondCellText = (await firstVisibleRow.locator('td').nth(1).textContent())
-      ?.trim();
+    const firstCellText = (
+      await firstVisibleRow.locator('td').nth(0).textContent()
+    )?.trim();
+    const secondCellText = (
+      await firstVisibleRow.locator('td').nth(1).textContent()
+    )?.trim();
 
     page1FirstItemName = firstCellText || secondCellText || null;
   }

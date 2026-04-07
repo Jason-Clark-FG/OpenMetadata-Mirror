@@ -13,6 +13,7 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { clickOutside, descriptionBox } from './common';
 import { waitForAllLoadersToDisappear } from './entity';
+import { waitForPageLoaded } from './polling';
 import {
   waitForTaskActionResponse,
   waitForTaskCommentResponse,
@@ -40,7 +41,6 @@ const VISIBLE_TASK_MODAL_SELECTOR = '.ant-modal-wrap:visible';
 
 const logTaskDebug = (...messages: Array<string | number | boolean>) => {
   if (process.env.PW_TASK_DEBUG) {
-    // eslint-disable-next-line no-console -- opt-in playwright debug logging
     console.log('[PW_TASK_DEBUG]', ...messages);
   }
 };
@@ -119,7 +119,9 @@ const clickDropdownMenuItem = async ({
     .getByRole('button', { name: /down/i })
     .last();
   const visibleDropdownMenu = page.locator('.task-action-dropdown').last();
-  const roleMenuItem = page.getByRole('menuitem', { name: menuPattern }).first();
+  const roleMenuItem = page
+    .getByRole('menuitem', { name: menuPattern })
+    .first();
   const cssMenuItem = visibleDropdownMenu
     .locator('.ant-dropdown-menu-item')
     .filter({ hasText: menuPattern })
@@ -300,7 +302,7 @@ export const createDescriptionTaskFromForm = async ({
   await page.getByTestId('submit-btn').click();
   const response = await taskCreateResponse;
 
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   await waitForAllLoadersToDisappear(page);
 
   return (await response.json()) as CreatedTask;
@@ -346,7 +348,7 @@ export const createTagTaskFromForm = async ({
   await page.getByTestId('submit-tag-request').click();
   const response = await taskCreateResponse;
 
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   await waitForAllLoadersToDisappear(page);
   logTaskDebug('createTagTaskFromForm:done');
 
@@ -359,7 +361,7 @@ export const openEntityTasksTab = async (page: Page) => {
 
   if (await activityFeedTab.isVisible().catch(() => false)) {
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   }
 
   const menuItemTaskTab = page.getByRole('menuitem', { name: /tasks/i });
@@ -375,7 +377,7 @@ export const openEntityTasksTab = async (page: Page) => {
     await taskListResponse.catch(() => undefined);
   }
 
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   await waitForAllLoadersToDisappear(page);
   logTaskDebug('openEntityTasksTab:done');
 };
@@ -419,9 +421,9 @@ export const openTaskEditModal = async (page: Page) => {
     .first();
 
   const waitForVisibleTaskModal = async () => {
-    await visibleTaskModal.waitFor({ state: 'visible', timeout: 5000 }).catch(
-      () => undefined
-    );
+    await visibleTaskModal
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .catch(() => undefined);
 
     return visibleTaskModal.isVisible().catch(() => false);
   };
@@ -449,7 +451,7 @@ export const openTaskEditModal = async (page: Page) => {
     await dropdownPrimaryButton.click().catch(() => undefined);
 
     if (!(await waitForVisibleTaskModal()) && isPrimaryEditAction) {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await waitForPageLoaded(page).catch(() => undefined);
     }
 
     if (!(await waitForVisibleTaskModal()) && !isPrimaryEditAction) {
@@ -461,12 +463,14 @@ export const openTaskEditModal = async (page: Page) => {
     }
 
     if (!(await waitForVisibleTaskModal()) && isPrimaryEditAction) {
-      await dropdownPrimaryButton.scrollIntoViewIfNeeded().catch(() => undefined);
+      await dropdownPrimaryButton
+        .scrollIntoViewIfNeeded()
+        .catch(() => undefined);
       await dropdownPrimaryButton.click().catch(() => undefined);
     }
 
     if (!(await waitForVisibleTaskModal()) && !isPrimaryEditAction) {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await waitForPageLoaded(page).catch(() => undefined);
     }
 
     if (!(await waitForVisibleTaskModal()) && isPrimaryEditAction) {
@@ -488,7 +492,7 @@ export const openTaskEditModal = async (page: Page) => {
     await workflowTaskActionPrimary.click().catch(() => undefined);
 
     if (!(await waitForVisibleTaskModal())) {
-      await page.waitForLoadState('networkidle').catch(() => undefined);
+      await waitForPageLoaded(page).catch(() => undefined);
       await workflowTaskActionPrimary.click().catch(() => undefined);
     }
   } else if (await addSuggestionDropdown.isVisible().catch(() => false)) {
@@ -527,12 +531,16 @@ export const openTaskEditModal = async (page: Page) => {
       .getByRole('button', { name: /down/i })
       .first();
     if (await genericPrimaryAction.isVisible().catch(() => false)) {
-      await genericPrimaryAction.scrollIntoViewIfNeeded().catch(() => undefined);
+      await genericPrimaryAction
+        .scrollIntoViewIfNeeded()
+        .catch(() => undefined);
       await genericPrimaryAction.click().catch(() => undefined);
     }
 
-    if (!(await waitForVisibleTaskModal()) &&
-        (await genericDropdownTrigger.isVisible().catch(() => false))) {
+    if (
+      !(await waitForVisibleTaskModal()) &&
+      (await genericDropdownTrigger.isVisible().catch(() => false))
+    ) {
       await clickDropdownMenuItem({
         dropdown: genericTaskActionPanel,
         page,
@@ -554,7 +562,7 @@ export const saveTaskEditModal = async (page: Page) => {
     .getByRole('button', { name: /save|ok/i })
     .click();
   await taskResolveResponse;
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   logTaskDebug('saveTaskEditModal:done');
 };
 
@@ -631,7 +639,7 @@ export const addCommentToTask = async (page: Page, comment: string) => {
   await sendButton.click();
   logTaskDebug('addCommentToTask:submit');
   await taskCommentResponse;
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   logTaskDebug('addCommentToTask:done');
 };
 
@@ -675,7 +683,7 @@ export const closeTaskFromDetails = async (page: Page) => {
   }
 
   await taskActionResponse;
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   logTaskDebug('closeTaskFromDetails:done');
 };
 
@@ -698,7 +706,7 @@ export const approveTaskFromDetails = async (page: Page) => {
     await button.scrollIntoViewIfNeeded().catch(() => undefined);
     await button.click({ force: true });
     await taskActionResponse;
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   };
 
   if (await approveButton.isVisible().catch(() => false)) {

@@ -25,7 +25,6 @@ import {
   openAddGlossaryTermModal,
   performExpandAll,
   selectActiveGlossary,
-  verifyTaskCreated,
 } from '../../../utils/glossary';
 import { sidebarClick } from '../../../utils/sidebar';
 

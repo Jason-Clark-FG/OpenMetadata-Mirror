@@ -16,6 +16,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { redirectToHomePage } from '../../../utils/common';
+import { waitForPageLoaded } from '../../../utils/polling';
 
 /**
  * Task Navigation Tests
@@ -83,7 +84,7 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
     page,
   }) => {
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Find the activity feed widget
     const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
@@ -91,7 +92,9 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
     if (await feedWidget.isVisible()) {
       // Look for task items in the feed
       const taskItem = feedWidget
-        .locator('[data-testid="task-feed-card"], [data-testid="message-container"]')
+        .locator(
+          '[data-testid="task-feed-card"], [data-testid="message-container"]'
+        )
         .first();
 
       if (await taskItem.isVisible()) {
@@ -100,7 +103,7 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
 
         if (await taskLink.isVisible()) {
           await taskLink.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // CRITICAL: Should NOT be a 404 page
           await expect(page.getByText('No data available')).not.toBeVisible();
@@ -130,12 +133,12 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -155,7 +158,7 @@ test.describe('Task Navigation - Activity Feed Widget', () => {
 
         // Click and verify navigation
         await taskLink.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Should be on entity page, not 404
         await expect(page.getByText('No data available')).not.toBeVisible();
@@ -225,13 +228,13 @@ test.describe('Task Navigation - Entity Page', () => {
       name: /activity feeds & tasks/i,
     });
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Click on Tasks filter
     const tasksFilter = page.getByRole('button', { name: /tasks/i });
     if (await tasksFilter.isVisible()) {
       await tasksFilter.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     // Use Playwright's polling mechanism for task visibility
@@ -246,16 +249,18 @@ test.describe('Task Navigation - Entity Page', () => {
       .toBeGreaterThanOrEqual(0);
   });
 
-  test('clicking task card should open task detail drawer', async ({ page }) => {
+  test('clicking task card should open task detail drawer', async ({
+    page,
+  }) => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -299,12 +304,12 @@ test.describe('Task Navigation - Entity Page', () => {
 
     // Click on tab and go to tasks
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksFilter = page.getByRole('button', { name: /tasks/i });
     if (await tasksFilter.isVisible()) {
       await tasksFilter.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     // Count actual task cards
@@ -363,7 +368,7 @@ test.describe('Task Navigation - Notification Box', () => {
   test('assignee should see task in notification box', async ({ page }) => {
     await assigneeUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Click notification bell
     const notificationBell = page.getByTestId('task-notifications');
@@ -379,7 +384,7 @@ test.describe('Task Navigation - Notification Box', () => {
 
       if (await tasksTab.isVisible()) {
         await tasksTab.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Should see assigned tasks
         const taskItems = notificationBox.locator(
@@ -397,7 +402,7 @@ test.describe('Task Navigation - Notification Box', () => {
   }) => {
     await assigneeUser.login(page);
     await redirectToHomePage(page);
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const notificationBell = page.getByTestId('task-notifications');
 
@@ -411,7 +416,7 @@ test.describe('Task Navigation - Notification Box', () => {
 
       if (await tasksTab.isVisible()) {
         await tasksTab.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         const taskLink = notificationBox
           .locator('[data-testid^="notification-link-"]')
@@ -419,7 +424,7 @@ test.describe('Task Navigation - Notification Box', () => {
 
         if (await taskLink.isVisible()) {
           await taskLink.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Should NOT be 404
           await expect(page.getByText('No data available')).not.toBeVisible();
@@ -468,7 +473,7 @@ test.describe('Task Navigation - URL Validation', () => {
     // This is a regression test - /table/TASK-00001 is an invalid URL
     // because TASK-00001 is a task ID, not a table FQN
     await page.goto('/table/TASK-00001');
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Should show 404 or "No data available"
     const noData = page.getByText('No data available');
@@ -484,7 +489,9 @@ test.describe('Task Navigation - URL Validation', () => {
     expect(isError).toBe(true);
   });
 
-  test('task detail page with valid task ID should work', async ({ browser }) => {
+  test('task detail page with valid task ID should work', async ({
+    browser,
+  }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
@@ -510,7 +517,7 @@ test.describe('Task Navigation - URL Validation', () => {
 
       if (entityFqn) {
         await page.goto(`/table/${encodeURIComponent(entityFqn)}`);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Should NOT be 404
         await expect(page.getByText('No data available')).not.toBeVisible();

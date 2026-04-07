@@ -659,7 +659,9 @@ test.describe('User Profile Feed Interactions', () => {
       threadId = conversation.id as string;
 
       await redirectToHomePage(page);
-      await page.goto(`/table/${encodeURIComponent(entityFqn)}/activity_feed/all`);
+      await page.goto(
+        `/table/${encodeURIComponent(entityFqn)}/activity_feed/all`
+      );
       await waitForAllLoadersToDisappear(page);
 
       const messageContainer = page
@@ -672,12 +674,14 @@ test.describe('User Profile Feed Interactions', () => {
       await page.waitForURL(new RegExp(`/users/${user3.responseData.name}`));
       await page.getByTestId('user-profile').waitFor();
 
-      await expect(page.locator('[data-testid="user-display-name"]')).toHaveText(
-        user3.responseData.displayName ?? user3.responseData.name
-      );
+      await expect(
+        page.locator('[data-testid="user-display-name"]')
+      ).toHaveText(user3.responseData.displayName ?? user3.responseData.name);
     } finally {
       if (threadId) {
-        await apiContext.delete(`/api/v1/feed/${threadId}`).catch(() => undefined);
+        await apiContext
+          .delete(`/api/v1/feed/${threadId}`)
+          .catch(() => undefined);
       }
       await afterAction();
     }

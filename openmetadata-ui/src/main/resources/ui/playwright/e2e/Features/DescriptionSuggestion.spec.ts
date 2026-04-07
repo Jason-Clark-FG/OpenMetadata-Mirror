@@ -46,7 +46,11 @@ const ENTITY_ENDPOINTS = {
 } as const;
 
 const findFieldByPath = (
-  fields: Array<{ name: string; children?: unknown[]; description?: string }> = [],
+  fields: Array<{
+    name: string;
+    children?: unknown[];
+    description?: string;
+  }> = [],
   pathSegments: string[]
 ): { description?: string } | undefined => {
   const [currentField, ...remainingSegments] = pathSegments;
@@ -148,7 +152,8 @@ test.describe.serial(
       page,
       browser,
     }) => {
-      const requestedDescription = 'Requested description added by the assignee';
+      const requestedDescription =
+        'Requested description added by the assignee';
 
       await requesterUser.login(page);
       await openTaskForm(
@@ -571,10 +576,9 @@ test.describe.serial(
                 'container',
                 container.entityResponseData.fullyQualifiedName
               );
-              const field = findFieldByPath(
-                entity.dataModel?.columns ?? [],
-                [containerColumnName]
-              );
+              const field = findFieldByPath(entity.dataModel?.columns ?? [], [
+                containerColumnName,
+              ]);
 
               return getPlainTextDescription(field?.description);
             })

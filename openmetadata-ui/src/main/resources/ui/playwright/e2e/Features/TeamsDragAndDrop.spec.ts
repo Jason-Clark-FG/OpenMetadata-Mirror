@@ -12,11 +12,8 @@
  */
 import { expect, test } from '@playwright/test';
 import { PLAYWRIGHT_BASIC_TEST_TAG_OBJ } from '../../constant/config';
-import {
-  createNewPage,
-  toastNotification,
-  uuid,
-} from '../../utils/common';
+import { TeamClass } from '../../support/team/TeamClass';
+import { createNewPage, toastNotification, uuid } from '../../utils/common';
 import {
   confirmationDragAndDropTeam,
   dragAndDropElement,
@@ -24,7 +21,6 @@ import {
 } from '../../utils/dragDrop';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { hardDeleteTeam } from '../../utils/team';
-import { TeamClass } from '../../support/team/TeamClass';
 
 // use the admin user to login
 test.use({ storageState: 'playwright/.auth/admin.json' });

@@ -12,8 +12,8 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { PipelineClass } from '../../../support/entity/PipelineClass';
 import { Domain } from '../../../support/domain/Domain';
+import { PipelineClass } from '../../../support/entity/PipelineClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 

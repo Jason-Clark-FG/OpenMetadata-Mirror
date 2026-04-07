@@ -14,15 +14,11 @@ import { expect, type Locator, type Page } from '@playwright/test';
 import { get } from 'lodash';
 import { PLAYWRIGHT_INGESTION_TAG_OBJ } from '../../constant/config';
 import { SidebarItem } from '../../constant/sidebar';
-import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { TableClass } from '../../support/entity/TableClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { resetTokenFromBotPage } from '../../utils/bot';
-import {
-  getApiContext,
-  redirectToHomePage,
-} from '../../utils/common';
+import { getApiContext, redirectToHomePage } from '../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import {
   acknowledgeTask,
@@ -144,7 +140,9 @@ const openIncidentReassignModal = async (page: Page) => {
   const actionTrigger = page
     .locator('[data-testid="incident-task-action-trigger"]:visible')
     .last();
-  const editAssigneesButton = page.locator('[data-testid="edit-assignees"]:visible').last();
+  const editAssigneesButton = page
+    .locator('[data-testid="edit-assignees"]:visible')
+    .last();
   const reassignModal = page
     .locator('.ant-modal-wrap:visible')
     .filter({ hasText: /Re-?assign Task/i });
@@ -252,7 +250,8 @@ const openIncidentResolveDialog = async (page: Page) => {
     return resolveModal;
   }
 
-  const primaryActionText = (await primaryActionButton.textContent())?.trim() ?? '';
+  const primaryActionText =
+    (await primaryActionButton.textContent())?.trim() ?? '';
 
   if (primaryActionText.includes('Resolve')) {
     await primaryActionButton.click();
@@ -504,7 +503,9 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       await user1.login(actorPage);
       await waitForIncidentTask(actorPage, testCaseFqn);
       await visitProfilerTab(actorPage, table1);
-      await actorPage.click(`[data-testid="${testCaseName}"] >> text=${testCaseName}`);
+      await actorPage.click(
+        `[data-testid="${testCaseName}"] >> text=${testCaseName}`
+      );
       await waitForAllLoadersToDisappear(actorPage);
       await openIncidentTaskTab(actorPage, true);
       await reassignIncidentTask(actorPage, assignee1);
@@ -534,10 +535,8 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
       } finally {
         await afterActorApiAction();
       }
-      const {
-        apiContext: adminApiContext,
-        afterAction: afterAdminApiAction,
-      } = await getApiContext(adminPage);
+      const { apiContext: adminApiContext, afterAction: afterAdminApiAction } =
+        await getApiContext(adminPage);
 
       try {
         const loggedInUserResponse = await adminApiContext.get(
@@ -548,12 +547,15 @@ test.describe('Incident Manager', PLAYWRIGHT_INGESTION_TAG_OBJ, () => {
         await expect
           .poll(
             async () => {
-              const mentionsResponse = await adminApiContext.get('/api/v1/feed', {
-                params: {
-                  userId: loggedInUser.id,
-                  filterType: 'MENTIONS',
-                },
-              });
+              const mentionsResponse = await adminApiContext.get(
+                '/api/v1/feed',
+                {
+                  params: {
+                    userId: loggedInUser.id,
+                    filterType: 'MENTIONS',
+                  },
+                }
+              );
               const mentions = await mentionsResponse.json();
 
               return JSON.stringify(mentions.data ?? []);

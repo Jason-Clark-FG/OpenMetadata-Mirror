@@ -296,11 +296,11 @@ export const addTeamHierarchy = async (
   await page.click('[form="add-team-form"]');
   await saveTeamResponse;
   await expect(addTeamModal).toBeHidden({ timeout: 60000 });
-  await expect(page.locator(`[data-row-key="${teamDetails.name}"]`)).toBeVisible(
-    {
-      timeout: 60000,
-    }
-  );
+  await expect(
+    page.locator(`[data-row-key="${teamDetails.name}"]`)
+  ).toBeVisible({
+    timeout: 60000,
+  });
 };
 
 export const removeOrganizationPolicyAndRole = async (
@@ -367,7 +367,10 @@ export const searchTeam = async (
 
           return (
             count > 0 &&
-            (await matchingCells.first().isVisible().catch(() => false))
+            (await matchingCells
+              .first()
+              .isVisible()
+              .catch(() => false))
           );
         },
         { timeout: 30000, intervals: [500, 1000, 2000] }

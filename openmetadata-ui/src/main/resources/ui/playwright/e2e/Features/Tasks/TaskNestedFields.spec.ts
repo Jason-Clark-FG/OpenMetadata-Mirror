@@ -290,7 +290,8 @@ test.describe('Task Resolution - DashboardDataModel Columns', () => {
     browser,
   }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
-    const newDescription = 'Updated DashboardDataModel column description via task';
+    const newDescription =
+      'Updated DashboardDataModel column description via task';
 
     try {
       // Get the dashboardDataModel to find column name
@@ -594,7 +595,8 @@ test.describe('Task Resolution - SearchIndex Fields', () => {
     browser,
   }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
-    const newDescription = 'Updated nested SearchIndex field description via task';
+    const newDescription =
+      'Updated nested SearchIndex field description via task';
 
     try {
       // Get the searchIndex to find nested field
@@ -643,7 +645,10 @@ test.describe('Task Resolution - SearchIndex Fields', () => {
                 : field.name;
               if (
                 findNestedLeafField(
-                  field.children as Array<{ name: string; children?: unknown[] }>,
+                  field.children as Array<{
+                    name: string;
+                    children?: unknown[];
+                  }>,
                   currentPath,
                   depth + 1
                 )

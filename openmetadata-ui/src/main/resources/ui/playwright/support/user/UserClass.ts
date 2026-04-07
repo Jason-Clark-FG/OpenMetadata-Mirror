@@ -263,7 +263,6 @@ export class UserClass {
   }
 
   private async completeAuthenticatedLogin(page: Page) {
-
     // Set localStorage to prevent welcome screen from showing
     // The welcome screen checks for user's name in 'loggedInUsers' localStorage key
     if (this.responseData.name) {

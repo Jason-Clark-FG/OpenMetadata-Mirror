@@ -12,10 +12,11 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { DashboardClass } from '../../../support/entity/DashboardClass';
 import { Domain } from '../../../support/domain/Domain';
+import { DashboardClass } from '../../../support/entity/DashboardClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
+import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 /**
  * Task Tests for Dashboard Entities
@@ -171,7 +172,9 @@ test.describe('Task Creation and Resolution - Dashboard Entity', () => {
       // Verify task is resolved (status could be 'Approved', 'Completed', or 'Resolved')
       const taskGetResponse = await apiContext.get(`/api/v1/tasks/${task.id}`);
       const resolvedTask = await taskGetResponse.json();
-      expect(['Approved', 'Completed', 'Resolved']).toContain(resolvedTask.status);
+      expect(['Approved', 'Completed', 'Resolved']).toContain(
+        resolvedTask.status
+      );
     } finally {
       await afterAction();
     }
@@ -466,16 +469,19 @@ test.describe('Dashboard Task UI Flow', () => {
       const dashboardFQN = dashboard.entityResponseData?.fullyQualifiedName;
       await page.goto(
         `/dashboard/${dashboardFQN}?activeTab=activity_feed&feedFilter=TASK`,
-        { waitUntil: 'networkidle' }
+        { waitUntil: 'domcontentloaded' }
       );
+      await waitForAllLoadersToDisappear(page);
 
       // Wait for the activity feed content to load
-      await page.waitForSelector('[data-testid="activity-feed-tab"]', {
-        state: 'visible',
-        timeout: 10000,
-      }).catch(() => {
-        // Tab might already be active, continue
-      });
+      await page
+        .waitForSelector('[data-testid="activity-feed-tab"]', {
+          state: 'visible',
+          timeout: 10000,
+        })
+        .catch(() => {
+          // Tab might already be active, continue
+        });
 
       // Verify the task is visible - check for any task card
       const taskCards = page.locator(

@@ -89,13 +89,11 @@ export const selectActiveGlossaryTerm = async (
 
   await expect(glossaryTermEntry).toBeVisible();
   await glossaryTermEntry.scrollIntoViewIfNeeded().catch(() => undefined);
-  await glossaryTermEntry
-    .click({ force: true })
-    .catch(async () =>
-      glossaryTermEntry.evaluate((node) => {
-        (node as HTMLElement).click();
-      })
-    );
+  await glossaryTermEntry.click({ force: true }).catch(async () =>
+    glossaryTermEntry.evaluate((node) => {
+      (node as HTMLElement).click();
+    })
+  );
 
   await waitForAllLoadersToDisappear(page);
 
@@ -520,7 +518,9 @@ export const verifyTaskCreated = async (
       async () => {
         const response = await apiContext
           .get(
-            `/api/v1/tasks?aboutEntity=${encodeURIComponent(glossaryFqn)}&status=Open&type=GlossaryApproval&limit=100&fields=about,assignees`
+            `/api/v1/tasks?aboutEntity=${encodeURIComponent(
+              glossaryFqn
+            )}&status=Open&type=GlossaryApproval&limit=100&fields=about,assignees`
           )
           .then((res) => res.json());
 

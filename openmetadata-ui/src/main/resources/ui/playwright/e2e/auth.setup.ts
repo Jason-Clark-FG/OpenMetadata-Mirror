@@ -10,12 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import {
-  BrowserContext,
-  Page,
-  request,
-  test as setup,
-} from '@playwright/test';
+import { BrowserContext, Page, request, test as setup } from '@playwright/test';
 import {
   EDIT_DESCRIPTION_RULE,
   EDIT_GLOSSARY_TERM_RULE,

@@ -15,7 +15,6 @@ import { Operation } from 'fast-json-patch';
 import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { redirectToHomePage, uuid } from '../../utils/common';
-import { visitEntityPageByUrl } from '../../utils/entity';
 import { visitServiceDetailsPage } from '../../utils/service';
 import {
   EntityTypeEndpoint,

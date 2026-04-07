@@ -16,6 +16,7 @@ import { TableClass } from '../../../support/entity/TableClass';
 import { TeamClass } from '../../../support/team/TeamClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
+import { waitForPageLoaded } from '../../../utils/polling';
 
 /**
  * Task Permissions Tests
@@ -315,12 +316,12 @@ test.describe('Task Permissions - UI Button Visibility', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -342,12 +343,12 @@ test.describe('Task Permissions - UI Button Visibility', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -367,12 +368,12 @@ test.describe('Task Permissions - UI Button Visibility', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -468,12 +469,12 @@ test.describe('Task Permissions - Team Assignment', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -491,12 +492,12 @@ test.describe('Task Permissions - Team Assignment', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -590,7 +591,7 @@ test.describe('Task Permissions - Task Creator', () => {
         about: table.entityResponseData?.fullyQualifiedName,
         aboutType: 'table',
         type: 'DescriptionUpdate',
-          category: 'MetadataUpdate',
+        category: 'MetadataUpdate',
         assignees: [assigneeUser.responseData.name],
       },
     });
@@ -604,12 +605,12 @@ test.describe('Task Permissions - Task Creator', () => {
     // Navigate to task and try to close
     await table.visitEntityPage(page);
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -651,7 +652,9 @@ test.describe('Task Permissions - Edge Cases', () => {
     }
   });
 
-  test('resolving already closed task should preserve closed status', async ({ browser }) => {
+  test('resolving already closed task should preserve closed status', async ({
+    browser,
+  }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
@@ -668,11 +671,15 @@ test.describe('Task Permissions - Edge Cases', () => {
       const task = await taskResponse.json();
 
       // Close the task
-      const closeResponse = await apiContext.post(`/api/v1/tasks/${task.id}/close?comment=Closing for test`);
+      const closeResponse = await apiContext.post(
+        `/api/v1/tasks/${task.id}/close?comment=Closing for test`
+      );
       expect(closeResponse.ok()).toBe(true);
 
       // Verify task is now cancelled
-      const afterCloseResponse = await apiContext.get(`/api/v1/tasks/${task.id}`);
+      const afterCloseResponse = await apiContext.get(
+        `/api/v1/tasks/${task.id}`
+      );
       const closedTask = await afterCloseResponse.json();
       expect(closedTask.status).toBe('Cancelled');
 
@@ -689,7 +696,9 @@ test.describe('Task Permissions - Edge Cases', () => {
 
       // Verify task status after resolve attempt - should not become Approved/Completed
       if (resolveResponse.ok()) {
-        const afterResolveResponse = await apiContext.get(`/api/v1/tasks/${task.id}`);
+        const afterResolveResponse = await apiContext.get(
+          `/api/v1/tasks/${task.id}`
+        );
         const taskAfterResolve = await afterResolveResponse.json();
         // Status should indicate task was not approved - either remains Cancelled or becomes Rejected
         expect(['Cancelled', 'Rejected']).toContain(taskAfterResolve.status);

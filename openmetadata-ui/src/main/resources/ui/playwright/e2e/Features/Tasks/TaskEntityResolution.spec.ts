@@ -76,7 +76,9 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
     }
   });
 
-  test('should create and approve OwnershipUpdate task', async ({ browser }) => {
+  test('should create and approve OwnershipUpdate task', async ({
+    browser,
+  }) => {
     const { apiContext, afterAction } = await performAdminLogin(browser);
 
     try {
@@ -89,9 +91,7 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
           category: 'MetadataUpdate',
           assignees: [currentOwner.responseData.name],
           payload: {
-            currentOwners: [
-              { id: currentOwner.responseData.id, type: 'user' },
-            ],
+            currentOwners: [{ id: currentOwner.responseData.id, type: 'user' }],
             newOwners: [{ id: newOwner.responseData.id, type: 'user' }],
             reason: 'Transferring ownership to new team member',
           },
@@ -133,19 +133,16 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
 
     try {
       // First set owner back to currentOwner
-      await apiContext.patch(
-        `/api/v1/tables/${table.entityResponseData?.id}`,
-        {
-          data: [
-            {
-              op: 'replace',
-              path: '/owners',
-              value: [{ id: currentOwner.responseData.id, type: 'user' }],
-            },
-          ],
-          headers: { 'Content-Type': 'application/json-patch+json' },
-        }
-      );
+      await apiContext.patch(`/api/v1/tables/${table.entityResponseData?.id}`, {
+        data: [
+          {
+            op: 'replace',
+            path: '/owners',
+            value: [{ id: currentOwner.responseData.id, type: 'user' }],
+          },
+        ],
+        headers: { 'Content-Type': 'application/json-patch+json' },
+      });
 
       // Create OwnershipUpdate task
       const taskResponse = await apiContext.post('/api/v1/tasks', {
@@ -156,9 +153,7 @@ test.describe('Task Resolution - OwnershipUpdate', () => {
           category: 'MetadataUpdate',
           assignees: [currentOwner.responseData.name],
           payload: {
-            currentOwners: [
-              { id: currentOwner.responseData.id, type: 'user' },
-            ],
+            currentOwners: [{ id: currentOwner.responseData.id, type: 'user' }],
             newOwners: [{ id: newOwner.responseData.id, type: 'user' }],
           },
         },

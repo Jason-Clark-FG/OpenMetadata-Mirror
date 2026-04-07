@@ -11,12 +11,13 @@
  *  limitations under the License.
  */
 
-import { expect, Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { TableClass } from '../../../support/entity/TableClass';
 import { TeamClass } from '../../../support/team/TeamClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 import { getApiContext } from '../../../utils/common';
+import { waitForPageLoaded } from '../../../utils/polling';
 
 /**
  * Task Resolution Tests
@@ -95,13 +96,13 @@ test.describe('Task Resolution - Approve/Reject', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     // Navigate to Tasks tab
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -116,17 +117,19 @@ test.describe('Task Resolution - Approve/Reject', () => {
     }
   });
 
-  test('non-assignee should NOT see approve/reject buttons', async ({ page }) => {
+  test('non-assignee should NOT see approve/reject buttons', async ({
+    page,
+  }) => {
     await nonAssigneeUser.login(page);
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -167,12 +170,12 @@ test.describe('Task Resolution - Approve/Reject', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -245,8 +248,10 @@ test.describe('Task Resolution - Approve/Reject', () => {
       feedbackTaskId = task.id;
 
       await assigneeUser.login(page);
-      const { apiContext: assigneeApiContext, afterAction: afterAssigneeAction } =
-        await getApiContext(page);
+      const {
+        apiContext: assigneeApiContext,
+        afterAction: afterAssigneeAction,
+      } = await getApiContext(page);
 
       const response = await assigneeApiContext.post(
         `/api/v1/tasks/${feedbackTaskId}/resolve`,
@@ -267,7 +272,9 @@ test.describe('Task Resolution - Approve/Reject', () => {
       await afterAssigneeAction();
     } finally {
       if (feedbackTaskId) {
-        await apiContext.delete(`/api/v1/tasks/${feedbackTaskId}?hardDelete=true`);
+        await apiContext.delete(
+          `/api/v1/tasks/${feedbackTaskId}?hardDelete=true`
+        );
       }
       await afterAction();
     }
@@ -347,12 +354,12 @@ test.describe('Task Resolution - Team Assignee', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -372,12 +379,12 @@ test.describe('Task Resolution - Team Assignee', () => {
     await table.visitEntityPage(page);
 
     await page.getByTestId('activity_feed').click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const tasksTab = page.getByRole('button', { name: /tasks/i });
     if (await tasksTab.isVisible()) {
       await tasksTab.click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     }
 
     const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -583,7 +590,9 @@ test.describe('Task Resolution - Close by Creator', () => {
       // Get detailed error if task creation fails
       if (!taskResponse.ok()) {
         const errorBody = await taskResponse.text();
-        console.log(`Task creation failed: ${taskResponse.status()} - ${errorBody}`);
+        console.log(
+          `Task creation failed: ${taskResponse.status()} - ${errorBody}`
+        );
       }
       expect(taskResponse.ok()).toBe(true);
       const task = await taskResponse.json();

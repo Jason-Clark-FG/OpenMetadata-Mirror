@@ -12,8 +12,8 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { TopicClass } from '../../../support/entity/TopicClass';
 import { Domain } from '../../../support/domain/Domain';
+import { TopicClass } from '../../../support/entity/TopicClass';
 import { UserClass } from '../../../support/user/UserClass';
 import { performAdminLogin } from '../../../utils/admin';
 
@@ -46,19 +46,16 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
       await topic.create(apiContext);
 
       // Set owner via patch
-      await apiContext.patch(
-        `/api/v1/topics/${topic.entityResponseData?.id}`,
-        {
-          data: [
-            {
-              op: 'add',
-              path: '/owners',
-              value: [{ id: ownerUser.responseData.id, type: 'user' }],
-            },
-          ],
-          headers: { 'Content-Type': 'application/json-patch+json' },
-        }
-      );
+      await apiContext.patch(`/api/v1/topics/${topic.entityResponseData?.id}`, {
+        data: [
+          {
+            op: 'add',
+            path: '/owners',
+            value: [{ id: ownerUser.responseData.id, type: 'user' }],
+          },
+        ],
+        headers: { 'Content-Type': 'application/json-patch+json' },
+      });
     } finally {
       await afterAction();
     }
@@ -211,7 +208,11 @@ test.describe('Task Creation and Resolution - Topic Entity', () => {
 
       // Find the field in the schema to verify
       const findFieldDescription = (
-        fields: Array<{ name: string; description?: string; children?: unknown[] }>,
+        fields: Array<{
+          name: string;
+          description?: string;
+          children?: unknown[];
+        }>,
         path: string
       ): string | undefined => {
         const parts = path.split('.');

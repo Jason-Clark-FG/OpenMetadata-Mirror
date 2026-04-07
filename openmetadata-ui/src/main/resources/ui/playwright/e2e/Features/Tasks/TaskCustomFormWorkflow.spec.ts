@@ -27,10 +27,7 @@
 import { expect, test } from '@playwright/test';
 import { TableClass } from '../../../support/entity/TableClass';
 import { authenticateAdminPage } from '../../../utils/admin';
-import {
-  getApiContext,
-  uuid,
-} from '../../../utils/common';
+import { getApiContext, uuid } from '../../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 
 type TaskFormSchema = {
@@ -365,14 +362,20 @@ test.describe.serial('Task Custom Form Workflow', () => {
 
       if (existingSchema?.id) {
         schemaToRestore = existingSchema;
-        const updateSchemaResponse = await apiContext.put('/api/v1/taskFormSchemas', {
-          data: updatedSchema,
-        });
+        const updateSchemaResponse = await apiContext.put(
+          '/api/v1/taskFormSchemas',
+          {
+            data: updatedSchema,
+          }
+        );
         expect(updateSchemaResponse.ok()).toBeTruthy();
       } else {
-        const createSchemaResponse = await apiContext.post('/api/v1/taskFormSchemas', {
-          data: updatedSchema,
-        });
+        const createSchemaResponse = await apiContext.post(
+          '/api/v1/taskFormSchemas',
+          {
+            data: updatedSchema,
+          }
+        );
         expect(createSchemaResponse.ok()).toBeTruthy();
         const createdSchema = await createSchemaResponse.json();
         createdSchemaId = createdSchema.id;
@@ -404,7 +407,9 @@ test.describe.serial('Task Custom Form Workflow', () => {
       await waitForAllLoadersToDisappear(page);
       await page.getByRole('menuitem', { name: /tasks/i }).click();
       await waitForAllLoadersToDisappear(page);
-      await expect(page.locator('[data-testid="task-feed-card"]').first()).toBeVisible();
+      await expect(
+        page.locator('[data-testid="task-feed-card"]').first()
+      ).toBeVisible();
       await page.locator('[data-testid="task-feed-card"]').first().click();
       await expect(page.getByTestId('task-tab')).toBeVisible();
       await expect(page.getByTestId('task-payload-details')).toContainText(
@@ -466,14 +471,18 @@ test.describe.serial('Task Custom Form Workflow', () => {
         )
         .toBe(updatedDescription);
 
-      const resolvedTaskResponse = await apiContext.get(`/api/v1/tasks/${taskId}`);
+      const resolvedTaskResponse = await apiContext.get(
+        `/api/v1/tasks/${taskId}`
+      );
       expect(resolvedTaskResponse.ok()).toBeTruthy();
       const resolvedTask = await resolvedTaskResponse.json();
 
       expect(resolvedTask.status).not.toBe('Open');
     } finally {
       if (taskId) {
-        await apiContext.delete(`/api/v1/tasks/${taskId}?hardDelete=true`).catch(() => null);
+        await apiContext
+          .delete(`/api/v1/tasks/${taskId}?hardDelete=true`)
+          .catch(() => null);
       }
 
       if (table.entityResponseData?.id) {
@@ -481,12 +490,16 @@ test.describe.serial('Task Custom Form Workflow', () => {
       }
 
       if (schemaToRestore) {
-        await apiContext.put('/api/v1/taskFormSchemas', {
-          data: schemaToRestore,
-        }).catch(() => null);
+        await apiContext
+          .put('/api/v1/taskFormSchemas', {
+            data: schemaToRestore,
+          })
+          .catch(() => null);
       } else if (createdSchemaId) {
         await apiContext
-          .delete(`/api/v1/taskFormSchemas/${createdSchemaId}?hardDelete=true&recursive=true`)
+          .delete(
+            `/api/v1/taskFormSchemas/${createdSchemaId}?hardDelete=true&recursive=true`
+          )
           .catch(() => null);
       }
 

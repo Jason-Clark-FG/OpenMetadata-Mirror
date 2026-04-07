@@ -126,7 +126,9 @@ test.describe('Task Assignee Management', () => {
       const updatedTask = await response.json();
 
       expect(updatedTask.assignees).toHaveLength(1);
-      expect(updatedTask.assignees[0].name).toBe(nextAssignee.responseData.name);
+      expect(updatedTask.assignees[0].name).toBe(
+        nextAssignee.responseData.name
+      );
     } finally {
       await afterAction();
     }

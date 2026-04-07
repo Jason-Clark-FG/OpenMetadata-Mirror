@@ -60,11 +60,16 @@ test.describe(
         const permissionResponse = page.waitForResponse(
           '/api/v1/permissions/team/name/*'
         );
-        await page.goto(`/settings/members/teams/${encodeURIComponent(teamName)}`, {
-          waitUntil: 'domcontentloaded',
-        });
+        await page.goto(
+          `/settings/members/teams/${encodeURIComponent(teamName)}`,
+          {
+            waitUntil: 'domcontentloaded',
+          }
+        );
         await permissionResponse;
-        await expect(page.getByRole('heading', { name: teamName })).toBeVisible();
+        await expect(
+          page.getByRole('heading', { name: teamName })
+        ).toBeVisible();
       }
     });
 

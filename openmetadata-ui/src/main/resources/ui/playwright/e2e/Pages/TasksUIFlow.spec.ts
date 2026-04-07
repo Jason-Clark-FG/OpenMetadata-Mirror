@@ -20,9 +20,8 @@ import {
   authenticateAdminPage,
   createAdminApiContext,
 } from '../../utils/admin';
-import {
-  descriptionBox,
-} from '../../utils/common';
+import { descriptionBox } from '../../utils/common';
+import { waitForPageLoaded } from '../../utils/polling';
 import { waitForTaskCreateResponse } from '../../utils/task';
 import {
   addTagSuggestion,
@@ -89,7 +88,7 @@ const createDescriptionTaskViaUI = async (
   await taskResponse;
 
   // Wait for navigation after task creation (page navigates to entity page with tasks tab)
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
 };
 
 const createTagTaskViaUI = async (
@@ -119,7 +118,7 @@ const createTagTaskViaUI = async (
   await taskResponse;
 
   // Wait for navigation after task creation (page navigates to entity page with tasks tab)
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
 };
 
 const resolveTaskWithApproval = async (page: Page) => {
@@ -127,7 +126,7 @@ const resolveTaskWithApproval = async (page: Page) => {
   const taskCard = page.locator('[data-testid="task-feed-card"]').first();
   if (await taskCard.isVisible()) {
     await taskCard.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   }
 
   await approveTaskFromDetails(page);
@@ -138,7 +137,7 @@ const resolveTaskWithRejection = async (page: Page, comment: string) => {
   const taskCard = page.locator('[data-testid="task-feed-card"]').first();
   if (await taskCard.isVisible({ timeout: 5000 }).catch(() => false)) {
     await taskCard.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
   }
 
   await closeTaskFromDetails(page);
@@ -199,7 +198,7 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
 
       await test.step('Navigate to entity page', async () => {
         await entity.visitEntityPage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
       });
 
       await test.step('Create description task via UI', async () => {
@@ -214,7 +213,7 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
 
       await test.step('Verify task appears in activity feed', async () => {
         await entity.visitEntityPage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
         await navigateToActivityFeedTasks(page);
 
         const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -236,7 +235,7 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
 
       await test.step('Navigate to entity page', async () => {
         await entity.visitEntityPage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
       });
 
       await test.step('Create tag task via UI', async () => {
@@ -251,7 +250,7 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
 
       await test.step('Verify task in activity feed', async () => {
         await entity.visitEntityPage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
         await navigateToActivityFeedTasks(page);
 
         const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -306,7 +305,7 @@ test.describe('Task Workflow - Table Column Tasks', () => {
 
     await test.step('Navigate to table and open column task menu', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const schemaTab = page.getByTestId('schema');
       await schemaTab.click();
@@ -334,12 +333,12 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await page.click('button[type="submit"]');
       await taskResponse;
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     });
 
     await test.step('Resolve the column task', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
       await navigateToActivityFeedTasks(page);
 
       await resolveTaskWithApproval(page);
@@ -353,7 +352,7 @@ test.describe('Task Workflow - Table Column Tasks', () => {
 
     await test.step('Navigate to table and open column task menu', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       const schemaTab = page.getByTestId('schema');
       await schemaTab.click();
@@ -363,7 +362,9 @@ test.describe('Task Workflow - Table Column Tasks', () => {
 
       // Click on the task-element icon button in the tags cell
       // The tags cell has data-testid="classification-tags-{index}"
-      const tagsCell = columnRow.locator('[data-testid^="classification-tags-"]');
+      const tagsCell = columnRow.locator(
+        '[data-testid^="classification-tags-"]'
+      );
       const taskBtn = tagsCell.getByTestId('task-element');
       await taskBtn.click();
     });
@@ -384,12 +385,12 @@ test.describe('Task Workflow - Table Column Tasks', () => {
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await page.click('button[type="submit"]');
       await taskResponse;
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     });
 
     await test.step('Resolve the column tag task', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
       await navigateToActivityFeedTasks(page);
 
       await resolveTaskWithApproval(page);
@@ -433,7 +434,7 @@ test.describe('Task Activity Feed Integration', () => {
 
     await test.step('Create a task', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       await createDescriptionTaskViaUI(
         page,
@@ -446,7 +447,7 @@ test.describe('Task Activity Feed Integration', () => {
 
     await test.step('Verify task appears in Open tasks tab', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
       await navigateToActivityFeedTasks(page);
 
       // Look for Open button/tab that shows task count
@@ -466,7 +467,9 @@ test.describe('Task Activity Feed Integration', () => {
       if (await closedTab.isVisible()) {
         await closedTab.click();
 
-        const closedTaskCard = page.locator('[data-testid="task-feed-card"]').first();
+        const closedTaskCard = page
+          .locator('[data-testid="task-feed-card"]')
+          .first();
         await expect(closedTaskCard).toBeVisible();
       }
     });
@@ -478,7 +481,7 @@ test.describe('Task Activity Feed Integration', () => {
 
     await test.step('Create a task', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       await createDescriptionTaskViaUI(
         page,
@@ -491,7 +494,7 @@ test.describe('Task Activity Feed Integration', () => {
 
     await test.step('Verify task metadata in feed', async () => {
       await table.visitEntityPage(page);
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
       await navigateToActivityFeedTasks(page);
 
       const taskCard = page.locator('[data-testid="task-feed-card"]').first();

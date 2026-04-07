@@ -17,11 +17,8 @@ import { TeamClass } from '../../support/team/TeamClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
-import { visitEntityPage } from '../../utils/entity';
-import {
-  addTagSuggestion,
-  selectAssignee,
-} from '../../utils/taskWorkflow';
+import { waitForPageLoaded } from '../../utils/polling';
+import { addTagSuggestion, selectAssignee } from '../../utils/taskWorkflow';
 
 /**
  * Task System E2E Tests
@@ -113,7 +110,7 @@ test.describe('Task Workflow Tests', () => {
       await taskResponse;
 
       // Should navigate back to entity page
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     });
 
     test('should allow manual assignee selection when entity has no owner', async ({
@@ -139,7 +136,7 @@ test.describe('Task Workflow Tests', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     });
 
     test('should create suggest tags task', async ({ page }) => {
@@ -176,7 +173,7 @@ test.describe('Task Workflow Tests', () => {
       await submitBtn.click();
       await taskResponse;
 
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
     });
   });
 
@@ -208,7 +205,7 @@ test.describe('Task Workflow Tests', () => {
 
         // Go to home page and find the task in activity feed
         await redirectToHomePage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Find the task in activity feed widget
         const feedWidget = page.getByTestId('KnowledgePanel.ActivityFeed');
@@ -220,7 +217,7 @@ test.describe('Task Workflow Tests', () => {
           // Click on the task link
           const taskLink = taskItem.getByTestId('redirect-task-button-link');
           await taskLink.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Verify navigation - should NOT be 404
           await expect(page.getByText('No data available')).not.toBeVisible();
@@ -237,7 +234,7 @@ test.describe('Task Workflow Tests', () => {
     }) => {
       await tableWithOwner.visitEntityPage(page);
       await page.getByTestId('activity_feed').click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       // Click on a task if visible
       const taskCard = page.locator('[data-testid="task-feed-card"]').first();
@@ -245,7 +242,7 @@ test.describe('Task Workflow Tests', () => {
       if (await taskCard.isVisible()) {
         const taskLink = taskCard.getByTestId('redirect-task-button-link');
         await taskLink.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // URL should NOT contain /table/TASK- pattern
         expect(page.url()).not.toMatch(/\/table\/TASK-/);
@@ -280,20 +277,20 @@ test.describe('Task Workflow Tests', () => {
 
         await tableWithOwner.visitEntityPage(page);
         await page.getByTestId('activity_feed').click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Find the task card
         const taskCard = page.locator('[data-testid="task-feed-card"]').first();
         if (await taskCard.isVisible()) {
           // Click on card to open drawer
           await taskCard.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Look for approve button in drawer
           const approveBtn = page.getByTestId('approve-task');
           if (await approveBtn.isVisible()) {
             await approveBtn.click();
-            await page.waitForLoadState('networkidle');
+            await waitForPageLoaded(page);
           }
         }
 
@@ -317,14 +314,14 @@ test.describe('Task Workflow Tests', () => {
 
         await tableWithOwner.visitEntityPage(page);
         await page.getByTestId('activity_feed').click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Find the task card
         const taskCard = page.locator('[data-testid="task-feed-card"]').first();
 
         if (await taskCard.isVisible()) {
           await taskCard.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
 
           // Should NOT see approve button (not assignee)
           const approveBtn = page.getByTestId('approve-task');
@@ -391,13 +388,13 @@ test.describe('Task Workflow Tests', () => {
 
       // Click on activity feed tab
       await page.getByTestId('activity_feed').click();
-      await page.waitForLoadState('networkidle');
+      await waitForPageLoaded(page);
 
       // Navigate to Tasks tab
       const tasksTab = page.getByRole('button', { name: /tasks/i });
       if (await tasksTab.isVisible()) {
         await tasksTab.click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
       }
 
       // Count actual tasks - this just verifies the UI loads correctly
@@ -416,7 +413,9 @@ test.describe('Task Workflow Tests', () => {
       try {
         const entityFqn = tableWithOwner.entityResponseData?.fullyQualifiedName;
         const countResponse = await apiContext.get(
-          `/api/v1/tasks/count?aboutEntity=${encodeURIComponent(entityFqn || '')}`
+          `/api/v1/tasks/count?aboutEntity=${encodeURIComponent(
+            entityFqn || ''
+          )}`
         );
 
         expect(countResponse.ok()).toBe(true);
@@ -462,13 +461,13 @@ test.describe('Task Workflow Tests', () => {
 
         // Navigate to activity feed
         await page.getByTestId('activity_feed').click();
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Navigate to Tasks tab
         const tasksTab = page.getByRole('button', { name: /tasks/i });
         if (await tasksTab.isVisible()) {
           await tasksTab.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
         }
 
         // Verify task appears using Playwright's polling mechanism
@@ -509,13 +508,13 @@ test.describe('Task Workflow Tests', () => {
         const page = await browser.newPage();
         await regularUser.login(page);
         await redirectToHomePage(page);
-        await page.waitForLoadState('networkidle');
+        await waitForPageLoaded(page);
 
         // Check notifications for tasks
         const taskNotifications = page.getByTestId('task-notifications');
         if (await taskNotifications.isVisible()) {
           await taskNotifications.click();
-          await page.waitForLoadState('networkidle');
+          await waitForPageLoaded(page);
         }
 
         await page.close();

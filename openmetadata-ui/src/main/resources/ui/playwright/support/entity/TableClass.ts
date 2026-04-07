@@ -345,7 +345,10 @@ export class TableClass extends EntityClass {
       EntityDataClass.loadResponseData();
     }
 
-    if (!this.entityResponseData.fullyQualifiedName && this.entityResponseData.id) {
+    if (
+      !this.entityResponseData.fullyQualifiedName &&
+      this.entityResponseData.id
+    ) {
       const response = await page.request.get(
         `/api/v1/tables/${this.entityResponseData.id}`
       );
@@ -515,7 +518,10 @@ export class TableClass extends EntityClass {
     apiContext: APIRequestContext;
     patchData: Operation[];
   }) {
-    if (!this.entityResponseData?.fullyQualifiedName && this.entityResponseData?.id) {
+    if (
+      !this.entityResponseData?.fullyQualifiedName &&
+      this.entityResponseData?.id
+    ) {
       const tableResponse = await apiContext.get(
         `/api/v1/tables/${this.entityResponseData.id}`
       );
@@ -530,7 +536,9 @@ export class TableClass extends EntityClass {
 
     if (!tableId && !tableFqn) {
       throw new Error(
-        `TableClass.patch: table id and fullyQualifiedName are missing for table "${this.entityResponseData?.name ?? this.entity.name}"`
+        `TableClass.patch: table id and fullyQualifiedName are missing for table "${
+          this.entityResponseData?.name ?? this.entity.name
+        }"`
       );
     }
 

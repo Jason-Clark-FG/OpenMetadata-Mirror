@@ -16,6 +16,7 @@ import { TableClass } from '../../support/entity/TableClass';
 import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { waitForAllLoadersToDisappear } from '../../utils/entity';
+import { waitForPageLoaded } from '../../utils/polling';
 
 const test = base;
 
@@ -23,36 +24,30 @@ const adminUser = new UserClass();
 const testTable = new TableClass();
 
 test.describe('Activity Stream on Entity Pages', () => {
-  test.beforeAll(
-    'setup: create entities and users',
-    async ({ browser }) => {
-      test.slow(true);
+  test.beforeAll('setup: create entities and users', async ({ browser }) => {
+    test.slow(true);
 
-      const { apiContext, afterAction } = await performAdminLogin(browser);
+    const { apiContext, afterAction } = await performAdminLogin(browser);
 
-      try {
-        await adminUser.create(apiContext);
-        await adminUser.setAdminRole(apiContext);
-        await testTable.create(apiContext);
-      } finally {
-        await afterAction();
-      }
+    try {
+      await adminUser.create(apiContext);
+      await adminUser.setAdminRole(apiContext);
+      await testTable.create(apiContext);
+    } finally {
+      await afterAction();
     }
-  );
+  });
 
-  test.afterAll(
-    'cleanup: delete entities and users',
-    async ({ browser }) => {
-      const { apiContext, afterAction } = await performAdminLogin(browser);
+  test.afterAll('cleanup: delete entities and users', async ({ browser }) => {
+    const { apiContext, afterAction } = await performAdminLogin(browser);
 
-      try {
-        await testTable.delete(apiContext);
-        await adminUser.delete(apiContext);
-      } finally {
-        await afterAction();
-      }
+    try {
+      await testTable.delete(apiContext);
+      await adminUser.delete(apiContext);
+    } finally {
+      await afterAction();
     }
-  );
+  });
 
   test.beforeEach(async ({ page }) => {
     await adminUser.login(page);
@@ -70,7 +65,7 @@ test.describe('Activity Stream on Entity Pages', () => {
 
     await expect(activityFeedTab).toBeVisible();
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     const activityTabContent = page.locator('.activity-feed-tab');
 
@@ -85,7 +80,7 @@ test.describe('Activity Stream on Entity Pages', () => {
         '[data-testid="global-setting-left-panel"], [data-testid="activity-feed-tabs"]'
       );
 
-      if (await leftPanelContent.count() > 0) {
+      if ((await leftPanelContent.count()) > 0) {
         await expect(leftPanelContent.first()).toBeVisible();
       }
     }
@@ -103,9 +98,11 @@ test.describe('Activity Stream on Entity Pages', () => {
     await editDescriptionButton.click();
 
     // Wait for editor to appear - TipTap uses ProseMirror contenteditable
-    const descriptionEditor = page.locator(
-      '[data-testid="editor"] .ProseMirror, [data-testid="markdown-editor"] .ql-editor, .toastui-editor-contents'
-    ).first();
+    const descriptionEditor = page
+      .locator(
+        '[data-testid="editor"] .ProseMirror, [data-testid="markdown-editor"] .ql-editor, .toastui-editor-contents'
+      )
+      .first();
 
     await expect(descriptionEditor).toBeVisible({ timeout: 10000 });
 
@@ -121,7 +118,7 @@ test.describe('Activity Stream on Entity Pages', () => {
     await saveButton.click();
     await updateResponse;
 
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     await page.reload();
     await waitForAllLoadersToDisappear(page);
@@ -130,7 +127,7 @@ test.describe('Activity Stream on Entity Pages', () => {
       name: 'Activity Feeds & Tasks',
     });
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     await page.waitForTimeout(2000);
 
@@ -158,7 +155,9 @@ test.describe('Activity Stream on Entity Pages', () => {
       await expect(tagSearch).toBeVisible();
       await tagSearch.fill('PII');
 
-      const tagOption = page.locator('[data-testid="tag-PII.Sensitive"]').first();
+      const tagOption = page
+        .locator('[data-testid="tag-PII.Sensitive"]')
+        .first();
 
       if (await tagOption.isVisible()) {
         await tagOption.click();
@@ -179,7 +178,7 @@ test.describe('Activity Stream on Entity Pages', () => {
       }
     }
 
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
     await page.reload();
     await waitForAllLoadersToDisappear(page);
 
@@ -187,7 +186,7 @@ test.describe('Activity Stream on Entity Pages', () => {
       name: 'Activity Feeds & Tasks',
     });
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
     await page.waitForTimeout(2000);
 
@@ -220,12 +219,14 @@ test.describe('Activity Stream on Entity Pages', () => {
   test('activity stream API is called when visiting entity page', async ({
     page,
   }) => {
-    const activityApiPromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/activity') &&
-        response.status() === 200,
-      { timeout: 10000 }
-    ).catch(() => null);
+    const activityApiPromise = page
+      .waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/activity') &&
+          response.status() === 200,
+        { timeout: 10000 }
+      )
+      .catch(() => null);
 
     await testTable.visitEntityPage(page);
     await waitForAllLoadersToDisappear(page);
@@ -255,11 +256,9 @@ test.describe('Activity Stream on Entity Pages', () => {
       name: 'Activity Feeds & Tasks',
     });
     await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
+    await waitForPageLoaded(page);
 
-    const leftPanel = page.locator(
-      '[data-testid="global-setting-left-panel"]'
-    );
+    const leftPanel = page.locator('[data-testid="global-setting-left-panel"]');
 
     if (await leftPanel.isVisible()) {
       const allOption = leftPanel.locator('li').filter({ hasText: 'All' });

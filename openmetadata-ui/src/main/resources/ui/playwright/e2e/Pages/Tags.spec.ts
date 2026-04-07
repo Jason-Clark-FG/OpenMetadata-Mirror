@@ -31,15 +31,15 @@ import {
 } from '../../utils/entity';
 import { sidebarClick } from '../../utils/sidebar';
 import {
-  waitForTaskCreateResponse,
-  waitForTaskResolveResponse,
-} from '../../utils/task';
-import {
   addTagToTableColumn,
   setTagDisabled,
   submitForm,
   validateForm,
 } from '../../utils/tag';
+import {
+  waitForTaskCreateResponse,
+  waitForTaskResolveResponse,
+} from '../../utils/task';
 
 const NEW_CLASSIFICATION = {
   name: `PlaywrightClassification-${uuid()}`,

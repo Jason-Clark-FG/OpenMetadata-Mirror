@@ -29,15 +29,11 @@ import {
   authenticateAdminPage,
   createAdminApiContext,
 } from '../../utils/admin';
-import { getApiContext, redirectToHomePage, toastNotification, uuid } from '../../utils/common';
+import { toastNotification, uuid } from '../../utils/common';
 
 const TASK_FORM_SETTINGS_ROUTE = '/settings/governance/task-forms';
 
-const selectAntOption = async (
-  page: Page,
-  testId: string,
-  option: string
-) => {
+const selectAntOption = async (page: Page, testId: string, option: string) => {
   await page.getByTestId(testId).click();
   await page
     .locator('.ant-select-dropdown .ant-select-item-option-content')
@@ -129,9 +125,9 @@ test.describe.serial('Task Form Settings', () => {
       const createdSchema = await (await createResponse).json();
       schemaId = createdSchema.id;
 
-      expect(createdSchema.createFormSchema.properties.requestReason.title).toBe(
-        'Request Reason'
-      );
+      expect(
+        createdSchema.createFormSchema.properties.requestReason.title
+      ).toBe('Request Reason');
       expect(createdSchema.createFormSchema.required).toContain(
         'requestReason'
       );
@@ -142,8 +138,12 @@ test.describe.serial('Task Form Settings', () => {
       expect(createdSchema.defaultStageMappings.open).toBe('Open');
 
       await toastNotification(page, 'Task form saved successfully');
-      await expect(page.getByTestId(`task-form-list-item-${schemaName}`)).toBeVisible();
-      await expect(page.getByTestId('task-form-name-input')).toHaveValue(schemaName);
+      await expect(
+        page.getByTestId(`task-form-list-item-${schemaName}`)
+      ).toBeVisible();
+      await expect(page.getByTestId('task-form-name-input')).toHaveValue(
+        schemaName
+      );
 
       const updateResponse = page.waitForResponse(
         (response) =>
@@ -152,14 +152,16 @@ test.describe.serial('Task Form Settings', () => {
           response.ok()
       );
 
-      await page.getByTestId('task-form-display-name-input').fill(updatedDisplayName);
+      await page
+        .getByTestId('task-form-display-name-input')
+        .fill(updatedDisplayName);
       await page.getByTestId('task-form-save-button').click();
       await updateResponse;
 
       await toastNotification(page, 'Task form saved successfully');
-      await expect(page.getByTestId('task-form-display-name-input')).toHaveValue(
-        updatedDisplayName
-      );
+      await expect(
+        page.getByTestId('task-form-display-name-input')
+      ).toHaveValue(updatedDisplayName);
 
       const reloadResponse = page.waitForResponse(
         (response) =>
@@ -171,9 +173,9 @@ test.describe.serial('Task Form Settings', () => {
       await reloadResponse;
 
       await page.getByTestId(`task-form-list-item-${schemaName}`).click();
-      await expect(page.getByTestId('task-form-display-name-input')).toHaveValue(
-        updatedDisplayName
-      );
+      await expect(
+        page.getByTestId('task-form-display-name-input')
+      ).toHaveValue(updatedDisplayName);
       await page.getByRole('tab', { name: 'Create Form' }).click();
       await expect(
         page.getByTestId('task-form-create-builder-field-name-0')

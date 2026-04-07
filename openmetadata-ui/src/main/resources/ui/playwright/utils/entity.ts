@@ -215,18 +215,29 @@ export const addOwner = async ({
       .first();
 
     const getVisibleOwnerItem = async () => {
-      if (await ownerItemByRole.first().isVisible().catch(() => false)) {
+      if (
+        await ownerItemByRole
+          .first()
+          .isVisible()
+          .catch(() => false)
+      ) {
         return ownerItemByRole.first();
       }
 
       if (
-        await ownerItemByAntListClass.first().isVisible().catch(() => false)
+        await ownerItemByAntListClass
+          .first()
+          .isVisible()
+          .catch(() => false)
       ) {
         return ownerItemByAntListClass.first();
       }
 
       if (
-        await ownerItemBySelectableClass.first().isVisible().catch(() => false)
+        await ownerItemBySelectableClass
+          .first()
+          .isVisible()
+          .catch(() => false)
       ) {
         return ownerItemBySelectableClass.first();
       }
@@ -264,7 +275,7 @@ export const addOwner = async ({
       )
       .toBe(true);
     const visibleOwnerItem = await getVisibleOwnerItem();
-    await expect(visibleOwnerItem).toBeDefined();
+    expect(visibleOwnerItem).toBeDefined();
     await visibleOwnerItem?.click();
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
     await page.getByTestId('selectable-list-update-btn').click();
@@ -1562,7 +1573,9 @@ const announcementForm = async (
 
 const openAnnouncementDrawer = async (page: Page) => {
   const announcementDrawer = page.getByTestId('announcement-drawer');
-  const isDrawerVisible = await announcementDrawer.isVisible().catch(() => false);
+  const isDrawerVisible = await announcementDrawer
+    .isVisible()
+    .catch(() => false);
   if (isDrawerVisible) {
     await expect(announcementDrawer).toBeVisible();
 

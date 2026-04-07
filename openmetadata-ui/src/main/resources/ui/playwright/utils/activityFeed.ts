@@ -13,6 +13,7 @@
 import { expect, Locator, Page } from '@playwright/test';
 import { descriptionBox, removeLandingBanner } from './common';
 import { waitForAllLoadersToDisappear } from './entity';
+import { waitForPageLoaded } from './polling';
 import { TaskDetails } from './task';
 
 export const REACTION_EMOJIS = ['🚀', '😕', '👀', '❤️', '🎉', '😄', '👎', '👍'];
@@ -231,7 +232,7 @@ export const reactOnActivity = async (
  */
 export const navigateToActivityFeedTab = async (page: Page) => {
   await page.getByTestId('activity_feed').click();
-  await page.waitForLoadState('networkidle');
+  await waitForPageLoaded(page);
   await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
 };
 
@@ -262,9 +263,7 @@ export const postActivityComment = async (page: Page, commentText: string) => {
   await expect(commentInput).toBeVisible();
   await commentInput.click();
 
-  const editorField = page.locator(
-    '[data-testid="editor-wrapper"] .ql-editor'
-  );
+  const editorField = page.locator('[data-testid="editor-wrapper"] .ql-editor');
   await editorField.fill(commentText);
 
   const sendButton = page.getByTestId('send-button');
