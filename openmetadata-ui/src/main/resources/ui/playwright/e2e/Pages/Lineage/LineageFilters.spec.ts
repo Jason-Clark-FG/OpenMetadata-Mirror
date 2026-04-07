@@ -32,6 +32,7 @@ import {
   getApiContext,
   getDefaultAdminAPIContext,
   getEntityTypeSearchIndexMapping,
+  redirectToHomePage,
 } from '../../../utils/common';
 import { waitForAllLoadersToDisappear } from '../../../utils/entity';
 import {
@@ -124,6 +125,7 @@ test.describe('Lineage Filters', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    await redirectToHomePage(page);
     await lineageEntity.visitEntityPage(page);
     await visitLineageTab(page);
     await waitForAllLoadersToDisappear(page);
@@ -274,7 +276,7 @@ test.describe('Lineage Filters', () => {
           await page.reload();
           await waitForAllLoadersToDisappear(page);
 
-          await page.getByTestId('filters-button').click();
+          await page.getByRole('button', { name: 'Filters' }).click();
           await page.getByTestId(`search-dropdown-${filterTestId}`).click();
 
           await page.getByTitle(filterValue).click();
@@ -316,7 +318,7 @@ test.describe('Lineage Filters', () => {
           await impactAnalysisTab.click();
           await waitForAllLoadersToDisappear(page);
 
-          await page.getByTestId('filters-button').click();
+          await page.getByRole('button', { name: 'Filters' }).click();
           await page.getByTestId(`search-dropdown-${filterTestId}`).click();
 
           await page
