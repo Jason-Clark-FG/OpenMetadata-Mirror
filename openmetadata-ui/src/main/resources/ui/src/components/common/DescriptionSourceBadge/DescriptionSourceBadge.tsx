@@ -94,11 +94,12 @@ const DescriptionSourceBadge = ({
       <>
         {config.iconOnly ? (
           <Tooltip title={t(config.tooltipKey)}>
-            <span
+            <output
+              aria-live="polite"
               className="description-source-icon"
               data-testid={config.testId}>
               {config.icon}
-            </span>
+            </output>
           </Tooltip>
         ) : (
           <Tooltip title={tooltipContent}>
@@ -114,7 +115,7 @@ const DescriptionSourceBadge = ({
         )}
       </>
     );
-  }, []);
+  }, [showBadge, config, t, tooltipContent]);
 
   const isManualChange =
     changeSummaryEntry?.changeSource === ChangeSource.Manual;
