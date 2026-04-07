@@ -27,20 +27,31 @@ jest.mock('../../../utils/date-time/DateTimeUtils', () => ({
   getShortRelativeTime: jest.fn((ts: number) => `relative-${ts}`),
 }));
 
-jest.mock('../../../assets/svg/ic-suggestions-coloured.svg', () => ({
-  ReactComponent: () => <div data-testid="badge-icon" />,
+jest.mock('../../../assets/svg/ic-ai-suggestion.svg', () => ({
+  ReactComponent: () => <div data-testid="ai-suggestion-icon" />,
 }));
 
-jest.mock('../../../assets/svg/automator-bot.svg', () => ({
-  ReactComponent: () => <div data-testid="badge-icon" />,
+jest.mock('../../../assets/svg/ic-automated.svg', () => ({
+  ReactComponent: () => <div data-testid="automated-icon" />,
 }));
 
-jest.mock('../../../assets/svg/automated-tag.svg', () => ({
-  ReactComponent: () => <div data-testid="badge-icon" />,
+jest.mock('../../../assets/svg/ic-propagated.svg', () => ({
+  ReactComponent: () => <div data-testid="propagated-icon" />,
 }));
 
-jest.mock('../../../assets/svg/ic-check-circle-colored.svg', () => ({
+jest.mock('../../../assets/svg/ic-check-circle.svg', () => ({
   ReactComponent: () => <div data-testid="check-circle-icon" />,
+}));
+
+jest.mock('../PopOverCard/UserPopOverCard', () => ({
+  __esModule: true,
+  default: ({ displayName }: { displayName: string }) => (
+    <span data-testid="user-popover">{displayName}</span>
+  ),
+}));
+
+jest.mock('antd', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 describe('DescriptionSourceBadge', () => {
@@ -72,14 +83,14 @@ describe('DescriptionSourceBadge', () => {
     );
 
     expect(screen.getByTestId('source-actor')).toHaveTextContent(
-      'label.authored-by admin'
+      /label\.authored-by.*admin/
     );
     expect(screen.getByTestId('source-timestamp')).toHaveTextContent(
       'relative-1700000000000'
     );
   });
 
-  it('should render sparkle icon for Suggested changeSource', () => {
+  it('should render AI suggestion icon for Suggested changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -93,11 +104,11 @@ describe('DescriptionSourceBadge', () => {
     const badge = screen.getByTestId('ai-suggested-badge');
 
     expect(badge).toBeInTheDocument();
-    expect(badge.tagName).toBe('SPAN');
+    expect(badge.tagName).toBe('OUTPUT');
     expect(screen.queryByText('label.ai')).not.toBeInTheDocument();
   });
 
-  it('should render green Automated badge for Automated changeSource', () => {
+  it('should render Automated badge for Automated changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -110,11 +121,11 @@ describe('DescriptionSourceBadge', () => {
     const badge = screen.getByTestId('automated-badge');
 
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('badge-automated');
-    expect(screen.getByText('label.automated')).toBeInTheDocument();
+    expect(badge.tagName).toBe('OUTPUT');
+    expect(screen.queryByText('label.automated')).not.toBeInTheDocument();
   });
 
-  it('should render blue Propagated badge for Propagated changeSource', () => {
+  it('should render Propagated badge for Propagated changeSource', () => {
     render(
       <DescriptionSourceBadge
         changeSummaryEntry={{
@@ -127,8 +138,8 @@ describe('DescriptionSourceBadge', () => {
     const badge = screen.getByTestId('propagated-badge');
 
     expect(badge).toBeInTheDocument();
-    expect(badge).toHaveClass('badge-propagated');
-    expect(screen.getByText('label.propagated')).toBeInTheDocument();
+    expect(badge.tagName).toBe('OUTPUT');
+    expect(screen.queryByText('label.propagated')).not.toBeInTheDocument();
   });
 
   it('should render accepted-by metadata when changedBy is present', () => {
