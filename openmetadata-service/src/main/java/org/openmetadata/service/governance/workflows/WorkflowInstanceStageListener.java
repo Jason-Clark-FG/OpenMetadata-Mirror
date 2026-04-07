@@ -135,6 +135,13 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
     String workflowDefinitionName =
         getProcessDefinitionKeyFromId(execution.getProcessDefinitionId());
     String processInstanceId = execution.getProcessInstanceId();
+    if (isUnknownFlowableProcess(workflowDefinitionName)) {
+      LOG.debug(
+          "[STAGE_SKIP] ProcessInstance: {} - process key '{}' is not an OM workflow, skipping stage tracking",
+          processInstanceId,
+          workflowDefinitionName);
+      return;
+    }
 
     // Check business key first - critical for stage tracking
     String businessKey = execution.getProcessInstanceBusinessKey();
@@ -195,6 +202,13 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
     String workflowDefinitionName =
         getProcessDefinitionKeyFromId(execution.getProcessDefinitionId());
     String processInstanceId = execution.getProcessInstanceId();
+    if (isUnknownFlowableProcess(workflowDefinitionName)) {
+      LOG.debug(
+          "[STAGE_SKIP] ProcessInstance: {} - process key '{}' is not an OM workflow, skipping stage tracking",
+          processInstanceId,
+          workflowDefinitionName);
+      return;
+    }
     String stage =
         Optional.ofNullable(execution.getCurrentActivityId()).orElse(workflowDefinitionName);
 
@@ -219,5 +233,9 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
         processInstanceId,
         stage,
         workflowInstanceStateId);
+  }
+
+  private boolean isUnknownFlowableProcess(String processKey) {
+    return processKey.matches("\\d+");
   }
 }

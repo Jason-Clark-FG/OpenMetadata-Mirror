@@ -127,6 +127,7 @@ import org.openmetadata.sdk.exceptions.OpenMetadataException;
 import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
+import org.openmetadata.service.governance.workflows.elements.TriggerFactory;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1903,7 +1904,7 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd = client.workflowDefinitions().getByName(workflowName, null);
 
-      waitForWorkflowIdle(workflowName);
+      waitForWorkflowIdle(wd.getFullyQualifiedName());
 
       // Force delete with hardDelete=true and recursive=true to clean up properly
       executeWithDeadlockRetryVoid(
@@ -1965,12 +1966,12 @@ public class WorkflowDefinitionResourceIT {
    * "&lt;name&gt;Trigger-*" process definitions deployed, or for periodic-batch workflows whose
    * trigger PDs currently have no pending jobs.
    */
-  private void waitForWorkflowIdle(String workflowName) {
+  private void waitForWorkflowIdle(String workflowFqn) {
     RepositoryService repositoryService = WorkflowHandler.getInstance().getRepositoryService();
     List<ProcessDefinition> triggerPDs =
         repositoryService
             .createProcessDefinitionQuery()
-            .processDefinitionKeyLike(workflowName + "Trigger%")
+            .processDefinitionKeyLike(TriggerFactory.getTriggerWorkflowId(workflowFqn) + "%")
             .list();
     if (triggerPDs.isEmpty()) {
       return;
@@ -1991,7 +1992,7 @@ public class WorkflowDefinitionResourceIT {
                               managementService.createJobQuery().processDefinitionId(pdId).count()
                                   == 0));
     } catch (ConditionTimeoutException timeout) {
-      LOG.warn("waitForWorkflowIdle({}) timed out after 10s; proceeding with delete", workflowName);
+      LOG.warn("waitForWorkflowIdle({}) timed out after 10s; proceeding with delete", workflowFqn);
     }
   }
 
@@ -2989,7 +2990,7 @@ public class WorkflowDefinitionResourceIT {
     try {
       WorkflowDefinition wd =
           client.workflowDefinitions().getByName("MultiEntityPeriodicQuery", null);
-      waitForWorkflowIdle("MultiEntityPeriodicQuery");
+      waitForWorkflowIdle(wd.getFullyQualifiedName());
       executeWithDeadlockRetryVoid(
           () -> {
             try {
