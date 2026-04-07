@@ -166,7 +166,9 @@ export const updateContainerVotes = async (id: string, data: QueryVote) => {
 };
 
 export const getSampleDataByContainerId = async (id: string) => {
-  const response = await APIClient.get<Container>(`${BASE_URL}/${id}/sampleData`);
+  const response = await APIClient.get<Container>(
+    `${BASE_URL}/${id}/sampleData`
+  );
 
   return response.data;
 };

@@ -120,9 +120,7 @@ const SampleDataTable: FC<SampleDataProps> = ({
   const getSampleDataWithType = (entity: Table | Container) => {
     const { sampleData } = entity;
     const columns =
-      'columns' in entity
-        ? entity.columns
-        : entity.dataModel?.columns ?? [];
+      'columns' in entity ? entity.columns : entity.dataModel?.columns ?? [];
 
     const updatedColumns = sampleData?.columns?.map((column) => {
       const matchedColumn = columns.find((col) => col.name === column);

@@ -449,6 +449,70 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
 
         return self.patch(entity=entity, source=instance, destination=destination)
 
+    def _get_fields_for_entity(self, entity: ClassifiableEntityType) -> List[str]:
+        """Get fields to fetch based on entity type"""
+        if isinstance(entity, Table):
+            return ["tags", "columns"]
+        if isinstance(entity, Container):
+            return ["tags", "dataModel"]
+        return ["tags"]
+
+    def _prepare_table_destination(
+        self,
+        table: Table,
+        instance: Table,
+        column_tags: List[ColumnTag],
+        operation: PatchOperation,
+    ) -> Table:
+        """Prepare Table destination with updated column tags"""
+        table.columns = instance.columns
+        destination = table.model_copy(deep=True)
+        for column_tag in column_tags or []:
+            update_column_tags(destination.columns, column_tag, operation)
+        return destination
+
+    def _prepare_container_destination(
+        self,
+        container: Container,
+        instance: Container,
+        column_tags: List[ColumnTag],
+        operation: PatchOperation,
+    ) -> Optional[Container]:
+        """Prepare Container destination with updated column tags"""
+        if container.dataModel is None or instance.dataModel is None:
+            logger.debug(
+                f"Container {container.fullyQualifiedName.root} has no dataModel, skipping column tag patch"
+            )
+            return None
+
+        container.dataModel.columns = instance.dataModel.columns
+        destination = container.model_copy(deep=True)
+        for column_tag in column_tags or []:
+            update_column_tags(destination.dataModel.columns, column_tag, operation)
+        return destination
+
+    def _prepare_destination_for_column_tags(
+        self,
+        table: ClassifiableEntityType,
+        instance: ClassifiableEntityType,
+        column_tags: List[ColumnTag],
+        operation: PatchOperation,
+    ) -> Optional[ClassifiableEntityType]:
+        """Prepare destination entity with updated column tags"""
+        if isinstance(table, Table):
+            return self._prepare_table_destination(
+                table, instance, column_tags, operation
+            )
+        if isinstance(table, Container):
+            return self._prepare_container_destination(
+                table, instance, column_tags, operation
+            )
+
+        logger.warning(
+            f"Unsupported entity type for column tag patching: {type(table).__name__}"
+        )
+        return None
+
     def patch_column_tags(
         self,
         table: ClassifiableEntityType,
@@ -467,9 +531,7 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
             Updated Entity
         """
         entity_type = type(table)
-        fields = (
-            ["tags", "columns"] if isinstance(table, Table) else ["tags", "dataModel"]
-        )
+        fields = self._get_fields_for_entity(table)
 
         instance = self._fetch_entity_if_exists(
             entity=entity_type, entity_id=table.id, fields=fields
@@ -478,28 +540,11 @@ class OMetaPatchMixin(OMetaPatchMixinBase):
         if not instance:
             return None
 
-        if isinstance(table, Table):
-            table.columns = instance.columns
-            destination = table.model_copy(deep=True)
-            for column_tag in column_tags or []:
-                update_column_tags(destination.columns, column_tag, operation)
-        elif isinstance(table, Container):
-            if table.dataModel is not None and instance.dataModel is not None:
-                table.dataModel.columns = instance.dataModel.columns
-                destination = table.model_copy(deep=True)
-                for column_tag in column_tags or []:
-                    update_column_tags(
-                        destination.dataModel.columns, column_tag, operation
-                    )
-            else:
-                logger.debug(
-                    f"Container {table.fullyQualifiedName.root} has no dataModel, skipping column tag patch"
-                )
-                return None
-        else:
-            logger.warning(
-                f"Unsupported entity type for column tag patching: {entity_type.__name__}"
-            )
+        destination = self._prepare_destination_for_column_tags(
+            table, instance, column_tags, operation
+        )
+
+        if destination is None:
             return None
 
         patched_entity = self.patch(

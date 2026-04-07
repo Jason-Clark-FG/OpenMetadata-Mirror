@@ -34,6 +34,53 @@ class OMetaContainerMixin:
 
     client: REST
 
+    def _encode_binary_value(self, value: bytes) -> str:
+        """Encode binary value to base64 or binary string representation"""
+        try:
+            return f"[base64]{base64.b64encode(value).decode('ascii', errors='ignore')}"
+        except Exception:
+            return f"[binary]{value}"
+
+    def _process_sample_data_row(self, row: list) -> None:
+        """Process a single row of sample data, encoding binary values in-place"""
+        if not row:
+            return
+
+        for col_idx, value in enumerate(row):
+            if isinstance(value, bytes):
+                row[col_idx] = self._encode_binary_value(value)
+
+    def _process_sample_data_rows(self, sample_data: TableData) -> None:
+        """Process all rows in sample data, encoding binary values in-place"""
+        if not sample_data or not sample_data.rows:
+            return
+
+        for row in sample_data.rows:
+            self._process_sample_data_row(row)
+
+    def _serialize_sample_data(
+        self, sample_data: TableData, container_fqn: str
+    ) -> Optional[str]:
+        """Serialize sample data to JSON, returning None on error"""
+        try:
+            return sample_data.model_dump_json()
+        except Exception:
+            logger.debug(traceback.format_exc())
+            logger.warning(
+                f"Error serializing sample data for {container_fqn}"
+                " please check if the data is valid"
+            )
+            return None
+
+    def _parse_response(self, resp: dict, container_fqn: str) -> Optional[TableData]:
+        """Parse response into TableData, returning None on error"""
+        try:
+            return TableData(**resp["sampleData"])
+        except UnicodeError as err:
+            logger.debug(traceback.format_exc())
+            logger.warning(f"Cannot parse response from {container_fqn} due to {err}")
+            return None
+
     def ingest_container_sample_data(
         self, container: Container, sample_data: TableData
     ) -> Optional[TableData]:
@@ -43,49 +90,27 @@ class OMetaContainerMixin:
         :param container: Container Entity to update
         :param sample_data: Data to add
         """
-        resp = None
         try:
-            if sample_data and sample_data.rows:
+            self._process_sample_data_rows(sample_data)
 
-                for row in sample_data.rows:
-                    if not row:
-                        continue
-                    for col_idx, value in enumerate(row):
-                        if isinstance(value, bytes):
-                            try:
-                                row[
-                                    col_idx
-                                ] = f"[base64]{base64.b64encode(value).decode('ascii', errors='ignore')}"
-                            except Exception as _:
-                                row[col_idx] = f"[binary]{value}"
-
-            try:
-                data = sample_data.model_dump_json()
-            except Exception as _:
-                logger.debug(traceback.format_exc())
-                logger.warning(
-                    f"Error serializing sample data for {container.fullyQualifiedName.root}"
-                    " please check if the data is valid"
-                )
+            data = self._serialize_sample_data(
+                sample_data, container.fullyQualifiedName.root
+            )
+            if data is None:
                 return None
 
             resp = self.client.put(
                 f"{self.get_suffix(Container)}/{container.id.root}/sampleData",
                 data=data,
             )
+
+            if resp:
+                return self._parse_response(resp, container.fullyQualifiedName.root)
+
+            return None
         except Exception as exc:
             logger.debug(traceback.format_exc())
             logger.warning(
                 f"Error trying to PUT sample data for {container.fullyQualifiedName.root}: {exc}"
             )
-
-        if resp:
-            try:
-                return TableData(**resp["sampleData"])
-            except UnicodeError as err:
-                logger.debug(traceback.format_exc())
-                logger.warning(
-                    f"Cannot parse response from {container.fullyQualifiedName.root} due to {err}"
-                )
-
-        return None
+            return None

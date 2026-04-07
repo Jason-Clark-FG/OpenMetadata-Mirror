@@ -115,6 +115,12 @@ class SamplerProcessor(Processor):
             self.service_type, source_type=self._interface_type
         )
 
+        self._sample_data_config = None
+        settings = self.metadata.get_profiler_config_settings()
+        if settings:
+            profiler_cfg = cast(ProfilerConfiguration, settings.config_value)
+            self._sample_data_config = profiler_cfg.sampleDataConfig
+
     @property
     def name(self) -> str:
         return "Sampler"
@@ -188,25 +194,13 @@ class SamplerProcessor(Processor):
                 default_sample_data_count=self.source_config.sampleDataCount,
             )
 
-            settings = self.metadata.get_profiler_config_settings()
-            profiler_global_config = (
-                cast(ProfilerConfiguration, settings.config_value) if settings else None
-            )
-
-            sample_data_config = (
-                profiler_global_config.sampleDataConfig
-                if profiler_global_config
-                else None
-            )
-
             sample_data = SampleData(
-                data=sampler_interface.generate_sample_data(
-                    sample_data_config if sample_data_config else None
-                ),
+                data=sampler_interface.generate_sample_data(self._sample_data_config),
                 store=bool(
                     self.source_config.storeSampleData
                     and (
-                        sample_data_config is None or sample_data_config.storeSampleData
+                        self._sample_data_config is None
+                        or self._sample_data_config.storeSampleData
                     )
                 ),
             )
@@ -244,25 +238,13 @@ class SamplerProcessor(Processor):
                 default_sample_data_count=self.source_config.sampleDataCount,
             )
 
-            settings = self.metadata.get_profiler_config_settings()
-            profiler_global_config = (
-                cast(ProfilerConfiguration, settings.config_value) if settings else None
-            )
-
-            sample_data_config = (
-                profiler_global_config.sampleDataConfig
-                if profiler_global_config
-                else None
-            )
-
             sample_data = SampleData(
-                data=sampler_interface.generate_sample_data(
-                    sample_data_config if sample_data_config else None
-                ),
+                data=sampler_interface.generate_sample_data(self._sample_data_config),
                 store=bool(
                     self.source_config.storeSampleData
                     and (
-                        sample_data_config is None or sample_data_config.storeSampleData
+                        self._sample_data_config is None
+                        or self._sample_data_config.storeSampleData
                     )
                 ),
             )
