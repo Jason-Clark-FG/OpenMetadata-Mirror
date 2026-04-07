@@ -1979,7 +1979,7 @@ public class WorkflowDefinitionResourceIT {
     ManagementService managementService = WorkflowHandler.getInstance().getManagementService();
     List<String> triggerPDIds = triggerPDs.stream().map(ProcessDefinition::getId).toList();
     try {
-      await("async-after jobs for " + workflowName + " trigger PDs to drain")
+      await("async-after jobs for " + workflowFqn + " trigger PDs to drain")
           .atMost(Duration.ofSeconds(10))
           .pollInterval(Duration.ofMillis(100))
           .pollDelay(Duration.ZERO)
