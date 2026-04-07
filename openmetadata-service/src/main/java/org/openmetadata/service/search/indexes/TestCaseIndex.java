@@ -71,7 +71,10 @@ public record TestCaseIndex(TestCase testCase) implements TaggableIndex {
             MessageParser.EntityLink.parse(testCase.getEntityLink());
         EntityInterface linkedEntity =
             Entity.getEntityByName(
-                entityLink.getEntityType(), entityLink.getEntityFQN(), "domains", Include.ALL);
+                entityLink.getEntityType(),
+                entityLink.getEntityFQN(),
+                "domains",
+                Include.NON_DELETED);
         if (linkedEntity != null && !nullOrEmpty(linkedEntity.getDomains())) {
           doc.put("domains", getEntitiesWithDisplayName(linkedEntity.getDomains()));
         }

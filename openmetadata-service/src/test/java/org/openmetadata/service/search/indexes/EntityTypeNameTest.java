@@ -144,17 +144,19 @@ class EntityTypeNameTest {
         Arguments.of(new MetricIndex(new Metric().withId(id())), Entity.METRIC),
         Arguments.of(new ChartIndex(new Chart().withId(id())), Entity.CHART),
 
-        // Base SearchIndex only
+        // TaggableIndex only
         Arguments.of(new GlossaryIndex(new Glossary().withId(id())), Entity.GLOSSARY),
         Arguments.of(new GlossaryTermIndex(new GlossaryTerm().withId(id())), Entity.GLOSSARY_TERM),
         Arguments.of(new DatabaseIndex(new Database().withId(id())), Entity.DATABASE),
         Arguments.of(
             new DatabaseSchemaIndex(new DatabaseSchema().withId(id())), Entity.DATABASE_SCHEMA),
         Arguments.of(
+            new APICollectionIndex(new APICollection().withId(id())), Entity.API_COLLECTION),
+
+        // Base SearchIndex only
+        Arguments.of(
             new ClassificationIndex(new Classification().withId(id())), Entity.CLASSIFICATION),
         Arguments.of(new TagIndex(new Tag().withId(id())), Entity.TAG),
-        Arguments.of(
-            new APICollectionIndex(new APICollection().withId(id())), Entity.API_COLLECTION),
         Arguments.of(new UserIndex(new User().withId(id())), Entity.USER),
         Arguments.of(new TeamIndex(new Team().withId(id())), Entity.TEAM));
   }
