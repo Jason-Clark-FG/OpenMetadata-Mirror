@@ -238,7 +238,10 @@ public class TagRepository extends EntityRepository<Tag> {
     try {
       Classification parent =
           Entity.getEntity(
-              CLASSIFICATION, tag.getClassification().getId(), "owners,domains,reviewers", ALL);
+              CLASSIFICATION,
+              tag.getClassification().getId(),
+              "owners,domains,reviewers",
+              NON_DELETED);
       if (parent.getDisabled() != null && parent.getDisabled()) {
         tag.setDisabled(true);
       }

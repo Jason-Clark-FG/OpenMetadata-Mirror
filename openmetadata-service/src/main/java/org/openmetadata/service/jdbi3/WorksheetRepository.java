@@ -222,7 +222,10 @@ public class WorksheetRepository extends EntityRepository<Worksheet> {
     if (worksheet.getSpreadsheet() != null) {
       Spreadsheet spreadsheet =
           Entity.getEntity(
-              SPREADSHEET, worksheet.getSpreadsheet().getId(), "owners,domains", Include.ALL);
+              SPREADSHEET,
+              worksheet.getSpreadsheet().getId(),
+              "owners,domains",
+              Include.NON_DELETED);
       inheritOwners(worksheet, fields, spreadsheet);
       inheritDomains(worksheet, fields, spreadsheet);
     }
