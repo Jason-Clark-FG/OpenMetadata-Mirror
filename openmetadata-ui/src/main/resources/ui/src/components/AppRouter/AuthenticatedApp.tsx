@@ -19,8 +19,10 @@ import {
 } from '@openmetadata/ui-core-components';
 import { SnackbarProvider } from 'notistack';
 import { FC, useMemo } from 'react';
+import { RouterProvider } from 'react-aria-components';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_THEME } from '../../constants/Appearance.constants';
 import AirflowStatusProvider from '../../context/AirflowStatusProvider/AirflowStatusProvider';
@@ -34,6 +36,12 @@ import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { EntityExportModalProvider } from '../Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import ApplicationsProvider from '../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import WebAnalyticsProvider from '../WebAnalytics/WebAnalyticsProvider';
+
+const ReactAriaRouterBridge = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
+
+  return <RouterProvider navigate={navigate}>{children}</RouterProvider>;
+};
 
 interface AuthenticatedAppProps {
   children: React.ReactNode;
@@ -69,27 +77,29 @@ const AuthenticatedApp: FC<AuthenticatedAppProps> = ({ children }) => {
           }}
           autoHideDuration={6000}
           maxSnack={3}>
-          <TourProvider>
-            <WebAnalyticsProvider>
-              <PermissionProvider>
-                <WebSocketProvider>
-                  <ApplicationsProvider>
-                    <AsyncDeleteProvider>
-                      <EntityExportModalProvider>
-                        <AirflowStatusProvider>
-                          <RuleEnforcementProvider>
-                            <DndProvider backend={HTML5Backend}>
-                              {children}
-                            </DndProvider>
-                          </RuleEnforcementProvider>
-                        </AirflowStatusProvider>
-                      </EntityExportModalProvider>
-                    </AsyncDeleteProvider>
-                  </ApplicationsProvider>
-                </WebSocketProvider>
-              </PermissionProvider>
-            </WebAnalyticsProvider>
-          </TourProvider>
+          <ReactAriaRouterBridge>
+            <TourProvider>
+              <WebAnalyticsProvider>
+                <PermissionProvider>
+                  <WebSocketProvider>
+                    <ApplicationsProvider>
+                      <AsyncDeleteProvider>
+                        <EntityExportModalProvider>
+                          <AirflowStatusProvider>
+                            <RuleEnforcementProvider>
+                              <DndProvider backend={HTML5Backend}>
+                                {children}
+                              </DndProvider>
+                            </RuleEnforcementProvider>
+                          </AirflowStatusProvider>
+                        </EntityExportModalProvider>
+                      </AsyncDeleteProvider>
+                    </ApplicationsProvider>
+                  </WebSocketProvider>
+                </PermissionProvider>
+              </WebAnalyticsProvider>
+            </TourProvider>
+          </ReactAriaRouterBridge>
         </SnackbarProvider>
       </ThemeProvider>
     </UntitledUIThemeProvider>

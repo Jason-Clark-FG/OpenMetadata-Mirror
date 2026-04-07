@@ -57,8 +57,8 @@ import { SearchIndex } from '../../../../enums/search.enum';
 import { OwnerType } from '../../../../enums/user.enum';
 import { Team, TeamType } from '../../../../generated/entity/teams/team';
 import {
-  User,
   EntityReference as UserTeams,
+  User,
 } from '../../../../generated/entity/teams/user';
 import { EntityReference } from '../../../../generated/type/entityReference';
 import { useAuth } from '../../../../hooks/authHooks';

@@ -17,7 +17,9 @@ import { lazy, ReactNode, Suspense } from 'react';
 import DocumentTitle from '../../common/DocumentTitle/DocumentTitle';
 import './carousel-layout.less';
 
-const LoginCarousel = lazy(() => import('../../../pages/LoginPage/LoginCarousel'));
+const LoginCarousel = lazy(
+  () => import('../../../pages/LoginPage/LoginCarousel')
+);
 
 export const CarouselLayout = ({
   pageTitle,

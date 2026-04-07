@@ -12,7 +12,7 @@
  */
 import { Tooltip, TooltipTrigger } from '@openmetadata/ui-core-components';
 import { InfoCircle } from '@untitledui/icons';
-import { Tooltip as AntDTooltip, Divider, Space, Typography } from 'antd';
+import { Divider, Space, Tooltip as AntDTooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { get, isEmpty, isUndefined, noop } from 'lodash';
 import { Fragment, ReactNode } from 'react';

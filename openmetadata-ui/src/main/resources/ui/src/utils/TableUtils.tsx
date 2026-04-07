@@ -138,10 +138,6 @@ import { CommonWidgets } from '../components/DataAssets/CommonWidgets/CommonWidg
 import SampleDataTableComponent from '../components/Database/SampleDataTable/SampleDataTable.component';
 import SchemaTable from '../components/Database/SchemaTable/SchemaTable.component';
 import TableQueries from '../components/Database/TableQueries/TableQueries';
-
-const DataObservabilityTab = lazy(
-  () => import('../components/Database/Profiler/DataObservability/DataObservabilityTab')
-);
 import { ContractTab } from '../components/DataContract/ContractTab/ContractTab';
 import { useEntityExportModalProvider } from '../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import KnowledgeGraph from '../components/KnowledgeGraph/KnowledgeGraph';
@@ -207,6 +203,13 @@ import { ordinalize } from './StringsUtils';
 import { TableDetailPageTabProps } from './TableClassBase';
 import { TableFieldsInfoCommonEntities } from './TableUtils.interface';
 import { extractTopicFields } from './TopicDetailsUtils';
+
+const DataObservabilityTab = lazy(
+  () =>
+    import(
+      '../components/Database/Profiler/DataObservability/DataObservabilityTab'
+    )
+);
 
 const EntityLineageTab = lazy(() =>
   import('../components/Lineage/EntityLineageTab/EntityLineageTab').then(

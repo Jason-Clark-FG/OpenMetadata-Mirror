@@ -88,7 +88,10 @@ const AppRouter = () => {
     return (
       <AuthenticatedApp>
         <Routes>
-          <Route element={<PageNotFound />} path={APP_ROUTER_ROUTES.NOT_FOUND} />
+          <Route
+            element={<PageNotFound />}
+            path={APP_ROUTER_ROUTES.NOT_FOUND}
+          />
           <Route element={<LogoutPage />} path={APP_ROUTER_ROUTES.LOGOUT} />
           <Route
             element={<AccessNotAllowedPage />}
@@ -104,7 +107,10 @@ const AppRouter = () => {
             }
             path={APP_ROUTER_ROUTES.SIGNUP}
           />
-          <Route element={<SamlCallback />} path={APP_ROUTER_ROUTES.AUTH_CALLBACK} />
+          <Route
+            element={<SamlCallback />}
+            path={APP_ROUTER_ROUTES.AUTH_CALLBACK}
+          />
 
           <Route element={<AppContainer />} path="*" />
         </Routes>
@@ -116,7 +122,10 @@ const AppRouter = () => {
     <Routes>
       <Route element={<PageNotFound />} path={APP_ROUTER_ROUTES.NOT_FOUND} />
       <Route element={<LogoutPage />} path={APP_ROUTER_ROUTES.LOGOUT} />
-      <Route element={<AccessNotAllowedPage />} path={APP_ROUTER_ROUTES.UNAUTHORISED} />
+      <Route
+        element={<AccessNotAllowedPage />}
+        path={APP_ROUTER_ROUTES.UNAUTHORISED}
+      />
       <Route
         element={
           isEmpty(currentUser) ? (
@@ -127,7 +136,10 @@ const AppRouter = () => {
         }
         path={APP_ROUTER_ROUTES.SIGNUP}
       />
-      <Route element={<SamlCallback />} path={APP_ROUTER_ROUTES.AUTH_CALLBACK} />
+      <Route
+        element={<SamlCallback />}
+        path={APP_ROUTER_ROUTES.AUTH_CALLBACK}
+      />
       <Route element={<UnAuthenticatedAppRouter />} path="*" />
     </Routes>
   );

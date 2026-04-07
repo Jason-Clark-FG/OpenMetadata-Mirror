@@ -17,9 +17,9 @@ class LoginClassBase {
       {
         title: 'governance',
         imagePath: () =>
-          import(
-            '../assets/img/login-screen/governance/governance.png'
-          ).then((m) => m.default),
+          import('../assets/img/login-screen/governance/governance.png').then(
+            (m) => m.default
+          ),
         descriptionKey: 'assess-data-reliability-with-data-profiler-lineage',
       },
       {

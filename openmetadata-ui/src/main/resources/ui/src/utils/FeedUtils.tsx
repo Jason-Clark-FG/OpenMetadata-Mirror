@@ -26,12 +26,12 @@ import { ReactComponent as UpdatedIcon } from '../assets/svg/updated-icon.svg';
 import { MentionSuggestionsItem } from '../components/ActivityFeed/FeedEditor/FeedEditor.interface';
 import { FQN_SEPARATOR_CHAR } from '../constants/char.constants';
 import {
-  ENTITY_URL_MAP,
   EntityField,
   entityLinkRegEx,
   EntityRegEx,
   entityRegex,
   EntityUrlMapType,
+  ENTITY_URL_MAP,
   hashtagRegEx,
   linkRegEx,
   mentionRegEx,
