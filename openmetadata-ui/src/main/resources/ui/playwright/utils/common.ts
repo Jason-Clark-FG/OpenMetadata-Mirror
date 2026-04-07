@@ -171,6 +171,28 @@ export const getEntityTypeSearchIndexMapping = (entityType: string) => {
   return entityMapping[entityType as keyof typeof entityMapping];
 };
 
+export const getEntityTypeMapping = (entityType: string) => {
+  const entityMapping = {
+    Table: 'table',
+    Topic: 'topic',
+    Dashboard: 'dashboard',
+    Pipeline: 'pipeline',
+    MlModel: 'mlmodel',
+    Container: 'container',
+    SearchIndex: 'searchIndex',
+    ApiEndpoint: 'apiEndpoint',
+    Metric: 'metric',
+    ['Store Procedure']: 'storedProcedure',
+    Directory: 'directory',
+    File: 'file',
+    Spreadsheet: 'spreadsheet',
+    Worksheet: 'worksheet',
+    [DASHBOARD_DATA_MODEL]: 'dashboardDataModel',
+  };
+
+  return entityMapping[entityType as keyof typeof entityMapping];
+};
+
 export const toastNotification = async (
   page: Page,
   message: string | RegExp,
