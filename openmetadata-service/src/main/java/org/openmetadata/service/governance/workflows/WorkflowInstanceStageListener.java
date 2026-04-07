@@ -137,7 +137,7 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
     String processInstanceId = execution.getProcessInstanceId();
     String businessKey = execution.getProcessInstanceBusinessKey();
     if (businessKey == null || businessKey.isEmpty()) {
-      LOG.debug(
+      LOG.warn(
           "[STAGE_SKIP] ProcessInstance: {} (workflow: {}) - no business key, not an OM-managed process instance",
           processInstanceId,
           workflowDefinitionName);
@@ -215,5 +215,4 @@ public class WorkflowInstanceStageListener implements JavaDelegate {
         stage,
         workflowInstanceStateId);
   }
-
 }
