@@ -11,7 +11,7 @@
 """
 OpenMetadata source for the profiler
 """
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional
 
 from metadata.generated.schema.metadataIngestion.databaseServiceAutoClassificationPipeline import (
     DatabaseServiceAutoClassificationPipeline,
@@ -70,11 +70,11 @@ class OpenMetadataSource(Source):
         self.test_connection()
 
         # Init and type the source config - supports both Database and Storage service pipelines
-        self.source_config: Union[
-            DatabaseServiceProfilerPipeline,
-            DatabaseServiceAutoClassificationPipeline,
-            StorageServiceAutoClassificationPipeline,
-        ] = self.config.source.sourceConfig.config
+        self.source_config: (
+            DatabaseServiceProfilerPipeline
+            | DatabaseServiceAutoClassificationPipeline
+            | StorageServiceAutoClassificationPipeline
+        ) = self.config.source.sourceConfig.config
 
         if not self._validate_service_name():
             raise ValueError(

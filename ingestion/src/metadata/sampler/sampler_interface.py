@@ -13,7 +13,7 @@ Interface for sampler
 """
 import traceback
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Set, Union
+from typing import Any, List, Optional, Set
 
 from metadata.generated.schema.configuration.profilerConfiguration import (
     SampleDataIngestionConfig,
@@ -70,9 +70,9 @@ class SamplerInterface(ABC):
     # pylint: disable=too-many-instance-attributes, too-many-arguments
     def __init__(
         self,
-        service_connection_config: Union[
-            DatabaseConnection, DatalakeConnection, StorageConnection
-        ],
+        service_connection_config: DatabaseConnection
+        | DatalakeConnection
+        | StorageConnection,
         ometa_client: OpenMetadata,
         entity: ClassifiableEntityType,
         include_columns: Optional[List[ColumnProfilerConfig]] = None,
@@ -106,9 +106,9 @@ class SamplerInterface(ABC):
     @classmethod
     def create(
         cls,
-        service_connection_config: Union[
-            DatabaseConnection, DatalakeConnection, StorageConnection
-        ],
+        service_connection_config: DatabaseConnection
+        | DatalakeConnection
+        | StorageConnection,
         ometa_client: OpenMetadata,
         entity: ClassifiableEntityType,
         schema_entity: DatabaseSchema,

@@ -12,7 +12,7 @@
 Base sampler for storage services (S3, GCS, etc.)
 """
 from abc import abstractmethod
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional
 
 from metadata.generated.schema.entity.data.container import Container
 from metadata.generated.schema.entity.data.table import (
@@ -47,7 +47,7 @@ class StorageSampler(SamplerInterface):
 
     def __init__(
         self,
-        service_connection_config: Union[StorageConnection],
+        service_connection_config: StorageConnection,
         ometa_client: OpenMetadata,
         entity: Container,
         include_columns: Optional[List[ColumnProfilerConfig]] = None,

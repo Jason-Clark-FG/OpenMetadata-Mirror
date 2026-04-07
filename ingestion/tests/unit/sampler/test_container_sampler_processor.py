@@ -88,7 +88,7 @@ def table_entity():
 @pytest.fixture
 def workflow_config():
     """Create test workflow configuration"""
-    return OpenMetadataWorkflowConfig(
+    config = OpenMetadataWorkflowConfig(
         source=Source(
             type="s3",
             serviceName="s3_service",
@@ -106,12 +106,16 @@ def workflow_config():
             )
         ),
     )
+    # Mock the serviceConnection structure
+    config.source.serviceConnection = Mock()
+    config.source.serviceConnection.root = Mock()
+    config.source.serviceConnection.root.config = {}
+    return config
 
 
-@patch("metadata.sampler.processor.SamplerProcessor._copy_service_config")
 @patch("metadata.sampler.processor.import_sampler_class")
 def test_sampler_processor_handles_container(
-    mock_import_sampler, mock_copy_config, container_entity, workflow_config
+    mock_import_sampler, container_entity, workflow_config
 ):
     """Test that SamplerProcessor can handle Container entities"""
 
@@ -131,10 +135,11 @@ def test_sampler_processor_handles_container(
     )
     mock_sampler_class.create.return_value = mock_sampler_instance
     mock_import_sampler.return_value = mock_sampler_class
-    mock_copy_config.return_value = {}
 
     # Create processor
     metadata_mock = MagicMock()
+    metadata_mock.get_profiler_config_settings.return_value = None
+
     processor = SamplerProcessor(
         config=workflow_config,
         metadata=metadata_mock,
@@ -157,10 +162,9 @@ def test_sampler_processor_handles_container(
     assert result.right.sample_data.store is True
 
 
-@patch("metadata.sampler.processor.SamplerProcessor._copy_service_config")
 @patch("metadata.sampler.processor.import_sampler_class")
 def test_sampler_processor_handles_table(
-    mock_import_sampler, mock_copy_config, table_entity, workflow_config
+    mock_import_sampler, table_entity, workflow_config
 ):
     """Test that SamplerProcessor still handles Table entities correctly"""
 
@@ -179,33 +183,38 @@ def test_sampler_processor_handles_table(
     )
     mock_sampler_class.create.return_value = mock_sampler_instance
     mock_import_sampler.return_value = mock_sampler_class
-    mock_copy_config.return_value = {}
 
     # Create processor
     metadata_mock = MagicMock()
+    metadata_mock.get_profiler_config_settings.return_value = None
 
     # Mock get_context_entities to return database entity
     with patch("metadata.sampler.processor.get_context_entities") as mock_get_context:
         mock_get_context.return_value = (Mock(), Mock(), None)
 
-        processor = SamplerProcessor(
-            config=workflow_config,
-            metadata=metadata_mock,
-        )
+        with patch(
+            "metadata.sampler.processor.SamplerProcessor._copy_service_config"
+        ) as mock_copy_config:
+            mock_copy_config.return_value = {}
 
-        # Create profiler source and entity
-        profiler_source = MagicMock()
-        record = ProfilerSourceAndEntity.model_construct(
-            profiler_source=profiler_source, entity=table_entity
-        )
+            processor = SamplerProcessor(
+                config=workflow_config,
+                metadata=metadata_mock,
+            )
 
-        # Process the table
-        result = processor._run(record)
+            # Create profiler source and entity
+            profiler_source = MagicMock()
+            record = ProfilerSourceAndEntity.model_construct(
+                profiler_source=profiler_source, entity=table_entity
+            )
 
-        # Assertions
-        assert result.right is not None
-        assert result.left is None
-        assert result.right.entity == table_entity
+            # Process the table
+            result = processor._run(record)
+
+            # Assertions
+            assert result.right is not None
+            assert result.left is None
+            assert result.right.entity == table_entity
 
 
 def test_sampler_processor_run_for_container_no_context_entities(
@@ -223,6 +232,8 @@ def test_sampler_processor_run_for_container_no_context_entities(
         mock_import.return_value = mock_sampler_class
 
         metadata_mock = MagicMock()
+        metadata_mock.get_profiler_config_settings.return_value = None
+
         processor = SamplerProcessor(
             config=workflow_config,
             metadata=metadata_mock,
@@ -233,14 +244,13 @@ def test_sampler_processor_run_for_container_no_context_entities(
             profiler_source=profiler_source, entity=container_entity
         )
 
-        with patch.object(processor, "_copy_service_config", return_value={}):
-            result = processor._run_for_container(container_entity, record)
+        result = processor._run_for_container(container_entity, record)
 
-            # Verify sampler was created with None for schema/database entities
-            call_args = mock_sampler_class.create.call_args
-            assert call_args.kwargs["schema_entity"] is None
-            assert call_args.kwargs["database_entity"] is None
-            assert call_args.kwargs["entity"] == container_entity
+        # Verify sampler was created with None for schema/database entities
+        call_args = mock_sampler_class.create.call_args
+        assert call_args.kwargs["schema_entity"] is None
+        assert call_args.kwargs["database_entity"] is None
+        assert call_args.kwargs["entity"] == container_entity
 
 
 def test_sampler_processor_unsupported_entity_type(workflow_config):
@@ -252,6 +262,8 @@ def test_sampler_processor_unsupported_entity_type(workflow_config):
 
     with patch("metadata.sampler.processor.import_sampler_class"):
         metadata_mock = MagicMock()
+        metadata_mock.get_profiler_config_settings.return_value = None
+
         processor = SamplerProcessor(
             config=workflow_config,
             metadata=metadata_mock,
@@ -286,6 +298,8 @@ def test_sample_data_store_flag_respected(container_entity, workflow_config):
         mock_import.return_value = mock_sampler_class
 
         metadata_mock = MagicMock()
+        metadata_mock.get_profiler_config_settings.return_value = None
+
         processor = SamplerProcessor(
             config=workflow_config,
             metadata=metadata_mock,
@@ -296,7 +310,6 @@ def test_sample_data_store_flag_respected(container_entity, workflow_config):
             profiler_source=profiler_source, entity=container_entity
         )
 
-        with patch.object(processor, "_copy_service_config", return_value={}):
-            result = processor._run_for_container(container_entity, record)
+        result = processor._run_for_container(container_entity, record)
 
-            assert result.right.sample_data.store is False
+        assert result.right.sample_data.store is False
