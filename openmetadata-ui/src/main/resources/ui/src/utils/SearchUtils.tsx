@@ -44,10 +44,6 @@ import { ElasticsearchQuery } from './QueryBuilderUtils';
 import searchClassBase from './SearchClassBase';
 import serviceUtilClassBase from './ServiceUtilClassBase';
 
-// will add back slash "\" before quote in string if present
-export const getQueryWithSlash = (query: string): string =>
-  query.replace(/["']/g, '\\$&');
-
 export const getGroupLabel = (index: string) => {
   let label = '';
   let GroupIcon;
@@ -224,7 +220,7 @@ export const getSuggestionElement = (
       <Link
         className="text-sm no-underline"
         data-testid="data-name"
-        id={fqdn.replace(/\./g, '')}
+        id={fqdn.replaceAll('.', '')}
         target={searchClassBase.getSearchEntityLinkTarget(entitySource)}
         to={entityLink}
         onClick={onClickHandler}>
@@ -397,16 +393,14 @@ export const getTermQuery = (
     wildcardMustNotQueries?: Record<string, string | string[]>;
   }
 ) => {
-  const termQueries = Object.entries(terms)
-    .map(([field, value]) => {
-      const nestedPath = getNestedPath(field);
-      if (Array.isArray(value)) {
-        return value.map((v) => wrapTermQuery(field, v, nestedPath));
-      }
+  const termQueries = Object.entries(terms).flatMap(([field, value]) => {
+    const nestedPath = getNestedPath(field);
+    if (Array.isArray(value)) {
+      return value.map((v) => wrapTermQuery(field, v, nestedPath));
+    }
 
-      return wrapTermQuery(field, value, nestedPath);
-    })
-    .flat();
+    return wrapTermQuery(field, value, nestedPath);
+  });
 
   const wildcardQueries = options?.wildcardTerms
     ? Object.entries(options.wildcardTerms).map(([field, value]) => ({
@@ -415,16 +409,14 @@ export const getTermQuery = (
     : [];
 
   const mustNotQueries = options?.mustNotTerms
-    ? Object.entries(options.mustNotTerms)
-        .map(([field, value]) => {
-          const nestedPath = getNestedPath(field);
-          if (Array.isArray(value)) {
-            return value.map((v) => wrapTermQuery(field, v, nestedPath));
-          }
+    ? Object.entries(options.mustNotTerms).flatMap(([field, value]) => {
+        const nestedPath = getNestedPath(field);
+        if (Array.isArray(value)) {
+          return value.map((v) => wrapTermQuery(field, v, nestedPath));
+        }
 
-          return wrapTermQuery(field, value, nestedPath);
-        })
-        .flat()
+        return wrapTermQuery(field, value, nestedPath);
+      })
     : [];
 
   const matchQueries = options?.matchTerms
@@ -470,15 +462,15 @@ export const getTermQuery = (
 
   // Handle wildcardMustNotQueries
   const wildcardMustNotQueries = options?.wildcardMustNotQueries
-    ? Object.entries(options.wildcardMustNotQueries)
-        .map(([field, value]) => {
+    ? Object.entries(options.wildcardMustNotQueries).flatMap(
+        ([field, value]) => {
           if (Array.isArray(value)) {
             return value.map((v) => ({ wildcard: { [field]: v } }));
           }
 
           return { wildcard: { [field]: value } };
-        })
-        .flat()
+        }
+      )
     : [];
 
   const allMustNotQueries = [...mustNotQueries, ...wildcardMustNotQueries];
