@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.openmetadata.schema.EntityInterface;
 import org.openmetadata.schema.api.feed.ResolveTask;
 import org.openmetadata.schema.entity.data.Container;
@@ -51,6 +49,8 @@ import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 import org.openmetadata.service.util.FullyQualifiedName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ContainerRepository extends EntityRepository<Container> {
   private static final Logger LOG = LoggerFactory.getLogger(ContainerRepository.class);

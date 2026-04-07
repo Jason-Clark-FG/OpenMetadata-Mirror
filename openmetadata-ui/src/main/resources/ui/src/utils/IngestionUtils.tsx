@@ -448,7 +448,7 @@ export const getDefaultFilterPropertyValues = ({
       }
 
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, unknown>);
   }
 };
 
