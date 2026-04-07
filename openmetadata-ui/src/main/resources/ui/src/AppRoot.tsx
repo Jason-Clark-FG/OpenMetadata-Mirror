@@ -11,15 +11,19 @@
  *  limitations under the License.
  */
 
+import { GlobalStyles, ThemeProvider } from '@mui/material';
+import { createMuiTheme } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
-import { FC, useEffect } from 'react';
+import { FC, useEffect, useMemo } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import App from './App';
 import ErrorBoundary from './components/common/ErrorBoundary/ErrorBoundary';
+import { DEFAULT_THEME } from './constants/Appearance.constants';
 import AntDConfigProvider from './context/AntDConfigProvider/AntDConfigProvider';
+import { ThemeProvider as UntitledUIThemeProvider } from './context/UntitledUIThemeProvider/theme-provider';
 import { useApplicationStore } from './hooks/useApplicationStore';
 import {
   getCustomUiThemePreference,
@@ -31,10 +35,6 @@ import { getThemeConfig } from './utils/ThemeUtils';
 
 const AppRoot: FC = () => {
   const { initializeAuthState } = useApplicationStore();
-
-  useEffect(() => {
-    initializeAuthState();
-  }, [initializeAuthState]);
 
   const { applicationConfig, setApplicationConfig, setRdfEnabled } =
     useApplicationStore(
@@ -66,6 +66,7 @@ const AppRoot: FC = () => {
 
   useEffect(() => {
     fetchApplicationConfig();
+    initializeAuthState();
   }, []);
 
   useEffect(() => {
@@ -84,17 +85,28 @@ const AppRoot: FC = () => {
     }
   }, [applicationConfig]);
 
+  const muiTheme = useMemo(
+    () => createMuiTheme(applicationConfig?.customTheme, DEFAULT_THEME),
+    [applicationConfig?.customTheme]
+  );
+
   return (
     <div className="main-container">
       <div className="content-wrapper" data-testid="content-wrapper">
         <BrowserRouter basename={getBasePath()}>
           <I18nextProvider i18n={i18n}>
             <AntDConfigProvider>
-              <HelmetProvider>
-                <ErrorBoundary>
-                  <App />
-                </ErrorBoundary>
-              </HelmetProvider>
+              <UntitledUIThemeProvider
+                brandColors={applicationConfig?.customTheme}>
+                <ThemeProvider theme={muiTheme}>
+                  <GlobalStyles styles={{ html: { fontSize: '14px' } }} />
+                  <HelmetProvider>
+                    <ErrorBoundary>
+                      <App />
+                    </ErrorBoundary>
+                  </HelmetProvider>
+                </ThemeProvider>
+              </UntitledUIThemeProvider>
             </AntDConfigProvider>
           </I18nextProvider>
         </BrowserRouter>

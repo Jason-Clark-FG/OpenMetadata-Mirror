@@ -40,8 +40,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { UN_AUTHORIZED_EXCLUDED_PATHS } from '../../../constants/Auth.constants';
 import {
-  APP_ROUTER_ROUTES as ROUTES,
   REDIRECT_PATHNAME,
+  APP_ROUTER_ROUTES as ROUTES,
 } from '../../../constants/router.constants';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { TabSpecificField } from '../../../enums/entity.enum';
@@ -149,7 +149,6 @@ export const AuthProvider = ({
     isApplicationLoading,
     setApplicationLoading,
     isAuthenticating,
-    initializeAuthState,
   } = useApplicationStore();
   const tokenService = useRef<TokenService>(TokenService.getInstance());
 
@@ -329,10 +328,6 @@ export const AuthProvider = ({
       setTimeoutId(Number(timerId));
     }
   };
-
-  useEffect(() => {
-    initializeAuthState();
-  }, []);
 
   useEffect(() => {
     if (authenticatorRef.current?.renewIdToken) {
