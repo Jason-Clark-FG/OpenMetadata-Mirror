@@ -98,7 +98,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => { }}
+        onCancel={() => {}}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -124,7 +124,7 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => { },
+    onSubmit: () => {},
     loading: isLoading,
   });
 
@@ -132,11 +132,11 @@ const DataProductListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-          {
-            name: t('label.data-marketplace'),
-            url: ROUTES.DATA_MARKETPLACE,
-          },
-        ]
+            {
+              name: t('label.data-marketplace'),
+              url: ROUTES.DATA_MARKETPLACE,
+            },
+          ]
         : []),
       { name: t('label.data-product-plural'), url: dataProductBasePath },
     ],
