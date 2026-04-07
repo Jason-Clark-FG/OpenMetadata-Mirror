@@ -266,16 +266,16 @@ public class ElasticSearchSourceBuilderFactory
 
   private ElasticSearchRequestBuilder addAggregationV2(
       ElasticSearchRequestBuilder searchRequestBuilder) {
-    searchSettings
-        .getGlobalSettings()
-        .getAggregations()
+    listOrEmpty(searchSettings.getGlobalSettings().getAggregations())
         .forEach(
             agg -> {
               es.co.elastic.clients.elasticsearch._types.aggregations.Aggregation termsAgg;
               int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
               if (!nullOrEmpty(agg.getField())) {
-                termsAgg = ElasticAggregationBuilder.termsAggregation(agg.getField(), maxSize);
+                String field =
+                    SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
+                termsAgg = ElasticAggregationBuilder.termsAggregation(field, maxSize);
               } else if (!nullOrEmpty(agg.getScript())) {
                 termsAgg =
                     ElasticAggregationBuilder.termsAggregationWithScript(agg.getScript(), maxSize);
@@ -906,7 +906,8 @@ public class ElasticSearchSourceBuilderFactory
       int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
       if (!nullOrEmpty(agg.getField())) {
-        termsAgg = ElasticAggregationBuilder.termsAggregation(agg.getField(), maxSize);
+        String field = SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
+        termsAgg = ElasticAggregationBuilder.termsAggregation(field, maxSize);
       } else if (!nullOrEmpty(agg.getScript())) {
         termsAgg = ElasticAggregationBuilder.termsAggregationWithScript(agg.getScript(), maxSize);
       } else {
