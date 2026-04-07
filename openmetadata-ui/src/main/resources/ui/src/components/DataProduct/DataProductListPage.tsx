@@ -57,7 +57,7 @@ import EntityListingTable, {
 } from '../common/EntityListingTable/EntityListingTable.component';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../common/TagBadgeList/TagBadgeList';
+import TagBadgeList from '../common/TagBadgeList/TagBadgeList.component';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
 import { useDataProductListingData } from './hooks/useDataProductListingData';
@@ -98,7 +98,7 @@ const DataProductListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DATA_PRODUCT}
-        onCancel={() => {}}
+        onCancel={() => { }}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -124,7 +124,7 @@ const DataProductListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {},
+    onSubmit: () => { },
     loading: isLoading,
   });
 
@@ -132,11 +132,11 @@ const DataProductListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-            {
-              name: t('label.data-marketplace'),
-              url: ROUTES.DATA_MARKETPLACE,
-            },
-          ]
+          {
+            name: t('label.data-marketplace'),
+            url: ROUTES.DATA_MARKETPLACE,
+          },
+        ]
         : []),
       { name: t('label.data-product-plural'), url: dataProductBasePath },
     ],
