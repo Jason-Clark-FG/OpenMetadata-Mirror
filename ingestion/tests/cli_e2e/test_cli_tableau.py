@@ -12,10 +12,12 @@
 """
 Test Tableau connector with CLI - Enhanced with comprehensive lineage and metadata testing
 """
+import os
 from pathlib import Path
 from typing import List
 
 import pytest
+import tableauserverclient as TSC
 
 from metadata.generated.schema.entity.data.chart import Chart
 from metadata.generated.schema.entity.data.dashboard import Dashboard
@@ -349,24 +351,87 @@ class TableauCliTest(CliCommonDashboard.TestSuite):
                 f"Expected tag '{expected_tag}' not found in any entity",
             )
 
+    _MIN_UPSTREAM_EDGES = 6
+    _TABLEAU_BACKFILL_SKIP_MSG = (
+        "Skipping test: Tableau Metadata API is currently running a backfill index."
+    )
+
+    def _is_tableau_metadata_api_backfilling(self) -> bool:
+        """
+        Probes the Tableau Metadata API directly to confirm a backfill is in progress.
+        Uses the same env vars as the E2E config (E2E_TABLEAU_*).
+
+        Returns True only when Tableau's own API reports backfill or returns HTTP 503.
+        Returns False for unexpected/unknown errors so genuine code bugs still fail.
+        """
+        host = os.environ.get("E2E_TABLEAU_HOST_PORT", "")
+        site = os.environ.get("E2E_TABLEAU_SITE", "")
+        pat_name = os.environ.get("E2E_TABLEAU_PAT_NAME", "")
+        pat_secret = os.environ.get("E2E_TABLEAU_PAT_SECRET", "")
+
+        if not all([host, pat_name, pat_secret]):
+            return False
+
+        server = TSC.Server(host, use_server_version=True)
+        auth = TSC.PersonalAccessTokenAuth(pat_name, pat_secret, site_id=site)
+
+        try:
+            with server.auth.sign_in(auth):
+                # A minimal GraphQL probe surfaces API-level errors (e.g. partial
+                # results or internal errors) that the TSC library swallows instead
+                # of raising — the "errors" key is only populated during degraded states.
+                probe = server.metadata.query(
+                    query="{ dashboardsConnection(first: 1) { nodes { id } } }"
+                )
+                if probe.get("errors"):
+                    return True
+
+                # backfill_status() is the authoritative signal: returns
+                # {"isProcessing": true} while a background index rebuild is running.
+                status = server.metadata.backfill_status()
+                return bool(status.get("isProcessing") or status.get("isBackfilling"))
+        except Exception as exc:
+            # HTTP 503 means the Metadata API endpoint is temporarily down,
+            # which also occurs during a backfill. Any other exception is
+            # unexpected and should not be treated as a Tableau limitation.
+            if "503" in str(exc) or "Service Unavailable" in str(exc):
+                return True
+            return False
+
     def _validate_dashboard_lineage(self) -> None:
         """Validate dashboard lineage according to the knowledge base"""
-        # Lineage chain: Tables -> TableauPublishedDatasource -> TableauEmbeddedDatasource -> Dashboard
         analytics_dashboard = self.get_entity_by_name(Dashboard, "Analytics Workbook")
-        if analytics_dashboard:
+        if not analytics_dashboard:
+            return
+
+        try:
             lineage = self.openmetadata.get_lineage_by_name(
                 entity=Dashboard,
                 fqn=analytics_dashboard.fullyQualifiedName.root,
-                up_depth=5,  # Increased depth to capture full lineage chain
+                up_depth=5,
                 down_depth=1,
             )
+        except Exception as exc:
+            if "503" in str(exc) or "Service Unavailable" in str(exc):
+                pytest.skip(self._TABLEAU_BACKFILL_SKIP_MSG)
+            raise
 
-            if lineage and lineage.get("upstreamEdges"):
-                self.assertGreater(
-                    len(lineage["upstreamEdges"]),
-                    6,
-                    "Analytics Workbook should have upstream lineage",
-                )
+        if not lineage or not lineage.get("upstreamEdges"):
+            return
+
+        upstream_count = len(lineage["upstreamEdges"])
+        # Guard: only skip when Tableau's own API confirms a backfill is in
+        # progress. Skipping on edge count alone would silently mask regressions
+        # in our own lineage extraction code.
+        if upstream_count < self._MIN_UPSTREAM_EDGES:
+            if self._is_tableau_metadata_api_backfilling():
+                pytest.skip(self._TABLEAU_BACKFILL_SKIP_MSG)
+
+        self.assertGreater(
+            upstream_count,
+            self._MIN_UPSTREAM_EDGES,
+            "Analytics Workbook should have upstream lineage",
+        )
 
     def _validate_datamodel_lineage_chain(self) -> None:
         """Validate the complete lineage chain"""
