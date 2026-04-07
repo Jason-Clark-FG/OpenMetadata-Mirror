@@ -1879,11 +1879,15 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * Example implementation can be found in {@link GlossaryTermRepository#setFieldsInBulk}.
    */
   public void setFieldsInBulk(Fields fields, List<T> entities) {
+    setFieldsInBulk(fields, entities, Include.NON_DELETED);
+  }
+
+  public void setFieldsInBulk(Fields fields, List<T> entities, Include include) {
     if (entities == null || entities.isEmpty()) {
       return;
     }
     try (var ignored = phase("fetchFields")) {
-      fetchAndSetFields(entities, fields);
+      fetchAndSetFields(entities, fields, include);
     }
     try (var ignored = phase("setInheritedFields")) {
       setInheritedFields(entities, fields);
@@ -8421,7 +8425,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    Set<String> relationshipFieldsHandled = fetchAndSetRelationshipFieldsInBulk(entities, fields);
+    fetchAndSetFields(entities, fields, Include.NON_DELETED);
+  }
+
+  protected void fetchAndSetFields(List<T> entities, Fields fields, Include include) {
+    Set<String> relationshipFieldsHandled =
+        fetchAndSetRelationshipFieldsInBulk(entities, fields, include);
     for (Entry<String, BiConsumer<List<T>, Fields>> entry : fieldFetchers.entrySet()) {
       if (relationshipFieldsHandled.contains(entry.getKey())) {
         continue;
@@ -8430,7 +8439,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  private Set<String> fetchAndSetRelationshipFieldsInBulk(List<T> entities, Fields fields) {
+  private Set<String> fetchAndSetRelationshipFieldsInBulk(
+      List<T> entities, Fields fields, Include include) {
     if (nullOrEmpty(entities) || fields == null) {
       return Collections.emptySet();
     }
@@ -8497,9 +8507,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
                 .findToBatchWithRelations(entityIds, entityType, outgoingRelations, ALL);
 
     Map<String, Map<UUID, EntityReference>> incomingRefsByType =
-        resolveRelationshipEntityReferencesByType(incomingRecords, true);
+        resolveRelationshipEntityReferencesByType(incomingRecords, true, include);
     Map<String, Map<UUID, EntityReference>> outgoingRefsByType =
-        resolveRelationshipEntityReferencesByType(outgoingRecords, false);
+        resolveRelationshipEntityReferencesByType(outgoingRecords, false, include);
 
     Map<UUID, List<EntityReference>> ownersByEntity = loadOwners ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> followersByEntity = loadFollowers ? new HashMap<>() : null;
@@ -8680,7 +8690,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private Map<String, Map<UUID, EntityReference>> resolveRelationshipEntityReferencesByType(
-      List<CollectionDAO.EntityRelationshipObject> records, boolean fromSide) {
+      List<CollectionDAO.EntityRelationshipObject> records, boolean fromSide, Include include) {
     if (records == null || records.isEmpty()) {
       return Collections.emptyMap();
     }
@@ -8705,7 +8715,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     for (Entry<String, Set<UUID>> entry : idsByType.entrySet()) {
       List<EntityReference> refs =
           Entity.getEntityReferencesByIdsRespectingInclude(
-              entry.getKey(), new ArrayList<>(entry.getValue()), Include.NON_DELETED);
+              entry.getKey(), new ArrayList<>(entry.getValue()), include);
       refsByType.put(
           entry.getKey(),
           refs.stream()
