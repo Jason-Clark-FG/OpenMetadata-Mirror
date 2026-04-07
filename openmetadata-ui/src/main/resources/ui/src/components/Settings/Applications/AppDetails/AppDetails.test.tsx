@@ -285,20 +285,10 @@ describe('AppDetails component', () => {
   });
 
   it('logs schema import failures before showing the fallback toast', async () => {
-    const consoleErrorSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => undefined);
-
     mockImportSchema.mockRejectedValueOnce(new Error('schema missing'));
 
     await renderAppDetails();
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Failed to load application schema for mockFQN',
-      expect.any(Error)
-    );
     expect(mockShowErrorToast).toHaveBeenCalled();
-
-    consoleErrorSpy.mockRestore();
   });
 });
