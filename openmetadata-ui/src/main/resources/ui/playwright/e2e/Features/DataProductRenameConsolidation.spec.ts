@@ -119,18 +119,39 @@ test.describe('Data Product Rename + Field Update Consolidation', () => {
     const hasModalEditor = await modalDescriptionBox
       .isVisible({ timeout: 2000 })
       .catch(() => false);
-    const descriptionBox = hasModalEditor
-      ? modalDescriptionBox
-      : page.locator('.om-block-editor[contenteditable="true"]').first();
 
     if (hasModalEditor) {
       await expect(dialog).toBeVisible();
     }
-    await expect(descriptionBox).toBeVisible();
-    await descriptionBox.click({ force: true });
-    await page.keyboard.press('ControlOrMeta+A');
-    await page.keyboard.press('Backspace');
-    await descriptionBox.fill(description);
+
+    const descriptionBoxLocator = () =>
+      (
+        hasModalEditor
+          ? dialog.locator('.om-block-editor[contenteditable="true"]')
+          : page.locator('.om-block-editor[contenteditable="true"]')
+      ).first();
+
+    let descriptionUpdated = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const descriptionBox = descriptionBoxLocator();
+      await expect(descriptionBox).toBeVisible();
+
+      try {
+        await descriptionBox.focus();
+        await page.keyboard.press('ControlOrMeta+A');
+        await page.keyboard.press('Backspace');
+        await descriptionBox.fill(description);
+        descriptionUpdated = true;
+        break;
+      } catch (error) {
+        if (attempt === 2) {
+          throw error;
+        }
+        await page.waitForTimeout(250);
+      }
+    }
+
+    expect(descriptionUpdated).toBe(true);
 
     const patchResponse = page.waitForResponse(
       (response) =>

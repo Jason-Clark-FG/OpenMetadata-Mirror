@@ -407,11 +407,11 @@ public class CreateTaskImpl implements TaskListener {
           !assignees.isEmpty()
               ? assignees
               : (requestedAssignees != null
-                          && !requestedAssignees.isEmpty()
-                          && (existingTask.getAssignees() == null
-                              || existingTask.getAssignees().isEmpty()))
-                      ? requestedAssignees
-                      : existingTask.getAssignees();
+                      && !requestedAssignees.isEmpty()
+                      && (existingTask.getAssignees() == null
+                          || existingTask.getAssignees().isEmpty()))
+                  ? requestedAssignees
+                  : existingTask.getAssignees();
       existingTask.setStatus(stageStatus != null ? stageStatus : existingTask.getStatus());
       existingTask.setAssignees(resolvedAssignees);
       if (requestedReviewers != null) {

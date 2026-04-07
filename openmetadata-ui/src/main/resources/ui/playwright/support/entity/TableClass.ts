@@ -345,6 +345,16 @@ export class TableClass extends EntityClass {
       EntityDataClass.loadResponseData();
     }
 
+    if (!this.entityResponseData.fullyQualifiedName && this.entityResponseData.id) {
+      const response = await page.request.get(
+        `/api/v1/tables/${this.entityResponseData.id}`
+      );
+
+      if (response.ok()) {
+        this.entityResponseData = await response.json();
+      }
+    }
+
     const tableFqn = this.entityResponseData.fullyQualifiedName ?? '';
     const canUseDirectNavigation =
       !searchTerm || (tableFqn.length > 0 && searchTerm === tableFqn);
@@ -505,10 +515,29 @@ export class TableClass extends EntityClass {
     apiContext: APIRequestContext;
     patchData: Operation[];
   }) {
+    if (!this.entityResponseData?.fullyQualifiedName && this.entityResponseData?.id) {
+      const tableResponse = await apiContext.get(
+        `/api/v1/tables/${this.entityResponseData.id}`
+      );
+
+      if (tableResponse.ok()) {
+        this.entityResponseData = await tableResponse.json();
+      }
+    }
+
+    const tableId = this.entityResponseData?.id;
+    const tableFqn = this.entityResponseData?.fullyQualifiedName;
+
+    if (!tableId && !tableFqn) {
+      throw new Error(
+        `TableClass.patch: table id and fullyQualifiedName are missing for table "${this.entityResponseData?.name ?? this.entity.name}"`
+      );
+    }
+
     const response = await apiContext.patch(
-      `/api/v1/tables/name/${encodeURIComponent(
-        this.entityResponseData?.fullyQualifiedName ?? ''
-      )}`,
+      tableId
+        ? `/api/v1/tables/${tableId}`
+        : `/api/v1/tables/name/${encodeURIComponent(tableFqn!)}`,
       {
         data: patchData,
         headers: {

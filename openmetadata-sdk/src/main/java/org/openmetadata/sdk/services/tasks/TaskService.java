@@ -41,7 +41,9 @@ public class TaskService extends EntityServiceBase<Task> {
   }
 
   public Task create(CreateTask request) throws OpenMetadataException {
-    return httpClient.execute(HttpMethod.POST, basePath, request, Task.class);
+    Task created = httpClient.execute(HttpMethod.POST, basePath, request, Task.class);
+    rememberSnapshot(created);
+    return created;
   }
 
   public Task resolve(String id, ResolveTask resolveRequest) throws OpenMetadataException {

@@ -56,6 +56,11 @@ export const performAdminLogin = async (browser: Browser) => {
     });
     const page = await context.newPage();
 
+    await seedAuthStorage({
+      page,
+      token: accessToken,
+      username: DEFAULT_ADMIN_USER.userName,
+    });
     await redirectToHomePage(page);
     const apiContext = await getAuthContext(accessToken);
 

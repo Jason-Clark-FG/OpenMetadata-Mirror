@@ -287,16 +287,39 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       storageState: 'playwright/.auth/admin.json',
     });
     const page = await context.newPage();
+    const openCurrentGlossaryTerm = async (
+      termData: typeof glossaryTerm.responseData
+    ) => {
+      await visitGlossaryPage(page, glossary.responseData.displayName);
+
+      const candidateNames = [termData.displayName, termData.name].filter(
+        (value, index, names): value is string =>
+          Boolean(value) && names.indexOf(value) === index
+      );
+
+      for (const candidateName of candidateNames) {
+        const termEntry = page.getByTestId(candidateName).first();
+
+        if (
+          (await termEntry.count()) &&
+          (await termEntry.isVisible().catch(() => false))
+        ) {
+          await selectActiveGlossaryTerm(page, candidateName);
+
+          return;
+        }
+      }
+
+      throw new Error(
+        `Unable to locate glossary term after rename using candidates: ${candidateNames.join(
+          ', '
+        )}`
+      );
+    };
 
     try {
       await redirectToHomePage(page);
-
-      // Navigate to glossary term using displayName
-      await visitGlossaryPage(page, glossary.responseData.displayName);
-      await selectActiveGlossaryTerm(
-        page,
-        glossaryTerm.responseData.displayName
-      );
+      await openCurrentGlossaryTerm(glossaryTerm.responseData);
 
       // Perform 3 consecutive renames
       for (let i = 1; i <= 3; i++) {
@@ -313,6 +336,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
           glossaryTermData.name,
           glossaryTermData.fullyQualifiedName
         );
+        await openCurrentGlossaryTerm(glossaryTermData);
         await waitForAllLoadersToDisappear(page);
 
         // Verify the header shows the new name
@@ -354,19 +378,24 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
     let page = await context.newPage();
     let currentDisplayName =
       classification.responseData.displayName ?? classification.data.displayName;
-
-    try {
-      await redirectToHomePage(page);
+    const openCurrentClassification = async () => {
       await visitClassificationPage(
         page,
         classification.responseData.name,
-        classification.responseData.displayName ?? classification.responseData.name
+        classification.responseData.displayName ??
+          classification.responseData.name
       );
+    };
+
+    try {
+      await redirectToHomePage(page);
+      await openCurrentClassification();
       logRenameDebug('classification:start', classification.responseData.name);
 
       // Perform 3 consecutive renames
       for (let i = 1; i <= 3; i++) {
         logRenameDebug('classification:cycle:start', i, classification.responseData.name);
+        await openCurrentClassification();
         await waitForAllLoadersToDisappear(page);
         logRenameDebug('classification:cycle:visited', i, currentDisplayName);
         await expect(page.getByTestId('entity-header-display-name')).toContainText(
@@ -421,6 +450,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
           i,
           classification.responseData.name
         );
+        await openCurrentClassification();
         logRenameDebug(
           'classification:cycle:revisited',
           i,
@@ -476,28 +506,21 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
       storageState: 'playwright/.auth/admin.json',
     });
     const page = await context.newPage();
+    const openCurrentTag = async () => {
+      tag.data.name = tag.responseData.name ?? tag.data.name;
+      tag.data.displayName = tag.responseData.displayName ?? tag.data.displayName;
+
+      await tag.visitPage(page);
+    };
 
     try {
-      await redirectToHomePage(page);
-
-      // Navigate to tag using side panel and displayName
-      await sidebarClick(page, SidebarItem.TAGS);
-      await page.getByTestId('side-panel-classification').first().waitFor();
-      await page
-        .locator('[data-testid="side-panel-classification"]')
-        .filter({ hasText: classification.data.displayName })
-        .click();
-
-      // Click on the tag using test id
-      await page.getByTestId(tag.data.name).waitFor({ state: 'visible' });
-      await page.getByTestId(tag.data.name).click();
-
-      // Wait for page to load
+      await openCurrentTag();
       await expect(page.getByTestId('entity-header-name')).toBeVisible();
 
       // Perform 3 consecutive renames - Tag page has different menu structure
       for (let i = 1; i <= 3; i++) {
         const newName = `renamed-tag-${i}-${uuid()}`;
+        await openCurrentTag();
 
         // Tag page has multiple rename-button elements (Rename and Style)
         // So we need to specifically target the Rename menu item
@@ -525,6 +548,7 @@ test.describe('Multiple Rename Tests', PLAYWRIGHT_BASIC_TEST_TAG_OBJ, () => {
 
         const tagResponse = await apiContext.get(`/api/v1/tags/${tag.responseData.id}`);
         tag.responseData = (await tagResponse.json()) as typeof tag.responseData;
+        await openCurrentTag();
         await waitForAllLoadersToDisappear(page);
 
         // Wait for the UI to update

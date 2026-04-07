@@ -17,17 +17,20 @@ import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
 import { UserClass } from '../../support/user/UserClass';
 import {
-  clickOutside,
-  descriptionBox,
-  getApiContext,
-  redirectToHomePage,
-} from '../../utils/common';
+  authenticateAdminPage,
+  createAdminApiContext,
+} from '../../utils/admin';
 import {
-  waitForTaskActionResponse,
-  waitForTaskCreateResponse,
-  waitForTaskListResponse,
-  waitForTaskResolveResponse,
-} from '../../utils/task';
+  descriptionBox,
+} from '../../utils/common';
+import { waitForTaskCreateResponse } from '../../utils/task';
+import {
+  addTagSuggestion,
+  approveTaskFromDetails,
+  closeTaskFromDetails,
+  openEntityTasksTab,
+  selectAssignee,
+} from '../../utils/taskWorkflow';
 
 const adminFile = 'playwright/.auth/admin.json';
 test.use({ storageState: adminFile });
@@ -76,21 +79,7 @@ const createDescriptionTaskViaUI = async (
     `description for ${entityType}`
   );
 
-  const assigneeField = page.locator(
-    '[data-testid="select-assignee"] > .ant-select-selector #assignees'
-  );
-  await assigneeField.click();
-
-  const userSearchResponse = page.waitForResponse(
-    `/api/v1/search/query?q=*${assigneeName}**&index=user_search_index%2Cteam_search_index*`
-  );
-  await assigneeField.fill(assigneeName);
-  await userSearchResponse;
-
-  const dropdownValue = page.getByTestId(assigneeName);
-  await dropdownValue.hover();
-  await dropdownValue.click();
-  await clickOutside(page);
+  await selectAssignee(page, assigneeName);
 
   await page.locator(descriptionBox).clear();
   await page.locator(descriptionBox).fill(description);
@@ -118,37 +107,12 @@ const createTagTaskViaUI = async (
     `tags for ${entityType}`
   );
 
-  const assigneeField = page.locator(
-    '[data-testid="select-assignee"] > .ant-select-selector #assignees'
-  );
-  await assigneeField.click();
-
-  const userSearchResponse = page.waitForResponse(
-    `/api/v1/search/query?q=*${assigneeName}**&index=user_search_index%2Cteam_search_index*`
-  );
-  await assigneeField.fill(assigneeName);
-  await userSearchResponse;
-
-  const dropdownValue = page.getByTestId(assigneeName);
-  await dropdownValue.hover();
-  await dropdownValue.click();
-  await clickOutside(page);
-
-  const suggestTags = page.locator(
-    '[data-testid="tag-selector"] > .ant-select-selector .ant-select-selection-search-input'
-  );
-  await suggestTags.click();
-
-  const querySearchResponse = page.waitForResponse(
-    `/api/v1/search/query?q=*${tagFQN}*&index=tag_search_index&*`
-  );
-  await suggestTags.fill(tagFQN);
-  await querySearchResponse;
-
-  const tagDropdownValue = page.getByTestId(`tag-${tagFQN}`).first();
-  await tagDropdownValue.hover();
-  await tagDropdownValue.click();
-  await clickOutside(page);
+  await selectAssignee(page, assigneeName);
+  await addTagSuggestion({
+    page,
+    searchText: tagFQN,
+    tagTestId: `tag-${tagFQN}`,
+  });
 
   const taskResponse = waitForTaskCreateResponse(page);
   await page.click('button[type="submit"]');
@@ -166,26 +130,7 @@ const resolveTaskWithApproval = async (page: Page) => {
     await page.waitForLoadState('networkidle');
   }
 
-  // Look for approve button - try specific selectors in order
-  const approveBtn = page.getByTestId('approve-button').first();
-  const approveTextBtn = page.locator('button:has-text("Approve")').first();
-
-  let clicked = false;
-  if (await approveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const taskResolve = waitForTaskResolveResponse(page);
-    await approveBtn.click();
-    await taskResolve;
-    clicked = true;
-  } else if (await approveTextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    const taskResolve = waitForTaskResolveResponse(page);
-    await approveTextBtn.click();
-    await taskResolve;
-    clicked = true;
-  }
-
-  if (clicked) {
-    await page.waitForLoadState('networkidle');
-  }
+  await approveTaskFromDetails(page);
 };
 
 const resolveTaskWithRejection = async (page: Page, comment: string) => {
@@ -196,55 +141,11 @@ const resolveTaskWithRejection = async (page: Page, comment: string) => {
     await page.waitForLoadState('networkidle');
   }
 
-  // Try direct Reject button first (visible in task card summary)
-  const rejectBtn = page.getByRole('button', { name: /^reject$/i });
-  if (await rejectBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    const taskResolve = waitForTaskActionResponse(page);
-    await rejectBtn.click();
-    await taskResolve;
-    await page.waitForLoadState('networkidle');
-    return;
-  }
-
-  // If no direct reject button, use the dropdown and select "Close" option
-  const dropdownBtn = page.getByRole('button', { name: 'down' });
-  if (await dropdownBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await dropdownBtn.click();
-
-    // The dropdown has "Close" option which closes/rejects the task
-    const closeOption = page.getByRole('menuitem', { name: /close/i });
-    if (await closeOption.isVisible({ timeout: 2000 }).catch(() => false)) {
-      const taskResolve = waitForTaskActionResponse(page);
-      await closeOption.click();
-      await taskResolve;
-      await page.waitForLoadState('networkidle');
-    }
-  }
+  await closeTaskFromDetails(page);
 };
 
 const navigateToActivityFeedTasks = async (page: Page) => {
-  // Click on the Activity Feeds & Tasks tab if available
-  const activityFeedTab = page.locator('[data-testid="activity_feed"]');
-  if (await activityFeedTab.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await activityFeedTab.click();
-    await page.waitForLoadState('networkidle');
-  }
-
-  // Click on Tasks filter/tab - it's a menuitem
-  const tasksTab = page.getByRole('menuitem', { name: /tasks/i });
-  if (await tasksTab.isVisible({ timeout: 5000 }).catch(() => false)) {
-    // Check if tab is already active by looking at aria-selected or active state
-    const isActive = await tasksTab.getAttribute('aria-selected') === 'true' ||
-                     await tasksTab.evaluate(el => el.classList.contains('active'));
-
-    if (!isActive) {
-      // Only wait for response if we're actually switching tabs
-      const taskFeeds = waitForTaskListResponse(page).catch(() => null);
-      await tasksTab.click();
-      await taskFeeds;
-    }
-    await page.waitForLoadState('networkidle');
-  }
+  await openEntityTasksTab(page);
 };
 
 test.describe('Tasks UI Flow - Multi Entity Tests', () => {
@@ -253,45 +154,37 @@ test.describe('Tasks UI Flow - Multi Entity Tests', () => {
     TableClass | DashboardClass | TopicClass | PipelineClass
   > = [];
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.beforeAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    await user.create(apiContext);
+    try {
+      await user.create(apiContext);
 
-    for (const config of ENTITY_CONFIGS) {
-      const entity = config.createEntity();
-      await entity.create(apiContext);
-      entities.push(entity);
+      for (const config of ENTITY_CONFIGS) {
+        const entity = config.createEntity();
+        await entity.create(apiContext);
+        entities.push(entity);
+      }
+    } finally {
+      await afterAction();
     }
-
-    await afterAction();
-    await page.close();
-    await context.close();
   });
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.afterAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    for (const entity of entities) {
-      await entity.delete(apiContext);
+    try {
+      for (const entity of entities) {
+        await entity.delete(apiContext);
+      }
+      await user.delete(apiContext);
+    } finally {
+      await afterAction();
     }
-    await user.delete(apiContext);
-
-    await afterAction();
-    await page.close();
-    await context.close();
   });
 
   test.beforeEach(async ({ page }) => {
-    await redirectToHomePage(page);
+    await authenticateAdminPage(page);
   });
 
   for (let i = 0; i < ENTITY_CONFIGS.length; i++) {
@@ -380,39 +273,31 @@ test.describe('Task Workflow - Table Column Tasks', () => {
   const user = new UserClass();
   let table: TableClass;
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.beforeAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    await user.create(apiContext);
-    table = new TableClass();
-    await table.create(apiContext);
-
-    await afterAction();
-    await page.close();
-    await context.close();
+    try {
+      await user.create(apiContext);
+      table = new TableClass();
+      await table.create(apiContext);
+    } finally {
+      await afterAction();
+    }
   });
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.afterAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    await table.delete(apiContext);
-    await user.delete(apiContext);
-
-    await afterAction();
-    await page.close();
-    await context.close();
+    try {
+      await table.delete(apiContext);
+      await user.delete(apiContext);
+    } finally {
+      await afterAction();
+    }
   });
 
   test.beforeEach(async ({ page }) => {
-    await redirectToHomePage(page);
+    await authenticateAdminPage(page);
   });
 
   test('Create description task for table column via UI', async ({ page }) => {
@@ -441,21 +326,7 @@ test.describe('Task Workflow - Table Column Tasks', () => {
 
       expect(await page.locator('#title').inputValue()).toContain('columns');
 
-      const assigneeField = page.locator(
-        '[data-testid="select-assignee"] > .ant-select-selector #assignees'
-      );
-      await assigneeField.click();
-
-      const userSearchResponse = page.waitForResponse(
-        `/api/v1/search/query?q=*${userName}**&index=user_search_index%2Cteam_search_index*`
-      );
-      await assigneeField.fill(userName);
-      await userSearchResponse;
-
-      const dropdownValue = page.getByTestId(userName);
-      await dropdownValue.hover();
-      await dropdownValue.click();
-      await clickOutside(page);
+      await selectAssignee(page, userName);
 
       await page.locator(descriptionBox).clear();
       await page.locator(descriptionBox).fill('Column description test');
@@ -502,37 +373,13 @@ test.describe('Task Workflow - Table Column Tasks', () => {
 
       expect(await page.locator('#title').inputValue()).toContain('columns');
 
-      const assigneeField = page.locator(
-        '[data-testid="select-assignee"] > .ant-select-selector #assignees'
-      );
-      await assigneeField.click();
+      await selectAssignee(page, userName);
 
-      const userSearchResponse = page.waitForResponse(
-        `/api/v1/search/query?q=*${userName}**&index=user_search_index%2Cteam_search_index*`
-      );
-      await assigneeField.fill(userName);
-      await userSearchResponse;
-
-      const dropdownValue = page.getByTestId(userName);
-      await dropdownValue.hover();
-      await dropdownValue.click();
-      await clickOutside(page);
-
-      const suggestTags = page.locator(
-        '[data-testid="tag-selector"] > .ant-select-selector .ant-select-selection-search-input'
-      );
-      await suggestTags.click();
-
-      const querySearchResponse = page.waitForResponse(
-        `/api/v1/search/query?q=*${tagFQN}*&index=tag_search_index&*`
-      );
-      await suggestTags.fill(tagFQN);
-      await querySearchResponse;
-
-      const tagDropdownValue = page.getByTestId(`tag-${tagFQN}`).first();
-      await tagDropdownValue.hover();
-      await tagDropdownValue.click();
-      await clickOutside(page);
+      await addTagSuggestion({
+        page,
+        searchText: tagFQN,
+        tagTestId: `tag-${tagFQN}`,
+      });
 
       const taskResponse = page.waitForResponse('/api/v1/tasks');
       await page.click('button[type="submit"]');
@@ -554,39 +401,31 @@ test.describe('Task Activity Feed Integration', () => {
   const user = new UserClass();
   let table: TableClass;
 
-  test.beforeAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.beforeAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    await user.create(apiContext);
-    table = new TableClass();
-    await table.create(apiContext);
-
-    await afterAction();
-    await page.close();
-    await context.close();
+    try {
+      await user.create(apiContext);
+      table = new TableClass();
+      await table.create(apiContext);
+    } finally {
+      await afterAction();
+    }
   });
 
-  test.afterAll(async ({ browser }) => {
-    const context = await browser.newContext({ storageState: adminFile });
-    const page = await context.newPage();
-    await page.goto('/');
-    await page.waitForURL('**/my-data');
-    const { apiContext, afterAction } = await getApiContext(page);
+  test.afterAll(async () => {
+    const { apiContext, afterAction } = await createAdminApiContext();
 
-    await table.delete(apiContext);
-    await user.delete(apiContext);
-
-    await afterAction();
-    await page.close();
-    await context.close();
+    try {
+      await table.delete(apiContext);
+      await user.delete(apiContext);
+    } finally {
+      await afterAction();
+    }
   });
 
   test.beforeEach(async ({ page }) => {
-    await redirectToHomePage(page);
+    await authenticateAdminPage(page);
   });
 
   test('Verify task lifecycle in activity feed', async ({ page }) => {

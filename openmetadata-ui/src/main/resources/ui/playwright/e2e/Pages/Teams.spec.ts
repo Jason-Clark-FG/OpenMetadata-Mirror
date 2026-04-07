@@ -143,7 +143,10 @@ test.describe('Teams Page', () => {
   test.beforeEach('Visit Home Page', async ({ page }) => {
     await redirectToHomePage(page);
     const fetchOrganizationResponse = page.waitForResponse(
-      '/api/v1/teams?parentTeam=Organization&include=non-deleted&fields=**'
+      (response) =>
+        response.request().method() === 'GET' &&
+        response.url().includes('/api/v1/teams') &&
+        response.url().includes('parentTeam=Organization')
     );
     await settingClick(page, GlobalSettingOptions.TEAMS);
     await fetchOrganizationResponse;

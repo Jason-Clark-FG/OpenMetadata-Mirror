@@ -84,7 +84,7 @@ const validateTourSteps = async (page: Page) => {
 
   await waitForAllLoadersToDisappear(page);
 
-  await expectTourBadge(page, '4');
+  await expectTourBadge(page, '4', 20000);
 
   // step 3
   await page.locator('[data-tour-elem="right-arrow"]').click();

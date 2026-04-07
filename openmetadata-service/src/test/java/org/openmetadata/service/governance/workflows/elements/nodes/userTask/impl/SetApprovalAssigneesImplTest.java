@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
@@ -194,6 +195,25 @@ class SetApprovalAssigneesImplTest {
         "Workflow-managed approvals should not assign the creator as approver");
     assertEquals("[]", assigneesJson);
     assertTrue((Boolean) capturedVars.get("hasAssignees"));
+  }
+
+  @Test
+  void testTagReviewerResolutionLoadsClassificationForInheritedReviewers() {
+    when(execution.getVariable("global_relatedEntity")).thenReturn("<#E::tag::PII.Sensitive>");
+    when(mockEntity.getReviewers()).thenReturn(List.of());
+    when(mockEntity.getOwners()).thenReturn(List.of());
+    when(assigneesExpr.getValue(execution))
+        .thenReturn("{\"addReviewers\":true,\"addOwners\":false,\"users\":[],\"teams\":[]}");
+
+    delegate.execute(execution);
+
+    mockedEntity.verify(
+        () ->
+            Entity.getEntity(
+                any(MessageParser.EntityLink.class),
+                org.mockito.ArgumentMatchers.eq("reviewers,owners,classification"),
+                any(Include.class)),
+        times(1));
   }
 
   private static void injectField(Object target, String fieldName, Object value) throws Exception {

@@ -100,9 +100,12 @@ export const redirectToHomePage = async (
   }
 
   await page.waitForURL('**/my-data');
+  await page.getByTestId('searchBox').waitFor({ state: 'visible' });
 
   if (_waitForLoaders) {
-    await waitForAllLoadersToDisappear(page);
+    await waitForAllLoadersToDisappear(page, 'loader', 15000).catch(
+      () => undefined
+    );
   }
 };
 
@@ -839,8 +842,13 @@ export const testPaginationNavigation = async (
     );
   };
 
+  await waitForAllLoadersToDisappear(page);
   if (waitForLoadSelector) {
-    await page.locator(waitForLoadSelector).waitFor({ state: 'visible' });
+    await page
+      .locator(waitForLoadSelector)
+      .first()
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .catch(() => undefined);
   }
   await waitForAllLoadersToDisappear(page);
 

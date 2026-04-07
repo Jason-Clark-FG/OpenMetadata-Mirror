@@ -81,15 +81,22 @@ export const visitEntityPage = async (data: {
     await page.getByTestId('welcome-screen-close-btn').click();
   }
 
-  await page.getByTestId('searchBox').fill(searchTerm);
-  await page.waitForResponse(
-    (response) =>
-      response.url().includes('/api/v1/search/query') &&
-      response.url().includes('index=dataAsset') &&
-      response.url().includes('exclude_source_fields')
-  );
+  const searchResponse = page
+    .waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/search/query') &&
+        response.url().includes('index=dataAsset') &&
+        response.url().includes('exclude_source_fields'),
+      { timeout: 5000 }
+    )
+    .catch(() => undefined);
 
-  await page.getByTestId(dataTestId).getByTestId('data-name').click();
+  await page.getByTestId('searchBox').fill(searchTerm);
+  await searchResponse;
+
+  const targetResult = page.getByTestId(dataTestId);
+  await targetResult.waitFor({ state: 'visible', timeout: 30000 });
+  await targetResult.getByTestId('data-name').click();
   await waitForAllLoadersToDisappear(page);
   await page.getByTestId('searchBox').clear();
 };
@@ -194,24 +201,60 @@ export const addOwner = async ({
     await page.getByRole('listitem', { name: owner }).click();
     await patchRequest;
   } else {
-    const ownerItem = page
+    const ownerItemByRole = page.getByRole('listitem', {
+      name: owner,
+      exact: true,
+    });
+    const ownerItemBySelectableClass = page
       .locator('.selectable-list-item')
       .filter({ hasText: owner })
       .first();
+    const ownerItemByAntListClass = page
+      .locator('.ant-list-item')
+      .filter({ hasText: owner })
+      .first();
+
+    const getVisibleOwnerItem = async () => {
+      if (await ownerItemByRole.first().isVisible().catch(() => false)) {
+        return ownerItemByRole.first();
+      }
+
+      if (
+        await ownerItemByAntListClass.first().isVisible().catch(() => false)
+      ) {
+        return ownerItemByAntListClass.first();
+      }
+
+      if (
+        await ownerItemBySelectableClass.first().isVisible().catch(() => false)
+      ) {
+        return ownerItemBySelectableClass.first();
+      }
+
+      return undefined;
+    };
 
     await expect
       .poll(
         async () => {
-          const visible = await ownerItem.isVisible().catch(() => false);
-          if (visible) {
+          if (await getVisibleOwnerItem()) {
             return true;
           }
 
           await ownerSearchInput.fill('');
           await ownerSearchInput.fill(owner);
+          await page
+            .waitForResponse(
+              (response) =>
+                response.request().method() === 'GET' &&
+                response.url().includes('/api/v1/search/query') &&
+                response.url().includes('user_search_index'),
+              { timeout: 5000 }
+            )
+            .catch(() => undefined);
           await waitForAllLoadersToDisappear(page);
 
-          return await ownerItem.isVisible().catch(() => false);
+          return Boolean(await getVisibleOwnerItem());
         },
         {
           timeout: 60000,
@@ -220,7 +263,9 @@ export const addOwner = async ({
         }
       )
       .toBe(true);
-    await ownerItem.click();
+    const visibleOwnerItem = await getVisibleOwnerItem();
+    await expect(visibleOwnerItem).toBeDefined();
+    await visibleOwnerItem?.click();
     const patchRequest = page.waitForResponse(`/api/v1/${endpoint}/*`);
     await page.getByTestId('selectable-list-update-btn').click();
     await patchRequest;

@@ -10,19 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-/*
- *  Copyright 2026 Collate.
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
 import { expect, Locator, Page } from '@playwright/test';
 import { clickOutside, descriptionBox } from './common';
 import { waitForAllLoadersToDisappear } from './entity';
@@ -272,9 +259,22 @@ export const selectAssignee = async (page: Page, assigneeName: string) => {
     '[data-testid="select-assignee"] .ant-select-selection-search input'
   );
   const assigneeOption = page.getByTestId(assigneeName).first();
+  const assigneeSearchResponse = page
+    .waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        response.url().includes('/api/v1/search/query') &&
+        response.url().includes('user_search_index'),
+      { timeout: 5000 }
+    )
+    .catch(() => null);
 
   await assigneeInput.click();
   await assigneeInput.fill(assigneeName);
+  await Promise.race([
+    assigneeSearchResponse,
+    assigneeOption.waitFor({ state: 'visible', timeout: 5000 }),
+  ]).catch(() => undefined);
   await expect(assigneeOption).toBeVisible();
   await assigneeOption.click();
   await clickOutside(page);
@@ -677,4 +677,52 @@ export const closeTaskFromDetails = async (page: Page) => {
   await taskActionResponse;
   await page.waitForLoadState('networkidle');
   logTaskDebug('closeTaskFromDetails:done');
+};
+
+export const approveTaskFromDetails = async (page: Page) => {
+  logTaskDebug('approveTaskFromDetails:start');
+  const taskPanel = page.locator(TASK_PANEL_SELECTOR);
+  const approveButton = taskPanel.getByTestId('approve-button').first();
+  const workflowPrimaryButton = taskPanel
+    .getByTestId('workflow-task-action-primary')
+    .first();
+  const workflowDropdownPrimaryButton = taskPanel
+    .locator('[data-testid="workflow-task-action-dropdown"] button')
+    .first();
+  const genericPrimaryButton = taskPanel
+    .getByRole('button', { name: /approve|accept|resolve|complete/i })
+    .first();
+
+  const clickAndWait = async (button: Locator) => {
+    const taskActionResponse = waitForTaskActionResponse(page);
+    await button.scrollIntoViewIfNeeded().catch(() => undefined);
+    await button.click({ force: true });
+    await taskActionResponse;
+    await page.waitForLoadState('networkidle');
+  };
+
+  if (await approveButton.isVisible().catch(() => false)) {
+    await clickAndWait(approveButton);
+    logTaskDebug('approveTaskFromDetails:approveButton');
+
+    return;
+  }
+
+  if (await workflowPrimaryButton.isVisible().catch(() => false)) {
+    await clickAndWait(workflowPrimaryButton);
+    logTaskDebug('approveTaskFromDetails:workflowPrimaryButton');
+
+    return;
+  }
+
+  if (await workflowDropdownPrimaryButton.isVisible().catch(() => false)) {
+    await clickAndWait(workflowDropdownPrimaryButton);
+    logTaskDebug('approveTaskFromDetails:workflowDropdownPrimaryButton');
+
+    return;
+  }
+
+  await expect(genericPrimaryButton).toBeVisible();
+  await clickAndWait(genericPrimaryButton);
+  logTaskDebug('approveTaskFromDetails:genericPrimaryButton');
 };

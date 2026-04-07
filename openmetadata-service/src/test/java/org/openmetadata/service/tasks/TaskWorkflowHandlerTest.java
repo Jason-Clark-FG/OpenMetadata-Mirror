@@ -116,7 +116,7 @@ class TaskWorkflowHandlerTest {
       when(workflowHandler.transformToNodeVariables(eq(taskId), any()))
           .thenAnswer(invocation -> invocation.getArgument(1));
       when(workflowHandler.resolveTask(eq(taskId), any())).thenReturn(true);
-      when(workflowHandler.isTaskStillOpen(taskId)).thenReturn(true);
+      when(workflowHandler.isAwaitingAdditionalVotes(taskId)).thenReturn(true);
 
       entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
       when(taskRepository.getFields(anyString())).thenReturn(fields);
@@ -128,7 +128,7 @@ class TaskWorkflowHandlerTest {
 
       assertSame(refreshedTask, result);
       verify(taskRepository, never()).resolveTask(any(), any(TaskResolution.class), anyString());
-      verify(workflowHandler).isTaskStillOpen(taskId);
+      verify(workflowHandler).isAwaitingAdditionalVotes(taskId);
     }
   }
 
@@ -151,6 +151,7 @@ class TaskWorkflowHandlerTest {
       when(workflowHandler.transformToNodeVariables(eq(taskId), any()))
           .thenAnswer(invocation -> invocation.getArgument(1));
       when(workflowHandler.resolveTask(eq(taskId), any())).thenReturn(false);
+      when(workflowHandler.hasActiveRuntimeTask(taskId)).thenReturn(true);
 
       entityMock.when(() -> Entity.getEntityRepository(Entity.TASK)).thenReturn(taskRepository);
 

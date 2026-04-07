@@ -154,17 +154,38 @@ async function updateDescription(
   const hasModalEditor = await modalDescriptionBox
     .isVisible({ timeout: 2000 })
     .catch(() => false);
-  const descriptionBox = hasModalEditor
-    ? modalDescriptionBox
-    : inlineEditor;
   if (hasModalEditor) {
     await expect(dialog).toBeVisible();
   }
-  await expect(descriptionBox).toBeVisible();
-  await descriptionBox.click({ force: true });
-  await page.keyboard.press('ControlOrMeta+A');
-  await page.keyboard.press('Backspace');
-  await descriptionBox.fill(description);
+
+  const descriptionBoxLocator = () =>
+    (
+      hasModalEditor
+        ? dialog.locator(editorSelector)
+        : descriptionContainer.locator(editorSelector)
+    ).first();
+
+  let descriptionUpdated = false;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const descriptionBox = descriptionBoxLocator();
+    await expect(descriptionBox).toBeVisible();
+
+    try {
+      await descriptionBox.focus();
+      await page.keyboard.press('ControlOrMeta+A');
+      await page.keyboard.press('Backspace');
+      await descriptionBox.fill(description);
+      descriptionUpdated = true;
+      break;
+    } catch (error) {
+      if (attempt === 2) {
+        throw error;
+      }
+      await page.waitForTimeout(250);
+    }
+  }
+
+  expect(descriptionUpdated).toBe(true);
 
   const patchResponse = page.waitForResponse(
     (response) =>

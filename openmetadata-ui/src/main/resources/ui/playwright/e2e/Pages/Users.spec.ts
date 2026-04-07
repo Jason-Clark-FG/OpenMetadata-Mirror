@@ -26,13 +26,12 @@ import { GlobalSettingOptions } from '../../constant/settings';
 import { SidebarItem } from '../../constant/sidebar';
 import { PolicyClass } from '../../support/access-control/PoliciesClass';
 import { RolesClass } from '../../support/access-control/RolesClass';
-import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { PersonaClass } from '../../support/persona/PersonaClass';
 import { TeamClass } from '../../support/team/TeamClass';
 import { UserClass } from '../../support/user/UserClass';
-import { performAdminLogin } from '../../utils/admin';
+import { createAdminApiContext, performAdminLogin } from '../../utils/admin';
 import {
   getApiContext,
   redirectToHomePage,
@@ -40,7 +39,7 @@ import {
   uuid,
   visitOwnProfilePage,
 } from '../../utils/common';
-import { addOwner, waitForAllLoadersToDisappear } from '../../utils/entity';
+import { waitForAllLoadersToDisappear } from '../../utils/entity';
 import { settingClick, sidebarClick } from '../../utils/sidebar';
 import {
   addUser,
@@ -87,6 +86,7 @@ let user2: UserClass;
 let user3: UserClass;
 let tableEntity: TableClass;
 let tableEntity2: TableClass;
+let tableEntityFqn: string;
 let policy: PolicyClass;
 let role: RolesClass;
 let persona1: PersonaClass;
@@ -165,6 +165,7 @@ test.beforeAll('Setup pre-requests', async ({ browser }) => {
   await user3.setAdminRole(apiContext);
   await tableEntity.create(apiContext);
   await tableEntity2.create(apiContext);
+  tableEntityFqn = tableEntity.entityResponseData.fullyQualifiedName;
   await policy.create(apiContext, DATA_STEWARD_RULES);
   await role.create(apiContext, [policy.responseData.name]);
   await persona1.create(apiContext, [adminUser.responseData.id]);
@@ -456,27 +457,46 @@ test.describe('User with Data Consumer Roles', () => {
   });
 
   test('Permissions for table details page for Data Consumer', async ({
-    adminPage,
     dataConsumerPage,
   }) => {
     test.slow(true);
-    await redirectToHomePage(adminPage);
+    const permissionTable = new TableClass();
+    const { apiContext, afterAction } = await createAdminApiContext();
+    try {
+      const { entity } = await permissionTable.create(apiContext);
+      const tableFqn = entity.fullyQualifiedName;
+      const tableId = entity.id;
+      const tablePageUrl = `/table/${encodeURIComponent(tableFqn)}`;
 
-    await tableEntity.visitEntityPage(adminPage);
-    await waitForAllLoadersToDisappear(adminPage);
+      const ownerPatchResponse = await apiContext.patch(
+        `/api/v1/tables/${tableId}`,
+        {
+          data: [
+            {
+              op: 'add',
+              path: '/owners',
+              value: [{ id: user3.responseData.id, type: 'user' }],
+            },
+          ],
+          headers: {
+            'Content-Type': 'application/json-patch+json',
+          },
+        }
+      );
 
-    await addOwner({
-      page: adminPage,
-      owner: user.responseData.displayName,
-      type: 'Users',
-      endpoint: EntityTypeEndpoint.Table,
-      dataTestId: 'data-assets-header',
-    });
+      expect(
+        ownerPatchResponse.ok(),
+        `Failed to patch table ${tableId}: ${await ownerPatchResponse.text()}`
+      ).toBeTruthy();
 
-    await tableEntity.visitEntityPage(dataConsumerPage);
-    await waitForAllLoadersToDisappear(dataConsumerPage);
+      await dataConsumerPage.goto(tablePageUrl);
+      await waitForAllLoadersToDisappear(dataConsumerPage);
 
-    await checkDataConsumerPermissions(dataConsumerPage);
+      await checkDataConsumerPermissions(dataConsumerPage);
+    } finally {
+      await permissionTable.delete(apiContext).catch(() => undefined);
+      await afterAction();
+    }
   });
 
   test('Update user details for Data Consumer', async ({
@@ -567,17 +587,26 @@ test.describe('User with Data Steward Roles', () => {
 
     await checkStewardServicesPermissions(dataStewardPage);
 
-    await tableEntity2.visitEntityPage(adminPage);
+    const { apiContext, afterAction } = await getApiContext(adminPage);
+    try {
+      const tableResponse = await apiContext.get(
+        `/api/v1/tables/${tableEntity2.entityResponseData.id}`
+      );
+      expect(tableResponse.ok()).toBeTruthy();
+      const table = await tableResponse.json();
 
-    await addOwner({
-      page: adminPage,
-      owner: user.responseData.displayName ?? user.responseData.name,
-      type: 'Users',
-      endpoint: EntityTypeEndpoint.Table,
-      dataTestId: 'data-assets-header',
-    });
+      await tableEntity2.setOwner(apiContext, {
+        id: user3.responseData.id,
+        type: 'user',
+      });
 
-    await tableEntity2.visitEntityPage(dataStewardPage);
+      await dataStewardPage.goto(
+        `/table/${encodeURIComponent(table.fullyQualifiedName)}`
+      );
+      await waitForAllLoadersToDisappear(dataStewardPage);
+    } finally {
+      await afterAction();
+    }
 
     await checkStewardPermissions(dataStewardPage);
   });
@@ -608,48 +637,50 @@ test.describe('User Profile Feed Interactions', () => {
   test('Should navigate to user profile from feed card avatar click', async ({
     browser,
   }) => {
-    const { page, afterAction } = await performUserLogin(browser, user3);
-
-    await redirectToHomePage(page);
-    const feedResponse = page.waitForResponse('/api/v1/feed?type=Conversation');
-
-    await visitOwnProfilePage(page);
-    await feedResponse;
-
-    await page.getByTestId('message-container').first().waitFor();
-
-    const avatar = page
-      .locator('#feedData [data-testid="message-container"]')
-      .first()
-      .locator('[data-testid="profile-avatar"]')
-      .first();
-
-    await avatar.hover();
-    const popover = page.locator('.ant-popover-card');
-    await popover.waitFor({ state: 'visible' });
-
-    // Get the expected username from the popover BEFORE clicking
-    const userNameElement = popover.getByTestId('user-name');
-    const expectedUserName = await userNameElement.textContent();
-
-    // Set up response listener AFTER getting expected name and BEFORE clicking
-    const userDetailsResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/users/name/') &&
-        response.request().method() === 'GET'
+    const { page, apiContext, afterAction } = await performUserLogin(
+      browser,
+      user3
     );
+    const entityFqn = tableEntityFqn;
+    const seededMessage = `Profile feed seed ${uuid()}`;
+    let threadId: string | undefined;
 
-    await userNameElement.click();
-    const userData = await userDetailsResponse;
-    expect(userData.status()).toBe(200);
-    // redirecting on new page
+    try {
+      const conversationResponse = await apiContext.post('/api/v1/feed', {
+        data: {
+          about: `<#E::table::${entityFqn}>`,
+          from: user3.responseData.name,
+          message: seededMessage,
+          type: 'Conversation',
+        },
+      });
+      expect(conversationResponse.ok()).toBeTruthy();
+      const conversation = await conversationResponse.json();
+      threadId = conversation.id as string;
 
-    // Verify we navigated to the correct user's profile
-    await expect(page.locator('[data-testid="user-display-name"]')).toHaveText(
-      expectedUserName ?? ''
-    );
+      await redirectToHomePage(page);
+      await page.goto(`/table/${encodeURIComponent(entityFqn)}/activity_feed/all`);
+      await waitForAllLoadersToDisappear(page);
 
-    await afterAction();
+      const messageContainer = page
+        .locator('[data-testid="message-container"]')
+        .filter({ hasText: seededMessage })
+        .first();
+      await expect(messageContainer).toBeVisible({ timeout: 30000 });
+
+      await messageContainer.locator('a[href*="/users/"]').first().click();
+      await page.waitForURL(new RegExp(`/users/${user3.responseData.name}`));
+      await page.getByTestId('user-profile').waitFor();
+
+      await expect(page.locator('[data-testid="user-display-name"]')).toHaveText(
+        user3.responseData.displayName ?? user3.responseData.name
+      );
+    } finally {
+      if (threadId) {
+        await apiContext.delete(`/api/v1/feed/${threadId}`).catch(() => undefined);
+      }
+      await afterAction();
+    }
   });
 
   test('Close the profile dropdown after redirecting to user profile page', async ({

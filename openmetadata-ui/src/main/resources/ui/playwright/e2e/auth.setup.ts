@@ -208,6 +208,7 @@ setup('authenticate all users', async ({ browser }) => {
     ownerContext.newPage(),
   ]);
   let newAdminContext: BrowserContext | undefined;
+  let newAdminPage: Page | undefined;
 
   try {
     // Create admin page and context
@@ -217,7 +218,7 @@ setup('authenticate all users', async ({ browser }) => {
 
     // Create a new page to persist admin storage state after token expiry is set to 4 hours.
     newAdminContext = await browser.newContext();
-    const newAdminPage = await newAdminContext.newPage();
+    newAdminPage = await newAdminContext.newPage();
 
     const { apiContext, afterAction } = await getApiContext(adminPage);
 
@@ -324,47 +325,30 @@ setup('authenticate all users', async ({ browser }) => {
     });
 
     await afterAction();
-
-    if (newAdminPage) {
-      await newAdminPage.close();
-    }
   } catch (error) {
     console.error('Error during authentication setup:', error);
 
     throw error;
   } finally {
-    // Close pages sequentially to avoid conflicts
-    if (dataConsumerPage) {
-      await dataConsumerPage.close();
-    }
-    if (dataStewardPage) {
-      await dataStewardPage.close();
-    }
-    if (editDescriptionPage) {
-      await editDescriptionPage.close();
-    }
-    if (editTagsPage) {
-      await editTagsPage.close();
-    }
-    if (editGlossaryTermPage) {
-      await editGlossaryTermPage.close();
-    }
-    if (viewOnlyPage) {
-      await viewOnlyPage.close();
-    }
-    if (ownerPage) {
-      await ownerPage.close();
-    }
-    if (newAdminContext) {
-      await newAdminContext.close();
-    }
-    await adminContext.close();
-    await dataConsumerContext.close();
-    await dataStewardContext.close();
-    await editDescriptionContext.close();
-    await editTagsContext.close();
-    await editGlossaryTermContext.close();
-    await viewOnlyContext.close();
-    await ownerContext.close();
+    // Always attempt to tear down every page/context, even if one close fails.
+    await Promise.allSettled([
+      newAdminPage?.close(),
+      dataConsumerPage?.close(),
+      dataStewardPage?.close(),
+      editDescriptionPage?.close(),
+      editTagsPage?.close(),
+      editGlossaryTermPage?.close(),
+      viewOnlyPage?.close(),
+      ownerPage?.close(),
+      newAdminContext?.close(),
+      adminContext.close(),
+      dataConsumerContext.close(),
+      dataStewardContext.close(),
+      editDescriptionContext.close(),
+      editTagsContext.close(),
+      editGlossaryTermContext.close(),
+      viewOnlyContext.close(),
+      ownerContext.close(),
+    ]);
   }
 });

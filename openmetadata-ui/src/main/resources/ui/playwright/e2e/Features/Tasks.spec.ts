@@ -18,6 +18,10 @@ import { UserClass } from '../../support/user/UserClass';
 import { performAdminLogin } from '../../utils/admin';
 import { redirectToHomePage } from '../../utils/common';
 import { visitEntityPage } from '../../utils/entity';
+import {
+  addTagSuggestion,
+  selectAssignee,
+} from '../../utils/taskWorkflow';
 
 /**
  * Task System E2E Tests
@@ -127,21 +131,7 @@ test.describe('Task Workflow Tests', () => {
       });
 
       // Manually select assignee
-      const assigneeInput = page.locator(
-        '[data-testid="select-assignee"] .ant-select-selector input'
-      );
-      await assigneeInput.click();
-
-      const userSearchResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes('/api/v1/search/query') &&
-          response.url().includes('user_search_index')
-      );
-      await assigneeInput.fill(regularUser.responseData.name);
-      await userSearchResponse;
-
-      const userOption = page.getByTestId(regularUser.responseData.name);
-      await userOption.click();
+      await selectAssignee(page, regularUser.responseData.name);
 
       // Submit task
       const submitBtn = page.getByTestId('submit-btn');
@@ -170,17 +160,14 @@ test.describe('Task Workflow Tests', () => {
 
       // Add suggested tags
       const tagsInput = page.locator(
-        '[data-testid="tag-selector"] .ant-select-selector input'
+        '[data-testid="tag-selector"] .ant-select-selection-search input'
       );
-      if (await tagsInput.isVisible()) {
-        await tagsInput.click();
-        await tagsInput.fill('PII');
-        await page.waitForLoadState('networkidle');
-
-        const tagOption = page.getByTestId('tag-PII.Sensitive').first();
-        if (await tagOption.isVisible()) {
-          await tagOption.click();
-        }
+      if (await tagsInput.isVisible().catch(() => false)) {
+        await addTagSuggestion({
+          page,
+          searchText: 'PII',
+          tagTestId: 'tag-PII.Sensitive',
+        });
       }
 
       // Submit - tag request pages use submit-tag-request

@@ -52,7 +52,9 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
                       inputNamespaceMap.get(RELATED_ENTITY_VARIABLE), RELATED_ENTITY_VARIABLE));
       EntityRepository<?> entityRepository = Entity.getEntityRepository(entityLink.getEntityType());
       boolean entitySupportsReviewers = entityRepository.isSupportsReviewers();
-      String relationshipFields = entitySupportsReviewers ? "reviewers,owners" : "owners";
+      String relationshipFields =
+          getRelationshipFieldsForAssigneeResolution(
+              entityLink.getEntityType(), entitySupportsReviewers);
       EntityInterface entity = Entity.getEntity(entityLink, relationshipFields, Include.ALL);
 
       Set<String> assignees = new LinkedHashSet<>();
@@ -268,5 +270,18 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
           exc.getMessage());
       return List.of();
     }
+  }
+
+  private String getRelationshipFieldsForAssigneeResolution(
+      String entityType, boolean entitySupportsReviewers) {
+    if (!entitySupportsReviewers) {
+      return "owners";
+    }
+
+    return switch (entityType) {
+      case Entity.TAG -> "reviewers,owners,classification";
+      case Entity.GLOSSARY_TERM -> "reviewers,owners,parent,glossary";
+      default -> "reviewers,owners";
+    };
   }
 }
