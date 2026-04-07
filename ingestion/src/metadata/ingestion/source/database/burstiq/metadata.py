@@ -366,19 +366,19 @@ class Burstiqsource(DatabaseServiceSource):
         """
         # BurstIQ to OpenMetadata datatype mapping
         type_mapping = {
-            "STRING": "VARCHAR",
+            "STRING": "STRING",
             "INTEGER": "INT",
             "LONG": "BIGINT",
             "DOUBLE": "DOUBLE",
             "FLOAT": "FLOAT",
             "BOOLEAN": "BOOLEAN",
-            "DATETIME": "TIMESTAMP",
+            "DATETIME": "DATETIME",
             "DATE": "DATE",
             "TIME": "TIME",
             "BINARY": "BINARY",
             "DECIMAL": "DECIMAL",
-            "UUID": "VARCHAR",  # UUID stored as string
-            "ENUM": "VARCHAR",  # Enum stored as string
+            "UUID": "UUID",
+            "ENUM": "ENUM",
             "JSON": "JSON",
             "ARRAY": "ARRAY",
             "OBJECT": "STRUCT",

@@ -11,6 +11,7 @@
 """
 Client to interact with BurstIQ LifeGraph APIs
 """
+import re
 import traceback
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -328,8 +329,7 @@ class BurstIQClient:
             return {}
         chain_metrics = data.get("chainMetrics", {})
         return {
-            name: metrics.get("assets", 0)
-            for name, metrics in chain_metrics.items()
+            name: metrics.get("assets", 0) for name, metrics in chain_metrics.items()
         }
 
     def get_records_by_tql(
@@ -346,6 +346,10 @@ class BurstIQClient:
         Returns:
             List of flat record dicts (data envelope unwrapped)
         """
+        if not re.fullmatch(r"[A-Za-z0-9_]+", chain):
+            raise ValueError(
+                f"Invalid chain name '{chain}': must be alphanumeric/underscore only"
+            )
         tql = f"FROM {chain} SKIP {skip} LIMIT {limit} SELECT data.*"
         logger.info(f"Fetching records for chain '{chain}' via TQL (limit={limit})")
         try:

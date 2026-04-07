@@ -16,7 +16,7 @@ pandas DataFrame, and exposes the standard SamplerInterface contract
 so that PandasProfilerInterface can be used without any BurstIQ-specific
 profiler code.
 """
-from typing import Callable, Iterator, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional
 
 import pandas as pd
 
@@ -86,12 +86,6 @@ class BurstIQSampler(SamplerInterface):
             records = self.client.get_records_by_tql(chain, limit=int(limit))
             df = pd.DataFrame(records) if records else pd.DataFrame()
             self._cached_df = self._cast_dataframe(df)
-            df_cols = set(self._cached_df.columns)
-            om_cols = {c.name.root for c in self.entity.columns}
-            print(f"[DEBUG] df columns ({len(df_cols)}): {sorted(df_cols)}")
-            print(f"[DEBUG] OM columns ({len(om_cols)}): {sorted(om_cols)}")
-            print(f"[DEBUG] In OM but missing from df: {sorted(om_cols - df_cols)}")
-            print(f"[DEBUG] In df but not in OM: {sorted(df_cols - om_cols)}")
         df = self._cached_df
         return lambda: iter([df])
 
@@ -163,9 +157,7 @@ class BurstIQSampler(SamplerInterface):
             if col.dataType in _NUMERIC_TYPES:
                 df[col_name] = pd.to_numeric(df[col_name], errors="coerce")
             elif col.dataType in _DATETIME_TYPES:
-                df[col_name] = pd.to_datetime(
-                    df[col_name], errors="coerce", utc=True
-                )
+                df[col_name] = pd.to_datetime(df[col_name], errors="coerce", utc=True)
         return df
 
     def _get_limit(self) -> int:
