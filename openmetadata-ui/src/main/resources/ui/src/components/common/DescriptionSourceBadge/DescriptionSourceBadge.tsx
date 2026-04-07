@@ -11,20 +11,21 @@
  *  limitations under the License.
  */
 
-import { Tag, Tooltip } from 'antd';
+import { Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as AutomatedTagIcon } from '../../../assets/svg/automated-tag.svg';
-import { ReactComponent as AutomatorBotIcon } from '../../../assets/svg/automator-bot.svg';
-import { ReactComponent as CheckCircleIcon } from '../../../assets/svg/ic-check-circle-colored.svg';
-import { ReactComponent as StarIcon } from '../../../assets/svg/ic-suggestions-coloured.svg';
+import { ReactComponent as AISuggestionIcon } from '../../../assets/svg/ic-ai-suggestion.svg';
+import { ReactComponent as AutomatedIcon } from '../../../assets/svg/ic-automated.svg';
+import { ReactComponent as CheckCircleIcon } from '../../../assets/svg/ic-check-circle.svg';
+import { ReactComponent as PropagatedIcon } from '../../../assets/svg/ic-propagated.svg';
 import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import {
   formatDate,
   formatDateTime,
   getShortRelativeTime,
 } from '../../../utils/date-time/DateTimeUtils';
+import UserPopOverCard from '../PopOverCard/UserPopOverCard';
 import './description-source-badge.less';
 import { DescriptionSourceBadgeProps } from './DescriptionSourceBadge.interface';
 
@@ -40,25 +41,27 @@ interface BadgeConfig {
 const BADGE_CONFIG: Partial<Record<ChangeSource, BadgeConfig>> = {
   [ChangeSource.Suggested]: {
     labelKey: 'label.ai',
-    tooltipKey: 'label.ai-suggested',
-    icon: <StarIcon width={16} />,
+    tooltipKey: 'label.ai-generated-description',
+    icon: <AISuggestionIcon height={14} width={14} />,
     className: 'badge-suggested',
     testId: 'ai-suggested-badge',
     iconOnly: true,
   },
   [ChangeSource.Automated]: {
     labelKey: 'label.automated',
-    tooltipKey: 'label.automated',
-    icon: <AutomatorBotIcon height={12} width={12} />,
+    tooltipKey: 'label.automated-description',
+    icon: <AutomatedIcon height={16} width={16} />,
     className: 'badge-automated',
     testId: 'automated-badge',
+    iconOnly: true,
   },
   [ChangeSource.Propagated]: {
     labelKey: 'label.propagated',
-    tooltipKey: 'label.propagated',
-    icon: <AutomatedTagIcon height={12} width={12} />,
+    tooltipKey: 'label.description-inherited-from-parent-entity',
+    icon: <PropagatedIcon height={16} width={16} />,
     className: 'badge-propagated',
     testId: 'propagated-badge',
+    iconOnly: true,
   },
 };
 
@@ -78,16 +81,47 @@ const DescriptionSourceBadge = ({
     return BADGE_CONFIG[changeSummaryEntry.changeSource] ?? null;
   }, [changeSummaryEntry?.changeSource]);
 
+  const tooltipContent = changeSummaryEntry?.changedAt
+    ? formatDateTime(changeSummaryEntry.changedAt)
+    : undefined;
+
+  const renderTooltipContent = useMemo(() => {
+    if (!showBadge || !config) {
+      return '';
+    }
+
+    return (
+      <>
+        {config.iconOnly ? (
+          <Tooltip title={t(config.tooltipKey)}>
+            <span
+              className="description-source-icon"
+              data-testid={config.testId}>
+              {config.icon}
+            </span>
+          </Tooltip>
+        ) : (
+          <Tooltip title={tooltipContent}>
+            <div
+              className={classNames(
+                'description-source-badge',
+                config.className
+              )}>
+              {config.icon}
+              <span>{t(config.labelKey)}</span>
+            </div>
+          </Tooltip>
+        )}
+      </>
+    );
+  }, []);
+
   const isManualChange =
     changeSummaryEntry?.changeSource === ChangeSource.Manual;
 
   if (!config && !isManualChange) {
     return null;
   }
-
-  const tooltipContent = changeSummaryEntry?.changedAt
-    ? formatDateTime(changeSummaryEntry.changedAt)
-    : undefined;
 
   const actorLabel = config ? t('label.accepted-by') : t('label.authored-by');
 
@@ -103,9 +137,20 @@ const DescriptionSourceBadge = ({
           'description-source-text-success': Boolean(config),
         })}
         data-testid="source-actor">
-        {config ? <CheckCircleIcon height={14} width={14} /> : null}
-        <span>
-          {actorLabel} {changeSummaryEntry.changedBy}
+        {config ? (
+          <CheckCircleIcon className="text-primary" height={12} width={12} />
+        ) : null}
+        <span className="d-flex items-center gap-1">
+          <span className="text-grey-500">{actorLabel}</span>
+
+          <UserPopOverCard
+            showUserName
+            className="text-grey-900 actor-username"
+            displayName={changeSummaryEntry.changedBy}
+            profileWidth={16}
+            showUserProfile={false}
+            userName={changeSummaryEntry.changedBy || '-'}
+          />
         </span>
       </span>
     ) : null;
@@ -125,29 +170,7 @@ const DescriptionSourceBadge = ({
     <div
       className="description-source-container"
       data-testid="description-source-container">
-      {showBadge && config ? (
-        config.iconOnly ? (
-          <Tooltip title={t(config.tooltipKey)}>
-            <span data-testid={config.testId} role="status" tabIndex={0}>
-              {config.icon}
-            </span>
-          </Tooltip>
-        ) : (
-          <Tooltip title={tooltipContent}>
-            <Tag
-              className={classNames(
-                'description-source-badge',
-                config.className
-              )}
-              data-testid={config.testId}
-              role="status"
-              tabIndex={0}>
-              {config.icon}
-              <span>{t(config.labelKey)}</span>
-            </Tag>
-          </Tooltip>
-        )
-      ) : null}
+      {renderTooltipContent}
       {(actorInfo || timestampInfo) && (
         <div className="description-source-metadata">
           {actorInfo}

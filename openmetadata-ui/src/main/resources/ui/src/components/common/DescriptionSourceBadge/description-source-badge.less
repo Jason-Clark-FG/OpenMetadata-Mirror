@@ -16,11 +16,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  border-radius: 14px;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
-  padding: 2px 8px 2px 6px;
   cursor: default;
   white-space: nowrap;
   transition: filter 0.15s ease;
@@ -34,29 +32,35 @@
   }
 
   &.badge-suggested {
-    background-color: @purple-1;
     color: @purple-5;
-    border: 1px solid @purple-7;
+
+    span {
+      background: linear-gradient(270deg, @purple-5 0%, @blue-7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
   }
 
   &.badge-automated {
-    background-color: @green-9;
     color: @green-10;
-    border: 1px solid @green-12;
   }
 
   &.badge-propagated {
-    background-color: @blue-1;
     color: @blue-21;
-    border: 1px solid @blue-13;
   }
 }
 
 .description-source-container {
   display: inline-flex;
-  align-items: center;
+  align-items: self-start;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+
+  .description-source-icon {
+    margin-right: 4px;
+    display: flex;
+  }
 }
 
 .description-source-metadata {
@@ -71,11 +75,10 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: @grey-600;
   font-weight: 500;
 
-  &.description-source-text-success {
-    color: @green-10;
+  .actor-username {
+    max-width: 90px;
   }
 }
 

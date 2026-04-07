@@ -17,7 +17,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EntityField } from '../../../constants/Feeds.constants';
 import { Domain } from '../../../generated/entity/domains/domain';
-import { ChangeSource } from '../../../generated/type/changeSummaryMap';
 import { useFqn } from '../../../hooks/useFqn';
 import { isDescriptionContentEmpty } from '../../../utils/BlockEditorUtils';
 import { getEntityFeedLink } from '../../../utils/EntityUtils';
@@ -222,11 +221,7 @@ const DescriptionV1 = ({
   }, [description, suggestionData, isDescriptionExpanded]);
 
   const shouldShowDescriptionMetadata = useMemo(
-    () =>
-      changeSummary?.['description']?.changeSource === ChangeSource.Manual ||
-      changeSummary?.['description']?.changeSource === ChangeSource.Suggested ||
-      changeSummary?.['description']?.changeSource === ChangeSource.Automated ||
-      changeSummary?.['description']?.changeSource === ChangeSource.Propagated,
+    () => changeSummary?.['description']?.changeSource != null,
     [changeSummary]
   );
 
@@ -267,7 +262,7 @@ const DescriptionV1 = ({
         className={classNames('schema-description d-flex', className)}
         direction="vertical"
         size={16}>
-        {!wrapInCard ? header : null}
+        {wrapInCard ? null : header}
         <div>
           {descriptionContent}
           {!suggestionData && shouldShowDescriptionMetadata && (
