@@ -320,7 +320,7 @@ public class SinkTaskDelegate implements JavaDelegate {
         failedCount++;
         errors.add(
             SinkResult.SinkError.builder()
-                .entityFqn(entityLinkStr)
+                .entityFqn(entity.getFullyQualifiedName())
                 .errorMessage("Failed to process entity: " + e.getMessage())
                 .cause(e)
                 .build());
