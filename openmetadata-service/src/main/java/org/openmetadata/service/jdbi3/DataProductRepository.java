@@ -209,9 +209,17 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
       List<EntityReference> experts = new ArrayList<>();
 
       for (EntityReference domainRef : domains) {
-        Domain domain = Entity.getEntity(DOMAIN, domainRef.getId(), "owners,experts", NON_DELETED);
-        owners = mergedInheritedEntityRefs(owners, domain.getOwners());
-        experts = mergedInheritedEntityRefs(experts, domain.getExperts());
+        try {
+          Domain domain =
+              Entity.getEntity(DOMAIN, domainRef.getId(), "owners,experts", NON_DELETED);
+          owners = mergedInheritedEntityRefs(owners, domain.getOwners());
+          experts = mergedInheritedEntityRefs(experts, domain.getExperts());
+        } catch (EntityNotFoundException ex) {
+          LOG.debug(
+              "Skipping inherited fields from soft-deleted or missing domain {} for data product {}",
+              domainRef.getId(),
+              dataProduct.getId());
+        }
       }
       // inherit only if applicable and empty
       if (inheritOwners) {

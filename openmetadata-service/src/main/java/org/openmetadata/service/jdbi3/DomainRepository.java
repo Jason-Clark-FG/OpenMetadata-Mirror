@@ -48,6 +48,7 @@ import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.resources.domains.DomainResource;
 import org.openmetadata.service.resources.feeds.MessageParser.EntityLink;
 import org.openmetadata.service.search.DefaultInheritedFieldEntitySearch;
@@ -186,9 +187,16 @@ public class DomainRepository extends EntityRepository<Domain> {
     // domain
     EntityReference parentRef = domain.getParent() != null ? domain.getParent() : getParent(domain);
     if (parentRef != null) {
-      Domain parent = Entity.getEntity(DOMAIN, parentRef.getId(), "owners,experts", NON_DELETED);
-      inheritOwners(domain, fields, parent);
-      inheritExperts(domain, fields, parent);
+      try {
+        Domain parent = Entity.getEntity(DOMAIN, parentRef.getId(), "owners,experts", NON_DELETED);
+        inheritOwners(domain, fields, parent);
+        inheritExperts(domain, fields, parent);
+      } catch (EntityNotFoundException ex) {
+        LOG.debug(
+            "Skipping inherited fields from soft-deleted or missing parent domain {} for domain {}",
+            parentRef.getId(),
+            domain.getId());
+      }
     }
   }
 
