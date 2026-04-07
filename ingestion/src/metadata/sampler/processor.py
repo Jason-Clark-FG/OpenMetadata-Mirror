@@ -225,7 +225,9 @@ class SamplerProcessor(Processor):
     ) -> Either[SamplerResponse]:
         """Process Container entity for sampling"""
         try:
-            service_conn_config = self._copy_service_config(self.config, None)
+            service_conn_config = deepcopy(
+                self.config.source.serviceConnection.root.config
+            )
 
             sampler_interface: SamplerInterface = self.sampler_class.create(
                 service_connection_config=service_conn_config,

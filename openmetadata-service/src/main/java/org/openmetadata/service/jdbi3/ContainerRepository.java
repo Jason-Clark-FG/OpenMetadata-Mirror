@@ -513,6 +513,7 @@ public class ContainerRepository extends EntityRepository<Container> {
               .getExtension(containerId, CONTAINER_SAMPLE_DATA_EXTENSION);
       return json != null ? JsonUtils.readValue(json, TableData.class) : null;
     } catch (Exception e) {
+      LOG.warn("Failed to read sample data for container {}", containerId, e);
       return null;
     }
   }
