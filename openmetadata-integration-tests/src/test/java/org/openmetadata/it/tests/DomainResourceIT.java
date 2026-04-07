@@ -1215,13 +1215,20 @@ public class DomainResourceIT extends BaseEntityIT<Domain, CreateDomain> {
 
     client.users().delete(expert.getId().toString());
 
+    Domain listed = null;
     ListParams params = new ListParams().setFields("experts").withLimit(100);
-    ListResponse<Domain> list = listEntities(params);
-    Domain listed =
-        list.getData().stream()
-            .filter(d -> d.getId().equals(domain.getId()))
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("Domain not found in list"));
+    while (listed == null) {
+      ListResponse<Domain> page = listEntities(params);
+      listed =
+          page.getData().stream()
+              .filter(d -> d.getId().equals(domain.getId()))
+              .findFirst()
+              .orElse(null);
+      String after = page.getPaging() != null ? page.getPaging().getAfter() : null;
+      if (listed != null || after == null) break;
+      params = new ListParams().setFields("experts").withLimit(100).setAfter(after);
+    }
+    assertNotNull(listed, "Domain not found in list");
     assertTrue(
         listed.getExperts() == null || listed.getExperts().isEmpty(),
         "Soft-deleted expert must not appear in list endpoint");
