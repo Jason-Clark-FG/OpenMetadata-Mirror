@@ -11,6 +11,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +50,7 @@ import org.openmetadata.service.search.opensearch.OsUtils;
 import org.openmetadata.service.search.vector.OpenSearchVectorService;
 import org.openmetadata.service.search.vector.VectorDocBuilder;
 import org.openmetadata.service.search.vector.utils.AvailableEntityTypes;
+import os.org.opensearch.client.json.JsonData;
 import os.org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import os.org.opensearch.client.opensearch.OpenSearchAsyncClient;
 import os.org.opensearch.client.opensearch._types.Refresh;
@@ -247,15 +249,15 @@ public class OpenSearchBulkSink implements BulkSink {
       // Check if these are time series entities
       if (!entities.isEmpty() && entities.get(0) instanceof EntityTimeSeriesInterface) {
         List<EntityTimeSeriesInterface> tsEntities = (List<EntityTimeSeriesInterface>) entities;
-        List<CompletableFuture<Void>> futures =
-            tsEntities.stream()
-                .map(
-                    entity ->
-                        CompletableFuture.runAsync(
-                            () -> addTimeSeriesEntity(entity, indexName, entityType, tracker),
-                            DOC_BUILD_EXECUTOR))
-                .toList();
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        CompletableFuture<?>[] futures = new CompletableFuture[tsEntities.size()];
+        for (int i = 0; i < tsEntities.size(); i++) {
+          EntityTimeSeriesInterface entity = tsEntities.get(i);
+          futures[i] =
+              CompletableFuture.runAsync(
+                  () -> addTimeSeriesEntity(entity, indexName, entityType, tracker),
+                  DOC_BUILD_EXECUTOR);
+        }
+        CompletableFuture.allOf(futures).join();
       } else {
         List<EntityInterface> entityInterfaces = (List<EntityInterface>) entities;
         ReindexContext reindexContext =
@@ -272,23 +274,23 @@ public class OpenSearchBulkSink implements BulkSink {
 
         // Add entities to search index in parallel
         Map<String, String> finalFingerprints = existingFingerprints;
-        List<CompletableFuture<Void>> futures =
-            entityInterfaces.stream()
-                .map(
-                    entity ->
-                        CompletableFuture.runAsync(
-                            () ->
-                                addEntity(
-                                    entity,
-                                    indexName,
-                                    recreateIndex,
-                                    reindexContext,
-                                    tracker,
-                                    embeddingsEnabled,
-                                    finalFingerprints),
-                            DOC_BUILD_EXECUTOR))
-                .toList();
-        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        CompletableFuture<?>[] futures = new CompletableFuture[entityInterfaces.size()];
+        for (int i = 0; i < entityInterfaces.size(); i++) {
+          EntityInterface entity = entityInterfaces.get(i);
+          futures[i] =
+              CompletableFuture.runAsync(
+                  () ->
+                      addEntity(
+                          entity,
+                          indexName,
+                          recreateIndex,
+                          reindexContext,
+                          tracker,
+                          embeddingsEnabled,
+                          finalFingerprints),
+                  DOC_BUILD_EXECUTOR);
+        }
+        CompletableFuture.allOf(futures).join();
 
         // Index columns asynchronously when processing table entities
         if (Entity.TABLE.equals(entityType)) {
@@ -346,38 +348,51 @@ public class OpenSearchBulkSink implements BulkSink {
     try {
       String entityType = Entity.getEntityTypeFromObject(entity);
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
-
-      if (embeddingsEnabled) {
-        json = enrichWithEmbedding(entity, json, recreateIndex, existingFingerprints, tracker);
-      }
-
-      String finalJson = json;
       String docId = entity.getId().toString();
-      long estimatedSize =
-          (long) finalJson.getBytes(StandardCharsets.UTF_8).length
-              + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation;
-      if (recreateIndex) {
-        operation =
-            BulkOperation.of(
-                op ->
-                    op.index(
-                        idx ->
-                            idx.index(indexName)
-                                .id(docId)
-                                .document(OsUtils.toJsonData(finalJson))));
+      long estimatedSize;
+      if (embeddingsEnabled) {
+        String json = JsonUtils.pojoToJson(searchIndexDoc);
+        String finalJson =
+            enrichWithEmbedding(entity, json, recreateIndex, existingFingerprints, tracker);
+        estimatedSize = (long) finalJson.length() + BULK_OPERATION_METADATA_OVERHEAD;
+        if (recreateIndex) {
+          operation =
+              BulkOperation.of(
+                  op ->
+                      op.index(
+                          idx ->
+                              idx.index(indexName)
+                                  .id(docId)
+                                  .document(OsUtils.toJsonData(finalJson))));
+        } else {
+          operation =
+              BulkOperation.of(
+                  op ->
+                      op.update(
+                          upd ->
+                              upd.index(indexName)
+                                  .id(docId)
+                                  .document(OsUtils.toJsonData(finalJson))
+                                  .docAsUpsert(true)));
+        }
       } else {
-        operation =
-            BulkOperation.of(
-                op ->
-                    op.update(
-                        upd ->
-                            upd.index(indexName)
-                                .id(docId)
-                                .document(OsUtils.toJsonData(finalJson))
-                                .docAsUpsert(true)));
+        JsonData jsonData = OsUtils.toJsonData(searchIndexDoc);
+        estimatedSize =
+            (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
+        if (recreateIndex) {
+          operation =
+              BulkOperation.of(
+                  op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
+        } else {
+          operation =
+              BulkOperation.of(
+                  op ->
+                      op.update(
+                          upd ->
+                              upd.index(indexName).id(docId).document(jsonData).docAsUpsert(true)));
+        }
       }
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -432,16 +447,14 @@ public class OpenSearchBulkSink implements BulkSink {
       StageStatsTracker tracker) {
     try {
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
       String docId = entity.getId().toString();
+      JsonData jsonData = OsUtils.toJsonData(searchIndexDoc);
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation =
           BulkOperation.of(
-              op ->
-                  op.index(
-                      idx -> idx.index(indexName).id(docId).document(OsUtils.toJsonData(json))));
+              op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
 
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -513,19 +526,16 @@ public class OpenSearchBulkSink implements BulkSink {
       try {
         ColumnSearchIndex columnIndex = new ColumnSearchIndex(column, table);
         Map<String, Object> searchIndexDoc = columnIndex.buildSearchIndexDoc();
-        String json = JsonUtils.pojoToJson(searchIndexDoc);
         String docId = searchIndexDoc.get("id").toString();
+        JsonData jsonData = OsUtils.toJsonData(searchIndexDoc);
+        long estimatedSize =
+            (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
         BulkOperation operation;
         if (recreateIndex) {
           operation =
               BulkOperation.of(
-                  op ->
-                      op.index(
-                          idx ->
-                              idx.index(columnIndexName)
-                                  .id(docId)
-                                  .document(OsUtils.toJsonData(json))));
+                  op -> op.index(idx -> idx.index(columnIndexName).id(docId).document(jsonData)));
         } else {
           operation =
               BulkOperation.of(
@@ -534,11 +544,9 @@ public class OpenSearchBulkSink implements BulkSink {
                           upd ->
                               upd.index(columnIndexName)
                                   .id(docId)
-                                  .document(OsUtils.toJsonData(json))
+                                  .document(jsonData)
                                   .docAsUpsert(true)));
         }
-        long estimatedSize =
-            (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
         columnBulkProcessor.add(operation, docId, Entity.TABLE_COLUMN, null, estimatedSize);
       } catch (Exception e) {
         columnBuildFailed.incrementAndGet();
@@ -1142,7 +1150,7 @@ public class OpenSearchBulkSink implements BulkSink {
         List<BulkOperation> operations, int numberOfActions, String failureMessage) {
       totalFailed.addAndGet(numberOfActions);
 
-      Map<String, Integer> failuresByType = new ConcurrentHashMap<>();
+      Map<String, Integer> failuresByType = new HashMap<>();
       for (BulkOperation op : operations) {
         String docId = getDocId(op);
         if (docId == null) {
@@ -1177,8 +1185,8 @@ public class OpenSearchBulkSink implements BulkSink {
     private void handlePartialFailure(
         BulkResponse response, long executionId, int numberOfActions) {
       int failures = 0;
-      Map<String, Integer> successesByType = new ConcurrentHashMap<>();
-      Map<String, Integer> failuresByType = new ConcurrentHashMap<>();
+      Map<String, Integer> successesByType = new HashMap<>();
+      Map<String, Integer> failuresByType = new HashMap<>();
       for (BulkResponseItem item : response.items()) {
         String docId = item.id();
         StageStatsTracker tracker = docId != null ? docIdToTracker.remove(docId) : null;
@@ -1238,7 +1246,7 @@ public class OpenSearchBulkSink implements BulkSink {
     }
 
     private void reportSuccessByEntityType(List<BulkOperation> operations) {
-      Map<String, Integer> successesByType = new ConcurrentHashMap<>();
+      Map<String, Integer> successesByType = new HashMap<>();
       for (BulkOperation op : operations) {
         String docId = getDocId(op);
         String entityType = docId != null ? docIdToEntityType.remove(docId) : null;

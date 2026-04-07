@@ -67,6 +67,10 @@ public class OsUtils {
     return JsonData.of(docMap, jsonpMapper);
   }
 
+  public static JsonData toJsonData(Object pojo) {
+    return JsonData.of(pojo, jsonpMapper);
+  }
+
   public static String parseJsonQuery(String jsonQuery) throws JsonProcessingException {
     JsonNode rootNode = mapper.readTree(jsonQuery);
     String queryToProcess = jsonQuery;

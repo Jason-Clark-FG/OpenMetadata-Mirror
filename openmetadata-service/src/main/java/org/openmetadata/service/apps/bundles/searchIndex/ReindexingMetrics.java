@@ -39,6 +39,14 @@ public class ReindexingMetrics {
   // Circuit breaker
   private final Map<String, Counter> circuitBreakerCounters = new ConcurrentHashMap<>();
 
+  // Stage counter caches — keyed by "stage:entityType" to avoid registry lookup on every flush
+  private final Map<String, Counter> stageSuccessCounters = new ConcurrentHashMap<>();
+  private final Map<String, Counter> stageFailedCounters = new ConcurrentHashMap<>();
+  private final Map<String, Counter> stageWarningsCounters = new ConcurrentHashMap<>();
+
+  // Promotion counter cache — keyed by "entityType:result"
+  private final Map<String, Counter> promotionCounters = new ConcurrentHashMap<>();
+
   // Vector timeouts
   private final Counter vectorTimeouts;
 
@@ -208,29 +216,41 @@ public class ReindexingMetrics {
   // --- Stage counters (dynamic tags) ---
 
   public void recordStageSuccess(String stage, String entityType, long count) {
-    Counter.builder("reindexing.stage.success")
-        .description("Records successfully processed per stage")
-        .tag("stage", stage)
-        .tag("entity_type", entityType)
-        .register(meterRegistry)
+    stageSuccessCounters
+        .computeIfAbsent(
+            stage + ":" + entityType,
+            k ->
+                Counter.builder("reindexing.stage.success")
+                    .description("Records successfully processed per stage")
+                    .tag("stage", stage)
+                    .tag("entity_type", entityType)
+                    .register(meterRegistry))
         .increment(count);
   }
 
   public void recordStageFailed(String stage, String entityType, long count) {
-    Counter.builder("reindexing.stage.failed")
-        .description("Records failed per stage")
-        .tag("stage", stage)
-        .tag("entity_type", entityType)
-        .register(meterRegistry)
+    stageFailedCounters
+        .computeIfAbsent(
+            stage + ":" + entityType,
+            k ->
+                Counter.builder("reindexing.stage.failed")
+                    .description("Records failed per stage")
+                    .tag("stage", stage)
+                    .tag("entity_type", entityType)
+                    .register(meterRegistry))
         .increment(count);
   }
 
   public void recordStageWarnings(String stage, String entityType, long count) {
-    Counter.builder("reindexing.stage.warnings")
-        .description("Reader warnings")
-        .tag("stage", stage)
-        .tag("entity_type", entityType)
-        .register(meterRegistry)
+    stageWarningsCounters
+        .computeIfAbsent(
+            stage + ":" + entityType,
+            k ->
+                Counter.builder("reindexing.stage.warnings")
+                    .description("Reader warnings")
+                    .tag("stage", stage)
+                    .tag("entity_type", entityType)
+                    .register(meterRegistry))
         .increment(count);
   }
 
@@ -267,20 +287,28 @@ public class ReindexingMetrics {
   // --- Promotion metrics (dynamic tags) ---
 
   public void recordPromotionSuccess(String entityType) {
-    Counter.builder("reindexing.promotion")
-        .description("Index promotion events")
-        .tag("entity_type", entityType)
-        .tag("result", "success")
-        .register(meterRegistry)
+    promotionCounters
+        .computeIfAbsent(
+            entityType + ":success",
+            k ->
+                Counter.builder("reindexing.promotion")
+                    .description("Index promotion events")
+                    .tag("entity_type", entityType)
+                    .tag("result", "success")
+                    .register(meterRegistry))
         .increment();
   }
 
   public void recordPromotionFailure(String entityType) {
-    Counter.builder("reindexing.promotion")
-        .description("Index promotion events")
-        .tag("entity_type", entityType)
-        .tag("result", "failure")
-        .register(meterRegistry)
+    promotionCounters
+        .computeIfAbsent(
+            entityType + ":failure",
+            k ->
+                Counter.builder("reindexing.promotion")
+                    .description("Index promotion events")
+                    .tag("entity_type", entityType)
+                    .tag("result", "failure")
+                    .register(meterRegistry))
         .increment();
   }
 
