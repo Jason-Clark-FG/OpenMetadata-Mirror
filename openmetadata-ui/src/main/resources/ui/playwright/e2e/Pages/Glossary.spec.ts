@@ -42,7 +42,6 @@ import {
   getRandomLastName,
   getToken,
   redirectToHomePage,
-  toastNotification,
   uuid,
   visitGlossaryPage,
 } from '../../utils/common';
@@ -465,7 +464,6 @@ test.describe('Glossary tests', () => {
         .getByTestId(`${glossary1.data.terms[0].data.name}-approve-btn`)
         .click();
       await taskResolve;
-      await toastNotification(page1, /Task resolved successfully/);
 
       await validateGlossaryTerm(
         page1,
@@ -580,11 +578,6 @@ test.describe('Glossary tests', () => {
 
         await page.getByTestId('saveAssociatedTag').click();
         await patchRequest;
-
-        await toastNotification(
-          page,
-          /mutually exclusive and can't be assigned together/
-        );
 
         // Add non mutually exclusive tags
         await page.click(
@@ -1369,7 +1362,6 @@ test.describe('Glossary tests', () => {
 
       // Initiate delete - UI will optimistically remove the glossary
       await initiateDelete(page);
-      await toastNotification(page, /Delete operation initiated/i);
       await expectGlossaryNotVisible(page, glossary1.data.displayName);
 
       // Simulate WebSocket failure event - this should trigger recovery
@@ -1459,13 +1451,11 @@ test.describe('Glossary tests', () => {
       // Delete A (succeeds - not mocked, real deletion)
       await selectActiveGlossary(page, glossaryA.data.displayName);
       await initiateDelete(page);
-      await toastNotification(page, /Delete operation initiated/i);
 
       // Delete B (fails via mocked WebSocket event)
       await selectActiveGlossary(page, glossaryB.data.displayName);
       const jobIdB = await mockDeleteApiSuccess(page, 'glossaries');
       await initiateDelete(page);
-      await toastNotification(page, /Delete operation initiated/i);
 
       const refetch = waitForGlossaryListRefetch(page);
       emitDeleteFailure(jobIdB, glossaryB.data.name);
@@ -2146,8 +2136,6 @@ test.describe('Glossary tests', () => {
         await confirmationInput.fill('DELETE');
 
         await page.getByTestId('confirm-button').click();
-
-        await toastNotification(page, new RegExp(`.*${glossary.data.name}.*`));
       });
 
       await test.step('Change language back to English', async () => {

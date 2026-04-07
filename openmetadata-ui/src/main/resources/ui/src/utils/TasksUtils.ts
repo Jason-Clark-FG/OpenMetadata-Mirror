@@ -51,6 +51,7 @@ import { Field, Topic } from '../generated/entity/data/topic';
 import { TaskType, Thread } from '../generated/entity/feed/thread';
 import { EntityReference } from '../generated/entity/type';
 import { TagLabel } from '../generated/type/tagLabel';
+import { useMarketplaceStore } from '../hooks/useMarketplaceStore';
 import { SearchSourceAlias } from '../interface/search.interface';
 import { TestCasePageTabs } from '../pages/IncidentManager/IncidentManager.interface';
 import {
@@ -760,7 +761,7 @@ export const getBreadCrumbList = (
       return [
         {
           name: t('label.data-product-plural'),
-          url: ROUTES.DATA_PRODUCT,
+          url: useMarketplaceStore.getState().dataProductBasePath,
         },
         activeEntity,
       ];

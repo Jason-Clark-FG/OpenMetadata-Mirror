@@ -22,7 +22,7 @@ import { SERVICE_TYPE } from '../../constant/service';
 import { ServiceTypes } from '../../constant/settings';
 import { fullUuid, uuid } from '../../utils/common';
 import {
-  visitEntityPageByUrl,
+  visitEntityPage,
   waitForAllLoadersToDisappear,
 } from '../../utils/entity';
 import {
@@ -339,16 +339,33 @@ export class TableClass extends EntityClass {
     this.entityResponseData = entityData.entity;
   }
 
-  async visitEntityPage(page: Page) {
+  async visitEntityPage(page: Page, searchTerm?: string) {
     if (!this.entityResponseData.fullyQualifiedName) {
       const { EntityDataClass } = await import('./EntityDataClass');
       EntityDataClass.loadResponseData();
     }
 
-    await visitEntityPageByUrl({
+    const tableFqn = this.entityResponseData.fullyQualifiedName ?? '';
+    const canUseDirectNavigation =
+      !searchTerm || (tableFqn.length > 0 && searchTerm === tableFqn);
+
+    if (canUseDirectNavigation && tableFqn.length > 0) {
+      const tableResponse = page.waitForResponse(
+        `/api/v1/tables/name/${encodeURIComponent(tableFqn)}?**`
+      );
+      await page.goto(`/table/${encodeURIComponent(tableFqn)}`);
+      await tableResponse;
+      await waitForAllLoadersToDisappear(page);
+
+      return;
+    }
+
+    await visitEntityPage({
       page,
-      entityType: 'table',
-      fqn: this.entityResponseData.fullyQualifiedName ?? '',
+      searchTerm: searchTerm ?? tableFqn,
+      dataTestId: `${
+        this.entityResponseData.service?.name ?? this.service.name
+      }-${this.entityResponseData.name ?? this.entity.name}`,
     });
   }
 
@@ -489,7 +506,9 @@ export class TableClass extends EntityClass {
     patchData: Operation[];
   }) {
     const response = await apiContext.patch(
-      `/api/v1/tables/name/${this.entityResponseData?.fullyQualifiedName}`,
+      `/api/v1/tables/name/${encodeURIComponent(
+        this.entityResponseData?.fullyQualifiedName ?? ''
+      )}`,
       {
         data: patchData,
         headers: {
