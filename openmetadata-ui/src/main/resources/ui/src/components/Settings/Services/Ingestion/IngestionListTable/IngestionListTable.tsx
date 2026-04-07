@@ -201,16 +201,18 @@ function IngestionListTable({
     );
 
     // Fire both batches concurrently — whichever settles first updates state immediately
-    Promise.allSettled(permissionPromises).then((permissionResponse) => {
-      const permissionData = permissionResponse.reduce((acc, cv, index) => {
-        return {
-          ...acc,
-          [ingestionData?.[index].name]:
-            cv.status === 'fulfilled' ? cv.value : {},
-        };
-      }, {});
-      setIngestionPipelinePermissions(permissionData);
-    });
+    Promise.allSettled(permissionPromises)
+      .then((permissionResponse) => {
+        const permissionData = permissionResponse.reduce((acc, cv, index) => {
+          return {
+            ...acc,
+            [ingestionData?.[index].name]:
+              cv.status === 'fulfilled' ? cv.value : {},
+          };
+        }, {});
+        setIngestionPipelinePermissions(permissionData);
+      })
+      .catch((error) => showErrorToast(error as AxiosError));
 
     Promise.allSettled(recentRunStatusPromises)
       .then((recentRunStatusResponse) => {
