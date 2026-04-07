@@ -974,6 +974,7 @@ export const getTableDetailPageBaseTabs = ({
     {
       label: (
         <TabsLabel
+          isBeta
           id={EntityTabs.KNOWLEDGE_GRAPH}
           name={get(
             labelMap,
@@ -985,13 +986,11 @@ export const getTableDetailPageBaseTabs = ({
       key: EntityTabs.KNOWLEDGE_GRAPH,
       children: (
         <KnowledgeGraph
-          depth={2}
+          depth={1}
           entity={
             tableDetails
               ? {
-                  id: tableDetails.id,
-                  name: tableDetails.name,
-                  fullyQualifiedName: tableDetails.fullyQualifiedName,
+                  ...tableDetails,
                   type: EntityType.TABLE,
                 }
               : undefined
