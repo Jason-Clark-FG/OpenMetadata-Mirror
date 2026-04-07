@@ -23,7 +23,7 @@ import { useSnackbar } from 'notistack';
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
-import { NO_DATA } from '../../constants/constants';
+import { NO_DATA, ROUTES } from '../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
@@ -32,6 +32,7 @@ import { CreateDataProduct } from '../../generated/api/domains/createDataProduct
 import { CreateDomain } from '../../generated/api/domains/createDomain';
 import { Domain } from '../../generated/entity/domains/domain';
 import { withPageLayout } from '../../hoc/withPageLayout';
+import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { addDomains, patchDomains } from '../../rest/domainAPI';
 import { createEntityWithCoverImage } from '../../utils/CoverImageUploadUtils';
 import { getEntityName } from '../../utils/EntityUtils';
@@ -64,6 +65,7 @@ import { useDomainListingData } from './hooks/useDomainListingData';
 
 const DomainListPage = () => {
   const domainListing = useDomainListingData();
+  const { isMarketplace, domainBasePath } = useMarketplaceStore();
   const { t } = useTranslation();
   const { permissions } = usePermissionProvider();
   const [form] = useForm();
@@ -88,6 +90,7 @@ const DomainListPage = () => {
     title: t('label.add-entity', { entity: t('label.domain') }),
     width: 670,
     closeOnEscape: false,
+    className: 'tw:z-[20]',
     onCancel: () => {
       form.resetFields();
     },
@@ -128,7 +131,17 @@ const DomainListPage = () => {
   });
 
   const { breadcrumbs } = useBreadcrumbs({
-    items: [{ name: t('label.domain-plural'), url: '/domain' }],
+    items: [
+      ...(isMarketplace
+        ? [
+            {
+              name: t('label.data-marketplace'),
+              url: ROUTES.DATA_MARKETPLACE,
+            },
+          ]
+        : []),
+      { name: t('label.domain-plural'), url: domainBasePath },
+    ],
   });
 
   const { pageHeader } = usePageHeader({
@@ -288,7 +301,7 @@ const DomainListPage = () => {
           })}
           icon={<FolderEmptyIcon />}
           permission={permissions.domain?.Create}
-          type={ERROR_PLACEHOLDER_TYPE.MUI_CREATE}
+          type={ERROR_PLACEHOLDER_TYPE.CORE_CREATE}
           onClick={openDrawer}
         />
       );
@@ -373,5 +386,7 @@ const DomainListPage = () => {
     </Box>
   );
 };
+
+export { DomainListPage };
 
 export default withPageLayout(DomainListPage);
