@@ -465,6 +465,46 @@ public class GlossaryTermRelationSettingsIT {
   }
 
   @Test
+  void test_systemDefinedRelationTypesHaveCorrectDesignSystemColors() throws Exception {
+    JsonNode settings = getSettings();
+    JsonNode relationTypes = settings.get("config_value").get("relationTypes");
+
+    Map<String, String> expectedColors =
+        Map.of(
+            "relatedTo", "#1570ef",
+            "synonym", "#b42318",
+            "antonym", "#b54708",
+            "broader", "#067647",
+            "narrower", "#4e5ba6",
+            "partOf", "#026aa2",
+            "hasPart", "#155eef",
+            "calculatedFrom", "#6938ef",
+            "usedToCalculate", "#ba24d5",
+            "seeAlso", "#c11574");
+
+    for (JsonNode type : relationTypes) {
+      String name = type.get("name").asText();
+      if (!expectedColors.containsKey(name)) {
+        continue;
+      }
+      JsonNode colorNode = type.get("color");
+      assertNotNull(colorNode, "color should exist for system-defined type: " + name);
+      String actualColor = colorNode.asText().toLowerCase();
+      String expected = expectedColors.get(name);
+      assertEquals(
+          expected,
+          actualColor,
+          "System-defined type '"
+              + name
+              + "' should use design-system color "
+              + expected
+              + " but got "
+              + actualColor
+              + ". Old Ant Design colors (e.g. #1890ff, #722ed1) indicate the 2.0.0 migration did not run.");
+    }
+  }
+
+  @Test
   void test_defaultRelationTypesHaveExpectedProperties() throws Exception {
     JsonNode settings = getSettings();
     JsonNode relationTypes = settings.get("config_value").get("relationTypes");
