@@ -984,7 +984,7 @@ public class DataProductRepository extends EntityRepository<DataProduct> {
         Entity.getEntityReferencesByIdsRespectingInclude(
                 Entity.USER, expertIds, Include.NON_DELETED)
             .stream()
-            .collect(Collectors.toMap(EntityReference::getId, Function.identity()));
+            .collect(Collectors.toMap(EntityReference::getId, Function.identity(), (a, b) -> a));
 
     for (CollectionDAO.EntityRelationshipObject record : records) {
       UUID dataProductId = UUID.fromString(record.getFromId());

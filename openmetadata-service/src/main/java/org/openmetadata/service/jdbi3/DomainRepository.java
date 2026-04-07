@@ -594,7 +594,7 @@ public class DomainRepository extends EntityRepository<Domain> {
         Entity.getEntityReferencesByIdsRespectingInclude(
                 Entity.USER, expertIds, Include.NON_DELETED)
             .stream()
-            .collect(Collectors.toMap(EntityReference::getId, Function.identity()));
+            .collect(Collectors.toMap(EntityReference::getId, Function.identity(), (a, b) -> a));
 
     records.forEach(
         record -> {
