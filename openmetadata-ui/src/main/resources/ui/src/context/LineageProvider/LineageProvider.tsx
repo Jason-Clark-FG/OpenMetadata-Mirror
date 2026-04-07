@@ -253,12 +253,15 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     setEntityFqn(fqn);
   }, []);
 
-  const lineageLayer = useMemo(() => {
+  const { lineageLayer, lineageMode } = useMemo(() => {
     const searchData = QueryString.parse(location.search, {
       ignoreQueryPrefix: true,
     });
 
-    return searchData.layers as LineageLayer[] | undefined;
+    return {
+      lineageLayer: searchData.layers as LineageLayer[] | undefined,
+      lineageMode: searchData.mode ?? 'lineage',
+    };
   }, [location.search]);
 
   const cachedEntityEdgesAndMaps = useMemo(() => {
@@ -546,7 +549,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
 
   const fetchLineageData = useCallback(
     async (fqn: string, entityType: string, config?: LineageConfig) => {
-      if (isTourOpen) {
+      if (isTourOpen || lineageMode === 'impact_analysis') {
         return;
       }
 
@@ -590,7 +593,7 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         setLoading(false);
       }
     },
-    [queryFilter, entityFqn]
+    [queryFilter, entityFqn, lineageMode]
   );
 
   const onPlatformViewChange = useCallback(
@@ -1716,7 +1719,6 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
         pipelineViewMode: defaultLineageConfig.pipelineViewMode,
         nodesPerLayer: 50,
       });
-
       setActiveLayer(
         defaultLineageConfig.lineageLayer === LineageLayer.EntityLineage
           ? []
