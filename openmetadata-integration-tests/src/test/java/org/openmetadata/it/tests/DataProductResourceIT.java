@@ -33,6 +33,7 @@ import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.domains.CreateDomain.DomainType;
 import org.openmetadata.schema.api.domains.DataProductPortsView;
 import org.openmetadata.schema.api.services.CreateDatabaseService;
+import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.data.Dashboard;
 import org.openmetadata.schema.entity.data.Table;
 import org.openmetadata.schema.entity.data.Topic;
@@ -41,6 +42,7 @@ import org.openmetadata.schema.entity.domains.Domain;
 import org.openmetadata.schema.entity.services.DashboardService;
 import org.openmetadata.schema.entity.services.DatabaseService;
 import org.openmetadata.schema.entity.services.MessagingService;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.entity.type.Style;
 import org.openmetadata.schema.services.connections.database.MysqlConnection;
 import org.openmetadata.schema.services.connections.database.common.basicAuth;
@@ -2872,5 +2874,79 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     // Verify output port is cleaned up
     ResultList<Map<String, Object>> outputPorts = getOutputPorts(dataProduct.getId(), 10, 0);
     assertEquals(0, outputPorts.getPaging().getTotal());
+  }
+
+  @Test
+  void softDeletedExpert_notReturnedInSingleGet(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Domain domain = getOrCreateDomain(ns);
+
+    String userName = ns.prefix("expert_user");
+    User expert =
+        client
+            .users()
+            .create(
+                new CreateUser()
+                    .withName(userName)
+                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withDescription("Expert user for soft-delete test"));
+
+    CreateDataProduct create =
+        new CreateDataProduct()
+            .withName(ns.prefix("dp_softdel_expert"))
+            .withDescription("DataProduct for soft-delete expert test")
+            .withDomains(List.of(domain.getFullyQualifiedName()))
+            .withExperts(List.of(expert.getFullyQualifiedName()));
+    DataProduct dp = createEntity(create);
+
+    client.users().delete(expert.getId().toString());
+
+    DataProduct byId = client.dataProducts().get(dp.getId().toString(), "experts");
+    assertTrue(
+        byId.getExperts() == null || byId.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in single GET by ID");
+
+    DataProduct byName = client.dataProducts().getByName(dp.getFullyQualifiedName(), "experts");
+    assertTrue(
+        byName.getExperts() == null || byName.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in single GET by name");
+  }
+
+  @Test
+  void softDeletedExpert_notReturnedInListEndpoint(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+    Domain domain = getOrCreateDomain(ns);
+
+    String userName = ns.prefix("expert_list_user");
+    User expert =
+        client
+            .users()
+            .create(
+                new CreateUser()
+                    .withName(userName)
+                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withDescription("Expert user for bulk soft-delete test"));
+
+    CreateDataProduct create =
+        new CreateDataProduct()
+            .withName(ns.prefix("dp_softdel_expert_list"))
+            .withDescription("DataProduct for soft-delete expert list test")
+            .withDomains(List.of(domain.getFullyQualifiedName()))
+            .withExperts(List.of(expert.getFullyQualifiedName()));
+    DataProduct dp = createEntity(create);
+
+    client.users().delete(expert.getId().toString());
+
+    ListParams params =
+        new ListParams().setFields("experts").withDomain(domain.getFullyQualifiedName());
+    ListResponse<DataProduct> list = client.dataProducts().list(params);
+    DataProduct listed =
+        list.getData().stream()
+            .filter(p -> p.getId().equals(dp.getId()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("DataProduct not found in list"));
+    assertTrue(
+        listed.getExperts() == null || listed.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in list endpoint");
   }
 }

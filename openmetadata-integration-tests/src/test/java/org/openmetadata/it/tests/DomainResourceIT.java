@@ -31,7 +31,9 @@ import org.openmetadata.it.util.SdkClients;
 import org.openmetadata.it.util.TestNamespace;
 import org.openmetadata.schema.api.domains.CreateDomain;
 import org.openmetadata.schema.api.domains.CreateDomain.DomainType;
+import org.openmetadata.schema.api.teams.CreateUser;
 import org.openmetadata.schema.entity.domains.Domain;
+import org.openmetadata.schema.entity.teams.User;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.sdk.client.OpenMetadataClient;
@@ -1152,5 +1154,76 @@ public class DomainResourceIT extends BaseEntityIT<Domain, CreateDomain> {
 
     // Verify old child FQN no longer works
     assertThrows(Exception.class, () -> getEntityByName(oldChildFqn));
+  }
+
+  @Test
+  void softDeletedExpert_notReturnedInSingleGet(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String userName = ns.prefix("domain_expert");
+    User expert =
+        client
+            .users()
+            .create(
+                new CreateUser()
+                    .withName(userName)
+                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withDescription("Expert user for domain soft-delete test"));
+
+    CreateDomain create =
+        new CreateDomain()
+            .withName(ns.prefix("domain_softdel"))
+            .withDomainType(DomainType.AGGREGATE)
+            .withExperts(List.of(expert.getFullyQualifiedName()))
+            .withDescription("Domain for soft-delete expert test");
+    Domain domain = createEntity(create);
+
+    client.users().delete(expert.getId().toString());
+
+    Domain byId = client.domains().get(domain.getId().toString(), "experts");
+    assertTrue(
+        byId.getExperts() == null || byId.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in single GET by ID");
+
+    Domain byName = client.domains().getByName(domain.getFullyQualifiedName(), "experts");
+    assertTrue(
+        byName.getExperts() == null || byName.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in single GET by name");
+  }
+
+  @Test
+  void softDeletedExpert_notReturnedInListEndpoint(TestNamespace ns) {
+    OpenMetadataClient client = SdkClients.adminClient();
+
+    String userName = ns.prefix("domain_expert_list");
+    User expert =
+        client
+            .users()
+            .create(
+                new CreateUser()
+                    .withName(userName)
+                    .withEmail(userName.replaceAll("[^a-zA-Z0-9]", "") + "@test.openmetadata.org")
+                    .withDescription("Expert user for domain list soft-delete test"));
+
+    CreateDomain create =
+        new CreateDomain()
+            .withName(ns.prefix("domain_softdel_list"))
+            .withDomainType(DomainType.AGGREGATE)
+            .withExperts(List.of(expert.getFullyQualifiedName()))
+            .withDescription("Domain for soft-delete expert list test");
+    Domain domain = createEntity(create);
+
+    client.users().delete(expert.getId().toString());
+
+    ListParams params = new ListParams().setFields("experts").withLimit(100);
+    ListResponse<Domain> list = listEntities(params);
+    Domain listed =
+        list.getData().stream()
+            .filter(d -> d.getId().equals(domain.getId()))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Domain not found in list"));
+    assertTrue(
+        listed.getExperts() == null || listed.getExperts().isEmpty(),
+        "Soft-deleted expert must not appear in list endpoint");
   }
 }

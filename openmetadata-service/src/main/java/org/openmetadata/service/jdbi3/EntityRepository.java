@@ -8704,7 +8704,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     Map<String, Map<UUID, EntityReference>> refsByType = new HashMap<>();
     for (Entry<String, Set<UUID>> entry : idsByType.entrySet()) {
       List<EntityReference> refs =
-          Entity.getEntityReferencesByIds(entry.getKey(), new ArrayList<>(entry.getValue()), ALL);
+          Entity.getEntityReferencesByIdsRespectingInclude(
+              entry.getKey(), new ArrayList<>(entry.getValue()), Include.NON_DELETED);
       refsByType.put(
           entry.getKey(),
           refs.stream()
