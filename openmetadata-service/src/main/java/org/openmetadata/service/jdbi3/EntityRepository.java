@@ -9290,23 +9290,23 @@ public abstract class EntityRepository<T extends EntityInterface> {
     // Cache UUID conversions to avoid repeated parsing
     Map<String, UUID> uuidCache = new HashMap<>();
 
-    // Collect all unique expert user IDs (with .distinct() to avoid duplicate fetches)
+    // findToBatch returns fromId=entity, toId=user — collect user IDs from toId
     List<UUID> expertIds =
         records.stream()
-            .map(record -> uuidCache.computeIfAbsent(record.getFromId(), UUID::fromString))
+            .map(record -> uuidCache.computeIfAbsent(record.getToId(), UUID::fromString))
             .distinct()
             .collect(Collectors.toList());
 
-    // Batch fetch all expert references
+    // Batch fetch all expert references, filtering out soft-deleted users
     Map<UUID, EntityReference> expertRefs =
         Entity.getEntityReferencesByIdsRespectingInclude(USER, expertIds, NON_DELETED).stream()
             .collect(Collectors.toMap(EntityReference::getId, Function.identity(), (a, b) -> a));
 
-    // Group experts by entity (reuse cached UUIDs)
+    // Group experts by entity
     records.forEach(
         record -> {
-          UUID entityId = uuidCache.computeIfAbsent(record.getToId(), UUID::fromString);
-          UUID expertId = uuidCache.get(record.getFromId()); // Already cached above
+          UUID entityId = uuidCache.computeIfAbsent(record.getFromId(), UUID::fromString);
+          UUID expertId = uuidCache.get(record.getToId()); // Already cached above
           EntityReference expertRef = expertRefs.get(expertId);
           if (expertRef != null) {
             expertsMap.computeIfAbsent(entityId, k -> new ArrayList<>()).add(expertRef);
