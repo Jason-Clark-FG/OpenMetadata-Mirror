@@ -59,9 +59,6 @@ public record TestSuiteIndex(TestSuite testSuite) implements TaggableIndex {
         doc.put("database", table.getDatabase());
         doc.put("databaseSchema", table.getDatabaseSchema());
         doc.put("service", table.getService());
-        if (table.getServiceType() != null) {
-          doc.put("serviceType", table.getServiceType());
-        }
       } catch (EntityNotFoundException ex) {
         LOG.warn(
             "Table [{}] not found during search indexing: {}",
