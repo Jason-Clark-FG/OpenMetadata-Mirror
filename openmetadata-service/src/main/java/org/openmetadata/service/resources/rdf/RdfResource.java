@@ -311,7 +311,7 @@ public class RdfResource {
       @Parameter(description = "Export format: turtle or jsonld")
           @QueryParam("format")
           @DefaultValue("turtle")
-  String format) {
+          String format) {
     authorizer.authorizeAdmin(securityContext);
     try {
       String validatedEntityType = validateEntityType(entityType);
