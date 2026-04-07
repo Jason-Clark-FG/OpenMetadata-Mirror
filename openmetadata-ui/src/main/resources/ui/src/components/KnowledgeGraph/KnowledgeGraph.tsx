@@ -36,6 +36,7 @@ import {
 } from '@openmetadata/ui-core-components';
 import { ChevronDown } from '@untitledui/icons';
 import classNames from 'classnames';
+import { toPng } from 'html-to-image';
 import { isArray } from 'lodash';
 import Qs from 'qs';
 import React, {
@@ -64,7 +65,11 @@ import { useTheme } from '../../context/UntitledUIThemeProvider/theme-provider';
 import { ERROR_PLACEHOLDER_TYPE, SIZE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { useCurrentUserPreferences } from '../../hooks/currentUserStore/useCurrentUserStore';
-import { getEntityGraphData } from '../../rest/rdfAPI';
+import {
+  downloadEntityGraph,
+  EntityGraphExportFormat,
+  getEntityGraphData,
+} from '../../rest/rdfAPI';
 import {
   getEntityBreadcrumbs,
   getEntityLinkFromType,
@@ -82,6 +87,9 @@ import Loader from '../common/Loader/Loader';
 import TitleBreadcrumb from '../common/TitleBreadcrumb/TitleBreadcrumb.component';
 import EntitySummaryPanel from '../Explore/EntitySummaryPanel/EntitySummaryPanel.component';
 import { SearchSourceDetails } from '../Explore/EntitySummaryPanel/EntitySummaryPanel.interface';
+import ExportGraphPanel, {
+  ExportFormat,
+} from '../OntologyExplorer/ExportGraphPanel';
 import { SearchedDataProps } from '../SearchedData/SearchedData.interface';
 import CustomNode from './GraphElements/CustomNode';
 import {
@@ -233,6 +241,56 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         : Qs.stringify({ [FULLSCREEN_QUERY_PARAM_KEY]: true }),
     });
   }, [isFullscreen, navigate]);
+
+  const handleExportPng = useCallback(async () => {
+    if (!containerRef.current) {
+      return;
+    }
+    const dataUrl = await toPng(containerRef.current, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+    });
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'knowledge-graph.png';
+    a.click();
+  }, []);
+
+  const handleExportSvg = useCallback(async () => {
+    if (!containerRef.current) {
+      return;
+    }
+    const dataUrl = await toPng(containerRef.current, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+    });
+    const { width, height } = containerRef.current.getBoundingClientRect();
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+  <image href="${dataUrl}" width="${width}" height="${height}"/>
+</svg>`;
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'knowledge-graph-raster.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const getExportHandler = (format: EntityGraphExportFormat) => async () => {
+    await downloadEntityGraph({
+      entityId: entity?.id ?? '',
+      entityType: entityType ?? '',
+      entityName:
+        entity?.fullyQualifiedName ?? entity?.name ?? 'knowledge-graph',
+      depth: selectedDepth,
+      entityTypes: selectedEntityTypes.length ? selectedEntityTypes : undefined,
+      relationshipTypes: selectedRelationshipTypes.length
+        ? selectedRelationshipTypes
+        : undefined,
+      format: format,
+    });
+  };
 
   useEffect(() => {
     if (!containerRef.current || !graphData || loading) {
@@ -895,6 +953,20 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                   onChange={handleDepthChange}
                 />
               </Box>
+              <Divider orientation="vertical" />
+              <ExportGraphPanel
+                data-testid="knowledge-graph-export"
+                supportedExports={[
+                  ExportFormat.PNG,
+                  ExportFormat.SVG,
+                  ExportFormat.JSONLD,
+                  ExportFormat.TURTLE,
+                ]}
+                onExportJsonLd={getExportHandler(ExportFormat.JSONLD)}
+                onExportPng={handleExportPng}
+                onExportSvg={handleExportSvg}
+                onExportTurtle={getExportHandler(ExportFormat.TURTLE)}
+              />
             </Box>
 
             {hasActiveFilters && (

@@ -16,7 +16,7 @@ import { AxiosError } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { getAirflowStatus } from '../../rest/ingestionPipelineAPI';
 import AirflowStatusProvider, {
-    useAirflowStatus
+  useAirflowStatus,
 } from './AirflowStatusProvider';
 
 // Mock the API call

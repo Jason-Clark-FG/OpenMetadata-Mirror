@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
-import APIClient from './index';
 import { GraphEdge, GraphFilterOptions } from '../types/knowledgeGraph.types';
+import APIClient from './index';
 
 export interface GraphNode {
   id: string;

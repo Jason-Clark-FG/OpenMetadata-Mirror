@@ -255,8 +255,16 @@ export function useOntologyGraph({
   const positionAssetNodes = useCallback((graph: Graph) => {
     const map = assetToTermMapRef.current;
     const updates: NodeData[] = [];
-    const assignRingPositions = (anchorX: number, anchorY: number, assetIds: string[]) => {
-      const ringPositions = computeAssetRingPositions(anchorX, anchorY, assetIds);
+    const assignRingPositions = (
+      anchorX: number,
+      anchorY: number,
+      assetIds: string[]
+    ) => {
+      const ringPositions = computeAssetRingPositions(
+        anchorX,
+        anchorY,
+        assetIds
+      );
       Object.entries(ringPositions).forEach(([assetId, pos]) => {
         const nodeData = graph.getNodeData(assetId);
         if (nodeData) {
@@ -269,7 +277,10 @@ export function useOntologyGraph({
     };
 
     const singleTermAssets = new Map<string, string[]>();
-    const multiTermAssets = new Map<string, { termIds: string[]; assetIds: string[] }>();
+    const multiTermAssets = new Map<
+      string,
+      { termIds: string[]; assetIds: string[] }
+    >();
 
     Object.entries(map).forEach(([assetId, connectedTermIds]) => {
       const uniqueTermIds = [...new Set(connectedTermIds)];
@@ -281,6 +292,7 @@ export function useOntologyGraph({
         const assetIds = singleTermAssets.get(termId) ?? [];
         assetIds.push(assetId);
         singleTermAssets.set(termId, assetIds);
+
         return;
       }
 
@@ -310,7 +322,9 @@ export function useOntologyGraph({
       try {
         const termPositions = termIds
           .map((termId) => graph.getElementPosition(termId))
-          .filter((position): position is [number, number] => Array.isArray(position));
+          .filter((position): position is [number, number] =>
+            Array.isArray(position)
+          );
         if (termPositions.length === 0) {
           return;
         }
@@ -318,7 +332,8 @@ export function useOntologyGraph({
         const centerX =
           termPositions.reduce((sum, [x]) => sum + x, 0) / termPositions.length;
         const centerY =
-          termPositions.reduce((sum, [, y]) => sum + y, 0) / termPositions.length;
+          termPositions.reduce((sum, [, y]) => sum + y, 0) /
+          termPositions.length;
         assignRingPositions(centerX, centerY, assetIds);
       } catch {
         // one or more terms are not yet in the graph

@@ -17,32 +17,51 @@ import React, { useState } from 'react';
 import type { Key } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
 
+export enum ExportFormat {
+  PNG = 'png',
+  SVG = 'svg',
+  JSONLD = 'jsonld',
+  TURTLE = 'turtle',
+}
 export interface ExportGraphPanelProps {
+  supportedExports: ExportFormat[];
   onExportPng: () => Promise<void>;
   onExportSvg: () => Promise<void>;
+  onExportJsonLd?: () => Promise<void>;
+  onExportTurtle?: () => Promise<void>;
+  'data-testid'?: string;
 }
-
-const EXPORT_PNG = 'png';
-const EXPORT_SVG = 'svg';
 
 const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({
   onExportPng,
   onExportSvg,
+  onExportJsonLd,
+  onExportTurtle,
+  supportedExports = [ExportFormat.PNG, ExportFormat.SVG],
+  'data-testid': testId = 'ontology-export-graph',
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const items = [
-    { id: EXPORT_PNG, label: t('label.png-uppercase') },
-    { id: EXPORT_SVG, label: `${t('label.svg-uppercase')} (raster)` },
+    { id: ExportFormat.PNG, label: t('label.png-uppercase') },
+    { id: ExportFormat.SVG, label: `${t('label.svg-uppercase')} (raster)` },
+    { id: ExportFormat.JSONLD, label: t('label.json-ld') },
+    { id: ExportFormat.TURTLE, label: t('label.turtle-rdf') },
   ];
+
+  const menuItems = items.filter((item) => supportedExports.includes(item.id));
 
   const handleAction = async (key: Key) => {
     setOpen(false);
-    if (key === EXPORT_PNG) {
+    if (key === ExportFormat.PNG) {
       await onExportPng();
-    } else if (key === EXPORT_SVG) {
+    } else if (key === ExportFormat.SVG) {
       await onExportSvg();
+    } else if (key === ExportFormat.JSONLD && onExportJsonLd) {
+      await onExportJsonLd();
+    } else if (key === ExportFormat.TURTLE && onExportTurtle) {
+      await onExportTurtle();
     }
   };
 
@@ -50,13 +69,13 @@ const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({
     <Dropdown.Root isOpen={open} onOpenChange={setOpen}>
       <Button
         color="secondary"
-        data-testid="ontology-export-graph"
+        data-testid={testId}
         iconLeading={<Download01 height={20} width={20} />}
         size="sm">
         {t('label.export-graph')}
       </Button>
       <Dropdown.Popover aria-label={t('label.export-graph')}>
-        <Dropdown.Menu items={items} onAction={handleAction}>
+        <Dropdown.Menu items={menuItems} onAction={handleAction}>
           {(item) => <Dropdown.Item id={item.id} label={item.label} />}
         </Dropdown.Menu>
       </Dropdown.Popover>

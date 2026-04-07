@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 import {
-    act,
-    fireEvent,
-    render,
-    screen,
-    waitForElementToBeRemoved
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitForElementToBeRemoved,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Table as AntdTable } from 'antd';
@@ -23,15 +23,15 @@ import React from 'react';
 import { AppType } from '../../../../generated/entity/applications/app';
 import { Status } from '../../../../generated/entity/applications/appRunRecord';
 import {
-    mockApplicationData,
-    mockExternalApplicationData
+  mockApplicationData,
+  mockExternalApplicationData,
 } from '../../../../mocks/rests/applicationAPI.mock';
 import AppRunsHistory from './AppRunsHistory.component';
 
 const mockHandlePagingChange = jest.fn();
 const mockHandlePageChange = jest.fn();
 const mockHandlePageSizeChange = jest.fn();
-var mockSocket = {
+const mockSocket = {
   on: jest.fn(),
   off: jest.fn(),
 };

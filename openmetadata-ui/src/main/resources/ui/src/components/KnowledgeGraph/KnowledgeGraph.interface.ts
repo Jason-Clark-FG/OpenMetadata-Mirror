@@ -11,7 +11,10 @@
  *  limitations under the License.
  */
 import { EntityReference } from '../../generated/entity/type';
-import { GraphEdge, GraphFilterOptions } from '../../types/knowledgeGraph.types';
+import {
+  GraphEdge,
+  GraphFilterOptions,
+} from '../../types/knowledgeGraph.types';
 
 export interface KnowledgeGraphProps {
   entity?: EntityReference;

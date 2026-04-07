@@ -16,27 +16,27 @@ import { ColumnsType } from 'antd/lib/table';
 import { AxiosError } from 'axios';
 import { isNull, noop } from 'lodash';
 import {
-    forwardRef,
-    useCallback,
-    useEffect,
-    useImperativeHandle,
-    useMemo,
-    useState
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-    NO_DATA_PLACEHOLDER,
-    SOCKET_EVENTS,
-    STATUS_LABEL
+  NO_DATA_PLACEHOLDER,
+  SOCKET_EVENTS,
+  STATUS_LABEL,
 } from '../../../../constants/constants';
 import { GlobalSettingOptions } from '../../../../constants/GlobalSettings.constants';
 import { useWebSocketConnector } from '../../../../context/WebSocketProvider/WebSocketProvider';
 import { ServiceCategory } from '../../../../enums/service.enum';
 import { AppType } from '../../../../generated/entity/applications/app';
 import {
-    AppRunRecord,
-    Status
+  AppRunRecord,
+  Status,
 } from '../../../../generated/entity/applications/appRunRecord';
 import { Paging } from '../../../../generated/type/paging';
 import { usePaging } from '../../../../hooks/paging/usePaging';
@@ -44,10 +44,10 @@ import { useFqn } from '../../../../hooks/useFqn';
 import { getApplicationRuns } from '../../../../rest/applicationAPI';
 import { getStatusTypeForApplication } from '../../../../utils/ApplicationUtils';
 import {
-    formatDateTime,
-    formatDurationToHHMMSS,
-    getEpochMillisForPastDays,
-    getIntervalInMilliseconds
+  formatDateTime,
+  formatDurationToHHMMSS,
+  getEpochMillisForPastDays,
+  getIntervalInMilliseconds,
 } from '../../../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../../../utils/EntityUtils';
 import { getLogsViewerPath } from '../../../../utils/RouterUtils';
@@ -63,8 +63,8 @@ import applicationsClassBase from '../AppDetails/ApplicationsClassBase';
 import AppLogsViewer from '../AppLogsViewer/AppLogsViewer.component';
 import './app-run-history.less';
 import {
-    AppRunRecordWithId,
-    AppRunsHistoryProps
+  AppRunRecordWithId,
+  AppRunsHistoryProps,
 } from './AppRunsHistory.interface';
 
 const AppRunsHistory = forwardRef(
