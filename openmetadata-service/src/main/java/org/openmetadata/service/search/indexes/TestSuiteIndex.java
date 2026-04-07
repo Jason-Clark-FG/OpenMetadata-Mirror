@@ -50,15 +50,16 @@ public record TestSuiteIndex(TestSuite testSuite) implements TaggableIndex {
     addTestSuiteParentEntityRelations(entityReference, doc);
   }
 
-  static void addTestSuiteParentEntityRelations(
+  static Table addTestSuiteParentEntityRelations(
       EntityReference testSuiteRef, Map<String, Object> doc) {
     if (testSuiteRef.getType().equals(Entity.TABLE)) {
       try {
-        Table table = Entity.getEntity(testSuiteRef, "", Include.ALL);
+        Table table = Entity.getEntity(testSuiteRef, "domains", Include.ALL);
         doc.put("table", table.getEntityReference());
         doc.put("database", table.getDatabase());
         doc.put("databaseSchema", table.getDatabaseSchema());
         doc.put("service", table.getService());
+        return table;
       } catch (EntityNotFoundException ex) {
         LOG.warn(
             "Table [{}] not found during search indexing: {}",
@@ -66,5 +67,6 @@ public record TestSuiteIndex(TestSuite testSuite) implements TaggableIndex {
             ex.getMessage());
       }
     }
+    return null;
   }
 }

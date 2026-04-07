@@ -64,40 +64,32 @@ public record TestCaseIndex(TestCase testCase) implements TaggableIndex {
   }
 
   private void setParentRelationships(Map<String, Object> doc, TestCase testCase) {
-    // Inherit domains from linked entity if the test case has none directly
-    if (nullOrEmpty(testCase.getDomains())) {
-      try {
-        MessageParser.EntityLink entityLink =
-            MessageParser.EntityLink.parse(testCase.getEntityLink());
-        EntityInterface linkedEntity =
-            Entity.getEntityByName(
-                entityLink.getEntityType(),
-                entityLink.getEntityFQN(),
-                "domains",
-                Include.NON_DELETED);
-        if (linkedEntity != null && !nullOrEmpty(linkedEntity.getDomains())) {
-          doc.put("domains", getEntitiesWithDisplayName(linkedEntity.getDomains()));
-        }
-      } catch (Exception ex) {
-        LOG.warn(
-            "Failed to inherit domains for TestCase [{}]: {}",
-            testCase.getFullyQualifiedName(),
-            ex.getMessage());
-      }
-    }
+    // Denormalize parent relationships and inherit domains from the linked table.
+    // addTestSuiteParentEntityRelations already fetches the Table with "domains",
+    // so we reuse it to avoid an extra DB query per test case.
+    EntityInterface linkedTable = denormalizeTestSuiteParents(doc, testCase);
 
-    EntityReference testSuiteEntityReference = testCase.getTestSuite();
-    if (testSuiteEntityReference == null) {
-      return;
+    if (nullOrEmpty(testCase.getDomains())
+        && linkedTable != null
+        && !nullOrEmpty(linkedTable.getDomains())) {
+      doc.put("domains", getEntitiesWithDisplayName(linkedTable.getDomains()));
     }
-    TestSuite testSuite = Entity.getEntityOrNull(testSuiteEntityReference, "", Include.ALL);
+  }
+
+  private EntityInterface denormalizeTestSuiteParents(Map<String, Object> doc, TestCase testCase) {
+    EntityReference testSuiteRef = testCase.getTestSuite();
+    if (testSuiteRef == null) {
+      return null;
+    }
+    TestSuite testSuite = Entity.getEntityOrNull(testSuiteRef, "", Include.ALL);
     if (testSuite == null) {
-      return;
+      return null;
     }
     EntityReference entityReference = testSuite.getBasicEntityReference();
-    if (entityReference != null) {
-      TestSuiteIndex.addTestSuiteParentEntityRelations(entityReference, doc);
+    if (entityReference == null) {
+      return null;
     }
+    return TestSuiteIndex.addTestSuiteParentEntityRelations(entityReference, doc);
   }
 
   public static Map<String, Float> getFields() {
