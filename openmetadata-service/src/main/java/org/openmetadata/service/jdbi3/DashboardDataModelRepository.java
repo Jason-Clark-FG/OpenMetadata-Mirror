@@ -251,11 +251,7 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
     // Then, if columns field is requested, also fetch column-level tags
     if (fields.contains("columns")) {
       // Use bulk tag fetching to avoid N+1 queries
-      bulkPopulateEntityFieldTags(
-          dataModels,
-          entityType,
-          DashboardDataModel::getColumns,
-          DashboardDataModel::getFullyQualifiedName);
+      bulkPopulateEntityFieldTags(dataModels, DashboardDataModel::getColumns);
     }
   }
 
@@ -341,25 +337,18 @@ public class DashboardDataModelRepository extends EntityRepository<DashboardData
           });
       compareAndUpdate(
           "sourceUrl",
-          () -> {
-            recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl());
-          });
+          () -> recordChange("sourceUrl", original.getSourceUrl(), updated.getSourceUrl()));
       compareAndUpdate(
           "sourceHash",
-          () -> {
-            recordChange(
-                "sourceHash",
-                original.getSourceHash(),
-                updated.getSourceHash(),
-                false,
-                EntityUtil.objectMatch,
-                false);
-          });
-      compareAndUpdate(
-          "sql",
-          () -> {
-            recordChange("sql", original.getSql(), updated.getSql());
-          });
+          () ->
+              recordChange(
+                  "sourceHash",
+                  original.getSourceHash(),
+                  updated.getSourceHash(),
+                  false,
+                  EntityUtil.objectMatch,
+                  false));
+      compareAndUpdate("sql", () -> recordChange("sql", original.getSql(), updated.getSql()));
     }
   }
 

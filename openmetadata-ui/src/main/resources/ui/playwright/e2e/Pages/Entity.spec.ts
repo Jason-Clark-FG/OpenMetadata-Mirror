@@ -589,7 +589,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             columnNameTestId,
             entityType: entity.type as EntityType,
           });
-
+          await waitForAllLoadersToDisappear(page);
           // Step 1: Add a glossary term first
           const glossaryEditButton = panelContainer.getByTestId(
             'edit-glossary-terms'
@@ -2055,7 +2055,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         // Since the test iterates through all 17 types of custom property and
         // performs multiple actions for each, we need to increase the timeout
         // to avoid premature test failure
-        test.setTimeout(240000);
+        test.setTimeout(600000);
         const { apiContext, afterAction } = await getApiContext(page);
 
         await prepareCustomProperty(apiContext);
@@ -2063,12 +2063,15 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         const columnFqn =
           (entity as TableClass).entityResponseData.columns[0]
             .fullyQualifiedName ?? '';
+        const tableFqn =
+          (entity as TableClass).entityResponseData.fullyQualifiedName ?? '';
 
         for (const type of properties) {
           await test.step(`Set ${type} custom property on column and verify in UI`, async () => {
             await verifyTableColumnCustomPropertyPersistence({
               page,
               columnFqn,
+              tableFqn,
               propertyName: customPropertyValue[type].property.name,
               propertyType: type,
               users,
