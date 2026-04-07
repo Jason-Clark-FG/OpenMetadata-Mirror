@@ -14,6 +14,7 @@
 package org.openmetadata.service.apps.bundles.rdf.distributed;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -281,5 +283,73 @@ class DistributedRdfIndexCoordinatorTest {
             eq(completedAt),
             anyLong(),
             isNull());
+  }
+
+  @Test
+  void hasClaimableWorkUsesCountQueries() {
+    UUID jobId = UUID.randomUUID();
+    EventPublisherJob jobConfiguration = new EventPublisherJob().withEntities(Set.of("table"));
+    RdfIndexJobRecord jobRecord =
+        new RdfIndexJobRecord(
+            jobId.toString(),
+            IndexJobStatus.READY.name(),
+            JsonUtils.pojoToJson(jobConfiguration),
+            25L,
+            0L,
+            0L,
+            0L,
+            JsonUtils.pojoToJson(Map.of()),
+            "admin",
+            System.currentTimeMillis(),
+            null,
+            null,
+            System.currentTimeMillis(),
+            null);
+
+    when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
+    when(partitionDAO.getAggregatedStats(jobId.toString()))
+        .thenReturn(new RdfAggregatedStatsRecord(25L, 0L, 0L, 0L, 1, 0, 0, 1, 0));
+    when(partitionDAO.getEntityStats(jobId.toString())).thenReturn(List.of());
+    when(partitionDAO.getServerStats(jobId.toString())).thenReturn(List.of());
+    when(partitionDAO.countPendingPartitions(jobId.toString())).thenReturn(0);
+    when(partitionDAO.countInFlightPartitions(jobId.toString())).thenReturn(1);
+
+    assertTrue(coordinator.hasClaimableWork(jobId));
+
+    verify(partitionDAO).countPendingPartitions(jobId.toString());
+    verify(partitionDAO).countInFlightPartitions(jobId.toString());
+    verify(partitionDAO, never()).findByJobId(jobId.toString());
+  }
+
+  @Test
+  void hasClaimableWorkReturnsFalseWhenNoClaimableOrInflightPartitionsExist() {
+    UUID jobId = UUID.randomUUID();
+    EventPublisherJob jobConfiguration = new EventPublisherJob().withEntities(Set.of("table"));
+    RdfIndexJobRecord jobRecord =
+        new RdfIndexJobRecord(
+            jobId.toString(),
+            IndexJobStatus.READY.name(),
+            JsonUtils.pojoToJson(jobConfiguration),
+            25L,
+            0L,
+            0L,
+            0L,
+            JsonUtils.pojoToJson(Map.of()),
+            "admin",
+            System.currentTimeMillis(),
+            null,
+            null,
+            System.currentTimeMillis(),
+            null);
+
+    when(jobDAO.findById(jobId.toString())).thenReturn(jobRecord);
+    when(partitionDAO.getAggregatedStats(jobId.toString()))
+        .thenReturn(new RdfAggregatedStatsRecord(25L, 0L, 0L, 0L, 1, 0, 0, 1, 0));
+    when(partitionDAO.getEntityStats(jobId.toString())).thenReturn(List.of());
+    when(partitionDAO.getServerStats(jobId.toString())).thenReturn(List.of());
+    when(partitionDAO.countPendingPartitions(jobId.toString())).thenReturn(0);
+    when(partitionDAO.countInFlightPartitions(jobId.toString())).thenReturn(0);
+
+    assertFalse(coordinator.hasClaimableWork(jobId));
   }
 }

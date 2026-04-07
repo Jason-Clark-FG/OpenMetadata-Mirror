@@ -98,7 +98,7 @@ export const Tooltip = ({
           cx(
             isEntering && 'tw:ease-out tw:animate-in',
             isExiting && 'tw:ease-in tw:animate-out',
-            'tw:break-all' // Ensure long words in the tooltip wrap instead of overflowing.
+            'tw:break-words' // Ensure long words in the tooltip wrap instead of overflowing.
           )
         }
         crossOffset={crossOffset ?? calculatedCrossOffset}

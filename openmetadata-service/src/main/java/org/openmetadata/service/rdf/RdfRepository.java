@@ -1577,10 +1577,11 @@ public class RdfRepository {
   }
 
   private String buildEntityGraphBatchQuery(Set<String> nodeUris) {
-    String entityPrefix = config.getBaseUri().toString() + "entity/";
+    String entityPrefix = escapeSparqlStringLiteral(config.getBaseUri().toString() + "entity/");
     String valuesClause =
         nodeUris.stream()
             .sorted()
+            .map(this::escapeSparqlUri)
             .map(uri -> "<" + uri + ">")
             .collect(java.util.stream.Collectors.joining(" "));
 
@@ -1618,6 +1619,31 @@ public class RdfRepository {
         + "    BIND(?frontier AS ?object) "
         + "  } "
         + "} LIMIT 5000";
+  }
+
+  private String escapeSparqlUri(String uri) {
+    if (uri == null || uri.isBlank()) {
+      throw new IllegalArgumentException("Invalid URI for SPARQL: " + uri);
+    }
+
+    if (uri.contains("<") || uri.contains(">") || uri.chars().anyMatch(Character::isWhitespace)) {
+      throw new IllegalArgumentException("Invalid URI for SPARQL: " + uri);
+    }
+
+    try {
+      java.net.URI parsedUri = java.net.URI.create(uri);
+      if (!parsedUri.isAbsolute()) {
+        throw new IllegalArgumentException("Invalid URI for SPARQL: " + uri);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException("Invalid URI for SPARQL: " + uri, e);
+    }
+
+    return uri;
+  }
+
+  private String escapeSparqlStringLiteral(String value) {
+    return value.replace("\\", "\\\\").replace("\"", "\\\"");
   }
 
   private List<EdgeInfo> parseEntityGraphEdgesFromResults(

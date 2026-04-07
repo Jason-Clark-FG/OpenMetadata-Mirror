@@ -16,6 +16,7 @@ import { Download01 } from '@untitledui/icons';
 import React, { useState } from 'react';
 import type { Key } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
+import { showErrorToast } from '../../utils/ToastUtils';
 
 export enum ExportFormat {
   PNG = 'png',
@@ -54,14 +55,18 @@ const ExportGraphPanel: React.FC<ExportGraphPanelProps> = ({
 
   const handleAction = async (key: Key) => {
     setOpen(false);
-    if (key === ExportFormat.PNG) {
-      await onExportPng();
-    } else if (key === ExportFormat.SVG) {
-      await onExportSvg();
-    } else if (key === ExportFormat.JSONLD && onExportJsonLd) {
-      await onExportJsonLd();
-    } else if (key === ExportFormat.TURTLE && onExportTurtle) {
-      await onExportTurtle();
+    try {
+      if (key === ExportFormat.PNG) {
+        await onExportPng();
+      } else if (key === ExportFormat.SVG) {
+        await onExportSvg();
+      } else if (key === ExportFormat.JSONLD && onExportJsonLd) {
+        await onExportJsonLd();
+      } else if (key === ExportFormat.TURTLE && onExportTurtle) {
+        await onExportTurtle();
+      }
+    } catch {
+      showErrorToast(t('server.unexpected-error'));
     }
   };
 

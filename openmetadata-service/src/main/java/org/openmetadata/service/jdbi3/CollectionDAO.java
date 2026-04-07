@@ -11575,6 +11575,14 @@ public interface CollectionDAO {
     @RegisterRowMapper(RdfIndexPartitionMapper.class)
     List<RdfIndexPartitionRecord> findByJobId(@Bind("jobId") String jobId);
 
+    @SqlQuery(
+        "SELECT COUNT(*) FROM rdf_index_partition WHERE jobId = :jobId AND status = 'PENDING'")
+    int countPendingPartitions(@Bind("jobId") String jobId);
+
+    @SqlQuery(
+        "SELECT COUNT(*) FROM rdf_index_partition WHERE jobId = :jobId AND status = 'PROCESSING'")
+    int countInFlightPartitions(@Bind("jobId") String jobId);
+
     @ConnectionAwareSqlUpdate(
         value =
             "UPDATE rdf_index_partition p "

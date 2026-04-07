@@ -112,8 +112,9 @@ const AppDetails = () => {
       try {
         const schema = await applicationsClassBase.importSchema(fqn);
         setJsonSchema(schema);
-      } catch {
+      } catch (error) {
         setJsonSchema(undefined);
+        console.error(`Failed to load application schema for ${fqn}`, error);
         showErrorToast(
           t('message.no-application-schema-found', { appName: fqn })
         );

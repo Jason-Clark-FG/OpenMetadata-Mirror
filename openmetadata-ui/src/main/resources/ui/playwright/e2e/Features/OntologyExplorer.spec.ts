@@ -402,7 +402,7 @@ test.describe('Ontology Explorer', () => {
       await waitForGraphLoaded(page);
       await page.getByTestId('ontology-export-graph').click();
       await expect(page.getByText('PNG', { exact: true })).toBeVisible();
-      await expect(page.getByText('SVG', { exact: true })).toBeVisible();
+      await expect(page.getByText('SVG (raster)', { exact: true })).toBeVisible();
     });
   });
 

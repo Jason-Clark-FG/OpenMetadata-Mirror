@@ -220,7 +220,14 @@ public class DistributedRdfIndexCoordinator {
         collectionDAO
             .rdfIndexPartitionDAO()
             .findLatestClaimedPartition(jobId.toString(), serverId, claimAt);
-    return record != null ? toPartition(record) : null;
+    if (record == null) {
+      LOG.warn(
+          "Claimed RDF partition for job {} but could not retrieve the record; it may require stale recovery",
+          jobId);
+      return null;
+    }
+
+    return toPartition(record);
   }
 
   public void updatePartitionProgress(RdfIndexPartition partition) {
@@ -371,11 +378,11 @@ public class DistributedRdfIndexCoordinator {
     if (job == null || job.isTerminal()) {
       return false;
     }
-    return collectionDAO.rdfIndexPartitionDAO().findByJobId(jobId.toString()).stream()
-        .anyMatch(
-            partition ->
-                partition.status().equals(PartitionStatus.PENDING.name())
-                    || partition.status().equals(PartitionStatus.PROCESSING.name()));
+
+    String id = jobId.toString();
+
+    return collectionDAO.rdfIndexPartitionDAO().countPendingPartitions(id) > 0
+        || collectionDAO.rdfIndexPartitionDAO().countInFlightPartitions(id) > 0;
   }
 
   public void performStartupRecovery() {

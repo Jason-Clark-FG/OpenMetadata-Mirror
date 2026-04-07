@@ -82,6 +82,7 @@ import {
   NODE_WIDTH,
   transformToG6Format,
 } from '../../utils/KnowledgeGraph.utils';
+import { showErrorToast } from '../../utils/ToastUtils';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../common/Loader/Loader';
 import TitleBreadcrumb from '../common/TitleBreadcrumb/TitleBreadcrumb.component';
@@ -246,50 +247,68 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     if (!containerRef.current) {
       return;
     }
-    const dataUrl = await toPng(containerRef.current, {
-      backgroundColor: '#ffffff',
-      pixelRatio: 2,
-    });
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'knowledge-graph.png';
-    a.click();
-  }, []);
+    try {
+      const dataUrl = await toPng(containerRef.current, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+      });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'knowledge-graph.png';
+      a.click();
+    } catch {
+      showErrorToast(t('server.unexpected-error'));
+    }
+  }, [t]);
 
   const handleExportSvg = useCallback(async () => {
     if (!containerRef.current) {
       return;
     }
-    const dataUrl = await toPng(containerRef.current, {
-      backgroundColor: '#ffffff',
-      pixelRatio: 2,
-    });
-    const { width, height } = containerRef.current.getBoundingClientRect();
-    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    try {
+      const dataUrl = await toPng(containerRef.current, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+      });
+      const { width, height } = containerRef.current.getBoundingClientRect();
+      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
   <image href="${dataUrl}" width="${width}" height="${height}"/>
 </svg>`;
-    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'knowledge-graph-raster.svg';
-    a.click();
-    URL.revokeObjectURL(url);
-  }, []);
+      const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'knowledge-graph-raster.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showErrorToast(t('server.unexpected-error'));
+    }
+  }, [t]);
 
   const getExportHandler = (format: EntityGraphExportFormat) => async () => {
-    await downloadEntityGraph({
-      entityId: entity?.id ?? '',
-      entityType: entityType ?? '',
-      entityName:
-        entity?.fullyQualifiedName ?? entity?.name ?? 'knowledge-graph',
-      depth: selectedDepth,
-      entityTypes: selectedEntityTypes.length ? selectedEntityTypes : undefined,
-      relationshipTypes: selectedRelationshipTypes.length
-        ? selectedRelationshipTypes
-        : undefined,
-      format: format,
-    });
+    if (!entity?.id) {
+      showErrorToast(t('label.no-entity-selected', { entity: t('label.asset') }));
+
+      return;
+    }
+
+    try {
+      await downloadEntityGraph({
+        entityId: entity.id,
+        entityType: entityType ?? '',
+        entityName:
+          entity.fullyQualifiedName ?? entity.name ?? 'knowledge-graph',
+        depth: selectedDepth,
+        entityTypes: selectedEntityTypes.length ? selectedEntityTypes : undefined,
+        relationshipTypes: selectedRelationshipTypes.length
+          ? selectedRelationshipTypes
+          : undefined,
+        format: format,
+      });
+    } catch {
+      showErrorToast(t('server.unexpected-error'));
+    }
   };
 
   useEffect(() => {
@@ -660,14 +679,14 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
     layout !== 'dagre' ||
     selectedEntityTypes.length > 0 ||
     selectedRelationshipTypes.length > 0 ||
-    selectedDepth !== 1;
+    selectedDepth !== depth;
 
   const handleClearAll = useCallback(() => {
     setLayout('dagre');
     setSelectedEntityTypes([]);
     setSelectedRelationshipTypes([]);
-    setSelectedDepth(1);
-  }, []);
+    setSelectedDepth(depth);
+  }, [depth]);
 
   const filterInputClassName =
     'tw:w-full tw:rounded-md tw:bg-primary tw:px-2.5 tw:py-1.5 tw:text-sm' +
@@ -848,6 +867,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 <Dropdown.Popover>
                   <div className="tw:border-b tw:border-border-secondary tw:px-4 tw:py-2">
                     <input
+                      aria-label={t('label.entity-type')}
                       autoFocus
                       className={filterInputClassName}
                       placeholder={t('label.search')}
@@ -902,6 +922,7 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 <Dropdown.Popover>
                   <div className="tw:border-b tw:border-border-secondary tw:px-4 tw:py-2">
                     <input
+                      aria-label={t('label.relationship-type')}
                       autoFocus
                       className={filterInputClassName}
                       placeholder={t('label.search')}
