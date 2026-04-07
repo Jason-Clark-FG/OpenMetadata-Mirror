@@ -11,36 +11,28 @@
  *  limitations under the License.
  */
 
-import {
-  Avatar,
-  Box,
-  Card,
-  Typography,
-} from '@openmetadata/ui-core-components';
+import { Box, Card } from '@openmetadata/ui-core-components';
 import { useForm } from 'antd/lib/form/Form';
 import { isEmpty } from 'lodash';
 import { useSnackbar } from 'notistack';
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../assets/svg/folder-empty.svg';
-import { NO_DATA, ROUTES } from '../../constants/constants';
+import { ROUTES } from '../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../constants/Learning.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { CreateDataProduct } from '../../generated/api/domains/createDataProduct';
 import { CreateDomain } from '../../generated/api/domains/createDomain';
-import { Domain } from '../../generated/entity/domains/domain';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { useMarketplaceStore } from '../../hooks/useMarketplaceStore';
 import { addDomains, patchDomains } from '../../rest/domainAPI';
 import { createEntityWithCoverImage } from '../../utils/CoverImageUploadUtils';
-import { getEntityName } from '../../utils/EntityUtils';
-import { getEntityAvatarProps } from '../../utils/IconUtils';
-import { getClassificationTags, getGlossaryTags } from '../../utils/TagsUtils';
 import { useDelete } from '../common/atoms/actions/useDelete';
 import { useDomainCardTemplates } from '../common/atoms/domain/ui/useDomainCardTemplates';
 import { useDomainFilters } from '../common/atoms/domain/ui/useDomainFilters';
+import { useDomainTableColumns } from '../common/atoms/domain/ui/useDomainTableColumns';
 import { useFormDrawerWithRef } from '../common/atoms/drawer';
 import { useFilterSelection } from '../common/atoms/filters/useFilterSelection';
 import { useBreadcrumbs } from '../common/atoms/navigation/useBreadcrumbs';
@@ -51,16 +43,11 @@ import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { hasActiveSearchOrFilter } from '../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../common/EntityCardView/EntityCardView.component';
-import EntityListingTable, {
-  ColumnDef,
-} from '../common/EntityListingTable/EntityListingTable.component';
+import EntityListingTable from '../common/EntityListingTable/EntityListingTable.component';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
-import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../common/TagBadgeList/TagBadgeList';
 import AddDomainForm from '../Domain/AddDomainForm/AddDomainForm.component';
 import { DomainFormType } from '../Domain/DomainPage.interface';
 import DomainTreeView from './components/DomainTreeView';
-import { DomainTypeChip } from './components/DomainTypeChip';
 import { useDomainListingData } from './hooks/useDomainListingData';
 
 const DomainListPage = () => {
@@ -100,7 +87,7 @@ const DomainListPage = () => {
         formRef={form}
         loading={isLoading}
         type={DomainFormType.DOMAIN}
-        onCancel={() => {}}
+        onCancel={() => { }}
         onSubmit={async (formData: CreateDomain | CreateDataProduct) => {
           setIsLoading(true);
           try {
@@ -126,7 +113,7 @@ const DomainListPage = () => {
       />
     ),
     formRef: form,
-    onSubmit: () => {},
+    onSubmit: () => { },
     loading: isLoading,
   });
 
@@ -134,11 +121,11 @@ const DomainListPage = () => {
     items: [
       ...(isMarketplace
         ? [
-            {
-              name: t('label.data-marketplace'),
-              url: ROUTES.DATA_MARKETPLACE,
-            },
-          ]
+          {
+            name: t('label.data-marketplace'),
+            url: ROUTES.DATA_MARKETPLACE,
+          },
+        ]
         : []),
       { name: t('label.domain-plural'), url: domainBasePath },
     ],
@@ -177,54 +164,8 @@ const DomainListPage = () => {
     }
   }, [isTreeView]);
 
-  const domainColumns: ColumnDef[] = useMemo(
-    () => [
-      { id: 'name', label: t('label.domain') },
-      { id: 'owners', label: t('label.owner-plural') },
-      { id: 'glossaryTerms', label: t('label.glossary-term-plural') },
-      { id: 'domainType', label: t('label.domain-type') },
-      { id: 'tags', label: t('label.tag-plural') },
-    ],
-    [t]
-  );
-
-  const renderDomainCell = useCallback(
-    (entity: Domain, columnId: string): ReactNode => {
-      switch (columnId) {
-        case 'name':
-          return (
-            <Box align="center" direction="row" gap={3}>
-              <Avatar size="md" {...getEntityAvatarProps(entity)} />
-              <Typography size="text-sm" weight="medium">
-                {getEntityName(entity)}
-              </Typography>
-            </Box>
-          );
-        case 'domainType':
-          return entity.domainType ? (
-            <DomainTypeChip domainType={entity.domainType} />
-          ) : (
-            <Typography size="text-sm">{NO_DATA}</Typography>
-          );
-        case 'owners':
-          return (
-            <OwnerLabel
-              isCompactView={false}
-              maxVisibleOwners={4}
-              owners={entity.owners}
-              showLabel={false}
-            />
-          );
-        case 'glossaryTerms':
-          return <TagBadgeList tags={getGlossaryTags(entity.tags)} />;
-        case 'tags':
-          return <TagBadgeList tags={getClassificationTags(entity.tags)} />;
-        default:
-          return null;
-      }
-    },
-    []
-  );
+  const { columns: domainColumns, renderCell: renderDomainCell } =
+    useDomainTableColumns();
 
   const { paginationControls } = usePaginationControls({
     currentPage: domainListing.currentPage,

@@ -19,18 +19,17 @@ import {
 } from '@openmetadata/ui-core-components';
 import { ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NO_DATA } from '../../../../../constants/constants';
 import { DataProduct } from '../../../../../generated/entity/domains/dataProduct';
 import { Domain } from '../../../../../generated/entity/domains/domain';
 import { getEntityName } from '../../../../../utils/EntityUtils';
 import { getEntityAvatarProps } from '../../../../../utils/IconUtils';
-import {
-  getClassificationTags,
-  getGlossaryTags,
-} from '../../../../../utils/TagsUtils';
-import { DomainTypeChip } from '../../../../DomainListing/components/DomainTypeChip';
 import { OwnerLabel } from '../../../OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../../../TagBadgeList/TagBadgeList';
+import {
+  renderDomainClassificationTagsCell,
+  renderDomainGlossaryTagsCell,
+  renderDomainOwnersCell,
+  renderDomainTypeCell,
+} from './domainFieldRenderers';
 
 export const useDomainCardTemplates = () => {
   const { t } = useTranslation();
@@ -49,22 +48,13 @@ export const useDomainCardTemplates = () => {
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
               <Typography size="text-xs">{t('label.owner')}</Typography>
-              <OwnerLabel
-                isCompactView={false}
-                maxVisibleOwners={4}
-                owners={entity.owners}
-                showLabel={false}
-              />
+              {renderDomainOwnersCell(entity)}
             </Box>
           </Grid.Item>
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
               <Typography size="text-xs">{t('label.domain-type')}</Typography>
-              {entity.domainType ? (
-                <DomainTypeChip domainType={entity.domainType} />
-              ) : (
-                <Typography size="text-sm">{NO_DATA}</Typography>
-              )}
+              {renderDomainTypeCell(entity)}
             </Box>
           </Grid.Item>
         </Grid>
@@ -75,13 +65,13 @@ export const useDomainCardTemplates = () => {
               <Typography size="text-xs">
                 {t('label.glossary-term-plural')}
               </Typography>
-              <TagBadgeList tags={getGlossaryTags(entity.tags)} />
+              {renderDomainGlossaryTagsCell(entity)}
             </Box>
           </Grid.Item>
           <Grid.Item span={12}>
             <Box direction="col" gap={1}>
               <Typography size="text-xs">{t('label.tag-plural')}</Typography>
-              <TagBadgeList tags={getClassificationTags(entity.tags)} />
+              {renderDomainClassificationTagsCell(entity)}
             </Box>
           </Grid.Item>
         </Grid>
@@ -116,12 +106,7 @@ export const useDomainCardTemplates = () => {
                 <Typography size="text-xs">
                   {t('label.owner-plural')}
                 </Typography>
-                <OwnerLabel
-                  isCompactView={false}
-                  maxVisibleOwners={4}
-                  owners={entity.owners}
-                  showLabel={false}
-                />
+                {renderDomainOwnersCell(entity)}
               </Box>
             </Grid.Item>
             <Grid.Item span={12}>
@@ -145,13 +130,13 @@ export const useDomainCardTemplates = () => {
                 <Typography size="text-xs">
                   {t('label.glossary-term-plural')}
                 </Typography>
-                <TagBadgeList tags={getGlossaryTags(entity.tags)} />
+                {renderDomainGlossaryTagsCell(entity)}
               </Box>
             </Grid.Item>
             <Grid.Item span={12}>
               <Box direction="col" gap={1}>
                 <Typography size="text-xs">{t('label.tag-plural')}</Typography>
-                <TagBadgeList tags={getClassificationTags(entity.tags)} />
+                {renderDomainClassificationTagsCell(entity)}
               </Box>
             </Grid.Item>
           </Grid>

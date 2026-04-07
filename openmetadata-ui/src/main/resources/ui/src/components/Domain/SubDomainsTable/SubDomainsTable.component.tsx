@@ -11,28 +11,16 @@
  *  limitations under the License.
  */
 
-import {
-  Avatar,
-  Box,
-  Card,
-  Typography,
-} from '@openmetadata/ui-core-components';
+import { Box, Card } from '@openmetadata/ui-core-components';
 import { isEmpty } from 'lodash';
-import { ReactNode, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as FolderEmptyIcon } from '../../../assets/svg/folder-empty.svg';
-import { NO_DATA } from '../../../constants/constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
-import { Domain } from '../../../generated/entity/domains/domain';
-import { getEntityName } from '../../../utils/EntityUtils';
-import { getEntityAvatarProps } from '../../../utils/IconUtils';
-import {
-  getClassificationTags,
-  getGlossaryTags,
-} from '../../../utils/TagsUtils';
 import { useDelete } from '../../common/atoms/actions/useDelete';
 import { useDomainCardTemplates } from '../../common/atoms/domain/ui/useDomainCardTemplates';
 import { useDomainFilters } from '../../common/atoms/domain/ui/useDomainFilters';
+import { useDomainTableColumns } from '../../common/atoms/domain/ui/useDomainTableColumns';
 import { useFilterSelection } from '../../common/atoms/filters/useFilterSelection';
 import { useSearch } from '../../common/atoms/navigation/useSearch';
 import { useTitleAndCount } from '../../common/atoms/navigation/useTitleAndCount';
@@ -40,13 +28,8 @@ import { useViewToggle } from '../../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../../common/atoms/pagination/usePaginationControls';
 import { hasActiveSearchOrFilter } from '../../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../../common/EntityCardView/EntityCardView.component';
-import EntityListingTable, {
-  ColumnDef,
-} from '../../common/EntityListingTable/EntityListingTable.component';
+import EntityListingTable from '../../common/EntityListingTable/EntityListingTable.component';
 import ErrorPlaceHolder from '../../common/ErrorWithPlaceholder/ErrorPlaceHolder';
-import { OwnerLabel } from '../../common/OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../../common/TagBadgeList/TagBadgeList';
-import { DomainTypeChip } from '../../DomainListing/components/DomainTypeChip';
 import { useSubdomainListingData } from './hooks/useSubdomainListingData';
 import { SubDomainsTableProps } from './SubDomainsTable.interface';
 
@@ -93,56 +76,11 @@ const SubDomainsTable = ({
   const { view, viewToggle } = useViewToggle();
   const { renderDomainCard } = useDomainCardTemplates();
 
-  const subDomainColumns: ColumnDef[] = useMemo(
-    () => [
-      { id: 'name', label: t('label.sub-domain') },
-      { id: 'owners', label: t('label.owner-plural') },
-      { id: 'glossaryTerms', label: t('label.glossary-term-plural') },
-      { id: 'domainType', label: t('label.domain-type') },
-      { id: 'tags', label: t('label.tag-plural') },
-    ],
-    [t]
-  );
-
-  const renderSubDomainCell = useCallback(
-    (entity: Domain, columnId: string): ReactNode => {
-      switch (columnId) {
-        case 'name':
-          return (
-            <Box align="center" direction="row" gap={3}>
-              <Avatar size="md" {...getEntityAvatarProps(entity)} />
-              <Typography size="text-sm" weight="medium">
-                {getEntityName(entity)}
-              </Typography>
-            </Box>
-          );
-        case 'domainType':
-          return entity.domainType ? (
-            <DomainTypeChip domainType={entity.domainType} />
-          ) : (
-            <Typography size="text-sm">{NO_DATA}</Typography>
-          );
-        case 'owners':
-          return (
-            <OwnerLabel
-              isCompactView={false}
-              maxVisibleOwners={4}
-              owners={entity.owners}
-              showLabel={false}
-            />
-          );
-        case 'glossaryTerms':
-          return <TagBadgeList size="lg" tags={getGlossaryTags(entity.tags)} />;
-        case 'tags':
-          return (
-            <TagBadgeList size="lg" tags={getClassificationTags(entity.tags)} />
-          );
-        default:
-          return null;
-      }
-    },
-    []
-  );
+  const { columns: subDomainColumns, renderCell: renderSubDomainCell } =
+    useDomainTableColumns({
+      nameLabelKey: 'label.sub-domain',
+      tagSize: 'lg',
+    });
 
   const { paginationControls } = usePaginationControls({
     currentPage: subdomainListing.currentPage,
