@@ -122,9 +122,11 @@ public interface SearchIndex {
    */
   default void populateCommonFields(
       Map<String, Object> doc, EntityInterface entity, String entityType) {
-    if (entity.getDisplayName() != null && !entity.getDisplayName().isBlank()) {
-      doc.put("displayName", entity.getDisplayName());
-    }
+    doc.put(
+        "displayName",
+        entity.getDisplayName() != null && !entity.getDisplayName().isBlank()
+            ? entity.getDisplayName()
+            : entity.getName());
     doc.put("entityType", entityType);
     List<EntityReference> ownersList = getEntitiesWithDisplayName(entity.getOwners());
     doc.put("owners", ownersList);

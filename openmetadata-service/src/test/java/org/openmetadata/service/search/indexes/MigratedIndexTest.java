@@ -3,7 +3,6 @@ package org.openmetadata.service.search.indexes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -93,7 +92,7 @@ class MigratedIndexTest {
     Map<String, Object> result = index.buildSearchIndexDoc();
 
     // Common fields (auto-populated by template method)
-    assertNull(result.get("displayName"));
+    assertEquals("sales-dashboard", result.get("displayName"));
     assertEquals(Entity.DASHBOARD, result.get("entityType"));
     assertTrue(result.containsKey("owners"));
     assertTrue(result.containsKey("domains"));
@@ -239,7 +238,7 @@ class MigratedIndexTest {
     Map<String, Object> result = index.buildSearchIndexDoc();
 
     // Common
-    assertNull(result.get("displayName"));
+    assertEquals("engineering", result.get("displayName"));
     assertEquals(Entity.DOMAIN, result.get("entityType"));
 
     // Tags
@@ -269,7 +268,7 @@ class MigratedIndexTest {
     Map<String, Object> result = index.buildSearchIndexDoc();
 
     // Common
-    assertNull(result.get("displayName"));
+    assertEquals("mysql-prod", result.get("displayName"));
     assertEquals(Entity.DATABASE_SERVICE, result.get("entityType"));
 
     // Lineage

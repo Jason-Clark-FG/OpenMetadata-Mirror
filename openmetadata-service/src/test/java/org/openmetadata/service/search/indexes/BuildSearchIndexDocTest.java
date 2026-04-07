@@ -3,7 +3,6 @@ package org.openmetadata.service.search.indexes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -79,8 +78,8 @@ class BuildSearchIndexDocTest {
 
     Map<String, Object> result = new DashboardIndex(d).buildSearchIndexDoc();
 
-    // displayName not set when entity has no displayName (null fallback removed)
-    assertNull(result.get("displayName"));
+    // displayName falls back to name when entity has no explicit displayName
+    assertEquals("test", result.get("displayName"));
     assertEquals(Entity.DASHBOARD, result.get("entityType"));
     assertNotNull(result.get("owners"));
   }
@@ -219,7 +218,7 @@ class BuildSearchIndexDocTest {
 
     Map<String, Object> result = new UserIndex(user).buildSearchIndexDoc();
 
-    // Common fields present (displayName not set when entity has none)
+    // Common fields present (displayName falls back to name)
     assertEquals(Entity.USER, result.get("entityType"));
     // No mixin-applied fields
     assertFalse(result.containsKey("classificationTags"));

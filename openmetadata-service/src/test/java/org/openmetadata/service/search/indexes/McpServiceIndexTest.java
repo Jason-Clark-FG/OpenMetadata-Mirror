@@ -1,7 +1,6 @@
 package org.openmetadata.service.search.indexes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -76,7 +75,7 @@ class McpServiceIndexTest {
 
     // Common fields (populated by template method)
     assertEquals(Entity.MCP_SERVICE, result.get("entityType"));
-    assertNull(result.get("displayName"));
+    assertEquals("my-service", result.get("displayName"));
 
     // LineageIndex fields
     assertTrue(result.containsKey("upstreamLineage"));
