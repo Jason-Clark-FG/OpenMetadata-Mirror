@@ -37,7 +37,12 @@ jest.mock('../../Database/SchemaEditor/SchemaEditor', () => {
     editorClass,
     mode,
     value,
-  }: { className?: string; editorClass?: string; mode?: { name: string }; value?: string }) {
+  }: {
+    className?: string;
+    editorClass?: string;
+    mode?: { name: string };
+    value?: string;
+  }) {
     return (
       <div className={className} data-testid="schema-editor">
         <div data-testid="editor-class">{editorClass}</div>

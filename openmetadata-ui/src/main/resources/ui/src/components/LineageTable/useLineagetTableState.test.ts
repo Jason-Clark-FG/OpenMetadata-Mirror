@@ -132,13 +132,17 @@ describe('useLineageTableState Hook', () => {
     const downstreamNodes = [{ id: 'downstream1' }];
 
     act(() => {
-      result.current.setUpstreamColumnLineageNodes(upstreamNodes as unknown as LineageNode[]);
+      result.current.setUpstreamColumnLineageNodes(
+        upstreamNodes as unknown as LineageNode[]
+      );
     });
 
     expect(result.current.upstreamColumnLineageNodes).toEqual(upstreamNodes);
 
     act(() => {
-      result.current.setDownstreamColumnLineageNodes(downstreamNodes as unknown as LineageNode[]);
+      result.current.setDownstreamColumnLineageNodes(
+        downstreamNodes as unknown as LineageNode[]
+      );
     });
 
     expect(result.current.downstreamColumnLineageNodes).toEqual(
@@ -210,7 +214,9 @@ describe('useLineageTableState Hook', () => {
     // Set some values first
     act(() => {
       result.current.setSearchValue('test');
-      result.current.setFilterNodes([{ id: 'test' }] as unknown as LineageNode[]);
+      result.current.setFilterNodes([
+        { id: 'test' },
+      ] as unknown as LineageNode[]);
       result.current.setFilterSelectionActive(true);
     });
 

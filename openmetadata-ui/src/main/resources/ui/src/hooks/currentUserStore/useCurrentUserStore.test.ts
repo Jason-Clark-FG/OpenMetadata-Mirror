@@ -15,9 +15,9 @@ import { ApplicationStore } from '../../interface/store.interface';
 import { SupportedLocales } from '../../utils/i18next/LocalUtil.interface';
 import { useApplicationStore } from '../useApplicationStore';
 import {
-  UserPreferences,
   useCurrentUserPreferences,
   usePersistentStorage,
+  UserPreferences,
 } from './useCurrentUserStore';
 
 // Mock the useApplicationStore

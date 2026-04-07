@@ -80,7 +80,13 @@ jest.mock('../../../hooks/useApplicationStore', () => ({
 jest.mock(
   '../Widgets/Common/WidgetWrapper/WidgetWrapper',
   () =>
-    ({ children, header }: { children: React.ReactNode; header: React.ReactNode }) =>
+    ({
+      children,
+      header,
+    }: {
+      children: React.ReactNode;
+      header: React.ReactNode;
+    }) =>
       (
         <div data-testid="widget-wrapper">
           {header}
@@ -92,7 +98,15 @@ jest.mock(
 jest.mock(
   '../Widgets/Common/WidgetHeader/WidgetHeader',
   () =>
-    ({ onSortChange, handleRemoveWidget, widgetKey }: { onSortChange: (value: string) => void; handleRemoveWidget: (key: string) => void; widgetKey: string }) =>
+    ({
+      onSortChange,
+      handleRemoveWidget,
+      widgetKey,
+    }: {
+      onSortChange: (value: string) => void;
+      handleRemoveWidget: (key: string) => void;
+      widgetKey: string;
+    }) =>
       (
         <div data-testid="widget-header">
           <select
@@ -114,7 +128,13 @@ jest.mock(
   '../../ActivityFeed/ActivityFeedList/ActivityFeedListV1New.component',
   () => ({
     __esModule: true,
-    default: ({ feedList, onAfterClose }: { feedList: { message: string }[]; onAfterClose: () => void }) => (
+    default: ({
+      feedList,
+      onAfterClose,
+    }: {
+      feedList: { message: string }[];
+      onAfterClose: () => void;
+    }) => (
       <div data-testid="activity-feed-list">
         <button data-testid="close-button" onClick={onAfterClose}>
           Close

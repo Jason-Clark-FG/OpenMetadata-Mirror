@@ -621,7 +621,9 @@ describe('Test EntityLineageUtils utility', () => {
 
   describe('getEntityChildrenAndLabel', () => {
     it('should return empty values for null input', () => {
-      const result = getEntityChildrenAndLabel(null as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        null as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -634,7 +636,9 @@ describe('Test EntityLineageUtils utility', () => {
       const node = {
         entityType: 'UNKNOWN',
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -653,7 +657,9 @@ describe('Test EntityLineageUtils utility', () => {
         columns,
         flattenColumns: columns,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: columns,
@@ -667,7 +673,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.TABLE,
         columns: [],
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -684,7 +692,9 @@ describe('Test EntityLineageUtils utility', () => {
         columns,
         flattenChildren,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: flattenChildren,
@@ -702,7 +712,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.DASHBOARD,
         charts,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: charts,
@@ -716,7 +728,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.DASHBOARD,
         charts: [],
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -734,7 +748,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.MLMODEL,
         mlFeatures,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: mlFeatures,
@@ -748,7 +764,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.MLMODEL,
         mlFeatures: [],
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -767,7 +785,9 @@ describe('Test EntityLineageUtils utility', () => {
         columns,
         flattenColumns: columns,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: columns,
@@ -787,7 +807,9 @@ describe('Test EntityLineageUtils utility', () => {
           columns,
         },
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: columns,
@@ -800,7 +822,9 @@ describe('Test EntityLineageUtils utility', () => {
       const node = {
         entityType: EntityType.CONTAINER,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -820,7 +844,9 @@ describe('Test EntityLineageUtils utility', () => {
           schemaFields,
         },
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: schemaFields,
@@ -833,7 +859,9 @@ describe('Test EntityLineageUtils utility', () => {
       const node = {
         entityType: EntityType.TOPIC,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -853,7 +881,9 @@ describe('Test EntityLineageUtils utility', () => {
           schemaFields,
         },
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: schemaFields,
@@ -873,7 +903,9 @@ describe('Test EntityLineageUtils utility', () => {
           schemaFields,
         },
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: schemaFields,
@@ -894,7 +926,9 @@ describe('Test EntityLineageUtils utility', () => {
           schemaFields: requestFields,
         },
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: responseFields,
@@ -907,7 +941,9 @@ describe('Test EntityLineageUtils utility', () => {
       const node = {
         entityType: EntityType.API_ENDPOINT,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -925,7 +961,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.SEARCH_INDEX,
         fields,
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: fields,
@@ -939,7 +977,9 @@ describe('Test EntityLineageUtils utility', () => {
         entityType: EntityType.SEARCH_INDEX,
         fields: [],
       };
-      const result = getEntityChildrenAndLabel(node as unknown as LineageNodeType);
+      const result = getEntityChildrenAndLabel(
+        node as unknown as LineageNodeType
+      );
 
       expect(result).toEqual({
         children: [],
@@ -1373,22 +1413,28 @@ describe('parseLineageData', () => {
     // Setup default mock implementations
     mockUniqWith.mockImplementation((array: unknown[]) => array || []);
     mockIsEqual.mockImplementation((a: unknown, b: unknown) => a === b);
-    mockGet.mockImplementation((obj: Record<string, unknown>, path: string | string[], defaultValue?: unknown) => {
-      if (!obj || !path) {
-        return defaultValue;
-      }
-      const pathStr = Array.isArray(path) ? path.join('.') : String(path);
-      const keys = pathStr.split('.');
-      let result = obj;
-      for (const key of keys) {
-        result = result?.[key];
-        if (result === undefined) {
+    mockGet.mockImplementation(
+      (
+        obj: Record<string, unknown>,
+        path: string | string[],
+        defaultValue?: unknown
+      ) => {
+        if (!obj || !path) {
           return defaultValue;
         }
-      }
+        const pathStr = Array.isArray(path) ? path.join('.') : String(path);
+        const keys = pathStr.split('.');
+        let result = obj;
+        for (const key of keys) {
+          result = result?.[key];
+          if (result === undefined) {
+            return defaultValue;
+          }
+        }
 
-      return result;
-    });
+        return result;
+      }
+    );
   });
 
   describe('Basic functionality', () => {
@@ -1597,14 +1643,16 @@ describe('parseLineageData', () => {
   describe('Pagination handling', () => {
     it('should create load more nodes for entities with pagination', () => {
       // Mock get function to return pipeline type for filtering
-      mockGet.mockImplementation((obj: Record<string, unknown>, path: string | string[]) => {
-        if (path === 'entityType') {
-          return obj?.entityType || EntityType.TABLE;
-        }
-        const pathStr = Array.isArray(path) ? path.join('.') : String(path);
+      mockGet.mockImplementation(
+        (obj: Record<string, unknown>, path: string | string[]) => {
+          if (path === 'entityType') {
+            return obj?.entityType || EntityType.TABLE;
+          }
+          const pathStr = Array.isArray(path) ? path.join('.') : String(path);
 
-        return obj?.[pathStr];
-      });
+          return obj?.[pathStr];
+        }
+      );
 
       const result = parseLineageData(
         mockLineageData,
@@ -1637,14 +1685,16 @@ describe('parseLineageData', () => {
         },
       };
 
-      mockGet.mockImplementation((obj: Record<string, unknown>, path: string | string[]) => {
-        if (path === 'entityType') {
-          return obj?.entityType;
-        }
-        const pathStr = Array.isArray(path) ? path.join('.') : String(path);
+      mockGet.mockImplementation(
+        (obj: Record<string, unknown>, path: string | string[]) => {
+          if (path === 'entityType') {
+            return obj?.entityType;
+          }
+          const pathStr = Array.isArray(path) ? path.join('.') : String(path);
 
-        return obj?.[pathStr];
-      });
+          return obj?.[pathStr];
+        }
+      );
 
       const dataWithPipeline = {
         ...mockLineageData,
@@ -1743,26 +1793,29 @@ describe('parseLineageData', () => {
       };
 
       // Mock uniqWith to actually remove duplicates
-      mockUniqWith.mockImplementation((array: unknown[], compareFn?: (a: unknown, b: unknown) => boolean) => {
-        if (!array) {
-          return [];
-        }
-        const unique: unknown[] = [];
-        for (const item of array) {
-          if (
-            !unique.some((existing) =>
-              compareFn ? compareFn(existing, item) : existing === item
-            )
-          ) {
-            unique.push(item);
+      mockUniqWith.mockImplementation(
+        (array: unknown[], compareFn?: (a: unknown, b: unknown) => boolean) => {
+          if (!array) {
+            return [];
           }
-        }
+          const unique: unknown[] = [];
+          for (const item of array) {
+            if (
+              !unique.some((existing) =>
+                compareFn ? compareFn(existing, item) : existing === item
+              )
+            ) {
+              unique.push(item);
+            }
+          }
 
-        return unique;
-      });
+          return unique;
+        }
+      );
 
       mockIsEqual.mockImplementation(
-        (a: Record<string, unknown>, b: Record<string, unknown>) => a.fullyQualifiedName === b.fullyQualifiedName
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          a.fullyQualifiedName === b.fullyQualifiedName
       );
 
       parseLineageData(dataWithDuplicates, mockEntityFqn, mockRootFqn);

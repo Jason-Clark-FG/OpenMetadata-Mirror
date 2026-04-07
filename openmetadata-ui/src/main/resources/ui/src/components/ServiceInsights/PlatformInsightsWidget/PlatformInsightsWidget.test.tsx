@@ -49,7 +49,9 @@ jest.mock('../../../assets/svg/ic-trend-up.svg', () => {
   };
 });
 
-const mockUseRequiredParams = useRequiredParams as jest.MockedFunction<typeof useRequiredParams>;
+const mockUseRequiredParams = useRequiredParams as jest.MockedFunction<
+  typeof useRequiredParams
+>;
 
 const mockGetTitleByChartType = getTitleByChartType as jest.MockedFunction<
   typeof getTitleByChartType

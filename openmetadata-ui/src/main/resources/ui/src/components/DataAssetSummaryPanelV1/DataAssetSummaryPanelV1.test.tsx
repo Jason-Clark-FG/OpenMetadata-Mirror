@@ -206,13 +206,15 @@ jest.mock('../common/DescriptionSection/DescriptionSection', () => {
 jest.mock('../common/OverviewSection/OverviewSection', () => {
   return jest.fn().mockImplementation(({ entityInfoV1 }) => (
     <div data-testid="overview-section">
-      {(entityInfoV1 || []).map((item: { name: string; value: string }, index: number) => (
-        <div
-          data-testid={`overview-item-${String(item.name).toLowerCase()}`}
-          key={index}>
-          {item.name} {item.value}
-        </div>
-      ))}
+      {(entityInfoV1 || []).map(
+        (item: { name: string; value: string }, index: number) => (
+          <div
+            data-testid={`overview-item-${String(item.name).toLowerCase()}`}
+            key={index}>
+            {item.name} {item.value}
+          </div>
+        )
+      )}
     </div>
   ));
 });
@@ -415,7 +417,11 @@ describe('DataAssetSummaryPanelV1', () => {
     );
     (listTestCases as jest.Mock).mockResolvedValue({ data: mockTestCaseData });
     (getEntityOverview as jest.Mock).mockImplementation(
-      (_entityType: string, _dataAsset: DataAssetSummaryPanelProps['dataAsset'], additionalInfo?: Record<string, number | string>) => [
+      (
+        _entityType: string,
+        _dataAsset: DataAssetSummaryPanelProps['dataAsset'],
+        additionalInfo?: Record<string, number | string>
+      ) => [
         { name: 'Type', value: 'Table', visible: ['explore'] },
         { name: 'Rows', value: 1000, visible: ['explore'] },
         { name: 'Columns', value: 15, visible: ['explore'] },

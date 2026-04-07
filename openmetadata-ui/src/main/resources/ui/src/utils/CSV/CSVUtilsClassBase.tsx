@@ -70,7 +70,11 @@ class CSVUtilsClassBase {
       user: boolean;
       team: boolean;
     }
-  ): ((props: RenderEditCellProps<Record<string, string>, unknown>) => ReactNode) | undefined {
+  ):
+    | ((
+        props: RenderEditCellProps<Record<string, string>, unknown>
+      ) => ReactNode)
+    | undefined {
     switch (column) {
       case 'owner':
         return ({

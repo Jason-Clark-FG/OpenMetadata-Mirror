@@ -81,7 +81,13 @@ jest.mock('../../AlertBar/AlertBar', () => {
 });
 
 jest.mock('../../common/ErrorWithPlaceholder/ErrorPlaceHolder', () => {
-  return function MockErrorPlaceHolder({ type, children }: { type: string; children: React.ReactNode }) {
+  return function MockErrorPlaceHolder({
+    type,
+    children,
+  }: {
+    type: string;
+    children: React.ReactNode;
+  }) {
     return (
       <div data-testid="error-placeholder" data-type={type}>
         {children}
@@ -91,7 +97,11 @@ jest.mock('../../common/ErrorWithPlaceholder/ErrorPlaceHolder', () => {
 });
 
 jest.mock('../ContractExecutionChart/ContractExecutionChart.component', () => {
-  return function MockContractExecutionChart({ contract }: { contract: DataContract | null }) {
+  return function MockContractExecutionChart({
+    contract,
+  }: {
+    contract: DataContract | null;
+  }) {
     return (
       <div data-testid="contract-execution-chart">
         Chart for {contract?.name}
@@ -105,7 +115,11 @@ jest.mock('../ContractQualityCard/ContractQualityCard.component', () => {
 });
 
 jest.mock('../ContractSecurity/ContractSecurityCard.component', () => {
-  return function MockContractSecurityCard({ security }: { security?: { dataClassification?: string } }) {
+  return function MockContractSecurityCard({
+    security,
+  }: {
+    security?: { dataClassification?: string };
+  }) {
     return (
       <div data-testid="contract-security-card">
         ContractSecurityCard - {security?.dataClassification}
@@ -115,7 +129,11 @@ jest.mock('../ContractSecurity/ContractSecurityCard.component', () => {
 });
 
 jest.mock('../ContractViewSwitchTab/ContractViewSwitchTab.component', () => {
-  return function MockContractViewSwitchTab({ handleModeChange }: { handleModeChange: (e: { target: { value: string } }) => void }) {
+  return function MockContractViewSwitchTab({
+    handleModeChange,
+  }: {
+    handleModeChange: (e: { target: { value: string } }) => void;
+  }) {
     return (
       <div data-testid="contract-view-switch-tab">
         <button
@@ -164,7 +182,11 @@ jest.mock('../ODCSImportModal', () => {
 });
 
 jest.mock('../ContractYaml/ContractYaml.component', () => {
-  return function MockContractYaml({ contract }: { contract?: DataContract | null }) {
+  return function MockContractYaml({
+    contract,
+  }: {
+    contract?: DataContract | null;
+  }) {
     return <div data-testid="contract-yaml">YAML for {contract?.name}</div>;
   };
 });
@@ -196,7 +218,13 @@ jest.mock('../../common/RichTextEditor/RichTextEditorPreviewerV1', () => {
 });
 
 jest.mock('../../common/Table/Table', () => {
-  return function MockTable({ dataSource, loading }: { dataSource?: { id: string; name: string }[]; loading?: boolean }) {
+  return function MockTable({
+    dataSource,
+    loading,
+  }: {
+    dataSource?: { id: string; name: string }[];
+    loading?: boolean;
+  }) {
     return (
       <div data-testid="mock-table">
         <div>Loading: {loading ? 'true' : 'false'}</div>

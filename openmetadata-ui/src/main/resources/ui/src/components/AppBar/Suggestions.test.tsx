@@ -26,7 +26,8 @@ jest.mock('../../context/TourProvider/TourProvider');
 jest.mock('../../utils/SearchUtils', () => ({
   filterOptionsByIndex: jest.fn((options, index) => {
     return options.filter(
-      (option: { _source?: { entityType?: string } }) => option._source?.entityType === index
+      (option: { _source?: { entityType?: string } }) =>
+        option._source?.entityType === index
     );
   }),
   getGroupLabel: jest.fn((index) => `Group ${index}`),
@@ -40,7 +41,13 @@ jest.mock('../../utils/SearchClassBase', () => ({
   getEntitiesSuggestions: jest.fn(() => []),
 }));
 jest.mock('../../utils/CommonUtils', () => ({
-  Transi18next: ({ i18nKey, values }: { i18nKey: string; values: Record<string, string> }) => (
+  Transi18next: ({
+    i18nKey,
+    values,
+  }: {
+    i18nKey: string;
+    values: Record<string, string>;
+  }) => (
     <span data-testid="transi18next">
       {i18nKey} {values?.keyword || ''}
     </span>

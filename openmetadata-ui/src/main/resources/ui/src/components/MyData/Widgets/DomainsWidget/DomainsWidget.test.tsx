@@ -79,7 +79,10 @@ const mockSearchResponse = {
     total: { value: mockDomains.length },
   },
   aggregations: {},
-} as unknown as { hits: { hits: unknown[]; total: { value: number } }; aggregations: Record<string, unknown> };
+} as unknown as {
+  hits: { hits: unknown[]; total: { value: number } };
+  aggregations: Record<string, unknown>;
+};
 
 // Mock API functions
 jest.mock('../../../../rest/searchAPI', () => ({

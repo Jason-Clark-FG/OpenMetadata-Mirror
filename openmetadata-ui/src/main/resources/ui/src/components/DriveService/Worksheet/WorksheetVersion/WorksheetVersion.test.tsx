@@ -650,7 +650,9 @@ describe('WorksheetVersion', () => {
       const permissionsWithUndefinedViewCustomFields = {
         ...ENTITY_PERMISSIONS,
       };
-      delete (permissionsWithUndefinedViewCustomFields as Record<string, unknown>).ViewCustomFields;
+      delete (
+        permissionsWithUndefinedViewCustomFields as Record<string, unknown>
+      ).ViewCustomFields;
 
       renderWorksheetVersion({
         entityPermissions: permissionsWithUndefinedViewCustomFields,

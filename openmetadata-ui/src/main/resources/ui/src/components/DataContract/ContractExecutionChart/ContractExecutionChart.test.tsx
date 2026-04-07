@@ -41,19 +41,27 @@ jest.mock('../../../utils/ToastUtils', () => ({
 
 jest.mock('../../../utils/DataContract/DataContractUtils', () => ({
   processContractExecutionData: jest.fn((data) =>
-    data.map((item: { timestamp: number; contractExecutionStatus: string }, index: number) => ({
-      name: `${item.timestamp}_${index}`,
-      displayTimestamp: item.timestamp,
-      value: 1,
-      status: item.contractExecutionStatus,
-      failed: item.contractExecutionStatus === 'Failed' ? 1 : 0,
-      success: item.contractExecutionStatus === 'Success' ? 1 : 0,
-      aborted: item.contractExecutionStatus === 'Aborted' ? 1 : 0,
-      data: item,
-    }))
+    data.map(
+      (
+        item: { timestamp: number; contractExecutionStatus: string },
+        index: number
+      ) => ({
+        name: `${item.timestamp}_${index}`,
+        displayTimestamp: item.timestamp,
+        value: 1,
+        status: item.contractExecutionStatus,
+        failed: item.contractExecutionStatus === 'Failed' ? 1 : 0,
+        success: item.contractExecutionStatus === 'Success' ? 1 : 0,
+        aborted: item.contractExecutionStatus === 'Aborted' ? 1 : 0,
+        data: item,
+      })
+    )
   ),
   createContractExecutionCustomScale: jest.fn(() => {
-    const scale = ((value: unknown) => value) as unknown as Record<string, unknown>;
+    const scale = ((value: unknown) => value) as unknown as Record<
+      string,
+      unknown
+    >;
     scale.domain = jest.fn(() => scale);
     scale.range = jest.fn(() => scale);
     scale.ticks = jest.fn(() => []);
@@ -117,7 +125,11 @@ jest.mock('../../../utils/date-time/DateTimeUtils', () => ({
 }));
 
 jest.mock('../../common/DatePickerMenu/DatePickerMenu.component', () => {
-  return function MockDatePickerMenu({ handleDateRangeChange }: { handleDateRangeChange: (range: { startTs: number; endTs: number }) => void }) {
+  return function MockDatePickerMenu({
+    handleDateRangeChange,
+  }: {
+    handleDateRangeChange: (range: { startTs: number; endTs: number }) => void;
+  }) {
     return (
       <div data-testid="date-picker-menu">
         <button
@@ -136,7 +148,13 @@ jest.mock('../../common/DatePickerMenu/DatePickerMenu.component', () => {
 });
 
 jest.mock('../../common/ExpandableCard/ExpandableCard', () => {
-  return function MockExpandableCard({ cardProps, children }: { cardProps?: { className?: string; title?: string }; children?: React.ReactNode }) {
+  return function MockExpandableCard({
+    cardProps,
+    children,
+  }: {
+    cardProps?: { className?: string; title?: string };
+    children?: React.ReactNode;
+  }) {
     return (
       <div className={cardProps?.className} data-testid="expandable-card">
         <div data-testid="card-title">{cardProps?.title}</div>
@@ -156,12 +174,26 @@ jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
-  BarChart: ({ data, children }: { data: unknown[]; children: React.ReactNode }) => (
+  BarChart: ({
+    data,
+    children,
+  }: {
+    data: unknown[];
+    children: React.ReactNode;
+  }) => (
     <div data-chart-data={JSON.stringify(data)} data-testid="bar-chart">
       {children}
     </div>
   ),
-  Bar: ({ dataKey, fill, name }: { dataKey: string; fill: string; name: string }) => (
+  Bar: ({
+    dataKey,
+    fill,
+    name,
+  }: {
+    dataKey: string;
+    fill: string;
+    name: string;
+  }) => (
     <div data-fill={fill} data-testid={`bar-${dataKey}`}>
       {name}
     </div>
@@ -517,7 +549,11 @@ describe('ContractExecutionChart', () => {
       const contractWithoutId = { ...mockContract, id: undefined };
 
       expect(() => {
-        render(<ContractExecutionChart contract={contractWithoutId as unknown as DataContract} />);
+        render(
+          <ContractExecutionChart
+            contract={contractWithoutId as unknown as DataContract}
+          />
+        );
       }).not.toThrow();
     });
   });

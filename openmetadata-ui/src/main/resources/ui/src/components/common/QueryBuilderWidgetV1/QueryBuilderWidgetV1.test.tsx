@@ -12,7 +12,6 @@
  */
 import { JsonTree, Utils } from '@react-awesome-query-builder/antd';
 import '@testing-library/jest-dom';
-import { ReactNode } from 'react';
 import {
   act,
   fireEvent,
@@ -20,6 +19,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { ReactNode } from 'react';
 import { EntityType } from '../../../enums/entity.enum';
 import { searchQuery } from '../../../rest/searchAPI';
 import { getTreeConfig } from '../../../utils/AdvancedSearchUtils';
@@ -109,7 +109,10 @@ jest.mock('@react-awesome-query-builder/antd', () => {
     Builder: ({
       onChange,
       ...props
-    }: { onChange?: (...args: unknown[]) => void } & Record<string, unknown>) => (
+    }: { onChange?: (...args: unknown[]) => void } & Record<
+      string,
+      unknown
+    >) => (
       <div data-testid="query-builder" {...props}>
         <button
           data-testid="mock-query-change"

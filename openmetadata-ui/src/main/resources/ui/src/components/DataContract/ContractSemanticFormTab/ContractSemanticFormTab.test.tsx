@@ -37,7 +37,12 @@ jest.mock('../../common/QueryBuilderWidgetV1/QueryBuilderWidgetV1', () => {
     getQueryActions,
     value,
     readonly,
-  }: { onChange?: (query: string, tree: JsonTree) => void; getQueryActions?: (actions: Actions) => void; value?: string; readonly?: boolean }) {
+  }: {
+    onChange?: (query: string, tree: JsonTree) => void;
+    getQueryActions?: (actions: Actions) => void;
+    value?: string;
+    readonly?: boolean;
+  }) {
     return (
       <div data-testid="query-builder-widget">
         <span>Query Builder Widget</span>

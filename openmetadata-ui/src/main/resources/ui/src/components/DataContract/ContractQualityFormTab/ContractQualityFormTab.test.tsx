@@ -63,22 +63,30 @@ jest.mock('../../common/Table/Table', () => {
     loading,
     rowSelection,
     rowKey,
-  }: { columns?: unknown[]; dataSource?: { id: string; name: string }[]; loading?: boolean; rowSelection?: { onChange?: (keys: string[]) => void }; rowKey?: string }) {
+  }: {
+    columns?: unknown[];
+    dataSource?: { id: string; name: string }[];
+    loading?: boolean;
+    rowSelection?: { onChange?: (keys: string[]) => void };
+    rowKey?: string;
+  }) {
     return (
       <div data-testid="mock-table">
         <div>Loading: {loading ? 'true' : 'false'}</div>
         <div>Row Selection: {rowSelection ? 'enabled' : 'disabled'}</div>
         <div>Data Source Length: {dataSource?.length || 0}</div>
         <div>Columns: {columns?.length || 0}</div>
-        {dataSource?.map((item: { id: string; name: string; [key: string]: unknown }) => (
-          <div data-testid={`table-row-${item.id}`} key={item[rowKey]}>
-            <button
-              data-testid={`select-row-${item.id}`}
-              onClick={() => rowSelection?.onChange?.([item.id])}>
-              Select {item.name}
-            </button>
-          </div>
-        ))}
+        {dataSource?.map(
+          (item: { id: string; name: string; [key: string]: unknown }) => (
+            <div data-testid={`table-row-${item.id}`} key={item[rowKey]}>
+              <button
+                data-testid={`select-row-${item.id}`}
+                onClick={() => rowSelection?.onChange?.([item.id])}>
+                Select {item.name}
+              </button>
+            </div>
+          )
+        )}
       </div>
     );
   };
@@ -91,7 +99,11 @@ jest.mock(
       drawerProps,
       onCancel,
       onFormSubmit,
-    }: { drawerProps: { open: boolean }; onCancel: () => void; onFormSubmit: () => void }) {
+    }: {
+      drawerProps: { open: boolean };
+      onCancel: () => void;
+      onFormSubmit: () => void;
+    }) {
       if (!drawerProps.open) {
         return null;
       }

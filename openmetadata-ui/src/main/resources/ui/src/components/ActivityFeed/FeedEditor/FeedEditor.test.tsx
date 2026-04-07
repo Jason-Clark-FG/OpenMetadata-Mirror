@@ -47,17 +47,17 @@ jest.mock('react-quill-new', () => {
   return {
     __esModule: true,
     Quill: new MockQuill(),
-    default: jest.fn().mockImplementation(
-      (props: {
-        onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
-      }) => {
-        return (
-          <div data-testid="react-quill" onKeyDown={props.onKeyDown}>
-            editor
-          </div>
-        );
-      }
-    ),
+    default: jest
+      .fn()
+      .mockImplementation(
+        (props: { onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void }) => {
+          return (
+            <div data-testid="react-quill" onKeyDown={props.onKeyDown}>
+              editor
+            </div>
+          );
+        }
+      ),
   };
 });
 

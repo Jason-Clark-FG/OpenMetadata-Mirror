@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
-import { Button, Col, Row, Select } from 'antd';
 import type { RefSelectProps } from 'antd';
+import { Button, Col, Row, Select } from 'antd';
 import { AxiosError } from 'axios';
 import { capitalize, debounce, get } from 'lodash';
 import {

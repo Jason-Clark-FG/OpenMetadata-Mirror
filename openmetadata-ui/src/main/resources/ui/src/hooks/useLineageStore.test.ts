@@ -12,10 +12,10 @@
  */
 import { act, renderHook } from '@testing-library/react';
 import { Edge, Node } from 'reactflow';
+import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { ZOOM_VALUE } from '../constants/Lineage.constants';
 import { LineagePlatformView } from '../context/LineageProvider/LineageProvider.interface';
 import { LineageLayer, PipelineViewMode } from '../generated/settings/settings';
-import { SourceType } from '../components/SearchedData/SearchedData.interface';
 import { useLineageStore } from './useLineageStore';
 
 describe('useLineageStore', () => {

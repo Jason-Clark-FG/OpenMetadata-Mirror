@@ -460,7 +460,9 @@ describe('FileVersion', () => {
       const permissionsWithUndefinedViewCustomFields = {
         ...ENTITY_PERMISSIONS,
       };
-      delete (permissionsWithUndefinedViewCustomFields as Record<string, unknown>).ViewCustomFields;
+      delete (
+        permissionsWithUndefinedViewCustomFields as Record<string, unknown>
+      ).ViewCustomFields;
 
       renderFileVersion({
         entityPermissions: permissionsWithUndefinedViewCustomFields,

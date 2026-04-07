@@ -85,18 +85,24 @@ jest.mock('../../common/Table/Table', () => {
         <div>Data Source Length: {dataSource?.length || 0}</div>
         <div>Columns: {columns?.length || 0}</div>
         <div>Pagination: {pagination ? 'enabled' : 'disabled'}</div>
-        {dataSource?.map((item: { name: string; fullyQualifiedName: string; [key: string]: unknown }) => (
-          <div data-testid={`table-row-${item.name}`} key={item[rowKey]}>
-            <span>{item.name}</span>
-            <button
-              data-testid={`select-row-${item.name}`}
-              onClick={() =>
-                rowSelection?.onChange?.([item.fullyQualifiedName])
-              }>
-              Select {item.name}
-            </button>
-          </div>
-        ))}
+        {dataSource?.map(
+          (item: {
+            name: string;
+            fullyQualifiedName: string;
+            [key: string]: unknown;
+          }) => (
+            <div data-testid={`table-row-${item.name}`} key={item[rowKey]}>
+              <span>{item.name}</span>
+              <button
+                data-testid={`select-row-${item.name}`}
+                onClick={() =>
+                  rowSelection?.onChange?.([item.fullyQualifiedName])
+                }>
+                Select {item.name}
+              </button>
+            </div>
+          )
+        )}
       </div>
     );
   };

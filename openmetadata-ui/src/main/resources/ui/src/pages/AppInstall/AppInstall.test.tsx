@@ -71,14 +71,15 @@ jest.mock(
           onConfigSave: (data: { formData: Record<string, unknown> }) => void;
           onCancel: () => void;
         }) => (
-        <div>
-          FormBuilder
-          <button onClick={() => onConfigSave({ formData: {} })}>
-            Submit FormBuilder
-          </button>
-          <button onClick={onCancel}>Cancel FormBuilder</button>
-        </div>
-      )),
+          <div>
+            FormBuilder
+            <button onClick={() => onConfigSave({ formData: {} })}>
+              Submit FormBuilder
+            </button>
+            <button onClick={onCancel}>Cancel FormBuilder</button>
+          </div>
+        )
+      ),
   })
 );
 
