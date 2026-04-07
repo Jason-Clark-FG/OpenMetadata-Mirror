@@ -186,7 +186,7 @@ public class DomainRepository extends EntityRepository<Domain> {
     // domain
     EntityReference parentRef = domain.getParent() != null ? domain.getParent() : getParent(domain);
     if (parentRef != null) {
-      Domain parent = Entity.getEntity(DOMAIN, parentRef.getId(), "owners,experts", ALL);
+      Domain parent = Entity.getEntity(DOMAIN, parentRef.getId(), "owners,experts", NON_DELETED);
       inheritOwners(domain, fields, parent);
       inheritExperts(domain, fields, parent);
     }
