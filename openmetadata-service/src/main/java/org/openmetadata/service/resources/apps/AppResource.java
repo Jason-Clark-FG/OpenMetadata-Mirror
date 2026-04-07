@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.ServiceEntityInterface;
 import org.openmetadata.schema.api.data.RestoreEntity;
@@ -95,6 +96,7 @@ import org.openmetadata.service.util.AsyncService;
 import org.openmetadata.service.util.DeleteEntityResponse;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.OpenMetadataConnectionBuilder;
+import org.openmetadata.service.util.PipelineStatusUtils;
 import org.openmetadata.service.util.RestUtil;
 import org.openmetadata.service.util.WebsocketNotificationHandler;
 import org.quartz.SchedulerException;
@@ -1252,83 +1254,155 @@ public class AppResource extends EntityResource<App, AppRepository> {
             .entity("Application stop in progress. Please check status via.")
             .build();
       } else {
-        if (!app.getPipelines().isEmpty()) {
-          IngestionPipeline ingestionPipeline = getIngestionPipeline(uriInfo, securityContext, app);
-          if (runId != null && !runId.isBlank()) {
-            markPipelineStatusAsStopped(uriInfo, ingestionPipeline, runId);
-            PipelineServiceClientResponse response =
-                pipelineServiceClient.killIngestionRun(ingestionPipeline, runId);
-            return Response.status(response.getCode()).entity(response).build();
-          } else {
-            markLatestPipelineStatusAsStopped(uriInfo, ingestionPipeline);
-            PipelineServiceClientResponse response =
-                pipelineServiceClient.killIngestion(ingestionPipeline);
-            return Response.status(response.getCode()).entity(response).build();
-          }
+        if (nullOrEmpty(app.getPipelines())) {
+          throw new BadRequestException(
+              String.format(
+                  "Application [%s] supports interrupts but has no associated pipeline configured.",
+                  name));
+        }
+        IngestionPipeline ingestionPipeline = getIngestionPipeline(uriInfo, securityContext, app);
+        if (runId != null && !runId.isBlank()) {
+          return stopSpecificRun(uriInfo, ingestionPipeline, runId);
+        } else {
+          return stopAllRuns(uriInfo, app, ingestionPipeline);
         }
       }
     }
     throw new BadRequestException("Application does not support Interrupts.");
   }
 
+  private Response stopSpecificRun(
+      UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
+    markPipelineStatusAsStopped(uriInfo, ingestionPipeline, runId);
+    PipelineServiceClientResponse killResponse;
+    try {
+      killResponse = pipelineServiceClient.killIngestionRun(ingestionPipeline, runId);
+    } catch (Exception e) {
+      LOG.error(
+          "Kill request for run [{}] on pipeline [{}] failed after DB update. Workflow may still be running.",
+          runId,
+          ingestionPipeline.getFullyQualifiedName(),
+          e);
+      return Response.status(Response.Status.BAD_GATEWAY)
+          .entity(
+              new PipelineServiceClientResponse()
+                  .withCode(Response.Status.BAD_GATEWAY.getStatusCode())
+                  .withReason(e.getMessage())
+                  .withPlatform(pipelineServiceClient.getPlatform()))
+          .build();
+    }
+    return toStopResponse(killResponse);
+  }
+
+  private Response stopAllRuns(UriInfo uriInfo, App app, IngestionPipeline ingestionPipeline) {
+    Long runStartTime =
+        repository
+            .getLatestAppRunsOptional(app, ingestionPipeline.getService().getId())
+            .map(AppRunRecord::getStartTime)
+            .orElse(null);
+    markLatestPipelineStatusAsStopped(uriInfo, ingestionPipeline, runStartTime);
+    PipelineServiceClientResponse killResponse;
+    try {
+      killResponse = pipelineServiceClient.killIngestion(ingestionPipeline);
+    } catch (Exception e) {
+      LOG.error(
+          "Kill request for pipeline [{}] failed after DB update. Workflows may still be running.",
+          ingestionPipeline.getFullyQualifiedName(),
+          e);
+      return Response.status(Response.Status.BAD_GATEWAY)
+          .entity(
+              new PipelineServiceClientResponse()
+                  .withCode(Response.Status.BAD_GATEWAY.getStatusCode())
+                  .withReason(e.getMessage())
+                  .withPlatform(pipelineServiceClient.getPlatform()))
+          .build();
+    }
+    return toStopResponse(killResponse);
+  }
+
   private void markPipelineStatusAsStopped(
       UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
+    IngestionPipelineRepository ingestionPipelineRepository =
+        (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
     try {
-      IngestionPipelineRepository ingestionPipelineRepository =
-          (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
       PipelineStatus status =
           ingestionPipelineRepository.getPipelineStatus(
               ingestionPipeline.getFullyQualifiedName(), runId);
       if (status == null) {
-        LOG.warn("Pipeline status not found for run {}, skipping DB update", runId);
+        LOG.warn(
+            "Pipeline status not found in DB for run [{}] on pipeline [{}]. Proceeding with kill but DB state will remain inconsistent.",
+            runId,
+            ingestionPipeline.getFullyQualifiedName());
         return;
       }
-      if (!isTerminalState(status.getPipelineState())) {
+      if (!PipelineStatusUtils.isTerminalState(status.getPipelineState())) {
         status.setPipelineState(PipelineStatusType.STOPPED);
         status.setEndDate(System.currentTimeMillis());
         ingestionPipelineRepository.addPipelineStatus(
             uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
       }
-    } catch (RuntimeException e) {
-      LOG.warn(
-          "Failed to mark pipeline run {} as stopped, continuing with kill: {}",
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to mark run [{}] as STOPPED in DB for pipeline [{}]. Kill will proceed but DB status may remain inconsistent.",
           runId,
-          e.getMessage());
+          ingestionPipeline.getFullyQualifiedName(),
+          e);
     }
   }
 
   private void markLatestPipelineStatusAsStopped(
-      UriInfo uriInfo, IngestionPipeline ingestionPipeline) {
+      UriInfo uriInfo, IngestionPipeline ingestionPipeline, Long runStartTime) {
+    IngestionPipelineRepository ingestionPipelineRepository =
+        (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
+    long now = System.currentTimeMillis();
+    long startTs = runStartTime != null ? runStartTime : now - TimeUnit.HOURS.toMillis(1);
+    ResultList<PipelineStatus> statuses;
     try {
-      IngestionPipelineRepository ingestionPipelineRepository =
-          (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
-      // Limit to 20: covers any burst of concurrent runs while avoiding unbounded DB scans.
-      // This path is only hit when no specific runId is provided (fallback kill-all).
-      ResultList<PipelineStatus> recentStatuses =
+      statuses =
           ingestionPipelineRepository.listPipelineStatus(
-              ingestionPipeline.getFullyQualifiedName(), null, null, 20);
-      long now = System.currentTimeMillis();
-      for (PipelineStatus status : recentStatuses.getData()) {
-        if (!isTerminalState(status.getPipelineState())) {
+              ingestionPipeline.getFullyQualifiedName(), startTs, now);
+    } catch (Exception e) {
+      LOG.error(
+          "Failed to list pipeline statuses for [{}]. Kill will proceed but DB statuses may remain inconsistent.",
+          ingestionPipeline.getFullyQualifiedName(),
+          e);
+      return;
+    }
+    for (PipelineStatus status : statuses.getData()) {
+      if (status.getRunId() == null || status.getRunId().isBlank()) {
+        continue;
+      }
+      if (!PipelineStatusUtils.isTerminalState(status.getPipelineState())) {
+        try {
           status.setPipelineState(PipelineStatusType.STOPPED);
           status.setEndDate(now);
           ingestionPipelineRepository.addPipelineStatus(
               uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
+        } catch (Exception e) {
+          LOG.error(
+              "Failed to mark run [{}] as STOPPED for pipeline [{}]. Kill will proceed but this run's DB status remains inconsistent.",
+              status.getRunId(),
+              ingestionPipeline.getFullyQualifiedName(),
+              e);
         }
       }
-    } catch (RuntimeException e) {
-      LOG.warn("Failed to mark pipeline runs as stopped, continuing with kill: {}", e.getMessage());
     }
   }
 
-  private static boolean isTerminalState(PipelineStatusType state) {
-    if (state == null) {
-      return false;
+  private Response toStopResponse(PipelineServiceClientResponse killResponse) {
+    int code = killResponse.getCode();
+    if (code >= 200 && code < 300) {
+      return Response.status(code).entity(killResponse).build();
     }
-    return state == PipelineStatusType.SUCCESS
-        || state == PipelineStatusType.FAILED
-        || state == PipelineStatusType.STOPPED
-        || state == PipelineStatusType.PARTIAL_SUCCESS;
+    if (code == 404) {
+      LOG.warn(
+          "Kill request returned 404 — workflow already completed. DB status already marked STOPPED.");
+      return Response.ok(killResponse).build();
+    }
+    LOG.error(
+        "Kill request returned unexpected code [{}]. DB status already marked STOPPED but workflow may still be running.",
+        code);
+    return Response.status(Response.Status.BAD_GATEWAY).entity(killResponse).build();
   }
 
   @POST
