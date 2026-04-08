@@ -247,7 +247,9 @@ public class TaskRepository extends EntityRepository<Task> {
       task.setPriority(TaskPriority.Medium);
     }
 
-    setDefaultAssigneesFromEntityOwners(task);
+    if (!update) {
+      setDefaultAssigneesFromEntityOwners(task);
+    }
     validateAssignees(task.getAssignees());
     validateTaskReviewers(task.getReviewers());
     validatePayloadAgainstFormSchema(task);

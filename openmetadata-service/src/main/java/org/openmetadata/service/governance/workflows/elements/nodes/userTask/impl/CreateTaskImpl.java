@@ -20,6 +20,7 @@ import static org.openmetadata.service.governance.workflows.Workflow.RELATED_ENT
 import static org.openmetadata.service.governance.workflows.Workflow.WORKFLOW_RUNTIME_EXCEPTION;
 import static org.openmetadata.service.governance.workflows.WorkflowHandler.getProcessDefinitionKeyFromId;
 
+import jakarta.json.JsonPatch;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -73,6 +74,7 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
  */
 @Slf4j
 public class CreateTaskImpl implements TaskListener {
+  static final String PENDING_WORKFLOW_START_STAGE_ID = "pending-workflow-start";
   private static final String DEFAULT_SYSTEM_USER = "admin";
   private Expression inputNamespaceMapExpr;
   private Expression assigneesVarNameExpr;
@@ -403,66 +405,73 @@ public class CreateTaskImpl implements TaskListener {
       }
     }
     if (existingTask != null) {
+      Task currentTask =
+          taskRepository.get(
+              null,
+              existingTask.getId(),
+              taskRepository.getFields(
+                  "assignees,reviewers,watchers,about,createdBy,domains,tags"));
+      Task updatedTask = JsonUtils.deepCopy(currentTask, Task.class);
       List<EntityReference> resolvedAssignees =
-          !assignees.isEmpty()
-              ? assignees
-              : (requestedAssignees != null
-                      && !requestedAssignees.isEmpty()
-                      && (existingTask.getAssignees() == null
-                          || existingTask.getAssignees().isEmpty()))
-                  ? requestedAssignees
-                  : existingTask.getAssignees();
-      existingTask.setStatus(stageStatus != null ? stageStatus : existingTask.getStatus());
-      existingTask.setAssignees(resolvedAssignees);
-      if (requestedReviewers != null) {
-        existingTask.setReviewers(requestedReviewers);
+          resolveExistingTaskAssignees(currentTask, assignees, requestedAssignees);
+      updatedTask.setStatus(stageStatus != null ? stageStatus : updatedTask.getStatus());
+      if (resolvedAssignees != null) {
+        updatedTask.setAssignees(resolvedAssignees);
       }
-      existingTask.setWorkflowInstanceId(
-          workflowInstanceId != null ? workflowInstanceId : existingTask.getWorkflowInstanceId());
-      existingTask.setWorkflowStageId(workflowStageId);
-      existingTask.setWorkflowStageDisplayName(
+      if (requestedReviewers != null) {
+        updatedTask.setReviewers(requestedReviewers);
+      }
+      updatedTask.setWorkflowInstanceId(
+          workflowInstanceId != null ? workflowInstanceId : updatedTask.getWorkflowInstanceId());
+      updatedTask.setWorkflowStageId(workflowStageId);
+      updatedTask.setWorkflowStageDisplayName(
           workflowStageDisplayName != null ? workflowStageDisplayName : workflowStageId);
-      existingTask.setAvailableTransitions(availableTransitions);
-      existingTask.setUpdatedAt(System.currentTimeMillis());
-      existingTask.setUpdatedBy(updatedBy);
-      existingTask.setPayload(
-          requestedPayload != null ? requestedPayload : existingTask.getPayload());
+      updatedTask.setAvailableTransitions(availableTransitions);
+      updatedTask.setUpdatedAt(System.currentTimeMillis());
+      updatedTask.setUpdatedBy(updatedBy);
+      updatedTask.setPayload(
+          requestedPayload != null ? requestedPayload : updatedTask.getPayload());
       if (resolvedWorkflowDefinitionId != null) {
-        existingTask.setWorkflowDefinitionId(resolvedWorkflowDefinitionId);
+        updatedTask.setWorkflowDefinitionId(resolvedWorkflowDefinitionId);
       }
       if (taskFormSchemaId != null && !taskFormSchemaId.isBlank()) {
-        existingTask.setTaskFormSchemaId(UUID.fromString(taskFormSchemaId));
+        updatedTask.setTaskFormSchemaId(UUID.fromString(taskFormSchemaId));
       }
       if (taskFormSchemaVersion != null) {
-        existingTask.setTaskFormSchemaVersion(taskFormSchemaVersion);
+        updatedTask.setTaskFormSchemaVersion(taskFormSchemaVersion);
       }
       if (taskName != null && !taskName.isBlank()) {
-        existingTask.setName(taskName);
+        updatedTask.setName(taskName);
       }
       if (taskDisplayName != null && !taskDisplayName.isBlank()) {
-        existingTask.setDisplayName(taskDisplayName);
+        updatedTask.setDisplayName(taskDisplayName);
       }
       if (taskDescription != null && !taskDescription.isBlank()) {
-        existingTask.setDescription(taskDescription);
+        updatedTask.setDescription(taskDescription);
       }
       if (requestedPriority != null) {
-        existingTask.setPriority(requestedPriority);
+        updatedTask.setPriority(requestedPriority);
       }
       if (requestedDueDate != null) {
-        existingTask.setDueDate(requestedDueDate);
+        updatedTask.setDueDate(requestedDueDate);
       }
       if (requestedExternalReference != null) {
-        existingTask.setExternalReference(
+        updatedTask.setExternalReference(
             JsonUtils.convertValue(requestedExternalReference, TaskExternalReference.class));
       }
       if (requestedTags != null) {
-        existingTask.setTags(
+        updatedTask.setTags(
             JsonUtils.convertValue(
                 requestedTags,
                 new com.fasterxml.jackson.core.type.TypeReference<List<TagLabel>>() {}));
       }
 
-      return taskRepository.createOrUpdate(null, existingTask, updatedBy).getEntity();
+      JsonPatch patch = JsonUtils.getJsonPatch(currentTask, updatedTask);
+      if (patch.toJsonArray().isEmpty()) {
+        return currentTask;
+      }
+
+      return taskRepository.patch(null, currentTask.getId(), updatedBy, patch).entity();
     }
 
     // Create the task
@@ -542,6 +551,32 @@ public class CreateTaskImpl implements TaskListener {
     WebsocketNotificationHandler.handleTaskNotification(task);
 
     return task;
+  }
+
+  static List<EntityReference> resolveExistingTaskAssignees(
+      Task existingTask,
+      List<EntityReference> workflowAssignees,
+      List<EntityReference> requestedAssignees) {
+    List<EntityReference> existingAssignees = existingTask.getAssignees();
+    boolean hasExistingAssignees = existingAssignees != null && !existingAssignees.isEmpty();
+
+    // The initial workflow materialization runs asynchronously after the task row is created.
+    // If the API caller has already updated assignees on the pending row, leave assignees unset
+    // in the workflow-side PUT so the repository preserves the current database value.
+    if (PENDING_WORKFLOW_START_STAGE_ID.equals(existingTask.getWorkflowStageId())
+        && hasExistingAssignees) {
+      return null;
+    }
+
+    if (workflowAssignees != null && !workflowAssignees.isEmpty()) {
+      return workflowAssignees;
+    }
+
+    if (requestedAssignees != null && !requestedAssignees.isEmpty() && !hasExistingAssignees) {
+      return requestedAssignees;
+    }
+
+    return existingAssignees;
   }
 
   private UUID resolveRequestedTaskId(DelegateTask delegateTask) {

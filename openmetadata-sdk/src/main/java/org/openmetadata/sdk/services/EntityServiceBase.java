@@ -2,7 +2,6 @@ package org.openmetadata.sdk.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flipkart.zjsonpatch.JsonDiff;
 import java.util.ArrayList;
@@ -80,16 +79,12 @@ public abstract class EntityServiceBase<T> {
   }
 
   public T create(T entity) throws OpenMetadataException {
-    T created = httpClient.execute(HttpMethod.POST, basePath, entity, getEntityClass());
-    rememberSnapshot(created);
-    return created;
+    return httpClient.execute(HttpMethod.POST, basePath, entity, getEntityClass());
   }
 
   public T upsert(T entity) throws OpenMetadataException {
     // PUT without ID for create-or-update operations
-    T updated = httpClient.execute(HttpMethod.PUT, basePath, entity, getEntityClass());
-    rememberSnapshot(updated);
-    return updated;
+    return httpClient.execute(HttpMethod.PUT, basePath, entity, getEntityClass());
   }
 
   public BulkOperationResult bulkCreateOrUpdate(List<?> createRequests)
@@ -225,10 +220,6 @@ public abstract class EntityServiceBase<T> {
     return update(id.toString(), entity, null);
   }
 
-  protected final void rememberSnapshot(T entity) {
-    storeSnapshot(null, entity);
-  }
-
   public T update(String id, T entity) throws OpenMetadataException {
     return update(id, entity, null);
   }
@@ -273,8 +264,6 @@ public abstract class EntityServiceBase<T> {
           }
         }
 
-        // Fetch original directly without storing a snapshot (avoids polluting the cache
-        // with a server-state snapshot that doesn't reflect the user's baseline).
         T original;
         if (!fieldsToFetch.isEmpty()) {
           String fields = String.join(",", fieldsToFetch);
@@ -282,7 +271,6 @@ public abstract class EntityServiceBase<T> {
         } else {
           original = fetchEntity(id, null);
         }
-
         originalNode = objectMapper.readTree(objectMapper.writeValueAsString(original));
       }
 
@@ -291,7 +279,6 @@ public abstract class EntityServiceBase<T> {
       removeComputedFields(updatedNode);
 
       JsonNode patch = JsonDiff.asJson(originalNode, updatedNode);
-      patch = normalizeReferenceFieldPatch(patch, originalNode, updatedNode);
 
       RequestOptions options = null;
       if (etag != null) {
@@ -338,86 +325,6 @@ public abstract class EntityServiceBase<T> {
     }
 
     return false;
-  }
-
-  private JsonNode normalizeReferenceFieldPatch(
-      JsonNode patch, JsonNode originalNode, JsonNode updatedNode) {
-    if (!patch.isArray()) {
-      return patch;
-    }
-
-    ArrayNode normalizedPatch = objectMapper.createArrayNode();
-    Set<String> normalizedFields = new HashSet<>();
-    Set<String> candidateFields = new HashSet<>();
-
-    originalNode.fieldNames().forEachRemaining(candidateFields::add);
-    updatedNode.fieldNames().forEachRemaining(candidateFields::add);
-
-    for (String fieldName : candidateFields) {
-      JsonNode originalField = originalNode.get(fieldName);
-      JsonNode updatedField = updatedNode.get(fieldName);
-
-      if (!isReferenceField(originalField) && !isReferenceField(updatedField)) {
-        continue;
-      }
-
-      if (nodesEqual(originalField, updatedField)) {
-        continue;
-      }
-
-      normalizedFields.add(fieldName);
-    }
-
-    for (JsonNode operation : patch) {
-      String path = operation.path("path").asText();
-      if (!isNormalizedReferencePath(path, normalizedFields)) {
-        normalizedPatch.add(operation);
-      }
-    }
-
-    for (String fieldName : normalizedFields) {
-      JsonNode originalField = originalNode.get(fieldName);
-      JsonNode updatedField = updatedNode.get(fieldName);
-      ObjectNode operation = objectMapper.createObjectNode();
-      operation.put("path", "/" + fieldName);
-
-      if (isPresent(updatedField)) {
-        operation.put("op", isPresent(originalField) ? "replace" : "add");
-        operation.set("value", updatedField.deepCopy());
-      } else if (isPresent(originalField)) {
-        operation.put("op", "remove");
-      } else {
-        continue;
-      }
-
-      normalizedPatch.add(operation);
-    }
-
-    return normalizedPatch;
-  }
-
-  private boolean isNormalizedReferencePath(String path, Set<String> normalizedFields) {
-    for (String fieldName : normalizedFields) {
-      String fieldPath = "/" + fieldName;
-      if (path.equals(fieldPath) || path.startsWith(fieldPath + "/")) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean nodesEqual(JsonNode left, JsonNode right) {
-    if (!isPresent(left) && !isPresent(right)) {
-      return true;
-    }
-    if (!isPresent(left) || !isPresent(right)) {
-      return false;
-    }
-    return left.equals(right);
-  }
-
-  private boolean isPresent(JsonNode node) {
-    return node != null && !node.isNull() && !node.isMissingNode();
   }
 
   private static final Set<String> COMPUTED_FIELDS =
