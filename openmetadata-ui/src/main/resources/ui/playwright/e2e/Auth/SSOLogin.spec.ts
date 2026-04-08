@@ -13,13 +13,13 @@
 import { expect, test } from '@playwright/test';
 import { SSO_ENV } from '../../constant/ssoAuth';
 import { performAdminLogin } from '../../utils/admin';
+import { getAuthContext } from '../../utils/common';
 import {
   getProviderHelper,
   ProviderHelper,
 } from '../../utils/sso-providers';
 import {
   applyProviderConfig,
-  buildAuthContextFromJwt,
   restoreBasicAuth,
   verifyLoggedInUserMatches,
 } from '../../utils/ssoAuth';
@@ -64,7 +64,7 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
       return;
     }
 
-    const adminContext = await buildAuthContextFromJwt(adminJwt);
+    const adminContext = await getAuthContext(adminJwt);
 
     try {
       await restoreBasicAuth(adminContext);

@@ -12,7 +12,7 @@
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
 import { BASIC_AUTH_CONFIG } from '../constant/ssoAuth';
-import { getApiContext, getAuthContext } from './common';
+import { getApiContext } from './common';
 import { SSOConfig } from './sso';
 
 export interface ProviderCredentials {
@@ -43,12 +43,6 @@ export const restoreBasicAuth = async (
   expect(response.status()).toBe(200);
 };
 
-export const buildAuthContextFromJwt = async (
-  jwt: string
-): Promise<APIRequestContext> => {
-  return await getAuthContext(jwt);
-};
-
 export const verifyLoggedInUserMatches = async (
   page: Page,
   expectedEmail: string
@@ -61,15 +55,9 @@ export const verifyLoggedInUserMatches = async (
     expect(response.status()).toBe(200);
 
     const user = await response.json();
-    const normalizedExpected = expectedEmail.toLowerCase();
-    const candidates = [user?.email, user?.name]
-      .filter(Boolean)
-      .map((value: string) => value.toLowerCase());
+    const expected = expectedEmail.toLowerCase();
 
-    expect(
-      candidates.some((value) => value === normalizedExpected),
-      `Expected logged-in user to match ${expectedEmail}, got email="${user?.email}" name="${user?.name}"`
-    ).toBe(true);
+    expect(user.email?.toLowerCase()).toBe(expected);
   } finally {
     await afterAction();
   }
