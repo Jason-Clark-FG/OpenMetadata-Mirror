@@ -57,7 +57,7 @@ import {
   getEntityType,
   prepareFeedLink,
 } from '../../../utils/FeedUtils';
-import { languageSelectOptions } from '../../../utils/i18next/i18nextUtil';
+import { languageSelectOptions, loadLocale } from '../../../utils/i18next/i18nextUtil';
 import { SupportedLocales } from '../../../utils/i18next/LocalUtil.interface';
 import { getHelpDropdownItems } from '../../../utils/NavbarUtils';
 import { getSettingPath } from '../../../utils/RouterUtils';
@@ -363,7 +363,8 @@ const MarketplaceNavBar = () => {
     fetchOMVersion();
   }, []);
 
-  const handleLanguageChange = useCallback(({ key }: MenuInfo) => {
+  const handleLanguageChange = useCallback(async ({ key }: MenuInfo) => {
+    await loadLocale(key);
     i18next.changeLanguage(key);
     setPreference({ language: key as SupportedLocales });
     navigate(0);

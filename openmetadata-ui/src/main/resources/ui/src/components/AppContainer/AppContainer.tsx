@@ -27,6 +27,7 @@ import { getLimitConfig } from '../../rest/limitsAPI';
 import { getSettingsByType } from '../../rest/settingConfigAPI';
 import applicationRoutesClass from '../../utils/ApplicationRoutesClassBase';
 import i18n from '../../utils/i18next/LocalUtil';
+import { loadLocale } from '../../utils/i18next/i18nextUtil';
 import { isNewLayoutRoute } from '../../utils/LayoutUtils';
 import AppSidebar from '../AppSidebar/AppSidebar.component';
 import { LimitBanner } from '../common/LimitBanner/LimitBanner';
@@ -94,7 +95,9 @@ const AppContainer = () => {
 
   useEffect(() => {
     if (language) {
-      i18n.changeLanguage(language);
+      loadLocale(language).then(() => {
+        i18n.changeLanguage(language);
+      });
     }
   }, [language]);
 

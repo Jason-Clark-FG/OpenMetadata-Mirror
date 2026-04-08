@@ -13,26 +13,50 @@
 
 import i18next, { InitOptions } from 'i18next';
 import { map, upperCase } from 'lodash';
-import arSA from '../../locale/languages/ar-sa.json';
-import deDe from '../../locale/languages/de-de.json';
 import enUS from '../../locale/languages/en-us.json';
-import esES from '../../locale/languages/es-es.json';
-import frFR from '../../locale/languages/fr-fr.json';
-import glES from '../../locale/languages/gl-es.json';
-import heHE from '../../locale/languages/he-he.json';
-import jaJP from '../../locale/languages/ja-jp.json';
-import koKR from '../../locale/languages/ko-kr.json';
-import mrIN from '../../locale/languages/mr-in.json';
-import nlNL from '../../locale/languages/nl-nl.json';
-import prPR from '../../locale/languages/pr-pr.json';
-import ptBR from '../../locale/languages/pt-br.json';
-import ptPT from '../../locale/languages/pt-pt.json';
-import ruRU from '../../locale/languages/ru-ru.json';
-import thTH from '../../locale/languages/th-th.json';
-import trTR from '../../locale/languages/tr-tr.json';
-import zhCN from '../../locale/languages/zh-cn.json';
-import zhTW from '../../locale/languages/zh-tw.json';
 import { SupportedLocales } from './LocalUtil.interface';
+
+const LOCALE_LOADERS: Record<
+  string,
+  () => Promise<{ default: Record<string, unknown> }>
+> = {
+  'en-US': () => import('../../locale/languages/en-us.json'),
+  'ko-KR': () => import('../../locale/languages/ko-kr.json'),
+  'fr-FR': () => import('../../locale/languages/fr-fr.json'),
+  'zh-CN': () => import('../../locale/languages/zh-cn.json'),
+  'zh-TW': () => import('../../locale/languages/zh-tw.json'),
+  'ja-JP': () => import('../../locale/languages/ja-jp.json'),
+  'pt-BR': () => import('../../locale/languages/pt-br.json'),
+  'pt-PT': () => import('../../locale/languages/pt-pt.json'),
+  'es-ES': () => import('../../locale/languages/es-es.json'),
+  'gl-ES': () => import('../../locale/languages/gl-es.json'),
+  'ru-RU': () => import('../../locale/languages/ru-ru.json'),
+  'de-DE': () => import('../../locale/languages/de-de.json'),
+  'he-HE': () => import('../../locale/languages/he-he.json'),
+  'nl-NL': () => import('../../locale/languages/nl-nl.json'),
+  'pr-PR': () => import('../../locale/languages/pr-pr.json'),
+  'th-TH': () => import('../../locale/languages/th-th.json'),
+  'mr-IN': () => import('../../locale/languages/mr-in.json'),
+  'tr-TR': () => import('../../locale/languages/tr-tr.json'),
+  'ar-SA': () => import('../../locale/languages/ar-sa.json'),
+};
+
+const loadedLocales = new Set<string>(['en-US']);
+
+export const loadLocale = async (locale: string): Promise<void> => {
+  if (loadedLocales.has(locale)) {
+    return;
+  }
+
+  const loader = LOCALE_LOADERS[locale];
+  if (!loader) {
+    return;
+  }
+
+  const translations = await loader();
+  i18next.addResourceBundle(locale, 'translation', translations.default, true);
+  loadedLocales.add(locale);
+};
 
 export const languageSelectOptions = map(SupportedLocales, (value, key) => ({
   label: `${key} - ${upperCase(value.split('-')[0])}`,
@@ -45,24 +69,6 @@ export const getInitOptions = (): InitOptions => {
     supportedLngs: Object.values(SupportedLocales),
     resources: {
       'en-US': { translation: enUS },
-      'ko-KR': { translation: koKR },
-      'fr-FR': { translation: frFR },
-      'zh-CN': { translation: zhCN },
-      'zh-TW': { translation: zhTW },
-      'ja-JP': { translation: jaJP },
-      'pt-BR': { translation: ptBR },
-      'pt-PT': { translation: ptPT },
-      'es-ES': { translation: esES },
-      'gl-ES': { translation: glES },
-      'ru-RU': { translation: ruRU },
-      'de-DE': { translation: deDe },
-      'he-HE': { translation: heHE },
-      'nl-NL': { translation: nlNL },
-      'pr-PR': { translation: prPR },
-      'th-TH': { translation: thTH },
-      'mr-IN': { translation: mrIN },
-      'tr-TR': { translation: trTR },
-      'ar-SA': { translation: arSA },
     },
     fallbackLng: ['en-US'],
     detection: {
