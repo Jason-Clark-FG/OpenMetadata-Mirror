@@ -6,6 +6,7 @@ import static org.openmetadata.service.search.EntityBuilderConstant.POST_TAG;
 import static org.openmetadata.service.search.EntityBuilderConstant.PRE_TAG;
 import static org.openmetadata.service.search.SearchUtil.getFuzziness;
 import static org.openmetadata.service.search.SearchUtil.getMaxExpansions;
+import static org.openmetadata.service.search.SearchUtil.isColumnIndex;
 import static org.openmetadata.service.search.SearchUtil.isDataAssetIndex;
 import static org.openmetadata.service.search.SearchUtil.isDataQualityIndex;
 import static org.openmetadata.service.search.SearchUtil.isServiceIndex;
@@ -26,6 +27,7 @@ import org.openmetadata.schema.api.search.SearchSettings;
 import org.openmetadata.schema.api.search.TermBoost;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.search.SearchSourceBuilderFactory;
+import org.openmetadata.service.search.indexes.ColumnSearchIndex;
 import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.search.indexes.TestCaseIndex;
 import org.openmetadata.service.search.indexes.TestCaseResolutionStatusIndex;
@@ -203,7 +205,7 @@ public class OpenSearchSourceBuilderFactory
     compositeConfig.setTermBoosts(allTermBoosts);
     compositeConfig.setFieldValueBoosts(allFieldValueBoosts);
     compositeConfig.setScoreMode(AssetTypeConfiguration.ScoreMode.SUM);
-    compositeConfig.setBoostMode(AssetTypeConfiguration.BoostMode.SUM);
+    compositeConfig.setBoostMode(AssetTypeConfiguration.BoostMode.MULTIPLY);
 
     return compositeConfig;
   }
@@ -303,6 +305,10 @@ public class OpenSearchSourceBuilderFactory
       return buildTimeSeriesSearchBuilderV2(indexName, searchQuery, fromOffset, size);
     }
 
+    if (isColumnIndex(indexName)) {
+      return buildColumnSearchBuilderV2(searchQuery, fromOffset, size);
+    }
+
     if (isServiceIndex(indexName)) {
       return buildServiceSearchBuilderV2(searchQuery, fromOffset, size);
     }
@@ -359,6 +365,27 @@ public class OpenSearchSourceBuilderFactory
         buildSearchQueryBuilderV2(query, TestCaseResultIndex.getFields());
     os.org.opensearch.client.opensearch.core.search.Highlight highlighter =
         buildHighlightsV2(new ArrayList<>());
+    return searchBuilderV2(queryBuilder, highlighter, from, size);
+  }
+
+  public OpenSearchRequestBuilder buildColumnSearchBuilderV2(String query, int from, int size) {
+    os.org.opensearch.client.opensearch._types.query_dsl.Query queryBuilder;
+    if (nullOrEmpty(query) || "*".equals(query.trim())) {
+      queryBuilder =
+          os.org.opensearch.client.opensearch._types.query_dsl.Query.of(q -> q.matchAll(m -> m));
+    } else {
+      Map<String, Float> fields = ColumnSearchIndex.getFields();
+      queryBuilder =
+          OpenSearchQueryBuilder.multiMatchQuery(
+              query,
+              fields,
+              os.org.opensearch.client.opensearch._types.query_dsl.TextQueryType.BestFields,
+              os.org.opensearch.client.opensearch._types.query_dsl.Operator.Or,
+              String.valueOf(DEFAULT_TIE_BREAKER),
+              "0");
+    }
+    os.org.opensearch.client.opensearch.core.search.Highlight highlighter =
+        buildHighlightsV2(List.of("name", "displayName", "description"));
     return searchBuilderV2(queryBuilder, highlighter, from, size);
   }
 
@@ -531,6 +558,12 @@ public class OpenSearchSourceBuilderFactory
     List<os.org.opensearch.client.opensearch._types.query_dsl.FunctionScore> functions =
         new ArrayList<>();
 
+    // Add baseline weight of 1.0 so that assets with no tier/usage retain their text score
+    // when boostMode is multiply. Without this, function_score could be 0 and zero out the
+    // text relevance score.
+    functions.add(
+        OpenSearchQueryBuilder.weightFunction(OpenSearchQueryBuilder.matchAllQuery(), 1.0));
+
     if (searchSettings.getGlobalSettings().getTermBoosts() != null) {
       searchSettings.getGlobalSettings().getTermBoosts().stream()
           .map(this::buildTermBoostFunctionV2)
@@ -689,7 +722,7 @@ public class OpenSearchSourceBuilderFactory
       int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
       if (!nullOrEmpty(agg.getField())) {
-        String field = SearchSourceBuilderFactory.remapAggregationField(agg.getField());
+        String field = SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
         termsAgg = OpenSearchAggregationBuilder.termsAggregation(field, maxSize);
       } else if (!nullOrEmpty(agg.getScript())) {
         termsAgg =
@@ -703,16 +736,15 @@ public class OpenSearchSourceBuilderFactory
   }
 
   private OpenSearchRequestBuilder addAggregationV2(OpenSearchRequestBuilder searchRequestBuilder) {
-    searchSettings
-        .getGlobalSettings()
-        .getAggregations()
+    listOrEmpty(searchSettings.getGlobalSettings().getAggregations())
         .forEach(
             agg -> {
               os.org.opensearch.client.opensearch._types.aggregations.Aggregation termsAgg;
               int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
               if (!nullOrEmpty(agg.getField())) {
-                String field = SearchSourceBuilderFactory.remapAggregationField(agg.getField());
+                String field =
+                    SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
                 termsAgg = OpenSearchAggregationBuilder.termsAggregation(field, maxSize);
               } else if (!nullOrEmpty(agg.getScript())) {
                 termsAgg =

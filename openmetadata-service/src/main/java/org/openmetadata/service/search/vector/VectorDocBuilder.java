@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +20,39 @@ import org.openmetadata.schema.type.AssetCertification;
 import org.openmetadata.schema.type.Column;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.TagLabel;
+import org.openmetadata.schema.type.TermRelation;
 import org.openmetadata.service.search.vector.client.EmbeddingClient;
 import org.openmetadata.service.search.vector.utils.TextChunkManager;
 
 @Slf4j
 @UtilityClass
 public class VectorDocBuilder {
+
+  public static List<Map<String, Object>> fromEntity(
+      EntityInterface entity, EmbeddingClient embeddingClient) {
+    Map<String, Object> doc = new HashMap<>(buildEmbeddingFields(entity, embeddingClient));
+
+    if (entity instanceof GlossaryTerm term) {
+      List<TermRelation> relatedTerms = term.getRelatedTerms();
+      if (relatedTerms != null && !relatedTerms.isEmpty()) {
+        List<Map<String, Object>> relatedTermDocs = new ArrayList<>();
+        for (TermRelation rel : relatedTerms) {
+          EntityReference ref = rel.getTerm();
+          if (ref == null) continue;
+          Map<String, Object> refMap = new HashMap<>();
+          if (ref.getId() != null) refMap.put("id", ref.getId().toString());
+          if (ref.getName() != null) refMap.put("name", ref.getName());
+          if (ref.getType() != null) refMap.put("type", ref.getType());
+          if (ref.getFullyQualifiedName() != null)
+            refMap.put("fullyQualifiedName", ref.getFullyQualifiedName());
+          relatedTermDocs.add(refMap);
+        }
+        doc.put("relatedTerms", relatedTermDocs);
+      }
+    }
+
+    return List.of(doc);
+  }
 
   /**
    * Generate embedding fields to merge into an entity's search index document. Returns a map with:
@@ -99,7 +127,7 @@ public class VectorDocBuilder {
                   }
                   return name;
                 })
-            .filter(n -> n != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     List<EntityReference> domainsPojo =
@@ -107,7 +135,7 @@ public class VectorDocBuilder {
     List<String> domainFqns =
         domainsPojo.stream()
             .map(EntityReference::getFullyQualifiedName)
-            .filter(fqn -> fqn != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     List<String> parts = new ArrayList<>();
@@ -122,12 +150,12 @@ public class VectorDocBuilder {
       List<String> synonyms =
           term.getSynonyms() != null ? term.getSynonyms() : Collections.emptyList();
       parts.add("synonyms: " + joinOrEmpty(synonyms));
-      List<EntityReference> relatedTerms =
+      List<TermRelation> relatedTerms =
           term.getRelatedTerms() != null ? term.getRelatedTerms() : Collections.emptyList();
       List<String> relatedTermFqns =
           relatedTerms.stream()
-              .map(EntityReference::getFullyQualifiedName)
-              .filter(fqn -> fqn != null)
+              .map(tr -> tr.getTerm().getFullyQualifiedName())
+              .filter(Objects::nonNull)
               .collect(Collectors.toList());
       parts.add("relatedTerms: " + joinOrEmpty(relatedTermFqns));
     }
@@ -160,7 +188,7 @@ public class VectorDocBuilder {
         List<String> relatedMetricFqns =
             relatedMetrics.stream()
                 .map(EntityReference::getFullyQualifiedName)
-                .filter(fqn -> fqn != null)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         parts.add("relatedMetrics: " + joinOrEmpty(relatedMetricFqns));
       }

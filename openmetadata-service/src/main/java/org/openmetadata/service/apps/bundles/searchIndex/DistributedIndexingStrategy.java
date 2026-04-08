@@ -95,14 +95,21 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       return doExecute(config, context, startTime);
     } catch (Exception e) {
       LOG.error("Distributed reindexing failed", e);
+      if (searchIndexSink != null) {
+        try {
+          searchIndexSink.close();
+        } catch (Exception closeEx) {
+          LOG.error("Error closing search index sink during exception handling", closeEx);
+        }
+        searchIndexSink = null;
+      }
       Stats stats = currentStats.get();
       return ExecutionResult.fromStats(stats, ExecutionResult.Status.FAILED, startTime);
     }
   }
 
   private ExecutionResult doExecute(
-      ReindexingConfiguration config, ReindexingJobContext context, long startTime)
-      throws Exception {
+      ReindexingConfiguration config, ReindexingJobContext context, long startTime) {
 
     this.config = config;
     LOG.info("Starting distributed reindexing for entities: {}", config.entities());
@@ -139,8 +146,7 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     }
 
     distributedExecutor.setAppContext(appId, appStartTime);
-    distributedExecutor.execute(
-        searchIndexSink, recreateContext, Boolean.TRUE.equals(config.recreateIndex()), config);
+    distributedExecutor.execute(searchIndexSink, recreateContext, config.recreateIndex(), config);
 
     monitorDistributedJob(distributedJob.getId());
 
@@ -222,7 +228,9 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     CountDownLatch completionLatch = new CountDownLatch(1);
     ScheduledExecutorService monitor =
         Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().name("distributed-monitor").factory());
+            Thread.ofPlatform()
+                .name("reindex-distributed-monitor-" + jobId.toString().substring(0, 8))
+                .factory());
 
     try {
       monitor.scheduleAtFixedRate(
@@ -266,6 +274,13 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       LOG.warn("Distributed job monitoring interrupted");
     } finally {
       monitor.shutdownNow();
+      try {
+        if (!monitor.awaitTermination(5, TimeUnit.SECONDS)) {
+          LOG.warn("Distributed job monitor did not terminate within 5 seconds");
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
@@ -281,16 +296,6 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
           Entity.getCollectionDAO()
               .searchIndexServerStatsDAO()
               .getAggregatedStats(distributedJob.getId().toString());
-      if (serverStatsAggr != null) {
-        LOG.info(
-            "Fetched aggregated server stats for job {}: readerSuccess={}, readerFailed={}, "
-                + "sinkSuccess={}, sinkFailed={}",
-            distributedJob.getId(),
-            serverStatsAggr.readerSuccess(),
-            serverStatsAggr.readerFailed(),
-            serverStatsAggr.sinkSuccess(),
-            serverStatsAggr.sinkFailed());
-      }
     } catch (Exception e) {
       LOG.debug("Could not fetch aggregated server stats for job {}", distributedJob.getId(), e);
     }
@@ -386,7 +391,42 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       }
     }
 
+    updateColumnStatsFromSink(stats);
+
     StatsReconciler.reconcile(stats);
+  }
+
+  private void updateColumnStatsFromSink(Stats jobDataStats) {
+    if (searchIndexSink == null || jobDataStats == null || jobDataStats.getEntityStats() == null) {
+      return;
+    }
+    StepStats columnStats = searchIndexSink.getColumnStats();
+    if (columnStats != null) {
+      StepStats existingColumnStats =
+          jobDataStats.getEntityStats().getAdditionalProperties().get(Entity.TABLE_COLUMN);
+      if (existingColumnStats != null) {
+        existingColumnStats.setTotalRecords(columnStats.getTotalRecords());
+        existingColumnStats.setSuccessRecords(columnStats.getSuccessRecords());
+        existingColumnStats.setFailedRecords(columnStats.getFailedRecords());
+      }
+    }
+  }
+
+  private void promoteColumnIndex(
+      RecreateIndexHandler recreateIndexHandler,
+      ReindexContext recreateContext,
+      boolean tableSuccess) {
+    Optional<String> columnStagedIndex = recreateContext.getStagedIndex(Entity.TABLE_COLUMN);
+    if (columnStagedIndex.isEmpty()) {
+      return;
+    }
+    try {
+      finalizeEntityReindex(
+          recreateIndexHandler, recreateContext, Entity.TABLE_COLUMN, tableSuccess);
+      LOG.info("Promoted column index (tableSuccess={})", tableSuccess);
+    } catch (Exception ex) {
+      LOG.error("Failed to promote column index", ex);
+    }
   }
 
   private static int saturatedToInt(long value) {
@@ -445,6 +485,13 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
     Set<String> entitiesToFinalize = new HashSet<>(recreateContext.getEntities());
     entitiesToFinalize.removeAll(promotedEntities);
 
+    if (promotedEntities.contains(Entity.TABLE)
+        && !promotedEntities.contains(Entity.TABLE_COLUMN)) {
+      boolean tableSuccess = computeEntitySuccess(Entity.TABLE, entityStatsMap);
+      promoteColumnIndex(recreateIndexHandler, recreateContext, tableSuccess);
+      entitiesToFinalize.remove(Entity.TABLE_COLUMN);
+    }
+
     LOG.debug("Entities to finalize={}, already promoted={}", entitiesToFinalize, promotedEntities);
 
     try {
@@ -463,6 +510,9 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
                 entitySuccess,
                 finalSuccess);
             finalizeEntityReindex(recreateIndexHandler, recreateContext, entityType, entitySuccess);
+            if (Entity.TABLE.equals(entityType)) {
+              promoteColumnIndex(recreateIndexHandler, recreateContext, entitySuccess);
+            }
           } catch (Exception ex) {
             LOG.error("Failed to finalize reindex for entity: {}", entityType, ex);
           }
@@ -562,6 +612,15 @@ public class DistributedIndexingStrategy implements IndexingStrategy {
       entityStats.setSuccessRecords(0);
       entityStats.setFailedRecords(0);
       stats.getEntityStats().getAdditionalProperties().put(entityType, entityStats);
+    }
+
+    if (entities.contains(Entity.TABLE) && !entities.contains(Entity.TABLE_COLUMN)) {
+      StepStats columnEntityStats = new StepStats();
+      columnEntityStats.setTotalRecords(0);
+      columnEntityStats.setSuccessRecords(0);
+      columnEntityStats.setFailedRecords(0);
+      stats.getEntityStats().getAdditionalProperties().put(Entity.TABLE_COLUMN, columnEntityStats);
+      LOG.info("Added TABLE_COLUMN stats slot for column indexing tracking");
     }
 
     stats.getJobStats().setTotalRecords(total);

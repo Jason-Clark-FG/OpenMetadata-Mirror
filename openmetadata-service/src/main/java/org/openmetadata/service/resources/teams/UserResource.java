@@ -542,7 +542,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
     // Sync the Roles from token to User
     if (Boolean.TRUE.equals(authorizerConfiguration.getUseRolesFromProvider())
-        && Boolean.FALSE.equals(user.getIsBot() != null && user.getIsBot())) {
+        && !(user.getIsBot() != null && user.getIsBot())) {
       reSyncUserRolesFromToken(
           uriInfo, user, getRolesFromAuthorizationToken(catalogSecurityContext));
     }
@@ -731,7 +731,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
     CatalogSecurityContext catalogSecurityContext =
         (CatalogSecurityContext) containerRequestContext.getSecurityContext();
     if (Boolean.TRUE.equals(authorizerConfiguration.getUseRolesFromProvider())
-        && Boolean.FALSE.equals(user.getIsBot() != null && user.getIsBot())) {
+        && !(user.getIsBot() != null && user.getIsBot())) {
       user.setRoles(validateAndGetRolesRef(getRolesFromAuthorizationToken(catalogSecurityContext)));
     }
   }
@@ -748,7 +748,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
                 create.getCreatePasswordType(),
                 create.getPassword());
       } catch (Exception ex) {
-        LOG.error("Error in sending invite to User" + ex.getMessage());
+        LOG.error("Error in sending invite to User{}", ex.getMessage());
       }
     }
   }
@@ -1374,7 +1374,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
               EmailUtil.getPasswordResetSubject(),
               TemplateConstants.RESET_LINK_TEMPLATE);
     } catch (Exception ex) {
-      LOG.error("Error in sending mail for reset password" + ex.getMessage());
+      LOG.error("Error in sending mail for reset password{}", ex.getMessage());
       return Response.status(424).entity(new ErrorMessage(424, EMAIL_SENDING_ISSUE)).build();
     }
     return Response.status(Response.Status.OK)
@@ -1944,8 +1944,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
           repository.getByName(
               uriInfo, user.getFullyQualifiedName(), repository.getFieldsWithUserAuth("*"));
     } catch (EntityNotFoundException exc) {
-      LOG.debug(
-          String.format("User not found when adding auth mechanism for: [%s]", user.getName()));
+      LOG.debug("User not found when adding auth mechanism for: [{}]", user.getName());
       original = null;
     }
     return original;

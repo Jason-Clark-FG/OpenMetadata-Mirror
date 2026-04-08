@@ -56,8 +56,8 @@ public interface SearchIndex {
           "connection",
           "changeSummary");
 
-  public static final SearchClient searchClient = Entity.getSearchRepository().getSearchClient();
-  static final Logger LOG = LoggerFactory.getLogger(SearchIndex.class);
+  SearchClient searchClient = Entity.getSearchRepository().getSearchClient();
+  Logger LOG = LoggerFactory.getLogger(SearchIndex.class);
 
   default Map<String, Object> buildSearchIndexDoc() {
     // Build Index Doc
@@ -285,7 +285,12 @@ public interface SearchIndex {
           }
 
           columnIndex++;
-        } catch (EntityNotFoundException ignored) {
+        } catch (EntityNotFoundException ex) {
+          LOG.warn(
+              "Related table [{}] not found for upstream entity relationship of [{}]: {}",
+              relatedEntityFQN,
+              entity.getFullyQualifiedName(),
+              ex.getMessage());
         }
       }
     }

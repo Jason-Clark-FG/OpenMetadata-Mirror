@@ -8,6 +8,7 @@ import static org.openmetadata.schema.type.EventType.ENTITY_UPDATED;
 import static org.openmetadata.service.apps.bundles.insights.DataInsightsApp.getDataStreamName;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.unboundid.ldap.sdk.LDAPConnection;
 import com.unboundid.ldap.sdk.LDAPConnectionOptions;
 import com.unboundid.ldap.sdk.SearchResult;
@@ -103,7 +104,7 @@ import org.openmetadata.service.util.ValidationErrorBuilder.FieldPaths;
 @Slf4j
 @Repository
 public class SystemRepository {
-  private static final String FAILED_TO_UPDATE_SETTINGS = "Failed to Update Settings";
+  private static final String FAILED_TO_UPDATE_SETTINGS = "Failed to Update Settings {}";
   public static final String INTERNAL_SERVER_ERROR_WITH_REASON = "Internal Server Error. Reason :";
   private final SystemDAO dao;
   private final MigrationValidationClient migrationValidationClient;
@@ -143,7 +144,7 @@ public class SystemRepository {
     try {
       settingsList = dao.getAllConfig();
     } catch (Exception ex) {
-      LOG.error("Error while trying fetch all Settings " + ex.getMessage());
+      LOG.error("Error while trying fetch all Settings {}", ex.getMessage());
     }
     int count = 0;
     if (settingsList != null) {
@@ -233,7 +234,7 @@ public class SystemRepository {
       setting.setConfigValue(emailConfig);
       return setting;
     } catch (Exception ex) {
-      LOG.error("Error while trying fetch EMAIL Settings " + ex.getMessage());
+      LOG.error("Error while trying fetch EMAIL Settings {}", ex.getMessage());
     }
     return null;
   }
@@ -262,7 +263,7 @@ public class SystemRepository {
       setting.setConfigValue(slackAppConfiguration);
       return setting;
     } catch (Exception ex) {
-      LOG.error("Error while trying fetch Slack Settings " + ex.getMessage());
+      LOG.error("Error while trying fetch Slack Settings {}", ex.getMessage());
     }
     return null;
   }
@@ -288,7 +289,7 @@ public class SystemRepository {
     try {
       updateSetting(setting);
     } catch (Exception ex) {
-      LOG.error(FAILED_TO_UPDATE_SETTINGS + ex.getMessage());
+      LOG.error(FAILED_TO_UPDATE_SETTINGS, ex.getMessage());
       return Response.status(500, INTERNAL_SERVER_ERROR_WITH_REASON + ex.getMessage()).build();
     }
     if (oldValue == null) {
@@ -303,7 +304,7 @@ public class SystemRepository {
     try {
       updateSetting(setting);
     } catch (Exception ex) {
-      LOG.error(FAILED_TO_UPDATE_SETTINGS + ex.getMessage());
+      LOG.error(FAILED_TO_UPDATE_SETTINGS, ex.getMessage());
       return Response.status(500, INTERNAL_SERVER_ERROR_WITH_REASON + ex.getMessage()).build();
     }
     return (new RestUtil.PutResponse<>(Response.Status.CREATED, setting, ENTITY_CREATED))
@@ -329,7 +330,7 @@ public class SystemRepository {
     try {
       updateSetting(original);
     } catch (Exception ex) {
-      LOG.error(FAILED_TO_UPDATE_SETTINGS + ex.getMessage());
+      LOG.error(FAILED_TO_UPDATE_SETTINGS, ex.getMessage());
       return Response.status(500, INTERNAL_SERVER_ERROR_WITH_REASON + ex.getMessage()).build();
     }
     return (new RestUtil.PutResponse<>(Response.Status.OK, original, ENTITY_UPDATED)).toResponse();
@@ -413,7 +414,7 @@ public class SystemRepository {
       setting.setConfigValue(slackBotConfiguration);
       return setting;
     } catch (Exception ex) {
-      LOG.error("Error while trying fetch Slack bot Settings " + ex.getMessage());
+      LOG.error("Error while trying fetch Slack bot Settings {}", ex.getMessage());
     }
     return null;
   }
@@ -426,7 +427,7 @@ public class SystemRepository {
       setting.setConfigValue(slackInstallerConfiguration);
       return setting;
     } catch (Exception ex) {
-      LOG.error("Error while trying to fetch slack installer setting " + ex.getMessage());
+      LOG.error("Error while trying to fetch slack installer setting {}", ex.getMessage());
     }
     return null;
   }
@@ -439,7 +440,7 @@ public class SystemRepository {
       setting.setConfigValue(slackStateConfiguration);
       return setting;
     } catch (Exception ex) {
-      LOG.error("Error while trying to fetch slack state setting " + ex.getMessage());
+      LOG.error("Error while trying to fetch slack state setting {}", ex.getMessage());
     }
     return null;
   }
@@ -560,7 +561,8 @@ public class SystemRepository {
   public void addExtraValidations(
       OpenMetadataApplicationConfig applicationConfig, ValidationResponse validation) {}
 
-  private StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
+  @VisibleForTesting
+  StepValidation getEmbeddingsValidation(OpenMetadataApplicationConfig applicationConfig) {
     StepValidation embeddingsValidation = new StepValidation();
     String description = "Embeddings are used to allow Semantic Search";
     SearchRepository searchRepository = Entity.getSearchRepository();
@@ -576,15 +578,24 @@ public class SystemRepository {
     String configMessage = getEmbeddingConfigurationMessage(applicationConfig);
 
     if (searchRepository.getVectorIndexService() == null) {
-      return embeddingsValidation
-          .withDescription(description)
-          .withMessage("Embeddings are not configured properly. " + configMessage)
-          .withPassed(false);
+      return retryInitAndReportError(
+          searchRepository, embeddingsValidation, description, configMessage);
     }
 
     try {
-      return validateEmbeddingGeneration(
-          searchRepository.getEmbeddingClient(), embeddingsValidation, description, configMessage);
+      StepValidation embeddingResult =
+          validateEmbeddingGeneration(
+              searchRepository.getEmbeddingClient(),
+              embeddingsValidation,
+              description,
+              configMessage);
+
+      if (Boolean.FALSE.equals(embeddingResult.getPassed())) {
+        return embeddingResult;
+      }
+
+      return validateHybridSearchPipeline(
+          searchRepository, embeddingResult, description, configMessage);
     } catch (Exception e) {
       LOG.error("Error during embedding generation validation", e);
       return embeddingsValidation
@@ -592,6 +603,84 @@ public class SystemRepository {
           .withMessage("Embedding generation failed: " + e.getMessage() + ". " + configMessage)
           .withPassed(false);
     }
+  }
+
+  private StepValidation retryInitAndReportError(
+      SearchRepository searchRepository,
+      StepValidation embeddingsValidation,
+      String description,
+      String configMessage) {
+    searchRepository.initializeVectorSearchService();
+
+    if (searchRepository.getVectorIndexService() != null) {
+      try {
+        StepValidation embeddingResult =
+            validateEmbeddingGeneration(
+                searchRepository.getEmbeddingClient(),
+                embeddingsValidation,
+                description,
+                configMessage);
+        if (Boolean.FALSE.equals(embeddingResult.getPassed())) {
+          return embeddingResult;
+        }
+        return validateHybridSearchPipeline(
+            searchRepository, embeddingResult, description, configMessage);
+      } catch (Exception e) {
+        LOG.error("Error during embedding generation validation after retry", e);
+        return embeddingsValidation
+            .withDescription(description)
+            .withMessage("Embedding generation failed: " + e.getMessage() + ". " + configMessage)
+            .withPassed(false);
+      }
+    }
+
+    String initError = searchRepository.getVectorServiceInitError();
+    String errorSuffix = initError != null ? " Error: " + initError + "." : "";
+    if (searchRepository.getEmbeddingClient() == null) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              "Embedding client could not be initialized."
+                  + errorSuffix
+                  + " Check the embedding provider configuration. "
+                  + configMessage)
+          .withPassed(false);
+    }
+
+    return embeddingsValidation
+        .withDescription(description)
+        .withMessage(
+            "Vector search service could not be initialized. "
+                + "The embedding client is configured but the OpenSearch vector service failed to start."
+                + errorSuffix
+                + " "
+                + configMessage)
+        .withPassed(false);
+  }
+
+  private StepValidation validateHybridSearchPipeline(
+      SearchRepository searchRepository,
+      StepValidation embeddingsValidation,
+      String description,
+      String configMessage) {
+    Optional<String> pipelineError = searchRepository.checkHybridSearchPipeline();
+    if (pipelineError.isPresent()) {
+      return embeddingsValidation
+          .withDescription(description)
+          .withMessage(
+              "Embeddings are working but the hybrid search pipeline check failed: "
+                  + pipelineError.get()
+                  + " "
+                  + configMessage)
+          .withPassed(false);
+    }
+
+    return embeddingsValidation
+        .withDescription(description)
+        .withMessage(
+            String.format(
+                "Embeddings and hybrid search pipeline are working correctly. %s", configMessage))
+        .withPassed(true);
   }
 
   private StepValidation validateEmbeddingGeneration(
@@ -703,18 +792,21 @@ public class SystemRepository {
 
   private StepValidation getSearchValidation(OpenMetadataApplicationConfig applicationConfig) {
     SearchRepository searchRepository = Entity.getSearchRepository();
-    if (Boolean.TRUE.equals(searchRepository.getSearchClient().isClientAvailable())
-        && searchRepository
-            .getSearchClient()
-            .indexExists(Entity.getSearchRepository().getIndexOrAliasName(INDEX_NAME))) {
+    if (searchRepository.getSearchClient().isClientAvailable()) {
       if (validateDataInsights()) {
+        List<String> missingIndexes = findMissingIndexes(searchRepository);
+        String message =
+            String.format(
+                "Connected to %s", applicationConfig.getElasticSearchConfiguration().getHost());
+        if (!missingIndexes.isEmpty()) {
+          message +=
+              String.format(
+                  ". WARNING: %d missing indexes: %s", missingIndexes.size(), missingIndexes);
+        }
         return new StepValidation()
             .withDescription(ValidationStepDescription.SEARCH.key)
-            .withPassed(Boolean.TRUE)
-            .withMessage(
-                String.format(
-                    "Connected to %s",
-                    applicationConfig.getElasticSearchConfiguration().getHost()));
+            .withPassed(missingIndexes.isEmpty())
+            .withMessage(message);
       } else {
         return new StepValidation()
             .withDescription(ValidationStepDescription.SEARCH.key)
@@ -730,6 +822,22 @@ public class SystemRepository {
     }
   }
 
+  private List<String> findMissingIndexes(SearchRepository searchRepository) {
+    List<String> missing = new ArrayList<>();
+    try {
+      Map<String, org.openmetadata.search.IndexMapping> indexMap =
+          searchRepository.getEntityIndexMap();
+      for (Map.Entry<String, org.openmetadata.search.IndexMapping> entry : indexMap.entrySet()) {
+        if (!searchRepository.indexExists(entry.getValue())) {
+          missing.add(entry.getKey());
+        }
+      }
+    } catch (Exception e) {
+      LOG.warn("Failed to check for missing indexes: {}", e.getMessage());
+    }
+    return missing;
+  }
+
   private boolean validateDataInsights() {
     boolean isValid = false;
 
@@ -741,7 +849,7 @@ public class SystemRepository {
       SearchRepository searchRepository = Entity.getSearchRepository();
       String dataStreamName = getDataStreamName(searchRepository.getClusterAlias(), Entity.TABLE);
 
-      if (Boolean.TRUE.equals(searchRepository.getSearchClient().isClientAvailable())
+      if (searchRepository.getSearchClient().isClientAvailable()
           && searchRepository.getSearchClient().indexExists(dataStreamName)) {
         isValid = true;
       }
@@ -756,21 +864,28 @@ public class SystemRepository {
       OpenMetadataApplicationConfig applicationConfig,
       PipelineServiceClientInterface pipelineServiceClient) {
     if (pipelineServiceClient != null) {
-      PipelineServiceClientResponse pipelineResponse = pipelineServiceClient.getServiceStatus();
-      if (pipelineResponse.getCode() == 200) {
-        return new StepValidation()
-            .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
-            .withPassed(Boolean.TRUE)
-            .withMessage(
-                String.format(
-                    "%s is available at %s",
-                    pipelineServiceClient.getPlatform(),
-                    applicationConfig.getPipelineServiceClientConfiguration().getApiEndpoint()));
-      } else {
+      try {
+        PipelineServiceClientResponse pipelineResponse = pipelineServiceClient.getServiceStatus();
+        if (pipelineResponse.getCode() == 200) {
+          return new StepValidation()
+              .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
+              .withPassed(Boolean.TRUE)
+              .withMessage(
+                  String.format(
+                      "%s is available at %s",
+                      pipelineServiceClient.getPlatform(),
+                      applicationConfig.getPipelineServiceClientConfiguration().getApiEndpoint()));
+        } else {
+          return new StepValidation()
+              .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
+              .withPassed(Boolean.FALSE)
+              .withMessage(pipelineResponse.getReason());
+        }
+      } catch (Exception e) {
         return new StepValidation()
             .withDescription(ValidationStepDescription.PIPELINE_SERVICE_CLIENT.key)
             .withPassed(Boolean.FALSE)
-            .withMessage(pipelineResponse.getReason());
+            .withMessage(e.getMessage());
       }
     }
     return new StepValidation()
@@ -1378,7 +1493,7 @@ public class SystemRepository {
               }
             }
           } catch (Exception e) {
-            LOG.warn("Failed to validate mail attribute: " + e.getMessage());
+            LOG.warn("Failed to validate mail attribute: {}", e.getMessage());
           }
         }
 
@@ -1614,11 +1729,8 @@ public class SystemRepository {
       // Use enhanced SAML validator - this performs comprehensive validation
       // without affecting production settings
       SamlValidator samlValidator = new SamlValidator();
-      FieldError result = samlValidator.validateSamlConfiguration(null, samlConfig);
-      if (result != null) {
-        return result;
-      }
-      return null; // No errors - validation passed
+      return samlValidator.validateSamlConfiguration(
+          null, samlConfig); // No errors - validation passed
     } catch (Exception e) {
       String fieldPath = determineFieldPathFromError("saml", e.getMessage());
       return ValidationErrorBuilder.createFieldError(
