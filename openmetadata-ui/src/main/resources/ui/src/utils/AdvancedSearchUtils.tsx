@@ -18,8 +18,8 @@ import {
   FieldOrGroup,
   ListValues,
   OldJsonTree,
-  Utils as QbUtils,
   RenderSettings,
+  Utils as QbUtils,
   ValueSource,
 } from '@react-awesome-query-builder/antd';
 import { Button, Checkbox, MenuProps, Radio, Space, Typography } from 'antd';
