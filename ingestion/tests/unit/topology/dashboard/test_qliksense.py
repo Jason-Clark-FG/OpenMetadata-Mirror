@@ -514,7 +514,7 @@ class QlikSenseUnitTest(TestCase):
             "get_script_tables",
             return_value=mock_sources,
         ) as mock_get:
-            self.qliksense.script_table_sources = {}
+            self.qliksense.script_table_sources = None
             self.qliksense._fetch_script_table_sources()
             self.qliksense._fetch_script_table_sources()
 
