@@ -290,17 +290,17 @@ class QlikSenseClient:
                 continue
             if current_table:
                 from_join_tables = re.findall(
-                    r"(?:FROM|JOIN)\s+(?:\[?([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*)\]?)",
+                    r"(?:FROM|JOIN)\s+((?:\[?[a-zA-Z0-9_ ]+\]?\.)*\[?[a-zA-Z0-9_ ]+\]?)",
                     stripped,
                     re.IGNORECASE,
                 )
                 sql_tables = {
-                    t
+                    re.sub(r"[\[\]]", "", t)
                     for t in from_join_tables
-                    if not t.startswith("lib://") and "." in t
+                    if "." in re.sub(r"[\[\]]", "", t)
                 }
                 if sql_tables:
-                    table_source_map[current_table] = sql_tables
+                    table_source_map.setdefault(current_table, set()).update(sql_tables)
 
         return table_source_map
 

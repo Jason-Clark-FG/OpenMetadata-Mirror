@@ -93,7 +93,7 @@ class QliksenseSource(DashboardServiceSource):
         # Data models will be cleared up for each dashboard
         self.data_models: List[QlikTable] = []
         # Mapping of qlik table name -> source SQL tables from load script
-        self.script_table_sources: Dict[str, Set[str]] = {}
+        self.script_table_sources: Optional[Dict[str, Set[str]]] = None
 
     def filter_draft_dashboard(self, dashboard: QlikDashboard) -> bool:
         # When only published(non-draft) dashboards are allowed, filter dashboard based on "published" flag from QlikDashboardMeta(qMeta)
@@ -111,7 +111,7 @@ class QliksenseSource(DashboardServiceSource):
             self.client.connect_websocket(dashboard.qDocId)
             # clean data models and script sources for next iteration
             self.data_models = []
-            self.script_table_sources = {}
+            self.script_table_sources = None
             yield dashboard
 
     def get_dashboard_name(self, dashboard: QlikDashboard) -> str:
@@ -326,7 +326,7 @@ class QliksenseSource(DashboardServiceSource):
 
     def _fetch_script_table_sources(self) -> None:
         """Fetch and cache the script table source mapping for the current app."""
-        if not self.script_table_sources:
+        if self.script_table_sources is None:
             self.script_table_sources = self.client.get_script_tables()
 
     def _yield_lineage_from_script_sources(
@@ -334,6 +334,9 @@ class QliksenseSource(DashboardServiceSource):
         datamodel: QlikTable,
         data_model_entity,
         prefix_service_name: Optional[str],
+        prefix_database_name: Optional[str] = None,
+        prefix_schema_name: Optional[str] = None,
+        prefix_table_name: Optional[str] = None,
     ) -> Iterable[Either[AddLineageRequest]]:
         """
         Yield lineage from SQL source tables found in the load script
@@ -350,11 +353,26 @@ class QliksenseSource(DashboardServiceSource):
                 table_name = parts[-1]
             database_name = parts[-3] if len(parts) >= 3 else None
 
+            if prefix_table_name and prefix_table_name.lower() != table_name.lower():
+                continue
+            if (
+                prefix_schema_name
+                and schema_name
+                and prefix_schema_name.lower() != schema_name.lower()
+            ):
+                continue
+            if (
+                prefix_database_name
+                and database_name
+                and prefix_database_name.lower() != database_name.lower()
+            ):
+                continue
+
             fqn_search_string = build_es_fqn_search_string(
-                database_name=database_name,
-                schema_name=schema_name,
+                database_name=prefix_database_name or database_name,
+                schema_name=prefix_schema_name or schema_name,
                 service_name=prefix_service_name or "*",
-                table_name=table_name,
+                table_name=prefix_table_name or table_name,
             )
             om_table = self.metadata.search_in_any_service(
                 entity_type=Table,
@@ -396,7 +414,12 @@ class QliksenseSource(DashboardServiceSource):
                 # build lineage from those source tables instead.
                 if datamodel.tableName in self.script_table_sources:
                     yield from self._yield_lineage_from_script_sources(
-                        datamodel, data_model_entity, prefix_service_name
+                        datamodel,
+                        data_model_entity,
+                        prefix_service_name,
+                        prefix_database_name,
+                        prefix_schema_name,
+                        prefix_table_name,
                     )
                     continue
 
