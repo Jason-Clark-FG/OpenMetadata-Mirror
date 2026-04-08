@@ -30,7 +30,7 @@ from metadata.sampler.sampler_interface import SamplerInterface
 from metadata.utils.constants import SAMPLE_DATA_DEFAULT_COUNT
 from metadata.utils.sqa_like_column import SQALikeColumn
 
-_PAGE_SIZE = 1_000  # Records per TQL page request
+_PAGE_SIZE = 1_000
 
 _NUMERIC_TYPES = {
     DataType.INT,
@@ -57,14 +57,15 @@ class BurstIQSampler(SamplerInterface):
     """
     Sampler for BurstIQ LifeGraph.
 
-    Fetches records via paginated TQL queries and yields DataFrame chunks
-    so that PandasProfilerInterface can compute metrics without loading the
-    full dataset into memory at once.
+    Fetches records via paginated TQL queries and caches them as DataFrame
+    chunks so that PandasProfilerInterface can compute all metrics without
+    repeated API calls.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.client: BurstIQClient = self.get_client()
+        self._cached_frames: Optional[List[pd.DataFrame]] = None
 
     # ------------------------------------------------------------------
     # SamplerInterface abstract methods
@@ -74,37 +75,48 @@ class BurstIQSampler(SamplerInterface):
         """Return the BurstIQClient created by get_ssl_connection in the base __init__."""
         return self.connection
 
-    @property
-    def raw_dataset(self) -> Callable[[], Iterator[pd.DataFrame]]:
-        """Return a callable that lazily paginates records from BurstIQ in chunks."""
+    def _load_frames(self) -> List[pd.DataFrame]:
+        """Fetch records from BurstIQ in paginated chunks and cache for reuse across metrics."""
+        if self._cached_frames is not None:
+            return self._cached_frames
+
         chain = self.entity.name.root
         sample = self.sample_config.profileSample
         sample_type = self.sample_config.profileSampleType
-        client = self.client
+
+        if sample and sample_type == ProfileSampleType.ROWS:
+            total_limit = int(sample)
+        elif sample and sample_type == ProfileSampleType.PERCENTAGE:
+            total = self.client.get_chain_metrics().get(chain, 0)
+            total_limit = max(1, int(total * sample / 100))
+        else:
+            total_limit = self.client.get_chain_metrics().get(chain, 0)
+
+        if not total_limit:
+            self._cached_frames = [pd.DataFrame()]
+            return self._cached_frames
+
+        frames = []
+        skip = 0
+        while skip < total_limit:
+            page_size = min(_PAGE_SIZE, total_limit - skip)
+            records = self.client.get_records_by_tql(chain, limit=page_size, skip=skip)
+            if not records:
+                break
+            frames.append(self._cast_dataframe(pd.DataFrame(records)))
+            skip += len(records)
+            if len(records) < page_size:
+                break
+
+        self._cached_frames = frames if frames else [pd.DataFrame()]
+        return self._cached_frames
+
+    @property
+    def raw_dataset(self) -> Callable[[], Iterator[pd.DataFrame]]:
+        """Return a callable that yields cached DataFrame chunks from BurstIQ."""
 
         def chunk_generator() -> Iterator[pd.DataFrame]:
-            if sample and sample_type == ProfileSampleType.ROWS:
-                total_limit = int(sample)
-            elif sample and sample_type == ProfileSampleType.PERCENTAGE:
-                total = client.get_chain_metrics().get(chain, 0)
-                total_limit = max(1, int(total * sample / 100))
-            else:
-                total_limit = client.get_chain_metrics().get(chain, 0)
-
-            if not total_limit:
-                yield pd.DataFrame()
-                return
-
-            skip = 0
-            while skip < total_limit:
-                page_size = min(_PAGE_SIZE, total_limit - skip)
-                records = client.get_records_by_tql(chain, limit=page_size, skip=skip)
-                if not records:
-                    break
-                yield self._cast_dataframe(pd.DataFrame(records))
-                skip += len(records)
-                if len(records) < page_size:
-                    break
+            yield from self._load_frames()
 
         return chunk_generator
 
@@ -137,6 +149,13 @@ class BurstIQSampler(SamplerInterface):
             for row in subset.itertuples(index=False, name=None)
         ]
         return TableData(columns=available, rows=rows)
+
+    def get_columns(self) -> List[SQALikeColumn]:
+        """Return SQALikeColumn list derived from the OM Table entity."""
+        return [
+            SQALikeColumn(name=c.name.root, type=c.dataType)
+            for c in self.entity.columns
+        ]
 
     # ------------------------------------------------------------------
     # Internal helpers
