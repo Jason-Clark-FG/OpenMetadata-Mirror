@@ -25,11 +25,10 @@ from metadata.generated.schema.entity.data.table import (
     ProfileSampleType,
     TableData,
 )
+from metadata.ingestion.source.database.burstiq.client import BurstIQClient
 from metadata.sampler.sampler_interface import SamplerInterface
 from metadata.utils.constants import CHUNKSIZE, SAMPLE_DATA_DEFAULT_COUNT
 from metadata.utils.sqa_like_column import SQALikeColumn
-
-from metadata.ingestion.source.database.burstiq.client import BurstIQClient
 
 _PAGE_SIZE = 1_000  # Records per TQL page request
 
@@ -179,4 +178,3 @@ class BurstIQSampler(SamplerInterface):
             elif col.dataType in _DATETIME_TYPES:
                 df[col_name] = pd.to_datetime(df[col_name], errors="coerce", utc=True)
         return df
-
