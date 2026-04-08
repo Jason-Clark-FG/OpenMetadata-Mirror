@@ -17,7 +17,8 @@ class RequestLatencyContextTest {
   @BeforeEach
   void setUp() {
     Metrics.globalRegistry.clear();
-    Metrics.globalRegistry.getRegistries().forEach(Metrics.globalRegistry::remove);
+    new java.util.ArrayList<>(Metrics.globalRegistry.getRegistries())
+        .forEach(Metrics.globalRegistry::remove);
 
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     Metrics.addRegistry(registry);
