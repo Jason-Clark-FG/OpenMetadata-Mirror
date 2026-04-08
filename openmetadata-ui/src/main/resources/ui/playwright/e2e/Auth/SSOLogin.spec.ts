@@ -1,0 +1,133 @@
+/*
+ *  Copyright 2025 Collate.
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+import { expect, test } from '@playwright/test';
+import { SSO_ENV } from '../../constant/ssoAuth';
+import { performAdminLogin } from '../../utils/admin';
+import {
+  getProviderHelper,
+  ProviderHelper,
+} from '../../utils/sso-providers';
+import {
+  applyProviderConfig,
+  buildAuthContextFromJwt,
+  restoreBasicAuth,
+  verifyLoggedInUserMatches,
+} from '../../utils/ssoAuth';
+import { getToken } from '../../utils/tokenStorage';
+
+const providerType = process.env[SSO_ENV.PROVIDER_TYPE] ?? '';
+const username = process.env[SSO_ENV.USERNAME] ?? '';
+const password = process.env[SSO_ENV.PASSWORD] ?? '';
+
+test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
+  // eslint-disable-next-line playwright/no-skipped-test -- conditional skip on required env vars; the suite only runs when SSO credentials are provided by CI or the developer
+  test.skip(
+    !providerType || !username || !password,
+    `${SSO_ENV.PROVIDER_TYPE}, ${SSO_ENV.USERNAME}, and ${SSO_ENV.PASSWORD} env vars must be set`
+  );
+
+  test.describe.configure({ mode: 'serial' });
+
+  let helper: ProviderHelper;
+  let adminJwt: string | undefined;
+
+  test.beforeAll(
+    'Swap OpenMetadata server to target SSO provider',
+    async ({ browser }) => {
+      test.slow();
+      helper = getProviderHelper(providerType);
+      const { apiContext, afterAction, page } = await performAdminLogin(
+        browser
+      );
+
+      try {
+        adminJwt = await getToken(page);
+        await applyProviderConfig(apiContext, helper.buildConfigPayload());
+      } finally {
+        await afterAction();
+      }
+    }
+  );
+
+  test.afterAll('Restore basic auth configuration', async () => {
+    if (!adminJwt) {
+      return;
+    }
+
+    const adminContext = await buildAuthContextFromJwt(adminJwt);
+
+    try {
+      await restoreBasicAuth(adminContext);
+    } finally {
+      await adminContext.dispose();
+    }
+  });
+
+  test('should display SSO sign-in button on /signin', async ({ page }) => {
+    await page.goto('/signin');
+
+    await expect(page.getByTestId('login-form-container')).toBeVisible();
+
+    const signInButton = page.locator('.signin-button');
+
+    await expect(signInButton).toBeVisible();
+    await expect(signInButton).toContainText(helper.expectedButtonText);
+    await expect(page.getByTestId('email')).toHaveCount(0);
+  });
+
+  test('should complete full SSO login and verify user session', async ({
+    page,
+  }) => {
+    test.slow();
+
+    await test.step('Click SSO button and redirect to IdP', async () => {
+      await page.goto('/signin');
+
+      const signInButton = page.locator('.signin-button');
+
+      await expect(signInButton).toBeVisible();
+      await signInButton.click();
+      await page.waitForURL(helper.loginUrlPattern, { timeout: 45_000 });
+    });
+
+    await test.step('Authenticate at the identity provider', async () => {
+      await helper.performProviderLogin(page, { username, password });
+    });
+
+    await test.step(
+      'Return to OpenMetadata and complete self-signup if needed',
+      async () => {
+        await page.waitForURL(
+          (url) =>
+            url.pathname.endsWith('/signup') ||
+            url.pathname.endsWith('/my-data'),
+          { timeout: 60_000 }
+        );
+
+        if (page.url().includes('/signup')) {
+          const createButton = page.getByRole('button', { name: /create/i });
+
+          await expect(createButton).toBeEnabled();
+          await createButton.click();
+          await page.waitForURL('**/my-data', { timeout: 60_000 });
+        }
+
+        await expect(page.getByTestId('dropdown-profile')).toBeVisible();
+      }
+    );
+
+    await test.step('Verify JWT against loggedInUser API', async () => {
+      await verifyLoggedInUserMatches(page, username);
+    });
+  });
+});

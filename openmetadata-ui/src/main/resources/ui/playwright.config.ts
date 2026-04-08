@@ -84,11 +84,18 @@ export default defineConfig({
       teardown: 'SearchRBAC',
       testIgnore: [
         '**/nightly/**',
+        '**/Auth/**',
         '**/DataAssetRulesEnabled.spec.ts',
         '**/DataAssetRulesDisabled.spec.ts',
         '**/SystemCertificationTags.spec.ts',
         '**/SearchRBAC.spec.ts',
       ],
+    },
+    {
+      name: 'sso-auth',
+      testMatch: '**/Auth/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+      fullyParallel: false,
     },
     {
       name: 'SearchRBAC',
