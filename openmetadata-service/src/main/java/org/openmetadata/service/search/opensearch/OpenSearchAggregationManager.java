@@ -26,7 +26,6 @@ import org.openmetadata.service.resources.settings.SettingsCache;
 import org.openmetadata.service.search.AggregationManagementClient;
 import org.openmetadata.service.search.SearchAggregation;
 import org.openmetadata.service.search.SearchIndexUtils;
-import org.openmetadata.service.search.SearchSourceBuilderFactory;
 import org.openmetadata.service.search.SearchUtils;
 import org.openmetadata.service.search.opensearch.aggregations.OpenAggregationsBuilder;
 import org.openmetadata.service.search.opensearch.queries.OpenSearchQueryBuilder;
@@ -122,8 +121,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
         searchRequestBuilder.query(query);
       }
 
-      String aggregationField =
-          SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(request.getFieldName());
+      String aggregationField = request.getFieldName();
       if (aggregationField == null || aggregationField.isBlank()) {
         throw new IllegalArgumentException("Aggregation field (fieldName) cannot be null or empty");
       }
@@ -290,7 +288,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
           Query rbacQuery = ((OpenSearchQueryBuilder) rbacQueryBuilder).buildV2();
           if (parsedQuery != null) {
             final Query existingQuery = parsedQuery;
-            parsedQuery =
+            Query combinedQuery =
                 Query.of(
                     qb ->
                         qb.bool(
@@ -299,6 +297,7 @@ public class OpenSearchAggregationManager implements AggregationManagementClient
                               b.filter(rbacQuery);
                               return b;
                             }));
+            parsedQuery = combinedQuery;
           } else {
             parsedQuery = rbacQuery;
           }

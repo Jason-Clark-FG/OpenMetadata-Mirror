@@ -254,18 +254,16 @@ public class ElasticSearchBulkSink implements BulkSink {
     try {
       String entityType = Entity.getEntityTypeFromObject(entity);
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
+      es.co.elastic.clients.json.JsonData jsonData = EsUtils.toJsonData(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation;
       if (recreateIndex) {
         operation =
             BulkOperation.of(
-                op ->
-                    op.index(
-                        idx -> idx.index(indexName).id(docId).document(EsUtils.toJsonData(json))));
+                op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
       } else {
         operation =
             BulkOperation.of(
@@ -274,7 +272,7 @@ public class ElasticSearchBulkSink implements BulkSink {
                         upd ->
                             upd.index(indexName)
                                 .id(docId)
-                                .action(a -> a.doc(EsUtils.toJsonData(json)).docAsUpsert(true))));
+                                .action(a -> a.doc(jsonData).docAsUpsert(true))));
       }
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -329,16 +327,14 @@ public class ElasticSearchBulkSink implements BulkSink {
       StageStatsTracker tracker) {
     try {
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
+      es.co.elastic.clients.json.JsonData jsonData = EsUtils.toJsonData(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation =
           BulkOperation.of(
-              op ->
-                  op.index(
-                      idx -> idx.index(indexName).id(docId).document(EsUtils.toJsonData(json))));
+              op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
 
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -576,7 +572,11 @@ public class ElasticSearchBulkSink implements BulkSink {
       this.circuitBreaker = circuitBreaker;
       this.scheduler =
           Executors.newScheduledThreadPool(
-              1, Thread.ofPlatform().name("reindex-es-bulk-flush").factory());
+              1,
+              Thread.ofPlatform()
+                  .name("reindex-es-bulk-flush")
+                  .priority(Thread.MIN_PRIORITY)
+                  .factory());
 
       scheduler.scheduleAtFixedRate(
           this::flushIfNeeded, flushIntervalMillis, flushIntervalMillis, TimeUnit.MILLISECONDS);

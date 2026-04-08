@@ -232,9 +232,7 @@ public interface SearchSourceBuilderFactory<S, Q, H, F> {
   Map<String, String> AGGREGATION_FIELD_REMAPS =
       Map.of(
           "owners.displayName.keyword", "ownerDisplayName",
-          "owners.displayName", "ownerDisplayName",
-          "owners.name.keyword", "ownerName",
-          "owners.name", "ownerName");
+          "owners.name.keyword", "ownerName");
 
   /**
    * Root-level text fields that carry a {@code .keyword} sub-field in all index mappings. Only
@@ -280,5 +278,9 @@ public interface SearchSourceBuilderFactory<S, Q, H, F> {
       return field + ".keyword";
     }
     return field;
+  }
+
+  static String remapAggregationField(String field) {
+    return AGGREGATION_FIELD_REMAPS.getOrDefault(field, field);
   }
 }

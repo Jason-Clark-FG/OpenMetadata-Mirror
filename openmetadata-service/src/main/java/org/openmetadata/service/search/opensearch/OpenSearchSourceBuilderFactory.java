@@ -695,8 +695,7 @@ public class OpenSearchSourceBuilderFactory
       int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
       if (!nullOrEmpty(agg.getField())) {
-        String field = SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
-        termsAgg = OpenSearchAggregationBuilder.termsAggregation(field, maxSize);
+        termsAgg = OpenSearchAggregationBuilder.termsAggregation(agg.getField(), maxSize);
       } else if (!nullOrEmpty(agg.getScript())) {
         termsAgg =
             OpenSearchAggregationBuilder.termsAggregationWithScript(agg.getScript(), maxSize);
@@ -709,16 +708,16 @@ public class OpenSearchSourceBuilderFactory
   }
 
   private OpenSearchRequestBuilder addAggregationV2(OpenSearchRequestBuilder searchRequestBuilder) {
-    listOrEmpty(searchSettings.getGlobalSettings().getAggregations())
+    searchSettings
+        .getGlobalSettings()
+        .getAggregations()
         .forEach(
             agg -> {
               os.org.opensearch.client.opensearch._types.aggregations.Aggregation termsAgg;
               int maxSize = searchSettings.getGlobalSettings().getMaxAggregateSize();
 
               if (!nullOrEmpty(agg.getField())) {
-                String field =
-                    SearchSourceBuilderFactory.resolveFieldForSortOrAggregation(agg.getField());
-                termsAgg = OpenSearchAggregationBuilder.termsAggregation(field, maxSize);
+                termsAgg = OpenSearchAggregationBuilder.termsAggregation(agg.getField(), maxSize);
               } else if (!nullOrEmpty(agg.getScript())) {
                 termsAgg =
                     OpenSearchAggregationBuilder.termsAggregationWithScript(

@@ -300,28 +300,23 @@ public class OpenSearchBulkSink implements BulkSink {
     try {
       String entityType = Entity.getEntityTypeFromObject(entity);
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
+      os.org.opensearch.client.json.JsonData jsonData = OsUtils.toJsonData(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation;
       if (recreateIndex) {
         operation =
             BulkOperation.of(
-                op ->
-                    op.index(
-                        idx -> idx.index(indexName).id(docId).document(OsUtils.toJsonData(json))));
+                op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
       } else {
         operation =
             BulkOperation.of(
                 op ->
                     op.update(
                         upd ->
-                            upd.index(indexName)
-                                .id(docId)
-                                .document(OsUtils.toJsonData(json))
-                                .docAsUpsert(true)));
+                            upd.index(indexName).id(docId).document(jsonData).docAsUpsert(true)));
       }
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -376,16 +371,14 @@ public class OpenSearchBulkSink implements BulkSink {
       StageStatsTracker tracker) {
     try {
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
+      os.org.opensearch.client.json.JsonData jsonData = OsUtils.toJsonData(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
 
       BulkOperation operation =
           BulkOperation.of(
-              op ->
-                  op.index(
-                      idx -> idx.index(indexName).id(docId).document(OsUtils.toJsonData(json))));
+              op -> op.index(idx -> idx.index(indexName).id(docId).document(jsonData)));
 
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -791,7 +784,13 @@ public class OpenSearchBulkSink implements BulkSink {
       this.totalFailed = totalFailed;
       this.statsUpdater = statsUpdater;
       this.circuitBreaker = circuitBreaker;
-      this.scheduler = Executors.newScheduledThreadPool(1);
+      this.scheduler =
+          Executors.newScheduledThreadPool(
+              1,
+              Thread.ofPlatform()
+                  .name("reindex-os-bulk-flush")
+                  .priority(Thread.MIN_PRIORITY)
+                  .factory());
 
       scheduler.scheduleAtFixedRate(
           this::flushIfNeeded, flushIntervalMillis, flushIntervalMillis, TimeUnit.MILLISECONDS);
