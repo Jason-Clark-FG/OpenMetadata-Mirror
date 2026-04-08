@@ -2938,7 +2938,10 @@ public class DataProductResourceIT extends BaseEntityIT<DataProduct, CreateDataP
     client.users().delete(expert.getId().toString());
 
     ListParams params =
-        new ListParams().setFields("experts").withDomain(domain.getFullyQualifiedName());
+        new ListParams()
+            .setFields("experts")
+            .withDomain(domain.getFullyQualifiedName())
+            .withLimit(100);
     ListResponse<DataProduct> list = client.dataProducts().list(params);
     DataProduct listed =
         list.getData().stream()

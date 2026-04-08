@@ -15,7 +15,6 @@ package org.openmetadata.service.jdbi3;
 
 import static org.openmetadata.common.utils.CommonUtil.listOrEmpty;
 import static org.openmetadata.common.utils.CommonUtil.nullOrEmpty;
-import static org.openmetadata.schema.type.Include.ALL;
 import static org.openmetadata.schema.type.Include.NON_DELETED;
 import static org.openmetadata.service.Entity.CLASSIFICATION;
 import static org.openmetadata.service.Entity.FIELD_CERTIFICATION;
@@ -280,7 +279,7 @@ public class TagRepository extends EntityRepository<Tag> {
     List<Classification> classifications =
         classificationRepository
             .getDao()
-            .findEntitiesByIds(new ArrayList<>(classificationIds), ALL);
+            .findEntitiesByIds(new ArrayList<>(classificationIds), NON_DELETED);
 
     classificationRepository.setFieldsInBulk(
         new Fields(Set.of("owners", "domains", "reviewers")), classifications);
