@@ -609,7 +609,9 @@ describe('DataQualityUtils', () => {
     it('should prefix data product field for nested test case documents', () => {
       expect(buildMustEsFilterForDataProducts(['a.b'], 'testCase.')).toEqual({
         bool: {
-          should: [{ term: { 'testCase.dataProducts.fullyQualifiedName': 'a.b' } }],
+          should: [
+            { term: { 'testCase.dataProducts.fullyQualifiedName': 'a.b' } },
+          ],
           minimum_should_match: 1,
         },
       });

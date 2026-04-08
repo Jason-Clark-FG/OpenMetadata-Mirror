@@ -292,9 +292,7 @@ export const buildDataQualityDashboardFilters = (data: {
   }
 
   if (filters?.dataProductFqns && filters.dataProductFqns.length > 0) {
-    mustFilter.push(
-      buildMustEsFilterForDataProducts(filters.dataProductFqns)
-    );
+    mustFilter.push(buildMustEsFilterForDataProducts(filters.dataProductFqns));
   }
 
   if (filters?.entityFQN) {
