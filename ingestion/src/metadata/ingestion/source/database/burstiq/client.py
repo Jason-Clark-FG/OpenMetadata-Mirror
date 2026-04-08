@@ -347,9 +347,10 @@ class BurstIQClient:
             List of flat record dicts (data envelope unwrapped)
         """
         if not re.fullmatch(r"[A-Za-z0-9_]+", chain):
-            raise ValueError(
-                f"Invalid chain name '{chain}': must be alphanumeric/underscore only"
+            logger.warning(
+                f"Skipping chain '{chain}': name contains characters not supported by TQL "
             )
+            return []
         tql = f"FROM {chain} SKIP {skip} LIMIT {limit} SELECT data.*"
         logger.info(f"Fetching records for chain '{chain}' via TQL (limit={limit})")
         try:

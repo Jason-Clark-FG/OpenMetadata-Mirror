@@ -13,19 +13,12 @@ Tests for BurstIQProfilerInterface — covers get_columns, _type_casted_dataset,
 and the full get_all_metrics profiler flow.
 """
 import math
-import sys
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pandas as pd
 import pytest
-
-if sys.version_info < (3, 9):
-    pytest.skip(
-        "requires python 3.9+ due to incompatibility with object patch",
-        allow_module_level=True,
-    )
 
 from metadata.generated.schema.entity.data.table import Column as EntityColumn
 from metadata.generated.schema.entity.data.table import ColumnName, DataType, Table
@@ -127,15 +120,12 @@ def _make_interface(df_factory, table_entity=FULL_TABLE_ENTITY):
     sampler.get_dataset.return_value = df_factory
     sampler.raw_dataset = df_factory
 
-    with (
-        patch(
-            "metadata.profiler.interface.profiler_interface.get_ssl_connection",
-            return_value=FakeConnection(),
-        ),
-        patch(
-            "metadata.sampler.sampler_interface.get_ssl_connection",
-            return_value=FakeConnection(),
-        ),
+    with patch(
+        "metadata.profiler.interface.profiler_interface.get_ssl_connection",
+        return_value=FakeConnection(),
+    ), patch(
+        "metadata.sampler.sampler_interface.get_ssl_connection",
+        return_value=FakeConnection(),
     ):
         interface = BurstIQProfilerInterface(
             service_connection_config=BURSTIQ_CONNECTION,

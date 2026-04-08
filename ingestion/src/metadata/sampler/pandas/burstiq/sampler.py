@@ -16,7 +16,7 @@ pandas DataFrame, and exposes the standard SamplerInterface contract
 so that PandasProfilerInterface can be used without any BurstIQ-specific
 profiler code.
 """
-from typing import TYPE_CHECKING, Callable, Iterator, List, Optional
+from typing import Callable, Iterator, List, Optional
 
 import pandas as pd
 
@@ -26,13 +26,12 @@ from metadata.generated.schema.entity.data.table import (
     TableData,
 )
 from metadata.sampler.sampler_interface import SamplerInterface
-from metadata.utils.constants import SAMPLE_DATA_DEFAULT_COUNT
+from metadata.utils.constants import CHUNKSIZE, SAMPLE_DATA_DEFAULT_COUNT
 from metadata.utils.sqa_like_column import SQALikeColumn
 
-if TYPE_CHECKING:
-    from metadata.ingestion.source.database.burstiq.client import BurstIQClient
+from metadata.ingestion.source.database.burstiq.client import BurstIQClient
 
-_DEFAULT_PROFILER_LIMIT = 10_000
+_PAGE_SIZE = 1_000  # Records per TQL page request
 
 _NUMERIC_TYPES = {
     DataType.INT,
@@ -59,35 +58,56 @@ class BurstIQSampler(SamplerInterface):
     """
     Sampler for BurstIQ LifeGraph.
 
-    Replaces both NoSQLSampler and BurstIQAdaptor for the profiler path.
-    Records are fetched once via TQL and cached as a DataFrame so that
-    PandasProfilerInterface can compute all metrics in-memory.
+    Fetches records via paginated TQL queries and yields DataFrame chunks
+    so that PandasProfilerInterface can compute metrics without loading the
+    full dataset into memory at once.
     """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.client: "BurstIQClient" = self.get_client()
-        self._cached_df: Optional[pd.DataFrame] = None
+        self.client: BurstIQClient = self.get_client()
 
     # ------------------------------------------------------------------
     # SamplerInterface abstract methods
     # ------------------------------------------------------------------
 
-    def get_client(self) -> "BurstIQClient":
+    def get_client(self) -> BurstIQClient:
         """Return the BurstIQClient created by get_ssl_connection in the base __init__."""
         return self.connection
 
     @property
     def raw_dataset(self) -> Callable[[], Iterator[pd.DataFrame]]:
-        """Lazy-fetch and cache records as a single DataFrame, return a callable iterator."""
-        if self._cached_df is None:
-            limit = self._get_limit()
-            chain = self.entity.name.root
-            records = self.client.get_records_by_tql(chain, limit=int(limit))
-            df = pd.DataFrame(records) if records else pd.DataFrame()
-            self._cached_df = self._cast_dataframe(df)
-        df = self._cached_df
-        return lambda: iter([df])
+        """Return a callable that lazily paginates records from BurstIQ in chunks."""
+        chain = self.entity.name.root
+        sample = self.sample_config.profileSample
+        sample_type = self.sample_config.profileSampleType
+        client = self.client
+
+        def chunk_generator() -> Iterator[pd.DataFrame]:
+            if sample and sample_type == ProfileSampleType.ROWS:
+                total_limit = int(sample)
+            elif sample and sample_type == ProfileSampleType.PERCENTAGE:
+                total = client.get_chain_metrics().get(chain, 0)
+                total_limit = max(1, int(total * sample / 100))
+            else:
+                total_limit = min(client.get_chain_metrics().get(chain, 0), CHUNKSIZE)
+
+            if not total_limit:
+                yield pd.DataFrame()
+                return
+
+            skip = 0
+            while skip < total_limit:
+                page_size = min(_PAGE_SIZE, total_limit - skip)
+                records = client.get_records_by_tql(chain, limit=page_size, skip=skip)
+                if not records:
+                    break
+                yield self._cast_dataframe(pd.DataFrame(records))
+                skip += len(records)
+                if len(records) < page_size:
+                    break
+
+        return chunk_generator
 
     def get_dataset(self, **__) -> Callable[[], Iterator[pd.DataFrame]]:
         """Return the dataset callable (sampling applied via TQL limit)."""
@@ -160,17 +180,3 @@ class BurstIQSampler(SamplerInterface):
                 df[col_name] = pd.to_datetime(df[col_name], errors="coerce", utc=True)
         return df
 
-    def _get_limit(self) -> int:
-        """Compute the TQL record fetch limit from the profiler sample config."""
-        sample = self.sample_config.profileSample
-        sample_type = self.sample_config.profileSampleType
-
-        if sample and sample_type == ProfileSampleType.ROWS:
-            return int(sample)
-
-        if sample and sample_type == ProfileSampleType.PERCENTAGE:
-            chain_metrics = self.client.get_chain_metrics()
-            total = chain_metrics.get(self.entity.name.root, 0)
-            return max(1, int(total * sample / 100))
-
-        return _DEFAULT_PROFILER_LIMIT

@@ -30,20 +30,22 @@ from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
-_CLIENT_CACHE: Dict[int, BurstIQClient] = {}
+_CLIENT_CACHE: Dict[str, BurstIQClient] = {}
 
 
 def get_connection(connection: BurstIQConnection) -> BurstIQClient:
     """
     Create or return a cached BurstIQ client connection.
 
-    Caching by a hash of the connection config avoids re-authentication on every
-    table during profiler ingestion, where SamplerInterface.__init__ calls
-    get_ssl_connection (which calls this function) once per table entity.
-    Using id(connection) was unreliable because each table deserialization
-    produces a new object with a different id.
+    Caching by the JSON representation of the connection config avoids
+    re-authentication on every table during profiler ingestion, where
+    SamplerInterface.__init__ calls get_ssl_connection (which calls this
+    function) once per table entity. Using id(connection) was unreliable
+    because each table deserialization produces a new object with a
+    different id. The JSON string itself is used (not its hash) to
+    guarantee no key collisions across distinct configs.
     """
-    key = hash(connection.model_dump_json())
+    key = connection.model_dump_json()
     if key not in _CLIENT_CACHE:
         _CLIENT_CACHE[key] = BurstIQClient(config=connection)
     return _CLIENT_CACHE[key]
