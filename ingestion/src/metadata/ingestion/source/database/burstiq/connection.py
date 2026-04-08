@@ -11,6 +11,7 @@
 """
 Source connection handler for BurstIQ
 """
+import hashlib
 from typing import Dict, Optional
 
 from metadata.generated.schema.entity.automations.workflow import (
@@ -37,15 +38,14 @@ def get_connection(connection: BurstIQConnection) -> BurstIQClient:
     """
     Create or return a cached BurstIQ client connection.
 
-    Caching by the JSON representation of the connection config avoids
-    re-authentication on every table during profiler ingestion, where
-    SamplerInterface.__init__ calls get_ssl_connection (which calls this
-    function) once per table entity. Using id(connection) was unreliable
-    because each table deserialization produces a new object with a
-    different id. The JSON string itself is used (not its hash) to
-    guarantee no key collisions across distinct configs.
+    Caching avoids re-authentication on every table during profiler ingestion,
+    where SamplerInterface.__init__ calls get_ssl_connection once per table.
+    Using id(connection) was unreliable because each table deserialization
+    produces a new object with a different id. A SHA-256 digest of the
+    serialised config is used as the key: collision-resistant but never
+    stores plaintext credentials in the cache keys.
     """
-    key = connection.model_dump_json()
+    key = hashlib.sha256(connection.model_dump_json().encode()).hexdigest()
     if key not in _CLIENT_CACHE:
         _CLIENT_CACHE[key] = BurstIQClient(config=connection)
     return _CLIENT_CACHE[key]

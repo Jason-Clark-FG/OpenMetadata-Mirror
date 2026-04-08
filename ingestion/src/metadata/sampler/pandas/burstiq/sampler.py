@@ -27,7 +27,7 @@ from metadata.generated.schema.entity.data.table import (
 )
 from metadata.ingestion.source.database.burstiq.client import BurstIQClient
 from metadata.sampler.sampler_interface import SamplerInterface
-from metadata.utils.constants import CHUNKSIZE, SAMPLE_DATA_DEFAULT_COUNT
+from metadata.utils.constants import SAMPLE_DATA_DEFAULT_COUNT
 from metadata.utils.sqa_like_column import SQALikeColumn
 
 _PAGE_SIZE = 1_000  # Records per TQL page request
@@ -89,7 +89,7 @@ class BurstIQSampler(SamplerInterface):
                 total = client.get_chain_metrics().get(chain, 0)
                 total_limit = max(1, int(total * sample / 100))
             else:
-                total_limit = min(client.get_chain_metrics().get(chain, 0), CHUNKSIZE)
+                total_limit = client.get_chain_metrics().get(chain, 0)
 
             if not total_limit:
                 yield pd.DataFrame()
@@ -137,22 +137,6 @@ class BurstIQSampler(SamplerInterface):
             for row in subset.itertuples(index=False, name=None)
         ]
         return TableData(columns=available, rows=rows)
-
-    def get_columns(self) -> List[SQALikeColumn]:
-        """Return SQALikeColumn list derived from the OM Table entity."""
-        df = next(self.raw_dataset())
-        df_cols = set(df.columns)
-        om_cols = {c.name.root for c in self.entity.columns}
-        missing = om_cols - df_cols
-        extra = df_cols - om_cols
-        print(f"[DEBUG] df columns ({len(df_cols)}): {sorted(df_cols)}")
-        print(f"[DEBUG] OM columns in entity ({len(om_cols)}): {sorted(om_cols)}")
-        print(f"[DEBUG] In OM but missing from df ({len(missing)}): {sorted(missing)}")
-        print(f"[DEBUG] In df but not in OM ({len(extra)}): {sorted(extra)}")
-        return [
-            SQALikeColumn(name=c.name.root, type=c.dataType)
-            for c in self.entity.columns
-        ]
 
     # ------------------------------------------------------------------
     # Internal helpers
