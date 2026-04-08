@@ -360,6 +360,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
                 }
               });
 
+  private static final ThreadLocal<Include> bulkInclude =
+      ThreadLocal.withInitial(() -> Include.NON_DELETED);
+
   private final String collectionPath;
   @Getter public final Class<T> entityClass;
   @Getter protected final String entityType;
@@ -1879,15 +1882,11 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * Example implementation can be found in {@link GlossaryTermRepository#setFieldsInBulk}.
    */
   public void setFieldsInBulk(Fields fields, List<T> entities) {
-    setFieldsInBulk(fields, entities, Include.NON_DELETED);
-  }
-
-  public void setFieldsInBulk(Fields fields, List<T> entities, Include include) {
     if (entities == null || entities.isEmpty()) {
       return;
     }
     try (var ignored = phase("fetchFields")) {
-      fetchAndSetFields(entities, fields, include);
+      fetchAndSetFields(entities, fields);
     }
     try (var ignored = phase("setInheritedFields")) {
       setInheritedFields(entities, fields);
@@ -1895,6 +1894,16 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     for (T entity : entities) {
       clearFieldsInternal(entity, fields);
+    }
+  }
+
+  public final void setFieldsInBulk(Fields fields, List<T> entities, Include include) {
+    Include previous = bulkInclude.get();
+    bulkInclude.set(include);
+    try {
+      setFieldsInBulk(fields, entities);
+    } finally {
+      bulkInclude.set(previous);
     }
   }
 
@@ -8427,7 +8436,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    fetchAndSetFields(entities, fields, Include.NON_DELETED);
+    fetchAndSetFields(entities, fields, bulkInclude.get());
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields, Include include) {
