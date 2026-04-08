@@ -290,7 +290,7 @@ class QlikSenseClient:
                 continue
             if current_table:
                 from_join_tables = re.findall(
-                    r"(?:FROM|JOIN)\s+((?:\[?[a-zA-Z0-9_ ]+\]?\.)*\[?[a-zA-Z0-9_ ]+\]?)",
+                    r"(?:FROM|JOIN)\s+((?:(?:\[[a-zA-Z0-9_ ]+\]|[a-zA-Z0-9_]+)\.)*(?:\[[a-zA-Z0-9_ ]+\]|[a-zA-Z0-9_]+))",
                     stripped,
                     re.IGNORECASE,
                 )
