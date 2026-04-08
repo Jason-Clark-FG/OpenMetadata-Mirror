@@ -82,7 +82,7 @@ const EntityListingTable = <T extends { id: string; name: string }>({
   return (
     <Table
       aria-label={ariaLabel}
-      data-testid="entity-listing-table"
+      data-testid="table-view-container"
       selectedKeys={selectedKeys}
       selectionBehavior="toggle"
       selectionMode="multiple"

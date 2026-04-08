@@ -51,7 +51,7 @@ const EntityCardView = <T extends { id: string }>({
           data-testid="entity-card"
           isClickable={Boolean(onEntityClick)}
           key={entity.id}
-          variant="outlined"
+          variant='default'
           onClick={onEntityClick ? () => onEntityClick(entity) : undefined}>
           <Card.Content>{renderCard(entity)}</Card.Content>
         </Card>
