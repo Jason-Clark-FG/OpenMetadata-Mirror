@@ -138,16 +138,21 @@ const AppRunsHistory = forwardRef(
     }, [appData, appRunsHistoryData, isExternalApp]);
 
     const handleRowExpandable = useCallback(
-      (key?: string) => {
+      (key?: string, record?: AppRunRecordWithId) => {
         if (key) {
           if (isExternalApp && appData) {
-            return navigate(
-              getLogsViewerPath(
-                GlobalSettingOptions.APPLICATIONS,
-                appData.name ?? '',
-                appData.name ?? ''
-              )
+            const basePath = getLogsViewerPath(
+              GlobalSettingOptions.APPLICATIONS,
+              appData.name ?? '',
+              appData.name ?? ''
             );
+            const rawRunId = record?.properties?.pipelineRunId;
+            const runId = typeof rawRunId === 'string' ? rawRunId : undefined;
+            const path = runId
+              ? `${basePath}?runId=${encodeURIComponent(runId)}`
+              : basePath;
+
+            return navigate(path);
           }
           if (expandedRowKeys.includes(key)) {
             setExpandedRowKeys((prev) => prev.filter((item) => item !== key));
@@ -190,7 +195,7 @@ const AppRunsHistory = forwardRef(
               disabled={showLogAction(record)}
               size="small"
               type="link"
-              onClick={() => handleRowExpandable(record.id)}>
+              onClick={() => handleRowExpandable(record.id, record)}>
               {t('label.log-plural')}
             </Button>
             <Button

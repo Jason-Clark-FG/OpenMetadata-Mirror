@@ -718,6 +718,41 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
         PipelineStatus.class);
   }
 
+  /**
+   * Upsert only the time-series record for a specific run without overwriting the pipeline-level
+   * current status. Use this when stopping a specific run while other runs may still be active.
+   * Inserts a new record if none exists for the runId, otherwise updates the existing one.
+   */
+  public void updatePipelineStatusByRunId(String fqn, PipelineStatus pipelineStatus) {
+    IngestionPipeline ingestionPipeline = findByName(fqn, Include.NON_DELETED);
+    String pipelineFqn = ingestionPipeline.getFullyQualifiedName();
+    String json = JsonUtils.pojoToJson(pipelineStatus);
+    PipelineStatus storedPipelineStatus =
+        JsonUtils.readValue(
+            daoCollection
+                .entityExtensionTimeSeriesDao()
+                .getLatestExtensionByKey(
+                    RUN_ID_EXTENSION_KEY,
+                    pipelineStatus.getRunId(),
+                    pipelineFqn,
+                    PIPELINE_STATUS_EXTENSION),
+            PipelineStatus.class);
+    if (storedPipelineStatus != null) {
+      daoCollection
+          .entityExtensionTimeSeriesDao()
+          .updateExtensionByKey(
+              RUN_ID_EXTENSION_KEY,
+              pipelineStatus.getRunId(),
+              pipelineFqn,
+              PIPELINE_STATUS_EXTENSION,
+              json);
+    } else {
+      daoCollection
+          .entityExtensionTimeSeriesDao()
+          .insert(pipelineFqn, PIPELINE_STATUS_EXTENSION, PIPELINE_STATUS_JSON_SCHEMA, json);
+    }
+  }
+
   @Transaction
   public IngestionPipeline deletePipelineStatusByRunId(UUID ingestionPipelineId, UUID runId) {
     IngestionPipeline ingestionPipeline = find(ingestionPipelineId, Include.NON_DELETED);

@@ -535,7 +535,14 @@ public class AppResource extends EntityResource<App, AppRepository> {
               schema = @Schema(type = "string"))
           @QueryParam("after")
           @DefaultValue("")
-          String after) {
+          String after,
+      @Parameter(
+              description =
+                  "Pipeline run ID (Argo workflow UID) to fetch logs for a specific run. "
+                      + "If not provided, returns logs for the latest run.",
+              schema = @Schema(type = "string"))
+          @QueryParam("runId")
+          String runId) {
     App installation = repository.getByName(uriInfo, name, repository.getFields("id,pipelines"));
     if (installation.getAppType().equals(AppType.Internal)) {
       AppRunRecord latestRun = repository.getLatestAppRunsOptional(installation).orElse(null);
@@ -552,7 +559,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
             ingestionPipelineRepository.get(
                 uriInfo, pipelineRef.getId(), ingestionPipelineRepository.getFields(FIELD_OWNERS));
         return Response.ok(
-                pipelineServiceClient.getLastIngestionLogs(ingestionPipeline, after),
+                pipelineServiceClient.getIngestionLogs(ingestionPipeline, after, runId),
                 MediaType.APPLICATION_JSON_TYPE)
             .build();
       }
@@ -1338,8 +1345,11 @@ public class AppResource extends EntityResource<App, AppRepository> {
       if (!PipelineStatusUtils.isTerminalState(status.getPipelineState())) {
         status.setPipelineState(PipelineStatusType.STOPPED);
         status.setEndDate(System.currentTimeMillis());
-        ingestionPipelineRepository.addPipelineStatus(
-            uriInfo, ingestionPipeline.getFullyQualifiedName(), status);
+        // Use updatePipelineStatusByRunId instead of addPipelineStatus to avoid overwriting
+        // the pipeline-level current status. When stopping a specific run, other runs may still
+        // be active and their status should not be affected.
+        ingestionPipelineRepository.updatePipelineStatusByRunId(
+            ingestionPipeline.getFullyQualifiedName(), status);
       }
     } catch (Exception e) {
       LOG.error(

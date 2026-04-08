@@ -127,6 +127,13 @@ public interface PipelineServiceClientInterface {
   /* Get the all last run logs of a deployed pipeline */
   Map<String, String> getLastIngestionLogs(IngestionPipeline ingestionPipeline, String after);
 
+  /* Get logs for a specific pipeline run identified by runId (e.g. Argo workflow UID).
+   * When runId is null or blank, falls back to getLastIngestionLogs (latest run). */
+  default Map<String, String> getIngestionLogs(
+      IngestionPipeline ingestionPipeline, String after, String runId) {
+    return getLastIngestionLogs(ingestionPipeline, after);
+  }
+
   /* Get the all last run logs of a deployed pipeline */
   PipelineServiceClientResponse killIngestion(IngestionPipeline ingestionPipeline);
 

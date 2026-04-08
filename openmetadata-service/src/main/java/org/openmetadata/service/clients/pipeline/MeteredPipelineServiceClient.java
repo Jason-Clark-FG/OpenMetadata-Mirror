@@ -136,6 +136,13 @@ public class MeteredPipelineServiceClient implements PipelineServiceClientInterf
         GET_LOGS, () -> this.decoratedClient.getLastIngestionLogs(ingestionPipeline, after));
   }
 
+  @Override
+  public Map<String, String> getIngestionLogs(
+      IngestionPipeline ingestionPipeline, String after, String runId) {
+    return executeWithMetering(
+        GET_LOGS, () -> this.decoratedClient.getIngestionLogs(ingestionPipeline, after, runId));
+  }
+
   public PipelineServiceClientResponse killIngestion(IngestionPipeline ingestionPipeline) {
     return this.respondWithMetering(
         KILL, () -> this.decoratedClient.killIngestion(ingestionPipeline));
