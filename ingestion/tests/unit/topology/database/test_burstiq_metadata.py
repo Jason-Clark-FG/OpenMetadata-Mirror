@@ -55,8 +55,6 @@ class TestBurstIQMetadataIngestion(TestCase):
                     "description": "Patient age",
                     "datatype": "INTEGER",
                     "required": False,
-                    "min": 0,
-                    "max": 150,
                 },
                 {
                     "name": "diagnosis_codes",
@@ -70,9 +68,7 @@ class TestBurstIQMetadataIngestion(TestCase):
                     "required": True,
                 },
             ],
-            "indexes": [
-                {"name": "pk_patient", "type": "PRIMARY", "attributes": ["patient_id"]}
-            ],
+            "indexes": [{"type": "PRIMARY", "attributes": ["patient_id"]}],
         }
 
     def test_datatype_mapping_simple_types(self):
@@ -229,11 +225,7 @@ class TestBurstIQMetadataIngestion(TestCase):
         dictionary = BurstIQDictionary(
             name="patient",
             attributes=[],
-            indexes=[
-                BurstIQIndex(
-                    name="pk_patient", type="PRIMARY", attributes=["patient_id"]
-                )
-            ],
+            indexes=[BurstIQIndex(type="PRIMARY", attributes=["patient_id"])],
         )
 
         # Get constraints
@@ -258,9 +250,7 @@ class TestBurstIQMetadataIngestion(TestCase):
         dictionary = BurstIQDictionary(
             name="patient",
             attributes=[],
-            indexes=[
-                BurstIQIndex(name="uk_email", type="UNIQUE", attributes=["email"])
-            ],
+            indexes=[BurstIQIndex(type="UNIQUE", attributes=["email"])],
         )
 
         # Get constraints

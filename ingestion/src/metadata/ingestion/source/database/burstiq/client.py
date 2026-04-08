@@ -11,7 +11,6 @@
 """
 Client to interact with BurstIQ LifeGraph APIs
 """
-import re
 import traceback
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -21,15 +20,19 @@ import requests
 from metadata.generated.schema.entity.services.connections.database.burstIQConnection import (
     BurstIQConnection,
 )
+from metadata.ingestion.source.database.burstiq.models import (
+    BurstIQDictionary,
+    BurstIQEdge,
+    SdzMetricsResponse,
+    TokenResponse,
+    TQLRecord,
+)
 from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
-AUTH_TIMEOUT = (10, 30)  # 10s connect, 30s read for authentication
-API_TIMEOUT = (
-    10,
-    120,
-)  # 10s connect, 120s read for API calls (handles 600+ dictionaries)
+AUTH_TIMEOUT = (10, 30)
+API_TIMEOUT = (10, 120)
 
 AUTH_SERVER_BASE = "https://auth.burstiq.com"
 API_BASE_URL = "https://api.burstiq.com"
@@ -42,16 +45,9 @@ class BurstIQClient:
     """
 
     def __init__(self, config: BurstIQConnection):
-        """
-        Initialize BurstIQ Client
-
-        Args:
-            config: BurstIQConnection configuration
-        """
         self.config = config
         self.api_base_url = getattr(config, "apiUrl", API_BASE_URL).rstrip("/")
 
-        # Token management
         self.access_token: Optional[str] = None
         self.token_expires_at: Optional[datetime] = None
 
@@ -66,13 +62,11 @@ class BurstIQClient:
         self._authenticate()
 
     def _authenticate(self):
-        """Authenticate with BurstIQ and get access token"""
-        # Get configuration values
+        """Authenticate with BurstIQ and store the access token."""
         realm_name = getattr(self.config, "realmName", None)
         username = getattr(self.config, "username", None)
         password = getattr(self.config, "password", None)
 
-        # Validate required fields
         if not realm_name:
             raise ValueError("realmName is required for authentication")
         if not username:
@@ -93,30 +87,27 @@ class BurstIQClient:
             "password": password.get_secret_value(),
         }
 
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-
         try:
             logger.info(f"Authenticating with BurstIQ at: {token_url}")
             response = requests.post(
-                token_url, data=payload, headers=headers, timeout=AUTH_TIMEOUT
+                token_url,
+                data=payload,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=AUTH_TIMEOUT,
             )
             response.raise_for_status()
 
-            token_data = response.json()
-
-            self.access_token = token_data.get("access_token")
-
-            # Calculate token expiration
-            expires_in = token_data.get("expires_in", 3600)
+            token = TokenResponse.model_validate(response.json())
+            self.access_token = token.access_token
             self.token_expires_at = datetime.now() + timedelta(
-                seconds=expires_in - 60
-            )  # 60s buffer
+                seconds=token.expires_in - 60
+            )
 
             customer_name = getattr(self.config, "biqCustomerName", None)
             sdz_name = getattr(self.config, "biqSdzName", None)
 
             logger.info(
-                f"Authentication successful. Token expires in {expires_in} seconds"
+                f"Authentication successful. Token expires in {token.expires_in} seconds"
             )
             if customer_name and sdz_name:
                 logger.info(f"Customer: {customer_name}, SDZ: {sdz_name}")
@@ -128,17 +119,14 @@ class BurstIQClient:
 
     def _get_auth_header(self) -> Dict[str, str]:
         """
-        Get authentication headers with current access token.
-        Authenticates on first call if not already authenticated.
+        Get authentication headers, refreshing the token if necessary.
 
         Returns:
             Dictionary of headers
         """
-        # Authenticate if not already done (lazy authentication)
         if not self.access_token:
             logger.info("No access token found, authenticating...")
             self._authenticate()
-        # Check if token needs refresh
         elif self.token_expires_at and datetime.now() >= self.token_expires_at:
             logger.info("Access token expired, re-authenticating...")
             self._authenticate()
@@ -149,24 +137,20 @@ class BurstIQClient:
             "Accept": "application/json",
         }
 
-        # Add BurstIQ-specific headers from config
         customer_name = getattr(self.config, "biqCustomerName", None)
         sdz_name = getattr(self.config, "biqSdzName", None)
+        system_wallet_id = getattr(self.config, "biqSystemWalletId", None)
 
         if customer_name:
             headers["biq_customer_name"] = customer_name
         if sdz_name:
             headers["biq_sdz_name"] = sdz_name
-
-        system_wallet_id = getattr(self.config, "biqSystemWalletId", None)
         if system_wallet_id:
             headers["biq_system_wallet_id"] = system_wallet_id
 
         return headers
 
-    def _make_request(
-        self, method: str, endpoint: str, **kwargs
-    ) -> Optional[Dict[str, Any]]:
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> Optional[Any]:
         """
         Make HTTP request to BurstIQ API
 
@@ -183,11 +167,9 @@ class BurstIQClient:
         url = f"{self.api_base_url}/{endpoint.lstrip('/')}"
         headers = self._get_auth_header()
 
-        # Merge with any additional headers provided
         if "headers" in kwargs:
             headers.update(kwargs.pop("headers"))
 
-        # Log request params for debugging
         params = kwargs.get("params", {})
         logger.debug(f"Making {method} request to {url} with params: {params}")
 
@@ -204,14 +186,12 @@ class BurstIQClient:
 
             response.raise_for_status()
 
-            # Parse JSON response
             json_data = response.json()
 
-            # Log response size
             if isinstance(json_data, list):
                 logger.debug(f"Received {len(json_data)} items in response")
             else:
-                logger.debug(f"Received single item response")
+                logger.debug("Received single item response")
 
             return json_data
 
@@ -234,7 +214,7 @@ class BurstIQClient:
             logger.debug(traceback.format_exc())
             raise
 
-    def get_dictionaries(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def get_dictionaries(self, limit: Optional[int] = None) -> List[BurstIQDictionary]:
         """
         Fetch all data dictionaries from BurstIQ
 
@@ -242,7 +222,7 @@ class BurstIQClient:
             limit: Optional limit on number of dictionaries to fetch
 
         Returns:
-            List of dictionary objects
+            List of BurstIQDictionary model instances
         """
         params = {}
         if limit:
@@ -254,11 +234,12 @@ class BurstIQClient:
         if data is None:
             return []
 
-        dictionaries = data if isinstance(data, list) else [data]
+        raw_items = data if isinstance(data, list) else [data]
+        dictionaries = [BurstIQDictionary.model_validate(item) for item in raw_items]
         logger.info(f"Found {len(dictionaries)} dictionaries")
         return dictionaries
 
-    def get_dictionary_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_dictionary_by_name(self, name: str) -> Optional[BurstIQDictionary]:
         """
         Get a specific dictionary by name
 
@@ -266,10 +247,13 @@ class BurstIQClient:
             name: Dictionary name
 
         Returns:
-            Dictionary object or None
+            BurstIQDictionary instance or None
         """
         logger.debug(f"Fetching dictionary: {name}")
-        return self._make_request("GET", f"/api/metadata/dictionary/{name}")
+        data = self._make_request("GET", f"/api/metadata/dictionary/{name}")
+        if data is None:
+            return None
+        return BurstIQDictionary.model_validate(data)
 
     def get_edges(
         self,
@@ -278,7 +262,7 @@ class BurstIQClient:
         to_dictionary: Optional[str] = None,
         limit: Optional[int] = None,
         skip: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[BurstIQEdge]:
         """
         Query edge definitions (lineage relationships) from BurstIQ
 
@@ -290,7 +274,7 @@ class BurstIQClient:
             skip: Optional number of edges to skip (pagination)
 
         Returns:
-            List of edge definition objects
+            List of BurstIQEdge model instances
         """
         params = {}
         if name:
@@ -312,7 +296,8 @@ class BurstIQClient:
         if data is None:
             return []
 
-        edges = data if isinstance(data, list) else [data]
+        raw_items = data if isinstance(data, list) else [data]
+        edges = [BurstIQEdge.model_validate(item) for item in raw_items]
         logger.info(f"Found {len(edges)} edge definitions")
         return edges
 
@@ -327,10 +312,8 @@ class BurstIQClient:
         data = self._make_request("GET", "/api/metrics/sdz")
         if data is None:
             return {}
-        chain_metrics = data.get("chainMetrics", {})
-        return {
-            name: metrics.get("assets", 0) for name, metrics in chain_metrics.items()
-        }
+        metrics = SdzMetricsResponse.model_validate(data)
+        return {name: chain.assets for name, chain in metrics.chainMetrics.items()}
 
     def get_records_by_tql(
         self, chain: str, limit: int, skip: int = 0
@@ -346,11 +329,6 @@ class BurstIQClient:
         Returns:
             List of flat record dicts (data envelope unwrapped)
         """
-        if not re.fullmatch(r"[A-Za-z0-9_]+", chain):
-            logger.warning(
-                f"Skipping chain '{chain}': name contains characters not supported by TQL "
-            )
-            return []
         tql = f"FROM {chain} SKIP {skip} LIMIT {limit} SELECT data.*"
         logger.info(f"Fetching records for chain '{chain}' via TQL (limit={limit})")
         try:
@@ -364,16 +342,13 @@ class BurstIQClient:
         if not isinstance(raw, list):
             return []
 
-        records = []
-        for item in raw:
-            if isinstance(item, dict):
-                if "data" in item and isinstance(item["data"], dict):
-                    records.append(item["data"])
-                else:
-                    records.append(item)
+        records = [
+            TQLRecord.model_validate(item).to_record()
+            for item in raw
+            if isinstance(item, dict)
+        ]
         logger.info(f"Fetched {len(records)} records for chain '{chain}'")
         return records
 
     def close(self):
-        """Cleanup method - no session to close when using plain requests"""
         pass
