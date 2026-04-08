@@ -29,10 +29,6 @@ class GCSBucketResponse(BaseModel):
     Class modelling a response received from gcs_client.list_buckets operation
     """
 
-    model_config = ConfigDict(
-        extra="ignore",
-    )
-
     name: str = Field(..., description="Bucket name")
     project_id: str = Field(..., description="Project ID")
     creation_date: Optional[datetime] = Field(
@@ -46,8 +42,9 @@ class GCSContainerDetails(BaseModel):
     Class mapping container details used to create the container requests
     """
 
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        extra="forbid",
+    )
 
     name: str = Field(..., description="Bucket name")
     prefix: str = Field(..., description="Prefix for the container")
