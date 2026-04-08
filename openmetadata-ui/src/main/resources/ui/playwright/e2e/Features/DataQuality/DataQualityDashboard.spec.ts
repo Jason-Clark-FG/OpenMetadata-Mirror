@@ -158,6 +158,22 @@ test.beforeAll('setup pre-test', async ({ browser }) => {
   await afterAction();
 });
 
+test.afterAll('cleanup', async ({ browser }) => {
+  const { apiContext, afterAction } = await createNewPage(browser);
+
+  await table1.delete(apiContext);
+  await table2.delete(apiContext);
+  await table3.delete(apiContext);
+  await user1.delete(apiContext);
+  await glossaryTerm.delete(apiContext);
+  await glossary.delete(apiContext);
+  await tag.delete(apiContext);
+  await tier.delete(apiContext);
+  await classification.delete(apiContext);
+
+  await afterAction();
+});
+
 const waitForDashboardApiResponses = (page: Page, key: string) => {
   const testCaseStatusResponse = page.waitForResponse(
     `/api/v1/dataQuality/testSuites/dataQualityReport?q=*${key}*&index=testCase&aggregationQuery=bucketName%3Dstatus%3AaggType%3Dterms%3Afield%3DtestCaseResult.testCaseStatus`

@@ -706,16 +706,6 @@ const DataQualityDashboard = ({
             />
           )}
 
-          {showDataProductsFilter && (
-            <SearchDropdown
-              hideCounts
-              label={t('label.data-product')}
-              searchKey="dataProduct"
-              triggerButtonSize="middle"
-              {...dataProducts}
-            />
-          )}
-
           {showGlossaryTermsFilter && (
             <SearchDropdown
               hideCounts
@@ -723,6 +713,16 @@ const DataQualityDashboard = ({
               searchKey="glossaryTerms"
               triggerButtonSize="middle"
               {...glossaryTerms}
+            />
+          )}
+
+          {showDataProductsFilter && (
+            <SearchDropdown
+              hideCounts
+              label={t('label.data-product')}
+              searchKey="dataProduct"
+              triggerButtonSize="middle"
+              {...dataProducts}
             />
           )}
         </div>
