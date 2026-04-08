@@ -52,9 +52,8 @@ import { useViewToggle } from '../common/atoms/navigation/useViewToggle';
 import { usePaginationControls } from '../common/atoms/pagination/usePaginationControls';
 import { hasActiveSearchOrFilter } from '../common/atoms/shared/utils/hasActiveSearchOrFilter';
 import EntityCardView from '../common/EntityCardView/EntityCardView.component';
-import EntityListingTable, {
-  ColumnDef,
-} from '../common/EntityListingTable/EntityListingTable.component';
+import EntityListingTable from '../common/EntityListingTable/EntityListingTable.component';
+import { ColumnDef } from '../common/EntityListingTable/EntityListingTable.interface';
 import ErrorPlaceHolder from '../common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
 import TagBadgeList from '../common/TagBadgeList/TagBadgeList.component';

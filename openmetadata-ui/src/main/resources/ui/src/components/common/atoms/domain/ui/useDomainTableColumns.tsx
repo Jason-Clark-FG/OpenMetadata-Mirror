@@ -14,7 +14,7 @@
 import { ReactNode, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Domain } from '../../../../../generated/entity/domains/domain';
-import { ColumnDef } from '../../../EntityListingTable/EntityListingTable.component';
+import { ColumnDef } from '../../../EntityListingTable/EntityListingTable.interface';
 import {
   renderDomainClassificationTagsCell,
   renderDomainGlossaryTagsCell,

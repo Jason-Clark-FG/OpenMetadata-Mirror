@@ -12,27 +12,10 @@
  */
 
 import { Table } from '@openmetadata/ui-core-components';
-import { ReactNode, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Selection } from 'react-aria-components';
 import Loader from '../Loader/Loader';
-
-export interface ColumnDef {
-  id: string;
-  label: string;
-}
-
-interface EntityListingTableProps<T extends { id: string; name: string }> {
-  entities: T[];
-  loading: boolean;
-  columns: ColumnDef[];
-  renderCell: (entity: T, columnId: string) => ReactNode;
-  selectedEntities: string[];
-  onSelectAll: (checked: boolean) => void;
-  onSelect: (id: string, checked: boolean) => void;
-  onEntityClick?: (entity: T) => void;
-  ariaLabel: string;
-  emptyMessage?: string;
-}
+import { EntityListingTableProps } from './EntityListingTable.interface';
 
 const EntityListingTable = <T extends { id: string; name: string }>({
   entities,

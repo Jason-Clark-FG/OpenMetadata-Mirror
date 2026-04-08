@@ -12,16 +12,8 @@
  */
 
 import { Card } from '@openmetadata/ui-core-components';
-import { ReactNode } from 'react';
 import Loader from '../Loader/Loader';
-
-export interface EntityCardViewProps<T extends { id: string }> {
-  entities: T[];
-  loading: boolean;
-  renderCard: (entity: T) => ReactNode;
-  onEntityClick?: (entity: T) => void;
-  emptyMessage?: string;
-}
+import { EntityCardViewProps } from './EntityCardView.interface';
 
 const EntityCardView = <T extends { id: string }>({
   entities,
