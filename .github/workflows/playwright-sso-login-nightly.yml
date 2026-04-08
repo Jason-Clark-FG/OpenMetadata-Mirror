@@ -113,8 +113,15 @@ jobs:
             --workers=1
         env:
           SSO_PROVIDER_TYPE: ${{ matrix.provider }}
-          SSO_USERNAME: ${{ secrets[format('{0}_SSO_USERNAME', upper(matrix.provider))] }}
-          SSO_PASSWORD: ${{ secrets[format('{0}_SSO_PASSWORD', upper(matrix.provider))] }}
+          # Reference each provider's secrets statically so GitHub Actions
+          # exposes only the credentials this step needs — not the entire
+          # org/repo secret store. A `secrets[format(...)]` style lookup
+          # would defeat static analysis and trigger CodeQL's
+          # "Excessive Secrets Exposure" rule. When a new provider lands,
+          # add a sibling step gated by `if: matrix.provider == '<provider>'`
+          # with that provider's static secret references.
+          SSO_USERNAME: ${{ secrets.OKTA_SSO_USERNAME }}
+          SSO_PASSWORD: ${{ secrets.OKTA_SSO_PASSWORD }}
           # Okta-specific overrides (all optional — defaults are baked into
           # playwright/utils/sso-providers/okta.ts and point at the
           # integrator-9351624.okta.com dev tenant).
