@@ -57,6 +57,10 @@ public class OsUtils {
     }
   }
 
+  public static JsonData toJsonData(Object pojo) {
+    return JsonData.of(pojo, jsonpMapper);
+  }
+
   public static JsonData toJsonData(String doc) {
     Map<String, Object> docMap;
     try {
