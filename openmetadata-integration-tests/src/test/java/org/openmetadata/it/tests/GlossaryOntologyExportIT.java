@@ -42,7 +42,7 @@ import org.testcontainers.utility.DockerImageName;
  * <p>Test isolation: Uses TestNamespace for unique entity naming Parallelization: Safe for
  * concurrent execution via @Execution(ExecutionMode.CONCURRENT)
  */
-@Execution(ExecutionMode.CONCURRENT)
+@Execution(ExecutionMode.SAME_THREAD)
 @ExtendWith(TestNamespaceExtension.class)
 public class GlossaryOntologyExportIT {
 
