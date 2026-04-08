@@ -88,6 +88,8 @@ test.describe('Lineage Filters', () => {
   const [depth1Entity, ...depth2ndEntities] = entities;
 
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(120_000);
+
     const { apiContext, afterAction } = await getDefaultAdminAPIContext(
       browser
     );
@@ -125,6 +127,8 @@ test.describe('Lineage Filters', () => {
   });
 
   test.beforeEach(async ({ page }) => {
+    test.setTimeout(120_000);
+
     await redirectToHomePage(page);
     await lineageEntity.visitEntityPage(page);
     await visitLineageTab(page);

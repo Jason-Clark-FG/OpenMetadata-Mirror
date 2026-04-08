@@ -75,7 +75,9 @@ export const visitEntityPage = async (data: {
   }
 
   const waitForSearchResponse = page.waitForResponse(
-    '/api/v1/search/query?q=*index=dataAsset*'
+    (response) =>
+      response.url().includes('/api/v1/search/query') &&
+      response.url().includes('index=dataAsset')
   );
   await page.getByTestId('searchBox').fill(searchTerm);
   await waitForSearchResponse;
@@ -169,14 +171,20 @@ export const addOwnerWithoutValidation = async ({
       (await usersTab.getAttribute('aria-selected')) === 'true';
 
     if (!isTabAlreadySelected) {
+      // The call with size > 0 only fires after the tab click.
       const userListResponse = page.waitForResponse(
-        '/api/v1/search/query?q=&index=user_search_index&*'
+        (response) =>
+          response.url().includes('/api/v1/search/query?q=&index=user') &&
+          !response.url().includes('size=0') &&
+          response.status() === 200
       );
       await usersTab.click();
+      await expect(usersTab).toHaveAttribute('aria-selected', 'true');
       await userListResponse;
     }
   }
-  await page.waitForSelector('[data-testid="loader"]', { state: 'detached' });
+
+  await waitForAllLoadersToDisappear(page);
 
   const ownerSearchBar = await page
     .getByTestId(`owner-select-${lowerCase(type)}-search-bar`)
