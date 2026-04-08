@@ -1,0 +1,141 @@
+#  Copyright 2025 Collate
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#  http://www.apache.org/licenses/LICENSE-2.0
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+# Nightly end-to-end SSO login tests.
+#
+# Purpose:
+#   Drive a real login round-trip through an external identity provider
+#   (Okta in Phase 1) and validate the resulting OpenMetadata session.
+#   Complements playwright-sso-tests.yml, which only exercises the SSO
+#   configuration form UI and does not perform an actual login.
+#
+# Test location:
+#   openmetadata-ui/src/main/resources/ui/playwright/e2e/Auth/SSOLogin.spec.ts
+#
+# Triggers:
+#   - Nightly cron at 03:00 UTC
+#   - Manual workflow_dispatch with provider selection
+
+name: SSO Login Nightly
+
+on:
+  schedule:
+    # Every night at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      sso_provider:
+        description: "SSO provider to test"
+        required: true
+        default: "okta"
+        type: choice
+        options:
+          - okta
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sso-login-nightly-${{ github.event.inputs.sso_provider || 'scheduled' }}
+  cancel-in-progress: true
+
+jobs:
+  sso-login:
+    runs-on: ubuntu-latest
+    environment: test
+
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          ${{ github.event_name == 'schedule'
+              && fromJSON('["okta"]')
+              || github.event.inputs.sso_provider
+              && fromJSON(format('["{0}"]', github.event.inputs.sso_provider))
+              || fromJSON('["okta"]') }}
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: true
+          docker-images: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup OpenMetadata Test Environment
+        uses: ./.github/actions/setup-openmetadata-test-environment
+        with:
+          python-version: "3.10"
+          # Ingestion is not required for SSO login tests.
+          args: "-d postgresql -i false"
+          ingestion_dependency: "all"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'openmetadata-ui/src/main/resources/ui/.nvmrc'
+
+      - name: Install dependencies
+        working-directory: openmetadata-ui/src/main/resources/ui/
+        run: yarn --ignore-scripts --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: npx playwright@1.51.1 install chromium --with-deps
+
+      - name: Run SSO Login Spec
+        working-directory: openmetadata-ui/src/main/resources/ui
+        run: |
+          npx playwright test playwright/e2e/Auth/SSOLogin.spec.ts \
+            --project=sso-auth \
+            --workers=1
+        env:
+          SSO_PROVIDER_TYPE: ${{ matrix.provider }}
+          SSO_USERNAME: ${{ secrets[format('{0}_SSO_USERNAME', upper(matrix.provider))] }}
+          SSO_PASSWORD: ${{ secrets[format('{0}_SSO_PASSWORD', upper(matrix.provider))] }}
+          # Okta-specific overrides (all optional — defaults are baked into
+          # playwright/utils/sso-providers/okta.ts and point at the
+          # integrator-9351624.okta.com dev tenant).
+          OKTA_SSO_CLIENT_ID: ${{ secrets.OKTA_SSO_CLIENT_ID }}
+          OKTA_SSO_DOMAIN: ${{ secrets.OKTA_SSO_DOMAIN }}
+          OKTA_SSO_PRINCIPAL_DOMAIN: ${{ secrets.OKTA_SSO_PRINCIPAL_DOMAIN }}
+          PLAYWRIGHT_IS_OSS: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        timeout-minutes: 30
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sso-login-html-report-${{ matrix.provider }}
+          path: openmetadata-ui/src/main/resources/ui/playwright/output/playwright-report
+          retention-days: 5
+
+      - name: Clean Up
+        if: always()
+        run: |
+          cd ./docker/development
+          docker compose down --remove-orphans
+          sudo rm -rf ${PWD}/docker-volume
