@@ -110,9 +110,9 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
       operations.add(
           BulkOperation.of(
               b ->
-                  b.index(
-                      i ->
-                          i.index(indexName)
+                  b.create(
+                      c ->
+                          c.index(indexName)
                               .id(entry.getKey())
                               .document(toJsonData(entry.getValue())))));
     }
@@ -145,25 +145,37 @@ public class ElasticSearchEntityManager implements EntityManagementClient {
           }
 
           if (response.errors()) {
-            LOG.error(
-                "Bulk indexing to ElasticSearch encountered errors. Index: {}, Total: {}, Failed: {}",
-                indexName,
-                docsAndIds.size(),
-                response.items().stream().filter(item -> item.error() != null).count());
+            long realFailures =
+                response.items().stream()
+                    .filter(item -> item.error() != null && item.status() != 409)
+                    .count();
+
+            if (realFailures > 0) {
+              LOG.error(
+                  "Bulk indexing to ElasticSearch encountered errors. Index: {}, Total: {}, Failed: {}",
+                  indexName,
+                  docsAndIds.size(),
+                  realFailures);
+            }
 
             response.items().stream()
                 .filter(item -> item.error() != null)
                 .forEach(
                     item -> {
-                      if (SearchIndexRetryQueue.isUuid(item.id())) {
-                        SearchIndexRetryQueue.enqueue(
-                            item.id(),
-                            null,
-                            SearchIndexRetryQueue.failureReason(
-                                "createEntitiesItemError",
-                                new RuntimeException(item.error().reason())));
+                      if (item.status() == 409) {
+                        LOG.debug("Document already exists for ID {}, skipping create", item.id());
+                      } else {
+                        if (SearchIndexRetryQueue.isUuid(item.id())) {
+                          SearchIndexRetryQueue.enqueue(
+                              item.id(),
+                              null,
+                              SearchIndexRetryQueue.failureReason(
+                                  "createEntitiesItemError",
+                                  new RuntimeException(item.error().reason())));
+                        }
+                        LOG.error(
+                            "Indexing failed for ID {}: {}", item.id(), item.error().reason());
                       }
-                      LOG.error("Indexing failed for ID {}: {}", item.id(), item.error().reason());
                     });
           } else {
             LOG.info(

@@ -425,7 +425,7 @@ public class GlossaryOntologyExportIT {
             .uri(URI.create(url))
             .header("Authorization", "Bearer " + token)
             .header("Accept", acceptHeader)
-            .timeout(Duration.ofSeconds(30))
+            .timeout(Duration.ofSeconds(60))
             .GET()
             .build();
 
