@@ -170,8 +170,8 @@ test.afterAll('cleanup', async ({ browser }) => {
   await tag.delete(apiContext);
   await tier.delete(apiContext);
   await classification.delete(apiContext);
-  await domain.delete(apiContext);
   await dataProduct.delete(apiContext);
+  await domain.delete(apiContext);
 
   await afterAction();
 });
