@@ -10,24 +10,45 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-set -euo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 
+helpFunction()
+{
+   echo ""
+   echo "Usage: $0 [run_local_docker.sh args]"
+   echo "\t-f Start Fuseki for RDF support: [true, false]. Default [true]"
+   echo "\t-h For usage help"
+   exit 1
+}
+
+startFuseki=true
 filtered_args=()
-skip_next=false
-for arg in "$@"; do
-  if [[ "$skip_next" == "true" ]]; then
-    skip_next=false
-    continue
-  fi
 
-  if [[ "$arg" == "-f" ]]; then
-    skip_next=true
-    continue
-  fi
-
-  filtered_args+=("$arg")
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f)
+      if [[ $# -lt 2 ]]; then
+        helpFunction
+      fi
+      startFuseki="$2"
+      shift 2
+      ;;
+    -h)
+      helpFunction
+      ;;
+    *)
+      filtered_args+=("$1")
+      shift
+      ;;
+  esac
 done
+
+if [[ $startFuseki == "true" ]]; then
+  export RDF_ENABLED=true
+  export RDF_AUTO_REINDEX=true
+else
+  export RDF_ENABLED=false
+  export RDF_AUTO_REINDEX=false
+fi
 
 exec ./run_local_docker.sh "${filtered_args[@]}"
