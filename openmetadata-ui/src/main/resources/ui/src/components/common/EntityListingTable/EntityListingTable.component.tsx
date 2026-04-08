@@ -21,7 +21,7 @@ export interface ColumnDef {
   label: string;
 }
 
-interface EntityListingTableProps<T extends { id: string }> {
+interface EntityListingTableProps<T extends { id: string; name: string }> {
   entities: T[];
   loading: boolean;
   columns: ColumnDef[];
@@ -34,7 +34,7 @@ interface EntityListingTableProps<T extends { id: string }> {
   emptyMessage?: string;
 }
 
-const EntityListingTable = <T extends { id: string }>({
+const EntityListingTable = <T extends { id: string; name: string }>({
   entities,
   loading,
   columns,
@@ -107,6 +107,7 @@ const EntityListingTable = <T extends { id: string }>({
               onEntityClick ? ' tw:cursor-pointer' : ''
             }`}
             columns={columns}
+            data-testid={entity.name}
             id={entity.id}
             key={entity.id}
             onAction={onEntityClick ? () => onEntityClick(entity) : undefined}>
