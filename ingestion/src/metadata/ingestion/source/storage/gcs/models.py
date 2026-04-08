@@ -14,7 +14,7 @@ GCS custom pydantic models
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from metadata.generated.schema.entity.data.container import (
     ContainerDataModel,
@@ -29,8 +29,9 @@ class GCSBucketResponse(BaseModel):
     Class modelling a response received from gcs_client.list_buckets operation
     """
 
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        extra="ignore",
+    )
 
     name: str = Field(..., description="Bucket name")
     project_id: str = Field(..., description="Project ID")

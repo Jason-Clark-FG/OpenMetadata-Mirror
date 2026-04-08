@@ -30,7 +30,7 @@ class S3BucketResponse(BaseModel):
     """
 
     model_config = ConfigDict(
-        extra="forbid",
+        extra="ignore",
     )
 
     name: str = Field(..., description="Bucket name", alias="Name")

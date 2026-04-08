@@ -54,7 +54,7 @@ logger = ingestion_logger()
 
 class SageMakerModel(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",
+        extra="ignore",
     )
 
     name: str = Field(..., description="Model name", title="Model Name")
