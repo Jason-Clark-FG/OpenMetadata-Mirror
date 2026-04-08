@@ -98,12 +98,8 @@ jest.mock('@openmetadata/ui-core-components', () => {
         })}
       </>
     ),
-    FormItemLabel: ({ label }: { label: ReactNode }) => (
-      <div>{label}</div>
-    ),
-    HintText: ({ children }: { children: ReactNode }) => (
-      <div>{children}</div>
-    ),
+    FormItemLabel: ({ label }: { label: ReactNode }) => <div>{label}</div>,
+    HintText: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     HookForm: ({
       children,
       onSubmit,
@@ -133,9 +129,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
       </div>
     ),
     Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
-    TooltipTrigger: ({ children }: { children: ReactNode }) => (
-      <>{children}</>
-    ),
+    TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
   };
 });
 

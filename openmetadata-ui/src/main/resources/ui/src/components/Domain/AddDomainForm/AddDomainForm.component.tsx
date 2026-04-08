@@ -19,9 +19,9 @@ import {
   FormField,
   FormItemLabel,
   FormSelectItem,
+  getField,
   HintText,
   HookForm,
-  getField,
 } from '@openmetadata/ui-core-components';
 import { Users01 } from '@untitledui/icons';
 import { debounce, omit } from 'lodash';
@@ -43,11 +43,11 @@ import { ResourceEntity } from '../../../context/PermissionProvider/PermissionPr
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { CreateDataProduct } from '../../../generated/api/domains/createDataProduct';
-import { Domain } from '../../../generated/entity/domains/domain';
 import {
   CreateDomain,
   DomainType,
 } from '../../../generated/api/domains/createDomain';
+import { Domain } from '../../../generated/entity/domains/domain';
 import { Operation } from '../../../generated/entity/policies/policy';
 import { EntityReference } from '../../../generated/entity/type';
 import {
@@ -58,23 +58,23 @@ import {
 } from '../../../generated/type/tagLabel';
 import { searchDomains } from '../../../rest/domainAPI';
 import { searchQuery } from '../../../rest/searchAPI';
-import { checkPermission } from '../../../utils/PermissionsUtils';
-import tagClassBase from '../../../utils/TagClassBase';
 import { formatTeamsResponse } from '../../../utils/APIUtils';
 import { getRandomColor } from '../../../utils/CommonUtils';
 import {
   getEntityName,
   getEntityReferenceListFromEntities,
 } from '../../../utils/EntityUtils';
+import { checkPermission } from '../../../utils/PermissionsUtils';
 import { getTermQuery } from '../../../utils/SearchUtils';
+import tagClassBase from '../../../utils/TagClassBase';
 import { getTagDisplay } from '../../../utils/TagsUtils';
 import {
   AVAILABLE_ICONS,
   DEFAULT_DATA_PRODUCT_ICON,
   DEFAULT_DOMAIN_ICON,
 } from '../../common/IconPicker';
-import RichTextEditor from '../../common/RichTextEditor/RichTextEditor';
 import MUIGlossaryTagSuggestion from '../../common/MUIGlossaryTagSuggestion/MUIGlossaryTagSuggestion';
+import RichTextEditor from '../../common/RichTextEditor/RichTextEditor';
 import '../domain.less';
 import { DomainFormType } from '../DomainPage.interface';
 import {
@@ -186,13 +186,15 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
     const { t } = useTranslation();
     const { permissions } = usePermissionProvider();
     const [tagOptions, setTagOptions] = useState<DomainFormSelectItem[]>([]);
-    const [domainOptions, setDomainOptions] = useState<DomainFormSelectItem[]>([]);
-    const [userTeamOptions, setUserTeamOptions] = useState<DomainFormSelectItem[]>(
+    const [domainOptions, setDomainOptions] = useState<DomainFormSelectItem[]>(
       []
     );
-    const [userOnlyOptions, setUserOnlyOptions] = useState<DomainFormSelectItem[]>(
-      []
-    );
+    const [userTeamOptions, setUserTeamOptions] = useState<
+      DomainFormSelectItem[]
+    >([]);
+    const [userOnlyOptions, setUserOnlyOptions] = useState<
+      DomainFormSelectItem[]
+    >([]);
     const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
 
     const domainTypeOptions = Object.keys(DomainType).map((key) => ({
@@ -428,11 +430,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         debouncedDomainSearch.cancel();
         debouncedUserTeamSearch.cancel();
       },
-      [
-        debouncedDomainSearch,
-        debouncedTagSearch,
-        debouncedUserTeamSearch,
-      ]
+      [debouncedDomainSearch, debouncedTagSearch, debouncedUserTeamSearch]
     );
 
     const transformFormData = useCallback(
@@ -450,7 +448,8 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           (item) => item.value as EntityReference
         );
 
-        const domainTypeItem = formData.domainType as DomainFormSelectItem | null;
+        const domainTypeItem =
+          formData.domainType as DomainFormSelectItem | null;
 
         const updatedData = omit(
           formData,
@@ -478,7 +477,9 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         } as CreateDomain | CreateDataProduct;
 
         if (type === DomainFormType.DATA_PRODUCT) {
-          const domainItem = formData.domains as DomainFormSelectItem | undefined;
+          const domainItem = formData.domains as
+            | DomainFormSelectItem
+            | undefined;
           const domainRef = domainItem?.value as EntityReference | undefined;
           if (domainRef?.fullyQualifiedName) {
             (data as CreateDataProduct).domains = [
@@ -660,10 +661,10 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
       required: domainTypeFieldRequired,
       rules: domainTypeFieldRequired
         ? {
-          required: t('label.field-required', {
-            field: t('label.domain-type'),
-          }),
-        }
+            required: t('label.field-required', {
+              field: t('label.domain-type'),
+            }),
+          }
         : undefined,
       type: FieldTypes.SELECT,
     };
@@ -779,9 +780,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
           </FormField>
         </div>
         <div>{getField(tagsField)}</div>
-        <FormField
-          control={form.control}
-          name="glossaryTerms">
+        <FormField control={form.control} name="glossaryTerms">
           {({ field }) => (
             <MUIGlossaryTagSuggestion
               data-testid="glossary-terms"
@@ -797,8 +796,8 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
 
         {(type === DomainFormType.DOMAIN ||
           type === DomainFormType.SUBDOMAIN) && (
-            <div>{getField(domainTypeField)}</div>
-          )}
+          <div>{getField(domainTypeField)}</div>
+        )}
 
         {type === DomainFormType.DATA_PRODUCT && !parentDomain && (
           <div>{getField(domainField)}</div>
