@@ -299,6 +299,12 @@ public class OMJobReconciler
     String eventType = success ? "OMJobCompleted" : "OMJobFailed";
     eventPublisher.publishNormalEvent(omJob, eventType, message);
 
+    // Schedule reconciliation for TTL cleanup so handleTerminalPhase runs
+    // Without this, the SDK applies its max reconciliation interval (10h)
+    Integer ttl = omJob.getSpec() != null ? omJob.getSpec().getTtlSecondsAfterFinished() : null;
+    if (ttl != null && ttl > 0) {
+      return UpdateControl.updateStatus(omJob).rescheduleAfter(Duration.ofSeconds(ttl));
+    }
     return UpdateControl.updateStatus(omJob);
   }
 

@@ -54,7 +54,7 @@ class OMJobReconcilerTest {
     OperatorConfig config = new OperatorConfig();
     reconciler = new OMJobReconciler(config);
 
-    when(context.getClient()).thenReturn(kubernetesClient);
+    lenient().when(context.getClient()).thenReturn(kubernetesClient);
 
     // Inject mocks via reflection since the reconciler lazily initializes them
     var podManagerField = OMJobReconciler.class.getDeclaredField("podManager");
@@ -161,6 +161,73 @@ class OMJobReconcilerTest {
 
     assertFalse(result.getScheduleDelay().isPresent());
     verify(podManager, never()).deletePods(any());
+  }
+
+  @Test
+  void testExitHandlerCompletedSchedulesTtlCleanup() {
+    OMJobResource omJob = createOMJobInPhase(OMJobPhase.EXIT_HANDLER_RUNNING);
+    omJob.getSpec().setTtlSecondsAfterFinished(10);
+
+    Pod exitPod =
+        new PodBuilder()
+            .withNewMetadata()
+            .withName("test-omjob-exit")
+            .endMetadata()
+            .withNewStatus()
+            .withPhase("Succeeded")
+            .addNewContainerStatus()
+            .withNewState()
+            .withNewTerminated()
+            .withExitCode(0)
+            .endTerminated()
+            .endState()
+            .endContainerStatus()
+            .endStatus()
+            .build();
+
+    when(podManager.findExitHandlerPod(omJob)).thenReturn(Optional.of(exitPod));
+    when(podManager.isPodCompleted(exitPod)).thenReturn(true);
+    when(podManager.getPodExitCode(exitPod)).thenReturn(Optional.of(0));
+
+    UpdateControl<OMJobResource> result = reconciler.reconcile(omJob, context);
+
+    assertEquals(OMJobPhase.SUCCEEDED, omJob.getStatus().getPhase());
+    // Must reschedule after TTL so handleTerminalPhase cleans up
+    assertTrue(result.getScheduleDelay().isPresent());
+    assertEquals(10000L, result.getScheduleDelay().get());
+  }
+
+  @Test
+  void testExitHandlerCompletedNoRescheduleWithoutTtl() {
+    OMJobResource omJob = createOMJobInPhase(OMJobPhase.EXIT_HANDLER_RUNNING);
+    omJob.getSpec().setTtlSecondsAfterFinished(null);
+
+    Pod exitPod =
+        new PodBuilder()
+            .withNewMetadata()
+            .withName("test-omjob-exit")
+            .endMetadata()
+            .withNewStatus()
+            .withPhase("Succeeded")
+            .addNewContainerStatus()
+            .withNewState()
+            .withNewTerminated()
+            .withExitCode(0)
+            .endTerminated()
+            .endState()
+            .endContainerStatus()
+            .endStatus()
+            .build();
+
+    when(podManager.findExitHandlerPod(omJob)).thenReturn(Optional.of(exitPod));
+    when(podManager.isPodCompleted(exitPod)).thenReturn(true);
+    when(podManager.getPodExitCode(exitPod)).thenReturn(Optional.of(0));
+
+    UpdateControl<OMJobResource> result = reconciler.reconcile(omJob, context);
+
+    assertEquals(OMJobPhase.SUCCEEDED, omJob.getStatus().getPhase());
+    // No TTL - no reschedule for cleanup
+    assertFalse(result.getScheduleDelay().isPresent());
   }
 
   @Test

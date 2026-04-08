@@ -309,12 +309,16 @@ public class PodManager {
    */
   public void deletePods(OMJobResource omJob) {
     LOG.info("Deleting pods for OMJob: {}", omJob.getMetadata().getName());
+    String namespace = omJob.getMetadata().getNamespace();
     Map<String, String> selector = LabelBuilder.buildPodSelector(omJob);
 
     try {
-      client.pods().inNamespace(omJob.getMetadata().getNamespace()).withLabels(selector).delete();
-      LOG.info("Deleted pods for OMJob: {}", omJob.getMetadata().getName());
-
+      List<Pod> pods = client.pods().inNamespace(namespace).withLabels(selector).list().getItems();
+      for (Pod pod : pods) {
+        String podName = pod.getMetadata().getName();
+        client.pods().inNamespace(namespace).withName(podName).delete();
+        LOG.info("Deleted pod: {}", podName);
+      }
     } catch (Exception e) {
       LOG.warn("Failed to delete pods for OMJob: {}", omJob.getMetadata().getName(), e);
     }
