@@ -1322,7 +1322,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public final List<T> get(UriInfo uriInfo, List<UUID> ids, Fields fields, Include include) {
     List<T> entities = find(ids, include);
     try (var ignored = phase("setFieldsBulk")) {
-      setFieldsInBulk(fields, entities);
+      setFieldsInBulk(fields, entities, include);
     }
     entities.forEach(entity -> withHref(uriInfo, entity));
     return entities;
@@ -1765,7 +1765,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   public final List<T> getByNames(
       UriInfo uriInfo, List<String> entityFQNs, Fields fields, Include include) {
     List<T> entities = findByNames(entityFQNs, include);
-    setFieldsInBulk(fields, entities);
+    setFieldsInBulk(fields, entities, include);
     entities.forEach(entity -> withHref(uriInfo, entity));
     return entities;
   }
@@ -1847,7 +1847,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
       T entity = JsonUtils.readValue(json, entityClass);
       entities.add(entity);
     }
-    setFieldsInBulk(fields, entities);
+    setFieldsInBulk(fields, entities, filter.getInclude());
     return entities;
   }
 
@@ -1879,11 +1879,15 @@ public abstract class EntityRepository<T extends EntityInterface> {
    * Example implementation can be found in {@link GlossaryTermRepository#setFieldsInBulk}.
    */
   public void setFieldsInBulk(Fields fields, List<T> entities) {
+    setFieldsInBulk(fields, entities, Include.NON_DELETED);
+  }
+
+  public void setFieldsInBulk(Fields fields, List<T> entities, Include include) {
     if (entities == null || entities.isEmpty()) {
       return;
     }
     try (var ignored = phase("fetchFields")) {
-      fetchAndSetFields(entities, fields);
+      fetchAndSetFields(entities, fields, include);
     }
     try (var ignored = phase("setInheritedFields")) {
       setInheritedFields(entities, fields);
@@ -1927,7 +1931,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
         }
       }
       try (var ignored = phase("setFieldsBulk")) {
-        setFieldsInBulk(fields, entities);
+        setFieldsInBulk(fields, entities, filter.getInclude());
       }
       entities.forEach(entity -> withHref(uriInfo, entity));
 
@@ -1964,7 +1968,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
       boolean hasMoreData = jsons.size() > limitParam;
       List<String> jsonsToProcess = hasMoreData ? jsons.subList(0, limitParam) : jsons;
 
-      Iterator<Either<T, EntityError>> iterator = serializeJsons(jsonsToProcess, fields, null);
+      Iterator<Either<T, EntityError>> iterator =
+          serializeJsons(jsonsToProcess, fields, null, filter.getInclude());
       while (iterator.hasNext()) {
         Either<T, EntityError> either = iterator.next();
         if (either.right().isPresent()) {
@@ -2017,7 +2022,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     List<String> jsons = dao.listBefore(filter, limitParam + 1, beforeName, beforeId);
 
     List<T> entities = JsonUtils.readObjects(jsons, entityClass);
-    setFieldsInBulk(fields, entities);
+    setFieldsInBulk(fields, entities, filter.getInclude());
     entities.forEach(entity -> withHref(uriInfo, entity));
 
     int total = dao.listCount(filter);
@@ -2119,7 +2124,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     String beforeOffset = getBeforeOffset(offsetInt, limitParam);
     if (limitParam > 0) {
       List<String> jsons = callable.apply(filter, limitParam, offsetInt);
-      Iterator<Either<T, EntityError>> iterator = serializeJsons(jsons, fields, uriInfo);
+      Iterator<Either<T, EntityError>> iterator =
+          serializeJsons(jsons, fields, uriInfo, filter.getInclude());
       while (iterator.hasNext()) {
         Either<T, EntityError> either = iterator.next();
         if (either.right().isPresent()) {
@@ -8421,7 +8427,12 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   protected void fetchAndSetFields(List<T> entities, Fields fields) {
-    Set<String> relationshipFieldsHandled = fetchAndSetRelationshipFieldsInBulk(entities, fields);
+    fetchAndSetFields(entities, fields, Include.NON_DELETED);
+  }
+
+  protected void fetchAndSetFields(List<T> entities, Fields fields, Include include) {
+    Set<String> relationshipFieldsHandled =
+        fetchAndSetRelationshipFieldsInBulk(entities, fields, include);
     for (Entry<String, BiConsumer<List<T>, Fields>> entry : fieldFetchers.entrySet()) {
       if (relationshipFieldsHandled.contains(entry.getKey())) {
         continue;
@@ -8430,7 +8441,8 @@ public abstract class EntityRepository<T extends EntityInterface> {
     }
   }
 
-  private Set<String> fetchAndSetRelationshipFieldsInBulk(List<T> entities, Fields fields) {
+  private Set<String> fetchAndSetRelationshipFieldsInBulk(
+      List<T> entities, Fields fields, Include include) {
     if (nullOrEmpty(entities) || fields == null) {
       return Collections.emptySet();
     }
@@ -8497,9 +8509,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
                 .findToBatchWithRelations(entityIds, entityType, outgoingRelations, ALL);
 
     Map<String, Map<UUID, EntityReference>> incomingRefsByType =
-        resolveRelationshipEntityReferencesByType(incomingRecords, true);
+        resolveRelationshipEntityReferencesByType(incomingRecords, true, include);
     Map<String, Map<UUID, EntityReference>> outgoingRefsByType =
-        resolveRelationshipEntityReferencesByType(outgoingRecords, false);
+        resolveRelationshipEntityReferencesByType(outgoingRecords, false, include);
 
     Map<UUID, List<EntityReference>> ownersByEntity = loadOwners ? new HashMap<>() : null;
     Map<UUID, List<EntityReference>> followersByEntity = loadFollowers ? new HashMap<>() : null;
@@ -8680,7 +8692,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private Map<String, Map<UUID, EntityReference>> resolveRelationshipEntityReferencesByType(
-      List<CollectionDAO.EntityRelationshipObject> records, boolean fromSide) {
+      List<CollectionDAO.EntityRelationshipObject> records, boolean fromSide, Include include) {
     if (records == null || records.isEmpty()) {
       return Collections.emptyMap();
     }
@@ -8705,7 +8717,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
     for (Entry<String, Set<UUID>> entry : idsByType.entrySet()) {
       List<EntityReference> refs =
           Entity.getEntityReferencesByIdsRespectingInclude(
-              entry.getKey(), new ArrayList<>(entry.getValue()), Include.NON_DELETED);
+              entry.getKey(), new ArrayList<>(entry.getValue()), include);
       refsByType.put(
           entry.getKey(),
           refs.stream()
@@ -9354,7 +9366,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   private Iterator<Either<T, EntityError>> serializeJsons(
-      List<String> jsons, Fields fields, UriInfo uriInfo) {
+      List<String> jsons, Fields fields, UriInfo uriInfo, Include include) {
     List<Either<T, EntityError>> results = new ArrayList<>();
     List<T> entities = new ArrayList<>();
 
@@ -9373,7 +9385,7 @@ public abstract class EntityRepository<T extends EntityInterface> {
 
     if (!entities.isEmpty()) {
       try {
-        setFieldsInBulk(fields, entities);
+        setFieldsInBulk(fields, entities, include);
         if (!nullOrEmpty(uriInfo)) {
           entities.forEach(entity -> withHref(uriInfo, entity));
         }
