@@ -12,10 +12,9 @@
  */
 
 import { removeSession } from '@analytics/session-utils';
-import {
+import type {
   Configuration,
-  PublicClientApplication,
-  type IPublicClientApplication,
+  IPublicClientApplication,
 } from '@azure/msal-browser';
 import {
   AxiosError,
@@ -40,8 +39,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { UN_AUTHORIZED_EXCLUDED_PATHS } from '../../../constants/Auth.constants';
 import {
-  APP_ROUTER_ROUTES as ROUTES,
   REDIRECT_PATHNAME,
+  APP_ROUTER_ROUTES as ROUTES,
 } from '../../../constants/router.constants';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { TabSpecificField } from '../../../enums/entity.enum';
@@ -116,7 +115,11 @@ const isEmailVerifyField = 'isEmailVerified';
 let requestInterceptor: number | null = null;
 let responseInterceptor: number | null = null;
 
-let pendingRequests: any[] = [];
+let pendingRequests: {
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+  config: InternalAxiosRequestConfig<unknown>;
+}[] = [];
 
 type AuthContextType = {
   onLoginHandler: () => void;
@@ -383,15 +386,15 @@ export const AuthProvider = ({
       } catch (error) {
         const err = error as AxiosError;
         if (err?.response?.status === 404) {
-          if (!authConfig?.enableSelfSignup) {
-            resetUserDetails();
-            navigate(ROUTES.UNAUTHORISED);
-            showErrorToast(err);
-          } else {
+          if (authConfig?.enableSelfSignup) {
             setNewUserProfile(user.profile);
             setCurrentUser({} as User);
             setIsSigningUp(true);
             navigate(ROUTES.SIGNUP);
+          } else {
+            resetUserDetails();
+            navigate(ROUTES.UNAUTHORISED);
+            showErrorToast(err);
           }
         } else {
           // eslint-disable-next-line no-console
@@ -431,20 +434,17 @@ export const AuthProvider = ({
     configJson: AuthenticationConfiguration
   ) => {
     const { provider, ...otherConfigs } = configJson;
-    switch (provider) {
-      case AuthProviderEnum.Azure:
-        {
-          const instance = new PublicClientApplication(
-            otherConfigs as unknown as Configuration
-          );
+    if (provider === AuthProviderEnum.Azure) {
+      const AzureBrowser = await import('@azure/msal-browser');
+      const { PublicClientApplication } = AzureBrowser;
+      const instance = new PublicClientApplication(
+        otherConfigs as unknown as Configuration
+      );
 
-          // Need to initialize the instance before setting it
-          await instance.initialize();
+      // Need to initialize the instance before setting it
+      await instance.initialize();
 
-          setMsalInstance(instance);
-        }
-
-        break;
+      setMsalInstance(instance);
     }
   };
 
@@ -463,7 +463,7 @@ export const AuthProvider = ({
     }
 
     requestInterceptor = axiosClient.interceptors.request.use(async function (
-      config: InternalAxiosRequestConfig<any>
+      config: InternalAxiosRequestConfig<unknown>
     ) {
       // Need to read token from local storage as it might have been updated with refresh
       const token: string = await getOidcToken();
@@ -503,7 +503,16 @@ export const AuthProvider = ({
             handleStoreProtectedRedirectPath();
 
             // If 401 error and refresh is not in progress, trigger the refresh
-            if (!tokenService.current?.isTokenUpdateInProgress()) {
+            if (tokenService.current?.isTokenUpdateInProgress()) {
+              // If refresh is in progress, queue the request
+              return new Promise((resolve, reject) => {
+                pendingRequests.push({
+                  resolve,
+                  reject,
+                  config: error.config,
+                });
+              });
+            } else {
               // Start the refresh process
               return new Promise((resolve, reject) => {
                 // Add this request to the pending queue
@@ -535,15 +544,6 @@ export const AuthProvider = ({
 
                     return Promise.reject(error);
                   });
-              });
-            } else {
-              // If refresh is in progress, queue the request
-              return new Promise((resolve, reject) => {
-                pendingRequests.push({
-                  resolve,
-                  reject,
-                  config: error.config,
-                });
               });
             }
           }
@@ -644,7 +644,7 @@ export const AuthProvider = ({
           <LazyAuth0ProviderWrapper
             clientId={authConfig.clientId?.toString() ?? ''}
             domain={authConfig.authority?.toString() ?? ''}
-            redirectUri={authConfig.callbackUrl?.toString()}>
+            redirectUri={authConfig.callbackUrl?.toString() ?? ''}>
             <LazyAuth0Authenticator ref={authenticatorRef}>
               {childElement}
             </LazyAuth0Authenticator>

@@ -11,7 +11,8 @@
  *  limitations under the License.
  */
 
-import { isArray, isObject, transform } from 'lodash';
+import { AxiosError } from 'axios';
+import { get, isArray, isObject, transform } from 'lodash';
 import { SearchIndex } from '../enums/search.enum';
 import { DataProduct } from '../generated/entity/domains/dataProduct';
 import { Domain } from '../generated/entity/domains/domain';
@@ -111,4 +112,22 @@ export const omitDeep = <T>(
       }
     }
   });
+};
+
+export const getIsErrorMatch = (error: AxiosError, key: string): boolean => {
+  let errorMessage = '';
+
+  if (error) {
+    errorMessage = get(error, 'response.data.message', '');
+    if (!errorMessage) {
+      // if error text is undefined or null or empty, try responseMessage in data
+      errorMessage = get(error, 'response.data.responseMessage', '');
+    }
+    if (!errorMessage) {
+      errorMessage = get(error, 'response.data', '') as string;
+      errorMessage = typeof errorMessage === 'string' ? errorMessage : '';
+    }
+  }
+
+  return errorMessage.includes(key);
 };

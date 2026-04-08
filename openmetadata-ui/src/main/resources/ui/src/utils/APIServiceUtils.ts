@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 import { cloneDeep } from 'lodash';
-import { COMMON_UI_SCHEMA } from '../constants/Services.constant';
+import { COMMON_UI_SCHEMA } from '../constants/ServiceUISchema.constant';
 import { APIServiceType } from '../generated/entity/services/apiService';
 import restConnection from '../jsons/connectionSchemas/connections/api/restConnection.json';
 
