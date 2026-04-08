@@ -18,7 +18,9 @@ export interface ColumnDef {
   label: string;
 }
 
-export interface EntityListingTableProps<T extends { id: string; name: string }> {
+export interface EntityListingTableProps<
+  T extends { id: string; name: string }
+> {
   entities: T[];
   loading: boolean;
   columns: ColumnDef[];
