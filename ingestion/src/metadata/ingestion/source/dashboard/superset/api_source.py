@@ -153,7 +153,7 @@ class SupersetAPISource(SupersetSourceMixin):
                     )
                     continue
                 chart = CreateChartRequest(
-                    name=EntityName(str(chart_json.id)),
+                    name=EntityName(f"chart_{chart_json.id}"),
                     displayName=chart_json.slice_name,
                     description=(
                         Markdown(chart_json.description)

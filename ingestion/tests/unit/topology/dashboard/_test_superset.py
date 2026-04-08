@@ -156,8 +156,8 @@ MOCK_DB_POSTGRES_SERVICE = DatabaseService(
 EXPECTED_CHART_ENTITY = [
     Chart(
         id=uuid.uuid4(),
-        name="37",
-        fullyQualifiedName=FullyQualifiedEntityName("test_supserset.37"),
+        name="chart_37",
+        fullyQualifiedName=FullyQualifiedEntityName("test_supserset.chart_37"),
         service=EntityReference(
             id="c3eb265f-5445-4ad3-ba5e-797d3a3071bb", type="dashboardService"
         ),
@@ -183,7 +183,7 @@ EXPECTED_API_DASHBOARD = CreateDashboardRequest(
 )
 
 EXPECTED_CHART = CreateChartRequest(
-    name="1",
+    name="chart_1",
     displayName="Rural",
     description="desc",
     chartType=ChartType.Other.value,
@@ -191,7 +191,7 @@ EXPECTED_CHART = CreateChartRequest(
     service=EXPECTED_DASH_SERVICE.fullyQualifiedName,
 )
 EXPECTED_CHART_2 = CreateChartRequest(
-    name=EntityName("69"),
+    name=EntityName("chart_69"),
     displayName="Unicode Cloud",
     chartType=ChartType.Other.value,
     sourceUrl=SourceUrl("http://localhost:54510/explore/?slice_id=69"),
