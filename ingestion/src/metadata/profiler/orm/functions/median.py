@@ -174,7 +174,7 @@ def _(elements, compiler, **kwargs):
 @compiles(MedianFn, Dialects.MySQL)
 def _(elements, compiler, **kwargs):  # pylint: disable=unused-argument
     """
-    MySQL median implementation with optional GROUP BY correlation.
+    MySQL median implementation using pure window functions.
 
     Supports two modes:
     1. Non-correlated (default): MedianFn(col, table, percentile)
@@ -197,47 +197,26 @@ def _(elements, compiler, **kwargs):  # pylint: disable=unused-argument
         dimension_col = elements.clauses.clauses[3].value
 
     if dimension_col:
-        # CORRELATED MODE: Respect GROUP BY context
-        # Filter subquery by dimension: WHERE inner.dim = outer.dim
-        return """
-        (SELECT
-            {col}
-        FROM (
-            SELECT
-                {col},
-                ROW_NUMBER() OVER () AS row_num
-            FROM
-                {table} AS median_inner,
-                (SELECT @counter := COUNT(*)
-                 FROM {table} AS median_count
-                 WHERE median_count.{dimension_col} = {table}.{dimension_col}) t_count
-            WHERE median_inner.{dimension_col} = {table}.{dimension_col}
-            ORDER BY {col}
-            ) temp
-        WHERE temp.row_num = ROUND({percentile} * @counter)
-        )
-        """.format(
+        return (
+            "(SELECT {col} FROM ("
+            "SELECT {col},"
+            " ROW_NUMBER() OVER (ORDER BY {col}) AS rn,"
+            " COUNT(*) OVER () AS cnt"
+            " FROM {table} AS median_inner"
+            " WHERE median_inner.{dimension_col} = {table}.{dimension_col}"
+            ") temp WHERE temp.rn = ROUND({percentile} * temp.cnt))"
+        ).format(
             col=col, table=table, percentile=percentile, dimension_col=dimension_col
         )
     else:
-        # NON-CORRELATED MODE: Original behavior (profiler)
-        return """
-        (SELECT
-            {col}
-        FROM (
-            SELECT
-                {col},
-                ROW_NUMBER() OVER () AS row_num
-            FROM
-                {table},
-                (SELECT @counter := COUNT(*) FROM {table}) t_count
-            ORDER BY {col}
-            ) temp
-        WHERE temp.row_num = ROUND({percentile} * @counter)
-        )
-        """.format(
-            col=col, table=table, percentile=percentile
-        )
+        return (
+            "(SELECT {col} FROM ("
+            "SELECT {col},"
+            " ROW_NUMBER() OVER (ORDER BY {col}) AS rn,"
+            " COUNT(*) OVER () AS cnt"
+            " FROM {table}"
+            ") temp WHERE temp.rn = ROUND({percentile} * temp.cnt))"
+        ).format(col=col, table=table, percentile=percentile)
 
 
 @compiles(MedianFn, Dialects.SQLite)
