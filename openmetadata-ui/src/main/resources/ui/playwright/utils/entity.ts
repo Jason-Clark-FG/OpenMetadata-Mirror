@@ -196,23 +196,38 @@ export const addOwnerWithoutValidation = async ({
   type?: 'Teams' | 'Users';
   initiatorId?: string;
 }) => {
-  await page.getByTestId(initiatorId).click();
-  if (type === 'Users') {
+    // Register both prefetch listeners before the panel opens.
+    const teamsPrefetch = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/search/query?q=&index=team') &&
+        response.status() === 200
+    );
+    const usersPrefetch = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/search/query?q=&index=user') &&
+        response.status() === 200
+    );
+    await page.getByTestId(initiatorId).click();
+    await page.getByTestId('user-team-select-popover').waitFor({ state: 'visible' });
+    await teamsPrefetch;
+    await usersPrefetch;
+
     const usersTab = page.getByRole('tab', { name: type });
     const isTabAlreadySelected =
       (await usersTab.getAttribute('aria-selected')) === 'true';
 
     if (!isTabAlreadySelected) {
-      // Register the listener and trigger the click atomically so the response
-      // cannot arrive before waitForResponse starts listening.
-      await Promise.all([
-        page.waitForResponse(
-          '/api/v1/search/query?q=&index=user_search_index&*'
-        ),
-        usersTab.click(),
-      ]);
+      // The call with size > 0 only fires after the tab click.
+      const userListResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes('/api/v1/search/query?q=&index=user') &&
+          !response.url().includes('size=0') &&
+          response.status() === 200
+      );
+      await usersTab.click();
+      await expect(usersTab).toHaveAttribute('aria-selected', 'true');
+      await userListResponse;
     }
-  }
   await waitForAllLoadersToDisappear(page);
 
   const ownerSearchBar = await page

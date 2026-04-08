@@ -390,6 +390,7 @@ export const UserTeamSelectableList = ({
         'user-team-select-popover card-shadow',
         overlayClassName
       )}
+      data-testid="user-team-select-popover"
       placement="bottomRight"
       showArrow={false}
       trigger="click"
