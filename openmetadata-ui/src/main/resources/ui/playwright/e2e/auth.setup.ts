@@ -10,7 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { BrowserContext, Page, request, test as setup } from '@playwright/test';
+import { BrowserContext, request, test as setup } from '@playwright/test';
 import {
   EDIT_DESCRIPTION_RULE,
   EDIT_GLOSSARY_TERM_RULE,
@@ -20,7 +20,7 @@ import {
 import { DEFAULT_ADMIN_USER } from '../constant/user';
 import { AdminClass } from '../support/user/AdminClass';
 import { UserClass } from '../support/user/UserClass';
-import { getApiContext, redirectToHomePage, uuid } from '../utils/common';
+import { getApiContext, uuid } from '../utils/common';
 import { loginAsAdmin } from '../utils/initialSetup';
 import { seedAuthStorage } from '../utils/tokenStorage';
 
@@ -78,19 +78,6 @@ const ownerUser = new UserClass({
   email: `pw-owner-${userUUID}@gmail.com`,
   password: 'User@OMD123',
 });
-
-const addLoggedInUser = async (page: Page, username: string) => {
-  await page.evaluate((loggedInUser) => {
-    const storageKey = 'loggedInUsers';
-    const existing = localStorage.getItem(storageKey);
-    const users = existing ? existing.split(',').filter(Boolean) : [];
-
-    if (!users.includes(loggedInUser)) {
-      users.push(loggedInUser);
-      localStorage.setItem(storageKey, users.join(','));
-    }
-  }, username);
-};
 
 const loginViaApi = async (email: string, password: string) => {
   const loginContext = await request.newContext({
@@ -150,9 +137,6 @@ const persistAuthenticatedState = async ({
       token: accessToken,
       username,
     });
-    await redirectToHomePage(page);
-    await page.waitForLoadState('domcontentloaded').catch(() => undefined);
-    await addLoggedInUser(page, username);
     await page.context().storageState({ path: filePath, indexedDB: true });
   } finally {
     await afterAction();

@@ -15,10 +15,12 @@ package org.openmetadata.it.tests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -3439,6 +3441,9 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
                     "payload", taskTwoPayload),
                 Task.class);
 
+    awaitTaskReadyForWorkflowResolution(taskOne.getId());
+    awaitTaskReadyForWorkflowResolution(taskTwo.getId());
+
     BulkTaskOperationResult result =
         SdkClients.adminClient()
             .getHttpClient()
@@ -3513,6 +3518,9 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
                     "payload", taskTwoPayload),
                 Task.class);
 
+    awaitTaskReadyForWorkflowResolution(taskOne.getId());
+    awaitTaskReadyForWorkflowResolution(taskTwo.getId());
+
     BulkTaskOperationResult result =
         SdkClients.adminClient()
             .getHttpClient()
@@ -3537,5 +3545,27 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Table unchangedTable =
         SdkClients.adminClient().tables().getByName(table.getFullyQualifiedName(), "description");
     assertNull(unchangedTable.getDescription());
+  }
+
+  private void awaitTaskReadyForWorkflowResolution(UUID taskId) {
+    Awaitility.await("task workflow materialization for " + taskId)
+        .atMost(Duration.ofSeconds(20))
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(
+            () -> {
+              Task task =
+                  SdkClients.adminClient()
+                      .tasks()
+                      .get(
+                          taskId.toString(),
+                          "status,workflowDefinitionId,workflowInstanceId,workflowStageId,availableTransitions");
+
+              assertNotNull(task.getWorkflowDefinitionId(), "workflow definition should be bound");
+              assertNotNull(task.getWorkflowStageId(), "workflow stage should be materialized");
+              assertNotNull(task.getAvailableTransitions(), "workflow transitions should exist");
+              assertFalse(
+                  task.getAvailableTransitions().isEmpty(),
+                  "workflow transitions should be available before bulk resolution");
+            });
   }
 }
