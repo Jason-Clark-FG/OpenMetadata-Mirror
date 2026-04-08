@@ -18,11 +18,12 @@ import {
   FieldOrGroup,
   ListValues,
   OldJsonTree,
-  RenderSettings,
   Utils as QbUtils,
+  RenderSettings,
   ValueSource,
 } from '@react-awesome-query-builder/antd';
 import { Button, Checkbox, MenuProps, Radio, Space, Typography } from 'antd';
+import DOMPurify from 'dompurify';
 import { isArray, isEmpty, toLower } from 'lodash';
 import { Bucket } from 'Models';
 import React from 'react';
@@ -153,7 +154,7 @@ export const getSearchLabel = (itemLabel: string, searchKey: string) => {
   if (searchKey) {
     const result = itemLabel.replace(regex, (match) => `<mark>${match}</mark>`);
 
-    return result;
+    return DOMPurify.sanitize(result, { ALLOWED_TAGS: ['mark'] });
   } else {
     return itemLabel;
   }

@@ -13,6 +13,7 @@
 
 import { EditorState } from '@tiptap/pm/state';
 import { Editor } from '@tiptap/react';
+import DOMPurify from 'dompurify';
 import { isEmpty, isString } from 'lodash';
 import Showdown from 'showdown';
 import { ReactComponent as IconFormatAttachment } from '../assets/svg/ic-format-attachment.svg';
@@ -238,7 +239,7 @@ export const transformImgTagsToFileAttachment = (
   }
 
   const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = htmlString;
+  tempDiv.innerHTML = DOMPurify.sanitize(htmlString);
 
   const imgTags = tempDiv.querySelectorAll('img[src]');
 
