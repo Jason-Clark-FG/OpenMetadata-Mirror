@@ -90,8 +90,8 @@ class TokenService {
     this.setRefreshInProgress();
 
     try {
-      const token = await getOidcToken();
-      const { isExpired, timeoutExpiry } = extractDetailsFromToken(token);
+      const oldToken = await getOidcToken();
+      const { isExpired, timeoutExpiry } = extractDetailsFromToken(oldToken);
 
       // If token is expired or timeoutExpiry is less than 0 then try to silent signIn
       if (isExpired || timeoutExpiry <= 0) {
@@ -162,6 +162,21 @@ class TokenService {
   // Check if a refresh is already in progress (used by other tabs)
   isTokenUpdateInProgress() {
     return localStorage.getItem(REFRESH_IN_PROGRESS_KEY) === 'true';
+  }
+
+  private async waitForTokenPersistence(oldToken: string) {
+    const maxAttempts = 20;
+    const delayMs = 50;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      const currentToken = await getOidcToken();
+
+      if (currentToken && currentToken !== oldToken) {
+        return;
+      }
+    }
   }
 }
 
