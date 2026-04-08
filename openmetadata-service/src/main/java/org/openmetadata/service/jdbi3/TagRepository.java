@@ -237,10 +237,7 @@ public class TagRepository extends EntityRepository<Tag> {
     try {
       Classification parent =
           Entity.getEntity(
-              CLASSIFICATION,
-              tag.getClassification().getId(),
-              "owners,domains,reviewers",
-              NON_DELETED);
+              CLASSIFICATION, tag.getClassification().getId(), "owners,domains,reviewers", ALL);
       if (parent.getDisabled() != null && parent.getDisabled()) {
         tag.setDisabled(true);
       }
@@ -279,7 +276,7 @@ public class TagRepository extends EntityRepository<Tag> {
     List<Classification> classifications =
         classificationRepository
             .getDao()
-            .findEntitiesByIds(new ArrayList<>(classificationIds), NON_DELETED);
+            .findEntitiesByIds(new ArrayList<>(classificationIds), ALL);
 
     classificationRepository.setFieldsInBulk(
         new Fields(Set.of("owners", "domains", "reviewers")), classifications);
