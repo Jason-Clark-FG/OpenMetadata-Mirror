@@ -30,7 +30,6 @@ import io.fabric8.kubernetes.api.model.SecurityContext;
 import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -192,27 +191,12 @@ public class PodManager {
    * Find main pod for an OMJob
    */
   public Optional<Pod> findMainPod(OMJobResource omJob) {
-    // First try with operator-created pod selector
     Optional<Pod> pod = findPod(omJob, LabelBuilder.buildMainPodSelector(omJob));
-
     if (pod.isPresent()) {
       return pod;
     }
 
-    // If not found, try with server-created pod selector (fallback for compatibility)
-    Map<String, String> serverSelector = new HashMap<>();
-    serverSelector.put(LabelBuilder.LABEL_OMJOB_NAME, omJob.getMetadata().getName());
-    serverSelector.put(LabelBuilder.LABEL_POD_TYPE, LabelBuilder.POD_TYPE_MAIN);
-    // Note: server-created pods have app.kubernetes.io/managed-by = openmetadata
-
-    Optional<Pod> serverPod = findPod(omJob, serverSelector);
-
-    if (serverPod.isPresent()) {
-      LOG.info("Found server-created main pod for OMJob: {}", omJob.getMetadata().getName());
-      return serverPod;
-    }
-
-    // Last resort: try to find by pod name if it was recorded in status
+    // Fallback: try to find by pod name if it was recorded in status
     String recordedPodName = omJob.getStatus() != null ? omJob.getStatus().getMainPodName() : null;
     if (recordedPodName != null && !recordedPodName.isEmpty()) {
       try {
@@ -314,6 +298,9 @@ public class PodManager {
 
     try {
       List<Pod> pods = client.pods().inNamespace(namespace).withLabels(selector).list().getItems();
+      if (pods == null) {
+        pods = List.of();
+      }
       for (Pod pod : pods) {
         String podName = pod.getMetadata().getName();
         client.pods().inNamespace(namespace).withName(podName).delete();
