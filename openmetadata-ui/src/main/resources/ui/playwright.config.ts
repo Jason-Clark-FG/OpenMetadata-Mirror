@@ -95,7 +95,9 @@ export default defineConfig({
       name: 'sso-auth',
       testMatch: '**/Auth/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
+      // Provider swaps mutate global server state — keep tests strictly serial.
       fullyParallel: false,
+      workers: 1,
     },
     {
       name: 'SearchRBAC',

@@ -12,6 +12,12 @@
  */
 import { SSOConfig } from '../utils/sso';
 
+// Mirrors playwright.config.ts `baseURL` resolution so the SSO config we
+// PUT into OpenMetadata always matches the host the Playwright suite is
+// driving. Defaults to the local stack.
+export const OM_BASE_URL =
+  process.env.PLAYWRIGHT_TEST_BASE_URL ?? 'http://localhost:8585';
+
 export const SSO_ENV = {
   PROVIDER_TYPE: 'SSO_PROVIDER_TYPE',
   USERNAME: 'SSO_USERNAME',
@@ -21,15 +27,6 @@ export const SSO_ENV = {
   OKTA_PRINCIPAL_DOMAIN: 'OKTA_SSO_PRINCIPAL_DOMAIN',
 } as const;
 
-export const PROVIDER_BUTTON_TEXT: Record<string, string> = {
-  okta: 'Sign in with Okta',
-  azure: 'Sign in with Azure',
-  google: 'Sign in with Google',
-  auth0: 'Sign in with Auth0',
-  'aws-cognito': 'Sign in with AWS Cognito',
-  saml: 'Sign in with SAML SSO',
-};
-
 export const BASIC_AUTH_CONFIG: SSOConfig = {
   authenticationConfiguration: {
     provider: 'basic',
@@ -37,7 +34,7 @@ export const BASIC_AUTH_CONFIG: SSOConfig = {
     authority: '',
     clientId: '',
     callbackUrl: '',
-    publicKeyUrls: ['http://localhost:8585/api/v1/system/config/jwks'],
+    publicKeyUrls: [`${OM_BASE_URL}/api/v1/system/config/jwks`],
     jwtPrincipalClaims: ['email', 'preferred_username', 'sub'],
     enableSelfSignup: true,
   },
