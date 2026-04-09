@@ -9,19 +9,26 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """
-Mixin class containing Task entity specific methods
-
-To be used by OpenMetadata class
+Mixin class containing Task entity specific methods.
 """
-from typing import List, Optional, Union
+import json
+from typing import Dict, List, Optional, Union
 from uuid import UUID
 
-from metadata.generated.schema.api.tasks.createTask import CreateTaskRequest
-from metadata.generated.schema.api.tasks.resolveTask import ResolveTaskRequest
-from metadata.generated.schema.entity.tasks.task import Task
-from metadata.generated.schema.type.taskStatus import TaskStatus
-from metadata.ingestion.ometa.client import REST
-from metadata.ingestion.ometa.utils import model_str
+from metadata.ingestion.ometa.client import REST, APIError
+from metadata.ingestion.ometa.models import EntityList
+from metadata.ingestion.ometa.task_models import (
+    BulkTaskOperationRequest,
+    BulkTaskOperationResult,
+    CreateTaskRequest,
+    ResolveTaskRequest,
+    Task,
+    TaskCategory,
+    TaskEntityStatus,
+    TaskEntityType,
+    TaskPriority,
+)
+from metadata.ingestion.ometa.utils import model_str, quote
 from metadata.utils.logger import ometa_logger
 
 logger = ometa_logger()
@@ -35,6 +42,7 @@ class OMetaTaskMixin:
     """
 
     client: REST
+    _tasks_path = "/tasks"
 
     def create_task(self, create_request: CreateTaskRequest) -> Task:
         """Create a new task.
@@ -46,8 +54,10 @@ class OMetaTaskMixin:
             Task: The created task entity
         """
         resp = self.client.post(
-            self.get_suffix(Task),
-            create_request.model_dump_json(),
+            self._tasks_path,
+            create_request.model_dump_json(
+                context={"mask_secrets": False}, by_alias=True
+            ),
         )
         return Task.model_validate(resp)
 
@@ -65,74 +75,111 @@ class OMetaTaskMixin:
         Returns:
             Task: The resolved task
         """
-        path = f"{self.get_suffix(Task)}/{model_str(task_id)}/resolve"
-        resp = self.client.post(path, resolve_request.model_dump_json())
+        path = f"{self._tasks_path}/{model_str(task_id)}/resolve"
+        resp = self.client.post(
+            path,
+            resolve_request.model_dump_json(
+                context={"mask_secrets": False}, by_alias=True
+            ),
+        )
         return Task.model_validate(resp)
 
-    def list_tasks_by_status(
-        self, status: TaskStatus, limit: int = 10
-    ) -> Optional[List[Task]]:
-        """List tasks filtered by status.
+    def get_task(
+        self,
+        task_id: Union[str, UUID],
+        fields: Optional[List[str]] = None,
+        include: Optional[str] = None,
+        nullable: bool = True,
+    ) -> Optional[Task]:
+        """Get a task by UUID."""
+        query = []
+        if fields:
+            query.append(f"fields={','.join(fields)}")
+        if include:
+            query.append(f"include={include}")
+        suffix = f"?{'&'.join(query)}" if query else ""
+        try:
+            resp = self.client.get(f"{self._tasks_path}/{model_str(task_id)}{suffix}")
+            return Task.model_validate(resp) if resp else None
+        except APIError:
+            if nullable:
+                return None
+            raise
 
-        Args:
-            status: TaskStatus to filter by
-            limit: Maximum number of tasks to return
+    def get_task_by_task_id(
+        self,
+        task_id: str,
+        fields: Optional[List[str]] = None,
+        include: Optional[str] = None,
+    ) -> Optional[Task]:
+        """Get a task by its human-readable task id (e.g. TASK-00001)."""
+        query = []
+        if fields:
+            query.append(f"fields={','.join(fields)}")
+        if include:
+            query.append(f"include={include}")
+        suffix = f"?{'&'.join(query)}" if query else ""
+        resp = self.client.get(f"{self._tasks_path}/name/{quote(task_id)}{suffix}")
+        return Task.model_validate(resp) if resp else None
 
-        Returns:
-            List of tasks with the given status
-        """
-        params = {"status": status.value, "limit": str(limit)}
-        resp = self.client.get(self.get_suffix(Task), params)
-        if resp and resp.get("data"):
-            return [Task.model_validate(task) for task in resp["data"]]
-        return None
+    def list_tasks(
+        self,
+        fields: Optional[List[str]] = None,
+        status: Optional[TaskEntityStatus] = None,
+        status_group: Optional[str] = None,
+        category: Optional[TaskCategory] = None,
+        type_: Optional[TaskEntityType] = None,
+        domain: Optional[str] = None,
+        priority: Optional[TaskPriority] = None,
+        assignee: Optional[str] = None,
+        created_by: Optional[str] = None,
+        created_by_id: Optional[Union[str, UUID]] = None,
+        about_entity: Optional[str] = None,
+        mentioned_user: Optional[str] = None,
+        limit: int = 10,
+        before: Optional[str] = None,
+        after: Optional[str] = None,
+        include: Optional[str] = None,
+    ) -> EntityList[Task]:
+        params: Dict[str, str] = {"limit": str(limit)}
+        if fields:
+            params["fields"] = ",".join(fields)
+        if status:
+            params["status"] = status.value
+        if status_group:
+            params["statusGroup"] = status_group
+        if category:
+            params["category"] = category.value
+        if type_:
+            params["type"] = type_.value
+        if domain:
+            params["domain"] = domain
+        if priority:
+            params["priority"] = priority.value
+        if assignee:
+            params["assignee"] = assignee
+        if created_by:
+            params["createdBy"] = created_by
+        if created_by_id:
+            params["createdById"] = model_str(created_by_id)
+        if about_entity:
+            params["aboutEntity"] = about_entity
+        if mentioned_user:
+            params["mentionedUser"] = mentioned_user
+        if before:
+            params["before"] = before
+        if after:
+            params["after"] = after
+        if include:
+            params["include"] = include
 
-    def list_tasks_by_assignee(
-        self, assignee_fqn: str, limit: int = 10
-    ) -> Optional[List[Task]]:
-        """List tasks assigned to a specific user or team.
-
-        Args:
-            assignee_fqn: FQN of the user or team
-            limit: Maximum number of tasks to return
-
-        Returns:
-            List of tasks assigned to the given user/team
-        """
-        params = {"assignee": assignee_fqn, "limit": str(limit)}
-        resp = self.client.get(self.get_suffix(Task), params)
-        if resp and resp.get("data"):
-            return [Task.model_validate(task) for task in resp["data"]]
-        return None
-
-    def list_tasks_by_domain(
-        self, domain_fqn: str, limit: int = 10
-    ) -> Optional[List[Task]]:
-        """List tasks within a specific domain.
-
-        Args:
-            domain_fqn: FQN of the domain
-            limit: Maximum number of tasks to return
-
-        Returns:
-            List of tasks in the given domain
-        """
-        params = {"domain": domain_fqn, "limit": str(limit)}
-        resp = self.client.get(self.get_suffix(Task), params)
-        if resp and resp.get("data"):
-            return [Task.model_validate(task) for task in resp["data"]]
-        return None
-
-    def get_task_by_task_id(self, task_id: str) -> Optional[Task]:
-        """Get a task by its human-readable task ID (e.g., TASK-00001).
-
-        Args:
-            task_id: Human-readable task ID
-
-        Returns:
-            Task entity if found, None otherwise
-        """
-        return self.get_by_name(entity=Task, fqn=task_id)
+        resp = self.client.get(self._tasks_path, params)
+        return EntityList(
+            entities=[Task.model_validate(task) for task in resp["data"]],
+            total=resp["paging"]["total"],
+            after=resp["paging"].get("after"),
+            before=resp["paging"].get("before"),
+        )
 
     def add_task_comment(
         self, task_id: Union[str, UUID], message: str
@@ -146,38 +193,48 @@ class OMetaTaskMixin:
         Returns:
             Updated task with the new comment
         """
-        path = f"{self.get_suffix(Task)}/{model_str(task_id)}/comments"
+        path = f"{self._tasks_path}/{model_str(task_id)}/comments"
         resp = self.client.post(path, data=message)
         if resp:
             return Task.model_validate(resp)
         return None
 
-    def get_my_tasks(self, limit: int = 10) -> Optional[List[Task]]:
-        """Get tasks assigned to the current user.
+    def patch_task(self, task_id: Union[str, UUID], patch: list[dict]) -> Task:
+        """Patch a task via JsonPatch operations."""
+        resp = self.client.patch(
+            f"{self._tasks_path}/{model_str(task_id)}",
+            data=json.dumps(patch),
+        )
+        return Task.model_validate(resp)
 
-        Args:
-            limit: Maximum number of tasks to return
+    def close_task(
+        self, task_id: Union[str, UUID], comment: Optional[str] = None
+    ) -> Task:
+        """Close a task without applying changes."""
+        suffix = f"?comment={quote(comment)}" if comment else ""
+        resp = self.client.post(
+            f"{self._tasks_path}/{model_str(task_id)}/close{suffix}"
+        )
+        return Task.model_validate(resp)
 
-        Returns:
-            List of tasks assigned to the current user
-        """
-        params = {"assignedToMe": "true", "limit": str(limit)}
-        resp = self.client.get(self.get_suffix(Task), params)
-        if resp and resp.get("data"):
-            return [Task.model_validate(task) for task in resp["data"]]
-        return None
+    def apply_suggestion(
+        self, task_id: Union[str, UUID], comment: Optional[str] = None
+    ) -> Task:
+        """Approve and apply a suggestion task to its target entity."""
+        suffix = f"?comment={quote(comment)}" if comment else ""
+        resp = self.client.put(
+            f"{self._tasks_path}/{model_str(task_id)}/suggestion/apply{suffix}"
+        )
+        return Task.model_validate(resp)
 
-    def get_tasks_created_by_me(self, limit: int = 10) -> Optional[List[Task]]:
-        """Get tasks created by the current user.
-
-        Args:
-            limit: Maximum number of tasks to return
-
-        Returns:
-            List of tasks created by the current user
-        """
-        params = {"createdByMe": "true", "limit": str(limit)}
-        resp = self.client.get(self.get_suffix(Task), params)
-        if resp and resp.get("data"):
-            return [Task.model_validate(task) for task in resp["data"]]
-        return None
+    def bulk_task_operation(
+        self, bulk_request: BulkTaskOperationRequest
+    ) -> BulkTaskOperationResult:
+        """Run a bulk task operation."""
+        resp = self.client.post(
+            f"{self._tasks_path}/bulk",
+            bulk_request.model_dump_json(
+                context={"mask_secrets": False}, by_alias=True
+            ),
+        )
+        return BulkTaskOperationResult.model_validate(resp)

@@ -2639,6 +2639,9 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
     Task task1 = SdkClients.adminClient().tasks().create(request1);
     Task task2 = SdkClients.adminClient().tasks().create(request2);
 
+    awaitTaskReadyForWorkflowResolution(task1.getId());
+    awaitTaskReadyForWorkflowResolution(task2.getId());
+
     ResolveTask resolve =
         new ResolveTask().withResolutionType(TaskResolutionType.Approved).withComment("Approved");
 
@@ -2703,6 +2706,8 @@ public class TaskResourceIT extends BaseEntityIT<Task, CreateTask> {
             .withPayload(payload);
 
     Task task = SdkClients.adminClient().tasks().create(request);
+
+    awaitTaskReadyForWorkflowResolution(task.getId());
 
     ResolveTask resolveRequest =
         new ResolveTask()

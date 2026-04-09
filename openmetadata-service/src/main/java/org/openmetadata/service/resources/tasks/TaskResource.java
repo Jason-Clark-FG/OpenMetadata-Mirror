@@ -149,6 +149,8 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
       @Parameter(description = "Filter by assignee (user or team FQN)") @QueryParam("assignee")
           String assignee,
       @Parameter(description = "Filter by creator FQN") @QueryParam("createdBy") String createdBy,
+      @Parameter(description = "Filter by creator user id") @QueryParam("createdById")
+          UUID createdById,
       @Parameter(description = "Filter by entity FQN the task is about") @QueryParam("aboutEntity")
           String aboutEntity,
       @Parameter(description = "Filter by user FQN who was mentioned in task comments")
@@ -189,6 +191,9 @@ public class TaskResource extends EntityResource<Task, TaskRepository> {
     }
     if (createdBy != null) {
       filter.addQueryParam("createdBy", createdBy);
+    }
+    if (createdById != null) {
+      filter.addQueryParam("createdById", createdById.toString());
     }
     if (aboutEntity != null) {
       filter.addQueryParam("aboutEntity", aboutEntity);
