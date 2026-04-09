@@ -95,7 +95,7 @@ class TokenService {
         // Logic to refresh the token
         const newToken = await this.fetchNewToken();
         if (newToken) {
-          // Wait briefly for token to be persisted in SW+IndexedDB before notifying
+          // Wait for token persistence in SW+IndexedDB before notifying, with a bounded timeout
           await this.waitForTokenPersistence(oldToken);
           this.refreshSuccessCallback?.();
           // To update all the tabs on updating channel token

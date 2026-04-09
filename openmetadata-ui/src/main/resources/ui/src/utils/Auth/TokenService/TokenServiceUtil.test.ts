@@ -127,7 +127,11 @@ describe('TokenService', () => {
     });
 
     it('should refresh token if expired', async () => {
-      (getOidcToken as jest.Mock).mockResolvedValue('old-token');
+      // First call returns old token (initial check), subsequent calls return new token
+      // to simulate the token being persisted in storage after renewal
+      (getOidcToken as jest.Mock)
+        .mockResolvedValueOnce('old-token')
+        .mockResolvedValue('new-token');
       (extractDetailsFromToken as jest.Mock).mockReturnValue({
         isExpired: true,
         timeoutExpiry: -1,
@@ -137,18 +141,57 @@ describe('TokenService', () => {
 
       const refreshPromise = tokenService.refreshToken();
 
-      // Wait for async operations to reach the setTimeout
-      // Multiple flushes to ensure we pass the awaits in code
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      jest.advanceTimersByTime(100);
+      // Advance through the waitForTokenPersistence polling loop
+      await jest.runAllTimersAsync();
 
       const result = await refreshPromise;
 
       expect(mockRenewToken).toHaveBeenCalled();
       expect(result).toBe('new-token');
+      expect(localStorage.getItem('tokenRefreshed')).toBe('true');
+    });
+
+    it('should invoke refreshSuccessCallback after token persistence is confirmed', async () => {
+      // First call returns old token, subsequent calls return new token (token persisted)
+      (getOidcToken as jest.Mock)
+        .mockResolvedValueOnce('old-token')
+        .mockResolvedValue('new-token');
+      (extractDetailsFromToken as jest.Mock).mockReturnValue({
+        isExpired: true,
+        timeoutExpiry: -1,
+      });
+      const refreshSuccessCallback = jest.fn();
+      tokenService.refreshSuccessCallback = refreshSuccessCallback;
+      tokenService.updateRenewToken(mockRenewToken);
+      mockRenewToken.mockResolvedValue('new-token');
+
+      const refreshPromise = tokenService.refreshToken();
+      await jest.runAllTimersAsync();
+      await refreshPromise;
+
+      expect(refreshSuccessCallback).toHaveBeenCalled();
+      expect(localStorage.getItem('tokenRefreshed')).toBe('true');
+    });
+
+    it('should invoke callback after bounded timeout even if token is never updated in storage', async () => {
+      // getOidcToken always returns old token, simulating a persistence failure
+      (getOidcToken as jest.Mock).mockResolvedValue('old-token');
+      (extractDetailsFromToken as jest.Mock).mockReturnValue({
+        isExpired: true,
+        timeoutExpiry: -1,
+      });
+      const refreshSuccessCallback = jest.fn();
+      tokenService.refreshSuccessCallback = refreshSuccessCallback;
+      tokenService.updateRenewToken(mockRenewToken);
+      mockRenewToken.mockResolvedValue('new-token');
+
+      const refreshPromise = tokenService.refreshToken();
+      // Advance all timers to exhaust the 20x50ms polling attempts
+      await jest.runAllTimersAsync();
+      await refreshPromise;
+
+      // Callback is still invoked after the bounded retry window expires
+      expect(refreshSuccessCallback).toHaveBeenCalled();
       expect(localStorage.getItem('tokenRefreshed')).toBe('true');
     });
 
