@@ -12,12 +12,12 @@
  */
 import { test as setup } from '@playwright/test';
 import { EntityDataClass } from '../support/entity/EntityDataClass';
-import { performAdminLogin } from '../utils/admin';
+import { createAdminApiContext } from '../utils/admin';
 
-setup('create entity data prerequisites', async ({ browser }) => {
+setup('create entity data prerequisites', async () => {
   setup.setTimeout(300 * 1000);
 
-  const { apiContext, afterAction } = await performAdminLogin(browser);
+  const { apiContext, afterAction } = await createAdminApiContext();
 
   try {
     await EntityDataClass.preRequisitesForTests(apiContext);

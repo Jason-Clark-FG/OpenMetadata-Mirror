@@ -102,7 +102,7 @@ export const redirectToHomePage = async (
   }
 
   await page.waitForURL('**/my-data');
-  await page.getByTestId('searchBox').waitFor({ state: 'visible' });
+  await page.locator('main').first().waitFor({ state: 'visible' });
 
   if (_waitForLoaders) {
     await waitForAllLoadersToDisappear(page, 'loader', 15000).catch(
