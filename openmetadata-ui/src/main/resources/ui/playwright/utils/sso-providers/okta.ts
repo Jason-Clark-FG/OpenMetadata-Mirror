@@ -11,18 +11,19 @@
  *  limitations under the License.
  */
 import { expect, Page } from '@playwright/test';
-import { OM_BASE_URL } from '../../constant/ssoAuth';
+import { OM_BASE_URL, SSO_ENV } from '../../constant/ssoAuth';
 import { ProviderConfigOverride, ProviderCredentials } from '../ssoAuth';
 import { ProviderHelper } from './index';
 
-// Collate's nightly test Okta tenant. These are non-secret OAuth public
-// identifiers — visible on the hosted login page during any sign-in — so
-// committing them is intentional. To point the suite at a different tenant,
-// update this constant in a single commit.
+// Defaults target Collate's nightly test Okta tenant. These are non-secret
+// OAuth public identifiers — visible on the hosted login page during any
+// sign-in — so committing them is intentional. Override via the matching
+// env vars to point the suite at a different tenant without a code change.
 const OKTA_TENANT = {
-  clientId: '0oayn277hnOhUpVLd697',
-  domain: 'integrator-9351624.okta.com',
-  principalDomain: 'getcollate.io',
+  clientId: process.env[SSO_ENV.OKTA_CLIENT_ID] ?? '0oayn277hnOhUpVLd697',
+  domain: process.env[SSO_ENV.OKTA_DOMAIN] ?? 'integrator-9351624.okta.com',
+  principalDomain:
+    process.env[SSO_ENV.OKTA_PRINCIPAL_DOMAIN] ?? 'getcollate.io',
 } as const;
 
 const buildConfigPayload = (): ProviderConfigOverride => {

@@ -13,7 +13,7 @@
 import { expect, test } from '@playwright/test';
 import { SSO_ENV } from '../../constant/ssoAuth';
 import { performAdminLogin } from '../../utils/admin';
-import { getAuthContext } from '../../utils/common';
+import { getAuthContext, redirectToHomePage } from '../../utils/common';
 import { getProviderHelper, ProviderHelper } from '../../utils/sso-providers';
 import {
   applyProviderConfig,
@@ -117,6 +117,9 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
     });
 
     await test.step('Return to OpenMetadata and complete self-signup if needed', async () => {
+      // The IdP can land the user on /signup (first-ever sign-in against this
+      // OM instance) or /my-data (user already exists from a prior run). Wait
+      // for either, and handle the one-time self-signup click when it appears.
       await page.waitForURL(
         (url) =>
           url.pathname.endsWith('/signup') || url.pathname.endsWith('/my-data'),
@@ -131,7 +134,7 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
         await page.waitForURL('**/my-data', { timeout: 60_000 });
       }
 
-      await expect(page.getByTestId('dropdown-profile')).toBeVisible();
+      await redirectToHomePage(page);
     });
 
     await test.step('Verify JWT against loggedInUser API', async () => {
