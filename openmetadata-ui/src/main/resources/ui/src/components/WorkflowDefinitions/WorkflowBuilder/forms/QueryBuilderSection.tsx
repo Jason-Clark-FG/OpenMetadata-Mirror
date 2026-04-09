@@ -38,6 +38,7 @@ const getQueryBuilderPortalContainer = (): HTMLElement => {
 
 interface QueryBuilderSectionProps {
   entityTypes?: EntityType;
+  forceReadOnly?: boolean;
   label?: string;
   outputType?: SearchOutputType;
   value: string;
@@ -46,12 +47,14 @@ interface QueryBuilderSectionProps {
 
 export const QueryBuilderSection: React.FC<QueryBuilderSectionProps> = ({
   entityTypes = EntityType.ALL,
+  forceReadOnly = false,
   label,
   onChange,
   outputType,
   value,
 }) => {
   const { isViewMode } = useWorkflowModeContext();
+  const readOnly = isViewMode || forceReadOnly;
 
   const [internalValue, setInternalValue] = useState(value || '');
   const emptyRegistry = {} as Registry;
@@ -61,7 +64,7 @@ export const QueryBuilderSection: React.FC<QueryBuilderSectionProps> = ({
   }, [value]);
 
   const handleChange = (newValue: string) => {
-    if (isViewMode) {
+    if (readOnly) {
       return;
     }
     setInternalValue(newValue);
@@ -70,7 +73,7 @@ export const QueryBuilderSection: React.FC<QueryBuilderSectionProps> = ({
 
   return (
     <div
-      className={isViewMode ? 'tw:pointer-events-none' : ''}
+      className={readOnly ? 'tw:pointer-events-none' : ''}
       data-testid="query-builder-section"
     >
       <ConfigProvider getPopupContainer={getQueryBuilderPortalContainer}>

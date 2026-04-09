@@ -22,10 +22,10 @@ export const EmptyCanvasMessage: React.FC<EmptyCanvasMessageProps> = ({
   isDragging,
   hasNodes,
 }) => {
-  const { isViewMode } = useWorkflowModeContext();
+  const { isViewMode, showWorkflowNodePalette } = useWorkflowModeContext();
   const { t } = useTranslation();
 
-  if (isDragging || hasNodes || isViewMode) {
+  if (isDragging || hasNodes || isViewMode || !showWorkflowNodePalette) {
     return null;
   }
 

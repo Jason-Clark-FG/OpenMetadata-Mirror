@@ -27,6 +27,7 @@ export const DataAssetFiltersSection: React.FC<
 > = ({
   dataAssetFilters,
   dataAssets,
+  lockFields = false,
   onAddDataAssetFilter,
   onUpdateDataAssetFilter,
   onRemoveDataAssetFilter,
@@ -57,7 +58,9 @@ export const DataAssetFiltersSection: React.FC<
     (asset) => !selectedDataAssets.includes(asset)
   );
   const isDisabled =
-    isFormDisabled || (!hasAvailableAssets && dataAssetFilters.length > 0);
+    isFormDisabled ||
+    lockFields ||
+    (!hasAvailableAssets && dataAssetFilters.length > 0);
 
   return (
     <div className="tw:mb-6">
@@ -84,7 +87,7 @@ export const DataAssetFiltersSection: React.FC<
                   <Button
                     color="tertiary"
                     iconLeading={XClose}
-                    isDisabled={isFormDisabled}
+                    isDisabled={isDisabled}
                     size="sm"
                     onPress={() => onRemoveDataAssetFilter(dataAssetFilter.id)}
                   />
@@ -96,6 +99,7 @@ export const DataAssetFiltersSection: React.FC<
                       entityTypes={
                         dataAssetFilter.dataAsset.toLowerCase() as EntityType
                       }
+                      forceReadOnly={lockFields}
                       label={`Filter for ${dataAssetFilter.dataAsset}`}
                       outputType={SearchOutputType.ElasticSearch}
                       value={dataAssetFilter.filters || ''}

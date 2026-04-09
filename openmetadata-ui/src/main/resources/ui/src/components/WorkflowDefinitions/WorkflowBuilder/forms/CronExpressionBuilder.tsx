@@ -19,6 +19,7 @@ import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext
 interface CronExpressionBuilderProps {
   value?: string;
   onChange?: (cronExpression: string) => void;
+  forceDisabled?: boolean;
 }
 
 interface CronConfig {
@@ -132,9 +133,11 @@ const generateDescription = (cronConfig: CronConfig): string => {
 export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
   value = '',
   onChange,
+  forceDisabled = false,
 }) => {
   const { t } = useTranslation();
   const { isFormDisabled } = useWorkflowModeContext();
+  const controlsDisabled = isFormDisabled || forceDisabled;
 
   const [config, setConfig] = useState<CronConfig>(DEFAULT_CONFIG);
 
@@ -183,7 +186,7 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
             {t('every')}
           </Typography>
           <Select
-            isDisabled={isFormDisabled}
+            isDisabled={controlsDisabled}
             value={config.every}
             onChange={(key) => handleConfigChange('every', String(key ?? ''))}
           >
@@ -202,7 +205,7 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
               {t('hour')}
             </Typography>
             <Select
-              isDisabled={isFormDisabled}
+              isDisabled={controlsDisabled}
               value={config.hour}
               onChange={(key) => handleConfigChange('hour', String(key ?? ''))}
             >
@@ -221,7 +224,7 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
             {t('minute')}
           </Typography>
           <Select
-            isDisabled={isFormDisabled}
+            isDisabled={controlsDisabled}
             value={config.minute}
             onChange={(key) => handleConfigChange('minute', String(key ?? ''))}
           >

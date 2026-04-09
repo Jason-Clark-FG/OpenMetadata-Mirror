@@ -21,6 +21,8 @@ interface FormActionButtonsProps {
   onSave: () => void;
   onDelete?: () => void;
   showDelete?: boolean;
+  /** When false, hides the save button (e.g. OSS read-only periodic start node). */
+  showSave?: boolean;
   isDisabled?: boolean;
   isLoading?: boolean;
   saveLabel?: string;
@@ -33,6 +35,7 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
   onSave,
   onDelete,
   showDelete = false,
+  showSave = true,
   isDisabled = false,
   isLoading = false,
   saveLabel,
@@ -72,7 +75,7 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
           >
             {effectiveCancelLabel}
           </Button>
-          {canSave && (
+          {showSave && canSave && (
             <Button
               color="primary"
               data-testid="save-node-configuration-button"

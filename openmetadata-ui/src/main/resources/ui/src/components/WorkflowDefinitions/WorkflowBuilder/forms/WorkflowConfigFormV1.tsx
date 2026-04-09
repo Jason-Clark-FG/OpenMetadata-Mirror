@@ -30,6 +30,7 @@ interface WorkflowConfigFormV1Props {
   config: NodeConfig;
   availableEventTypes: string[];
   availableExcludeFields: string[];
+  allowFullStartNodeConfiguration: boolean;
   updateConfig: <K extends keyof NodeConfig>(
     key: K,
     value: NodeConfig[K]
@@ -58,83 +59,95 @@ export const WorkflowConfigFormV1: React.FC<WorkflowConfigFormV1Props> = ({
   config,
   availableEventTypes,
   availableExcludeFields,
+  allowFullStartNodeConfiguration,
   updateConfig,
   removeFromArray,
   handleEventTypeChange,
   addDataAssetFilter,
   onUpdateDataAssetFilter,
   removeDataAssetFilter,
-}) => (
-  <div data-testid="workflow-config-form-v1">
-    <MetadataFormSection
-      isStartNode
-      description={config.description}
-      name={config.name}
-      onDescriptionChange={(description) =>
-        updateConfig('description', description)
-      }
-      onNameChange={(name) => updateConfig('name', name)}
-    />
+}) => {
+  const lockStartNodeFields = !allowFullStartNodeConfiguration;
 
-    <DataAssetFormSection
-      availableDataAssets={[...AVAILABLE_OPTIONS.DATA_ASSETS]}
-      dataAssets={config.dataAssets}
-      onDataAssetsChange={(dataAssets) =>
-        updateConfig('dataAssets', dataAssets)
-      }
-      onRemoveDataAsset={(asset) => removeFromArray('dataAssets', asset)}
-    />
-
-    {config.triggerType === WorkflowType.PERIODIC_BATCH && (
-      <DataAssetFiltersSection
-        dataAssetFilters={config.dataAssetFilters || []}
-        dataAssets={config.dataAssets || []}
-        onAddDataAssetFilter={addDataAssetFilter}
-        onRemoveDataAssetFilter={removeDataAssetFilter}
-        onUpdateDataAssetFilter={onUpdateDataAssetFilter}
+  return (
+    <div data-testid="workflow-config-form-v1">
+      <MetadataFormSection
+        isStartNode
+        description={config.description}
+        lockFields={lockStartNodeFields}
+        name={config.name}
+        onDescriptionChange={(description) =>
+          updateConfig('description', description)
+        }
+        onNameChange={(name) => updateConfig('name', name)}
       />
-    )}
 
-    <TriggerConfigSection
-      availableEventTypes={availableEventTypes}
-      availableExcludeFields={availableExcludeFields}
-      batchSize={config.batchSize}
-      cronExpression={config.cronExpression}
-      eventType={config.eventType}
-      excludeFields={config.excludeFields}
-      include={config.include}
-      scheduleType={config.scheduleType}
-      triggerType={config.triggerType}
-      onBatchSizeChange={(batchSize) => updateConfig('batchSize', batchSize)}
-      onCronExpressionChange={(cron) => updateConfig('cronExpression', cron)}
-      onEventTypeChange={handleEventTypeChange}
-      onExcludeFieldsChange={(excludeFields) =>
-        updateConfig('excludeFields', excludeFields)
-      }
-      onIncludeChange={(include) => updateConfig('include', include)}
-      onRemoveEventType={(eventType) => removeFromArray('eventType', eventType)}
-      onRemoveExcludeField={(fieldToRemove) =>
-        removeFromArray('excludeFields', fieldToRemove)
-      }
-      onRemoveInclude={(fieldToRemove) =>
-        removeFromArray('include', fieldToRemove)
-      }
-      onScheduleTypeChange={(scheduleType) =>
-        updateConfig('scheduleType', scheduleType)
-      }
-      onTriggerTypeChange={(triggerType) =>
-        updateConfig('triggerType', triggerType)
-      }
-    />
+      <DataAssetFormSection
+        availableDataAssets={[...AVAILABLE_OPTIONS.DATA_ASSETS]}
+        dataAssets={config.dataAssets}
+        lockFields={lockStartNodeFields}
+        onDataAssetsChange={(dataAssets) =>
+          updateConfig('dataAssets', dataAssets)
+        }
+        onRemoveDataAsset={(asset) => removeFromArray('dataAssets', asset)}
+      />
 
-    {config.triggerType === WorkflowType.EVENT_BASED && (
-      <EventTriggerFilterSection
-        entityType={getEventTriggerEntityType(config.dataAssets)}
-        triggerFilter={config.triggerFilter}
-        onTriggerFilterChange={(filter) =>
-          updateConfig('triggerFilter', filter)
+      {config.triggerType === WorkflowType.PERIODIC_BATCH && (
+        <DataAssetFiltersSection
+          dataAssetFilters={config.dataAssetFilters || []}
+          dataAssets={config.dataAssets || []}
+          lockFields={lockStartNodeFields}
+          onAddDataAssetFilter={addDataAssetFilter}
+          onRemoveDataAssetFilter={removeDataAssetFilter}
+          onUpdateDataAssetFilter={onUpdateDataAssetFilter}
+        />
+      )}
+
+      <TriggerConfigSection
+        availableEventTypes={availableEventTypes}
+        availableExcludeFields={availableExcludeFields}
+        batchSize={config.batchSize}
+        cronExpression={config.cronExpression}
+        eventType={config.eventType}
+        excludeFields={config.excludeFields}
+        include={config.include}
+        lockNonIncludeExcludeFields={lockStartNodeFields}
+        scheduleType={config.scheduleType}
+        triggerType={config.triggerType}
+        onBatchSizeChange={(batchSize) => updateConfig('batchSize', batchSize)}
+        onCronExpressionChange={(cron) => updateConfig('cronExpression', cron)}
+        onEventTypeChange={handleEventTypeChange}
+        onExcludeFieldsChange={(excludeFields) =>
+          updateConfig('excludeFields', excludeFields)
+        }
+        onIncludeChange={(include) => updateConfig('include', include)}
+        onRemoveEventType={(eventType) =>
+          removeFromArray('eventType', eventType)
+        }
+        onRemoveExcludeField={(fieldToRemove) =>
+          removeFromArray('excludeFields', fieldToRemove)
+        }
+        onRemoveInclude={(fieldToRemove) =>
+          removeFromArray('include', fieldToRemove)
+        }
+        onScheduleTypeChange={(scheduleType) =>
+          updateConfig('scheduleType', scheduleType)
+        }
+        onTriggerTypeChange={(triggerType) =>
+          updateConfig('triggerType', triggerType)
         }
       />
-    )}
-  </div>
-);
+
+      {config.triggerType === WorkflowType.EVENT_BASED && (
+        <EventTriggerFilterSection
+          entityType={getEventTriggerEntityType(config.dataAssets)}
+          lockFields={lockStartNodeFields}
+          triggerFilter={config.triggerFilter}
+          onTriggerFilterChange={(filter) =>
+            updateConfig('triggerFilter', filter)
+          }
+        />
+      )}
+    </div>
+  );
+};

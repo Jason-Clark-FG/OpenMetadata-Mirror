@@ -23,11 +23,13 @@ import { DataAssetFormSectionProps } from '../../../../interface/workflow-builde
 export const DataAssetFormSection: React.FC<DataAssetFormSectionProps> = ({
   availableDataAssets,
   dataAssets,
+  lockFields = false,
   onDataAssetsChange,
   onRemoveDataAsset,
 }) => {
   const { t } = useTranslation();
   const { isFormDisabled } = useWorkflowModeContext();
+  const inputsDisabled = isFormDisabled || lockFields;
 
   const dataAssetOptionsIncludingAll = useMemo(
     () => [ALL_DATA_ASSETS_OPTION_VALUE, ...availableDataAssets],
@@ -110,7 +112,7 @@ export const DataAssetFormSection: React.FC<DataAssetFormSectionProps> = ({
       <Autocomplete
         isRequired
         data-testid="data-asset"
-        isDisabled={isFormDisabled}
+        isDisabled={inputsDisabled}
         items={allItems}
         label={t('label.data-asset')}
         maxVisibleItems={4}

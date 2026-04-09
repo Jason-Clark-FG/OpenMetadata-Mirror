@@ -48,6 +48,8 @@ export interface NodeConfig {
 export interface DataAssetFiltersSectionProps {
   dataAssetFilters: DataAssetFilter[];
   dataAssets: string[];
+  /** OSS: lock filters when only include/exclude may be edited on the trigger */
+  lockFields?: boolean;
   onAddDataAssetFilter: (dataAsset?: string) => void;
   onUpdateDataAssetFilter: (dataAssetId: number, value: string) => void;
   onRemoveDataAssetFilter: (filterId: number) => void;
@@ -73,12 +75,16 @@ export interface TriggerConfigSectionProps {
   onScheduleTypeChange?: (scheduleType: string) => void;
   onCronExpressionChange?: (cron: string) => void;
   onBatchSizeChange?: (batchSize: number) => void;
+  /** OSS: disable all trigger controls except include/exclude (event-based) */
+  lockNonIncludeExcludeFields?: boolean;
 }
 
 export interface MetadataFormSectionProps {
   name: string;
   description: string;
   isStartNode: boolean;
+  /** OSS: lock name/description when only include/exclude may be edited */
+  lockFields?: boolean;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
 }
@@ -86,6 +92,8 @@ export interface MetadataFormSectionProps {
 export interface DataAssetFormSectionProps {
   dataAssets: string[];
   availableDataAssets: string[];
+  /** OSS: lock when only include/exclude may be edited */
+  lockFields?: boolean;
   onDataAssetsChange: (dataAssets: string[]) => void;
   onRemoveDataAsset: (assetToRemove: string) => void;
 }

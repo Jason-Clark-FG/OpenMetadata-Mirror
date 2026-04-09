@@ -72,6 +72,7 @@ export interface UseWorkflowModeReturn {
   isDropdownDisabled: boolean;
   allowStructuralGraphEdits: boolean;
   showWorkflowNodePalette: boolean;
+  allowFullStartNodeConfiguration: boolean;
 }
 
 export const useWorkflowMode = (
@@ -141,6 +142,7 @@ export const useWorkflowMode = (
     const caps = workflowUiClassBase.getCapabilities();
     const structural = caps.allowStructuralGraphEdits;
     const showWorkflowNodePalette = caps.showWorkflowNodePalette;
+    const allowFullStartNodeConfiguration = caps.allowFullStartNodeConfiguration;
 
     return {
       mode: internalMode,
@@ -154,6 +156,7 @@ export const useWorkflowMode = (
       canAccessSidebar: isEditMode,
       allowStructuralGraphEdits: structural,
       showWorkflowNodePalette,
+      allowFullStartNodeConfiguration,
 
       showEditButton: isViewMode && !isNoOpTrigger,
       showSaveButton: isEditMode && !isNoOpTrigger,

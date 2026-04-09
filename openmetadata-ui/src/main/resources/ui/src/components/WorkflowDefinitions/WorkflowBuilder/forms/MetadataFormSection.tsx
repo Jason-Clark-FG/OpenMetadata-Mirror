@@ -20,12 +20,14 @@ import { MetadataFormSectionProps } from '../../../../interface/workflow-builder
 export const MetadataFormSection: React.FC<MetadataFormSectionProps> = ({
   description,
   isStartNode,
+  lockFields = false,
   name,
   onDescriptionChange,
   onNameChange,
 }) => {
   const { t } = useTranslation();
   const { isFormDisabled } = useWorkflowModeContext();
+  const inputsDisabled = isFormDisabled || lockFields;
 
   return (
     <div data-testid="metadata-form-section">
@@ -33,7 +35,7 @@ export const MetadataFormSection: React.FC<MetadataFormSectionProps> = ({
         <Input
           isRequired
           data-testid="workflow-name-input"
-          isDisabled={isFormDisabled}
+          isDisabled={inputsDisabled}
           label={
             isStartNode ? t('label.workflow-name') : t('label.display-name')
           }
@@ -51,7 +53,7 @@ export const MetadataFormSection: React.FC<MetadataFormSectionProps> = ({
       <div className="tw:mb-6" data-testid="workflow-description-section">
         <TextArea
           data-testid="workflow-description-input"
-          isDisabled={isFormDisabled}
+          isDisabled={inputsDisabled}
           label={
             isStartNode
               ? t('label.workflow-description')

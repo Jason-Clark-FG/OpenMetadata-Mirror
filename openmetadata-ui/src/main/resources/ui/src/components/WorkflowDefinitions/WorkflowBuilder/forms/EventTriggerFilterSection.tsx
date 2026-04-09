@@ -24,6 +24,7 @@ interface EventTriggerFilterSectionProps {
   triggerFilter?: string;
   onTriggerFilterChange?: (filter: string) => void;
   entityType?: EntityType;
+  lockFields?: boolean;
 }
 
 export const EventTriggerFilterSection: React.FC<
@@ -32,9 +33,11 @@ export const EventTriggerFilterSection: React.FC<
   triggerFilter = '',
   onTriggerFilterChange,
   entityType = EntityType.ALL,
+  lockFields = false,
 }) => {
   const { t } = useTranslation();
   const { isFormDisabled } = useWorkflowModeContext();
+  const controlsDisabled = isFormDisabled || lockFields;
   const [showFilter, setShowFilter] = useState(
     triggerFilter && triggerFilter.trim() !== ''
   );
@@ -64,7 +67,7 @@ export const EventTriggerFilterSection: React.FC<
           color="secondary"
           data-testid="add-event-filter-button"
           iconLeading={Plus}
-          isDisabled={isFormDisabled}
+          isDisabled={controlsDisabled}
           size="sm"
           onPress={handleAddFilter}
         >
@@ -81,7 +84,7 @@ export const EventTriggerFilterSection: React.FC<
           <Button
             color="tertiary"
             iconLeading={XClose}
-            isDisabled={isFormDisabled}
+            isDisabled={controlsDisabled}
             size="sm"
             onPress={handleClearFilter}
           />
@@ -90,6 +93,7 @@ export const EventTriggerFilterSection: React.FC<
         <div className="tw:mt-4">
           <QueryBuilderSection
             entityTypes={entityType}
+            forceReadOnly={lockFields}
             label="Filter"
             outputType={SearchOutputType.ElasticSearch}
             value={triggerFilter}

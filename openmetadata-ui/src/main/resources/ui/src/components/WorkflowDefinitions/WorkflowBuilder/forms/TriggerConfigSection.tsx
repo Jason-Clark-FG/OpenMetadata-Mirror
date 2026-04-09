@@ -84,9 +84,13 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
   onScheduleTypeChange,
   onCronExpressionChange,
   onBatchSizeChange,
+  lockNonIncludeExcludeFields = false,
 }) => {
   const { t } = useTranslation();
   const { isFormDisabled } = useWorkflowModeContext();
+  const nonIncludeExcludeDisabled =
+    isFormDisabled || lockNonIncludeExcludeFields;
+  const includeExcludeDisabled = isFormDisabled;
 
   const triggerTypeOptions = [
     { label: t('label.event-based'), value: 'Event Based' },
@@ -186,7 +190,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
         <Select
           isRequired
           data-testid="trigger-type-select"
-          isDisabled={isFormDisabled}
+          isDisabled={nonIncludeExcludeDisabled}
           label={t('message.trigger-type')}
           value={triggerType}
           onChange={(key) => onTriggerTypeChange(String(key ?? ''))}
@@ -203,7 +207,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
             <Autocomplete
               isRequired
               data-testid="event-type-select"
-              isDisabled={isFormDisabled}
+              isDisabled={nonIncludeExcludeDisabled}
               items={availableEventTypes.map((v) => ({ id: v, label: v }))}
               label={t('label.event-type')}
               placeholder={t('message.select-event-types')}
@@ -241,7 +245,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
           <div className="tw:mt-6">
             <Autocomplete
               data-testid="exclude-fields-select"
-              isDisabled={isFormDisabled}
+              isDisabled={includeExcludeDisabled}
               items={fieldItems}
               label={t('label.exclude-fields')}
               maxVisibleItems={2}
@@ -269,7 +273,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
           <div className="tw:mt-6">
             <Autocomplete
               data-testid="include-fields-select"
-              isDisabled={isFormDisabled}
+              isDisabled={includeExcludeDisabled}
               items={fieldItems}
               label={t('label.include-fields')}
               maxVisibleItems={2}
@@ -302,7 +306,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
             isRequired
             data-testid="schedule-type-select"
             hint={t('message.choose-how-the-workflow-should-be-triggered')}
-            isDisabled={isFormDisabled}
+            isDisabled={nonIncludeExcludeDisabled}
             label={t('label.schedule-type')}
             value={scheduleType}
             onChange={(key) => onScheduleTypeChange?.(String(key ?? ''))}
@@ -326,6 +330,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
             >
               <div className="tw:mb-6">
                 <CronExpressionBuilder
+                  forceDisabled={nonIncludeExcludeDisabled}
                   value={cronExpression}
                   onChange={onCronExpressionChange}
                 />
@@ -337,7 +342,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
             className="tw:mt-6"
             data-testid="batch-size-input"
             hint={t('message.number-of-entities-to-process-in-each-batch')}
-            isDisabled={isFormDisabled}
+            isDisabled={nonIncludeExcludeDisabled}
             label={t('label.batch-size')}
             placeholder="100"
             type="number"

@@ -45,6 +45,7 @@ import {
   serializeEventBasedFilters,
   serializePeriodicBatchFilters,
 } from '../../../utils/WorkflowSerializationUtils';
+import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import { FormActionButtons, WorkflowConfigFormV1 } from './forms';
 
 const getBackendConfig = (node: Node | null): BackendNodeConfig => {
@@ -71,6 +72,7 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
   workflowMetadata,
   onWorkflowMetadataUpdate,
 }) => {
+  const { allowFullStartNodeConfiguration } = useWorkflowModeContext();
   const [isUpdating, setIsUpdating] = useState(false);
   const [backendConfig, setBackendConfig] = useState(() =>
     getBackendConfig(node)
@@ -357,7 +359,7 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
       setIsUpdating(true);
       const isTriggerNode = isStartNode(node);
 
-      if (isTriggerNode) {
+      if (isTriggerNode && allowFullStartNodeConfiguration) {
         updateWorkflowMetadata();
       }
 
@@ -385,6 +387,7 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
     buildTaskConfiguration,
     onSave,
     onClose,
+    allowFullStartNodeConfiguration,
   ]);
 
   const handleCancel = useCallback(() => {
@@ -404,6 +407,7 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
     return (
       <WorkflowConfigFormV1
         addDataAssetFilter={addDataAssetFilter}
+        allowFullStartNodeConfiguration={allowFullStartNodeConfiguration}
         availableEventTypes={[...AVAILABLE_OPTIONS.EVENT_TYPES]}
         availableExcludeFields={availableExcludeFields}
         config={effectiveConfig}
@@ -452,6 +456,7 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
               isDisabled={!isWorkflowConfigValid}
               isLoading={isUpdating}
               showDelete={false}
+              showSave
               onCancel={handleCancel}
               onSave={handleSave}
             />
