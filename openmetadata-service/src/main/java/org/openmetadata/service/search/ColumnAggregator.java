@@ -21,6 +21,28 @@ public interface ColumnAggregator {
 
   ColumnGridResponse aggregateColumns(ColumnAggregationRequest request) throws IOException;
 
+  /**
+   * Convert a plain text pattern to a case-insensitive regex for ES/OS terms include. Lucene regex
+   * does not support (?i), so each letter is expanded to a character class: "MAT" → [mM][aA][tT].
+   */
+  static String toCaseInsensitiveRegex(String pattern) {
+    StringBuilder sb = new StringBuilder(".*");
+    for (char c : pattern.toCharArray()) {
+      if (Character.isLetter(c)) {
+        sb.append('[')
+            .append(Character.toLowerCase(c))
+            .append(Character.toUpperCase(c))
+            .append(']');
+      } else if (".+*?|[](){}^$\\~@&#<>\"".indexOf(c) >= 0) {
+        sb.append('\\').append(c);
+      } else {
+        sb.append(c);
+      }
+    }
+    sb.append(".*");
+    return sb.toString();
+  }
+
   class ColumnAggregationRequest {
     private int size = 1000;
     private String cursor;
