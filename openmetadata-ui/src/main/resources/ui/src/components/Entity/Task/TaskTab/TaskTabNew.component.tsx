@@ -157,14 +157,17 @@ const FIELD_LINK_MAP: Array<{
     pattern: /\*\*(domain|domains)\*\*/,
     getUrl: (fqn) => getDomainDetailsPath(fqn),
   },
-  {
-    pattern: /\*\*(owners|reviewers|experts)\*\*/,
-    getUrl: (fqn) => getUserPath(fqn),
-  },
 ];
 
 const DIFF_SPAN_RE =
-  /(<span[^>]*class="diff-(?:added|removed)"[^>]*>)([^<]+)(<\/span>)/g;
+  /(<span\b[^>]*\bclass="[^"]*\bdiff-(?:added|removed)\b[^"]*"[^>]*>)([^<]+)(<\/span>)/g;
+
+const escapeHtml = (s: string): string =>
+  s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 
 const addEntityLinks = (message: string): string =>
   message
@@ -178,9 +181,9 @@ const addEntityLinks = (message: string): string =>
       return line.replace(
         DIFF_SPAN_RE,
         (_, openTag: string, fqn: string, closeTag: string) =>
-          `${openTag}<a href="${matcher.getUrl(
-            fqn.trim()
-          )}">${fqn}</a>${closeTag}`
+          `${openTag}<a href="${matcher.getUrl(fqn.trim())}">${escapeHtml(
+            fqn
+          )}</a>${closeTag}`
       );
     })
     .join('\n');
