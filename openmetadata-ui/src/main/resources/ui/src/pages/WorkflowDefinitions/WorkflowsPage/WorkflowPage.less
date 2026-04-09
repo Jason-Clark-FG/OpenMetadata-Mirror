@@ -1,0 +1,35 @@
+@import (reference) '../../styles/variables.less';
+
+.workflow-page {
+  height: 100vh;
+  border-radius: 12px;
+}
+
+.workflow-page-content {
+  background-color: @white;
+  border-radius: 10px;
+  min-height: calc(100vh - 120px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workflow-card-divider {
+  margin: 0;
+}
+
+.cancel-btn {
+  color: @red-7;
+}
+
+.workflow-input {
+  border-radius: 10px;
+
+  &:focus {
+    border-radius: 10px;
+  }
+
+  &:hover {
+    border-radius: 10px;
+  }
+}

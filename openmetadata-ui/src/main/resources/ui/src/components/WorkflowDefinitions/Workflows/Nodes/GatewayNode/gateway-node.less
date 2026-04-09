@@ -1,0 +1,24 @@
+@import (reference) '../../../../../styles/variables.less';
+
+.gateway-node {
+  background-color: @white;
+  border-radius: 8px;
+  width: auto;
+  padding: 1rem;
+  border: 2px solid @border-color;
+
+  .gateway-node-action {
+    text-transform: uppercase;
+  }
+
+  .gateway-node-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &.active {
+    border-color: @primary-color;
+    background-color: @primary-1;
+  }
+}

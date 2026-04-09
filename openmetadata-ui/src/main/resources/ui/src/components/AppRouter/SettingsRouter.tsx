@@ -41,6 +41,8 @@ import EmailConfigSettingsPage from '../../pages/EmailConfigSettingsPage/EmailCo
 import GlobalSettingCategoryPage from '../../pages/GlobalSettingPage/GlobalSettingCategory/GlobalSettingCategoryPage';
 import GlobalSettingPage from '../../pages/GlobalSettingPage/GlobalSettingPage';
 import GlossaryTermRelationSettingsPage from '../../pages/GlossaryTermRelationSettings/GlossaryTermRelationSettings';
+import WorkflowBuilderPage from '../../pages/WorkflowDefinitions/WorkflowBuilder/WorkflowBuilder';
+import WorkflowsListPage from '../../pages/WorkflowDefinitions/WorkflowsPage/WorkflowsPage';
 import { LearningResourcesPage } from '../../pages/LearningResourcesPage/LearningResourcesPage';
 import LineageConfigPage from '../../pages/LineageConfigPage/LineageConfigPage';
 import NotificationListPage from '../../pages/NotificationListPage/NotificationListPage';
@@ -681,6 +683,29 @@ const SettingsRouter = () => {
         path={getSettingPathRelative(
           GlobalSettingsMenuCategory.GOVERNANCE,
           GlobalSettingOptions.GLOSSARY_TERM_RELATIONS
+        )}
+      />
+      <Route
+        element={
+          <AdminProtectedRoute>
+            <WorkflowsListPage />
+          </AdminProtectedRoute>
+        }
+        path={getSettingPathRelative(
+          GlobalSettingsMenuCategory.GOVERNANCE,
+          GlobalSettingOptions.WORKFLOW_DEFINITIONS
+        )}
+      />
+      <Route
+        element={
+          <AdminProtectedRoute>
+            <WorkflowBuilderPage />
+          </AdminProtectedRoute>
+        }
+        path={getSettingPathRelative(
+          GlobalSettingsMenuCategory.GOVERNANCE,
+          GlobalSettingOptions.WORKFLOW_DEFINITIONS,
+          true
         )}
       />
     </Routes>

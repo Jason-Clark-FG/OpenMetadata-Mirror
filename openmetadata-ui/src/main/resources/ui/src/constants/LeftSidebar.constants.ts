@@ -13,6 +13,7 @@
 
 import { Building02, Cube01 } from '@untitledui/icons';
 import { ReactComponent as GovernIcon } from '../assets/svg/bank.svg';
+import { ReactComponent as WorkflowsNavIcon } from '../assets/svg/ic-workflows.svg';
 import { ReactComponent as ClassificationIcon } from '../assets/svg/classification.svg';
 import { ReactComponent as DataQualityRulesIcon } from '../assets/svg/data-observability/data-quality-rules.svg';
 import { ReactComponent as ExploreIcon } from '../assets/svg/explore.svg';
@@ -196,6 +197,13 @@ export const SIDEBAR_LIST: Array<LeftSidebarItem> = [
         icon: ColumnBulkIcon,
         dataTestId: `app-bar-item-${SidebarItem.COLUMN_BULK_OPERATIONS}`,
         isBeta: true,
+      },
+      {
+        key: ROUTES.WORKFLOWS,
+        title: 'label.workflow-plural',
+        redirect_url: ROUTES.WORKFLOWS,
+        icon: WorkflowsNavIcon,
+        dataTestId: `app-bar-item-${SidebarItem.WORKFLOWS}`,
       },
     ],
   },
