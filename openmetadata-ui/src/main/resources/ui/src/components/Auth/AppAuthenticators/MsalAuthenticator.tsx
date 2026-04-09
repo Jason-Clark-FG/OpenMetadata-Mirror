@@ -85,6 +85,7 @@ const MsalAuthenticator = forwardRef<AuthenticatorRef, Props>(
       const tokenRequest = {
         account: account || accounts[0], // This is an example - Select account based on your app's requirements
         scopes: msalLoginRequest.scopes,
+        forceRefresh: true,
       };
       try {
         const response = await instance.acquireTokenSilent(tokenRequest);
