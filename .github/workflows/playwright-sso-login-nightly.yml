@@ -12,33 +12,44 @@
 # Nightly end-to-end SSO login tests.
 #
 # Purpose:
-#   Drive a real login round-trip through an external identity provider
-#   (Okta in Phase 1) and validate the resulting OpenMetadata session.
-#   Complements playwright-sso-tests.yml, which only exercises the SSO
-#   configuration form UI and does not perform an actual login.
+#   Drive real login round-trips through external identity providers and
+#   validate the resulting OpenMetadata sessions. Complements
+#   playwright-sso-tests.yml, which only exercises the SSO configuration
+#   form UI without performing an actual login.
 #
-# Test location:
-#   openmetadata-ui/src/main/resources/ui/playwright/e2e/Auth/SSOLogin.spec.ts
+# Shape:
+#   One job per provider. Each job declares `environment: test` so it can
+#   resolve `${{ secrets.<PROVIDER>_SSO_PASSWORD }}` from the environment's
+#   secrets with a STATIC reference (keeps CodeQL's "Excessive Secrets
+#   Exposure" rule happy). All shared setup + test-run logic lives in the
+#   composite action ./.github/actions/sso-login-run.
 #
-# Triggers:
-#   - Nightly cron at 03:00 UTC
-#   - Manual workflow_dispatch with provider selection
+# Adding a new provider:
+#   1. Add `<PROVIDER>_SSO_PASSWORD` as an environment secret and
+#      `<PROVIDER>_SSO_USERNAME` + tenant vars in the `test` environment.
+#   2. Add the provider to the `workflow_dispatch.inputs.sso_provider`
+#      options list.
+#   3. Copy the `okta` job below, rename it, and point its static secret
+#      reference at `<PROVIDER>_SSO_PASSWORD`.
+#   4. Register the provider helper in
+#      openmetadata-ui/src/main/resources/ui/playwright/utils/sso-providers/index.ts.
 
 name: SSO Login Nightly
 
 on:
   schedule:
-    # Every night at 03:00 UTC
+    # Every night at 03:00 UTC — runs every registered provider.
     - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       sso_provider:
-        description: "SSO provider to test"
+        description: 'SSO provider to test (or "all")'
         required: true
-        default: "okta"
+        default: okta
         type: choice
         options:
           - okta
+          - all
 
 permissions:
   contents: read
@@ -48,102 +59,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sso-login:
+  okta:
+    if: >-
+      github.event_name == 'schedule' ||
+      github.event.inputs.sso_provider == 'okta' ||
+      github.event.inputs.sso_provider == 'all'
     runs-on: ubuntu-latest
     environment: test
-
-    strategy:
-      fail-fast: false
-      matrix:
-        provider:
-          ${{ github.event_name == 'schedule'
-              && fromJSON('["okta"]')
-              || github.event.inputs.sso_provider
-              && fromJSON(format('["{0}"]', github.event.inputs.sso_provider))
-              || fromJSON('["okta"]') }}
-
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: false
-          swap-storage: true
-          docker-images: false
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache Maven Dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-
-      - name: Setup OpenMetadata Test Environment
-        uses: ./.github/actions/setup-openmetadata-test-environment
-        with:
-          python-version: "3.10"
-          # Ingestion is not required for SSO login tests.
-          args: "-d postgresql -i false"
-          ingestion_dependency: "all"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: 'openmetadata-ui/src/main/resources/ui/.nvmrc'
-
-      - name: Install dependencies
-        working-directory: openmetadata-ui/src/main/resources/ui/
-        run: yarn --ignore-scripts --frozen-lockfile
-
-      - name: Install Playwright Browsers
-        run: npx playwright@1.51.1 install chromium --with-deps
-
       - name: Run SSO Login Spec
-        working-directory: openmetadata-ui/src/main/resources/ui
-        run: |
-          npx playwright test playwright/e2e/Auth/SSOLogin.spec.ts \
-            --project=sso-auth \
-            --workers=1
-        env:
-          SSO_PROVIDER_TYPE: ${{ matrix.provider }}
-          # Reference each provider's secrets statically so GitHub Actions
-          # exposes only the credentials this step needs — not the entire
-          # org/repo secret store. A `secrets[format(...)]` style lookup
-          # would defeat static analysis and trigger CodeQL's
-          # "Excessive Secrets Exposure" rule. When a new provider lands,
-          # add a sibling step gated by `if: matrix.provider == '<provider>'`
-          # with that provider's static secret references.
-          SSO_USERNAME: ${{ secrets.OKTA_SSO_USERNAME }}
-          SSO_PASSWORD: ${{ secrets.OKTA_SSO_PASSWORD }}
-          # Okta tenant configuration — all three are REQUIRED by
-          # playwright/utils/sso-providers/okta.ts; the helper throws if any
-          # are missing so the suite is explicit about which IdP tenant it
-          # exercises.
-          OKTA_SSO_CLIENT_ID: ${{ secrets.OKTA_SSO_CLIENT_ID }}
-          OKTA_SSO_DOMAIN: ${{ secrets.OKTA_SSO_DOMAIN }}
-          OKTA_SSO_PRINCIPAL_DOMAIN: ${{ secrets.OKTA_SSO_PRINCIPAL_DOMAIN }}
-          PLAYWRIGHT_IS_OSS: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        timeout-minutes: 30
-
-      - name: Upload HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
+        uses: ./.github/actions/sso-login-run
         with:
-          name: sso-login-html-report-${{ matrix.provider }}
-          path: openmetadata-ui/src/main/resources/ui/playwright/output/playwright-report
-          retention-days: 5
-
-      - name: Clean Up
-        if: always()
-        run: |
-          cd ./docker/development
-          docker compose down --remove-orphans
-          sudo rm -rf ${PWD}/docker-volume
+          provider: okta
+          sso_password: ${{ secrets.OKTA_SSO_PASSWORD }}
+          all_vars_json: ${{ toJSON(vars) }}
