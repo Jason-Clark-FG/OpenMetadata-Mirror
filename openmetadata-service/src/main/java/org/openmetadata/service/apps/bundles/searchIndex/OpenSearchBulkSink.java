@@ -346,17 +346,20 @@ public class OpenSearchBulkSink implements BulkSink {
     try {
       String entityType = Entity.getEntityTypeFromObject(entity);
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
 
-      if (embeddingsEnabled) {
-        json = enrichWithEmbedding(entity, json, recreateIndex, existingFingerprints, tracker);
-      }
-
-      String finalJson = json;
       String docId = entity.getId().toString();
-      long estimatedSize =
-          (long) finalJson.getBytes(StandardCharsets.UTF_8).length
-              + BULK_OPERATION_METADATA_OVERHEAD;
+      JsonData docJsonData;
+      long estimatedSize;
+      if (embeddingsEnabled) {
+        String json = JsonUtils.pojoToJson(searchIndexDoc);
+        json = enrichWithEmbedding(entity, json, recreateIndex, existingFingerprints, tracker);
+        estimatedSize = (long) json.length() + BULK_OPERATION_METADATA_OVERHEAD;
+        docJsonData = OsUtils.toJsonData(json);
+      } else {
+        estimatedSize =
+            (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
+        docJsonData = OsUtils.toJsonData(searchIndexDoc);
+      }
 
       BulkOperation operation;
       if (recreateIndex) {
@@ -367,7 +370,7 @@ public class OpenSearchBulkSink implements BulkSink {
                         idx ->
                             idx.index(indexName)
                                 .id(docId)
-                                .document(OsUtils.toJsonData(finalJson))));
+                                .document(docJsonData)));
       } else {
         operation =
             BulkOperation.of(
@@ -376,7 +379,7 @@ public class OpenSearchBulkSink implements BulkSink {
                         upd ->
                             upd.index(indexName)
                                 .id(docId)
-                                .document(OsUtils.toJsonData(finalJson))
+                                .document(docJsonData)
                                 .docAsUpsert(true)));
       }
       if (tracker != null) {

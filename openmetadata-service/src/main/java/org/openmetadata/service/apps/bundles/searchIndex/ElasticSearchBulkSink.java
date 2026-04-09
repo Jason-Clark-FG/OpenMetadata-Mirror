@@ -301,10 +301,10 @@ public class ElasticSearchBulkSink implements BulkSink {
     try {
       String entityType = Entity.getEntityTypeFromObject(entity);
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
+      JsonData docJsonData = EsUtils.toJsonData(searchIndexDoc);
 
       BulkOperation operation;
       if (recreateIndex) {
@@ -312,7 +312,7 @@ public class ElasticSearchBulkSink implements BulkSink {
             BulkOperation.of(
                 op ->
                     op.index(
-                        idx -> idx.index(indexName).id(docId).document(EsUtils.toJsonData(json))));
+                        idx -> idx.index(indexName).id(docId).document(docJsonData)));
       } else {
         operation =
             BulkOperation.of(
@@ -321,7 +321,7 @@ public class ElasticSearchBulkSink implements BulkSink {
                         upd ->
                             upd.index(indexName)
                                 .id(docId)
-                                .action(a -> a.doc(EsUtils.toJsonData(json)).docAsUpsert(true))));
+                                .action(a -> a.doc(docJsonData).docAsUpsert(true))));
       }
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -376,16 +376,16 @@ public class ElasticSearchBulkSink implements BulkSink {
       StageStatsTracker tracker) {
     try {
       Object searchIndexDoc = Entity.buildSearchIndex(entityType, entity).buildSearchIndexDoc();
-      String json = JsonUtils.pojoToJson(searchIndexDoc);
       String docId = entity.getId().toString();
       long estimatedSize =
-          (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+          (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
+      JsonData docJsonData = EsUtils.toJsonData(searchIndexDoc);
 
       BulkOperation operation =
           BulkOperation.of(
               op ->
                   op.index(
-                      idx -> idx.index(indexName).id(docId).document(EsUtils.toJsonData(json))));
+                      idx -> idx.index(indexName).id(docId).document(docJsonData)));
 
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -457,8 +457,8 @@ public class ElasticSearchBulkSink implements BulkSink {
       try {
         ColumnSearchIndex columnIndex = new ColumnSearchIndex(column, table);
         Map<String, Object> searchIndexDoc = columnIndex.buildSearchIndexDoc();
-        String json = JsonUtils.pojoToJson(searchIndexDoc);
         String docId = searchIndexDoc.get("id").toString();
+        JsonData docJsonData = EsUtils.toJsonData(searchIndexDoc);
 
         BulkOperation operation;
         if (recreateIndex) {
@@ -469,7 +469,7 @@ public class ElasticSearchBulkSink implements BulkSink {
                           idx ->
                               idx.index(columnIndexName)
                                   .id(docId)
-                                  .document(EsUtils.toJsonData(json))));
+                                  .document(docJsonData)));
         } else {
           operation =
               BulkOperation.of(
@@ -478,10 +478,10 @@ public class ElasticSearchBulkSink implements BulkSink {
                           upd ->
                               upd.index(columnIndexName)
                                   .id(docId)
-                                  .action(a -> a.doc(EsUtils.toJsonData(json)).docAsUpsert(true))));
+                                  .action(a -> a.doc(docJsonData).docAsUpsert(true))));
         }
         long estimatedSize =
-            (long) json.getBytes(StandardCharsets.UTF_8).length + BULK_OPERATION_METADATA_OVERHEAD;
+            (long) JsonUtils.pojoToJson(searchIndexDoc).length() + BULK_OPERATION_METADATA_OVERHEAD;
         columnBulkProcessor.add(operation, docId, Entity.TABLE_COLUMN, null, estimatedSize);
       } catch (Exception e) {
         columnBuildFailed.incrementAndGet();

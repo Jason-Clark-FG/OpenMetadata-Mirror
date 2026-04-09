@@ -64,11 +64,17 @@ public class EsUtils {
   }
 
   public static JsonData toJsonData(String doc) {
+    Map<String, Object> docMap;
     try {
-      return JsonData.of(mapper.readTree(doc), jsonpMapper);
+      docMap = mapper.readValue(doc, new TypeReference<>() {});
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid JSON input", e);
     }
+    return JsonData.of(docMap, jsonpMapper);
+  }
+
+  public static JsonData toJsonData(Object pojo) {
+    return JsonData.of(pojo, jsonpMapper);
   }
 
   public static String parseJsonQuery(String jsonQuery) throws JsonProcessingException {
