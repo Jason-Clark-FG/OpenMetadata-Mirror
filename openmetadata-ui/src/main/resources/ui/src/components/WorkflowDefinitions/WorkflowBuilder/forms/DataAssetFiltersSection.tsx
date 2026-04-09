@@ -67,8 +67,7 @@ export const DataAssetFiltersSection: React.FC<
       <FormField
         description={t('message.choose-which-assets-this-workflow-can-act-on')}
         label={t('label.data-asset-filter')}
-        showInfoIcon={false}
-      >
+        showInfoIcon={false}>
         <>
           {dataAssetFilters.map((dataAssetFilter) => (
             <div className="tw:mt-6 first:tw:mt-0" key={dataAssetFilter.id}>
@@ -79,8 +78,7 @@ export const DataAssetFiltersSection: React.FC<
                     as="span"
                     className="tw:text-secondary"
                     size="text-xs"
-                    weight="semibold"
-                  >
+                    weight="semibold">
                     {dataAssetFilter.dataAsset.charAt(0).toUpperCase() +
                       dataAssetFilter.dataAsset.slice(1)}
                   </Typography>
@@ -118,8 +116,7 @@ export const DataAssetFiltersSection: React.FC<
                   as="span"
                   className="tw:flex tw:items-center tw:gap-2 tw:text-secondary"
                   size="text-xs"
-                  weight="medium"
-                >
+                  weight="medium">
                   <Typography as="span" size="text-xs" weight="semibold">
                     {t('label.note')}
                   </Typography>
@@ -140,8 +137,7 @@ export const DataAssetFiltersSection: React.FC<
               iconTrailing={ChevronDown}
               isDisabled={isDisabled}
               size="sm"
-              onPress={isDisabled ? undefined : handleDropdownClick}
-            >
+              onPress={isDisabled ? undefined : handleDropdownClick}>
               {t('label.add-asset-filter')}
             </Button>
             {open && (
@@ -161,8 +157,7 @@ export const DataAssetFiltersSection: React.FC<
                         if (!isAlreadySelected) {
                           handleDataAssetSelect(dataAsset);
                         }
-                      }}
-                    >
+                      }}>
                       {dataAsset}
                     </Button>
                   );

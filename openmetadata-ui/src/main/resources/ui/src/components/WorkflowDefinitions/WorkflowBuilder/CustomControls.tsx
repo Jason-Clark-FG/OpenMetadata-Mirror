@@ -12,10 +12,10 @@
  */
 
 import {
-    Button,
-    Card,
-    Divider,
-    Typography
+  Button,
+  Card,
+  Divider,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { GitBranch01, Minus, Plus } from '@untitledui/icons';
 import React from 'react';
@@ -66,8 +66,7 @@ export const CustomControls: React.FC<CustomControlsProps> = ({
   return (
     <Card
       className="tw:absolute tw:bottom-5 tw:right-5 tw:flex tw:items-center tw:gap-0.5 tw:z-10 tw:p-1"
-      data-testid="workflow-controls"
-    >
+      data-testid="workflow-controls">
       <Button
         color="tertiary"
         data-testid="undo-button"
@@ -97,8 +96,7 @@ export const CustomControls: React.FC<CustomControlsProps> = ({
       <Typography
         className="tw:min-w-11 tw:text-center tw:text-secondary"
         size="text-xs"
-        weight="medium"
-      >
+        weight="medium">
         {currentZoom}
         {t('label.percentage-symbol')}
       </Typography>

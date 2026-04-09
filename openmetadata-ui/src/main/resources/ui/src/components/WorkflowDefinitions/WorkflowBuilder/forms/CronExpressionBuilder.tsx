@@ -181,15 +181,13 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
         <div className="tw:flex-1 tw:min-w-30">
           <Typography
             className="tw:m-0 tw:mb-1 tw:text-tertiary"
-            size="text-sm"
-          >
+            size="text-sm">
             {t('every')}
           </Typography>
           <Select
             isDisabled={controlsDisabled}
             value={config.every}
-            onChange={(key) => handleConfigChange('every', String(key ?? ''))}
-          >
+            onChange={(key) => handleConfigChange('every', String(key ?? ''))}>
             {everyOptions.map((opt) => (
               <Select.Item id={opt.value} key={opt.value} label={opt.label} />
             ))}
@@ -200,15 +198,13 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
           <div className="tw:flex-1 tw:min-w-30">
             <Typography
               className="tw:m-0 tw:mb-1 tw:text-secondary"
-              size="text-sm"
-            >
+              size="text-sm">
               {t('hour')}
             </Typography>
             <Select
               isDisabled={controlsDisabled}
               value={config.hour}
-              onChange={(key) => handleConfigChange('hour', String(key ?? ''))}
-            >
+              onChange={(key) => handleConfigChange('hour', String(key ?? ''))}>
               {hourOptions.map((opt) => (
                 <Select.Item id={opt.value} key={opt.value} label={opt.label} />
               ))}
@@ -219,15 +215,13 @@ export const CronExpressionBuilder: React.FC<CronExpressionBuilderProps> = ({
         <div className="tw:flex-1 tw:min-w-30">
           <Typography
             className="tw:m-0 tw:mb-1 tw:text-secondary"
-            size="text-sm"
-          >
+            size="text-sm">
             {t('minute')}
           </Typography>
           <Select
             isDisabled={controlsDisabled}
             value={config.minute}
-            onChange={(key) => handleConfigChange('minute', String(key ?? ''))}
-          >
+            onChange={(key) => handleConfigChange('minute', String(key ?? ''))}>
             {minuteOptions.map((opt) => (
               <Select.Item id={opt.value} key={opt.value} label={opt.label} />
             ))}

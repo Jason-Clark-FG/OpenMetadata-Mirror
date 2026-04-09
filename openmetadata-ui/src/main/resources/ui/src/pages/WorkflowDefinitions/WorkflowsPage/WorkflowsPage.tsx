@@ -12,11 +12,11 @@
  */
 
 import {
-    Button,
-    Input,
-    SlideoutMenu,
-    TextArea,
-    Typography
+  Button,
+  Input,
+  SlideoutMenu,
+  TextArea,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { Plus } from '@untitledui/icons';
 import { AxiosError } from 'axios';
@@ -36,20 +36,18 @@ import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
 import { Paging } from '../../../generated/type/paging';
 import {
-    createWorkflowDefinition,
-    getWorkflowDefinitions,
-    WorkflowDefinitionsParams
+  createWorkflowDefinition,
+  getWorkflowDefinitions,
+  WorkflowDefinitionsParams,
 } from '../../../rest/workflowDefinitionsAPI';
 import { SettingMenuItem } from '../../../utils/GlobalSettingsUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
-import {
-    getWorkflowDefinitionDetailPath
-} from '../../../utils/WorkflowRouterUtils';
+import { getWorkflowDefinitionDetailPath } from '../../../utils/WorkflowRouterUtils';
 import workflowUiClassBase from '../../../utils/WorkflowUiClassBase';
 import {
-    WORKFLOW_NAME_MAX_LENGTH,
-    WORKFLOW_NAME_MIN_LENGTH,
-    WORKFLOW_NAME_REGEX
+  WORKFLOW_NAME_MAX_LENGTH,
+  WORKFLOW_NAME_MIN_LENGTH,
+  WORKFLOW_NAME_REGEX,
 } from '../../../utils/WorkflowValidationUtils';
 import { WorkflowDetailsTabs } from '../WorkflowDetails/workflow-details.interface';
 
@@ -202,7 +200,10 @@ const WorkflowsPage = () => {
       resetForm();
 
       navigate(
-        `${getWorkflowDefinitionDetailPath(workflowName, WorkflowDetailsTabs.WORKFLOW)}?mode=edit`
+        `${getWorkflowDefinitionDetailPath(
+          workflowName,
+          WorkflowDetailsTabs.WORKFLOW
+        )}?mode=edit`
       );
     } catch (error) {
       showErrorToast(
@@ -231,8 +232,7 @@ const WorkflowsPage = () => {
     <PageLayoutV1
       className="workflow-page"
       pageContainerStyle={{ paddingLeft: 0, paddingRight: 0 }}
-      pageTitle={t('label.workflow-plural')}
-    >
+      pageTitle={t('label.workflow-plural')}>
       <div className="tw:flex tw:flex-col tw:overflow-hidden tw:mx-6 tw:my-4">
         <div className="tw:px-6 tw:py-4 tw:bg-primary tw:rounded-xl tw:border tw:border-border-secondary tw:mb-4">
           <div className="tw:flex tw:items-center tw:justify-between">
@@ -249,8 +249,7 @@ const WorkflowsPage = () => {
                 data-testid="create-workflow-button"
                 iconLeading={Plus}
                 size="sm"
-                onPress={handleNewWorkflowClick}
-              >
+                onPress={handleNewWorkflowClick}>
                 {t('label.new-workflow')}
               </Button>
             )}
@@ -272,8 +271,7 @@ const WorkflowsPage = () => {
           {paging.total > PAGE_SIZE_MEDIUM && (
             <div
               className="tw:flex tw:justify-center tw:py-4"
-              data-testid="workflows-pagination"
-            >
+              data-testid="workflows-pagination">
               <PaginationComponent
                 current={currentPage}
                 hideOnSinglePage={false}
@@ -294,21 +292,18 @@ const WorkflowsPage = () => {
           if (!open) {
             handleModalCancel();
           }
-        }}
-      >
+        }}>
         {({ close }) => (
           <>
             <SlideoutMenu.Header onClose={close}>
               <Typography
                 as="p"
-                className="tw:m-0 tw:mb-1 tw:text-base tw:font-semibold tw:text-primary"
-              >
+                className="tw:m-0 tw:mb-1 tw:text-base tw:font-semibold tw:text-primary">
                 {t('label.create-new-workflow')}
               </Typography>
               <Typography
                 as="p"
-                className="tw:m-0 tw:text-sm tw:text-secondary"
-              >
+                className="tw:m-0 tw:text-sm tw:text-secondary">
                 {t('message.automate-your-tasks-by-creating-custom-workflows')}
               </Typography>
             </SlideoutMenu.Header>
@@ -339,8 +334,7 @@ const WorkflowsPage = () => {
                     <Typography
                       as="p"
                       className="tw:m-0 tw:mt-1 tw:text-error-primary"
-                      size="text-xs"
-                    >
+                      size="text-xs">
                       {nameError}
                     </Typography>
                   )}
@@ -348,8 +342,7 @@ const WorkflowsPage = () => {
                 <div>
                   <Typography
                     as="p"
-                    className="tw:m-0 tw:mb-1.5 tw:text-sm tw:font-medium tw:text-secondary"
-                  >
+                    className="tw:m-0 tw:mb-1.5 tw:text-sm tw:font-medium tw:text-secondary">
                     {t('label.description')}
                   </Typography>
                   <TextArea
@@ -368,16 +361,14 @@ const WorkflowsPage = () => {
                   color="secondary"
                   data-testid="cancel-workflow-button"
                   size="sm"
-                  onPress={close}
-                >
+                  onPress={close}>
                   {t('label.cancel')}
                 </Button>
                 <Button
                   color="primary"
                   data-testid="submit-workflow-button"
                   size="sm"
-                  onPress={handleModalSubmit}
-                >
+                  onPress={handleModalSubmit}>
                   {t('label.save-and-next')}
                 </Button>
               </div>

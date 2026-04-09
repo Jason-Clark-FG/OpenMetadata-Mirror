@@ -17,8 +17,8 @@ import { Connection, Edge, Node } from 'reactflow';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
 import {
-    DataAssetFilter,
-    NodeConfig
+  DataAssetFilter,
+  NodeConfig,
 } from '../interface/workflow-builder-components.interface';
 
 export interface WorkflowState {

@@ -74,8 +74,7 @@ export const QueryBuilderSection: React.FC<QueryBuilderSectionProps> = ({
   return (
     <div
       className={readOnly ? 'tw:pointer-events-none' : ''}
-      data-testid="query-builder-section"
-    >
+      data-testid="query-builder-section">
       <ConfigProvider getPopupContainer={getQueryBuilderPortalContainer}>
         <QueryBuilderWidget
           data-testid="query-builder-widget"

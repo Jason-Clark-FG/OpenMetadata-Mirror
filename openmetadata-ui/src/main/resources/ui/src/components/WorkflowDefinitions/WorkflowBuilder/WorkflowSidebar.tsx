@@ -12,10 +12,10 @@
  */
 
 import {
-    Badge,
-    Card,
-    Divider,
-    Typography
+  Badge,
+  Card,
+  Divider,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import React from 'react';
@@ -59,8 +59,7 @@ const TaskItem = ({
       className={itemClassName}
       data-testid={`workflow-task-item-${type}`}
       draggable={!disabled}
-      onDragStart={handleDragStart}
-    >
+      onDragStart={handleDragStart}>
       <Typography as="span" className="tw:mr-2 tw:flex tw:items-center">
         {icon}
       </Typography>
@@ -70,8 +69,7 @@ const TaskItem = ({
           as="p"
           className="tw:m-0 tw:text-primary"
           size="text-sm"
-          weight="regular"
-        >
+          weight="regular">
           {label}
         </Typography>
       </div>
@@ -172,8 +170,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
         as="p"
         className="tw:m-0 tw:text-primary tw:px-4.5 tw:py-2.5"
         size="text-xs"
-        weight="semibold"
-      >
+        weight="semibold">
         {t('label.drag-and-drop-nodes')}
       </Typography>
 
@@ -191,8 +188,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
               return;
             }
             onDragStart(e, NodeSubType.StartEvent, 'Start');
-          }}
-        >
+          }}>
           {getNodeIcon(NodeSubType.StartEvent, {
             style: { width: '16px', height: '16px' },
           })}
@@ -200,8 +196,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
             as="p"
             className="tw:m-0 tw:mt-1 tw:text-primary"
             size="text-xs"
-            weight="regular"
-          >
+            weight="regular">
             {t('label.start')}
           </Typography>
         </Card>
@@ -217,8 +212,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
               return;
             }
             onDragStart(e, NodeSubType.EndEvent, 'End');
-          }}
-        >
+          }}>
           {getNodeIcon(NodeSubType.EndEvent, {
             style: { width: '16px', height: '16px' },
           })}
@@ -226,8 +220,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
             as="p"
             className="tw:m-0 tw:mt-1 tw:text-primary"
             size="text-xs"
-            weight="regular"
-          >
+            weight="regular">
             {t('label.end')}
           </Typography>
         </Card>
@@ -237,14 +230,12 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
         as="p"
         className="tw:m-0 tw:mt-2 tw:mb-4 tw:px-3.5 tw:text-secondary tw:tracking-wide tw:uppercase"
         size="text-xs"
-        weight="semibold"
-      >
+        weight="semibold">
         {t('label.automated-tasks')}
       </Typography>
       <div
         className="tw:mb-6 tw:px-3.5"
-        data-testid="workflow-automated-tasks-section"
-      >
+        data-testid="workflow-automated-tasks-section">
         {automatedTasks.map((task) => (
           <TaskItem
             disabled={isNodeDragEnabled ? !isNodeDragEnabled(task.type) : false}
@@ -261,8 +252,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
         as="p"
         className="tw:m-0 tw:mt-2 tw:mb-4 tw:px-3.5 tw:text-secondary tw:tracking-wide tw:uppercase"
         size="text-xs"
-        weight="semibold"
-      >
+        weight="semibold">
         {t('message.sinks')}
       </Typography>
       <div className="tw:mb-6 tw:px-3.5" data-testid="workflow-sinks-section">
@@ -283,8 +273,7 @@ const WorkflowSidebar = ({ isNodeDragEnabled }: WorkflowSidebarProps) => {
         as="p"
         className="tw:m-0 tw:mt-2 tw:mb-4 tw:px-3.5 tw:text-secondary tw:tracking-wide tw:uppercase"
         size="text-xs"
-        weight="semibold"
-      >
+        weight="semibold">
         {t('label.user-tasks')}
       </Typography>
       <div className="tw:px-3.5" data-testid="workflow-user-tasks-section">

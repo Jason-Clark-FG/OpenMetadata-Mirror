@@ -17,23 +17,23 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import {
-    FieldOptions,
-    FIELD_OPTIONS_DROPDOWN
+  FieldOptions,
+  FIELD_OPTIONS_DROPDOWN,
 } from '../../../../constants/WorkflowBuilder.constants';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import { EntityType } from '../../../../enums/entity.enum';
 import { TagSource } from '../../../../generated/api/domains/createDataProduct';
 import { EntityStatus } from '../../../../generated/entity/data/glossaryTerm';
 import {
-    LabelType,
-    State,
-    TagLabel
+  LabelType,
+  State,
+  TagLabel,
 } from '../../../../generated/type/tagLabel';
 import { getTags } from '../../../../rest/tagAPI';
 import { showErrorToast } from '../../../../utils/ToastUtils';
 import {
-    createNodeConfig,
-    isValidString
+  createNodeConfig,
+  isValidString,
 } from '../../../../utils/WorkflowBuilderUtils';
 import TagSuggestion from '../../../common/TagSuggestion/TagSuggestion';
 
@@ -240,8 +240,7 @@ export const SetActionForm: React.FC<SetActionFormProps> = ({
           isDisabled={isFormDisabled || isLoadingOptions}
           label={t('label.field-value')}
           value={formData.fieldValue}
-          onChange={(e) => updateFormData('fieldValue', String(e ?? ''))}
-        >
+          onChange={(e) => updateFormData('fieldValue', String(e ?? ''))}>
           {getSelectOptions(formData.fieldName).map((o) => (
             <Select.Item id={o} key={o} label={o} />
           ))}
@@ -281,8 +280,7 @@ export const SetActionForm: React.FC<SetActionFormProps> = ({
             onChange={(e) => {
               updateFormData('fieldName', String(e ?? ''));
               updateFormData('fieldValue', '');
-            }}
-          >
+            }}>
             {FIELD_OPTIONS_DROPDOWN.map((opt) => (
               <Select.Item id={opt.value} key={opt.value} label={opt.label} />
             ))}

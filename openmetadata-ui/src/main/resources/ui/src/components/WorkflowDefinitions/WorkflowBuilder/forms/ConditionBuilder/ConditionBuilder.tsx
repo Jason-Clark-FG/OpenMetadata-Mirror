@@ -12,37 +12,37 @@
  */
 
 import {
-    Autocomplete,
-    Button,
-    Card,
-    Input,
-    Select,
-    SelectItemType,
-    Toggle
+  Autocomplete,
+  Button,
+  Card,
+  Input,
+  Select,
+  SelectItemType,
+  Toggle,
 } from '@openmetadata/ui-core-components';
 import { Plus, Trash01 } from '@untitledui/icons';
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import { useWorkflowModeContext } from '../../../../../contexts/WorkflowModeContext';
 import { CONDITION_BUILDER_WORKFLOW_TRIGGER_FIELDS } from './ConditionBuilder.constants';
 import type {
-    ConditionBuilderOption,
-    ConditionBuilderProps,
-    ConditionFieldDefinition,
-    ConditionRow,
-    ConditionType
+  ConditionBuilderOption,
+  ConditionBuilderProps,
+  ConditionFieldDefinition,
+  ConditionRow,
+  ConditionType,
 } from './ConditionBuilder.interface';
 import {
-    buildConditionBuilderPayload,
-    generateRowId,
-    parseConditionBuilderPayload
+  buildConditionBuilderPayload,
+  generateRowId,
+  parseConditionBuilderPayload,
 } from './conditionBuilderTransformer';
 
 interface ConditionBuilderValueControlProps {
@@ -135,8 +135,7 @@ function ConditionBuilderValueControl(
     return (
       <div
         className="tw:flex tw:items-center tw:min-h-10"
-        data-testid={dataTestId}
-      >
+        data-testid={dataTestId}>
         <Toggle
           data-testid={`${dataTestId}-switch`}
           isDisabled={disabled}
@@ -194,8 +193,7 @@ function ConditionBuilderValueControl(
           label: opt?.label ?? String(key),
         });
         onChange([...selectedItems.items.map((i) => i.id), String(key)]);
-      }}
-    >
+      }}>
       {(item) => (
         <Autocomplete.Item
           id={item.id}
@@ -341,13 +339,11 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
   return (
     <Card
       className="tw:flex tw:flex-col tw:gap-4 tw:p-4"
-      data-testid={dataTestId}
-    >
+      data-testid={dataTestId}>
       {showCondition && (
         <div
           className="tw:flex tw:justify-center tw:mb-1"
-          data-testid={`${dataTestId}-condition-radio`}
-        >
+          data-testid={`${dataTestId}-condition-radio`}>
           <div className="tw:flex tw:border tw:border-border-secondary tw:rounded-lg tw:overflow-hidden">
             <Button
               color={condition === 'AND' ? 'primary' : 'tertiary'}
@@ -359,8 +355,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
                   setCondition('AND');
                   emitChange(rows, 'AND');
                 }
-              }}
-            >
+              }}>
               {t('label.condition-and')}
             </Button>
             <Button
@@ -373,8 +368,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
                   setCondition('OR');
                   emitChange(rows, 'OR');
                 }
-              }}
-            >
+              }}>
               {t('label.condition-or')}
             </Button>
           </div>
@@ -386,8 +380,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
           <div
             className="tw:flex tw:items-center tw:gap-4 tw:flex-nowrap"
             data-testid="advanced-search-field-select"
-            key={row.id}
-          >
+            key={row.id}>
             <div className="tw:flex-1 tw:min-w-0">
               <Select
                 data-testid={`${dataTestId}-row-${index}-field`}
@@ -395,8 +388,7 @@ export const ConditionBuilder: React.FC<ConditionBuilderProps> = ({
                 value={row.field}
                 onChange={(key) =>
                   handleRowFieldChange(row.id, String(key ?? ''))
-                }
-              >
+                }>
                 {fieldSelectOptions.map((opt) => (
                   <Select.Item
                     id={opt.value}

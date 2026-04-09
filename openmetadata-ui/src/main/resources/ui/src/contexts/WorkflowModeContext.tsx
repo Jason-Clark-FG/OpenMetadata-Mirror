@@ -13,8 +13,8 @@
 
 import React, { createContext, ReactNode, useContext } from 'react';
 import {
-    useWorkflowMode,
-    UseWorkflowModeReturn
+  useWorkflowMode,
+  UseWorkflowModeReturn,
 } from '../hooks/useWorkflowMode';
 
 interface WorkflowModeContextProps {

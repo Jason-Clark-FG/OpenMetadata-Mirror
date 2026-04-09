@@ -12,12 +12,12 @@
  */
 
 import {
-    Button,
-    Checkbox,
-    Input,
-    Tooltip,
-    TooltipTrigger,
-    Typography
+  Button,
+  Checkbox,
+  Input,
+  Tooltip,
+  TooltipTrigger,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { InfoCircle } from '@untitledui/icons';
 import React, { useEffect, useState } from 'react';
@@ -29,8 +29,8 @@ import { NodeSubType } from '../../../../generated/governance/workflows/elements
 import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import { AssigneeCandidate } from '../../../../interface/WorkflowTypes.interface';
 import {
-    createNodeConfig,
-    isValidString
+  createNodeConfig,
+  isValidString,
 } from '../../../../utils/WorkflowBuilderUtils';
 import { UserTeamSelectableList } from '../../../common/UserTeamSelectableList/UserTeamSelectableList.component';
 import { FormField } from '../common/FormField';
@@ -190,8 +190,7 @@ export const UserApprovalForm: React.FC<UserApprovalFormProps> = ({
               <Typography
                 as="span"
                 className="tw:text-sm tw:font-medium tw:text-secondary"
-                data-testid="user-approval-approver-label"
-              >
+                data-testid="user-approval-approver-label">
                 {t('label.approver-plural')}
               </Typography>
               <Tooltip title={t('message.approver-tooltip')}>
@@ -218,8 +217,7 @@ export const UserApprovalForm: React.FC<UserApprovalFormProps> = ({
             </div>
             <div
               className="tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-tertiary"
-              data-testid="user-approval-no-reviewers-info"
-            >
+              data-testid="user-approval-no-reviewers-info">
               <InfoCircle className="tw:w-4 tw:h-4 tw:shrink-0" />
               <Typography as="span" className="tw:leading-snug">
                 {t('message.approver-no-reviewers-info')}
@@ -228,8 +226,7 @@ export const UserApprovalForm: React.FC<UserApprovalFormProps> = ({
             <FormField
               description={t('message.approver-users-helper')}
               label={t('label.additional-approvers')}
-              showInfoIcon={false}
-            >
+              showInfoIcon={false}>
               <ModeAwareFormField>
                 <UserTeamSelectableList
                   hasPermission
@@ -240,18 +237,15 @@ export const UserApprovalForm: React.FC<UserApprovalFormProps> = ({
                     placement: 'bottomLeft',
                     overlayStyle: { zIndex: 10000 },
                   }}
-                  onUpdate={(updated) => setCandidates(updated ?? [])}
-                >
+                  onUpdate={(updated) => setCandidates(updated ?? [])}>
                   <Button
                     className="tw:h-10 tw:w-full tw:min-w-0 tw:justify-start tw:overflow-hidden"
                     color="secondary"
                     data-testid="user-approval-users-select-trigger"
-                    size="md"
-                  >
+                    size="md">
                     <Typography
                       as="span"
-                      className="tw:block tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap"
-                    >
+                      className="tw:block tw:min-w-0 tw:overflow-hidden tw:text-ellipsis tw:whitespace-nowrap">
                       {getApproversButtonLabel(candidates, t)}
                     </Typography>
                   </Button>

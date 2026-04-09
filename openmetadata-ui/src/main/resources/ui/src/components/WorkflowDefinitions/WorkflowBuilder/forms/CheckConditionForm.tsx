@@ -17,14 +17,14 @@ import { EntityType } from '../../../../enums/entity.enum';
 import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import {
-    createNodeConfig,
-    isValidString
+  createNodeConfig,
+  isValidString,
 } from '../../../../utils/WorkflowBuilderUtils';
 import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import {
-    FormActionButtons,
-    MetadataFormSection,
-    QueryBuilderSection
+  FormActionButtons,
+  MetadataFormSection,
+  QueryBuilderSection,
 } from './';
 
 interface CheckConditionFormProps {

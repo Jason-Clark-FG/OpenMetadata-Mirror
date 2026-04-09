@@ -35,8 +35,7 @@ export const EmptyCanvasMessage: React.FC<EmptyCanvasMessageProps> = ({
         <ClickIcon />
         <Typography
           className="tw:m-0 tw:text-primary tw:text-center"
-          size="text-sm"
-        >
+          size="text-sm">
           {t('label.drag-and-drop-the-nodes-here')}
         </Typography>
       </Card>

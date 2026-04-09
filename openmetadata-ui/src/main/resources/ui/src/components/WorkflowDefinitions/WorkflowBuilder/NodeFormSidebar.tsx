@@ -12,9 +12,9 @@
  */
 
 import {
-    Divider,
-    SlideoutMenu,
-    Typography
+  Divider,
+  SlideoutMenu,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -139,15 +139,13 @@ export const NodeFormSidebar: React.FC<NodeFormSidebarProps> = ({
         if (!open) {
           onClose();
         }
-      }}
-    >
+      }}>
       {({ close }) => (
         <>
           <SlideoutMenu.Header onClose={close}>
             <Typography
               as="p"
-              className="tw:m-0 tw:text-sm tw:font-semibold tw:text-primary"
-            >
+              className="tw:m-0 tw:text-sm tw:font-semibold tw:text-primary">
               {nodeTitle}
             </Typography>
           </SlideoutMenu.Header>

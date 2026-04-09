@@ -12,11 +12,11 @@
  */
 
 import {
-    Autocomplete,
-    Button,
-    Input,
-    SelectItemType,
-    Typography
+  Autocomplete,
+  Button,
+  Input,
+  SelectItemType,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { Trash01 } from '@untitledui/icons';
 import React, { useEffect, useRef, useState } from 'react';
@@ -231,8 +231,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
               const item = { id: String(key), label: String(key) };
               selectedFieldItems.append(item);
               setSelectedFields((prev) => [...prev, String(key)]);
-            }}
-          >
+            }}>
             {(item) => (
               <Autocomplete.Item
                 id={item.id}
@@ -248,8 +247,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
           <Typography
             className="tw:text-primary"
             size="text-sm"
-            weight="semibold"
-          >
+            weight="semibold">
             {t('label.scoring-levels')}
           </Typography>
 
@@ -258,8 +256,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
               <Typography
                 className="tw:m-0  tw:text-secondary"
                 size="text-sm"
-                weight="semibold"
-              >
+                weight="semibold">
                 {t('label.threshold-percentage')}
               </Typography>
             </div>
@@ -267,8 +264,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
               <Typography
                 className="tw:m-0 tw:text-secondary"
                 size="text-sm"
-                weight="semibold"
-              >
+                weight="semibold">
                 {t('label.level-name')}
               </Typography>
             </div>
@@ -278,8 +274,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
           {scoringLevels.map((level, index) => (
             <div
               className="tw:flex tw:gap-3 tw:mb-3 tw:items-center"
-              key={index}
-            >
+              key={index}>
               <div className="tw:w-1/3">
                 <Input
                   icon={PercentIcon}
@@ -326,8 +321,7 @@ export const DataCompletenessForm: React.FC<DataCompletenessFormProps> = ({
             data-testid="add-scoring-level-button"
             isDisabled={isFormDisabled}
             size="sm"
-            onPress={addScoringLevel}
-          >
+            onPress={addScoringLevel}>
             {t('label.add-level')}
           </Button>
         </div>

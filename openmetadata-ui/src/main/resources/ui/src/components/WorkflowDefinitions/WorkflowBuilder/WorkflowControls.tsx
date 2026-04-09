@@ -12,11 +12,11 @@
  */
 
 import {
-    Button,
-    Dialog,
-    Modal,
-    ModalOverlay,
-    Typography
+  Button,
+  Dialog,
+  Modal,
+  ModalOverlay,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -61,8 +61,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           color="tertiary-destructive"
           data-testid="delete-workflow-button"
           size="sm"
-          onPress={onDeleteWorkflow}
-        >
+          onPress={onDeleteWorkflow}>
           {t('label.delete-workflow')}
         </Button>
       )}
@@ -72,8 +71,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           data-testid="run-workflow-button"
           isDisabled={isRunLoading}
           size="sm"
-          onPress={onRunWorkflow}
-        >
+          onPress={onRunWorkflow}>
           {isRunLoading ? t('label.running') : t('label.run-now')}
         </Button>
       )}
@@ -82,8 +80,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           color="secondary"
           data-testid="cancel-workflow-button"
           size="sm"
-          onPress={handleCancelClick}
-        >
+          onPress={handleCancelClick}>
           {t('label.cancel')}
         </Button>
       )}
@@ -92,8 +89,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           color="secondary"
           data-testid="test-workflow-button"
           size="sm"
-          onPress={onTestWorkflow}
-        >
+          onPress={onTestWorkflow}>
           {t('label.validate-workflow')}
         </Button>
       )}
@@ -102,8 +98,7 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
           color="primary"
           data-testid="save-workflow-button"
           size="sm"
-          onPress={onSaveWorkflow}
-        >
+          onPress={onSaveWorkflow}>
           {t('label.save-workflow')}
         </Button>
       )}
@@ -114,14 +109,12 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
             showCloseButton
             title={t('message.discard-your-changes')}
             width={480}
-            onClose={() => setShowCancelModal(false)}
-          >
+            onClose={() => setShowCancelModal(false)}>
             <Dialog.Content>
               <Typography
                 as="p"
                 className="tw:m-0 tw:text-secondary"
-                size="text-sm"
-              >
+                size="text-sm">
                 {t('message.unsaved-changes-warning')}
               </Typography>
             </Dialog.Content>
@@ -130,16 +123,14 @@ export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
                 color="secondary"
                 data-testid="save-workflow-cancel-modal-button"
                 size="sm"
-                onPress={handleSaveChanges}
-              >
+                onPress={handleSaveChanges}>
                 {t('label.save-workflow')}
               </Button>
               <Button
                 color="primary"
                 data-testid="close-without-saving-button"
                 size="sm"
-                onPress={handleProceedToCancel}
-              >
+                onPress={handleProceedToCancel}>
                 {t('label.close-without-saving')}
               </Button>
             </Dialog.Footer>

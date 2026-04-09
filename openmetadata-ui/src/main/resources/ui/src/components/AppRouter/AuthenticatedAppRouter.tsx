@@ -15,8 +15,8 @@ import React, { FunctionComponent, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import {
-    PLACEHOLDER_ROUTE_ENTITY_TYPE,
-    ROUTES
+  PLACEHOLDER_ROUTE_ENTITY_TYPE,
+  ROUTES,
 } from '../../constants/constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';

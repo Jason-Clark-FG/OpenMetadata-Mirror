@@ -38,8 +38,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   return (
     <div
       className={`tw:mb-6 ${className ?? ''}`}
-      data-testid={`form-field-${label.toLowerCase().replace(/\s+/g, '-')}`}
-    >
+      data-testid={`form-field-${label.toLowerCase().replace(/\s+/g, '-')}`}>
       <InfoLabel
         className="tw:mb-1.5"
         description={description}
@@ -49,8 +48,9 @@ export const FormField: React.FC<FormFieldProps> = ({
       />
       <div
         className="tw:w-full"
-        data-testid={`form-control-${label.toLowerCase().replace(/\s+/g, '-')}`}
-      >
+        data-testid={`form-control-${label
+          .toLowerCase()
+          .replace(/\s+/g, '-')}`}>
         {children}
       </div>
     </div>

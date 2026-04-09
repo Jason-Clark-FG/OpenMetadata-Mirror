@@ -69,8 +69,7 @@ export const EventTriggerFilterSection: React.FC<
           iconLeading={Plus}
           isDisabled={controlsDisabled}
           size="sm"
-          onPress={handleAddFilter}
-        >
+          onPress={handleAddFilter}>
           {t('label.add-asset-filter')}
         </Button>
       </div>

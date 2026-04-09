@@ -12,10 +12,10 @@
  */
 
 import {
-    Box,
-    Card,
-    Divider,
-    Typography
+  Box,
+  Card,
+  Divider,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { useCallback } from 'react';
@@ -43,14 +43,12 @@ const WorkflowCard = ({ data, onClick, className }: WorkflowCardProps) => {
         className
       )}
       data-testid={data.key}
-      onClick={handleOnClick}
-    >
+      onClick={handleOnClick}>
       <Box align="center" direction="row" gap={2}>
         <Box
           align="center"
           className="tw:size-6 tw:rounded-md tw:bg-brand-solid"
-          justify="center"
-        >
+          justify="center">
           {IconComponent && (
             <IconComponent className="tw:size-3 tw:text-white" />
           )}
@@ -62,8 +60,7 @@ const WorkflowCard = ({ data, onClick, className }: WorkflowCardProps) => {
             ellipsis={{ rows: 1 }}
             size="text-sm"
             title={titleText}
-            weight="medium"
-          >
+            weight="medium">
             {titleText}
           </Typography>
         </div>
@@ -76,8 +73,7 @@ const WorkflowCard = ({ data, onClick, className }: WorkflowCardProps) => {
         className="tw:text-start tw:text-secondary"
         ellipsis={{ rows: 3 }}
         size="text-xs"
-        title={data.description || undefined}
-      >
+        title={data.description || undefined}>
         {data.description}
       </Typography>
     </Card>

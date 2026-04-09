@@ -16,8 +16,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import {
-    createNodeConfig,
-    isValidString
+  createNodeConfig,
+  isValidString,
 } from '../../../../utils/WorkflowBuilderUtils';
 import { FormActionButtons, MetadataFormSection } from './';
 
@@ -84,16 +84,14 @@ export const RevertBackForm: React.FC<RevertBackFormProps> = ({
             as="p"
             className="tw:m-0 tw:mb-1.5 tw:px-3 tw:py-2.5 tw:text-brand-700 tw:bg-brand-100 tw:rounded"
             size="text-xs"
-            weight="semibold"
-          >
+            weight="semibold">
             {t('label.revert-changes')}
           </Typography>
           <Typography
             as="p"
             className="tw:m-0 tw:px-3 tw:pt-1.5 tw:pb-3 tw:text-primary"
             size="text-xs"
-            weight="regular"
-          >
+            weight="regular">
             {t(
               'message.this-node-will-restore-the-entity-back-to-its-last-approved-version'
             )}

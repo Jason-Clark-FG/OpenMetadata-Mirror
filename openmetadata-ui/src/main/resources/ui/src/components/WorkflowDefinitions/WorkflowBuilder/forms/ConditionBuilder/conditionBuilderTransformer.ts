@@ -12,11 +12,11 @@
  */
 
 import type {
-    CheckChangeDescConditionPayload,
-    ConditionBuilderPayload,
-    ConditionRow,
-    ConditionRulesMap,
-    ConditionType
+  CheckChangeDescConditionPayload,
+  ConditionBuilderPayload,
+  ConditionRow,
+  ConditionRulesMap,
+  ConditionType,
 } from './ConditionBuilder.interface';
 
 export function generateRowId(index?: number): string {

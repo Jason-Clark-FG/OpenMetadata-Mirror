@@ -17,15 +17,15 @@ import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubT
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { Event } from '../generated/governance/workflows/elements/triggers/eventBasedEntityTrigger';
 import {
-    TriggerObject,
-    Type,
-    WorkflowDefinition
+  TriggerObject,
+  Type,
+  WorkflowDefinition,
 } from '../generated/governance/workflows/workflowDefinition';
 import {
-    BackendEdge,
-    BackendNode,
-    NodeData,
-    NodePosition
+  BackendEdge,
+  BackendNode,
+  NodeData,
+  NodePosition,
 } from '../interface/WorkflowTypes.interface';
 
 const getUINodeType = (backendType: string, backendSubType: string): string => {

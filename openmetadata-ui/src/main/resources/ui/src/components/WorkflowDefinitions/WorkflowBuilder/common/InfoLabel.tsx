@@ -35,13 +35,11 @@ export const InfoLabel: React.FC<InfoLabelProps> = ({
       <div
         className={`tw:flex tw:items-center tw:gap-1 ${
           description ? 'tw:mb-1' : ''
-        }`}
-      >
+        }`}>
         <Typography
           className="tw:text-secondary"
           size="text-sm"
-          weight="medium"
-        >
+          weight="medium">
           {text}
         </Typography>
         {showIcon && (

@@ -113,8 +113,7 @@ export const StraightEdge = (props: EdgeProps) => {
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               pointerEvents: 'all',
               ...labelStyleOverrides,
-            }}
-          >
+            }}>
             <Typography size="text-xs" weight="semibold">
               {label}
             </Typography>

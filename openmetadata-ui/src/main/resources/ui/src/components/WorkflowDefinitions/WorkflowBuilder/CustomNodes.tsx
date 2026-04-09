@@ -31,8 +31,7 @@ export const StartNode: React.FC<NodeProps<CustomNodeData>> = () => {
   return (
     <Card
       className="tw:flex tw:items-center tw:rounded-full tw:relative tw:overflow-visible"
-      data-testid="workflow-start-node"
-    >
+      data-testid="workflow-start-node">
       <div className="tw:flex tw:items-center tw:justify-center tw:p-1.5">
         {getCanvasNodeIcon(NodeSubType.StartEvent, {
           style: { width: '32px', height: '32px' },
@@ -42,8 +41,7 @@ export const StartNode: React.FC<NodeProps<CustomNodeData>> = () => {
         <Typography
           className="tw:m-0 tw:text-primary"
           size="text-lg"
-          weight="medium"
-        >
+          weight="medium">
           {t('label.start')}
         </Typography>
       </div>
@@ -68,8 +66,7 @@ export const EndNode: React.FC<NodeProps<CustomNodeData>> = () => {
   return (
     <Card
       className="tw:flex tw:items-center tw:rounded-full tw:relative tw:overflow-visible"
-      data-testid="workflow-end-node"
-    >
+      data-testid="workflow-end-node">
       <Handle
         className={HANDLE_CLASS_NAME}
         position={Position.Left}
@@ -90,8 +87,7 @@ export const EndNode: React.FC<NodeProps<CustomNodeData>> = () => {
         <Typography
           className="tw:m-0 tw:text-primary"
           size="text-lg"
-          weight="medium"
-        >
+          weight="medium">
           {t('label.end')}
         </Typography>
       </div>
@@ -114,8 +110,7 @@ export const AutomatedTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
       data-testid={`workflow-${data?.subType
         ?.toLowerCase()
         .replace(/([A-Z])/g, '-$1')
-        .replace(/^-/, '')}-node`}
-    >
+        .replace(/^-/, '')}-node`}>
       <Handle
         className={HANDLE_CLASS_NAME}
         position={Position.Left}
@@ -136,8 +131,7 @@ export const AutomatedTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
         <Typography
           className="tw:m-0 tw:text-sm tw:font-medium tw:text-primary"
           size="text-sm"
-          weight="medium"
-        >
+          weight="medium">
           {getDisplayLabelFromSubType(data.subType)}
         </Typography>
       </div>
@@ -146,8 +140,7 @@ export const AutomatedTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
         <Typography
           className="tw:m-0 tw:text-xs tw:font-medium tw:text-primary"
           size="text-xs"
-          weight="medium"
-        >
+          weight="medium">
           {data.displayName || data.label}
         </Typography>
       </div>
@@ -180,8 +173,7 @@ export const UserTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
       data-testid={`workflow-${data?.subType
         ?.toLowerCase()
         .replace(/([A-Z])/g, '-$1')
-        .replace(/^-/, '')}-node`}
-    >
+        .replace(/^-/, '')}-node`}>
       <Handle
         className={HANDLE_CLASS_NAME}
         position={Position.Left}
@@ -201,8 +193,7 @@ export const UserTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
         <Typography
           className="tw:m-0  tw:text-primary"
           size="text-sm"
-          weight="medium"
-        >
+          weight="medium">
           {getDisplayLabelFromSubType(data.subType)}
         </Typography>
       </div>
@@ -212,8 +203,7 @@ export const UserTaskNode: React.FC<NodeProps<CustomNodeData>> = ({
         <Typography
           className="tw:m-0 tw:text-xs tw:font-medium tw:text-primary"
           size="text-xs"
-          weight="medium"
-        >
+          weight="medium">
           {data.displayName || data.label}
         </Typography>
       </div>

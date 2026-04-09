@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import {
-    PLACEHOLDER_ROUTE_FQN,
-    PLACEHOLDER_ROUTE_TAB,
-    ROUTES
+  PLACEHOLDER_ROUTE_FQN,
+  PLACEHOLDER_ROUTE_TAB,
+  ROUTES,
 } from '../constants/constants';
 import {
-    GlobalSettingOptions,
-    GlobalSettingsMenuCategory
+  GlobalSettingOptions,
+  GlobalSettingsMenuCategory,
 } from '../constants/GlobalSettings.constants';
 import { getSettingsPathWithFqn } from './RouterUtils';
 import { getEncodedFqn } from './StringsUtils';
@@ -26,7 +26,10 @@ import { getEncodedFqn } from './StringsUtils';
 export const getWorkflowDefinitionsListPath = () => ROUTES.WORKFLOWS;
 
 /** Builder/detail URL under `/workflows` (Collate-compatible). */
-export const getWorkflowDefinitionDetailPath = (fqn: string, tab = 'workflow') =>
+export const getWorkflowDefinitionDetailPath = (
+  fqn: string,
+  tab = 'workflow'
+) =>
   ROUTES.WORKFLOWS_WITH_FQN_TAB.replace(
     PLACEHOLDER_ROUTE_FQN,
     getEncodedFqn(fqn)

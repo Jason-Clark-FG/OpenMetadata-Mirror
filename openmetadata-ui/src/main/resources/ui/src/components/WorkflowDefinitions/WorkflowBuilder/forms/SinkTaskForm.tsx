@@ -17,8 +17,8 @@ import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import {
-    createNodeConfig,
-    isValidString
+  createNodeConfig,
+  isValidString,
 } from '../../../../utils/WorkflowBuilderUtils';
 
 import { FormActionButtons, MetadataFormSection } from './';
@@ -217,8 +217,7 @@ export const SinkTaskForm: React.FC<SinkTaskFormProps> = ({
             value={formData.conflictResolution}
             onChange={(key) =>
               updateFormData('conflictResolution', String(key ?? ''))
-            }
-          >
+            }>
             {conflictResolutionOptions.map((opt) => (
               <Select.Item id={opt.value} key={opt.value} label={opt.label} />
             ))}

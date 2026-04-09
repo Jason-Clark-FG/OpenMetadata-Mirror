@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-    Type,
-    WorkflowDefinition
+  Type,
+  WorkflowDefinition,
 } from '../generated/governance/workflows/workflowDefinition';
 import workflowUiClassBase from '../utils/WorkflowUiClassBase';
 
@@ -142,7 +142,8 @@ export const useWorkflowMode = (
     const caps = workflowUiClassBase.getCapabilities();
     const structural = caps.allowStructuralGraphEdits;
     const showWorkflowNodePalette = caps.showWorkflowNodePalette;
-    const allowFullStartNodeConfiguration = caps.allowFullStartNodeConfiguration;
+    const allowFullStartNodeConfiguration =
+      caps.allowFullStartNodeConfiguration;
 
     return {
       mode: internalMode,

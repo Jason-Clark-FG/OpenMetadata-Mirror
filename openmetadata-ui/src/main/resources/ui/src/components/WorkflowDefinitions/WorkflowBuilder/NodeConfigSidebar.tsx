@@ -12,39 +12,39 @@
  */
 
 import {
-    Divider,
-    SlideoutMenu,
-    Typography
+  Divider,
+  SlideoutMenu,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Node } from 'reactflow';
 import {
-    AVAILABLE_OPTIONS,
-    DEFAULT_QUALITY_BANDS,
-    WorkflowType
+  AVAILABLE_OPTIONS,
+  DEFAULT_QUALITY_BANDS,
+  WorkflowType,
 } from '../../../constants/WorkflowBuilder.constants';
 import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import { WorkflowTriggerFields } from '../../../generated/type/workflowTriggerFields';
 import {
-    BackendNodeConfig,
-    DataAssetFilter,
-    NodeConfig,
-    NodeConfigSidebarProps
+  BackendNodeConfig,
+  DataAssetFilter,
+  NodeConfig,
+  NodeConfigSidebarProps,
 } from '../../../interface/workflow-builder-components.interface';
 import { getCustomPropertiesByEntityType } from '../../../rest/metadataTypeAPI';
 import {
-    convertDisplayToBackendTriggerType,
-    getInitialNodeConfig,
-    getNodeTitle,
-    isStartNode
+  convertDisplayToBackendTriggerType,
+  getInitialNodeConfig,
+  getNodeTitle,
+  isStartNode,
 } from '../../../utils/NodeUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import { validateWorkflowConfig } from '../../../utils/WorkflowConfigUtils';
 import {
-    serializeDataAssetFilters,
-    serializeEventBasedFilters,
-    serializePeriodicBatchFilters
+  serializeDataAssetFilters,
+  serializeEventBasedFilters,
+  serializePeriodicBatchFilters,
 } from '../../../utils/WorkflowSerializationUtils';
 import { FormActionButtons, WorkflowConfigFormV1 } from './forms';
 
@@ -434,16 +434,14 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
         if (!open) {
           onClose();
         }
-      }}
-    >
+      }}>
       {({ close }) => (
         <>
           <SlideoutMenu.Header data-testid="node-config-header" onClose={close}>
             <Typography
               as="p"
               className="tw:m-0 tw:text-sm tw:font-semibold tw:text-primary"
-              data-testid="node-config-title"
-            >
+              data-testid="node-config-title">
               {getNodeTitle(node)}
             </Typography>
           </SlideoutMenu.Header>

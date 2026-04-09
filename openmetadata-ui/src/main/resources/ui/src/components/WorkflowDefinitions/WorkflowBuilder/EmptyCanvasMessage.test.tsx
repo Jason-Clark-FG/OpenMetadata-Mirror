@@ -39,9 +39,8 @@ jest.mock('../../../assets/svg/ic_click.svg', () => ({
   ReactComponent: () => <span data-testid="empty-canvas-click-icon" />,
 }));
 
-const mockUseWorkflowModeContext = useWorkflowModeContext as jest.MockedFunction<
-  typeof useWorkflowModeContext
->;
+const mockUseWorkflowModeContext =
+  useWorkflowModeContext as jest.MockedFunction<typeof useWorkflowModeContext>;
 
 describe('EmptyCanvasMessage', () => {
   beforeEach(() => {

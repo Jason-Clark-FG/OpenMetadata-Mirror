@@ -15,16 +15,16 @@ import { Card } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import React, { useCallback } from 'react';
 import ReactFlow, {
-    Background,
-    ConnectionLineType,
-    EdgeChange,
-    MarkerType,
-    NodeChange
+  Background,
+  ConnectionLineType,
+  EdgeChange,
+  MarkerType,
+  NodeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
-    MAX_ZOOM_VALUE,
-    MIN_ZOOM_VALUE
+  MAX_ZOOM_VALUE,
+  MIN_ZOOM_VALUE,
 } from '../../../constants/Lineage.constants';
 import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import { WorkflowCanvasProps } from '../../../interface/workflow-builder-components.interface';
@@ -67,8 +67,7 @@ const WorkflowCanvasInternal: React.FC<WorkflowCanvasProps> = ({
 
   const structuralEditMode = allowStructuralGraphEdits && !isViewMode;
   const enablePaletteDrop =
-    !isViewMode &&
-    (allowStructuralGraphEdits || showWorkflowNodePalette);
+    !isViewMode && (allowStructuralGraphEdits || showWorkflowNodePalette);
 
   const guardedOnNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -112,8 +111,7 @@ const WorkflowCanvasInternal: React.FC<WorkflowCanvasProps> = ({
     <Card
       className={canvasClassName}
       data-testid="workflow-canvas"
-      style={{ height: '100%', minHeight: 0 }}
-    >
+      style={{ height: '100%', minHeight: 0 }}>
       {focusedConnection && (
         <div className="tw:absolute tw:inset-0 tw:bg-brand-900/20 tw:z-[1] tw:pointer-events-none tw:transition-opacity tw:duration-300" />
       )}
@@ -206,8 +204,7 @@ const WorkflowCanvasInternal: React.FC<WorkflowCanvasProps> = ({
         onEdgeClick={onEdgeClick}
         onEdgesChange={guardedOnEdgesChange}
         onNodeClick={onNodeClick}
-        onNodesChange={guardedOnNodesChange}
-      >
+        onNodesChange={guardedOnNodesChange}>
         <Background />
       </ReactFlow>
 

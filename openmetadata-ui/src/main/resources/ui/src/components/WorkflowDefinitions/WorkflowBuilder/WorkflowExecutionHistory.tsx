@@ -23,14 +23,14 @@ import StatusBadgeV2 from '../../../components/common/StatusBadge/StatusBadgeV2.
 import { getStatusMapping } from '../../../constants/WorkflowBuilder.constants';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import {
-    WorkflowInstance,
-    WorkflowStatus
+  WorkflowInstance,
+  WorkflowStatus,
 } from '../../../generated/governance/workflows/workflowInstance';
 import { useFqn } from '../../../hooks/useFqn';
 import { getWorkflowInstancesByFQN } from '../../../rest/workflowDefinitionsAPI';
 import {
-    convertMillisecondsToHumanReadableFormat,
-    formatDateTime
+  convertMillisecondsToHumanReadableFormat,
+  formatDateTime,
 } from '../../../utils/date-time/DateTimeUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 
@@ -106,8 +106,7 @@ export const WorkflowExecutionHistory: React.FC = () => {
     <TableCard.Root>
       <Table
         aria-label={t('label.execution-history')}
-        data-testid="workflow-execution-history-table"
-      >
+        data-testid="workflow-execution-history-table">
         <Table.Header>
           <Table.Row>
             <Table.Head
@@ -121,8 +120,7 @@ export const WorkflowExecutionHistory: React.FC = () => {
         </Table.Header>
         <Table.Body
           data-testid="workflow-execution-history-table-body"
-          items={instances}
-        >
+          items={instances}>
           {(instance) => {
             const { displayLabel, statusType } = getStatusInfo(instance.status);
             const duration =

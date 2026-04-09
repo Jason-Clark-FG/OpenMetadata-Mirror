@@ -12,13 +12,13 @@
  */
 
 import {
-    Button,
-    Card,
-    Dialog,
-    Input,
-    Modal,
-    ModalOverlay,
-    Typography
+  Button,
+  Card,
+  Dialog,
+  Input,
+  Modal,
+  ModalOverlay,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import React, { useEffect, useState } from 'react';
@@ -100,8 +100,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
                 className="tw:m-0 tw:mb-1 tw:text-primary"
                 data-testid="workflow-title"
                 size="text-md"
-                weight="semibold"
-              >
+                weight="semibold">
                 {title}
               </Typography>
               {!isViewMode && (
@@ -120,8 +119,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
                 as="p"
                 className="tw:m-0 tw:text-secondary tw:max-w-150"
                 data-testid="workflow-description"
-                size="text-sm"
-              >
+                size="text-sm">
                 {workflowName}
               </Typography>
             )}
@@ -149,8 +147,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
               color="primary"
               data-testid="edit-workflow-button"
               size="sm"
-              onPress={enterEditMode}
-            >
+              onPress={enterEditMode}>
               {t('label.edit-workflow')}
             </Button>
           )}
@@ -165,8 +162,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
               entity: t('label.display-name'),
             })}
             width={480}
-            onClose={handleCloseEditModal}
-          >
+            onClose={handleCloseEditModal}>
             <Dialog.Content>
               <Input isDisabled label={t('label.name')} value={workflowName} />
               <Input
@@ -181,15 +177,13 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
                 color="secondary"
                 data-testid="cancel-button"
                 size="md"
-                onPress={handleCloseEditModal}
-              >
+                onPress={handleCloseEditModal}>
                 {t('label.cancel')}
               </Button>
               <Button
                 data-testid="save-button"
                 size="md"
-                onPress={handleSaveDisplayName}
-              >
+                onPress={handleSaveDisplayName}>
                 {t('label.save')}
               </Button>
             </Dialog.Footer>

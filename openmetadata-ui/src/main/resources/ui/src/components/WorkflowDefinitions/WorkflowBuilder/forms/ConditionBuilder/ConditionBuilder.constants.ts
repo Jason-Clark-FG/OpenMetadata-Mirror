@@ -14,15 +14,15 @@
 import { WorkflowTriggerFields } from '../../../../../generated/type/workflowTriggerFields';
 import type { ConditionFieldDefinition } from './ConditionBuilder.interface';
 import {
-    fetchCertificationOptions,
-    fetchDataProductOptions,
-    fetchDomainOptions,
-    fetchExpertOptions,
-    fetchGlossaryOptions,
-    fetchOwnerOptions,
-    fetchRelatedTermsOptions,
-    fetchSynonymsOptions,
-    fetchTagOptions
+  fetchCertificationOptions,
+  fetchDataProductOptions,
+  fetchDomainOptions,
+  fetchExpertOptions,
+  fetchGlossaryOptions,
+  fetchOwnerOptions,
+  fetchRelatedTermsOptions,
+  fetchSynonymsOptions,
+  fetchTagOptions,
 } from './conditionBuilderValueFetchers';
 
 const WORKFLOW_TRIGGER_FIELD_LABELS: Record<string, string> = {

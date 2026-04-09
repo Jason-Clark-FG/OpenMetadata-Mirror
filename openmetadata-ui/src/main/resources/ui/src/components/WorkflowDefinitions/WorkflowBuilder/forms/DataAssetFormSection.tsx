@@ -119,8 +119,7 @@ export const DataAssetFormSection: React.FC<DataAssetFormSectionProps> = ({
         placeholder={t('message.select-data-assets')}
         selectedItems={selectedItems}
         onItemCleared={handleItemCleared}
-        onItemInserted={handleItemInserted}
-      >
+        onItemInserted={handleItemInserted}>
         {(item) => (
           <Autocomplete.Item
             id={item.id}

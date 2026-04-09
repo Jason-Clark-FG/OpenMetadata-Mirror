@@ -56,15 +56,8 @@ describe('useWorkflowNavigationBlock', () => {
         'beforeunload',
         expect.any(Function)
       );
-      expect(globalSpy).toHaveBeenCalledWith(
-        'popstate',
-        expect.any(Function)
-      );
-      expect(docSpy).toHaveBeenCalledWith(
-        'click',
-        expect.any(Function),
-        true
-      );
+      expect(globalSpy).toHaveBeenCalledWith('popstate', expect.any(Function));
+      expect(docSpy).toHaveBeenCalledWith('click', expect.any(Function), true);
     });
 
     it('does not register listeners when disabled', () => {
@@ -188,7 +181,7 @@ describe('useWorkflowNavigationBlock', () => {
       act(() => {
         clickAnchor(INTERNAL_HREF);
       });
-      
+
       expect(result.current.showModal).toBe(true);
     };
 

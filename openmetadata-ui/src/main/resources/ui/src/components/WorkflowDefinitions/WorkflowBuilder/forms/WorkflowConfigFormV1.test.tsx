@@ -26,8 +26,7 @@ jest.mock('./TriggerConfigSection', () => ({
   }) => (
     <div
       data-lock-non-include-exclude={String(!!lockNonIncludeExcludeFields)}
-      data-testid="trigger-config-section"
-    >
+      data-testid="trigger-config-section">
       <div data-testid="trigger-type-select" />
     </div>
   ),

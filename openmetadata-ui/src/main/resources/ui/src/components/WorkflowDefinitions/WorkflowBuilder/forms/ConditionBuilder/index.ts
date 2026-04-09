@@ -14,17 +14,17 @@
 export { ConditionBuilder } from './ConditionBuilder';
 export { CONDITION_BUILDER_WORKFLOW_TRIGGER_FIELDS } from './ConditionBuilder.constants';
 export type {
-    CheckChangeDescConditionPayload,
-    ConditionBuilderOption,
-    ConditionBuilderPayload,
-    ConditionBuilderProps,
-    ConditionFieldDefinition,
-    ConditionRow,
-    ConditionRulesMap,
-    ConditionType
+  CheckChangeDescConditionPayload,
+  ConditionBuilderOption,
+  ConditionBuilderPayload,
+  ConditionBuilderProps,
+  ConditionFieldDefinition,
+  ConditionRow,
+  ConditionRulesMap,
+  ConditionType,
 } from './ConditionBuilder.interface';
 export {
-    buildConditionBuilderPayload,
-    generateRowId,
-    parseConditionBuilderPayload
+  buildConditionBuilderPayload,
+  generateRowId,
+  parseConditionBuilderPayload,
 } from './conditionBuilderTransformer';

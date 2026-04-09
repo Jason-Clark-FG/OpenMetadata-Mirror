@@ -13,12 +13,12 @@
 
 import React from 'react';
 import {
-    Connection,
-    Edge,
-    Node,
-    OnConnect,
-    OnEdgesChange,
-    OnNodesChange
+  Connection,
+  Edge,
+  Node,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
 } from 'reactflow';
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';

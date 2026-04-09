@@ -12,19 +12,19 @@
  */
 
 import {
-    Autocomplete,
-    Box,
-    Input,
-    Select,
-    SelectItemType,
-    Typography
+  Autocomplete,
+  Box,
+  Input,
+  Select,
+  SelectItemType,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import {
-    SchedularOptions,
-    WorkflowType
+  SchedularOptions,
+  WorkflowType,
 } from '../../../../constants/WorkflowBuilder.constants';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import { TriggerConfigSectionProps } from '../../../../interface/workflow-builder-components.interface';
@@ -121,15 +121,13 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
       id={item.id}
       isDisabled={item.isDisabled}
       key={item.id}
-      label={item.label}
-    >
+      label={item.label}>
       <Box
         align="center"
         className="tw:w-full"
         direction="row"
         gap={2}
-        justify="between"
-      >
+        justify="between">
         <Typography ellipsis as="span">
           {item.label}
         </Typography>
@@ -137,8 +135,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
           <Typography
             as="span"
             className="tw:text-tertiary tw:shrink-0"
-            size="text-xs"
-          >
+            size="text-xs">
             {item.supportingText}
           </Typography>
         )}
@@ -166,14 +163,12 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
     <div className="tw:mb-6" data-testid="trigger-config-section">
       <div
         className="tw:flex tw:items-center tw:gap-1"
-        data-testid="trigger-header"
-      >
+        data-testid="trigger-header">
         <Typography
           as="span"
           className="tw:text-secondary"
           size="text-sm"
-          weight="medium"
-        >
+          weight="medium">
           {t('label.trigger')}
         </Typography>
       </div>
@@ -181,8 +176,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
         as="p"
         className="tw:m-0 tw:text-tertiary tw:mb-6"
         size="text-xs"
-        weight="medium"
-      >
+        weight="medium">
         {t('message.select-when-execute-workflow')}
       </Typography>
 
@@ -193,8 +187,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
           isDisabled={nonIncludeExcludeDisabled}
           label={t('message.trigger-type')}
           value={triggerType}
-          onChange={(key) => onTriggerTypeChange(String(key ?? ''))}
-        >
+          onChange={(key) => onTriggerTypeChange(String(key ?? ''))}>
           {triggerTypeOptions.map((opt) => (
             <Select.Item id={opt.value} key={opt.value} label={opt.label} />
           ))}
@@ -229,8 +222,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
                     ],
                   },
                 });
-              }}
-            >
+              }}>
               {(item) => (
                 <Autocomplete.Item
                   id={item.id}
@@ -264,8 +256,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
                   ...selectedExcludeFields.items.map((i) => i.id),
                   String(key),
                 ]);
-              }}
-            >
+              }}>
               {renderFieldItem}
             </Autocomplete>
           </div>
@@ -292,8 +283,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
                   ...selectedIncludeFields.items.map((i) => i.id),
                   String(key),
                 ]);
-              }}
-            >
+              }}>
               {renderFieldItem}
             </Autocomplete>
           </div>
@@ -309,8 +299,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
             isDisabled={nonIncludeExcludeDisabled}
             label={t('label.schedule-type')}
             value={scheduleType}
-            onChange={(key) => onScheduleTypeChange?.(String(key ?? ''))}
-          >
+            onChange={(key) => onScheduleTypeChange?.(String(key ?? ''))}>
             {scheduleTypeOptions.map((opt) => (
               <Select.Item
                 data-testid={opt.testId}
@@ -326,8 +315,7 @@ export const TriggerConfigSection: React.FC<TriggerConfigSectionProps> = ({
               className="tw:mt-6"
               description={t('message.define-when-the-workflow-should-run')}
               label={t('label.schedule')}
-              showInfoIcon={false}
-            >
+              showInfoIcon={false}>
               <div className="tw:mb-6">
                 <CronExpressionBuilder
                   forceDisabled={nonIncludeExcludeDisabled}

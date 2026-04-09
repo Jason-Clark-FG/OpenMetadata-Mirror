@@ -88,8 +88,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
         <select
           data-testid={dataTestId}
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-        >
+          onChange={(e) => onChange?.(e.target.value)}>
           {children}
         </select>
       </div>
@@ -165,8 +164,7 @@ jest.mock('./FormActionButtons', () => ({
         <button
           data-testid="save-button"
           disabled={isDisabled}
-          onClick={onSave}
-        >
+          onClick={onSave}>
           Save
         </button>
         <button data-testid="cancel-button" onClick={onCancel}>

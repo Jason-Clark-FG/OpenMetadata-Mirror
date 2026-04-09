@@ -44,7 +44,8 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
 }) => {
   const { t } = useTranslation();
   const { allowStructuralGraphEdits, canSave } = useWorkflowModeContext();
-  const shouldShowDelete = showDelete && onDelete && canSave && allowStructuralGraphEdits;
+  const shouldShowDelete =
+    showDelete && onDelete && canSave && allowStructuralGraphEdits;
 
   const effectiveSaveLabel = saveLabel ?? t('label.save');
   const effectiveCancelLabel = cancelLabel ?? t('label.cancel');
@@ -59,8 +60,7 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
             color="tertiary-destructive"
             data-testid="delete-node-button"
             size="sm"
-            onPress={onDelete}
-          >
+            onPress={onDelete}>
             {effectiveDeleteLabel}
           </Button>
         ) : (
@@ -71,8 +71,7 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
             color="secondary"
             data-testid="cancel-workflow-button"
             size="sm"
-            onPress={onCancel}
-          >
+            onPress={onCancel}>
             {effectiveCancelLabel}
           </Button>
           {showSave && canSave && (
@@ -81,8 +80,7 @@ export const FormActionButtons: React.FC<FormActionButtonsProps> = ({
               data-testid="save-node-configuration-button"
               isDisabled={isDisabled || isLoading || !canSave}
               size="sm"
-              onPress={onSave}
-            >
+              onPress={onSave}>
               {isLoading ? `${t('label.saving')}...` : effectiveSaveLabel}
             </Button>
           )}

@@ -12,23 +12,23 @@
  */
 
 import {
-    Button,
-    Card,
-    Divider,
-    Select,
-    Typography
+  Button,
+  Card,
+  Divider,
+  Select,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-    AVAILABLE_OPTIONS,
-    ConditionValue,
-    DEFAULT_QUALITY_BANDS
+  AVAILABLE_OPTIONS,
+  ConditionValue,
+  DEFAULT_QUALITY_BANDS,
 } from '../../../constants/WorkflowBuilder.constants';
 import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import {
-    ConnectionCondition,
-    ConnectionConditionModalProps
+  ConnectionCondition,
+  ConnectionConditionModalProps,
 } from '../../../interface/workflow-builder-components.interface';
 
 export const ConnectionConditionModal: React.FC<
@@ -154,15 +154,13 @@ export const ConnectionConditionModal: React.FC<
   return (
     <Card
       className="tw:fixed tw:left-[400px] tw:top-[30%] tw:min-w-90 tw:max-w-100 tw:z-10000"
-      data-testid="connection-condition-modal"
-    >
+      data-testid="connection-condition-modal">
       <div className="tw:flex tw:justify-between tw:items-center tw:p-3">
         <Typography
           as="p"
           className="tw:m-0 tw:text-primary tw:leading-5"
           size="text-xs"
-          weight="medium"
-        >
+          weight="medium">
           {t('label.connection-condition')}
         </Typography>
 
@@ -174,8 +172,7 @@ export const ConnectionConditionModal: React.FC<
             color="primary"
             data-testid="save-connection-button"
             size="sm"
-            onPress={handleSave}
-          >
+            onPress={handleSave}>
             {t('label.save')}
           </Button>
         </div>
@@ -188,15 +185,13 @@ export const ConnectionConditionModal: React.FC<
           <Typography
             className="tw:m-0  tw:text-secondary"
             size="text-xs"
-            weight="medium"
-          >
+            weight="medium">
             {t('label.source')}
           </Typography>
           <Typography
             className="tw:m-0  tw:text-primary tw:pl-11"
             size="text-xs"
-            weight="medium"
-          >
+            weight="medium">
             {sourceNodeLabel}
           </Typography>
         </div>
@@ -210,8 +205,7 @@ export const ConnectionConditionModal: React.FC<
             if (conditions[0]) {
               updateCondition(conditions[0].id, 'value', String(key));
             }
-          }}
-        >
+          }}>
           {availableOptions.map((option) => (
             <Select.Item
               data-testid={`condition-select-option-${option.value}`}
@@ -228,8 +222,7 @@ export const ConnectionConditionModal: React.FC<
           <Typography
             className="tw:m-0 tw:text-secondary"
             size="text-xs"
-            weight="medium"
-          >
+            weight="medium">
             {t('label.destination')}
             {' : '}
           </Typography>
@@ -237,8 +230,7 @@ export const ConnectionConditionModal: React.FC<
           <Typography
             className="tw:m-0  tw:text-primary tw:pl-4"
             size="text-xs"
-            weight="medium"
-          >
+            weight="medium">
             {targetNodeLabel}
           </Typography>
         </div>

@@ -16,11 +16,11 @@ import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compare, Operation } from 'fast-json-patch';
 import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
@@ -31,39 +31,36 @@ import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBre
 import { UnsavedChangesModal } from '../../../components/Modals/UnsavedChangesModal/UnsavedChangesModal.component';
 import PageLayoutV1 from '../../../components/PageLayoutV1/PageLayoutV1';
 import {
-    ConnectionConditionModal,
-    WorkflowCanvas,
-    WorkflowExecutionHistory,
-    WorkflowHeader,
-    WorkflowSidebar
+  ConnectionConditionModal,
+  WorkflowCanvas,
+  WorkflowExecutionHistory,
+  WorkflowHeader,
+  WorkflowSidebar,
 } from '../../../components/WorkflowDefinitions/WorkflowBuilder';
 import { NodeFormSidebar } from '../../../components/WorkflowDefinitions/WorkflowBuilder/NodeFormSidebar';
 import type { WorkflowBuilderTab } from '../../../constants/WorkflowBuilder.constants';
 import {
-    getWorkflowBuilderTabs,
-    tabTestIds
+  getWorkflowBuilderTabs,
+  tabTestIds,
 } from '../../../constants/WorkflowBuilder.constants';
 import {
-    useWorkflowModeContext,
-    WorkflowModeProvider
+  useWorkflowModeContext,
+  WorkflowModeProvider,
 } from '../../../contexts/WorkflowModeContext';
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
 import { useFqn } from '../../../hooks/useFqn';
 import { useWorkflowActions } from '../../../hooks/useWorkflowActions';
 import { useWorkflowHistory } from '../../../hooks/useWorkflowHistory';
 import {
-    useWorkflowLogic,
-    UseWorkflowLogicReturn
+  useWorkflowLogic,
+  UseWorkflowLogicReturn,
 } from '../../../hooks/useWorkflowLogic';
 import { useWorkflowNavigationBlock } from '../../../hooks/useWorkflowNavigationBlock';
 import {
-    patchWorkflowDefinition,
-    triggerWorkflow
+  patchWorkflowDefinition,
+  triggerWorkflow,
 } from '../../../rest/workflowDefinitionsAPI';
-import {
-    showErrorToast,
-    showSuccessToast
-} from '../../../utils/ToastUtils';
+import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
 import { applyFlowchartLayout } from '../../../utils/WorkflowLayout';
 import { getWorkflowDefinitionsListPath } from '../../../utils/WorkflowRouterUtils';
 import workflowUiClassBase from '../../../utils/WorkflowUiClassBase';
@@ -429,8 +426,7 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
     <PageLayoutV1
       fullHeight
       mainContainerClassName="workflow-builder-layout"
-      pageTitle={t('label.workflow-plural')}
-    >
+      pageTitle={t('label.workflow-plural')}>
       {isConnectionModalOpen && (
         <div className="tw:fixed tw:inset-0 tw:bg-black/30 tw:z-9999" />
       )}
@@ -458,8 +454,9 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
             className="tw:w-full tw:mt-3 tw:shrink-0 tw:pl-5"
             data-testid="workflow-execution-tabs"
             selectedKey={activeTab}
-            onSelectionChange={(key) => setActiveTab(key as WorkflowBuilderTab)}
-          >
+            onSelectionChange={(key) =>
+              setActiveTab(key as WorkflowBuilderTab)
+            }>
             <Tabs.List items={workflowBuilderTabs} type="underline">
               {(tab) => (
                 <Tabs.Item
@@ -585,8 +582,7 @@ const WorkflowBuilderWrapper: React.FC<{ workflowFqn?: string }> = ({
   return (
     <WorkflowModeProvider
       workflowDefinition={workflowDefinition}
-      workflowFqn={workflowFqn}
-    >
+      workflowFqn={workflowFqn}>
       <WorkflowBuilderInternal workflowLogic={workflowLogic} />
     </WorkflowModeProvider>
   );
