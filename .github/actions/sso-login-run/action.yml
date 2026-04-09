@@ -79,7 +79,6 @@ runs:
         npx playwright test playwright/e2e/Auth/SSOLogin.spec.ts \
           --project=sso-auth \
           --workers=1
-      timeout-minutes: 30
 
     - name: Upload HTML report
       if: always()
