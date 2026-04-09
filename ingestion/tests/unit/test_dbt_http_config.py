@@ -66,7 +66,10 @@ class TestDbtHttpConfigNoAuth:
         config = _base_config()
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         mock_get.assert_called_once_with(
@@ -81,7 +84,10 @@ class TestDbtHttpConfigCustomHeaders:
         config = _base_config(dbtHttpHeaders={"Authorization": "Bearer mytoken"})
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         _, kwargs = mock_get.call_args
@@ -91,7 +97,10 @@ class TestDbtHttpConfigCustomHeaders:
         config = _base_config(dbtHttpHeaders={"PRIVATE-TOKEN": "glpat-abc123"})
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         _, kwargs = mock_get.call_args
@@ -126,7 +135,10 @@ class TestDbtHttpConfigSSLVerify:
         config = _base_config(dbtVerifySSL=VerifySSL.ignore)
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         _, kwargs = mock_get.call_args
@@ -144,7 +156,10 @@ class TestDbtHttpConfigSSLVerify:
         )
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         _, kwargs = mock_get.call_args
@@ -154,7 +169,10 @@ class TestDbtHttpConfigSSLVerify:
         config = _base_config(dbtVerifySSL=VerifySSL.no_ssl)
         manifest_resp = _make_json_response(MANIFEST_JSON)
 
-        with patch("requests.get", return_value=manifest_resp) as mock_get:
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=manifest_resp,
+        ) as mock_get:
             list(get_dbt_details(config))
 
         _, kwargs = mock_get.call_args
@@ -192,7 +210,10 @@ class TestDbtHttpConfigErrorHandling:
         http_error = requests.exceptions.HTTPError(response=mock_resp)
         mock_resp.raise_for_status.side_effect = http_error
 
-        with patch("requests.get", return_value=mock_resp):
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=mock_resp,
+        ):
             with pytest.raises(DBTConfigException) as exc_info:
                 list(get_dbt_details(config))
 
@@ -205,7 +226,10 @@ class TestDbtHttpConfigErrorHandling:
         http_error = requests.exceptions.HTTPError(response=mock_resp)
         mock_resp.raise_for_status.side_effect = http_error
 
-        with patch("requests.get", return_value=mock_resp):
+        with patch(
+            "metadata.ingestion.source.database.dbt.dbt_config.requests.get",
+            return_value=mock_resp,
+        ):
             with pytest.raises(DBTConfigException) as exc_info:
                 list(get_dbt_details(config))
 
