@@ -3268,6 +3268,7 @@
     "workflow-name-max-length": "Workflow name must be at most {{count}} characters",
     "workflow-name-min-length": "Workflow name must be at least {{count}} characters",
     "workflow-subtitle": "Create and manage governance workflows for metadata automation.",
+    "workflow-trigger-requires-data-assets": "Select at least one data asset for the workflow trigger.",
     "would-like-to-start-adding-some": "काही जोडण्यास प्रारंभ करू इच्छिता?",
     "write-markdown-content": "येथे markdown सामग्री लिहा...",
     "write-your-announcement-lowercase": "तुमची घोषणा लिहा",

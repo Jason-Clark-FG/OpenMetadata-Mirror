@@ -27,7 +27,7 @@ const GatewayNode = ({ data }: Node['data']) => {
 
   const isActive = useMemo(() => {
     return selectedNode?.name === data.name;
-  }, [selectedNode]);
+  }, [selectedNode, data?.name]);
 
   const handleNodeClick = () => {
     setSelectedNode(data);

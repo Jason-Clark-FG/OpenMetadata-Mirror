@@ -11,7 +11,7 @@
  *  limitations under the License.
  */
 
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Node } from 'reactflow';
@@ -118,12 +118,16 @@ export const useWorkflowActions = ({
 
   // Test workflow handler
   const handleTestWorkflow = useCallback(async () => {
-    return await testWorkflow(
-      nodes,
-      edges,
-      workflowDefinition,
-      workflowMetadata
-    );
+    try {
+      return await testWorkflow(
+        nodes,
+        edges,
+        workflowDefinition,
+        workflowMetadata
+      );
+    } catch {
+      // testWorkflow / buildWorkflowForSave already show a toast on validation failure
+    }
   }, [nodes, edges, workflowDefinition, workflowMetadata]);
 
   // Node click handler
@@ -190,7 +194,13 @@ export const useWorkflowActions = ({
 
       return true;
     } catch (error) {
-      showErrorToast(error as AxiosError);
+      if (axios.isAxiosError(error)) {
+        showErrorToast(error);
+      } else if (error instanceof Error) {
+        showErrorToast(error.message);
+      } else {
+        showErrorToast(String(error));
+      }
 
       return false;
     }

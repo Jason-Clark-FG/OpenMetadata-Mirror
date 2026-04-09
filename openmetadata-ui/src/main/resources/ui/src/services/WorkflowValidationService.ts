@@ -12,6 +12,7 @@
  */
 
 import { AxiosError } from 'axios';
+import i18next from 'i18next';
 import { Edge, Node } from 'reactflow';
 import {
   ScheduleConfig,
@@ -562,6 +563,22 @@ export const buildWorkflowForSave = async (
     existingTriggerConfig
   );
 
+  const triggerEntityTypes = Array.isArray(
+    (finalTriggerConfig as { entityTypes?: unknown }).entityTypes
+  )
+    ? ((finalTriggerConfig as { entityTypes: string[] }).entityTypes ?? [])
+    : [];
+
+  if (
+    (triggerType === Type.EventBasedEntity ||
+      triggerType === Type.PeriodicBatchEntity) &&
+    triggerEntityTypes.length === 0
+  ) {
+    throw new Error(
+      i18next.t('message.workflow-trigger-requires-data-assets')
+    );
+  }
+
   let workflowNodes = buildWorkflowNodes(nodes, validEdges);
   const workflowEdges = buildWorkflowEdges(validEdges as Edge[], nodes);
 
@@ -593,12 +610,22 @@ export const testWorkflow = async (
   workflowDefinition: WorkflowDefinition | null,
   workflowMetadata?: { displayName?: string; description?: string } | null
 ): Promise<WorkflowDefinition> => {
-  const backendReadyJSON = await buildWorkflowForSave(
-    nodes,
-    edges,
-    workflowDefinition,
-    workflowMetadata
-  );
+  let backendReadyJSON: WorkflowDefinition;
+  try {
+    backendReadyJSON = await buildWorkflowForSave(
+      nodes,
+      edges,
+      workflowDefinition,
+      workflowMetadata
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      showErrorToast(error.message);
+    } else {
+      showErrorToast(String(error));
+    }
+    throw error;
+  }
 
   try {
     const validationResult: {
@@ -612,7 +639,13 @@ export const testWorkflow = async (
       validationResult.message || 'Workflow validation successful'
     );
   } catch (error) {
-    showErrorToast(error as AxiosError);
+    if (error && typeof error === 'object' && 'response' in error) {
+      showErrorToast(error as AxiosError);
+    } else if (error instanceof Error) {
+      showErrorToast(error.message);
+    } else {
+      showErrorToast(String(error));
+    }
   }
 
   return backendReadyJSON;

@@ -66,6 +66,7 @@ const WorkflowsPage = () => {
   const [workflowName, setWorkflowName] = useState('');
   const [description, setDescription] = useState('');
   const [nameError, setNameError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const allowCreateWorkflow = useMemo(
     () => workflowUiClassBase.getCapabilities().allowCreateWorkflow,
@@ -114,6 +115,7 @@ const WorkflowsPage = () => {
 
   const handleModalCancel = useCallback(() => {
     setIsModalOpen(false);
+    setIsSubmitting(false);
     resetForm();
   }, [resetForm]);
 
@@ -172,6 +174,10 @@ const WorkflowsPage = () => {
   }, [getWorkflows]);
 
   const handleModalSubmit = useCallback(async () => {
+    if (isSubmitting) {
+      return;
+    }
+
     const error = validateWorkflowName(workflowName);
     if (error) {
       setNameError(error);
@@ -179,6 +185,7 @@ const WorkflowsPage = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const workflowData = {
         description: description || '',
@@ -205,15 +212,26 @@ const WorkflowsPage = () => {
           WorkflowDetailsTabs.WORKFLOW
         )}?mode=edit`
       );
-    } catch (error) {
+    } catch (err) {
       showErrorToast(
-        error as AxiosError,
+        err as AxiosError,
         t('server.create-entity-error', {
           entity: t('label.workflow'),
         })
       );
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [workflowName, description, validateWorkflowName, resetForm, navigate, t]);
+  }, [
+    isSubmitting,
+    workflowName,
+    description,
+    validateWorkflowName,
+    resetForm,
+    navigate,
+    t,
+    getWorkflows,
+  ]);
 
   if (loading) {
     return <Loader />;
@@ -320,6 +338,7 @@ const WorkflowsPage = () => {
                   </div>
                   <Input
                     data-testid="workflow-name"
+                    isDisabled={isSubmitting}
                     isInvalid={!!nameError}
                     placeholder={t('label.workflow-name-placeholder')}
                     value={workflowName}
@@ -347,6 +366,7 @@ const WorkflowsPage = () => {
                   </Typography>
                   <TextArea
                     data-testid="workflow-description"
+                    isDisabled={isSubmitting}
                     placeholder={t('label.description')}
                     rows={4}
                     value={description}
@@ -367,6 +387,8 @@ const WorkflowsPage = () => {
                 <Button
                   color="primary"
                   data-testid="submit-workflow-button"
+                  isDisabled={isSubmitting}
+                  isLoading={isSubmitting}
                   size="sm"
                   onPress={handleModalSubmit}>
                   {t('label.save-and-next')}
