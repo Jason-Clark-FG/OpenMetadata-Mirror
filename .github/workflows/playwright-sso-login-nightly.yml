@@ -94,9 +94,6 @@ jobs:
 
       - name: Run SSO Login Spec
         working-directory: openmetadata-ui/src/main/resources/ui
-        # GitHub secret/variable names are case-insensitive, so passing the
-        # lowercase matrix.provider through format() resolves correctly
-        # against uppercase conventional names like OKTA_SSO_PASSWORD.
         env:
           SSO_PROVIDER_TYPE: ${{ matrix.provider }}
           SSO_USERNAME: ${{ vars[format('{0}_SSO_USERNAME', matrix.provider)] }}
