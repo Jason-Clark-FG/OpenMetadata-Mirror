@@ -40,6 +40,7 @@ import {
   openImpactAnalysisTab,
   performZoomOut,
   rearrangeNodes,
+  setLineageDepthAndVerify,
   visitLineageTab,
 } from '../../../utils/lineage';
 import { test } from '../../fixtures/pages';
@@ -132,6 +133,8 @@ test.describe('Lineage Filters', () => {
     await redirectToHomePage(page);
     await lineageEntity.visitEntityPage(page);
     await visitLineageTab(page);
+    await waitForAllLoadersToDisappear(page);
+    await setLineageDepthAndVerify(page, 2, 2);
     await waitForAllLoadersToDisappear(page);
     await rearrangeNodes(page);
     await performZoomOut(page);
@@ -278,6 +281,8 @@ test.describe('Lineage Filters', () => {
 
         await test.step('Verify filters working for Lineage tab', async () => {
           await page.reload();
+          await waitForAllLoadersToDisappear(page);
+          await setLineageDepthAndVerify(page, 2, 2);
           await waitForAllLoadersToDisappear(page);
 
           await page.getByRole('button', { name: 'Filters' }).click();
@@ -962,7 +967,9 @@ test.describe('Lineage Filters', () => {
       for (const entity of depth2ndEntities) {
         await entity.visitEntityPage(page);
         await visitLineageTab(page);
-        await openImpactAnalysisTab(page);
+        await waitForAllLoadersToDisappear(page);
+        await setLineageDepthAndVerify(page, 2, 2);
+        await page.getByRole('tab', { name: 'Impact Analysis' }).click();
         await waitForAllLoadersToDisappear(page);
 
         await expect(
@@ -1000,7 +1007,9 @@ test.describe('Lineage Filters', () => {
       for (const entity of depth2ndEntities) {
         await entity.visitEntityPage(page);
         await visitLineageTab(page);
-        await openImpactAnalysisTab(page);
+        await waitForAllLoadersToDisappear(page);
+        await setLineageDepthAndVerify(page, 2, 2);
+        await page.getByRole('tab', { name: 'Impact Analysis' }).click();
 
         // Verify Dashboard is visible in Impact Analysis for Upstream
         await page.getByRole('button', { name: 'Upstream' }).click();
