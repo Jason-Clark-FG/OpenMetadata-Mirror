@@ -89,7 +89,6 @@ jest.mock('../../../utils/EntityUtils', () => {
   return {
     getEntityLinkFromType: jest.fn().mockImplementation(() => 'link'),
     getEntityName: jest.fn().mockImplementation(() => 'displayName'),
-    getEntityOverview: jest.fn().mockImplementation(() => []),
     hasLineageTab: jest.fn((entityType) => LINEAGE_TABS_SET.has(entityType)),
     hasSchemaTab: jest.fn((entityType) => SCHEMA_TABS_SET.has(entityType)),
     hasCustomPropertiesTab: jest.fn((entityType) =>
