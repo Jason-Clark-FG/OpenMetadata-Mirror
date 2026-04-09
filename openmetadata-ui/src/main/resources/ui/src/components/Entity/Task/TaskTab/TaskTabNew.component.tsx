@@ -93,7 +93,11 @@ import { updateTask, updateThread } from '../../../../rest/feedsAPI';
 import { postTestCaseIncidentStatus } from '../../../../rest/incidentManagerAPI';
 import { getNameFromFQN } from '../../../../utils/CommonUtils';
 import EntityLink from '../../../../utils/EntityLink';
-import { getEntityFQN } from '../../../../utils/FeedUtils';
+import {
+  getEntityFQN,
+  getFrontEndFormat,
+  MarkdownToHTMLConverter,
+} from '../../../../utils/FeedUtils';
 import { getField } from '../../../../utils/formUtils';
 import { checkPermission } from '../../../../utils/PermissionsUtils';
 import { getErrorText } from '../../../../utils/StringsUtils';
@@ -121,7 +125,13 @@ import {
   getEntityName,
   getEntityReferenceListFromEntities,
 } from '../../../../utils/EntityUtils';
-import { getUserPath } from '../../../../utils/RouterUtils';
+import {
+  getClassificationTagPath,
+  getDomainDetailsPath,
+  getGlossaryTermDetailsPath,
+  getUserPath,
+} from '../../../../utils/RouterUtils';
+import { getSanitizeContent } from '../../../../utils/sanitize.utils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
 import EntityPopOverCard from '../../../common/PopOverCard/EntityPopOverCard';
 import UserPopOverCard from '../../../common/PopOverCard/UserPopOverCard';
@@ -130,6 +140,50 @@ import { EditorContentRef } from '../../../common/RichTextEditor/RichTextEditor.
 import TaskTabIncidentManagerHeaderNew from '../TaskTabIncidentManagerHeader/TasktabIncidentManagerHeaderNew';
 import './task-tab-new.less';
 import { TaskTabProps } from './TaskTab.interface';
+
+const FIELD_LINK_MAP: Array<{
+  pattern: RegExp;
+  getUrl: (fqn: string) => string;
+}> = [
+  {
+    pattern: /\*\*(tags|tier)\*\*/,
+    getUrl: (fqn) => getClassificationTagPath(fqn),
+  },
+  {
+    pattern: /\*\*(glossaryTerms|glossaryTerm|relatedTerms)\*\*/,
+    getUrl: (fqn) => getGlossaryTermDetailsPath(fqn),
+  },
+  {
+    pattern: /\*\*(domain|domains)\*\*/,
+    getUrl: (fqn) => getDomainDetailsPath(fqn),
+  },
+  {
+    pattern: /\*\*(owners|reviewers|experts)\*\*/,
+    getUrl: (fqn) => getUserPath(fqn),
+  },
+];
+
+const DIFF_SPAN_RE =
+  /(<span[^>]*class="diff-(?:added|removed)"[^>]*>)([^<]+)(<\/span>)/g;
+
+const addEntityLinks = (message: string): string =>
+  message
+    .split('\n')
+    .map((line) => {
+      const matcher = FIELD_LINK_MAP.find((m) => m.pattern.test(line));
+      if (!matcher) {
+        return line;
+      }
+
+      return line.replace(
+        DIFF_SPAN_RE,
+        (_, openTag: string, fqn: string, closeTag: string) =>
+          `${openTag}<a href="${matcher.getUrl(
+            fqn.trim()
+          )}">${fqn}</a>${closeTag}`
+      );
+    })
+    .join('\n');
 
 export const TaskTabNew = ({
   taskThread,
@@ -1135,6 +1189,25 @@ export const TaskTabNew = ({
       </Col>
       <Divider className="m-0" type="horizontal" />
       <Col span={24}>{taskHeader}</Col>
+      {taskThread.message?.trimStart().startsWith('- ') && (
+        <Col span={24}>
+          <div className="task-proposed-changes">
+            <Typography.Text className="task-proposed-changes-title">
+              {t('label.proposed-change-plural')}
+            </Typography.Text>
+            <div
+              className="feed-message"
+              dangerouslySetInnerHTML={{
+                __html: getSanitizeContent(
+                  MarkdownToHTMLConverter.makeHtml(
+                    getFrontEndFormat(addEntityLinks(taskThread.message ?? ''))
+                  )
+                ),
+              }}
+            />
+          </div>
+        </Col>
+      )}
       <Col span={24}>
         {isTaskDescription && (
           <DescriptionTaskNew
