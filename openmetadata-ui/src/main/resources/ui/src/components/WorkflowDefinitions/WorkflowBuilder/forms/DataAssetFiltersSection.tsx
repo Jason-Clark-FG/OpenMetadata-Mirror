@@ -13,12 +13,12 @@
 
 import { Button, Card, Typography } from '@openmetadata/ui-core-components';
 import { ChevronDown, Plus, XClose } from '@untitledui/icons';
-import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
-import { DataAssetFiltersSectionProps } from '../../../../interface/workflow-builder-components.interface';
 import { EntityType } from '../../../../enums/entity.enum';
+import { DataAssetFiltersSectionProps } from '../../../../interface/workflow-builder-components.interface';
+import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import { FormField } from '../common/FormField';
 import { QueryBuilderSection } from './QueryBuilderSection';
 

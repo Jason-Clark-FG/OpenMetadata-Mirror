@@ -16,9 +16,9 @@ import { ConfigProvider } from 'antd';
 import { noop } from 'lodash';
 import React, { useEffect, useState } from 'react';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
+import { EntityType } from '../../../../enums/entity.enum';
 import QueryBuilderWidget from '../../../common/Form/JSONSchema/JsonSchemaWidgets/QueryBuilderWidget/QueryBuilderWidget';
 import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
-import { EntityType } from '../../../../enums/entity.enum';
 
 const PORTAL_CONTAINER_ID = 'workflow-query-builder-portal';
 

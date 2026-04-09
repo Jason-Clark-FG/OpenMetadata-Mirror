@@ -12,14 +12,14 @@
  */
 
 import {
-  Box,
-  Card,
-  Divider,
-  Typography,
+    Box,
+    Card,
+    Divider,
+    Typography
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { SettingMenuItem } from '../../../utils/GlobalSettingsUtils';
 import { useCallback } from 'react';
+import { SettingMenuItem } from '../../../utils/GlobalSettingsUtils';
 
 interface WorkflowCardProps {
   data: SettingMenuItem;

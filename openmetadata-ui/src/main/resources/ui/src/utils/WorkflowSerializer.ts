@@ -13,20 +13,20 @@
 
 import { Edge, MarkerType, Node } from 'reactflow';
 import { ConditionValue } from '../constants/WorkflowBuilder.constants';
-import {
-  BackendEdge,
-  BackendNode,
-  NodeData,
-  NodePosition,
-} from '../interface/WorkflowTypes.interface';
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { Event } from '../generated/governance/workflows/elements/triggers/eventBasedEntityTrigger';
 import {
-  TriggerObject,
-  Type,
-  WorkflowDefinition,
+    TriggerObject,
+    Type,
+    WorkflowDefinition
 } from '../generated/governance/workflows/workflowDefinition';
+import {
+    BackendEdge,
+    BackendNode,
+    NodeData,
+    NodePosition
+} from '../interface/WorkflowTypes.interface';
 
 const getUINodeType = (backendType: string, backendSubType: string): string => {
   if (

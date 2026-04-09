@@ -13,8 +13,8 @@
 
 import { Typography } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { ConditionValue } from '../../../constants/WorkflowBuilder.constants';
 import { BaseEdge, EdgeLabelRenderer, EdgeProps, Position } from 'reactflow';
+import { ConditionValue } from '../../../constants/WorkflowBuilder.constants';
 
 const getCleanStraightPath = (
   sourceX: number,

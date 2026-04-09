@@ -15,9 +15,7 @@ export interface WorkflowUiCapabilities {
   allowCreateWorkflow: boolean;
   allowDeleteWorkflow: boolean;
   allowStructuralGraphEdits: boolean;
-  /** When true, the node palette sidebar is shown and palette drag/drop is allowed even if structural edits are off. */
   showWorkflowNodePalette: boolean;
-  /** When true, start node shows full metadata, assets, and trigger UI (Collate). OSS uses a restricted or read-only start node. */
   allowFullStartNodeConfiguration: boolean;
 }
 

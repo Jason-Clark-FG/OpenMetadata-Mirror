@@ -1,6 +1,6 @@
+import { Edge, Node } from 'reactflow';
 import { StartEvent } from '../../../generated/governance/workflows/elements/nodes/startEvent/startEvent';
 import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
-import { Edge, Node } from 'reactflow';
 
 export interface WorkflowState {
   workflowDefinition: WorkflowDefinition | undefined;

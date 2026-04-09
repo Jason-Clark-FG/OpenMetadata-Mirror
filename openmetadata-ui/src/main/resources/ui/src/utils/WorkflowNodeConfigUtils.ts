@@ -14,9 +14,9 @@
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import {
-  BackendEdge,
-  NodeConfiguration,
-  NodeDataWithMetadata,
+    BackendEdge,
+    NodeConfiguration,
+    NodeDataWithMetadata
 } from '../interface/WorkflowTypes.interface';
 
 export const findPathBetweenNodes = (

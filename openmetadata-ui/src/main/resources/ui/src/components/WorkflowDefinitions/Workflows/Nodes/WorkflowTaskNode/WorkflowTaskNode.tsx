@@ -1,10 +1,10 @@
 import { Space, Typography } from 'antd';
 import classNames from 'classnames';
-import { useWorkflowStore } from '../../useWorkflowStore';
-import { getEntityName } from '../../../../../utils/EntityUtils';
 import { useMemo } from 'react';
 import { Handle, Node, Position } from 'reactflow';
+import { getEntityName } from '../../../../../utils/EntityUtils';
 import { ReactComponent as TaskIcon } from '../../../../assets/svg/workflow-task.svg';
+import { useWorkflowStore } from '../../useWorkflowStore';
 import './task-node.less';
 
 const WorkflowTaskNode = ({ data }: Node['data']) => {

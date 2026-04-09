@@ -12,37 +12,37 @@
  */
 
 import {
-  Autocomplete,
-  Button,
-  Card,
-  Input,
-  Select,
-  SelectItemType,
-  Toggle,
+    Autocomplete,
+    Button,
+    Card,
+    Input,
+    Select,
+    SelectItemType,
+    Toggle
 } from '@openmetadata/ui-core-components';
 import { Plus, Trash01 } from '@untitledui/icons';
 import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import { useWorkflowModeContext } from '../../../../../contexts/WorkflowModeContext';
 import { CONDITION_BUILDER_WORKFLOW_TRIGGER_FIELDS } from './ConditionBuilder.constants';
 import type {
-  ConditionBuilderOption,
-  ConditionBuilderProps,
-  ConditionFieldDefinition,
-  ConditionRow,
-  ConditionType,
+    ConditionBuilderOption,
+    ConditionBuilderProps,
+    ConditionFieldDefinition,
+    ConditionRow,
+    ConditionType
 } from './ConditionBuilder.interface';
 import {
-  buildConditionBuilderPayload,
-  generateRowId,
-  parseConditionBuilderPayload,
+    buildConditionBuilderPayload,
+    generateRowId,
+    parseConditionBuilderPayload
 } from './conditionBuilderTransformer';
 
 interface ConditionBuilderValueControlProps {

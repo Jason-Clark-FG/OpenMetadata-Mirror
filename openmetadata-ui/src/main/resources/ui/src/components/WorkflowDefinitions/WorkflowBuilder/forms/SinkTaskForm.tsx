@@ -17,8 +17,8 @@ import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import {
-  createNodeConfig,
-  isValidString,
+    createNodeConfig,
+    isValidString
 } from '../../../../utils/WorkflowBuilderUtils';
 
 import { FormActionButtons, MetadataFormSection } from './';

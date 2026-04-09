@@ -12,18 +12,18 @@
  */
 
 import {
-  Button,
-  Card,
-  Divider,
-  Typography,
+    Button,
+    Card,
+    Divider,
+    Typography
 } from '@openmetadata/ui-core-components';
 import { GitBranch01, Minus, Plus } from '@untitledui/icons';
-import { CustomControlsProps } from '../../../interface/workflow-builder-components.interface';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useReactFlow } from 'reactflow';
 import { ReactComponent as RedoIcon } from '../../../assets/svg/ic_redo.svg';
 import { ReactComponent as UndoIcon } from '../../../assets/svg/ic_undo.svg';
+import { CustomControlsProps } from '../../../interface/workflow-builder-components.interface';
 
 export const CustomControls: React.FC<CustomControlsProps> = ({
   allowStructuralGraphEdits = true,

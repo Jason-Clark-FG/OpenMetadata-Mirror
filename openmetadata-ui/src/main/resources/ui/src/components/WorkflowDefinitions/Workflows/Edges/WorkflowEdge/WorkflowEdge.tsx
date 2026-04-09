@@ -1,18 +1,18 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Menu, Popover } from 'antd';
-import { useWorkflowStore } from '../../useWorkflowStore';
-import {
-  WORKFLOW_EDGE_BTN_HEIGHT,
-  WORKFLOW_EDGE_BTN_WIDTH,
-} from '../../../../../constants/Workflow.constants';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  EdgeProps,
-  getSmoothStepPath,
+    BaseEdge,
+    EdgeLabelRenderer,
+    EdgeProps,
+    getSmoothStepPath
 } from 'reactflow';
+import {
+    WORKFLOW_EDGE_BTN_HEIGHT,
+    WORKFLOW_EDGE_BTN_WIDTH
+} from '../../../../../constants/Workflow.constants';
+import { useWorkflowStore } from '../../useWorkflowStore';
 import './workflow-edge.less';
 
 // Constants for button size

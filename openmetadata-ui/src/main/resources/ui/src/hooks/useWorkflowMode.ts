@@ -14,8 +14,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Type,
-  WorkflowDefinition,
+    Type,
+    WorkflowDefinition
 } from '../generated/governance/workflows/workflowDefinition';
 import workflowUiClassBase from '../utils/WorkflowUiClassBase';
 

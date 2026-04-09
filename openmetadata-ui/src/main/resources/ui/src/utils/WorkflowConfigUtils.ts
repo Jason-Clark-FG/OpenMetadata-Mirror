@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
-import { NodeConfig } from '../interface/workflow-builder-components.interface';
 import { EntityType } from '../enums/entity.enum';
+import { NodeConfig } from '../interface/workflow-builder-components.interface';
 
 export const getSelectedEntityTypes = (
   config: NodeConfig,

@@ -12,30 +12,30 @@
  */
 
 import { AxiosError } from 'axios';
+import { Edge, Node } from 'reactflow';
 import {
-  ScheduleConfig,
-  WorkflowType,
+    ScheduleConfig,
+    WorkflowType
 } from '../constants/WorkflowBuilder.constants';
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { ScheduleTimeline } from '../generated/governance/workflows/elements/triggers/periodicBatchEntityTrigger';
 import {
-  Type,
-  WorkflowDefinition,
+    Type,
+    WorkflowDefinition
 } from '../generated/governance/workflows/workflowDefinition';
 import {
-  showErrorToast,
-  showSuccessToast,
-} from '../utils/ToastUtils';
-import { Edge, Node } from 'reactflow';
-import {
-  DataAssetFilter,
-  NodeConfig,
+    DataAssetFilter,
+    NodeConfig
 } from '../interface/workflow-builder-components.interface';
 import { validateWorkflowDefinition } from '../rest/workflowDefinitionsAPI';
 import {
-  getNodeConfiguration,
-  getNodeName,
+    showErrorToast,
+    showSuccessToast
+} from '../utils/ToastUtils';
+import {
+    getNodeConfiguration,
+    getNodeName
 } from '../utils/WorkflowNodeConfigUtils';
 
 type NodeConfigWithMetadata = NodeConfig & {

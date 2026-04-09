@@ -14,15 +14,15 @@
 import React, { useEffect, useState } from 'react';
 import { Node } from 'reactflow';
 import {
-  createNodeConfig,
-  isValidString,
+    createNodeConfig,
+    isValidString
 } from '../../../../utils/WorkflowBuilderUtils';
 import { FormActionButtons, MetadataFormSection } from './';
 import type { CheckChangeDescConditionPayload } from './ConditionBuilder';
 import {
-  buildConditionBuilderPayload,
-  ConditionBuilder,
-  parseConditionBuilderPayload,
+    buildConditionBuilderPayload,
+    ConditionBuilder,
+    parseConditionBuilderPayload
 } from './ConditionBuilder';
 
 interface CheckChangeDescriptionFormProps {

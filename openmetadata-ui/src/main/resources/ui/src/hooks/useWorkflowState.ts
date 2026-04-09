@@ -12,14 +12,14 @@
  */
 
 import { SelectChangeEvent } from '@mui/material';
-import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
 import { useCallback, useEffect, useState } from 'react';
 import { Connection, Edge, Node } from 'reactflow';
-import {
-  DataAssetFilter,
-  NodeConfig,
-} from '../interface/workflow-builder-components.interface';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
+import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
+import {
+    DataAssetFilter,
+    NodeConfig
+} from '../interface/workflow-builder-components.interface';
 
 export interface WorkflowState {
   nodes: Node[];

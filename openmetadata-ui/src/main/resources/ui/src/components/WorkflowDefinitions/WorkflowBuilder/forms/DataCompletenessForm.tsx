@@ -12,22 +12,22 @@
  */
 
 import {
-  Autocomplete,
-  Button,
-  Input,
-  SelectItemType,
-  Typography,
+    Autocomplete,
+    Button,
+    Input,
+    SelectItemType,
+    Typography
 } from '@openmetadata/ui-core-components';
 import { Trash01 } from '@untitledui/icons';
-import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
-import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
 import { Node } from 'reactflow';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
-import { useEntityFields } from '../../../../hooks/useEntityFields';
 import { EntityType } from '../../../../enums/entity.enum';
+import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
+import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
+import { useEntityFields } from '../../../../hooks/useEntityFields';
 import { FormActionButtons, MetadataFormSection } from './';
 
 interface ScoringLevel {

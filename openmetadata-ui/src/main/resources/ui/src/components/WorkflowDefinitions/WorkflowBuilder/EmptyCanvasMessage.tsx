@@ -12,11 +12,11 @@
  */
 
 import { Card, Typography } from '@openmetadata/ui-core-components';
-import { EmptyCanvasMessageProps } from '../../../interface/workflow-builder-components.interface';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as ClickIcon } from '../../../assets/svg/ic_click.svg';
 import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
+import { EmptyCanvasMessageProps } from '../../../interface/workflow-builder-components.interface';
 
 export const EmptyCanvasMessage: React.FC<EmptyCanvasMessageProps> = ({
   isDragging,

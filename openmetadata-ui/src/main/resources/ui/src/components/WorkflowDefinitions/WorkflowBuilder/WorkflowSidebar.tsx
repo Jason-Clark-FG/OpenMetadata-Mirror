@@ -12,19 +12,19 @@
  */
 
 import {
-  Badge,
-  Card,
-  Divider,
-  Typography,
+    Badge,
+    Card,
+    Divider,
+    Typography
 } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { TaskItemProps } from '../../../interface/workflow-builder-components.interface';
-import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as AddIcon } from '../../../assets/svg/ic_add.svg';
 import { NODE_TYPE_MAPPINGS } from '../../../constants/WorkflowBuilder.constants';
+import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
+import { TaskItemProps } from '../../../interface/workflow-builder-components.interface';
 import { getNodeIcon } from '../../../utils/NodeIconUtils';
 
 const TaskItem = ({

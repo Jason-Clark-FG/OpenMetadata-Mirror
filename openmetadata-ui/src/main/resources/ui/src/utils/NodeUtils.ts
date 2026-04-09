@@ -11,24 +11,23 @@
  *  limitations under the License.
  */
 
-import { ScheduleTimeline } from '../generated/governance/workflows/elements/triggers/periodicBatchEntityTrigger';
-import { WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
 import { Node } from 'reactflow';
 import {
-  CONNECTION_MODAL_RULES,
-  NODE_TYPE_MAPPINGS,
+    CONNECTION_MODAL_RULES,
+    NODE_TYPE_MAPPINGS
 } from '../constants/WorkflowBuilder.constants';
-import {
-  DataAssetFilter,
-  NodeConfig,
-} from '../interface/workflow-builder-components.interface';
-import { CustomNodeData } from '../interface/WorkflowBuilder.interface';
 import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../generated/governance/workflows/elements/nodeType';
-import { Type } from '../generated/governance/workflows/workflowDefinition';
+import { ScheduleTimeline } from '../generated/governance/workflows/elements/triggers/periodicBatchEntityTrigger';
+import { Type, WorkflowDefinition } from '../generated/governance/workflows/workflowDefinition';
 import {
-  deserializeEventBasedFilters,
-  deserializePeriodicBatchFilters,
+    DataAssetFilter,
+    NodeConfig
+} from '../interface/workflow-builder-components.interface';
+import { CustomNodeData } from '../interface/WorkflowBuilder.interface';
+import {
+    deserializeEventBasedFilters,
+    deserializePeriodicBatchFilters
 } from './WorkflowSerializationUtils';
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {

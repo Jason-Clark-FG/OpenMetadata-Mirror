@@ -15,8 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ROUTES } from '../../constants/constants';
 import {
-  GlobalSettingOptions,
-  GlobalSettingsMenuCategory,
+    GlobalSettingOptions,
+    GlobalSettingsMenuCategory
 } from '../../constants/GlobalSettings.constants';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
@@ -41,8 +41,6 @@ import EmailConfigSettingsPage from '../../pages/EmailConfigSettingsPage/EmailCo
 import GlobalSettingCategoryPage from '../../pages/GlobalSettingPage/GlobalSettingCategory/GlobalSettingCategoryPage';
 import GlobalSettingPage from '../../pages/GlobalSettingPage/GlobalSettingPage';
 import GlossaryTermRelationSettingsPage from '../../pages/GlossaryTermRelationSettings/GlossaryTermRelationSettings';
-import WorkflowBuilderPage from '../../pages/WorkflowDefinitions/WorkflowBuilder/WorkflowBuilder';
-import WorkflowsListPage from '../../pages/WorkflowDefinitions/WorkflowsPage/WorkflowsPage';
 import { LearningResourcesPage } from '../../pages/LearningResourcesPage/LearningResourcesPage';
 import LineageConfigPage from '../../pages/LineageConfigPage/LineageConfigPage';
 import NotificationListPage from '../../pages/NotificationListPage/NotificationListPage';
@@ -64,11 +62,13 @@ import ServicesPage from '../../pages/ServicesPage/ServicesPage';
 import ImportTeamsPage from '../../pages/TeamsPage/ImportTeamsPage/ImportTeamsPage';
 import TeamsPage from '../../pages/TeamsPage/TeamsPage';
 import UserListPageV1 from '../../pages/UserListPage/UserListPageV1';
+import WorkflowBuilderPage from '../../pages/WorkflowDefinitions/WorkflowBuilder/WorkflowBuilder';
+import WorkflowsListPage from '../../pages/WorkflowDefinitions/WorkflowsPage/WorkflowsPage';
 import { checkPermission, userPermissions } from '../../utils/PermissionsUtils';
 import {
-  getSettingCategoryPath,
-  getSettingPathRelative,
-  getTeamsWithFqnPath,
+    getSettingCategoryPath,
+    getSettingPathRelative,
+    getTeamsWithFqnPath
 } from '../../utils/RouterUtils';
 import EntitySearchSettings from '../SearchSettings/EntitySeachSettings/EntitySearchSettings';
 import AppDetails from '../Settings/Applications/AppDetails/AppDetails.component';

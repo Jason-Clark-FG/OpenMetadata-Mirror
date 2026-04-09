@@ -34,7 +34,7 @@ const proceedToPendingPath = (
 ) => {
   const path = pendingRef.current;
   pendingRef.current = NO_PENDING_PATH;
-  if (path) navigate(path);
+  if (path) {navigate(path);}
 };
 
 const preventUnload = (e: BeforeUnloadEvent) => {
@@ -58,7 +58,7 @@ export const useWorkflowNavigationBlock = ({
 
   const handlePopState = useCallback(() => {
     const nextPath = globalThis.location.pathname;
-    if (nextPath === location.pathname) return;
+    if (nextPath === location.pathname) {return;}
 
     globalThis.history.replaceState(
       null,
@@ -72,7 +72,7 @@ export const useWorkflowNavigationBlock = ({
     const anchor = (e.target as HTMLElement).closest('a');
     const href = anchor?.getAttribute('href') ?? null;
 
-    if (!isInternalLink(href, location.pathname)) return;
+    if (!isInternalLink(href, location.pathname)) {return;}
 
     e.preventDefault();
     e.stopPropagation();
@@ -80,7 +80,7 @@ export const useWorkflowNavigationBlock = ({
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {return;}
 
     globalThis.addEventListener('beforeunload', preventUnload);
     globalThis.addEventListener('popstate', handlePopState);
@@ -108,8 +108,8 @@ export const useWorkflowNavigationBlock = ({
     }
 
     setShowModal(false);
-    if (saved) proceedToPendingPath(pendingPathRef, navigate);
-    else pendingPathRef.current = NO_PENDING_PATH;
+    if (saved) {proceedToPendingPath(pendingPathRef, navigate);}
+    else {pendingPathRef.current = NO_PENDING_PATH;}
   }, [onSaveWorkflow, navigate]);
 
   const onDiscard = useCallback(() => {

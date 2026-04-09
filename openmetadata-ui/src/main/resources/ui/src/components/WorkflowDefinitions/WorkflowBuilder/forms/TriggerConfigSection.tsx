@@ -12,20 +12,20 @@
  */
 
 import {
-  Autocomplete,
-  Box,
-  Input,
-  Select,
-  SelectItemType,
-  Typography,
+    Autocomplete,
+    Box,
+    Input,
+    Select,
+    SelectItemType,
+    Typography
 } from '@openmetadata/ui-core-components';
-import {
-  SchedularOptions,
-  WorkflowType,
-} from '../../../../constants/WorkflowBuilder.constants';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useListData } from 'react-stately';
+import {
+    SchedularOptions,
+    WorkflowType
+} from '../../../../constants/WorkflowBuilder.constants';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import { TriggerConfigSectionProps } from '../../../../interface/workflow-builder-components.interface';
 import { FormField } from '../common/FormField';

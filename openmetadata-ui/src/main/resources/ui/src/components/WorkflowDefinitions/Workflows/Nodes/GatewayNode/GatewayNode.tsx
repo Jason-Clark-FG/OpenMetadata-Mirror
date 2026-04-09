@@ -1,11 +1,11 @@
 import { ForkOutlined } from '@ant-design/icons';
 import { Space, Typography } from 'antd';
 import classNames from 'classnames';
-import { useWorkflowStore } from '../../useWorkflowStore';
-import { getEntityName } from '../../../../../utils/EntityUtils';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Handle, Node, Position } from 'reactflow';
+import { getEntityName } from '../../../../../utils/EntityUtils';
+import { useWorkflowStore } from '../../useWorkflowStore';
 import './gateway-node.less';
 
 const GatewayNode = ({ data }: Node['data']) => {

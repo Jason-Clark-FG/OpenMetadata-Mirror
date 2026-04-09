@@ -15,58 +15,58 @@ import { Card, Tabs } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { compare, Operation } from 'fast-json-patch';
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { Navigate } from 'react-router-dom';
+import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import DeleteModalMUI from '../../../components/common/DeleteModal/DeleteModalMUI';
 import Loader from '../../../components/common/Loader/Loader';
 import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { UnsavedChangesModal } from '../../../components/Modals/UnsavedChangesModal/UnsavedChangesModal.component';
 import PageLayoutV1 from '../../../components/PageLayoutV1/PageLayoutV1';
-import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
-import { useFqn } from '../../../hooks/useFqn';
 import {
-  showErrorToast,
-  showSuccessToast,
-} from '../../../utils/ToastUtils';
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router-dom';
-import { Edge, Node, ReactFlowProvider } from 'reactflow';
-import {
-  ConnectionConditionModal,
-  WorkflowCanvas,
-  WorkflowExecutionHistory,
-  WorkflowHeader,
-  WorkflowSidebar,
+    ConnectionConditionModal,
+    WorkflowCanvas,
+    WorkflowExecutionHistory,
+    WorkflowHeader,
+    WorkflowSidebar
 } from '../../../components/WorkflowDefinitions/WorkflowBuilder';
 import { NodeFormSidebar } from '../../../components/WorkflowDefinitions/WorkflowBuilder/NodeFormSidebar';
 import type { WorkflowBuilderTab } from '../../../constants/WorkflowBuilder.constants';
 import {
-  getWorkflowBuilderTabs,
-  tabTestIds,
+    getWorkflowBuilderTabs,
+    tabTestIds
 } from '../../../constants/WorkflowBuilder.constants';
 import {
-  useWorkflowModeContext,
-  WorkflowModeProvider,
+    useWorkflowModeContext,
+    WorkflowModeProvider
 } from '../../../contexts/WorkflowModeContext';
+import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
+import { useFqn } from '../../../hooks/useFqn';
 import { useWorkflowActions } from '../../../hooks/useWorkflowActions';
 import { useWorkflowHistory } from '../../../hooks/useWorkflowHistory';
 import {
-  useWorkflowLogic,
-  UseWorkflowLogicReturn,
+    useWorkflowLogic,
+    UseWorkflowLogicReturn
 } from '../../../hooks/useWorkflowLogic';
 import { useWorkflowNavigationBlock } from '../../../hooks/useWorkflowNavigationBlock';
 import {
-  patchWorkflowDefinition,
-  triggerWorkflow,
+    patchWorkflowDefinition,
+    triggerWorkflow
 } from '../../../rest/workflowDefinitionsAPI';
+import {
+    showErrorToast,
+    showSuccessToast
+} from '../../../utils/ToastUtils';
 import { applyFlowchartLayout } from '../../../utils/WorkflowLayout';
-import workflowUiClassBase from '../../../utils/WorkflowUiClassBase';
 import { getWorkflowDefinitionsListPath } from '../../../utils/WorkflowRouterUtils';
+import workflowUiClassBase from '../../../utils/WorkflowUiClassBase';
 
 interface WorkflowBuilderInternalProps {
   workflowLogic: UseWorkflowLogicReturn;

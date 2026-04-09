@@ -12,40 +12,40 @@
  */
 
 import {
-  Divider,
-  SlideoutMenu,
-  Typography,
+    Divider,
+    SlideoutMenu,
+    Typography
 } from '@openmetadata/ui-core-components';
 import { AxiosError } from 'axios';
-import { WorkflowTriggerFields } from '../../../generated/type/workflowTriggerFields';
-import { getCustomPropertiesByEntityType } from '../../../rest/metadataTypeAPI';
-import { showErrorToast } from '../../../utils/ToastUtils';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Node } from 'reactflow';
 import {
-  AVAILABLE_OPTIONS,
-  DEFAULT_QUALITY_BANDS,
-  WorkflowType,
+    AVAILABLE_OPTIONS,
+    DEFAULT_QUALITY_BANDS,
+    WorkflowType
 } from '../../../constants/WorkflowBuilder.constants';
+import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
+import { WorkflowTriggerFields } from '../../../generated/type/workflowTriggerFields';
 import {
-  BackendNodeConfig,
-  DataAssetFilter,
-  NodeConfig,
-  NodeConfigSidebarProps,
+    BackendNodeConfig,
+    DataAssetFilter,
+    NodeConfig,
+    NodeConfigSidebarProps
 } from '../../../interface/workflow-builder-components.interface';
+import { getCustomPropertiesByEntityType } from '../../../rest/metadataTypeAPI';
 import {
-  convertDisplayToBackendTriggerType,
-  getInitialNodeConfig,
-  getNodeTitle,
-  isStartNode,
+    convertDisplayToBackendTriggerType,
+    getInitialNodeConfig,
+    getNodeTitle,
+    isStartNode
 } from '../../../utils/NodeUtils';
+import { showErrorToast } from '../../../utils/ToastUtils';
 import { validateWorkflowConfig } from '../../../utils/WorkflowConfigUtils';
 import {
-  serializeDataAssetFilters,
-  serializeEventBasedFilters,
-  serializePeriodicBatchFilters,
+    serializeDataAssetFilters,
+    serializeEventBasedFilters,
+    serializePeriodicBatchFilters
 } from '../../../utils/WorkflowSerializationUtils';
-import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import { FormActionButtons, WorkflowConfigFormV1 } from './forms';
 
 const getBackendConfig = (node: Node | null): BackendNodeConfig => {
@@ -453,10 +453,10 @@ export const NodeConfigSidebar: React.FC<NodeConfigSidebarProps> = ({
           </SlideoutMenu.Content>
           <SlideoutMenu.Footer className="tw:shadow-none tw:p-0">
             <FormActionButtons
+              showSave
               isDisabled={!isWorkflowConfigValid}
               isLoading={isUpdating}
               showDelete={false}
-              showSave
               onCancel={handleCancel}
               onSave={handleSave}
             />

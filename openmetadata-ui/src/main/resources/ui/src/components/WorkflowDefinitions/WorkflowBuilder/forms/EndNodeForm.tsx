@@ -14,8 +14,8 @@
 import React, { useEffect, useState } from 'react';
 import { Node } from 'reactflow';
 import {
-  createNodeConfig,
-  isValidString,
+    createNodeConfig,
+    isValidString
 } from '../../../../utils/WorkflowBuilderUtils';
 import { FormActionButtons, MetadataFormSection } from './';
 

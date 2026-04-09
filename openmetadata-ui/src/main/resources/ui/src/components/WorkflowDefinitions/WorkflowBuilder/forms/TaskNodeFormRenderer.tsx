@@ -11,11 +11,11 @@
  *  limitations under the License.
  */
 
-import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
-import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import React from 'react';
 import { Node } from 'reactflow';
 import { EntityType } from '../../../../enums/entity.enum';
+import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
+import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import { CheckChangeDescriptionForm } from './CheckChangeDescriptionForm';
 import { CheckConditionForm } from './CheckConditionForm';
 import { DataCompletenessForm } from './DataCompletenessForm';

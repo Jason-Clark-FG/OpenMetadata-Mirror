@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useWorkflowStore } from '../../useWorkflowStore';
 import { ReactFlowProvider } from 'reactflow';
+import { useWorkflowStore } from '../../useWorkflowStore';
 import GatewayNode from './GatewayNode';
 
 jest.mock('../../useWorkflowStore');

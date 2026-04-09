@@ -15,8 +15,8 @@ export { ModeAwareFormField } from '../ModeAwareFormField';
 export { CheckChangeDescriptionForm } from './CheckChangeDescriptionForm';
 export { CheckConditionForm } from './CheckConditionForm';
 export {
-  ConditionBuilder,
-  parseConditionBuilderPayload,
+    ConditionBuilder,
+    parseConditionBuilderPayload
 } from './ConditionBuilder';
 export { CronExpressionBuilder } from './CronExpressionBuilder';
 export { DataAssetFiltersSection } from './DataAssetFiltersSection';

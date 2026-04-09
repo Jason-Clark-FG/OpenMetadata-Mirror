@@ -13,12 +13,12 @@
 
 import { Card, Divider, Typography } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
-import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Handle, NodeProps, Position } from 'reactflow';
-import { CustomNodeData } from '../../../interface/WorkflowBuilder.interface';
+import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
+import { CustomNodeData } from '../../../interface/WorkflowBuilder.interface';
 import { getCanvasNodeIcon } from '../../../utils/NodeIconUtils';
 import { getDisplayLabelFromSubType } from '../../../utils/NodeUtils';
 

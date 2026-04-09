@@ -13,7 +13,6 @@
 
 import { Building02, Cube01 } from '@untitledui/icons';
 import { ReactComponent as GovernIcon } from '../assets/svg/bank.svg';
-import { ReactComponent as WorkflowsNavIcon } from '../assets/svg/ic-workflows.svg';
 import { ReactComponent as ClassificationIcon } from '../assets/svg/classification.svg';
 import { ReactComponent as DataQualityRulesIcon } from '../assets/svg/data-observability/data-quality-rules.svg';
 import { ReactComponent as ExploreIcon } from '../assets/svg/explore.svg';
@@ -28,6 +27,7 @@ import { ReactComponent as LineageIcon } from '../assets/svg/ic-lineage.svg';
 import { ReactComponent as ObservabilityIcon } from '../assets/svg/ic-observability.svg';
 import { ReactComponent as PlatformLineageIcon } from '../assets/svg/ic-platform-lineage.svg';
 import { ReactComponent as SettingsIcon } from '../assets/svg/ic-settings-v1.svg';
+import { ReactComponent as WorkflowsNavIcon } from '../assets/svg/ic-workflows.svg';
 import { ReactComponent as InsightsIcon } from '../assets/svg/lamp-charge.svg';
 import { ReactComponent as LogoutIcon } from '../assets/svg/logout.svg';
 import { ReactComponent as MetricIcon } from '../assets/svg/metric.svg';

@@ -15,19 +15,19 @@ import { Card } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import React, { useCallback } from 'react';
 import ReactFlow, {
-  Background,
-  ConnectionLineType,
-  EdgeChange,
-  MarkerType,
-  NodeChange,
+    Background,
+    ConnectionLineType,
+    EdgeChange,
+    MarkerType,
+    NodeChange
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { WorkflowCanvasProps } from '../../../interface/workflow-builder-components.interface';
-import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
 import {
-  MAX_ZOOM_VALUE,
-  MIN_ZOOM_VALUE,
+    MAX_ZOOM_VALUE,
+    MIN_ZOOM_VALUE
 } from '../../../constants/Lineage.constants';
+import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
+import { WorkflowCanvasProps } from '../../../interface/workflow-builder-components.interface';
 import { CustomControls } from './CustomControls';
 import { nodeTypes } from './CustomNodes';
 import { EmptyCanvasMessage } from './EmptyCanvasMessage';
@@ -161,6 +161,7 @@ const WorkflowCanvasInternal: React.FC<WorkflowCanvasProps> = ({
             },
           };
         })}
+        edgesUpdatable={structuralEditMode}
         maxZoom={MAX_ZOOM_VALUE}
         minZoom={MIN_ZOOM_VALUE}
         nodeTypes={nodeTypes}
@@ -195,7 +196,6 @@ const WorkflowCanvasInternal: React.FC<WorkflowCanvasProps> = ({
             },
           };
         })}
-        edgesUpdatable={structuralEditMode}
         nodesConnectable={structuralEditMode}
         nodesDraggable={structuralEditMode}
         onConnect={structuralEditMode ? onConnect : undefined}

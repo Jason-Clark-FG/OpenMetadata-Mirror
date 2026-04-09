@@ -12,27 +12,27 @@
  */
 
 import {
-  Button,
-  Checkbox,
-  Input,
-  Tooltip,
-  TooltipTrigger,
-  Typography,
+    Button,
+    Checkbox,
+    Input,
+    Tooltip,
+    TooltipTrigger,
+    Typography
 } from '@openmetadata/ui-core-components';
 import { InfoCircle } from '@untitledui/icons';
-import { UserTeamSelectableList } from '../../../common/UserTeamSelectableList/UserTeamSelectableList.component';
-import { EntityReference } from '../../../../generated/entity/teams/user';
-import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
-import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Node } from 'reactflow';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
+import { EntityReference } from '../../../../generated/entity/teams/user';
+import { NodeSubType } from '../../../../generated/governance/workflows/elements/nodeSubType';
+import { NodeType } from '../../../../generated/governance/workflows/elements/nodeType';
 import { AssigneeCandidate } from '../../../../interface/WorkflowTypes.interface';
 import {
-  createNodeConfig,
-  isValidString,
+    createNodeConfig,
+    isValidString
 } from '../../../../utils/WorkflowBuilderUtils';
+import { UserTeamSelectableList } from '../../../common/UserTeamSelectableList/UserTeamSelectableList.component';
 import { FormField } from '../common/FormField';
 import { ModeAwareFormField } from '../ModeAwareFormField';
 import { FormActionButtons, MetadataFormSection } from './';

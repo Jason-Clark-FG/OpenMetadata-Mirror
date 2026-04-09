@@ -12,16 +12,16 @@
  */
 
 import {
-  Button,
-  Dialog,
-  Modal,
-  ModalOverlay,
-  Typography,
+    Button,
+    Dialog,
+    Modal,
+    ModalOverlay,
+    Typography
 } from '@openmetadata/ui-core-components';
-import { WorkflowControlsProps } from '../../../interface/workflow-builder-components.interface';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkflowModeContext } from '../../../contexts/WorkflowModeContext';
+import { WorkflowControlsProps } from '../../../interface/workflow-builder-components.interface';
 
 export const WorkflowControls: React.FC<WorkflowControlsProps> = ({
   onTestWorkflow,

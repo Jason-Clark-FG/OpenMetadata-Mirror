@@ -13,17 +13,17 @@
 
 import React from 'react';
 import {
-  AVAILABLE_OPTIONS,
-  WorkflowType,
+    AVAILABLE_OPTIONS,
+    WorkflowType
 } from '../../../../constants/WorkflowBuilder.constants';
-import { NodeConfig } from '../../../../interface/workflow-builder-components.interface';
 import { EntityType } from '../../../../enums/entity.enum';
+import { NodeConfig } from '../../../../interface/workflow-builder-components.interface';
 import {
-  DataAssetFiltersSection,
-  DataAssetFormSection,
-  EventTriggerFilterSection,
-  MetadataFormSection,
-  TriggerConfigSection,
+    DataAssetFiltersSection,
+    DataAssetFormSection,
+    EventTriggerFilterSection,
+    MetadataFormSection,
+    TriggerConfigSection
 } from './';
 
 interface WorkflowConfigFormV1Props {

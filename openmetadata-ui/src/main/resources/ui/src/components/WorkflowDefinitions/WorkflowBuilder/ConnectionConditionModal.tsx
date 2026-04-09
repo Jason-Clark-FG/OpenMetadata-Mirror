@@ -12,24 +12,24 @@
  */
 
 import {
-  Button,
-  Card,
-  Divider,
-  Select,
-  Typography,
+    Button,
+    Card,
+    Divider,
+    Select,
+    Typography
 } from '@openmetadata/ui-core-components';
-import {
-  ConnectionCondition,
-  ConnectionConditionModalProps,
-} from '../../../interface/workflow-builder-components.interface';
-import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AVAILABLE_OPTIONS,
-  ConditionValue,
-  DEFAULT_QUALITY_BANDS,
+    AVAILABLE_OPTIONS,
+    ConditionValue,
+    DEFAULT_QUALITY_BANDS
 } from '../../../constants/WorkflowBuilder.constants';
+import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
+import {
+    ConnectionCondition,
+    ConnectionConditionModalProps
+} from '../../../interface/workflow-builder-components.interface';
 
 export const ConnectionConditionModal: React.FC<
   ConnectionConditionModalProps

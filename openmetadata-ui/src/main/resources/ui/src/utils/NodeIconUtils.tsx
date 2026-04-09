@@ -25,7 +25,6 @@ import { ReactComponent as CanvasRevertIcon } from '../assets/svg/ic_revert_chan
 import { ReactComponent as CanvasActionIcon } from '../assets/svg/ic_set-action-node.svg';
 import { ReactComponent as CanvasUserIcon } from '../assets/svg/ic_user_approval-node.svg';
 
-import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 import { ReactComponent as CheckIcon } from '../assets/svg/ic_check-condition.svg';
 import { ReactComponent as CompletenessIcon } from '../assets/svg/ic_data-completeness.svg';
 import { ReactComponent as EndIcon } from '../assets/svg/ic_end-node.svg';
@@ -34,6 +33,7 @@ import { ReactComponent as RevertIcon } from '../assets/svg/ic_revert-changes.sv
 import { ReactComponent as ActionIcon } from '../assets/svg/ic_set-action.svg';
 import { ReactComponent as StarIcon } from '../assets/svg/ic_star.svg';
 import { ReactComponent as StartIcon } from '../assets/svg/ic_start-node.svg';
+import { NodeSubType } from '../generated/governance/workflows/elements/nodeSubType';
 
 export const getCanvasNodeIcon = (
   subType: NodeSubType | undefined,

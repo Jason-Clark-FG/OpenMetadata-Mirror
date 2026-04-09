@@ -13,11 +13,11 @@
 
 import { Button, Card } from '@openmetadata/ui-core-components';
 import { Plus, XClose } from '@untitledui/icons';
-import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWorkflowModeContext } from '../../../../contexts/WorkflowModeContext';
 import { EntityType } from '../../../../enums/entity.enum';
+import { SearchOutputType } from '../../../Explore/AdvanceSearchProvider/AdvanceSearchProvider.interface';
 import { QueryBuilderSection } from './QueryBuilderSection';
 
 interface EventTriggerFilterSectionProps {

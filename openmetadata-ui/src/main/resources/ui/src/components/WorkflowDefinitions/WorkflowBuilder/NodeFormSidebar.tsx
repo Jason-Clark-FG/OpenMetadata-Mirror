@@ -12,18 +12,18 @@
  */
 
 import {
-  Divider,
-  SlideoutMenu,
-  Typography,
+    Divider,
+    SlideoutMenu,
+    Typography
 } from '@openmetadata/ui-core-components';
-import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
-import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edge, Node } from 'reactflow';
-import { WorkflowMetadata } from '../../../interface/workflow-builder-components.interface';
 import { EntityType } from '../../../enums/entity.enum';
+import { NodeSubType } from '../../../generated/governance/workflows/elements/nodeSubType';
+import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
 import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
+import { WorkflowMetadata } from '../../../interface/workflow-builder-components.interface';
 import { TaskNodeFormRenderer } from './forms';
 import { NodeConfigSidebar } from './NodeConfigSidebar';
 

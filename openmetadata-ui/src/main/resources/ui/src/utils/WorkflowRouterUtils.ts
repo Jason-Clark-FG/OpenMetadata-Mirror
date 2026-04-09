@@ -11,13 +11,13 @@
  *  limitations under the License.
  */
 import {
-  PLACEHOLDER_ROUTE_FQN,
-  PLACEHOLDER_ROUTE_TAB,
-  ROUTES,
+    PLACEHOLDER_ROUTE_FQN,
+    PLACEHOLDER_ROUTE_TAB,
+    ROUTES
 } from '../constants/constants';
 import {
-  GlobalSettingOptions,
-  GlobalSettingsMenuCategory,
+    GlobalSettingOptions,
+    GlobalSettingsMenuCategory
 } from '../constants/GlobalSettings.constants';
 import { getSettingsPathWithFqn } from './RouterUtils';
 import { getEncodedFqn } from './StringsUtils';
