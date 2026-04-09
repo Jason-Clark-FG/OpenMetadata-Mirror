@@ -11,29 +11,22 @@
  *  limitations under the License.
  */
 import { expect, Page } from '@playwright/test';
-import { OM_BASE_URL, SSO_ENV } from '../../constant/ssoAuth';
+import { OM_BASE_URL } from '../../constant/ssoAuth';
 import { ProviderConfigOverride, ProviderCredentials } from '../ssoAuth';
 import { ProviderHelper } from './index';
 
-const getRequiredEnv = (envKey: string): string => {
-  const value = process.env[envKey]?.trim();
-
-  if (!value) {
-    throw new Error(
-      `Missing required Okta SSO environment variable: ${envKey}. ` +
-        'Set this explicitly for Playwright SSO tests.'
-    );
-  }
-
-  return value;
-};
+// Collate's nightly test Okta tenant. These are non-secret OAuth public
+// identifiers — visible on the hosted login page during any sign-in — so
+// committing them is intentional. To point the suite at a different tenant,
+// update this constant in a single commit.
+const OKTA_TENANT = {
+  clientId: '0oayn277hnOhUpVLd697',
+  domain: 'integrator-9351624.okta.com',
+  principalDomain: 'getcollate.io',
+} as const;
 
 const buildConfigPayload = (): ProviderConfigOverride => {
-  const clientId = getRequiredEnv(SSO_ENV.OKTA_CLIENT_ID);
-  const oktaDomain = getRequiredEnv(SSO_ENV.OKTA_DOMAIN);
-  const principalDomain = getRequiredEnv(SSO_ENV.OKTA_PRINCIPAL_DOMAIN);
-
-  const authority = `https://${oktaDomain}/oauth2/default`;
+  const authority = `https://${OKTA_TENANT.domain}/oauth2/default`;
 
   return {
     authenticationConfiguration: {
@@ -46,13 +39,13 @@ const buildConfigPayload = (): ProviderConfigOverride => {
       ],
       tokenValidationAlgorithm: 'RS256',
       authority,
-      clientId,
+      clientId: OKTA_TENANT.clientId,
       callbackUrl: `${OM_BASE_URL}/callback`,
       jwtPrincipalClaims: ['email', 'preferred_username', 'sub'],
       enableSelfSignup: true,
     },
     authorizerConfiguration: {
-      principalDomain,
+      principalDomain: OKTA_TENANT.principalDomain,
     },
   };
 };

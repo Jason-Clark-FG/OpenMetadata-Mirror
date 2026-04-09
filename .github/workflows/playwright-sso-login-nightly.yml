@@ -9,31 +9,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# Nightly end-to-end SSO login tests.
-#
-# Purpose:
-#   Drive real login round-trips through external identity providers and
-#   validate the resulting OpenMetadata sessions. Complements
-#   playwright-sso-tests.yml, which only exercises the SSO configuration
-#   form UI without performing an actual login.
-#
-# Shape:
-#   One job per provider. Each job declares `environment: test` so it can
-#   resolve `${{ secrets.<PROVIDER>_SSO_PASSWORD }}` from the environment's
-#   secrets with a STATIC reference (keeps CodeQL's "Excessive Secrets
-#   Exposure" rule happy). All shared setup + test-run logic lives in the
-#   composite action ./.github/actions/sso-login-run.
-#
-# Adding a new provider:
-#   1. Add `<PROVIDER>_SSO_PASSWORD` as an environment secret and
-#      `<PROVIDER>_SSO_USERNAME` + tenant vars in the `test` environment.
-#   2. Add the provider to the `workflow_dispatch.inputs.sso_provider`
-#      options list.
-#   3. Copy the `okta` job below, rename it, and point its static secret
-#      reference at `<PROVIDER>_SSO_PASSWORD`.
-#   4. Register the provider helper in
-#      openmetadata-ui/src/main/resources/ui/playwright/utils/sso-providers/index.ts.
-
 name: SSO Login Nightly
 
 on:
@@ -74,5 +49,5 @@ jobs:
         uses: ./.github/actions/sso-login-run
         with:
           provider: okta
+          sso_username: ${{ vars.OKTA_SSO_USERNAME }}
           sso_password: ${{ secrets.OKTA_SSO_PASSWORD }}
-          all_vars_json: ${{ toJSON(vars) }}

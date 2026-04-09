@@ -9,26 +9,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# Composite action that runs the end-to-end SSO login Playwright spec for a
-# single provider.
-#
-# Provider-agnostic: the caller job passes the provider name + its password
-# secret. Non-secret provider configuration (username, tenant IDs, domains)
-# is pulled dynamically from the calling job's `vars` context using the
-# convention `${PROVIDER_UPPER}_SSO_*`, so adding a new tenant field for an
-# existing provider requires no workflow change.
-#
-# Adding a new provider:
-#   1. Add `<PROVIDER>_SSO_PASSWORD` as an environment secret and
-#      `<PROVIDER>_SSO_USERNAME` + whatever tenant vars the helper reads in
-#      the `test` environment.
-#   2. Add a sibling job in playwright-sso-login-nightly.yml with
-#      `environment: test`, gated by `if: ...`, that calls this composite
-#      action with a STATIC `${{ secrets.<PROVIDER>_SSO_PASSWORD }}`
-#      reference (keeps CodeQL happy).
-#   3. Register the provider helper in
-#      openmetadata-ui/src/main/resources/ui/playwright/utils/sso-providers/index.ts.
-
 name: SSO Login Run
 description: Run the end-to-end SSO login Playwright spec for a single provider.
 
@@ -36,11 +16,11 @@ inputs:
   provider:
     description: 'SSO provider identifier (lowercase, e.g. okta, azure)'
     required: true
+  sso_username:
+    description: 'Username / email for the provider test account'
+    required: true
   sso_password:
     description: 'Password for the provider test account'
-    required: true
-  all_vars_json:
-    description: 'toJSON(vars) from the caller — used to pull non-secret provider config'
     required: true
 
 runs:
@@ -87,25 +67,12 @@ runs:
       shell: bash
       run: npx playwright@1.51.1 install chromium --with-deps
 
-    - name: Export SSO provider env
-      shell: bash
-      env:
-        PROVIDER: ${{ inputs.provider }}
-        ALL_VARS: ${{ inputs.all_vars_json }}
-      run: |
-        PREFIX=$(echo "$PROVIDER" | tr '[:lower:]' '[:upper:]')
-        echo "SSO_PROVIDER_TYPE=$PROVIDER" >> "$GITHUB_ENV"
-        printf '%s\n' "$ALL_VARS" \
-          | jq -r --arg p "${PREFIX}_SSO_" \
-              'to_entries[] | select(.key | startswith($p)) | "\(.key)=\(.value)"' \
-          >> "$GITHUB_ENV"
-        USERNAME=$(printf '%s\n' "$ALL_VARS" | jq -r --arg k "${PREFIX}_SSO_USERNAME" '.[$k]')
-        echo "SSO_USERNAME=$USERNAME" >> "$GITHUB_ENV"
-
     - name: Run SSO Login Spec
       working-directory: openmetadata-ui/src/main/resources/ui
       shell: bash
       env:
+        SSO_PROVIDER_TYPE: ${{ inputs.provider }}
+        SSO_USERNAME: ${{ inputs.sso_username }}
         SSO_PASSWORD: ${{ inputs.sso_password }}
         PLAYWRIGHT_IS_OSS: true
       run: |
