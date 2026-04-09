@@ -10,6 +10,7 @@ import es.co.elastic.clients.elasticsearch._types.Refresh;
 import es.co.elastic.clients.elasticsearch.core.BulkResponse;
 import es.co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import es.co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
+import es.co.elastic.clients.json.JsonData;
 import es.co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import jakarta.json.stream.JsonGenerator;
 import java.io.StringWriter;
@@ -310,9 +311,7 @@ public class ElasticSearchBulkSink implements BulkSink {
       if (recreateIndex) {
         operation =
             BulkOperation.of(
-                op ->
-                    op.index(
-                        idx -> idx.index(indexName).id(docId).document(docJsonData)));
+                op -> op.index(idx -> idx.index(indexName).id(docId).document(docJsonData)));
       } else {
         operation =
             BulkOperation.of(
@@ -383,9 +382,7 @@ public class ElasticSearchBulkSink implements BulkSink {
 
       BulkOperation operation =
           BulkOperation.of(
-              op ->
-                  op.index(
-                      idx -> idx.index(indexName).id(docId).document(docJsonData)));
+              op -> op.index(idx -> idx.index(indexName).id(docId).document(docJsonData)));
 
       if (tracker != null) {
         tracker.incrementPendingSink();
@@ -465,11 +462,7 @@ public class ElasticSearchBulkSink implements BulkSink {
           operation =
               BulkOperation.of(
                   op ->
-                      op.index(
-                          idx ->
-                              idx.index(columnIndexName)
-                                  .id(docId)
-                                  .document(docJsonData)));
+                      op.index(idx -> idx.index(columnIndexName).id(docId).document(docJsonData)));
         } else {
           operation =
               BulkOperation.of(
