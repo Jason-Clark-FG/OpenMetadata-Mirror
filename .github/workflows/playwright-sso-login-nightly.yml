@@ -90,7 +90,7 @@ jobs:
         run: yarn --ignore-scripts --frozen-lockfile
 
       - name: Install Playwright Browsers
-        run: npx playwright@1.51.1 install chromium --with-deps
+        run: npx playwright@1.57.0 install chromium --with-deps
 
       - name: Run SSO Login Spec
         working-directory: openmetadata-ui/src/main/resources/ui
