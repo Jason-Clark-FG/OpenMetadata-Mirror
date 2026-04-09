@@ -58,8 +58,8 @@ import {
 import { getEntityName } from '../../../../utils/EntityUtils';
 import { getPopupContainer } from '../../../../utils/formUtils';
 import { getPrioritizedViewPermission } from '../../../../utils/PermissionsUtils';
+import ObservabilityRouterClassBase from '../../../../utils/ObservabilityRouterClassBase';
 import {
-  getDataQualityPagePath,
   getEntityDetailsPath,
   getTestSuitePath,
 } from '../../../../utils/RouterUtils';
@@ -269,7 +269,7 @@ export const TestSuites = () => {
   };
 
   const handleSubTabChange = (e: RadioChangeEvent) => {
-    navigate(getDataQualityPagePath(tab, e.target.value as DataQualitySubTabs));
+    navigate(ObservabilityRouterClassBase.getDataQualityPagePath(tab, e.target.value as DataQualitySubTabs));
   };
 
   const customPaginationProps = useMemo(

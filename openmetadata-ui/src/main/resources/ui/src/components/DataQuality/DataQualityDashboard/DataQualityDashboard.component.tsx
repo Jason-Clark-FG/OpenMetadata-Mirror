@@ -57,7 +57,7 @@ import {
   getStartOfDayInMillis,
 } from '../../../utils/date-time/DateTimeUtils';
 import { getEntityName } from '../../../utils/EntityUtils';
-import { getDataQualityPagePath } from '../../../utils/RouterUtils';
+import ObservabilityRouterClassBase from '../../../utils/ObservabilityRouterClassBase';
 import DataAssetsCoveragePieChartWidget from '../ChartWidgets/DataAssetsCoveragePieChartWidget/DataAssetsCoveragePieChartWidget.component';
 import EntityHealthStatusPieChartWidget from '../ChartWidgets/EntityHealthStatusPieChartWidget/EntityHealthStatusPieChartWidget.component';
 import IncidentTimeChartWidget from '../ChartWidgets/IncidentTimeChartWidget/IncidentTimeChartWidget.component';
@@ -677,7 +677,7 @@ const DataQualityDashboard = ({
                   chartFilter={defaultFilters}
                   name="success"
                   redirectPath={{
-                    pathname: getDataQualityPagePath(
+                    pathname: ObservabilityRouterClassBase.getDataQualityPagePath(
                       DataQualityPageTabs.TEST_CASES
                     ),
                     search: QueryString.stringify({
@@ -694,7 +694,7 @@ const DataQualityDashboard = ({
                   chartFilter={defaultFilters}
                   name="aborted"
                   redirectPath={{
-                    pathname: getDataQualityPagePath(
+                    pathname: ObservabilityRouterClassBase.getDataQualityPagePath(
                       DataQualityPageTabs.TEST_CASES
                     ),
                     search: QueryString.stringify({
@@ -711,7 +711,7 @@ const DataQualityDashboard = ({
                   chartFilter={defaultFilters}
                   name="failed"
                   redirectPath={{
-                    pathname: getDataQualityPagePath(
+                    pathname: ObservabilityRouterClassBase.getDataQualityPagePath(
                       DataQualityPageTabs.TEST_CASES
                     ),
                     search: QueryString.stringify({

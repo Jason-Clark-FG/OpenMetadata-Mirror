@@ -49,10 +49,8 @@ import LimitWrapper from '../../hoc/LimitWrapper';
 import { usePaging } from '../../hooks/paging/usePaging';
 import { getAllAlerts } from '../../rest/alertsAPI';
 import { getEntityName } from '../../utils/EntityUtils';
-import {
-  getObservabilityAlertDetailsPath,
-  getObservabilityAlertsEditPath,
-} from '../../utils/RouterUtils';
+import ObservabilityRouterClassBase from '../../utils/ObservabilityRouterClassBase';
+import { getObservabilityAlertDetailsPath } from '../../utils/RouterUtils';
 import { descriptionTableObject } from '../../utils/TableColumn.util';
 import { showErrorToast } from '../../utils/ToastUtils';
 
@@ -253,7 +251,7 @@ const ObservabilityAlertsPage = () => {
             <div className="d-flex items-center">
               {alertPermission.edit && (
                 <Tooltip placement="bottom" title={t('label.edit')}>
-                  <Link to={getObservabilityAlertsEditPath(fqn)}>
+                  <Link to={ObservabilityRouterClassBase.getObservabilityAlertsEditPath(fqn)}>
                     <Button
                       className="flex flex-center"
                       data-testid={`alert-edit-${record.name}`}
@@ -311,7 +309,7 @@ const ObservabilityAlertsPage = () => {
                     <Button
                       data-testid="create-observability"
                       type="primary"
-                      onClick={() => navigate(ROUTES.ADD_OBSERVABILITY_ALERTS)}>
+                      onClick={() => navigate(ObservabilityRouterClassBase.getAddObservabilityAlertsPath())}>
                       {t('label.add-entity', { entity: t('label.alert') })}
                     </Button>
                   </LimitWrapper>
@@ -345,7 +343,7 @@ const ObservabilityAlertsPage = () => {
                     entity: t('label.alert'),
                   })}
                   type={ERROR_PLACEHOLDER_TYPE.CREATE}
-                  onClick={() => navigate(ROUTES.ADD_OBSERVABILITY_ALERTS)}
+                  onClick={() => navigate(ObservabilityRouterClassBase.getAddObservabilityAlertsPath())}
                 />
               ),
             }}

@@ -72,7 +72,7 @@ import {
   checkPermission,
   getPrioritizedViewPermission,
 } from '../../../utils/PermissionsUtils';
-import { getDataQualityPagePath } from '../../../utils/RouterUtils';
+import ObservabilityRouterClassBase from '../../../utils/ObservabilityRouterClassBase';
 import tagClassBase from '../../../utils/TagClassBase';
 import { ExtraTestCaseDropdownOptions } from '../../../utils/TestCaseUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
@@ -738,7 +738,7 @@ export const TestCases = () => {
           breadcrumbData={[
             {
               name: t('label.data-quality'),
-              url: getDataQualityPagePath(DataQualityPageTabs.TEST_CASES),
+              url: ObservabilityRouterClassBase.getDataQualityPagePath(DataQualityPageTabs.TEST_CASES),
             },
           ]}
           enableBulkActions={Boolean(testSuitePermission?.Create)}
