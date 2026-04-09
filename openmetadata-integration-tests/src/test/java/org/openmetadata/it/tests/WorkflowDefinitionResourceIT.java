@@ -130,7 +130,6 @@ import org.openmetadata.sdk.network.HttpMethod;
 import org.openmetadata.sdk.network.RequestOptions;
 import org.openmetadata.service.governance.workflows.WorkflowHandler;
 import org.openmetadata.service.governance.workflows.elements.TriggerFactory;
-import org.openmetadata.service.resources.feeds.MessageParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
