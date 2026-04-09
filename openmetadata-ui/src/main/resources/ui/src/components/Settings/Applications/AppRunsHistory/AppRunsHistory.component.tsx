@@ -210,6 +210,7 @@ const AppRunsHistory = forwardRef(
               record.status !== Status.Failed &&
               record.status !== Status.Stopped &&
               record.status !== Status.Completed &&
+              record.status !== Status.StopInProgress &&
               Boolean(appData?.supportsInterrupt) && (
                 <Button
                   className="m-l-xs p-0"

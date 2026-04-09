@@ -723,6 +723,7 @@ public class IngestionPipelineRepository extends EntityRepository<IngestionPipel
    * current status. Use this when stopping a specific run while other runs may still be active.
    * Inserts a new record if none exists for the runId, otherwise updates the existing one.
    */
+  @Transaction
   public void updatePipelineStatusByRunId(String fqn, PipelineStatus pipelineStatus) {
     IngestionPipeline ingestionPipeline = findByName(fqn, Include.NON_DELETED);
     String pipelineFqn = ingestionPipeline.getFullyQualifiedName();

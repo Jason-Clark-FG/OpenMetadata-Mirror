@@ -1280,7 +1280,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
 
   private Response stopSpecificRun(
       UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
-    markPipelineStatusAsStopped(uriInfo, ingestionPipeline, runId);
+    markPipelineStatusAsStopped(ingestionPipeline, runId);
     PipelineServiceClientResponse killResponse;
     try {
       killResponse = pipelineServiceClient.killIngestionRun(ingestionPipeline, runId);
@@ -1327,8 +1327,7 @@ public class AppResource extends EntityResource<App, AppRepository> {
     return toStopResponse(killResponse);
   }
 
-  private void markPipelineStatusAsStopped(
-      UriInfo uriInfo, IngestionPipeline ingestionPipeline, String runId) {
+  private void markPipelineStatusAsStopped(IngestionPipeline ingestionPipeline, String runId) {
     IngestionPipelineRepository ingestionPipelineRepository =
         (IngestionPipelineRepository) Entity.getEntityRepository(Entity.INGESTION_PIPELINE);
     try {
