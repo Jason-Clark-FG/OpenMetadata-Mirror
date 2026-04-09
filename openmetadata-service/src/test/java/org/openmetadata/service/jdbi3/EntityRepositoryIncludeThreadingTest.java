@@ -170,4 +170,25 @@ class EntityRepositoryIncludeThreadingTest {
       assertEquals(Include.ALL, includeCaptor.getValue());
     }
   }
+
+  @Test
+  void setFieldsInBulk_withNull_defaultsToNonDeleted() {
+    Pipeline pipeline = pipelineWithOwner(UUID.randomUUID(), UUID.randomUUID());
+    Fields fields = new Fields(Set.of("owners"));
+
+    ArgumentCaptor<Include> includeCaptor = ArgumentCaptor.forClass(Include.class);
+    try (MockedStatic<Entity> entityStatic = mockStatic(Entity.class, CALLS_REAL_METHODS)) {
+      entityStatic
+          .when(() -> Entity.getEntityReferencesByIdsRespectingInclude(any(), any(), any()))
+          .thenReturn(List.of());
+
+      repo.setFieldsInBulk(fields, List.of(pipeline), null);
+
+      entityStatic.verify(
+          () ->
+              Entity.getEntityReferencesByIdsRespectingInclude(
+                  anyString(), anyList(), includeCaptor.capture()));
+      assertEquals(Include.NON_DELETED, includeCaptor.getValue());
+    }
+  }
 }

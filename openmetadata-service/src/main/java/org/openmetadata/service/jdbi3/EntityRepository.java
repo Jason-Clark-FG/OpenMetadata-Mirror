@@ -1898,8 +1898,9 @@ public abstract class EntityRepository<T extends EntityInterface> {
   }
 
   public final void setFieldsInBulk(Fields fields, List<T> entities, Include include) {
+    Include resolved = include != null ? include : Include.NON_DELETED;
     Include previous = bulkInclude.get();
-    bulkInclude.set(include);
+    bulkInclude.set(resolved);
     try {
       setFieldsInBulk(fields, entities);
     } finally {
