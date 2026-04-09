@@ -12,14 +12,23 @@
  */
 
 import type { CSSProperties, FC, ReactNode } from 'react';
-import { createElement, isValidElement, useEffect, useRef, useState } from 'react';
+import {
+  createElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import type { Key } from 'react-aria-components';
 import { normalizeHexColor } from '@/colors/colorValidation';
 import { Tabs } from '@/components/application/tabs/tabs';
 import { Input } from '@/components/base/input/input';
 import { cx } from '@/utils/cx';
 import { isReactComponent } from '@/utils/is-react-component';
-import type { FormSelectItem, IconPickerFieldLabels } from '../form-field.types';
+import type {
+  FormSelectItem,
+  IconPickerFieldLabels,
+} from '../form-field.types';
 import { DEFAULT_COLOR_OPTIONS } from './color-picker-field';
 
 const looksLikeImageSource = (value: string) => {
@@ -71,7 +80,11 @@ const renderSelectItemIcon = (
   return isValidElement(icon) ? icon : null;
 };
 
-const ICON_STYLE: CSSProperties = { color: 'white', display: 'block', strokeWidth: 1.25 };
+const ICON_STYLE: CSSProperties = {
+  color: 'white',
+  display: 'block',
+  strokeWidth: 1.25,
+};
 
 const getDefaultIconPreview = (
   items: FormSelectItem[],
@@ -260,7 +273,9 @@ export const IconPickerField = ({
           })}
         </div>
       ) : (
-        <span className="tw:text-sm tw:text-tertiary">{labels?.emptyState ?? 'No icons available'}</span>
+        <span className="tw:text-sm tw:text-tertiary">
+          {labels?.emptyState ?? 'No icons available'}
+        </span>
       )}
     </div>
   );
@@ -285,7 +300,9 @@ export const IconPickerField = ({
   return (
     <div className="tw:relative tw:w-fit" ref={wrapperRef}>
       <button
-        aria-label={ariaLabel ?? placeholder ?? labels?.emptyState ?? 'Select icon'}
+        aria-label={
+          ariaLabel ?? placeholder ?? labels?.emptyState ?? 'Select icon'
+        }
         className={cx(
           'tw:flex tw:h-[34px] tw:w-[34px] tw:items-center tw:justify-center tw:rounded-[10px] tw:shadow-xs tw:outline-hidden tw:transition tw:duration-150',
           !disabled && 'tw:cursor-pointer tw:hover:scale-[1.02]',

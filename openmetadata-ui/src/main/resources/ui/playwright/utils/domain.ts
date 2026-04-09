@@ -413,10 +413,12 @@ export const fillDomainForm = async (
 ) => {
   await fillCommonFormItems(page, entity);
 
-  const domainTypeCombo = page.getByRole('combobox', { name: 'Domain Type' });
-  await domainTypeCombo.click();
+  const domainTypeTrigger = page.getByTestId('domainType').getByRole('button');
+  await domainTypeTrigger.click();
 
-  await page.getByRole('option', { name: entity.domainType }).click();
+  await page
+    .getByRole('option', { name: entity.domainType, exact: true })
+    .click();
 };
 
 export const checkDomainDisplayName = async (

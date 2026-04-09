@@ -56,9 +56,7 @@ export const ColorPickerField = ({
   value,
 }: ColorPickerFieldProps) => {
   const normalizedValue = normalizeHexColor(value);
-  const colorOptions = (
-    Array.isArray(colors) ? colors : DEFAULT_COLOR_OPTIONS
-  )
+  const colorOptions = (Array.isArray(colors) ? colors : DEFAULT_COLOR_OPTIONS)
     .map((color) => normalizeHexColor(color))
     .filter((color): color is string => Boolean(color));
   const palette = [...colorOptions];

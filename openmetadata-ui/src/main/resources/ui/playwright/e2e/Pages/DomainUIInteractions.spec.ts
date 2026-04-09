@@ -585,7 +585,9 @@ test.describe('Domain Form Validation', () => {
     await page.getByRole('button', { name: 'Save' }).click();
 
     await expect(
-      page.locator('.ant-form-item-explain-error').first()
+      page.getByText(
+        'Name must contain only letters, numbers, underscores, hyphens, periods, parenthesis, and ampersands.'
+      )
     ).toBeVisible();
   });
 

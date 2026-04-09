@@ -653,7 +653,6 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         entity: t('label.domain-type'),
       }),
       props: {
-        'data-testid': 'domainType',
         options: domainTypeOptions,
         size: 'sm',
         fontSize: 'sm',
@@ -796,7 +795,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
 
         {(type === DomainFormType.DOMAIN ||
           type === DomainFormType.SUBDOMAIN) && (
-          <div>{getField(domainTypeField)}</div>
+          <div data-testid="domainType">{getField(domainTypeField)}</div>
         )}
 
         {type === DomainFormType.DATA_PRODUCT && !parentDomain && (

@@ -107,7 +107,9 @@ const getDefaultAutocompleteItems = (items: FormSelectItem[]) =>
     />
   ));
 
-const getFileFieldHint = (value: File | { file: File } | File[] | null): string | null => {
+const getFileFieldHint = (
+  value: File | { file: File } | File[] | null
+): string | null => {
   if (!value) {
     return null;
   }
@@ -120,7 +122,11 @@ const getFileFieldHint = (value: File | { file: File } | File[] | null): string 
     return value.file.name;
   }
 
-  if (Array.isArray(value) && value.length > 0 && value.every((item) => item instanceof File)) {
+  if (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((item) => item instanceof File)
+  ) {
     return value.map((item) => item.name).join(', ');
   }
 
@@ -498,8 +504,8 @@ export const renderFieldElement = (
               const nextValue = allowsMultiple
                 ? Array.from(files ?? [])
                 : files?.[0]
-                  ? { file: files[0] }
-                  : null;
+                ? { file: files[0] }
+                : null;
 
               field.onChange(nextValue);
               onSelect?.(files);
