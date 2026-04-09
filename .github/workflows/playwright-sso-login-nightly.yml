@@ -13,12 +13,11 @@ name: SSO Login Nightly
 
 on:
   schedule:
-    # Every night at 03:00 UTC — runs every registered provider.
     - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       sso_provider:
-        description: 'SSO provider to test (or "all")'
+        description: 'SSO provider (or "all")'
         required: true
         default: okta
         type: choice
@@ -34,21 +33,91 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  okta:
-    if: >-
-      github.event_name == 'schedule' ||
-      github.event.inputs.sso_provider == 'okta' ||
-      github.event.inputs.sso_provider == 'all'
+  # To onboard a new provider:
+  #   1. Add its lowercase name to the matrix array below AND to the
+  #      dispatch `options:` list above.
+  #   2. Add <PROVIDER>_SSO_USERNAME (variable) and <PROVIDER>_SSO_PASSWORD
+  #      (secret) to the `test` environment.
+  #   3. Register the helper in playwright/utils/sso-providers/index.ts.
+  sso-login:
     runs-on: ubuntu-latest
     environment: test
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        provider:
+          ${{ (github.event_name == 'schedule' || github.event.inputs.sso_provider == 'all')
+              && fromJSON('["okta"]')
+              || fromJSON(format('["{0}"]', github.event.inputs.sso_provider)) }}
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: false
+          swap-storage: true
+          docker-images: false
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run SSO Login Spec
-        uses: ./.github/actions/sso-login-run
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v4
         with:
-          provider: okta
-          sso_username: ${{ vars.OKTA_SSO_USERNAME }}
-          sso_password: ${{ secrets.OKTA_SSO_PASSWORD }}
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup OpenMetadata Test Environment
+        uses: ./.github/actions/setup-openmetadata-test-environment
+        with:
+          python-version: "3.10"
+          args: "-d postgresql -i false"
+          ingestion_dependency: "all"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'openmetadata-ui/src/main/resources/ui/.nvmrc'
+
+      - name: Install dependencies
+        working-directory: openmetadata-ui/src/main/resources/ui/
+        run: yarn --ignore-scripts --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: npx playwright@1.51.1 install chromium --with-deps
+
+      - name: Compute provider prefix
+        run: echo "PROVIDER_PREFIX=$(echo '${{ matrix.provider }}' | tr '[:lower:]' '[:upper:]')" >> "$GITHUB_ENV"
+
+      - name: Run SSO Login Spec
+        working-directory: openmetadata-ui/src/main/resources/ui
+        env:
+          SSO_PROVIDER_TYPE: ${{ matrix.provider }}
+          SSO_USERNAME: ${{ vars[format('{0}_SSO_USERNAME', env.PROVIDER_PREFIX)] }}
+          SSO_PASSWORD: ${{ secrets[format('{0}_SSO_PASSWORD', env.PROVIDER_PREFIX)] }}
+          PLAYWRIGHT_IS_OSS: true
+        run: |
+          npx playwright test playwright/e2e/Auth/SSOLogin.spec.ts \
+            --project=sso-auth \
+            --workers=1
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sso-login-html-report-${{ matrix.provider }}
+          path: openmetadata-ui/src/main/resources/ui/playwright/output/playwright-report
+          retention-days: 5
+
+      - name: Clean Up
+        if: always()
+        run: |
+          cd ./docker/development
+          docker compose down --remove-orphans
+          sudo rm -rf ${PWD}/docker-volume
