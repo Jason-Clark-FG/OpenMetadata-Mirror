@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.jdbi.v3.core.Handle;
 import org.openmetadata.schema.entity.data.Chart;
 import org.openmetadata.schema.entity.services.DashboardService;
+import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
@@ -29,7 +29,7 @@ public class MigrationUtil {
 
   private MigrationUtil() {}
 
-  public static void fixSupersetFqnCollision(Handle handle, CollectionDAO collectionDAO) {
+  public static void fixSupersetFqnCollision(CollectionDAO collectionDAO) {
     LOG.info("Starting migration to fix Superset FQN collisions (dashboard/chart ID ambiguity)");
 
     List<DashboardService> supersetServices = findSupersetServices(collectionDAO);
@@ -45,6 +45,12 @@ public class MigrationUtil {
     }
 
     LOG.info("Fixed {} Superset chart entities with FQN collisions", fixedCount);
+    if (fixedCount > 0) {
+      LOG.warn(
+          "Search index may contain stale FQN values for renamed Superset chart entities. "
+              + "A manual reindex of Chart entities is required. "
+              + "Use the OpenMetadata UI: Settings > Search > Reindex, filter by 'chart'.");
+    }
   }
 
   private static List<DashboardService> findSupersetServices(CollectionDAO collectionDAO) {
@@ -60,9 +66,13 @@ public class MigrationUtil {
         break;
       }
       for (String json : jsons) {
-        DashboardService service = JsonUtils.readValue(json, DashboardService.class);
-        if (service != null && "Superset".equals(service.getServiceType().value())) {
-          supersetServices.add(service);
+        try {
+          DashboardService service = JsonUtils.readValue(json, DashboardService.class);
+          if (service != null && "Superset".equals(service.getServiceType().value())) {
+            supersetServices.add(service);
+          }
+        } catch (Exception e) {
+          LOG.warn("Skipping malformed dashboard_service_entity record: {}", e.getMessage());
         }
       }
       if (jsons.size() < BATCH_SIZE) {
@@ -75,35 +85,40 @@ public class MigrationUtil {
   }
 
   private static int fixChartFqns(CollectionDAO collectionDAO, DashboardService service) {
-    int fixedCount = 0;
     String serviceFqn = service.getFullyQualifiedName();
 
     Set<UUID> chartIds =
         findChildEntityIds(collectionDAO, service.getId(), Entity.DASHBOARD_SERVICE, Entity.CHART);
+    if (chartIds.isEmpty()) {
+      return 0;
+    }
 
-    for (UUID chartId : chartIds) {
+    List<Chart> charts =
+        collectionDAO.chartDAO().findEntitiesByIds(new ArrayList<>(chartIds), Include.ALL);
+
+    List<Chart> toUpdate = new ArrayList<>();
+    for (Chart chart : charts) {
       try {
-        Chart chart = collectionDAO.chartDAO().findEntityById(chartId);
-        if (chart == null) {
+        if (!isPurelyNumeric(chart.getName())) {
           continue;
         }
-        String name = chart.getName();
-        if (!isPurelyNumeric(name)) {
-          continue;
-        }
-        String newName = "chart_" + name;
+        String newName = "chart_" + chart.getName();
         String newFqn = FullyQualifiedName.add(serviceFqn, newName);
         LOG.debug("Fixing Chart FQN: {} -> {}", chart.getFullyQualifiedName(), newFqn);
         chart.setName(newName);
         chart.setFullyQualifiedName(newFqn);
-        collectionDAO.chartDAO().update(chart);
-        fixedCount++;
+        toUpdate.add(chart);
       } catch (Exception e) {
-        LOG.warn("Error processing Chart entity {}: {}", chartId, e.getMessage());
+        LOG.warn("Error processing Chart entity {}: {}", chart.getId(), e.getMessage());
       }
     }
 
-    return fixedCount;
+    for (int i = 0; i < toUpdate.size(); i += BATCH_SIZE) {
+      List<Chart> chunk = toUpdate.subList(i, Math.min(i + BATCH_SIZE, toUpdate.size()));
+      collectionDAO.chartDAO().updateMany(new ArrayList<>(chunk));
+    }
+
+    return toUpdate.size();
   }
 
   private static Set<UUID> findChildEntityIds(

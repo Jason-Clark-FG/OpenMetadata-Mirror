@@ -15,6 +15,6 @@ public class Migration extends MigrationProcessImpl {
   @Override
   @SneakyThrows
   public void runDataMigration() {
-    fixSupersetFqnCollision(handle, collectionDAO);
+    fixSupersetFqnCollision(collectionDAO);
   }
 }
