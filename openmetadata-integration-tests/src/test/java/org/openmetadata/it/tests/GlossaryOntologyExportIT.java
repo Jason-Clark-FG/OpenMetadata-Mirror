@@ -39,8 +39,12 @@ import org.testcontainers.utility.DockerImageName;
  * <p>Tests verify that glossaries can be exported as RDF ontologies in various formats (Turtle,
  * RDF/XML, N-Triples, JSON-LD) with proper SKOS vocabulary mapping.
  *
- * <p>Test isolation: Uses TestNamespace for unique entity naming. This class mutates shared RDF
- * infrastructure through {@link RdfUpdater}, so it runs serialized to avoid suite-order timeouts.
+ * <p>Test isolation: Uses TestNamespace for unique entity naming.
+ *
+ * <p>Parallelization: Runs with @Execution(ExecutionMode.SAME_THREAD) because each test blocks a
+ * server thread on synchronous Fuseki writes. This class also mutates shared RDF infrastructure
+ * through {@link RdfUpdater}, so concurrent execution can exhaust the server thread pool and cause
+ * suite-order request timeouts.
  */
 @Execution(ExecutionMode.SAME_THREAD)
 @ExtendWith(TestNamespaceExtension.class)
