@@ -58,13 +58,11 @@ public class OsUtils {
   }
 
   public static JsonData toJsonData(String doc) {
-    Map<String, Object> docMap;
     try {
-      docMap = mapper.readValue(doc, new TypeReference<>() {});
+      return JsonData.of(mapper.readTree(doc), jsonpMapper);
     } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid JSON input", e);
     }
-    return JsonData.of(docMap, jsonpMapper);
   }
 
   public static String parseJsonQuery(String jsonQuery) throws JsonProcessingException {
