@@ -12,19 +12,26 @@
  */
 import { expect, Page } from '@playwright/test';
 import { OM_BASE_URL, SSO_ENV } from '../../constant/ssoAuth';
-import { SSOConfig } from '../sso';
-import { ProviderCredentials } from '../ssoAuth';
+import { ProviderConfigOverride, ProviderCredentials } from '../ssoAuth';
 import { ProviderHelper } from './index';
 
-const DEFAULT_OKTA_DOMAIN = 'integrator-9351624.okta.com';
-const DEFAULT_OKTA_CLIENT_ID = '0oayn277hnOhUpVLd697';
-const DEFAULT_OKTA_PRINCIPAL_DOMAIN = 'getcollate.io';
+const getRequiredEnv = (envKey: string): string => {
+  const value = process.env[envKey]?.trim();
 
-const buildConfigPayload = (): SSOConfig => {
-  const clientId = process.env[SSO_ENV.OKTA_CLIENT_ID] ?? DEFAULT_OKTA_CLIENT_ID;
-  const oktaDomain = process.env[SSO_ENV.OKTA_DOMAIN] ?? DEFAULT_OKTA_DOMAIN;
-  const principalDomain =
-    process.env[SSO_ENV.OKTA_PRINCIPAL_DOMAIN] ?? DEFAULT_OKTA_PRINCIPAL_DOMAIN;
+  if (!value) {
+    throw new Error(
+      `Missing required Okta SSO environment variable: ${envKey}. ` +
+        'Set this explicitly for Playwright SSO tests.'
+    );
+  }
+
+  return value;
+};
+
+const buildConfigPayload = (): ProviderConfigOverride => {
+  const clientId = getRequiredEnv(SSO_ENV.OKTA_CLIENT_ID);
+  const oktaDomain = getRequiredEnv(SSO_ENV.OKTA_DOMAIN);
+  const principalDomain = getRequiredEnv(SSO_ENV.OKTA_PRINCIPAL_DOMAIN);
 
   const authority = `https://${oktaDomain}/oauth2/default`;
 
@@ -45,12 +52,7 @@ const buildConfigPayload = (): SSOConfig => {
       enableSelfSignup: true,
     },
     authorizerConfiguration: {
-      className: 'org.openmetadata.service.security.DefaultAuthorizer',
-      containerRequestFilter: 'org.openmetadata.service.security.JwtFilter',
-      adminPrincipals: ['admin'],
       principalDomain,
-      enforcePrincipalDomain: false,
-      enableSecureSocketConnection: false,
     },
   };
 };

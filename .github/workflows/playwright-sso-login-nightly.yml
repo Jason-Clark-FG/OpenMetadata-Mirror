@@ -122,9 +122,10 @@ jobs:
           # with that provider's static secret references.
           SSO_USERNAME: ${{ secrets.OKTA_SSO_USERNAME }}
           SSO_PASSWORD: ${{ secrets.OKTA_SSO_PASSWORD }}
-          # Okta-specific overrides (all optional — defaults are baked into
-          # playwright/utils/sso-providers/okta.ts and point at the
-          # integrator-9351624.okta.com dev tenant).
+          # Okta tenant configuration — all three are REQUIRED by
+          # playwright/utils/sso-providers/okta.ts; the helper throws if any
+          # are missing so the suite is explicit about which IdP tenant it
+          # exercises.
           OKTA_SSO_CLIENT_ID: ${{ secrets.OKTA_SSO_CLIENT_ID }}
           OKTA_SSO_DOMAIN: ${{ secrets.OKTA_SSO_DOMAIN }}
           OKTA_SSO_PRINCIPAL_DOMAIN: ${{ secrets.OKTA_SSO_PRINCIPAL_DOMAIN }}

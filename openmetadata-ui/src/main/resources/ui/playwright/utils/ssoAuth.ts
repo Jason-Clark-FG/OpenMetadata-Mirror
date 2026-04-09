@@ -11,33 +11,103 @@
  *  limitations under the License.
  */
 import { APIRequestContext, expect, Page } from '@playwright/test';
-import { BASIC_AUTH_CONFIG } from '../constant/ssoAuth';
 import { getApiContext } from './common';
-import { SSOConfig } from './sso';
 
 export interface ProviderCredentials {
   username: string;
   password: string;
 }
 
+export type SecurityConfigSnapshot = Record<string, unknown>;
+
+export interface ProviderConfigOverride {
+  authenticationConfiguration: Record<string, unknown>;
+  authorizerConfiguration: Record<string, unknown>;
+}
+
 const SECURITY_CONFIG_ENDPOINT = '/api/v1/system/security/config';
+
+// Round-trippable = can be GET'd and PUT back unchanged. These two aren't:
+// GET returns empty-string placeholders that the PUT validator rejects.
+const NON_ROUND_TRIPPABLE_AUTH_FIELDS = [
+  'ldapConfiguration',
+  'samlConfiguration',
+] as const;
+
+export const fetchSecurityConfig = async (
+  apiContext: APIRequestContext
+): Promise<SecurityConfigSnapshot> => {
+  const response = await apiContext.get(SECURITY_CONFIG_ENDPOINT);
+
+  expect(response.status()).toBe(200);
+
+  const snapshot = (await response.json()) as SecurityConfigSnapshot;
+  const authConfig = snapshot.authenticationConfiguration as
+    | Record<string, unknown>
+    | undefined;
+
+  if (authConfig) {
+    for (const field of NON_ROUND_TRIPPABLE_AUTH_FIELDS) {
+      delete authConfig[field];
+    }
+  }
+
+  return snapshot;
+};
+
+const mergeAdminPrincipals = (
+  originalSection: Record<string, unknown> | undefined,
+  overrideSection: Record<string, unknown>
+): string[] => {
+  const originalAdmins = Array.isArray(originalSection?.adminPrincipals)
+    ? (originalSection?.adminPrincipals as string[])
+    : [];
+  const overrideAdmins = Array.isArray(overrideSection.adminPrincipals)
+    ? (overrideSection.adminPrincipals as string[])
+    : [];
+
+  return Array.from(new Set([...originalAdmins, ...overrideAdmins]));
+};
 
 export const applyProviderConfig = async (
   apiContext: APIRequestContext,
-  config: SSOConfig
+  original: SecurityConfigSnapshot,
+  override: ProviderConfigOverride
 ): Promise<void> => {
+  const originalAuth =
+    (original.authenticationConfiguration as Record<string, unknown>) ?? {};
+  const originalAuthorizer =
+    (original.authorizerConfiguration as Record<string, unknown>) ?? {};
+
+  const merged: SecurityConfigSnapshot = {
+    ...original,
+    authenticationConfiguration: {
+      ...originalAuth,
+      ...override.authenticationConfiguration,
+    },
+    authorizerConfiguration: {
+      ...originalAuthorizer,
+      ...override.authorizerConfiguration,
+      adminPrincipals: mergeAdminPrincipals(
+        originalAuthorizer,
+        override.authorizerConfiguration
+      ),
+    },
+  };
+
   const response = await apiContext.put(SECURITY_CONFIG_ENDPOINT, {
-    data: config,
+    data: merged,
   });
 
   expect(response.status()).toBe(200);
 };
 
-export const restoreBasicAuth = async (
-  apiContext: APIRequestContext
+export const restoreSecurityConfig = async (
+  apiContext: APIRequestContext,
+  snapshot: SecurityConfigSnapshot
 ): Promise<void> => {
   const response = await apiContext.put(SECURITY_CONFIG_ENDPOINT, {
-    data: BASIC_AUTH_CONFIG,
+    data: snapshot,
   });
 
   expect(response.status()).toBe(200);

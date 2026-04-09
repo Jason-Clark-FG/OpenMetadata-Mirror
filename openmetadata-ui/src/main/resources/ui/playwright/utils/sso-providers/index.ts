@@ -11,14 +11,13 @@
  *  limitations under the License.
  */
 import { Page } from '@playwright/test';
-import { SSOConfig } from '../sso';
-import { ProviderCredentials } from '../ssoAuth';
+import { ProviderConfigOverride, ProviderCredentials } from '../ssoAuth';
 import { oktaProviderHelper } from './okta';
 
 export interface ProviderHelper {
   expectedButtonText: string;
   loginUrlPattern: RegExp;
-  buildConfigPayload: () => SSOConfig;
+  buildConfigPayload: () => ProviderConfigOverride;
   performProviderLogin: (
     page: Page,
     credentials: ProviderCredentials

@@ -14,13 +14,12 @@ import { expect, test } from '@playwright/test';
 import { SSO_ENV } from '../../constant/ssoAuth';
 import { performAdminLogin } from '../../utils/admin';
 import { getAuthContext } from '../../utils/common';
-import {
-  getProviderHelper,
-  ProviderHelper,
-} from '../../utils/sso-providers';
+import { getProviderHelper, ProviderHelper } from '../../utils/sso-providers';
 import {
   applyProviderConfig,
-  restoreBasicAuth,
+  fetchSecurityConfig,
+  restoreSecurityConfig,
+  SecurityConfigSnapshot,
   verifyLoggedInUserMatches,
 } from '../../utils/ssoAuth';
 import { getToken } from '../../utils/tokenStorage';
@@ -40,6 +39,7 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
 
   let helper: ProviderHelper;
   let adminJwt: string | undefined;
+  let originalSecurityConfig: SecurityConfigSnapshot | undefined;
 
   test.beforeAll(
     'Swap OpenMetadata server to target SSO provider',
@@ -52,22 +52,34 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
 
       try {
         adminJwt = await getToken(page);
-        await applyProviderConfig(apiContext, helper.buildConfigPayload());
+
+        if (!adminJwt) {
+          throw new Error(
+            'Failed to capture admin JWT before SSO swap — aborting to avoid leaving server in SSO mode'
+          );
+        }
+
+        originalSecurityConfig = await fetchSecurityConfig(apiContext);
+        await applyProviderConfig(
+          apiContext,
+          originalSecurityConfig,
+          helper.buildConfigPayload()
+        );
       } finally {
         await afterAction();
       }
     }
   );
 
-  test.afterAll('Restore basic auth configuration', async () => {
-    if (!adminJwt) {
+  test.afterAll('Restore original security configuration', async () => {
+    if (!adminJwt || !originalSecurityConfig) {
       return;
     }
 
     const adminContext = await getAuthContext(adminJwt);
 
     try {
-      await restoreBasicAuth(adminContext);
+      await restoreSecurityConfig(adminContext, originalSecurityConfig);
     } finally {
       await adminContext.dispose();
     }
@@ -104,27 +116,23 @@ test.describe('SSO Login', { tag: ['@sso', '@Platform'] }, () => {
       await helper.performProviderLogin(page, { username, password });
     });
 
-    await test.step(
-      'Return to OpenMetadata and complete self-signup if needed',
-      async () => {
-        await page.waitForURL(
-          (url) =>
-            url.pathname.endsWith('/signup') ||
-            url.pathname.endsWith('/my-data'),
-          { timeout: 60_000 }
-        );
+    await test.step('Return to OpenMetadata and complete self-signup if needed', async () => {
+      await page.waitForURL(
+        (url) =>
+          url.pathname.endsWith('/signup') || url.pathname.endsWith('/my-data'),
+        { timeout: 60_000 }
+      );
 
-        if (page.url().includes('/signup')) {
-          const createButton = page.getByRole('button', { name: /create/i });
+      if (page.url().includes('/signup')) {
+        const createButton = page.getByRole('button', { name: /create/i });
 
-          await expect(createButton).toBeEnabled();
-          await createButton.click();
-          await page.waitForURL('**/my-data', { timeout: 60_000 });
-        }
-
-        await expect(page.getByTestId('dropdown-profile')).toBeVisible();
+        await expect(createButton).toBeEnabled();
+        await createButton.click();
+        await page.waitForURL('**/my-data', { timeout: 60_000 });
       }
-    );
+
+      await expect(page.getByTestId('dropdown-profile')).toBeVisible();
+    });
 
     await test.step('Verify JWT against loggedInUser API', async () => {
       await verifyLoggedInUserMatches(page, username);

@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { SSOConfig } from '../utils/sso';
 
 // Mirrors playwright.config.ts `baseURL` resolution so the SSO config we
 // PUT into OpenMetadata always matches the host the Playwright suite is
@@ -26,24 +25,3 @@ export const SSO_ENV = {
   OKTA_DOMAIN: 'OKTA_SSO_DOMAIN',
   OKTA_PRINCIPAL_DOMAIN: 'OKTA_SSO_PRINCIPAL_DOMAIN',
 } as const;
-
-export const BASIC_AUTH_CONFIG: SSOConfig = {
-  authenticationConfiguration: {
-    provider: 'basic',
-    providerName: 'basic',
-    authority: '',
-    clientId: '',
-    callbackUrl: '',
-    publicKeyUrls: [`${OM_BASE_URL}/api/v1/system/config/jwks`],
-    jwtPrincipalClaims: ['email', 'preferred_username', 'sub'],
-    enableSelfSignup: true,
-  },
-  authorizerConfiguration: {
-    className: 'org.openmetadata.service.security.DefaultAuthorizer',
-    containerRequestFilter: 'org.openmetadata.service.security.JwtFilter',
-    adminPrincipals: ['admin'],
-    principalDomain: 'open-metadata.org',
-    enforcePrincipalDomain: false,
-    enableSecureSocketConnection: false,
-  },
-};
