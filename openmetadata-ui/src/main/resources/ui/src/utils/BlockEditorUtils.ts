@@ -24,6 +24,7 @@ import { ENTITY_URL_MAP } from '../constants/Feeds.constants';
 import blockEditorExtensionsClassBase from './BlockEditorExtensionsClassBase';
 import { ENTITY_LINK_SEPARATOR } from './EntityUtils';
 import { getEntityDetail, getHashTagList, getMentionList } from './FeedUtils';
+import { getSanitizeContent } from './sanitize.utils';
 
 export const getSelectedText = (state: EditorState) => {
   const { from, to } = state.selection;
@@ -138,15 +139,18 @@ export const formatContent = (
 
   // Apply additional transformations based on format
   if (formatFor === 'server') {
-    modifiedHtmlString =
+    modifiedHtmlString = getSanitizeContent(
       blockEditorExtensionsClassBase.serializeContentForBackend(
         modifiedHtmlString
-      );
+      )
+    );
 
     // Replace markers with actual entity links
     entityLinkMap.forEach((entityLink, marker) => {
       modifiedHtmlString = modifiedHtmlString.replace(marker, entityLink);
     });
+  } else {
+    modifiedHtmlString = getSanitizeContent(modifiedHtmlString);
   }
 
   return modifiedHtmlString;

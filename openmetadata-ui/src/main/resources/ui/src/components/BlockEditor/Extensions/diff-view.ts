@@ -68,7 +68,7 @@ export default Node.create({
     });
 
     diffNode.setAttribute('data-diff', 'true');
-    diffNode.innerHTML = node.textContent;
+    diffNode.textContent = node.textContent;
 
     return {
       dom: diffNode,

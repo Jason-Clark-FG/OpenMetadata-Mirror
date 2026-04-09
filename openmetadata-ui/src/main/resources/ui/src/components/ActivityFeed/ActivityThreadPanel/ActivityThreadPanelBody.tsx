@@ -163,7 +163,6 @@ const ActivityThreadPanelBody: FC<ActivityThreadPanelBodyProp> = ({
   const onPostThread = async (value: string) => {
     const data = {
       message: value,
-      from: currentUser?.name ?? '',
       about: threadLink,
     };
     await createThread(data);
