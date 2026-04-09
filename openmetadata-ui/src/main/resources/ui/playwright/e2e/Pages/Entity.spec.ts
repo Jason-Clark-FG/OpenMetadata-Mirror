@@ -12,9 +12,9 @@
  */
 import {
   APIRequestContext,
-  test as base,
   expect,
   Page,
+  test as base,
 } from '@playwright/test';
 import { isUndefined } from 'lodash';
 import { Column, Table } from '../../../src/generated/entity/data/table';
@@ -191,7 +191,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           page,
           EntityDataClass.domain1.responseData,
           entity.entityResponseData?.['fullyQualifiedName'] ??
-            entity.entityResponseData?.['name']
+          entity.entityResponseData?.['name']
         );
 
         await visitServiceDetailsPage(
@@ -402,10 +402,9 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
         // Glossary Selector
         await page
           .locator(
-            `[${rowSelector}="${
-              isMlModel
-                ? entity.childrenSelectorId2
-                : entity.childrenSelectorId ?? ''
+            `[${rowSelector}="${isMlModel
+              ? entity.childrenSelectorId2
+              : entity.childrenSelectorId ?? ''
             }"]`
           )
           .getByTestId('glossary-container')
@@ -524,16 +523,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
             .locator('[data-testid="selectable-list"]')
             .waitFor({ state: 'visible' });
 
-          const searchTagCleanup = page.waitForResponse(
-            '/api/v1/search/query?q=*index=tag_search_index*'
-          );
-          await page
-            .locator('[data-testid="tag-select-search-bar"]')
-            .fill('PersonalData.SpecialCategory');
-          await searchTagCleanup;
-          await waitForAllLoadersToDisappear(page);
-
-          await page.getByTitle('SpecialCategory', { exact: true }).click();
+          await page.getByTestId('clear-all-button').click();
           const removeResponse = page.waitForResponse(
             (response) =>
               response.url().includes('/api/v1/columns/name/') ||
@@ -909,9 +899,8 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
           ).toBeVisible();
 
           // Verify non-nested columns don't have expand icons
-          const simpleColumnFQN = `${tableFQN}.${
-            (entity as TableClass).columnsName[0]
-          }`;
+          const simpleColumnFQN = `${tableFQN}.${(entity as TableClass).columnsName[0]
+            }`;
 
           await expect(
             page
@@ -922,9 +911,8 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         await test.step('Open column detail panel for nested column', async () => {
           // Click on the parent nested column name to open detail panel
-          const nestedParentFQN = `${
-            entity.entityResponseData?.['fullyQualifiedName']
-          }.${(entity as TableClass).columnsName[2]}`;
+          const nestedParentFQN = `${entity.entityResponseData?.['fullyQualifiedName']
+            }.${(entity as TableClass).columnsName[2]}`;
 
           await openColumnDetailPanel({
             page,
@@ -1195,8 +1183,7 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
           if (!nestedParent) {
             throw new Error(
-              `Nested parent column not found: ${
-                (entity as TableClass).columnsName[2]
+              `Nested parent column not found: ${(entity as TableClass).columnsName[2]
               }`
             );
           }
@@ -1268,9 +1255,8 @@ Object.entries(entities).forEach(([key, EntityClass]) => {
 
         await test.step('Verify mixed siblings have consistent indentation', async () => {
           // columnsName[2] has mixed children: columnsName[3] (STRUCT) and columnsName[4] (ARRAY with nested children)
-          const nestedParentFQN = `${
-            entity.entityResponseData?.['fullyQualifiedName']
-          }.${(entity as TableClass).columnsName[2]}`;
+          const nestedParentFQN = `${entity.entityResponseData?.['fullyQualifiedName']
+            }.${(entity as TableClass).columnsName[2]}`;
 
           const nestedColumnRow = page.locator(
             `[data-row-key="${nestedParentFQN}"]`
