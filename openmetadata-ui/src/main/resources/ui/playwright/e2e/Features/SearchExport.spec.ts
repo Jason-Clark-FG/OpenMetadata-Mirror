@@ -27,6 +27,9 @@ const getExportModalContent = (page: Page) =>
 const openExportScopeModal = async (page: Page) => {
   await page.getByTestId('export-search-results-button').click();
   await expect(getExportModalContent(page)).toBeVisible();
+  await expect(
+    getExportModalContent(page).getByRole('button', { name: 'Export' })
+  ).toBeEnabled();
 };
 
 test.describe('Search Export', { tag: ['@Features', '@Discovery'] }, () => {
@@ -198,6 +201,34 @@ test.describe('Search Export', { tag: ['@Features', '@Discovery'] }, () => {
 
       await expect(exportButton).toBeDisabled();
       await expect(exportButton).toHaveClass(/ant-btn-loading/);
+    });
+  });
+
+  test('Export API error is shown inside the modal', async ({ page }) => {
+    const errorMessage = 'Export failed due to a server error.';
+
+    await page.route('**/api/v1/search/export?*', async (route) => {
+      await route.fulfill({
+        status: 400,
+        contentType: 'text/plain',
+        body: errorMessage,
+      });
+    });
+
+    await openExportScopeModal(page);
+
+    await getExportModalContent(page)
+      .getByRole('button', { name: 'Export' })
+      .click();
+
+    await test.step('Error message is visible inside the modal', async () => {
+      await expect(
+        getExportModalContent(page).getByText(errorMessage)
+      ).toBeVisible();
+    });
+
+    await test.step('Modal remains open after error', async () => {
+      await expect(getExportModalContent(page)).toBeVisible();
     });
   });
 

@@ -11,8 +11,18 @@
  *  limitations under the License.
  */
 import { createTheme, Theme, ThemeProvider } from '@mui/material/styles';
-import { fireEvent, render, screen } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { SearchIndex } from '../../enums/search.enum';
+import {
+  exportSearchResultsCsvStream,
+  searchQuery,
+} from '../../rest/searchAPI';
 import {
   MOCK_EXPLORE_SEARCH_RESULTS,
   MOCK_EXPLORE_TAB_ITEMS,
@@ -58,10 +68,6 @@ jest.mock('../../rest/searchAPI', () => ({
   searchQuery: jest.fn().mockResolvedValue({
     hits: { total: { value: 100 }, hits: [] },
   }),
-}));
-
-jest.mock('../../utils/ToastUtils', () => ({
-  showErrorToast: jest.fn(),
 }));
 
 jest.mock('../../hooks/useCustomLocation/useCustomLocation', () => {
@@ -139,7 +145,11 @@ jest.mock(
 
 jest.mock('antd', () => ({
   ...jest.requireActual('antd'),
-  Alert: jest.fn().mockReturnValue(<span>Index Not Found Alert</span>),
+  Alert: jest
+    .fn()
+    .mockImplementation(({ message }: { message?: React.ReactNode }) => (
+      <span>{message ?? 'Index Not Found Alert'}</span>
+    )),
 }));
 
 jest.mock('../SearchedData/SearchedData', () =>
@@ -286,6 +296,16 @@ const Wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('ExploreV1', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (searchQuery as jest.Mock).mockResolvedValue({
+      hits: { total: { value: 100 }, hits: [] },
+    });
+    (exportSearchResultsCsvStream as jest.Mock).mockResolvedValue(
+      new Blob([''], { type: 'text/csv' })
+    );
+  });
+
   it('renders component without errors', async () => {
     render(<ExploreV1 {...props} />, { wrapper: Wrapper });
 
@@ -306,5 +326,57 @@ describe('ExploreV1', () => {
     expect(screen.getByText('Index Not Found Alert')).toBeInTheDocument();
 
     expect(screen.queryByText('SearchedData')).not.toBeInTheDocument();
+  });
+
+  it('shows inline export error in modal and keeps modal open on export failure', async () => {
+    const errorMessage = 'Export failed due to a server error.';
+    (exportSearchResultsCsvStream as jest.Mock).mockRejectedValueOnce({
+      response: {
+        data: new Blob([errorMessage], { type: 'text/plain' }),
+      },
+    });
+
+    render(<ExploreV1 {...props} />, { wrapper: Wrapper });
+
+    fireEvent.click(screen.getByTestId('export-search-results-button'));
+    const modal = await screen.findByTestId('export-scope-modal');
+
+    const exportButton = within(modal).getByRole('button', {
+      name: 'label.export',
+    });
+    await waitFor(() => expect(exportButton).toBeEnabled());
+    fireEvent.click(exportButton);
+
+    expect(await within(modal).findByText(errorMessage)).toBeInTheDocument();
+    expect(modal).toBeVisible();
+  });
+
+  it('disables export button while count is loading when modal opens', async () => {
+    let resolveCountRequest:
+      | ((value: { hits: { total: { value: number } } }) => void)
+      | undefined;
+    (searchQuery as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCountRequest = resolve;
+        })
+    );
+
+    render(<ExploreV1 {...props} />, { wrapper: Wrapper });
+
+    fireEvent.click(screen.getByTestId('export-search-results-button'));
+    const modal = await screen.findByTestId('export-scope-modal');
+    const exportButton = within(modal).getByRole('button', {
+      name: 'label.export',
+    });
+
+    expect(exportButton).toBeDisabled();
+
+    if (!resolveCountRequest) {
+      throw new Error('Expected searchQuery resolver to be initialized');
+    }
+
+    resolveCountRequest({ hits: { total: { value: 100 } } });
+    await waitFor(() => expect(exportButton).toBeEnabled());
   });
 });

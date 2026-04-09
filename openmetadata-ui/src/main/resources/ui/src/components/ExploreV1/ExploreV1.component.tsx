@@ -31,6 +31,7 @@ import {
   Modal,
   Radio,
   Row,
+  Spin,
   Switch,
   Typography,
 } from 'antd';
@@ -69,7 +70,6 @@ import {
 } from '../../utils/ExploreUtils';
 import { getApplicationDetailsPath } from '../../utils/RouterUtils';
 import searchClassBase from '../../utils/SearchClassBase';
-import { showErrorToast } from '../../utils/ToastUtils';
 import FilterErrorPlaceHolder from '../common/ErrorWithPlaceholder/FilterErrorPlaceHolder';
 import Loader from '../common/Loader/Loader';
 import ResizableLeftPanels from '../common/ResizablePanels/ResizableLeftPanels';
@@ -177,13 +177,17 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const [exportScope, setExportScope] = useState<'visible' | 'all'>('all');
   const [isExporting, setIsExporting] = useState(false);
   const [allAssetsCount, setAllAssetsCount] = useState<number>();
+  const [exportError, setExportError] = useState<string | undefined>();
+  const [isCountLoading, setIsCountLoading] = useState(false);
 
   const visibleResultCount = searchResults?.hits?.hits?.length ?? 0;
 
   const handleOpenExportScopeModal = useCallback(async () => {
     setExportScope('all');
     setAllAssetsCount(undefined);
+    setExportError(undefined);
     setShowExportScopeModal(true);
+    setIsCountLoading(true);
 
     try {
       const combinedQueryFilter = getCombinedQueryFilterObject(
@@ -201,6 +205,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
       setAllAssetsCount(response.hits.total.value);
     } catch {
       // Count fetch failed — modal still usable without count
+    } finally {
+      setIsCountLoading(false);
     }
   }, [searchQueryParam, showDeleted, quickFilters, queryFilter]);
 
@@ -238,6 +244,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
       params.from = (currentPage - 1) * pageSize;
     }
 
+    setExportError(undefined);
     setIsExporting(true);
 
     try {
@@ -250,7 +257,21 @@ const ExploreV1: React.FC<ExploreProps> = ({
       URL.revokeObjectURL(url);
       setShowExportScopeModal(false);
     } catch (error) {
-      showErrorToast(error as AxiosError);
+      const axiosError = error as AxiosError<Blob | { message?: string }>;
+      const responseData = axiosError.response?.data;
+      if (responseData instanceof Blob) {
+        const text = await responseData.text();
+        try {
+          const json = JSON.parse(text) as { message?: string };
+          setExportError(
+            json?.message ?? (text || t('server.unexpected-error'))
+          );
+        } catch {
+          setExportError(text || t('server.unexpected-error'));
+        }
+      } else {
+        setExportError(responseData?.message ?? t('server.unexpected-error'));
+      }
     } finally {
       setIsExporting(false);
     }
@@ -644,13 +665,27 @@ const ExploreV1: React.FC<ExploreProps> = ({
         cancelText={t('label.cancel')}
         className="search-export-modal tw:overflow-hidden"
         data-testid="export-scope-modal"
-        okButtonProps={{ disabled: isExporting, loading: isExporting }}
+        okButtonProps={{
+          disabled: isExporting || isCountLoading,
+          loading: isExporting,
+        }}
         okText={t('label.export')}
         open={showExportScopeModal}
         title={exportModalTitle()}
         width={610}
-        onCancel={() => setShowExportScopeModal(false)}
+        onCancel={() => {
+          setShowExportScopeModal(false);
+          setExportError(undefined);
+        }}
         onOk={handleExportScopeConfirm}>
+        {exportError && (
+          <Alert
+            showIcon
+            className="m-b-sm"
+            message={exportError}
+            type="error"
+          />
+        )}
         <CoreTypography
           className="tw:text-secondary"
           size="text-sm"
@@ -715,13 +750,17 @@ const ExploreV1: React.FC<ExploreProps> = ({
                   size="text-sm"
                   weight="semibold">
                   {`${t('label.all-matching-asset-plural')} `}
-                  {allAssetsCount !== undefined && (
-                    <CoreTypography
-                      className="tw:text-tertiary"
-                      size="text-sm"
-                      weight="regular">
-                      ({allAssetsCount} {t('label.result-plural')})
-                    </CoreTypography>
+                  {isCountLoading ? (
+                    <Spin className="m-l-xs" size="small" />
+                  ) : (
+                    allAssetsCount !== undefined && (
+                      <CoreTypography
+                        className="tw:text-tertiary"
+                        size="text-sm"
+                        weight="regular">
+                        ({allAssetsCount} {t('label.result-plural')})
+                      </CoreTypography>
+                    )
                   )}
                 </CoreTypography>
                 <CoreTypography
