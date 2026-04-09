@@ -13,24 +13,22 @@
 
 /**
  * Consolidated custom property tests for:
- *   Database, DatabaseSchema, GlossaryTerm, MlModel, SearchIndex,
- *   StoredProcedure, DashboardDataModel, Metric, Chart.
+ *   ApiCollection, ApiEndpoint, DataProduct, Domain, TableColumn.
  *
  * Each entity type has ONE describe.serial block so no two workers can
  * ever run CP create/edit/delete operations for the same entity type
  * simultaneously.
+ *
+ * The TableColumn block also contains the column-level CP test (moved
+ * from Entity.spec.ts), which requires a TableClass instance.
  */
 
 import { test } from '@playwright/test';
 import { CUSTOM_PROPERTIES_ENTITIES } from '../../constant/customProperty';
-import { ChartClass } from '../../support/entity/ChartClass';
-import { DashboardDataModelClass } from '../../support/entity/DashboardDataModelClass';
-import { DatabaseClass } from '../../support/entity/DatabaseClass';
-import { DatabaseSchemaClass } from '../../support/entity/DatabaseSchemaClass';
-import { MetricClass } from '../../support/entity/MetricClass';
-import { MlModelClass } from '../../support/entity/MlModelClass';
-import { SearchIndexClass } from '../../support/entity/SearchIndexClass';
-import { StoredProcedureClass } from '../../support/entity/StoredProcedureClass';
+import { ApiCollectionClass } from '../../support/entity/ApiCollectionClass';
+import { ApiEndpointClass } from '../../support/entity/ApiEndpointClass';
+import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
+import { TableClass } from '../../support/entity/TableClass';
 import {
   createNewPage,
   getApiContext,
@@ -38,11 +36,13 @@ import {
 } from '../../utils/common';
 import {
   addCustomPropertiesForEntity,
+  createCustomPropertyForEntity,
   CustomPropertyTypeByName,
   deleteCreatedProperty,
   editCreatedProperty,
   updateCustomPropertyInRightPanel,
   verifyCustomPropertyInAdvancedSearch,
+  verifyTableColumnCustomPropertyPersistence,
 } from '../../utils/customProperty';
 import { settingClick, SettingOptionsType } from '../../utils/sidebar';
 
@@ -117,55 +117,62 @@ const CONFIG_PROPERTIES: Array<{
 
 type CRUDEntity = {
   key: keyof typeof CUSTOM_PROPERTIES_ENTITIES;
-  /** Entity class instance factory; null = CP-only entity (no UI entity page) */
+  /**
+   * Entity class instance factory.
+   * - Non-null for entities with a UI entity page (ApiCollection, ApiEndpoint).
+   * - null for CP-only entities (DataProduct, Domain) whose EntityClass
+   *   subclass lacks full entityResponseData support, and for TableColumn
+   *   which has a dedicated column-level CP test instead.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   makeInstance: (() => any) | null;
 };
 
-const PART2_ENTITIES: CRUDEntity[] = [
-  { key: 'entity_database', makeInstance: () => new DatabaseClass() },
-  {
-    key: 'entity_databaseSchema',
-    makeInstance: () => new DatabaseSchemaClass(),
-  },
-  // GlossaryTerm has no standalone EntityClass – only CRUD tests run
-  { key: 'entity_glossaryTerm', makeInstance: null },
-  { key: 'entity_mlmodel', makeInstance: () => new MlModelClass() },
-  { key: 'entity_searchIndex', makeInstance: () => new SearchIndexClass() },
-  {
-    key: 'entity_storedProcedure',
-    makeInstance: () => new StoredProcedureClass(),
-  },
-  {
-    key: 'entity_dashboardDataModel',
-    makeInstance: () => new DashboardDataModelClass(),
-  },
-  { key: 'entity_metric', makeInstance: () => new MetricClass() },
-  { key: 'entity_chart', makeInstance: () => new ChartClass() },
+const PART3_ENTITIES: CRUDEntity[] = [
+  { key: 'entity_apiCollection', makeInstance: () => new ApiCollectionClass() },
+  { key: 'entity_apiEndpoint', makeInstance: () => new ApiEndpointClass() },
+  // DataProduct/Domain extend EntityClass but lack entityResponseData; skip Set & Update
+  { key: 'entity_dataProduct', makeInstance: null },
+  { key: 'entity_domain', makeInstance: null },
+  // TableColumn has no standalone entity page; column-level CP test runs separately
+  { key: 'entity_tableColumn', makeInstance: null },
 ];
 
 // ─── Main test loop ──────────────────────────────────────────────────────────
 
-PART2_ENTITIES.forEach(({ key, makeInstance }) => {
+PART3_ENTITIES.forEach(({ key, makeInstance }) => {
   const entity = CUSTOM_PROPERTIES_ENTITIES[key];
 
   test.describe
     .serial(`Add update and delete custom properties for ${entity.name}`, () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let mainEntity: any = null;
+    // Used only for the entity_tableColumn column-level CP test
+    let tableForColumnTest: TableClass | null = null;
 
     test.beforeAll(async ({ browser }) => {
-      if (makeInstance === null) return;
       const { apiContext, afterAction } = await createNewPage(browser);
-      mainEntity = makeInstance();
-      await mainEntity.create(apiContext);
+
+      if (makeInstance !== null) {
+        mainEntity = makeInstance();
+        await mainEntity.create(apiContext);
+      } else if (key === 'entity_tableColumn') {
+        tableForColumnTest = new TableClass();
+        await tableForColumnTest.create(apiContext);
+      }
+
       await afterAction();
     });
 
     test.afterAll(async ({ browser }) => {
-      if (mainEntity === null) return;
       const { apiContext, afterAction } = await createNewPage(browser);
-      await mainEntity.delete(apiContext);
+
+      if (mainEntity !== null) {
+        await mainEntity.delete(apiContext);
+      } else if (tableForColumnTest !== null) {
+        await tableForColumnTest.delete(apiContext);
+      }
+
       await afterAction();
     });
 
@@ -264,7 +271,7 @@ PART2_ENTITIES.forEach(({ key, makeInstance }) => {
       });
     });
 
-    // ── Set & Update all CP types (only for entities with a UI entity page) ─
+    // ── Set & Update all CP types (only for entities with full entity page) ─
 
     if (makeInstance !== null) {
       test(`Set & Update all CP types on ${entity.name}`, async ({ page }) => {
@@ -313,6 +320,50 @@ PART2_ENTITIES.forEach(({ key, makeInstance }) => {
         });
 
         await mainEntity.cleanupCustomProperty(apiContext);
+        await afterAction();
+      });
+    }
+
+    // ── Column-level CP test (only for entity_tableColumn) ─────────────────
+
+    if (key === 'entity_tableColumn') {
+      test('Set & update column-level custom property', async ({ page }) => {
+        // Iterates all 17 CP types and performs multiple actions for each;
+        // needs a generous timeout.
+        test.setTimeout(600000);
+
+        const { apiContext, afterAction } = await getApiContext(page);
+
+        const data = await createCustomPropertyForEntity(
+          apiContext,
+          EntityTypeEndpoint.TableColumn
+        );
+        const customPropertyValue = data.customProperties;
+        const cleanupUser = data.cleanupUser;
+        const users = data.userNames;
+
+        const columnFqn =
+          tableForColumnTest!.entityResponseData.columns[0]
+            .fullyQualifiedName ?? '';
+        const tableFqn =
+          tableForColumnTest!.entityResponseData.fullyQualifiedName ?? '';
+
+        const properties = Object.values(CustomPropertyTypeByName);
+
+        for (const type of properties) {
+          await test.step(`Set ${type} custom property on column and verify in UI`, async () => {
+            await verifyTableColumnCustomPropertyPersistence({
+              page,
+              columnFqn,
+              tableFqn,
+              propertyName: customPropertyValue[type].property.name,
+              propertyType: type,
+              users,
+            });
+          });
+        }
+
+        await cleanupUser(apiContext);
         await afterAction();
       });
     }

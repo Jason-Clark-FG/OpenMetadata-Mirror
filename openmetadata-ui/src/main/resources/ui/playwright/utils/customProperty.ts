@@ -18,8 +18,8 @@ import {
 } from '../constant/customProperty';
 import { SidebarItem } from '../constant/sidebar';
 import {
-  EntityTypeEndpoint,
   ENTITY_PATH,
+  EntityTypeEndpoint,
 } from '../support/entity/Entity.interface';
 import { UserClass } from '../support/user/UserClass';
 import { selectOption, showAdvancedSearchDialog } from './advancedSearch';
@@ -111,14 +111,10 @@ export const setValueForProperty = async (data: {
   );
 
   await expect(
-    page.locator(
-      `[data-testid="custom-property-${propertyName}-card"] [data-testid="property-name"]`
-    )
+    container.locator('[data-testid="property-name"]')
   ).toContainText(propertyName);
 
-  const editButton = page.locator(
-    `[data-testid="custom-property-${propertyName}-card"] [data-testid="edit-icon"]`
-  );
+  const editButton = container.locator('[data-testid="edit-icon"]');
   await editButton.scrollIntoViewIfNeeded();
   // eslint-disable-next-line playwright/no-force-option -- element obscured by overlay
   await editButton.click({ force: true });
@@ -134,58 +130,58 @@ export const setValueForProperty = async (data: {
       break;
 
     case 'email':
-      await page.locator('[data-testid="email-input"]').isVisible();
-      await page.locator('[data-testid="email-input"]').fill(value);
+      await container.locator('[data-testid="email-input"]').isVisible();
+      await container.locator('[data-testid="email-input"]').fill(value);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
 
     case 'duration':
-      await page.locator('[data-testid="duration-input"]').isVisible();
-      await page.locator('[data-testid="duration-input"]').fill(value);
+      await container.locator('[data-testid="duration-input"]').isVisible();
+      await container.locator('[data-testid="duration-input"]').fill(value);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
 
     case 'enum':
-      await page.click('#enumValues');
+      await container.locator('#enumValues').click();
       // eslint-disable-next-line playwright/no-force-option -- Ant Select selected item overlay covers combobox input
-      await page.fill('#enumValues', value, { force: true });
-      await page.press('#enumValues', 'Enter');
+      await container.locator('#enumValues').fill(value, { force: true });
+      await container.locator('#enumValues').press('Enter');
       await clickOutside(page);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
 
     case 'sqlQuery':
-      await page.locator("pre[role='presentation']").last().click();
+      await container.locator("pre[role='presentation']").last().click();
       await page.keyboard.type(value);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
 
     case 'timestamp':
-      await page.locator('[data-testid="timestamp-input"]').isVisible();
-      await page.locator('[data-testid="timestamp-input"]').fill(value);
+      await container.locator('[data-testid="timestamp-input"]').isVisible();
+      await container.locator('[data-testid="timestamp-input"]').fill(value);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
 
     case 'timeInterval': {
       const [startValue, endValue] = value.split(',');
-      await page.locator('[data-testid="start-input"]').isVisible();
-      await page.locator('[data-testid="start-input"]').fill(startValue);
-      await page.locator('[data-testid="end-input"]').isVisible();
-      await page.locator('[data-testid="end-input"]').fill(endValue);
+      await container.locator('[data-testid="start-input"]').isVisible();
+      await container.locator('[data-testid="start-input"]').fill(startValue);
+      await container.locator('[data-testid="end-input"]').isVisible();
+      await container.locator('[data-testid="end-input"]').fill(endValue);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
     }
 
     case 'time-cp': {
-      await page.locator('[data-testid="time-picker"]').isVisible();
-      await page.locator('[data-testid="time-picker"]').click();
-      await page.locator('[data-testid="time-picker"]').fill(value);
+      await container.locator('[data-testid="time-picker"]').isVisible();
+      await container.locator('[data-testid="time-picker"]').click();
+      await container.locator('[data-testid="time-picker"]').fill(value);
       await page.getByRole('button', { name: 'OK', exact: true }).click();
       await container.locator('[data-testid="inline-save-btn"]').click();
 
@@ -194,9 +190,9 @@ export const setValueForProperty = async (data: {
 
     case 'date-cp':
     case 'dateTime-cp': {
-      await page.locator('[data-testid="date-time-picker"]').isVisible();
-      await page.locator('[data-testid="date-time-picker"]').click();
-      await page.locator('[data-testid="date-time-picker"]').fill(value);
+      await container.locator('[data-testid="date-time-picker"]').isVisible();
+      await container.locator('[data-testid="date-time-picker"]').click();
+      await container.locator('[data-testid="date-time-picker"]').fill(value);
       if (propertyType === 'dateTime-cp') {
         await page.getByText('Now', { exact: true }).click();
       } else {
@@ -210,8 +206,8 @@ export const setValueForProperty = async (data: {
     case 'string':
     case 'integer':
     case 'number':
-      await page.locator('[data-testid="value-input"]').isVisible();
-      await page.locator('[data-testid="value-input"]').fill(value);
+      await container.locator('[data-testid="value-input"]').isVisible();
+      await container.locator('[data-testid="value-input"]').fill(value);
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
@@ -225,9 +221,9 @@ export const setValueForProperty = async (data: {
           val
         )}*`;
         await page.route(searchApi, (route) => route.continue());
-        await page.locator('#entityReference').clear();
+        await container.locator('#entityReference').clear();
         const searchEntity = page.waitForResponse(searchApi);
-        await page.locator('#entityReference').fill(val);
+        await container.locator('#entityReference').fill(val);
         await searchEntity;
         await page.locator(`[data-testid="${val}"]`).click();
       }
@@ -258,10 +254,12 @@ export const setValueForProperty = async (data: {
     case 'hyperlink-cp': {
       // Value format: "url,displayText" or just "url"
       const [url, displayText] = value.split(',');
-      await page.locator('[data-testid="hyperlink-url-input"]').isVisible();
-      await page.locator('[data-testid="hyperlink-url-input"]').fill(url);
+      await container
+        .locator('[data-testid="hyperlink-url-input"]')
+        .isVisible();
+      await container.locator('[data-testid="hyperlink-url-input"]').fill(url);
       if (displayText) {
-        await page
+        await container
           .locator('[data-testid="hyperlink-display-text-input"]')
           .fill(displayText);
       }
@@ -885,6 +883,27 @@ export const editCreatedProperty = async (
       )
     ).toContainText('["user","team","metric","table"]');
   }
+};
+
+export const deleteCustomPropertyByNameViaApi = async (
+  apiContext: APIRequestContext,
+  typeName: string,
+  propertyName: string
+) => {
+  const schemaResp = await apiContext.get(
+    `/api/v1/metadata/types/name/${typeName}?fields=customProperties`
+  );
+  const schema = await schemaResp.json();
+  const index = (schema.customProperties ?? []).findIndex(
+    (cp: { name: string }) => cp.name === propertyName
+  );
+  if (index === -1) {
+    return;
+  }
+  await apiContext.patch(`/api/v1/metadata/types/${schema.id}`, {
+    data: [{ op: 'remove', path: `/customProperties/${index}` }],
+    headers: { 'Content-Type': 'application/json-patch+json' },
+  });
 };
 
 export const deleteCreatedProperty = async (
