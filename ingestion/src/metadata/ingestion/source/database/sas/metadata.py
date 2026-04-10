@@ -237,6 +237,11 @@ class SasSource(
         try:
             context = table["resourceId"].split("/")[3]
             context_parts = context.split("~")
+            # Explicit shape check (rather than letting context_parts[4]
+            # raise IndexError): gives operators a named error in the
+            # fallback log and guards against "5 parts but wrong shape"
+            # strings that would otherwise silently build a garbage
+            # db_name/schema pair.
             if len(context_parts) < 5:
                 raise ValueError(
                     f"Unexpected resourceId format, cannot derive database/schema: "
@@ -260,7 +265,21 @@ class SasSource(
             db_schema_entity = self.metadata.create_or_update(db_schema)
             return db_schema_entity
 
-        except (HTTPError, IndexError, KeyError, ValueError) as _:
+        except (HTTPError, IndexError, KeyError, ValueError) as exc:
+            # Distinguish the "expected" HTTP-failure path (catalog/create
+            # request bounced) from a parsing/format issue with the
+            # resourceId, so operators can tell them apart in the logs.
+            if isinstance(exc, HTTPError):
+                logger.debug(
+                    "Falling back to relationships-based schema lookup for "
+                    f"{table.get('resourceId')} after HTTP error: {exc}"
+                )
+            else:
+                logger.warning(
+                    "Could not derive database/schema from resourceId "
+                    f"{table.get('resourceId')!r} ({type(exc).__name__}: {exc}); "
+                    "falling back to relationships-based lookup."
+                )
             # Find the "database" entity in Information Catalog
             # First see if the table is a member of the library through the relationships attribute
             # Or we could use views to query the dataStores
