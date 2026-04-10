@@ -288,7 +288,9 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
 
   const getExportHandler = (format: EntityGraphExportFormat) => async () => {
     if (!entity?.id) {
-      showErrorToast(t('label.no-entity-selected', { entity: t('label.asset') }));
+      showErrorToast(
+        t('label.no-entity-selected', { entity: t('label.asset') })
+      );
 
       return;
     }
@@ -300,7 +302,9 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
         entityName:
           entity.fullyQualifiedName ?? entity.name ?? 'knowledge-graph',
         depth: selectedDepth,
-        entityTypes: selectedEntityTypes.length ? selectedEntityTypes : undefined,
+        entityTypes: selectedEntityTypes.length
+          ? selectedEntityTypes
+          : undefined,
         relationshipTypes: selectedRelationshipTypes.length
           ? selectedRelationshipTypes
           : undefined,
@@ -867,8 +871,8 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 <Dropdown.Popover>
                   <div className="tw:border-b tw:border-border-secondary tw:px-4 tw:py-2">
                     <input
-                      aria-label={t('label.entity-type')}
                       autoFocus
+                      aria-label={t('label.entity-type')}
                       className={filterInputClassName}
                       placeholder={t('label.search')}
                       type="text"
@@ -922,8 +926,8 @@ const KnowledgeGraph: React.FC<KnowledgeGraphProps> = ({
                 <Dropdown.Popover>
                   <div className="tw:border-b tw:border-border-secondary tw:px-4 tw:py-2">
                     <input
-                      aria-label={t('label.relationship-type')}
                       autoFocus
+                      aria-label={t('label.relationship-type')}
                       className={filterInputClassName}
                       placeholder={t('label.search')}
                       type="text"
