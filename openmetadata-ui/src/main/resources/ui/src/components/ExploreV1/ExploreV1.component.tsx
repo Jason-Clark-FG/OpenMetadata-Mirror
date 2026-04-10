@@ -19,7 +19,9 @@ import {
 } from '@ant-design/icons';
 import {
   Button,
+  Card as CoreCard,
   Typography as CoreTypography,
+  Alert as CoreAlert,
 } from '@openmetadata/ui-core-components';
 import { Download01 } from '@untitledui/icons';
 import {
@@ -82,6 +84,8 @@ import ExploreTree from '../Explore/ExploreTree/ExploreTree';
 import SearchedData from '../SearchedData/SearchedData';
 import { SearchedDataProps } from '../SearchedData/SearchedData.interface';
 import './exploreV1.less';
+
+const EXPORT_ALL_ASSETS_LIMIT = 200000;
 
 const IndexNotFoundBanner = () => {
   const { theme } = useApplicationStore();
@@ -181,6 +185,10 @@ const ExploreV1: React.FC<ExploreProps> = ({
   const [isCountLoading, setIsCountLoading] = useState(false);
 
   const visibleResultCount = searchResults?.hits?.hits?.length ?? 0;
+  const isAllAssetsLimitExceeded =
+    exportScope === 'all' &&
+    allAssetsCount !== undefined &&
+    allAssetsCount > EXPORT_ALL_ASSETS_LIMIT;
 
   const handleOpenExportScopeModal = useCallback(async () => {
     setExportScope('all');
@@ -211,6 +219,10 @@ const ExploreV1: React.FC<ExploreProps> = ({
   }, [searchQueryParam, showDeleted, quickFilters, queryFilter]);
 
   const handleExportScopeConfirm = useCallback(async () => {
+    if (isAllAssetsLimitExceeded) {
+      return;
+    }
+
     const isVisibleScope = exportScope === 'visible';
     const combinedQueryFilter = getCombinedQueryFilterObject(
       quickFilters,
@@ -259,8 +271,14 @@ const ExploreV1: React.FC<ExploreProps> = ({
     } catch (error) {
       const axiosError = error as AxiosError<Blob | { message?: string }>;
       const responseData = axiosError.response?.data;
-      if (responseData instanceof Blob) {
-        const text = await responseData.text();
+
+      if (
+        responseData instanceof Blob ||
+        (responseData &&
+          typeof (responseData as Blob).text === 'function' &&
+          typeof (responseData as Blob).size === 'number')
+      ) {
+        const text = await (responseData as Blob).text();
         try {
           const json = JSON.parse(text) as { message?: string };
           setExportError(
@@ -269,6 +287,8 @@ const ExploreV1: React.FC<ExploreProps> = ({
         } catch {
           setExportError(text || t('server.unexpected-error'));
         }
+      } else if (isString(responseData)) {
+        setExportError(responseData || t('server.unexpected-error'));
       } else {
         setExportError(responseData?.message ?? t('server.unexpected-error'));
       }
@@ -286,6 +306,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
     showDeleted,
     quickFilters,
     queryFilter,
+    isAllAssetsLimitExceeded,
   ]);
 
   const translatedSortingFields = useMemo(() => {
@@ -666,7 +687,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
         className="search-export-modal tw:overflow-hidden"
         data-testid="export-scope-modal"
         okButtonProps={{
-          disabled: isExporting || isCountLoading,
+          disabled: isExporting || isCountLoading || isAllAssetsLimitExceeded,
           loading: isExporting,
         }}
         okText={t('label.export')}
@@ -678,13 +699,15 @@ const ExploreV1: React.FC<ExploreProps> = ({
           setExportError(undefined);
         }}
         onOk={handleExportScopeConfirm}>
-        {exportError && (
-          <Alert
-            showIcon
+        {isAllAssetsLimitExceeded && (
+          <CoreAlert
             className="m-b-sm"
-            message={exportError}
-            type="error"
+            title={`Export is limited to ${EXPORT_ALL_ASSETS_LIMIT} assets. Please refine your filters or choose visible results.`}
+            variant="error"
           />
+        )}
+        {exportError && (
+          <CoreAlert className="m-b-sm" title={exportError} variant="error" />
         )}
         <CoreTypography
           className="tw:text-secondary"
@@ -696,17 +719,12 @@ const ExploreV1: React.FC<ExploreProps> = ({
           className="d-flex gap-3 m-t-sm w-full"
           value={exportScope}
           onChange={(e) => setExportScope(e.target.value)}>
-          <div
-            className={`export-scope-option-card${
-              exportScope === 'visible' ? ' selected' : ''
-            }`}
+          <CoreCard
+            isClickable
+            className="export-scope-option-card tw:flex-1 tw:p-4"
+            isSelected={exportScope === 'visible'}
             onClick={() => setExportScope('visible')}>
-            <div
-              className={`d-flex items-start gap-2 border-radius-sm tw:p-4 border ${
-                exportScope === 'visible'
-                  ? 'tw:border-brand'
-                  : 'tw:border-secondary'
-              }`}>
+            <div className="d-flex items-start gap-2">
               <Radio value="visible" />
               <div>
                 <div className="d-flex items-center gap-2">
@@ -731,18 +749,13 @@ const ExploreV1: React.FC<ExploreProps> = ({
                 </CoreTypography>
               </div>
             </div>
-          </div>
-          <div
-            className={`export-scope-option-card${
-              exportScope === 'all' ? ' selected' : ''
-            }`}
+          </CoreCard>
+          <CoreCard
+            isClickable
+            className="export-scope-option-card tw:flex-1 tw:p-4"
+            isSelected={exportScope === 'all'}
             onClick={() => setExportScope('all')}>
-            <div
-              className={`d-flex items-start border-radius-sm tw:gap-1 tw:p-4 border ${
-                exportScope === 'all'
-                  ? 'tw:border-brand'
-                  : 'tw:border-secondary'
-              }`}>
+            <div className="d-flex items-start tw:gap-1">
               <Radio value="all" />
               <div>
                 <CoreTypography
@@ -771,7 +784,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
                 </CoreTypography>
               </div>
             </div>
-          </div>
+          </CoreCard>
         </Radio.Group>
       </Modal>
     </div>

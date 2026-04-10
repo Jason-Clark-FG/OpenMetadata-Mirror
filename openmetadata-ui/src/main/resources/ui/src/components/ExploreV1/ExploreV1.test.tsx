@@ -54,7 +54,42 @@ jest.mock('@openmetadata/ui-core-components', () => {
     children?: import('react').ReactNode;
   } & Record<string, unknown>) => <span {...rest}>{children}</span>;
 
-  return { Button, Typography };
+  const Card = ({
+    children,
+    isSelected,
+    isClickable,
+    onClick,
+    ...rest
+  }: {
+    children?: import('react').ReactNode;
+    isSelected?: boolean;
+    isClickable?: boolean;
+    onClick?: () => void;
+  } & Record<string, unknown>) => (
+    <div
+      data-clickable={Boolean(isClickable)}
+      data-selected={Boolean(isSelected)}
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick?.();
+        }
+      }}
+      {...rest}>
+      {children}
+    </div>
+  );
+
+  const Alert = ({
+    title,
+    ...rest
+  }: {
+    title?: import('react').ReactNode;
+  } & Record<string, unknown>) => <span {...rest}>{title}</span>;
+
+  return { Alert, Button, Card, Typography };
 });
 
 jest.mock('@untitledui/icons', () => ({
@@ -145,6 +180,45 @@ jest.mock(
 
 jest.mock('antd', () => ({
   ...jest.requireActual('antd'),
+  Modal: jest
+    .fn()
+    .mockImplementation(
+      ({
+        children,
+        open,
+        onCancel,
+        onOk,
+        okButtonProps,
+        okText,
+        cancelText,
+        className,
+        'data-testid': dataTestId,
+      }: {
+        children?: React.ReactNode;
+        open?: boolean;
+        onCancel?: () => void;
+        onOk?: () => void;
+        okButtonProps?: { disabled?: boolean };
+        okText?: React.ReactNode;
+        cancelText?: React.ReactNode;
+        className?: string;
+        'data-testid'?: string;
+      }) =>
+        open ? (
+          <div className={className} data-testid={dataTestId} role="dialog">
+            {children}
+            <button type="button" onClick={onCancel}>
+              {cancelText}
+            </button>
+            <button
+              disabled={okButtonProps?.disabled}
+              type="button"
+              onClick={onOk}>
+              {okText}
+            </button>
+          </div>
+        ) : null
+    ),
   Alert: jest
     .fn()
     .mockImplementation(({ message }: { message?: React.ReactNode }) => (
@@ -332,7 +406,7 @@ describe('ExploreV1', () => {
     const errorMessage = 'Export failed due to a server error.';
     (exportSearchResultsCsvStream as jest.Mock).mockRejectedValueOnce({
       response: {
-        data: new Blob([errorMessage], { type: 'text/plain' }),
+        data: errorMessage,
       },
     });
 
@@ -378,5 +452,26 @@ describe('ExploreV1', () => {
 
     resolveCountRequest({ hits: { total: { value: 100 } } });
     await waitFor(() => expect(exportButton).toBeEnabled());
+  });
+
+  it('disables export and shows alert when all matching assets exceed export limit', async () => {
+    (searchQuery as jest.Mock).mockResolvedValueOnce({
+      hits: { total: { value: 200001 }, hits: [] },
+    });
+
+    render(<ExploreV1 {...props} />, { wrapper: Wrapper });
+
+    fireEvent.click(screen.getByTestId('export-search-results-button'));
+    const modal = await screen.findByTestId('export-scope-modal');
+    const exportButton = within(modal).getByRole('button', {
+      name: 'label.export',
+    });
+
+    expect(
+      await within(modal).findByText(
+        'Export is limited to 200000 assets. Please refine your filters or choose visible results.'
+      )
+    ).toBeInTheDocument();
+    expect(exportButton).toBeDisabled();
   });
 });
