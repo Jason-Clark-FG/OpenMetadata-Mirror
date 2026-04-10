@@ -468,9 +468,7 @@ describe('ExploreV1', () => {
     });
 
     expect(
-      await within(modal).findByText(
-        'Export is limited to 200000 assets. Please refine your filters or choose visible results.'
-      )
+      await within(modal).findByText('message.export-assets-limit-exceeded')
     ).toBeInTheDocument();
     expect(exportButton).toBeDisabled();
   });

@@ -94,6 +94,21 @@ export const formatDataProductResponse = (
   });
 };
 
+export const isBlobLikeResponse = (value: unknown): value is Blob => {
+  if (value instanceof Blob) {
+    return true;
+  }
+
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      typeof (value as Blob).text === 'function' &&
+      typeof (value as Blob).size === 'number' &&
+      typeof (value as Blob).type === 'string' &&
+      typeof (value as Blob).slice === 'function'
+  );
+};
+
 export const omitDeep = <T>(
   obj: T,
   predicate: (value: string, key: string | number | symbol) => boolean

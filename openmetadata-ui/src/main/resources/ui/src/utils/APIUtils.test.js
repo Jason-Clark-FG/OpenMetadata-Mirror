@@ -12,7 +12,7 @@
  */
 
 import { isNil } from 'lodash';
-import { formatTeamsResponse, omitDeep } from './APIUtils';
+import { formatTeamsResponse, isBlobLikeResponse, omitDeep } from './APIUtils';
 
 const APIHits = [
   {
@@ -149,6 +149,35 @@ describe('Test APIUtils utility', () => {
 
     expect(omitObj).toEqual({
       key3: { key6: [{}] },
+    });
+  });
+
+  describe('isBlobLikeResponse', () => {
+    it('returns true for Blob instance', () => {
+      const blob = new Blob(['hello'], { type: 'text/plain' });
+
+      expect(isBlobLikeResponse(blob)).toBe(true);
+    });
+
+    it('returns true for blob-like object', () => {
+      const blobLike = {
+        size: 0,
+        slice: jest.fn(),
+        text: jest.fn().mockResolvedValue(''),
+        type: 'text/plain',
+      };
+
+      expect(isBlobLikeResponse(blobLike)).toBe(true);
+    });
+
+    it('returns false for plain error object', () => {
+      const errorObject = {
+        message: 'failed',
+        size: 0,
+        text: jest.fn(),
+      };
+
+      expect(isBlobLikeResponse(errorObject)).toBe(false);
     });
   });
 });

@@ -70,6 +70,7 @@ import {
   getExploreQueryFilterMust,
   getSelectedValuesFromQuickFilter,
 } from '../../utils/ExploreUtils';
+import { isBlobLikeResponse } from '../../utils/APIUtils';
 import { getApplicationDetailsPath } from '../../utils/RouterUtils';
 import searchClassBase from '../../utils/SearchClassBase';
 import FilterErrorPlaceHolder from '../common/ErrorWithPlaceholder/FilterErrorPlaceHolder';
@@ -190,6 +191,11 @@ const ExploreV1: React.FC<ExploreProps> = ({
     allAssetsCount !== undefined &&
     allAssetsCount > EXPORT_ALL_ASSETS_LIMIT;
 
+  const handleExportScopeChange = (scope: 'visible' | 'all') => {
+    setExportScope(scope);
+    setExportError(undefined);
+  };
+
   const handleOpenExportScopeModal = useCallback(async () => {
     setExportScope('all');
     setAllAssetsCount(undefined);
@@ -272,12 +278,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
       const axiosError = error as AxiosError<Blob | { message?: string }>;
       const responseData = axiosError.response?.data;
 
-      if (
-        responseData instanceof Blob ||
-        (responseData &&
-          typeof (responseData as Blob).text === 'function' &&
-          typeof (responseData as Blob).size === 'number')
-      ) {
+      if (isBlobLikeResponse(responseData)) {
         const text = await (responseData as Blob).text();
         try {
           const json = JSON.parse(text) as { message?: string };
@@ -702,7 +703,9 @@ const ExploreV1: React.FC<ExploreProps> = ({
         {isAllAssetsLimitExceeded && (
           <CoreAlert
             className="m-b-sm"
-            title={`Export is limited to ${EXPORT_ALL_ASSETS_LIMIT} assets. Please refine your filters or choose visible results.`}
+            title={t('message.export-assets-limit-exceeded', {
+              limit: EXPORT_ALL_ASSETS_LIMIT,
+            })}
             variant="error"
           />
         )}
@@ -718,12 +721,14 @@ const ExploreV1: React.FC<ExploreProps> = ({
         <Radio.Group
           className="d-flex gap-3 m-t-sm w-full"
           value={exportScope}
-          onChange={(e) => setExportScope(e.target.value)}>
+          onChange={(e) =>
+            handleExportScopeChange(e.target.value as 'visible' | 'all')
+          }>
           <CoreCard
             isClickable
             className="export-scope-option-card tw:flex-1 tw:p-4"
             isSelected={exportScope === 'visible'}
-            onClick={() => setExportScope('visible')}>
+            onClick={() => handleExportScopeChange('visible')}>
             <div className="d-flex items-start gap-2">
               <Radio value="visible" />
               <div>
@@ -754,7 +759,7 @@ const ExploreV1: React.FC<ExploreProps> = ({
             isClickable
             className="export-scope-option-card tw:flex-1 tw:p-4"
             isSelected={exportScope === 'all'}
-            onClick={() => setExportScope('all')}>
+            onClick={() => handleExportScopeChange('all')}>
             <div className="d-flex items-start tw:gap-1">
               <Radio value="all" />
               <div>
