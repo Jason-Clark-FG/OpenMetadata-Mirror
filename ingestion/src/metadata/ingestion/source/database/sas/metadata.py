@@ -236,10 +236,16 @@ class SasSource(
         """
         try:
             context = table["resourceId"].split("/")[3]
+            context_parts = context.split("~")
+            if len(context_parts) < 5:
+                raise ValueError(
+                    f"Unexpected resourceId format, cannot derive database/schema: "
+                    f"{table['resourceId']}"
+                )
 
-            provider = context.split("~")[0]
-            self.db_name = provider + "." + context.split("~")[2]
-            self.db_schema_name = context.split("~")[4]
+            provider = context_parts[0]
+            self.db_name = provider + "." + context_parts[2]
+            self.db_schema_name = context_parts[4]
 
             database = CreateDatabaseRequest(
                 name=self.db_name,
@@ -254,7 +260,7 @@ class SasSource(
             db_schema_entity = self.metadata.create_or_update(db_schema)
             return db_schema_entity
 
-        except HTTPError as _:
+        except (HTTPError, IndexError, KeyError, ValueError) as _:
             # Find the "database" entity in Information Catalog
             # First see if the table is a member of the library through the relationships attribute
             # Or we could use views to query the dataStores
@@ -439,6 +445,7 @@ class SasSource(
         global table_fqn
 
         table_entity, table_fqn = None, None
+        table_name = table.get("name") if isinstance(table, dict) else None
 
         try:
             table_url = self.sas_client.get_information_catalog_link(table["id"])
@@ -506,10 +513,13 @@ class SasSource(
                 custom_attributes = [
                     custom_attribute["name"] for custom_attribute in TABLE_CUSTOM_ATTR
                 ]
+                # Drop null values — OpenMetadata's custom-field types
+                # (e.g. STRING_TYPE) reject null and fail the create with
+                # "Custom field <name> has invalid JSON [$: null found, string expected]"
                 extension_attributes = {
                     attr: value
                     for attr, value in table_extension.items()
-                    if attr in custom_attributes
+                    if attr in custom_attributes and value is not None
                 }
 
                 table_request = CreateTableRequest(
@@ -529,6 +539,18 @@ class SasSource(
                 table_entity = self.metadata.get_by_name(
                     entity=Table, fqn=self.get_table_fqn(table_name)
                 )
+                # If the table wasn't actually persisted (e.g. the sink
+                # rejected the CreateTableRequest), skip the follow-up
+                # patch/profile calls so we don't raise an AttributeError
+                # that masks the real sink-side failure.
+                if table_entity is None:
+                    logger.warning(
+                        f"Table [{table_name}] was not created in OpenMetadata; "
+                        "skipping description/extension/profile updates. "
+                        "Check the sink logs for the underlying error."
+                    )
+                    return
+
                 # update the description
                 logger.debug(
                     f"Updating description for {table_entity.id.root} with {table_description}"
@@ -595,10 +617,13 @@ class SasSource(
 
         except Exception as exc:
             logger.error(f"table failed to create: {table}")
+            error_name = table_name or (
+                table.get("id") if isinstance(table, dict) else "unknown"
+            )
             yield Either(
                 left=StackTraceError(
-                    name=table_name,
-                    error=f"Unexpected exception to create table [{table_name}]: {exc}",
+                    name=str(error_name),
+                    error=f"Unexpected exception to create table [{error_name}]: {exc}",
                     stackTrace=traceback.format_exc(),
                 )
             )
