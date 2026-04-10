@@ -379,8 +379,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          filter: blob:none
 
       - uses: actions/setup-node@v4
         with:
@@ -464,8 +462,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          filter: blob:none
 
       - uses: actions/setup-node@v4
         with:
