@@ -799,7 +799,7 @@ const AddDomainForm = forwardRef<DomainFormRef, AddDomainFormProps>(
         )}
 
         {type === DomainFormType.DATA_PRODUCT && !parentDomain && (
-          <div>{getField(domainField)}</div>
+          <div data-testid="domain-select">{getField(domainField)}</div>
         )}
 
         <div>{getField(ownersField)}</div>

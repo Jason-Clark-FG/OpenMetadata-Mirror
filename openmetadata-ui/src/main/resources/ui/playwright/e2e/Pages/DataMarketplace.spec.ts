@@ -246,8 +246,9 @@ test.describe(
           domains: [],
         } as DataProduct['data']);
 
-        const domainInput = page.getByTestId('domain-select');
-        await domainInput.scrollIntoViewIfNeeded();
+        const domainContainer = page.getByTestId('domain-select');
+        await domainContainer.scrollIntoViewIfNeeded();
+        const domainInput = domainContainer.getByRole('combobox');
         await domainInput.click();
 
         const searchDomain = page.waitForResponse((response) =>

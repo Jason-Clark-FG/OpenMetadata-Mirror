@@ -488,8 +488,8 @@ test.describe('Data Products', () => {
       });
 
       await expect(
-        page.locator('[data-testid="tag-suggestion"]')
-      ).toContainText(tag.data.displayName);
+        page.getByTestId('add-domain').getByText(tag.data.displayName)
+      ).toBeVisible();
     });
 
     await test.step('Save and verify tag is applied', async () => {

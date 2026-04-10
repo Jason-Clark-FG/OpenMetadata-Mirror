@@ -644,7 +644,9 @@ export const selectTagInTagSuggestion = async (
   await tagSearchResponse;
 
   await page.locator('[role="listbox"]').first().waitFor({ state: 'visible' });
-  const tagOption = page.getByTestId(`tag-option-${tagFqn}`);
+  const tagOption = page.getByRole('option', {
+    name: new RegExp(searchTerm),
+  });
   await tagOption.waitFor({ state: 'visible' });
   await tagOption.click();
   await page.keyboard.press('Escape');

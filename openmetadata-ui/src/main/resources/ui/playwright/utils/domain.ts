@@ -413,7 +413,10 @@ export const fillDomainForm = async (
 ) => {
   await fillCommonFormItems(page, entity);
 
-  const domainTypeTrigger = page.getByTestId('domainType').getByRole('button');
+  const domainTypeTrigger = page
+    .getByTestId('add-domain')
+    .getByTestId('domainType')
+    .getByRole('button');
   await domainTypeTrigger.click();
 
   await page
@@ -823,9 +826,10 @@ export const createDataProductFromListPage = async (
   await fillCommonFormItems(page, dataProduct);
 
   // Fill domain field (required when creating from list page)
-  const domainInput = page.getByTestId('domain-select');
-  await domainInput.scrollIntoViewIfNeeded();
-  await domainInput.waitFor({ state: 'visible' });
+  const domainContainer = page.getByTestId('domain-select');
+  await domainContainer.scrollIntoViewIfNeeded();
+  await domainContainer.waitFor({ state: 'visible' });
+  const domainInput = domainContainer.getByRole('combobox');
   await domainInput.click();
 
   const searchDomain = page.waitForResponse(
@@ -1803,9 +1807,10 @@ export const openDataProductDrawer = async (page: Page, domain: Domain) => {
   await descriptionEditor.click();
   await page.keyboard.type('Test data product description');
 
-  const domainInput = page.getByTestId('domain-select');
-  await domainInput.scrollIntoViewIfNeeded();
-  await domainInput.waitFor({ state: 'visible' });
+  const domainContainer = page.getByTestId('domain-select');
+  await domainContainer.scrollIntoViewIfNeeded();
+  await domainContainer.waitFor({ state: 'visible' });
+  const domainInput = domainContainer.getByRole('combobox');
   await domainInput.click();
 
   const searchDomain = page.waitForResponse(
