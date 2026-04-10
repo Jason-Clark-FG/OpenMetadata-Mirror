@@ -53,10 +53,7 @@ runs:
 
     - name: Install yarn
       if: ${{ inputs.install-server == 'true' }}
-      run: |
-        corepack enable
-        corepack prepare yarn@1.22.18 --activate
-        yarn --version
+      run: corepack enable
       shell: bash
     # ------------------------------------------------------------------------------
 
