@@ -49,6 +49,7 @@ import { performAdminLogin } from '../../utils/admin';
 import {
   assignDataProduct,
   assignSingleSelectDomain,
+  clickOutside,
   redirectToHomePage,
 } from '../../utils/common';
 import { DATA_ASSET_RULES } from '../../utils/dataAssetRules';
@@ -251,9 +252,14 @@ test.describe(
         await testGlossary.create(apiContext);
         await testGlossaryTerm.create(apiContext);
 
-        // Use the glossary term helper rather than building a URL from a
-        // response field that can still be unset right after create.
-        await testGlossaryTerm.visitEntityPage(page);
+        // Navigate to glossary term page with full page load
+        await page.goto(
+          `/glossary/${encodeURIComponent(
+            testGlossaryTerm.responseData.fullyQualifiedName
+          )}`
+        );
+
+        await page.waitForLoadState('domcontentloaded');
         await waitForAllLoadersToDisappear(page);
 
         // Open domain selector to verify single-select mode (no checkboxes)
@@ -264,6 +270,14 @@ test.describe(
         await expect(
           page.locator('.domain-selectable-tree .ant-tree-checkbox')
         ).toHaveCount(0);
+
+        // Close the selector by clicking outside
+        await clickOutside(page);
+
+        // Wait for domain selector to be fully closed
+        await page.getByTestId('domain-selectable-tree').waitFor({
+          state: 'detached',
+        });
 
         // Assign first domain (single-select mode)
         await assignSingleSelectDomain(page, testDomain1.responseData);
@@ -290,11 +304,10 @@ test.describe(
         // Verify no domain count button (only single domain, not multiple)
         await expect(page.getByTestId('domain-count-button')).not.toBeVisible();
       } finally {
+        await testGlossaryTerm.delete(apiContext);
         await testGlossary.delete(apiContext);
-        await Promise.all([
-          testDomain1.delete(apiContext),
-          testDomain2.delete(apiContext),
-        ]);
+        await testDomain1.delete(apiContext);
+        await testDomain2.delete(apiContext);
         await afterAction();
       }
     });

@@ -330,15 +330,6 @@
     ],
     "childAliases": []
   },
-  "task": {
-    "indexName": "task_search_index",
-    "indexMappingFile": "/elasticsearch/%s/task_index_mapping.json",
-    "alias": "task",
-    "parentAliases": [
-      "all"
-    ],
-    "childAliases": []
-  },
   "classification": {
     "indexName": "classification_search_index",
     "indexMappingFile": "/elasticsearch/%s/classification_index_mapping.json",

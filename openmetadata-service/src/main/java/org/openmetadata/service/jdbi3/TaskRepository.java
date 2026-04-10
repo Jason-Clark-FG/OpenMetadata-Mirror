@@ -27,6 +27,7 @@ import static org.openmetadata.service.governance.workflows.WorkflowVariableHand
 import static org.openmetadata.service.governance.workflows.elements.TriggerFactory.getTriggerWorkflowId;
 import static org.openmetadata.service.jdbi3.UserRepository.TEAMS_FIELD;
 
+import jakarta.json.JsonPatch;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.util.ArrayList;
@@ -1044,12 +1045,20 @@ public class TaskRepository extends EntityRepository<Task> {
     if (task == null) {
       return;
     }
-    task.setAssignees(newAssignees);
-    task.setUpdatedBy(updatedBy);
-    task.setUpdatedAt(System.currentTimeMillis());
-    storeEntity(task, true);
-    storeRelationships(task);
-    WebsocketNotificationHandler.handleTaskNotification(task);
+
+    Task currentTask = get(null, task.getId(), getFields("*"));
+    Task updatedTask = JsonUtils.deepCopy(currentTask, Task.class);
+    updatedTask.setAssignees(newAssignees);
+    updatedTask.setUpdatedBy(updatedBy);
+    updatedTask.setUpdatedAt(System.currentTimeMillis());
+
+    JsonPatch patch = JsonUtils.getJsonPatch(currentTask, updatedTask);
+    if (patch.toJsonArray().isEmpty()) {
+      return;
+    }
+
+    Task patchedTask = patch(null, currentTask.getId(), updatedBy, patch).entity();
+    WebsocketNotificationHandler.handleTaskNotification(patchedTask);
   }
 
   @Override

@@ -22,7 +22,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
@@ -41,6 +40,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.entity.classification.Classification;
+import org.openmetadata.schema.entity.classification.Tag;
+import org.openmetadata.schema.entity.data.Glossary;
+import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.service.Entity;
@@ -74,6 +77,7 @@ class SetApprovalAssigneesImplTest {
 
     when(inputNamespaceMapExpr.getValue(execution)).thenReturn("{\"relatedEntity\":\"global\"}");
     when(assigneesVarNameExpr.getValue(execution)).thenReturn("ApprovalTask_assignees");
+    when(execution.getProcessDefinitionId()).thenReturn("sample:1:1");
     when(execution.getVariable("global_relatedEntity"))
         .thenReturn("<#E::classification::test_classification>");
     when(mockRepository.isSupportsReviewers()).thenReturn(true);
@@ -200,20 +204,85 @@ class SetApprovalAssigneesImplTest {
   @Test
   void testTagReviewerResolutionLoadsClassificationForInheritedReviewers() {
     when(execution.getVariable("global_relatedEntity")).thenReturn("<#E::tag::PII.Sensitive>");
-    when(mockEntity.getReviewers()).thenReturn(List.of());
-    when(mockEntity.getOwners()).thenReturn(List.of());
     when(assigneesExpr.getValue(execution))
         .thenReturn("{\"addReviewers\":true,\"addOwners\":false,\"users\":[],\"teams\":[]}");
 
+    EntityReference classificationRef =
+        new EntityReference()
+            .withType(Entity.CLASSIFICATION)
+            .withFullyQualifiedName("test_classification");
+    Tag tag =
+        new Tag()
+            .withClassification(classificationRef)
+            .withReviewers(List.of())
+            .withOwners(List.of());
+    Classification classification =
+        new Classification()
+            .withReviewers(
+                List.of(
+                    new EntityReference()
+                        .withType(Entity.USER)
+                        .withFullyQualifiedName("classificationReviewer")));
+
+    mockedEntity
+        .when(
+            () ->
+                Entity.getEntity(
+                    any(MessageParser.EntityLink.class),
+                    org.mockito.ArgumentMatchers.eq("reviewers,owners,classification"),
+                    any(Include.class)))
+        .thenReturn(tag);
+    mockedEntity
+        .when(() -> Entity.getEntity(classificationRef, "reviewers", Include.NON_DELETED))
+        .thenReturn(classification);
+
     delegate.execute(execution);
 
-    mockedEntity.verify(
-        () ->
-            Entity.getEntity(
-                any(MessageParser.EntityLink.class),
-                org.mockito.ArgumentMatchers.eq("reviewers,owners,classification"),
-                any(Include.class)),
-        times(1));
+    String assigneesJson = (String) capturedVars.get("ApprovalTask_assignees");
+    assertNotNull(assigneesJson);
+    assertTrue(
+        assigneesJson.contains("classificationReviewer"),
+        "Classification reviewers should be used when tags inherit reviewers");
+  }
+
+  @Test
+  void testGlossaryTermReviewerResolutionFallsBackToGlossaryReviewers() {
+    when(execution.getVariable("global_relatedEntity"))
+        .thenReturn("<#E::glossaryTerm::sample_glossary.sample_term>");
+    when(assigneesExpr.getValue(execution))
+        .thenReturn("{\"addReviewers\":true,\"addOwners\":false,\"users\":[],\"teams\":[]}");
+
+    EntityReference glossaryRef =
+        new EntityReference().withType(Entity.GLOSSARY).withFullyQualifiedName("sample_glossary");
+    GlossaryTerm glossaryTerm =
+        new GlossaryTerm().withGlossary(glossaryRef).withReviewers(List.of()).withOwners(List.of());
+    Glossary glossary =
+        new Glossary()
+            .withReviewers(
+                List.of(
+                    new EntityReference()
+                        .withType(Entity.USER)
+                        .withFullyQualifiedName("reviewer1")));
+
+    mockedEntity
+        .when(
+            () ->
+                Entity.getEntity(
+                    any(MessageParser.EntityLink.class),
+                    org.mockito.ArgumentMatchers.eq("reviewers,owners,parent,glossary"),
+                    any(Include.class)))
+        .thenReturn(glossaryTerm);
+    mockedEntity
+        .when(() -> Entity.getEntity(glossaryRef, "reviewers", Include.NON_DELETED))
+        .thenReturn(glossary);
+
+    delegate.execute(execution);
+
+    String assigneesJson = (String) capturedVars.get("ApprovalTask_assignees");
+    assertNotNull(assigneesJson);
+    assertTrue(
+        assigneesJson.contains("reviewer1"),
+        "Glossary reviewers should be used when glossary terms inherit reviewers");
   }
 
   private static void injectField(Object target, String fieldName, Object value) throws Exception {

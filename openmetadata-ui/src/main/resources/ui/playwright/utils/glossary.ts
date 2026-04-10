@@ -50,8 +50,8 @@ import { sidebarClick } from './sidebar';
 import {
   TaskDetails,
   waitForTaskListResponse,
-  waitForTaskResolveResponse,
 } from './task';
+import { openTaskEditModal, saveTaskEditModal } from './taskWorkflow';
 
 const GLOSSARY_NAME_VALIDATION_ERROR = 'Name size must be between 1 and 128';
 
@@ -508,7 +508,7 @@ export const fillGlossaryTermDetails = async (
 
 export const verifyTaskCreated = async (
   page: Page,
-  glossaryFqn: string,
+  glossaryTermFqn: string,
   glossaryTermData: string
 ) => {
   const { apiContext } = await getApiContext(page);
@@ -519,14 +519,14 @@ export const verifyTaskCreated = async (
         const response = await apiContext
           .get(
             `/api/v1/tasks?aboutEntity=${encodeURIComponent(
-              glossaryFqn
-            )}&status=Open&type=GlossaryApproval&limit=100&fields=about,assignees`
+              glossaryTermFqn
+            )}&status=Open&category=Approval&limit=100&fields=about,assignees`
           )
           .then((res) => res.json());
 
-        const arr = response.data.map(
-          (item: { about: { name: string } }) => item.about.name
-        );
+        const arr = (response.data ?? [])
+          .map((item: { about?: { name?: string } }) => item.about?.name)
+          .filter(Boolean);
 
         return arr;
       },
@@ -643,18 +643,19 @@ export const validateGlossaryTermTask = async (
   });
 
   await expect(cardWithText).toHaveCount(1);
+  const taskCard = cardWithText.first();
+  await taskCard.click();
 
-  return cardWithText.first();
+  return taskCard;
 };
 
 export const approveGlossaryTermTask = async (
   page: Page,
   term: GlossaryTermData
 ) => {
-  const taskCard = await validateGlossaryTermTask(page, term);
-  const taskResolve = waitForTaskResolveResponse(page);
-  await taskCard.getByTestId('approve-button').click();
-  await taskResolve;
+  await validateGlossaryTermTask(page, term);
+  await openTaskEditModal(page);
+  await saveTaskEditModal(page);
 
   // Display toast notification
   await toastNotification(page, /Task resolved successfully|Vote recorded/);

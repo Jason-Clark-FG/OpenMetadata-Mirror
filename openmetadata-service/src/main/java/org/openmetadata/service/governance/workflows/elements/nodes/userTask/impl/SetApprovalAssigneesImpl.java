@@ -19,6 +19,10 @@ import org.flowable.engine.delegate.BpmnError;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.entity.classification.Classification;
+import org.openmetadata.schema.entity.classification.Tag;
+import org.openmetadata.schema.entity.data.Glossary;
+import org.openmetadata.schema.entity.data.GlossaryTerm;
 import org.openmetadata.schema.entity.teams.Team;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
@@ -65,11 +69,13 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       // Process addReviewers flag
       Boolean addReviewers = (Boolean) assigneesConfig.getOrDefault("addReviewers", true);
       if (addReviewers) {
-        if (entitySupportsReviewers
-            && entity.getReviewers() != null
-            && !entity.getReviewers().isEmpty()) {
+        List<EntityReference> effectiveReviewers =
+            entitySupportsReviewers
+                ? resolveEffectiveReviewers(entityLink.getEntityType(), entity)
+                : List.of();
+        if (!effectiveReviewers.isEmpty()) {
           List<String> reviewerAssignees =
-              getEntityLinkStringFromEntityReferenceWithTeamExpansion(entity.getReviewers());
+              getEntityLinkStringFromEntityReferenceWithTeamExpansion(effectiveReviewers);
           assignees.addAll(reviewerAssignees);
         } else if (!entitySupportsReviewers
             && entity.getOwners() != null
@@ -283,5 +289,52 @@ public class SetApprovalAssigneesImpl implements JavaDelegate {
       case Entity.GLOSSARY_TERM -> "reviewers,owners,parent,glossary";
       default -> "reviewers,owners";
     };
+  }
+
+  private List<EntityReference> resolveEffectiveReviewers(
+      String entityType, EntityInterface entity) {
+    if (entity.getReviewers() != null && !entity.getReviewers().isEmpty()) {
+      return entity.getReviewers();
+    }
+
+    return switch (entityType) {
+      case Entity.GLOSSARY_TERM -> resolveGlossaryTermReviewers((GlossaryTerm) entity);
+      case Entity.TAG -> resolveTagReviewers((Tag) entity);
+      default -> List.of();
+    };
+  }
+
+  private List<EntityReference> resolveGlossaryTermReviewers(GlossaryTerm term) {
+    if (term.getParent() != null) {
+      GlossaryTerm parentTerm =
+          Entity.getEntity(
+              term.getParent().withType(Entity.GLOSSARY_TERM), "reviewers", Include.NON_DELETED);
+      if (parentTerm.getReviewers() != null && !parentTerm.getReviewers().isEmpty()) {
+        return parentTerm.getReviewers();
+      }
+    }
+
+    if (term.getGlossary() != null) {
+      Glossary glossary = Entity.getEntity(term.getGlossary(), "reviewers", Include.NON_DELETED);
+      if (glossary.getReviewers() != null && !glossary.getReviewers().isEmpty()) {
+        return glossary.getReviewers();
+      }
+    }
+
+    return List.of();
+  }
+
+  private List<EntityReference> resolveTagReviewers(Tag tag) {
+    if (tag.getClassification() == null) {
+      return List.of();
+    }
+
+    Classification classification =
+        Entity.getEntity(tag.getClassification(), "reviewers", Include.NON_DELETED);
+    if (classification.getReviewers() != null && !classification.getReviewers().isEmpty()) {
+      return classification.getReviewers();
+    }
+
+    return List.of();
   }
 }

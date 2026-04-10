@@ -10,14 +10,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { APIRequestContext, Page, request } from '@playwright/test';
+import { APIRequestContext, Page } from '@playwright/test';
 import { Operation } from 'fast-json-patch';
 import {
   DATA_CONSUMER_RULES,
   DATA_STEWARD_RULES,
 } from '../../constant/permission';
 import { generateRandomUsername, uuid } from '../../utils/common';
-import { seedAuthStorage } from '../../utils/tokenStorage';
 import { PolicyClass, PolicyRulesType } from '../access-control/PoliciesClass';
 import { RolesClass } from '../access-control/RolesClass';
 import { UserResponseDataType } from '../entity/Entity.interface';
@@ -213,69 +212,29 @@ export class UserClass {
     userName = this.data.email,
     password = this.data.password
   ) {
-    const loginContext = await request.newContext({
-      baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585',
-      timeout: 90000,
-    });
-
-    let accessToken = '';
-
+    await page.goto('/');
     try {
-      const loginResponse = await loginContext.post('/api/v1/auth/login', {
-        data: {
-          email: userName,
-          password: Buffer.from(password).toString('base64'),
-        },
-      });
-
-      if (!loginResponse.ok()) {
-        throw new Error(
-          `UserClass.login() failed with status ${loginResponse.status()}: ${await loginResponse.text()}`
-        );
-      }
-
-      const loginPayload = (await loginResponse.json()) as {
-        accessToken?: string;
-      };
-      accessToken = loginPayload.accessToken ?? '';
-    } finally {
-      await loginContext.dispose();
-    }
-
-    if (accessToken) {
-      await seedAuthStorage({
-        page,
-        token: accessToken,
-        username: this.responseData.name,
-      });
-      await page.goto('/my-data');
-    } else {
+      await page.waitForURL('**/signin', { timeout: 5000 });
+    } catch {
+      await page.context().clearCookies();
       await page.goto('/signin');
+      await page.waitForURL('**/signin');
     }
+    await page.waitForLoadState('domcontentloaded');
+    const emailInput = page.locator('input[id="email"]');
+    await emailInput.waitFor({ state: 'visible' });
+    await emailInput.fill(userName);
+    await page.locator('#email').press('Tab');
+    await page.fill('input[id="password"]', password);
+    const loginRes = page.waitForResponse('/api/v1/auth/login');
+    await page.getByTestId('login').click();
+    await loginRes;
     await page
       .waitForURL((url) => !url.pathname.includes('/signin'), {
         timeout: 60000,
       })
       .catch(() => undefined);
     await page.waitForLoadState('domcontentloaded').catch(() => undefined);
-
-    await this.completeAuthenticatedLogin(page);
-  }
-
-  private async completeAuthenticatedLogin(page: Page) {
-    // Set localStorage to prevent welcome screen from showing
-    // The welcome screen checks for user's name in 'loggedInUsers' localStorage key
-    if (this.responseData.name) {
-      await page.evaluate((username) => {
-        const storageKey = 'loggedInUsers';
-        const existing = localStorage.getItem(storageKey);
-        const users = existing ? existing.split(',') : [];
-        if (!users.includes(username)) {
-          users.push(username);
-          localStorage.setItem(storageKey, users.join(','));
-        }
-      }, this.responseData.name);
-    }
 
     const modal = await page
       .getByRole('dialog')

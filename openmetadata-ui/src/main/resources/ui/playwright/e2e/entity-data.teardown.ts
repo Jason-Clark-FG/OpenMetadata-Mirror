@@ -13,12 +13,12 @@
 import { test as teardown } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createAdminApiContext } from '../utils/admin';
+import { performAdminLogin } from '../utils/admin';
 
-teardown('cleanup entity data prerequisites', async () => {
+teardown('cleanup entity data prerequisites', async ({ browser }) => {
   teardown.setTimeout(300 * 1000);
 
-  const { afterAction } = await createAdminApiContext();
+  const { afterAction } = await performAdminLogin(browser);
 
   try {
     const filePath = path.join(

@@ -10,19 +10,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { BrowserContext, request, test as setup } from '@playwright/test';
+import { test as setup } from '@playwright/test';
 import {
   EDIT_DESCRIPTION_RULE,
   EDIT_GLOSSARY_TERM_RULE,
   EDIT_TAGS_RULE,
   VIEW_ONLY_RULE,
 } from '../constant/permission';
-import { DEFAULT_ADMIN_USER } from '../constant/user';
 import { AdminClass } from '../support/user/AdminClass';
 import { UserClass } from '../support/user/UserClass';
 import { getApiContext, uuid } from '../utils/common';
 import { loginAsAdmin } from '../utils/initialSetup';
-import { seedAuthStorage } from '../utils/tokenStorage';
 
 const adminFile = 'playwright/.auth/admin.json';
 const dataConsumerFile = 'playwright/.auth/dataConsumer.json';
@@ -79,94 +77,9 @@ const ownerUser = new UserClass({
   password: 'User@OMD123',
 });
 
-const loginViaApi = async (email: string, password: string) => {
-  const loginContext = await request.newContext({
-    baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:8585',
-    timeout: 90000,
-  });
-
-  try {
-    const loginResponse = await loginContext.post('/api/v1/auth/login', {
-      data: {
-        email,
-        password: Buffer.from(password).toString('base64'),
-      },
-    });
-
-    if (!loginResponse.ok()) {
-      throw new Error(
-        `Authentication failed for ${email} (${loginResponse.status()}): ${await loginResponse.text()}`
-      );
-    }
-
-    const loginPayload = (await loginResponse.json()) as {
-      accessToken: string;
-    };
-
-    return {
-      accessToken: loginPayload.accessToken,
-      afterAction: async () => {
-        await loginContext.dispose();
-      },
-    };
-  } catch (error) {
-    await loginContext.dispose();
-
-    throw error;
-  }
-};
-
-const persistAuthenticatedState = async ({
-  page,
-  filePath,
-  email,
-  password,
-  username,
-}: {
-  page: Page;
-  filePath: string;
-  email: string;
-  password: string;
-  username: string;
-}) => {
-  const { accessToken, afterAction } = await loginViaApi(email, password);
-
-  try {
-    await seedAuthStorage({
-      page,
-      token: accessToken,
-      username,
-    });
-    await page.context().storageState({ path: filePath, indexedDB: true });
-  } finally {
-    await afterAction();
-  }
-};
-
 setup('authenticate all users', async ({ browser }) => {
-  setup.setTimeout(300 * 1000);
-  // Create separate browser contexts so auth state does not leak between users
-  // while we are persisting independent storage states.
-  const [
-    adminContext,
-    dataConsumerContext,
-    dataStewardContext,
-    editDescriptionContext,
-    editTagsContext,
-    editGlossaryTermContext,
-    viewOnlyContext,
-    ownerContext,
-  ] = await Promise.all([
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-    browser.newContext(),
-  ]);
-
+  setup.setTimeout(120 * 1000);
+  // Create separate pages for each user
   const [
     adminPage,
     dataConsumerPage,
@@ -177,17 +90,15 @@ setup('authenticate all users', async ({ browser }) => {
     viewOnlyPage,
     ownerPage,
   ] = await Promise.all([
-    adminContext.newPage(),
-    dataConsumerContext.newPage(),
-    dataStewardContext.newPage(),
-    editDescriptionContext.newPage(),
-    editTagsContext.newPage(),
-    editGlossaryTermContext.newPage(),
-    viewOnlyContext.newPage(),
-    ownerContext.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
+    browser.newPage(),
   ]);
-  let newAdminContext: BrowserContext | undefined;
-  let newAdminPage: Page | undefined;
 
   try {
     // Create admin page and context
@@ -195,9 +106,12 @@ setup('authenticate all users', async ({ browser }) => {
 
     await loginAsAdmin(adminPage, admin);
 
-    // Create a new page to persist admin storage state after token expiry is set to 4 hours.
-    newAdminContext = await browser.newContext();
-    newAdminPage = await newAdminContext.newPage();
+    // Create a new page to login with admin user after token expiry is set to 4 hours
+    // This is done to avoid logging out the user to get the new token
+    const newAdminPage = await browser.newPage();
+    await admin.login(newAdminPage);
+
+    await newAdminPage.waitForURL('**/my-data');
 
     const { apiContext, afterAction } = await getApiContext(adminPage);
 
@@ -239,95 +153,84 @@ setup('authenticate all users', async ({ browser }) => {
       ownerUser.setDataConsumerRole(apiContext),
     ]);
 
-    await persistAuthenticatedState({
-      page: newAdminPage,
-      filePath: adminFile,
-      email: DEFAULT_ADMIN_USER.userName,
-      password: DEFAULT_ADMIN_USER.password,
-      username: DEFAULT_ADMIN_USER.userName,
-    });
+    // Wait for indexedDB databases to be available
+    await adminPage.waitForFunction(() => indexedDB.databases());
 
-    await persistAuthenticatedState({
-      page: dataConsumerPage,
-      filePath: dataConsumerFile,
-      email: dataConsumer.data.email,
-      password: dataConsumer.data.password,
-      username: dataConsumer.responseData.name,
-    });
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth state to be persisted to indexedDB
+    await adminPage.waitForTimeout(2000);
 
-    await persistAuthenticatedState({
-      page: dataStewardPage,
-      filePath: dataStewardFile,
-      email: dataSteward.data.email,
-      password: dataSteward.data.password,
-      username: dataSteward.responseData.name,
-    });
+    // Save admin state
+    await newAdminPage
+      .context()
+      .storageState({ path: adminFile, indexedDB: true });
 
-    await persistAuthenticatedState({
-      page: editDescriptionPage,
-      filePath: editDescriptionFile,
-      email: editDescriptionUser.data.email,
-      password: editDescriptionUser.data.password,
-      username: editDescriptionUser.responseData.name,
-    });
+    // Save states for each user sequentially to avoid file operation conflicts
+    await dataConsumer.login(dataConsumerPage);
+    await dataConsumerPage
+      .context()
+      .storageState({ path: dataConsumerFile, indexedDB: true });
 
-    await persistAuthenticatedState({
-      page: editTagsPage,
-      filePath: editTagsFile,
-      email: editTagsUser.data.email,
-      password: editTagsUser.data.password,
-      username: editTagsUser.responseData.name,
-    });
+    await dataSteward.login(dataStewardPage);
+    await dataStewardPage
+      .context()
+      .storageState({ path: dataStewardFile, indexedDB: true });
 
-    await persistAuthenticatedState({
-      page: editGlossaryTermPage,
-      filePath: editGlossaryTermFile,
-      email: editGlossaryTermUser.data.email,
-      password: editGlossaryTermUser.data.password,
-      username: editGlossaryTermUser.responseData.name,
-    });
+    await editDescriptionUser.login(editDescriptionPage);
+    await editDescriptionPage
+      .context()
+      .storageState({ path: editDescriptionFile, indexedDB: true });
 
-    await persistAuthenticatedState({
-      page: viewOnlyPage,
-      filePath: viewOnlyFile,
-      email: viewOnlyUser.data.email,
-      password: viewOnlyUser.data.password,
-      username: viewOnlyUser.responseData.name,
-    });
+    await editTagsUser.login(editTagsPage);
+    await editTagsPage
+      .context()
+      .storageState({ path: editTagsFile, indexedDB: true });
 
-    await persistAuthenticatedState({
-      page: ownerPage,
-      filePath: ownerFile,
-      email: ownerUser.data.email,
-      password: ownerUser.data.password,
-      username: ownerUser.responseData.name,
-    });
+    await editGlossaryTermUser.login(editGlossaryTermPage);
+    await editGlossaryTermPage
+      .context()
+      .storageState({ path: editGlossaryTermFile, indexedDB: true });
+
+    await viewOnlyUser.login(viewOnlyPage);
+    await viewOnlyPage
+      .context()
+      .storageState({ path: viewOnlyFile, indexedDB: true });
+
+    await ownerUser.login(ownerPage);
+    await ownerPage
+      .context()
+      .storageState({ path: ownerFile, indexedDB: true });
 
     await afterAction();
+
+    if (newAdminPage) {
+      await newAdminPage.close();
+    }
   } catch (error) {
     console.error('Error during authentication setup:', error);
 
     throw error;
   } finally {
-    // Always attempt to tear down every page/context, even if one close fails.
-    await Promise.allSettled([
-      newAdminPage?.close(),
-      dataConsumerPage?.close(),
-      dataStewardPage?.close(),
-      editDescriptionPage?.close(),
-      editTagsPage?.close(),
-      editGlossaryTermPage?.close(),
-      viewOnlyPage?.close(),
-      ownerPage?.close(),
-      newAdminContext?.close(),
-      adminContext.close(),
-      dataConsumerContext.close(),
-      dataStewardContext.close(),
-      editDescriptionContext.close(),
-      editTagsContext.close(),
-      editGlossaryTermContext.close(),
-      viewOnlyContext.close(),
-      ownerContext.close(),
-    ]);
+    // Close pages sequentially to avoid conflicts
+    if (dataConsumerPage) {
+      await dataConsumerPage.close();
+    }
+    if (dataStewardPage) {
+      await dataStewardPage.close();
+    }
+    if (editDescriptionPage) {
+      await editDescriptionPage.close();
+    }
+    if (editTagsPage) {
+      await editTagsPage.close();
+    }
+    if (editGlossaryTermPage) {
+      await editGlossaryTermPage.close();
+    }
+    if (viewOnlyPage) {
+      await viewOnlyPage.close();
+    }
+    if (ownerPage) {
+      await ownerPage.close();
+    }
   }
 });

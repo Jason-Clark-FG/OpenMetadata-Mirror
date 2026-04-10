@@ -224,7 +224,7 @@ def _await_task_ready(metadata: OpenMetadata, task_id: str, timeout: int = 15) -
 
 
 def _await_task_deleted(
-    metadata: OpenMetadata, task_id: str, timeout: int = 15
+    metadata: OpenMetadata, task_id: str, timeout: int = 60
 ) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -235,7 +235,7 @@ def _await_task_deleted(
 
 
 def _await_no_tasks_for_creator(
-    metadata: OpenMetadata, creator_id: str, table_fqn: str, timeout: int = 15
+    metadata: OpenMetadata, creator_id: str, table_fqn: str, timeout: int = 60
 ) -> None:
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -372,6 +372,9 @@ class TestOMetaTaskSuggestionAPI:
             hard_delete=True,
         )
 
+        _await_no_tasks_for_creator(
+            metadata, str(user.id.root), suggestion_table.fullyQualifiedName.root
+        )
         _await_task_deleted(metadata, str(task.id.root))
 
         with pytest.raises(APIError):

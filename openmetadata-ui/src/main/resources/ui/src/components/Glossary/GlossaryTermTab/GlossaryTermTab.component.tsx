@@ -84,6 +84,7 @@ import {
   listTasks,
   resolveTask as resolveTaskAPI,
   Task,
+  TaskCategory,
   TaskEntityStatus,
   TaskEntityType,
   TaskResolutionType,
@@ -394,18 +395,23 @@ const GlossaryTermTab = ({ isGlossary, className }: GlossaryTermTabProps) => {
 
     try {
       const { data } = await listTasks({
-        aboutEntity: activeGlossary.fullyQualifiedName,
         status: TaskEntityStatus.Open,
-        type: TaskEntityType.GlossaryApproval,
+        category: TaskCategory.Approval,
+        type: TaskEntityType.RequestApproval,
         limit: API_RES_MAX_SIZE,
         fields: 'about,assignees',
       });
 
-      // Organize tasks by glossary term FQN using entity link format
+      // Glossary approvals are now workflow-managed RequestApproval tasks created
+      // for each glossary term, not legacy glossary-root tasks.
       const tasksByTerm = data.reduce(
         (acc: Record<string, Task[]>, task: Task) => {
           const termFQN = task.about?.fullyQualifiedName;
-          if (termFQN) {
+          const isGlossaryTermTask =
+            task.about?.type === EntityType.GLOSSARY_TERM &&
+            termFQN?.startsWith(`${activeGlossary.fullyQualifiedName}.`);
+
+          if (isGlossaryTermTask && termFQN) {
             const entityLink = `<#E::${EntityType.GLOSSARY_TERM}::${termFQN}>`;
             if (!acc[entityLink]) {
               acc[entityLink] = [];

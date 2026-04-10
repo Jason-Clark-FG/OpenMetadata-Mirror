@@ -156,7 +156,7 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossary(page1, glossary1.data.name);
       await verifyTaskCreated(
         page1,
-        glossary1.data.fullyQualifiedName,
+        glossary1.data.terms[0].data.fullyQualifiedName,
         glossary1.data.terms[0].data.name
       );
 
@@ -168,11 +168,9 @@ test.describe('Glossary tests', () => {
         .first();
 
       await expect(firstNotification).toContainText(
-        `Approval required for ${glossary1.data.terms[0].data.name}`
+        'a new task has been assigned to you'
       );
-      await expect(firstNotification).toContainText(
-        glossary1.data.fullyQualifiedName
-      );
+      await expect(firstNotification).toContainText('Request Approval');
 
       await clickOutside(page1);
 
@@ -226,7 +224,7 @@ test.describe('Glossary tests', () => {
 
       await verifyTaskCreated(
         page1,
-        glossary2.data.fullyQualifiedName,
+        glossary2.data.terms[0].data.fullyQualifiedName,
         glossary2.data.terms[0].data.name
       );
 
@@ -444,12 +442,12 @@ test.describe('Glossary tests', () => {
       await selectActiveGlossary(page1, glossary1.data.name);
       await verifyTaskCreated(
         page1,
-        glossary1.data.fullyQualifiedName,
+        glossary1.data.terms[0].data.fullyQualifiedName,
         glossary1.data.terms[0].data.name
       );
       await verifyTaskCreated(
         page1,
-        glossary1.data.fullyQualifiedName,
+        glossary1.data.terms[1].data.fullyQualifiedName,
         glossary1.data.terms[1].data.name
       );
       await redirectToHomePage(page1);
