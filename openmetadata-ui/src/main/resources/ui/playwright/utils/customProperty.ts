@@ -193,11 +193,7 @@ export const setValueForProperty = async (data: {
       await container.locator('[data-testid="date-time-picker"]').isVisible();
       await container.locator('[data-testid="date-time-picker"]').click();
       await container.locator('[data-testid="date-time-picker"]').fill(value);
-      if (propertyType === 'dateTime-cp') {
-        await page.getByText('Now', { exact: true }).click();
-      } else {
-        await page.getByText('Today', { exact: true }).click();
-      }
+      await page.keyboard.press('Enter');
       await container.locator('[data-testid="inline-save-btn"]').click();
 
       break;
@@ -1262,14 +1258,30 @@ export const updateCustomPropertyInRightPanel = async (data: {
   value: string;
   endpoint: EntityTypeEndpoint;
   skipNavigation?: boolean;
+  entityFQN?: string;
+  exploreTab?: string;
 }) => {
-  const { page, entityName, propertyDetails, value, endpoint, skipNavigation } =
-    data;
+  const {
+    page,
+    entityName,
+    propertyDetails,
+    value,
+    endpoint,
+    skipNavigation,
+    entityFQN,
+    exploreTab,
+  } = data;
   const propertyName = propertyDetails.name;
   const propertyType = propertyDetails.propertyType.name;
 
   if (!skipNavigation) {
-    await navigateToExploreAndSelectTable(page, entityName, endpoint);
+    await navigateToExploreAndSelectTable(
+      page,
+      entityName,
+      endpoint,
+      exploreTab,
+      entityFQN
+    );
     await waitForAllLoadersToDisappear(page);
     await navigateToEntityPanelTab(page, 'custom property');
     await waitForAllLoadersToDisappear(page);

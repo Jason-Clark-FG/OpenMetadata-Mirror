@@ -25,6 +25,30 @@ export const getEntityFqn = (
   ).entityResponseData?.fullyQualifiedName;
 };
 
+const findOptionByScrolling = async (page: Page, endpoint: string) => {
+  let tries = 0;
+  const maxTries = 5; // Limit the number of scroll attempts to prevent infinite loops
+
+  while (tries < maxTries) {
+    const option = page.getByTestId(
+      `global-search-select-option-${ENDPOINT_TO_FILTER_MAP[endpoint]}`
+    );
+    if (await option.isVisible()) {
+      await option.click();
+      return;
+    }
+
+    // Scroll the dropdown to load more options
+    await page
+      .getByTestId('global-search-select-dropdown')
+      .evaluate((dropdown) => {
+        dropdown.scrollBy(0, 100); // Adjust scroll amount as needed
+      });
+
+    tries++;
+  }
+};
+
 export const openEntitySummaryPanel = async ({
   page,
   entityName,
@@ -50,11 +74,7 @@ export const openEntitySummaryPanel = async ({
     await page.getByTestId('global-search-select-dropdown').waitFor({
       state: 'visible',
     });
-    await page
-      .getByTestId(
-        `global-search-select-option-${ENDPOINT_TO_FILTER_MAP[endpoint]}`
-      )
-      .click();
+    await findOptionByScrolling(page, endpoint);
   }
   const searchResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/v1/search/query')
@@ -97,7 +117,9 @@ export const openEntitySummaryPanel = async ({
 export async function navigateToExploreAndSelectTable(
   page: Page,
   entityName: string,
-  endpoint?: string
+  endpoint?: string,
+  exploreTab?: string,
+  fullyQualifiedName?: string
 ) {
   await redirectToExplorePage(page);
 
@@ -107,7 +129,13 @@ export async function navigateToExploreAndSelectTable(
     response.url().includes('/permissions')
   );
 
-  await openEntitySummaryPanel({ page, entityName, endpoint });
+  await openEntitySummaryPanel({
+    page,
+    entityName,
+    endpoint,
+    exploreTab,
+    fullyQualifiedName,
+  });
 
   const permissionsResponse = await permissionsResponsePromise;
   expect(permissionsResponse.status()).toBe(200);

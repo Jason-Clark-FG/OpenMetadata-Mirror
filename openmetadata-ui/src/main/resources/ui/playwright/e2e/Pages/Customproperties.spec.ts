@@ -12,11 +12,17 @@
  */
 
 /**
- * Consolidated custom property tests for: Table, Container, Dashboard, Topic, Pipeline.
+ * Consolidated custom property tests for all entity types:
+ *   Table, Container, Dashboard, Topic, Pipeline,
+ *   Database, DatabaseSchema, GlossaryTerm, MlModel, SearchIndex,
+ *   StoredProcedure, DashboardDataModel, Metric, Chart,
+ *   ApiCollection, ApiEndpoint, DataProduct, Domain, TableColumn.
  *
  * Each entity type has ONE describe.serial block so no two workers can ever run
  * CP create/edit/delete operations for the same entity type simultaneously.
  *
+ * Entity setup (prepareCustomProperty) is done in beforeAll, not inside tests,
+ * so cleanup always runs in afterAll even when a test fails mid-way.
  */
 
 import { expect, test } from '@playwright/test';
@@ -26,15 +32,29 @@ import {
   CP_PARTIAL_SEARCH_VALUES,
   CP_RANGE_VALUES,
 } from '../../constant/customPropertyAdvancedSearch';
+import { ENDPOINT_TO_EXPLORE_TAB_MAP } from '../../constant/explore';
 import { GlobalSettingOptions } from '../../constant/settings';
 import { SidebarItem } from '../../constant/sidebar';
+import { DataProduct } from '../../support/domain/DataProduct';
+import { Domain } from '../../support/domain/Domain';
+import { ApiCollectionClass } from '../../support/entity/ApiCollectionClass';
+import { ApiEndpointClass } from '../../support/entity/ApiEndpointClass';
+import { ChartClass } from '../../support/entity/ChartClass';
 import { ContainerClass } from '../../support/entity/ContainerClass';
 import { DashboardClass } from '../../support/entity/DashboardClass';
+import { DashboardDataModelClass } from '../../support/entity/DashboardDataModelClass';
+import { DatabaseClass } from '../../support/entity/DatabaseClass';
+import { DatabaseSchemaClass } from '../../support/entity/DatabaseSchemaClass';
 import { EntityTypeEndpoint } from '../../support/entity/Entity.interface';
 import { EntityDataClass } from '../../support/entity/EntityDataClass';
+import { MetricClass } from '../../support/entity/MetricClass';
+import { MlModelClass } from '../../support/entity/MlModelClass';
 import { PipelineClass } from '../../support/entity/PipelineClass';
+import { SearchIndexClass } from '../../support/entity/SearchIndexClass';
+import { StoredProcedureClass } from '../../support/entity/StoredProcedureClass';
 import { TableClass } from '../../support/entity/TableClass';
 import { TopicClass } from '../../support/entity/TopicClass';
+import { GlossaryTerm } from '../../support/glossary/GlossaryTerm';
 import { UserClass } from '../../support/user/UserClass';
 import {
   CONDITIONS_MUST,
@@ -45,11 +65,13 @@ import { advanceSearchSaveFilter } from '../../utils/advancedSearchCustomPropert
 import {
   clickOutside,
   createNewPage,
+  getApiContext,
   redirectToHomePage,
   uuid,
 } from '../../utils/common';
 import {
   addCustomPropertiesForEntity,
+  createCustomPropertyForEntity,
   CustomPropertyTypeByName,
   deleteCreatedProperty,
   editCreatedProperty,
@@ -58,6 +80,7 @@ import {
   updateCustomPropertyInRightPanel,
   validateValueForProperty,
   verifyCustomPropertyInAdvancedSearch,
+  verifyTableColumnCustomPropertyPersistence,
 } from '../../utils/customProperty';
 import {
   applyCustomPropertyFilter,
@@ -82,6 +105,31 @@ test.use({ storageState: 'playwright/.auth/admin.json' });
 
 type CustomPropertyEntity =
   (typeof CUSTOM_PROPERTIES_ENTITIES)[keyof typeof CUSTOM_PROPERTIES_ENTITIES];
+
+type CRUDEntity = {
+  key: keyof typeof CUSTOM_PROPERTIES_ENTITIES;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  makeInstance: (() => any) | null;
+};
+
+type AssetTypes =
+  | TableClass
+  | ContainerClass
+  | DashboardClass
+  | TopicClass
+  | PipelineClass
+  | DatabaseClass
+  | DatabaseSchemaClass
+  | MlModelClass
+  | SearchIndexClass
+  | StoredProcedureClass
+  | DashboardDataModelClass
+  | MetricClass
+  | ChartClass
+  | ApiCollectionClass
+  | ApiEndpointClass;
+
+type OtherTypes = GlossaryTerm | Domain | DataProduct;
 
 const BASIC_PROPERTIES = [
   'Integer',
@@ -145,43 +193,54 @@ const CONFIG_PROPERTIES: Array<{
   },
 ];
 
-// Part-1 entity keys
-const PART1_ENTITY_KEYS = [
-  'entity_table',
-  'entity_container',
-  'entity_dashboard',
-  'entity_topic',
-  'entity_pipeline',
-] as const;
+const ALL_ENTITIES: CRUDEntity[] = [
+  // Part-1 entities
+  { key: 'entity_table', makeInstance: () => new TableClass() },
+  { key: 'entity_container', makeInstance: () => new ContainerClass() },
+  { key: 'entity_dashboard', makeInstance: () => new DashboardClass() },
+  { key: 'entity_topic', makeInstance: () => new TopicClass() },
+  { key: 'entity_pipeline', makeInstance: () => new PipelineClass() },
+  // Part-2 entities
+  { key: 'entity_database', makeInstance: () => new DatabaseClass() },
+  {
+    key: 'entity_databaseSchema',
+    makeInstance: () => new DatabaseSchemaClass(),
+  },
+  { key: 'entity_glossaryTerm', makeInstance: () => new GlossaryTerm() },
+  { key: 'entity_mlmodel', makeInstance: () => new MlModelClass() },
+  { key: 'entity_searchIndex', makeInstance: () => new SearchIndexClass() },
+  {
+    key: 'entity_storedProcedure',
+    makeInstance: () => new StoredProcedureClass(),
+  },
+  {
+    key: 'entity_dashboardDataModel',
+    makeInstance: () => new DashboardDataModelClass(),
+  },
+  { key: 'entity_metric', makeInstance: () => new MetricClass() },
+  { key: 'entity_chart', makeInstance: () => new ChartClass() },
+  // Part-3 entities
+  { key: 'entity_apiCollection', makeInstance: () => new ApiCollectionClass() },
+  { key: 'entity_apiEndpoint', makeInstance: () => new ApiEndpointClass() },
+  { key: 'entity_dataProduct', makeInstance: () => new DataProduct() },
+  { key: 'entity_domain', makeInstance: null },
+  { key: 'entity_tableColumn', makeInstance: null },
+];
 
-// Key Entity class mapping
-const ENTITY_CLASS_MAPPING: Record<Part1EntityKey, any> = {
-  entity_table: TableClass,
-  entity_container: ContainerClass,
-  entity_dashboard: DashboardClass,
-  entity_topic: TopicClass,
-  entity_pipeline: PipelineClass,
-};
-
-type Part1EntityKey = (typeof PART1_ENTITY_KEYS)[number];
-
-// Main test loop
-
-PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
+ALL_ENTITIES.forEach(({ key, makeInstance }) => {
   const entity = CUSTOM_PROPERTIES_ENTITIES[key];
 
   test.describe
     .serial(`Add update and delete custom properties for ${entity.name}`, () => {
-    // shared state
-    let mainEntity:
-      | TableClass
-      | ContainerClass
-      | DashboardClass
-      | TopicClass
-      | PipelineClass;
+    let mainEntity: AssetTypes | OtherTypes = {} as AssetTypes | OtherTypes;
+    let responseData:
+      | AssetTypes['entityResponseData']
+      | OtherTypes['responseData'];
+
+    let tableForColumnTest: TableClass | null = null;
     const users: UserClass[] = [];
 
-    // Dashboard-specific
+    // Dashboard-specific state
     let dashboardTopic1: TopicClass;
     let dashboardTopic2: TopicClass;
     const cpasTestData: CPASTestData = {
@@ -193,49 +252,61 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
     const dashboardSearchPropertyName = `pwSearchCPDashboard${uuid()}`;
     const dashboardPropertyValue = `EXECUTIVE_DASHBOARD_${uuid()}`;
 
-    // Pipeline-specific
+    // Pipeline-specific state
     const pipelineSearchPropertyName = `pwSearchCPPipeline${uuid()}`;
     const pipelinePropertyValue = `ETL_PRODUCTION_${uuid()}`;
 
-    // lifecycle hooks
     test.beforeAll(async ({ browser }) => {
       const { page, apiContext, afterAction } = await createNewPage(browser);
 
-      mainEntity = new ENTITY_CLASS_MAPPING[key]();
-      await mainEntity.create(apiContext);
-      await mainEntity.prepareCustomProperty(apiContext);
+      if (key === 'entity_tableColumn') {
+        tableForColumnTest = new TableClass();
+        await tableForColumnTest.create(apiContext);
+      } else if (makeInstance !== null) {
+        mainEntity = makeInstance();
+        await mainEntity.create(apiContext);
+        await mainEntity.prepareCustomProperty(apiContext);
 
-      if (key === 'entity_table') {
-        for (let i = 0; i < 5; i++) {
-          const user = new UserClass();
-          await user.create(apiContext);
-          users.push(user);
+        if (key === 'entity_table') {
+          for (let i = 0; i < 5; i++) {
+            const user = new UserClass();
+            await user.create(apiContext);
+            users.push(user);
+          }
+        } else if (key === 'entity_dashboard') {
+          dashboardTopic1 = new TopicClass();
+          dashboardTopic2 = new TopicClass();
+          await dashboardTopic1.create(apiContext);
+          await dashboardTopic2.create(apiContext);
+          await setupCustomPropertyAdvancedSearchTest(
+            page,
+            cpasTestData,
+            mainEntity as DashboardClass,
+            dashboardTopic1,
+            dashboardTopic2
+          );
+          cpasTestData.createdCPData.forEach((cp) => {
+            propertyNames[cp.propertyType.name] = cp.name;
+          });
         }
-      } else if (key === 'entity_dashboard') {
-        dashboardTopic1 = new TopicClass();
-        dashboardTopic2 = new TopicClass();
-        await dashboardTopic1.create(apiContext);
-        await dashboardTopic2.create(apiContext);
-        await setupCustomPropertyAdvancedSearchTest(
-          page,
-          cpasTestData,
-          mainEntity as DashboardClass,
-          dashboardTopic1,
-          dashboardTopic2
-        );
-        cpasTestData.createdCPData.forEach((cp) => {
-          propertyNames[cp.propertyType.name] = cp.name;
-        });
       }
+      responseData =
+        (mainEntity as AssetTypes).entityResponseData ??
+        (mainEntity as OtherTypes).responseData;
 
       await afterAction();
     });
 
     test.afterAll(async ({ browser }) => {
       const { apiContext, afterAction } = await createNewPage(browser);
-      await mainEntity.cleanupCustomProperty(apiContext);
 
-      await mainEntity.delete(apiContext);
+      if (makeInstance !== null) {
+        await mainEntity.cleanupCustomProperty(apiContext);
+        await mainEntity.delete(apiContext);
+      } else if (tableForColumnTest !== null) {
+        await tableForColumnTest.delete(apiContext);
+      }
+
       await afterAction();
     });
 
@@ -243,7 +314,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
       await redirectToHomePage(page);
     });
 
-    // 17 CRUD tests (same for every entity)
+    // ── 17 CRUD tests ──────────────────────────────────────────────────────
 
     BASIC_PROPERTIES.forEach((property) => {
       test(property, async ({ page }) => {
@@ -334,52 +405,59 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
       });
     });
 
-    test(`Set & Update all CP types on ${entity.name}`, async ({ page }) => {
-      test.slow(true);
-      const properties = Object.values(CustomPropertyTypeByName);
+    // ── Set & Update all CP types (entities with a UI entity page) ──────────
 
-      await test.step('Set all CP types', async () => {
-        await mainEntity.visitEntityPage(page);
-        for (const type of properties) {
-          await mainEntity.updateCustomProperty(
-            page,
-            mainEntity.customPropertyValue[type].property,
-            mainEntity.customPropertyValue[type].value
-          );
-        }
-      });
+    if (makeInstance !== null) {
+      test(`Set & Update all CP types on ${entity.name}`, async ({ page }) => {
+        test.slow(true);
+        const properties = Object.values(CustomPropertyTypeByName);
 
-      await test.step('Update all CP types', async () => {
-        await mainEntity.visitEntityPage(page);
-        for (const type of properties) {
-          await mainEntity.updateCustomProperty(
-            page,
-            mainEntity.customPropertyValue[type].property,
-            mainEntity.customPropertyValue[type].newValue
-          );
-        }
-      });
+        await test.step('Set all CP types', async () => {
+          await mainEntity.visitEntityPage(page);
+          for (const type of properties) {
+            await mainEntity.updateCustomProperty(
+              page,
+              mainEntity.customPropertyValue[type].property,
+              mainEntity.customPropertyValue[type].value
+            );
+          }
+        });
 
-      if (key === 'entity_table') {
+        await test.step('Update all CP types', async () => {
+          await mainEntity.visitEntityPage(page);
+          for (const type of properties) {
+            await mainEntity.updateCustomProperty(
+              page,
+              mainEntity.customPropertyValue[type].property,
+              mainEntity.customPropertyValue[type].newValue
+            );
+          }
+        });
+
         await test.step('Update all CP types in Right Panel', async () => {
           test.slow();
           for (const [index, type] of properties.entries()) {
+            console.log(
+              'Tab value',
+              ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint]
+            );
             await updateCustomPropertyInRightPanel({
               page,
-              entityName:
-                mainEntity.entityResponseData['displayName'] ??
-                mainEntity.entityResponseData['name'],
+              entityName: responseData['displayName'] ?? responseData['name'],
               propertyDetails: mainEntity.customPropertyValue[type].property,
               value: mainEntity.customPropertyValue[type].value,
               endpoint: mainEntity.endpoint,
               skipNavigation: index > 0,
+              exploreTab: ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint],
+              entityFQN: responseData.fullyQualifiedName,
             });
           }
         });
-      }
-    });
+      });
+    }
 
-    // TABLE-specific extra tests
+    // ── Table-specific extra tests ──────────────────────────────────────────
+
     if (key === 'entity_table') {
       test('sqlQuery shows scrollable CodeMirror container and no expand toggle', async ({
         page,
@@ -735,9 +813,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
 
           await expect(
             page.getByTestId(
-              `table-data-card_${
-                mainEntity.entityResponseData.fullyQualifiedName ?? ''
-              }`
+              `table-data-card_${responseData.fullyQualifiedName ?? ''}`
             )
           ).toBeVisible();
 
@@ -756,16 +832,14 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
 
           await expect(
             page.getByTestId(
-              `table-data-card_${
-                mainEntity.entityResponseData.fullyQualifiedName ?? ''
-              }`
+              `table-data-card_${responseData.fullyQualifiedName ?? ''}`
             )
           ).toBeVisible();
         });
       });
     }
 
-    // CONTAINER-specific extra tests
+    // ── Container-specific extra tests ─────────────────────────────────────
 
     if (key === 'entity_container') {
       test('should show No Data placeholder when hyperlink has no value', async ({
@@ -881,11 +955,9 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
       });
     }
 
-    // DASHBOARD-specific extra tests
+    // ── Dashboard-specific extra tests ─────────────────────────────────────
 
     if (key === 'entity_dashboard') {
-      // Advanced search tests – all CP types against the dashboard entity
-      // (migrated from CustomPropertyAdvanceSeach.spec.ts)
       test.describe('Dashboard CP Advanced Search - Text Fields', () => {
         test.beforeEach(async ({ page }) => {
           await sidebarClick(page, SidebarItem.EXPLORE);
@@ -904,7 +976,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             CP_BASE_VALUES.string
           );
@@ -919,7 +991,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             CP_BASE_VALUES.string
           );
@@ -934,7 +1006,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             CP_PARTIAL_SEARCH_VALUES.string
           );
@@ -949,7 +1021,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             CP_BASE_VALUES.string
           );
@@ -959,7 +1031,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -973,7 +1045,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -991,7 +1063,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             CP_BASE_VALUES.email
           );
@@ -1006,7 +1078,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1020,7 +1092,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1029,7 +1101,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1043,7 +1115,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1061,7 +1133,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1075,7 +1147,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1084,7 +1156,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1098,7 +1170,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1116,7 +1188,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1125,7 +1197,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1139,7 +1211,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1157,7 +1229,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1171,7 +1243,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1180,7 +1252,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1194,7 +1266,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1212,7 +1284,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1226,7 +1298,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1235,7 +1307,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1249,7 +1321,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1273,7 +1345,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1287,7 +1359,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1301,7 +1373,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1313,7 +1385,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           });
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1322,7 +1394,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1336,7 +1408,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1354,7 +1426,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1368,7 +1440,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1382,7 +1454,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1391,7 +1463,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1405,7 +1477,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1423,7 +1495,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1437,7 +1509,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1446,7 +1518,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1460,7 +1532,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1496,7 +1568,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1512,7 +1584,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1526,7 +1598,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             containsText
           );
@@ -1541,7 +1613,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             containsText
           );
@@ -1556,7 +1628,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             regexpText
           );
@@ -1566,7 +1638,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1580,7 +1652,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1612,7 +1684,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1628,7 +1700,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1644,7 +1716,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1658,7 +1730,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             containsText
           );
@@ -1673,7 +1745,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             containsText
           );
@@ -1688,7 +1760,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             regexpText
           );
@@ -1698,7 +1770,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1712,7 +1784,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1739,7 +1811,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1755,7 +1827,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1769,7 +1841,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1783,7 +1855,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1792,7 +1864,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1806,7 +1878,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1827,7 +1899,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1843,7 +1915,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1857,7 +1929,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1871,7 +1943,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1880,7 +1952,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1894,7 +1966,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1919,7 +1991,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1933,7 +2005,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -1947,7 +2019,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1961,7 +2033,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1970,7 +2042,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, propertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -1984,7 +2056,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2011,7 +2083,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             String(CP_BASE_VALUES.timeInterval.start)
           );
@@ -2026,7 +2098,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             String(CP_BASE_VALUES.timeInterval.start)
           );
@@ -2039,7 +2111,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           });
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2056,7 +2128,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2070,7 +2142,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2084,12 +2156,11 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
 
-          // End time checks
           await showAdvancedSearchDialog(page);
           await applyCustomPropertyFilter(
             page,
@@ -2099,7 +2170,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             String(CP_BASE_VALUES.timeInterval.end)
           );
@@ -2114,7 +2185,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             String(CP_BASE_VALUES.timeInterval.end)
           );
@@ -2127,7 +2198,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           });
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2144,7 +2215,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2158,7 +2229,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2167,7 +2238,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, endPropertyName, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2194,7 +2265,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             String(CP_BASE_VALUES.hyperlinkCp.url)
           );
@@ -2209,7 +2280,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             String(CP_BASE_VALUES.hyperlinkCp.url)
           );
@@ -2224,7 +2295,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             urlPartialValue
           );
@@ -2239,7 +2310,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             urlPartialValue
           );
@@ -2249,7 +2320,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, urlProperty, 'is_not_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2258,12 +2329,11 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           await applyCustomPropertyFilter(page, urlProperty, 'is_null', '');
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
 
-          // Display Text checks
           await showAdvancedSearchDialog(page);
           await applyCustomPropertyFilter(
             page,
@@ -2273,7 +2343,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             String(CP_BASE_VALUES.hyperlinkCp.displayText)
           );
@@ -2288,7 +2358,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             String(CP_BASE_VALUES.hyperlinkCp.displayText)
           );
@@ -2303,7 +2373,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             displayTextPartialValue
           );
@@ -2318,7 +2388,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             displayTextPartialValue
           );
@@ -2333,7 +2403,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2347,7 +2417,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2374,7 +2444,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             value
           );
@@ -2389,7 +2459,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2403,7 +2473,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             partialValue
           );
@@ -2418,7 +2488,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             partialValue
           );
@@ -2433,7 +2503,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2447,7 +2517,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2468,7 +2538,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             value
           );
@@ -2483,7 +2553,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2497,7 +2567,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             partialValue
           );
@@ -2512,7 +2582,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             partialValue
           );
@@ -2527,7 +2597,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2541,7 +2611,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
@@ -2561,7 +2631,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             value
           );
@@ -2576,7 +2646,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             value
           );
@@ -2591,7 +2661,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true,
             value
           );
@@ -2606,7 +2676,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false,
             value
           );
@@ -2621,7 +2691,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             false
           );
           await clearAdvancedSearchFilters(page);
@@ -2635,15 +2705,13 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
           );
           await verifySearchResults(
             page,
-            mainEntity.entityResponseData.fullyQualifiedName ?? '',
+            responseData.fullyQualifiedName ?? '',
             true
           );
           await clearAdvancedSearchFilters(page);
         });
       });
 
-      // Search settings tests for Dashboard
-      // (migrated from CustomPropertySearchSettings.spec.ts)
       test('Create custom property and configure search for Dashboard', async ({
         page,
       }) => {
@@ -2763,9 +2831,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
 
           const searchResults = page.getByTestId('search-results');
           const dashboardCard = searchResults.getByTestId(
-            `table-data-card_${
-              mainEntity.entityResponseData.fullyQualifiedName ?? ''
-            }`
+            `table-data-card_${responseData.fullyQualifiedName ?? ''}`
           );
           await expect(dashboardCard).toBeVisible();
         });
@@ -2790,11 +2856,9 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
       });
     }
 
-    // PIPELINE-specific extra tests
+    // ── Pipeline-specific extra tests ──────────────────────────────────────
 
     if (key === 'entity_pipeline') {
-      // Search settings tests for Pipeline
-      // (migrated from CustomPropertySearchSettings.spec.ts)
       test('Create custom property and configure search for Pipeline', async ({
         page,
       }) => {
@@ -2892,9 +2956,7 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
 
           const searchResults = page.getByTestId('search-results');
           const pipelineCard = searchResults.getByTestId(
-            `table-data-card_${
-              mainEntity.entityResponseData.fullyQualifiedName ?? ''
-            }`
+            `table-data-card_${responseData.fullyQualifiedName ?? ''}`
           );
           await expect(pipelineCard).toBeVisible();
         });
@@ -2919,124 +2981,170 @@ PART1_ENTITY_KEYS.forEach((key: Part1EntityKey) => {
       });
     }
 
-    // ── Explore right-panel CP tab tests (migrated from ExplorePageRightPanel) ──
-    // Uses mainEntity already set up in beforeAll (prepareCustomProperty already
-    // called for Table and Container; other entities skip property-specific assertions).
+    // ── TableColumn-specific extra test ────────────────────────────────────
 
-    test(`Should display custom properties for ${entity.name} in right panel`, async ({
-      page,
-    }) => {
-      const rightPanel = new RightPanelPageObject(page);
-      const customProperties = new CustomPropertiesPageObject(rightPanel);
-      rightPanel.setEntityConfig(mainEntity);
-      // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
-      test.skip(
-        !rightPanel.isTabAvailable('custom property'),
-        `Custom Property tab not available for ${entity.name}`
-      );
-      const fqn = getEntityFqn(mainEntity);
-      await navigateToExploreAndSelectEntity({
-        page,
-        entityName: mainEntity.entity.name,
-        endpoint: mainEntity.endpoint,
-        fullyQualifiedName: fqn,
-      });
-      await rightPanel.waitForPanelVisible();
-      await customProperties.navigateToCustomPropertiesTab();
-      await customProperties.shouldShowCustomPropertiesContainer();
-      const propertyName = Object.values(mainEntity.customPropertyValue)[0]
-        ?.property?.name;
-      if (propertyName) {
-        await customProperties.shouldShowCustomProperty(propertyName);
-      }
-    });
+    if (key === 'entity_tableColumn') {
+      test('Set & update column-level custom property', async ({ page }) => {
+        test.setTimeout(600000);
 
-    test(`Should search custom properties for ${entity.name} in right panel`, async ({
-      page,
-    }) => {
-      const rightPanel = new RightPanelPageObject(page);
-      const customProperties = new CustomPropertiesPageObject(rightPanel);
-      rightPanel.setEntityConfig(mainEntity);
-      // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
-      test.skip(
-        !rightPanel.isTabAvailable('custom property'),
-        `Custom Property tab not available for ${entity.name}`
-      );
-      const fqn = getEntityFqn(mainEntity);
-      await navigateToExploreAndSelectEntity({
-        page,
-        entityName: mainEntity.entity.name,
-        endpoint: mainEntity.endpoint,
-        fullyQualifiedName: fqn,
-      });
-      await rightPanel.waitForPanelVisible();
-      await customProperties.navigateToCustomPropertiesTab();
-      await customProperties.shouldShowCustomPropertiesContainer();
-      const propertyName = Object.values(mainEntity.customPropertyValue)[0]
-        ?.property?.name;
-      if (propertyName) {
-        await customProperties.searchCustomProperties(propertyName);
-        await customProperties.shouldShowCustomProperty(propertyName);
-      }
-    });
+        const { apiContext, afterAction } = await getApiContext(page);
 
-    test(`Should clear search and show all properties for ${entity.name} in right panel`, async ({
-      page,
-    }) => {
-      const rightPanel = new RightPanelPageObject(page);
-      const customProperties = new CustomPropertiesPageObject(rightPanel);
-      rightPanel.setEntityConfig(mainEntity);
-      // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
-      test.skip(
-        !rightPanel.isTabAvailable('custom property'),
-        `Custom Property tab not available for ${entity.name}`
-      );
-      const fqn = getEntityFqn(mainEntity);
-      await navigateToExploreAndSelectEntity({
-        page,
-        entityName: mainEntity.entity.name,
-        endpoint: mainEntity.endpoint,
-        fullyQualifiedName: fqn,
+        const data = await createCustomPropertyForEntity(
+          apiContext,
+          EntityTypeEndpoint.TableColumn
+        );
+        const customPropertyValue = data.customProperties;
+        const cleanupUser = data.cleanupUser;
+        const users = data.userNames;
+
+        const columnFqn =
+          tableForColumnTest?.entityResponseData.columns[0]
+            .fullyQualifiedName ?? '';
+        const tableFqn =
+          tableForColumnTest?.entityResponseData.fullyQualifiedName ?? '';
+
+        const properties = Object.values(CustomPropertyTypeByName);
+
+        for (const type of properties) {
+          await test.step(`Set ${type} custom property on column and verify in UI`, async () => {
+            await verifyTableColumnCustomPropertyPersistence({
+              page,
+              columnFqn,
+              tableFqn,
+              propertyName: customPropertyValue[type].property.name,
+              propertyType: type,
+              users,
+            });
+          });
+        }
+
+        await cleanupUser(apiContext);
+        await afterAction();
       });
-      await rightPanel.waitForPanelVisible();
-      await customProperties.navigateToCustomPropertiesTab();
-      await customProperties.shouldShowCustomPropertiesContainer();
-      const propertyName = Object.values(mainEntity.customPropertyValue)[0]
-        ?.property?.name;
-      if (propertyName) {
-        await customProperties.searchCustomProperties(propertyName);
-        await customProperties.shouldShowCustomProperty(propertyName);
-        await customProperties.clearSearch();
+    }
+
+    // ── Explore right-panel CP tab tests ───────────────────────────────────
+
+    if (makeInstance !== null) {
+      test(`Should display custom properties for ${entity.name} in right panel`, async ({
+        page,
+      }) => {
+        const rightPanel = new RightPanelPageObject(page);
+        const customProperties = new CustomPropertiesPageObject(rightPanel);
+        rightPanel.setEntityConfig(mainEntity);
+        // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
+        test.skip(
+          !rightPanel.isTabAvailable('custom property'),
+          `Custom Property tab not available for ${entity.name}`
+        );
+        const fqn = getEntityFqn(mainEntity);
+        await navigateToExploreAndSelectEntity({
+          page,
+          entityName: responseData.name,
+          endpoint: mainEntity.endpoint,
+          fullyQualifiedName: fqn,
+          exploreTab: ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint],
+        });
+        await rightPanel.waitForPanelVisible();
+        await customProperties.navigateToCustomPropertiesTab();
         await customProperties.shouldShowCustomPropertiesContainer();
-      }
-    });
-
-    test(`Should verify property name is visible for ${entity.name} in right panel`, async ({
-      page,
-    }) => {
-      const rightPanel = new RightPanelPageObject(page);
-      const customProperties = new CustomPropertiesPageObject(rightPanel);
-      rightPanel.setEntityConfig(mainEntity);
-      // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
-      test.skip(
-        !rightPanel.isTabAvailable('custom property'),
-        `Custom Property tab not available for ${entity.name}`
-      );
-      const fqn = getEntityFqn(mainEntity);
-      await navigateToExploreAndSelectEntity({
-        page,
-        entityName: mainEntity.entity.name,
-        endpoint: mainEntity.endpoint,
-        fullyQualifiedName: fqn,
+        const propertyName = Object.values(mainEntity.customPropertyValue)[0]
+          ?.property?.name;
+        if (propertyName) {
+          await customProperties.shouldShowCustomProperty(propertyName);
+        }
       });
-      await rightPanel.waitForPanelVisible();
-      await customProperties.navigateToCustomPropertiesTab();
-      await customProperties.shouldShowCustomPropertiesContainer();
-      const propertyName = Object.values(mainEntity.customPropertyValue)[0]
-        ?.property?.name;
-      if (propertyName) {
-        await customProperties.verifyPropertyType(propertyName);
-      }
-    });
+
+      test(`Should search custom properties for ${entity.name} in right panel`, async ({
+        page,
+      }) => {
+        const rightPanel = new RightPanelPageObject(page);
+        const customProperties = new CustomPropertiesPageObject(rightPanel);
+        rightPanel.setEntityConfig(mainEntity);
+        // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
+        test.skip(
+          !rightPanel.isTabAvailable('custom property'),
+          `Custom Property tab not available for ${entity.name}`
+        );
+        const fqn = getEntityFqn(mainEntity);
+        await navigateToExploreAndSelectEntity({
+          page,
+          entityName: responseData.name,
+          endpoint: mainEntity.endpoint,
+          fullyQualifiedName: fqn,
+          exploreTab: ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint],
+        });
+        await rightPanel.waitForPanelVisible();
+        await customProperties.navigateToCustomPropertiesTab();
+        await customProperties.shouldShowCustomPropertiesContainer();
+        const propertyName = Object.values(mainEntity.customPropertyValue)[0]
+          ?.property?.name;
+        if (propertyName) {
+          await customProperties.searchCustomProperties(propertyName);
+          await customProperties.shouldShowCustomProperty(propertyName);
+        }
+      });
+
+      test(`Should clear search and show all properties for ${entity.name} in right panel`, async ({
+        page,
+      }) => {
+        const rightPanel = new RightPanelPageObject(page);
+        const customProperties = new CustomPropertiesPageObject(rightPanel);
+        rightPanel.setEntityConfig(mainEntity);
+        // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
+        test.skip(
+          !rightPanel.isTabAvailable('custom property'),
+          `Custom Property tab not available for ${entity.name}`
+        );
+        const fqn = getEntityFqn(mainEntity);
+        await navigateToExploreAndSelectEntity({
+          page,
+          entityName: responseData.name,
+          endpoint: mainEntity.endpoint,
+          fullyQualifiedName: fqn,
+          exploreTab: ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint],
+        });
+        await rightPanel.waitForPanelVisible();
+        await customProperties.navigateToCustomPropertiesTab();
+        await customProperties.shouldShowCustomPropertiesContainer();
+        const propertyName = Object.values(mainEntity.customPropertyValue)[0]
+          ?.property?.name;
+        if (propertyName) {
+          await customProperties.searchCustomProperties(propertyName);
+          await customProperties.shouldShowCustomProperty(propertyName);
+          await customProperties.clearSearch();
+          await customProperties.shouldShowCustomPropertiesContainer();
+        }
+      });
+
+      test(`Should verify property name is visible for ${entity.name} in right panel`, async ({
+        page,
+      }) => {
+        const rightPanel = new RightPanelPageObject(page);
+        const customProperties = new CustomPropertiesPageObject(rightPanel);
+        rightPanel.setEntityConfig(mainEntity);
+        // eslint-disable-next-line playwright/no-skipped-test -- conditional skip based on entity type
+        test.skip(
+          !rightPanel.isTabAvailable('custom property'),
+          `Custom Property tab not available for ${entity.name}`
+        );
+        const fqn = getEntityFqn(mainEntity);
+        await navigateToExploreAndSelectEntity({
+          page,
+          entityName: responseData.name,
+          endpoint: mainEntity.endpoint,
+          fullyQualifiedName: fqn,
+          exploreTab: ENDPOINT_TO_EXPLORE_TAB_MAP[mainEntity.endpoint],
+        });
+        await rightPanel.waitForPanelVisible();
+        await customProperties.navigateToCustomPropertiesTab();
+        await customProperties.shouldShowCustomPropertiesContainer();
+        const propertyName = Object.values(mainEntity.customPropertyValue)[0]
+          ?.property?.name;
+        if (propertyName) {
+          await customProperties.verifyPropertyType(propertyName);
+        }
+      });
+    }
   });
 });
