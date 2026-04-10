@@ -41,10 +41,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { UN_AUTHORIZED_EXCLUDED_PATHS } from '../../../constants/Auth.constants';
-import {
-  REDIRECT_PATHNAME,
-  ROUTES,
-} from '../../../constants/constants';
+import { REDIRECT_PATHNAME, ROUTES } from '../../../constants/constants';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { TabSpecificField } from '../../../enums/entity.enum';
 import {
@@ -339,6 +336,49 @@ export const AuthProvider = ({
       tokenService.current.updateRefreshSuccessCallback(startTokenExpiryTimer);
     }
   }, [authenticatorRef.current?.renewIdToken]);
+
+  // When the tab becomes visible after being backgrounded, browsers may have
+  // throttled or suspended the proactive renewal timer. Check token freshness
+  // immediately and refresh if expired, or reschedule the timer with the
+  // correct remaining time.
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      try {
+        const token = await getOidcToken();
+        const { isExpired, timeoutExpiry } = extractDetailsFromToken(token);
+
+        // eslint-disable-next-line no-console
+        console.debug(
+          '[VisibilityHandler] token length:',
+          token?.length,
+          'isExpired:',
+          isExpired,
+          'timeoutExpiry:',
+          timeoutExpiry,
+          'hasTokenService:',
+          !!tokenService.current
+        );
+
+        if (isExpired || timeoutExpiry <= 0) {
+          tokenService.current?.refreshToken();
+        } else {
+          startTokenExpiryTimer();
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('[VisibilityHandler] error:', error);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   /**
    * Performs cleanup around timers
@@ -649,7 +689,8 @@ export const AuthProvider = ({
             cacheLocation="memory"
             clientId={authConfig.clientId?.toString() ?? ''}
             domain={authConfig.authority?.toString() ?? ''}
-            redirectUri={authConfig.callbackUrl?.toString()}>
+            redirectUri={authConfig.callbackUrl?.toString()}
+          >
             <Auth0Authenticator ref={authenticatorRef}>
               {childElement}
             </Auth0Authenticator>
@@ -672,7 +713,8 @@ export const AuthProvider = ({
           <OidcAuthenticator
             childComponentType={childComponentType}
             ref={authenticatorRef}
-            userConfig={userConfig}>
+            userConfig={userConfig}
+          >
             {childElement}
           </OidcAuthenticator>
         );
