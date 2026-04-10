@@ -17,7 +17,7 @@ import {
   Divider,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { GitBranch01, Minus, Plus } from '@untitledui/icons';
+import { GitBranch01, Maximize01, Minus, Plus } from '@untitledui/icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useReactFlow } from 'reactflow';
@@ -35,7 +35,7 @@ export const CustomControls: React.FC<CustomControlsProps> = ({
   onUndo,
 }) => {
   const { t } = useTranslation();
-  const { getZoom, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, getZoom, zoomIn, zoomOut } = useReactFlow();
   const [currentZoom, setCurrentZoom] = React.useState(75);
 
   React.useEffect(() => {
@@ -61,6 +61,10 @@ export const CustomControls: React.FC<CustomControlsProps> = ({
 
   const handleZoomOut = () => {
     zoomOut();
+  };
+
+  const handleFitView = () => {
+    fitView({ padding: 0.2 });
   };
 
   return (
@@ -106,6 +110,16 @@ export const CustomControls: React.FC<CustomControlsProps> = ({
         iconLeading={Plus}
         size="sm"
         onPress={handleZoomIn}
+      />
+
+      <Divider orientation="vertical" />
+
+      <Button
+        color="tertiary"
+        data-testid="fit-view-button"
+        iconLeading={Maximize01}
+        size="sm"
+        onPress={handleFitView}
       />
 
       <Divider orientation="vertical" />
