@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,34 @@ import org.openmetadata.service.search.vector.utils.TextChunkManager;
 @Slf4j
 @UtilityClass
 public class VectorDocBuilder {
+
+  /**
+   * Strategy for producing the semantic "body text" that will be chunked and fed to the embedding
+   * model. Downstream distributions can register an extractor for entity types whose payload lives
+   * outside of {@link EntityInterface#getDescription()} (for example, ContextMemory with its
+   * title/question/answer triple).
+   */
+  @FunctionalInterface
+  public interface BodyTextExtractor {
+    String extract(EntityInterface entity);
+  }
+
+  private static final Map<String, BodyTextExtractor> BODY_TEXT_EXTRACTORS =
+      new ConcurrentHashMap<>();
+
+  /**
+   * Register a custom {@link BodyTextExtractor} for an entity type. When {@link #buildBodyText}
+   * is called for that entity type, the custom extractor runs in place of the default logic.
+   *
+   * <p>Registration is idempotent (the last registration wins) and thread-safe. Intended to be
+   * called at application startup.
+   */
+  public static void registerBodyTextExtractor(String entityType, BodyTextExtractor extractor) {
+    if (entityType == null || entityType.isBlank() || extractor == null) {
+      return;
+    }
+    BODY_TEXT_EXTRACTORS.put(entityType, extractor);
+  }
 
   public static List<Map<String, Object>> fromEntity(
       EntityInterface entity, EmbeddingClient embeddingClient) {
@@ -219,6 +248,14 @@ public class VectorDocBuilder {
   }
 
   static String buildBodyText(EntityInterface entity, String entityType) {
+    BodyTextExtractor customExtractor = BODY_TEXT_EXTRACTORS.get(entityType);
+    if (customExtractor != null) {
+      String custom = customExtractor.extract(entity);
+      if (custom != null) {
+        return custom;
+      }
+    }
+
     List<String> bodyParts = new ArrayList<>();
     bodyParts.add("description: " + removeHtml(orEmpty(entity.getDescription())));
 
