@@ -566,7 +566,7 @@ export const buildWorkflowForSave = async (
   const triggerEntityTypes = Array.isArray(
     (finalTriggerConfig as { entityTypes?: unknown }).entityTypes
   )
-    ? ((finalTriggerConfig as { entityTypes: string[] }).entityTypes ?? [])
+    ? (finalTriggerConfig as { entityTypes: string[] }).entityTypes ?? []
     : [];
 
   if (
@@ -574,9 +574,7 @@ export const buildWorkflowForSave = async (
       triggerType === Type.PeriodicBatchEntity) &&
     triggerEntityTypes.length === 0
   ) {
-    throw new Error(
-      i18next.t('message.workflow-trigger-requires-data-assets')
-    );
+    throw new Error(i18next.t('message.workflow-trigger-requires-data-assets'));
   }
 
   let workflowNodes = buildWorkflowNodes(nodes, validEdges);
@@ -624,6 +622,7 @@ export const testWorkflow = async (
     } else {
       showErrorToast(String(error));
     }
+
     throw error;
   }
 
