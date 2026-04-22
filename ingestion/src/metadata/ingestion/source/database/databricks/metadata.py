@@ -165,8 +165,15 @@ def _get_column_rows(self, connection, table_name, schema, db_name):
     column_rows = [
         [col.strip() if col else None for col in row] for row in table_columns
     ]
-    # Filter out empty rows and comment
-    return [row for row in column_rows if row[0] and row[0] != "# col_name"]
+    # Filter out empty rows, comment markers, and rows missing a usable col_type.
+    # DESCRIBE TABLE EXTENDED can return rows where col_type is empty/None for
+    # Delta/streaming partition markers; downstream regex at line ~200 requires
+    # a non-empty string.
+    return [
+        row
+        for row in column_rows
+        if row[0] and row[0] != "# col_name" and isinstance(row[1], str) and row[1]
+    ]
 
 
 @reflection.cache
@@ -197,7 +204,14 @@ def get_columns(self, connection, table_name, schema=None, **kw):
         # e.g. 'map<ixnt,int>' -> 'map'
         #      'decimal(10,1)' -> decimal
         raw_col_type = col_type
-        col_type = re.search(r"^\w+", col_type).group(0)
+        type_match = re.search(r"^\w+", col_type) if isinstance(col_type, str) else None
+        if type_match is None:
+            util.warn(
+                f"Skipping column '{col_name}' with unparseable type '{col_type}' "
+                f"in {schema}.{table_name}"
+            )
+            continue
+        col_type = type_match.group(0)
         try:
             coltype = _type_map[col_type]
         except KeyError:
