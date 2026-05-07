@@ -84,4 +84,4 @@ class AzureSQLSampler(SQASampler):
                 if col.name in temporal_cols:
                     continue
                 sqa_columns.append(col)
-        return super().fetch_sample_data(sqa_columns or columns)
+        return super().fetch_sample_data(sqa_columns if columns is not None else None)

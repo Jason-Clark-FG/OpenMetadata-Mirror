@@ -199,6 +199,55 @@ class SampleTest(TestCase):
         assert "ValidTo" not in passed_names
         assert "id" in passed_names
 
+    def test_all_columns_filtered_passes_empty_list_not_original(self, sampler_mock):
+        """
+        When every column is a temporal period column, sqa_columns is [].
+        The empty list must be passed to super(), not the original column list —
+        otherwise the filter is bypassed entirely (falsy empty list bug).
+        """
+        from unittest.mock import MagicMock, patch
+
+        from sqlalchemy.types import DateTime
+
+        sampler = AzureSQLSampler(
+            service_connection_config=self.azuresql_conn,
+            ometa_client=None,
+            entity=self.table_entity,
+            sample_config=SampleConfig(),
+        )
+
+        valid_from_col = MagicMock()
+        valid_from_col.name = "ValidFrom"
+        valid_from_col.type = DateTime()
+
+        valid_to_col = MagicMock()
+        valid_to_col.name = "ValidTo"
+        valid_to_col.type = DateTime()
+
+        received = {}
+
+        def capture_fetch(cols=None):
+            received["columns"] = cols
+            from metadata.generated.schema.entity.data.table import TableData
+
+            return TableData(columns=[], rows=[])
+
+        with (
+            patch.object(
+                sampler,
+                "_get_temporal_column_names",
+                return_value=frozenset({"ValidFrom", "ValidTo"}),
+            ),
+            patch.object(
+                SQASampler,
+                "fetch_sample_data",
+                side_effect=capture_fetch,
+            ),
+        ):
+            sampler.fetch_sample_data(columns=[valid_from_col, valid_to_col])
+
+        assert received["columns"] == [], "Expected empty list when all columns are filtered, not the original list"
+
     def test_sampling_with_partition(self, sampler_mock):
         """
         use specified partition columns.
