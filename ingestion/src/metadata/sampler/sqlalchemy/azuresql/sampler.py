@@ -18,6 +18,7 @@ from typing import List, Optional  # noqa: UP035
 from sqlalchemy import Column, Table, text
 from sqlalchemy.sql.selectable import CTE
 
+from metadata.generated.schema.entity.data.table import Table as TableEntity
 from metadata.generated.schema.entity.data.table import TableData, TableType
 from metadata.sampler.sqlalchemy.sampler import ProfileSampleType, SQASampler
 
@@ -36,7 +37,7 @@ class AzureSQLSampler(SQASampler):
     def _get_temporal_column_names(self) -> frozenset:
         schema_name = (
             self.entity.databaseSchema.name
-            if hasattr(self.entity, "databaseSchema") and self.entity.databaseSchema
+            if isinstance(self.entity, TableEntity) and self.entity.databaseSchema
             else "dbo"
         )
         query = text(
