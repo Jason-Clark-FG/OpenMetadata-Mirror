@@ -33,6 +33,27 @@ class AzureSQLSampler(SQASampler):
     # pyodbc.ProgrammingError: ('ODBC SQL type -151 is not yet supported.  column-index=x  type=-151', 'HY106')
     NOT_COMPUTE_PYODBC = {"SQASGeography", "UndeterminedType"}  # noqa: RUF012
 
+    def _get_temporal_column_names(self) -> frozenset:
+        schema_name = (
+            self.entity.databaseSchema.name
+            if hasattr(self.entity, "databaseSchema") and self.entity.databaseSchema
+            else "dbo"
+        )
+        query = text(
+            "SELECT c.name FROM sys.columns c"
+            " JOIN sys.tables t ON c.object_id = t.object_id"
+            " JOIN sys.schemas s ON t.schema_id = s.schema_id"
+            " WHERE t.name = :table_name"
+            " AND s.name = :schema_name"
+            " AND c.generated_always_type IN (1, 2)"
+        )
+        with self.session_factory() as session:
+            rows = session.execute(
+                query,
+                {"table_name": self.entity.name.root, "schema_name": schema_name},
+            ).fetchall()
+        return frozenset(row[0] for row in rows)
+
     def set_tablesample(self, selectable: Table):
         """Set the TABLESAMPLE clause for MSSQL
         Args:
@@ -54,9 +75,13 @@ class AzureSQLSampler(SQASampler):
         return query.cte(f"{self.get_sampler_table_name()}_sample")
 
     def fetch_sample_data(self, columns: Optional[List[Column]] = None) -> TableData:  # noqa: UP006, UP045
+        temporal_cols = self._get_temporal_column_names()
         sqa_columns = []
         if columns:
             for col in columns:
-                if col.type.__class__.__name__ not in self.NOT_COMPUTE_PYODBC:
-                    sqa_columns.append(col)  # noqa: PERF401
+                if col.type.__class__.__name__ in self.NOT_COMPUTE_PYODBC:
+                    continue
+                if col.name in temporal_cols:
+                    continue
+                sqa_columns.append(col)
         return super().fetch_sample_data(sqa_columns or columns)
