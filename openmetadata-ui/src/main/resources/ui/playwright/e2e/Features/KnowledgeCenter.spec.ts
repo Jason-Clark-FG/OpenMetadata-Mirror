@@ -110,12 +110,9 @@ test.describe('Knowledge Center', () => {
       );
 
       // visit knowledge center
-      await sidebarClick(page, SidebarItem.KNOWLEDGE_CENTER);
-      await page
-        .locator('[data-testid="left-panel"]')
-        .getByTestId('add-knowledge-page-btn')
-        .click();
-      await page.getByRole('menuitem', { name: 'Article' }).click();
+      await sidebarClick(page, SidebarItem.ARTICLE);
+      await page.getByTestId('create-knowledge-page-btn').click();
+      await page.getByTestId('create-article-btn').click();
       await createKnowledgePage;
 
       // add title
@@ -210,7 +207,7 @@ test.describe('Knowledge Center', () => {
     });
 
     await test.step('Quick Links: Create, Read, Update and Delete', async () => {
-      await sidebarClick(page, SidebarItem.KNOWLEDGE_CENTER);
+      await sidebarClick(page, SidebarItem.ARTICLE);
 
       // Create Quick Link
       await createQuickLink(page, knowledgePageQuickLink, dataAsset);
@@ -224,7 +221,7 @@ test.describe('Knowledge Center', () => {
       // verify the tag category
       await expect(
         page.locator(
-          `[data-testid="tag-category-${knowledgePageQuickLink.tagFqn}-${knowledgePageQuickLink.updatedDisplayName}"]`
+          `[data-testid="${knowledgePageQuickLink.updatedDisplayName}"]`
         )
       ).toBeVisible();
 
@@ -289,7 +286,7 @@ test.describe('Knowledge Center', () => {
 
       await page
         .getByTestId('breadcrumb')
-        .getByRole('link', { name: 'Knowledge Center' })
+        .getByRole('link', { name: 'Articles' })
         .click();
     });
     // TODO: Commented out due to performance issue with infinite scroll
@@ -500,8 +497,7 @@ test.describe('Knowledge Center', () => {
     try {
       const { apiContext } = await createNewPage(browser);
       await knowledgeCenter2.create(apiContext, 10);
-
-      await sidebarClick(page, SidebarItem.KNOWLEDGE_CENTER);
+      await sidebarClick(page, SidebarItem.ARTICLE);
 
       // Get the first element content before scrolling
       const firstElementBeforeScroll = page
@@ -551,12 +547,9 @@ test.describe('Knowledge Center', () => {
   }) => {
     const createKnowledgePage = page.waitForResponse('/api/v1/knowledgeCenter');
 
-    await sidebarClick(page, SidebarItem.KNOWLEDGE_CENTER);
-    await page
-      .locator('[data-testid="left-panel"]')
-      .getByTestId('add-knowledge-page-btn')
-      .click();
-    await page.getByRole('menuitem', { name: 'Article' }).click();
+    await sidebarClick(page, SidebarItem.ARTICLE);
+    await page.getByTestId('create-knowledge-page-btn').click();
+    await page.getByTestId('create-article-btn').click();
     await createKnowledgePage;
 
     await addTitle(page, knowledgePageArticle.title);
@@ -649,13 +642,9 @@ test.describe('Knowledge Center', () => {
     page,
   }) => {
     const createKnowledgePage = page.waitForResponse('/api/v1/knowledgeCenter');
-
-    await sidebarClick(page, SidebarItem.KNOWLEDGE_CENTER);
-    await page
-      .locator('[data-testid="left-panel"]')
-      .getByTestId('add-knowledge-page-btn')
-      .click();
-    await page.getByRole('menuitem', { name: 'Article' }).click();
+    await sidebarClick(page, SidebarItem.ARTICLE);
+    await page.getByTestId('create-knowledge-page-btn').click();
+    await page.getByTestId('create-article-btn').click();
     await createKnowledgePage;
 
     await addTitle(page, knowledgePageArticle.title);
