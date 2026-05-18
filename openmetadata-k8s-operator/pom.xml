@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         
         <!-- Java Operator SDK version -->
-        <java-operator-sdk.version>4.9.2</java-operator-sdk.version>
+        <java-operator-sdk.version>5.3.3</java-operator-sdk.version>
         <!-- Kubernetes client version (should match openmetadata-service) -->
         <kubernetes-client.version>21.0.1</kubernetes-client.version>
     </properties>
