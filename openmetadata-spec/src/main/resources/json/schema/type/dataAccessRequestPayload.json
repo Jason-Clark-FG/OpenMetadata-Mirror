@@ -32,14 +32,14 @@
   },
   "properties": {
     "accessType": {
-      "description": "Scope of access being requested. FullAccess grants access to all columns, ColumnLevel restricts to the columns listed in 'columns', Masked grants access to masked or anonymized data.",
+      "description": "Scope of access being requested. FullAccess grants access to all columns, ColumnLevel restricts to the columns listed in 'selectedColumns', Masked grants access to masked or anonymized data.",
       "$ref": "#/definitions/accessType"
     },
     "requestedAccess": {
       "description": "Permission level for the access (Read, Write, Admin). Defaults to Read.",
       "$ref": "#/definitions/requestedAccess"
     },
-    "columns": {
+    "selectedColumns": {
       "description": "Fully qualified column names included in the request when accessType is ColumnLevel.",
       "type": "array",
       "items": {

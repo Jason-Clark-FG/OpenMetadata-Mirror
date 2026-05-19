@@ -16,7 +16,7 @@
 export interface DataAccessRequestPayload {
     /**
      * Scope of access being requested. FullAccess grants access to all columns, ColumnLevel
-     * restricts to the columns listed in 'columns', Masked grants access to masked or
+     * restricts to the columns listed in 'selectedColumns', Masked grants access to masked or
      * anonymized data.
      */
     accessType: AccessType;
@@ -27,7 +27,7 @@ export interface DataAccessRequestPayload {
     /**
      * Fully qualified column names included in the request when accessType is ColumnLevel.
      */
-    columns?: string[];
+    selectedColumns?: string[];
     /**
      * Requested duration for access (ISO 8601).
      */
@@ -52,7 +52,7 @@ export interface DataAccessRequestPayload {
 
 /**
  * Scope of access being requested. FullAccess grants access to all columns, ColumnLevel
- * restricts to the columns listed in 'columns', Masked grants access to masked or
+ * restricts to the columns listed in 'selectedColumns', Masked grants access to masked or
  * anonymized data.
  *
  * Scope of access being requested against the target entity.

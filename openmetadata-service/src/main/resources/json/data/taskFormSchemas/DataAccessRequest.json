@@ -15,7 +15,7 @@
         "enum": ["FullAccess", "ColumnLevel", "Masked"],
         "default": "FullAccess"
       },
-      "columns": {
+      "selectedColumns": {
         "type": "array",
         "title": "Select Columns",
         "items": {
@@ -50,7 +50,7 @@
     },
     "ui:order": [
       "accessType",
-      "columns",
+      "selectedColumns",
       "requestedAccess",
       "duration",
       "reason",
@@ -59,7 +59,7 @@
     "accessType": {
       "ui:widget": "radio"
     },
-    "columns": {
+    "selectedColumns": {
       "ui:widget": "columnSelector"
     },
     "requestedAccess": {
