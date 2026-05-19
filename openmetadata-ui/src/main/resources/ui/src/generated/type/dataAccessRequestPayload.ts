@@ -25,10 +25,6 @@ export interface DataAccessRequestPayload {
      */
     assets?: EntityReference[];
     /**
-     * Fully qualified column names included in the request when accessType is ColumnLevel.
-     */
-    selectedColumns?: string[];
-    /**
      * Requested duration for access (ISO 8601).
      */
     duration?: string;
@@ -44,6 +40,10 @@ export interface DataAccessRequestPayload {
      * Permission level for the access (Read, Write, Admin). Defaults to Read.
      */
     requestedAccess?: RequestedAccess;
+    /**
+     * Fully qualified column names included in the request when accessType is ColumnLevel.
+     */
+    selectedColumns?: string[];
     /**
      * External ticket ID (JIRA, ServiceNow) if required.
      */
