@@ -13,19 +13,14 @@ import org.jdbi.v3.core.Handle;
 import org.openmetadata.schema.entity.activity.ActivityEvent;
 import org.openmetadata.schema.entity.feed.Announcement;
 import org.openmetadata.schema.entity.feed.Thread;
-import org.openmetadata.schema.entity.policies.Policy;
-import org.openmetadata.schema.entity.policies.accessControl.Rule;
 import org.openmetadata.schema.type.ActivityEventType;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
-import org.openmetadata.schema.type.MetadataOperation;
 import org.openmetadata.schema.type.Relationship;
 import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.service.Entity;
-import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.AnnouncementRepository;
 import org.openmetadata.service.jdbi3.CollectionDAO;
-import org.openmetadata.service.jdbi3.PolicyRepository;
 import org.openmetadata.service.jdbi3.locator.ConnectionType;
 import org.openmetadata.service.resources.feeds.MessageParser;
 import org.openmetadata.service.util.EntityUtil;
@@ -34,55 +29,7 @@ import org.openmetadata.service.util.FullyQualifiedName;
 @Slf4j
 public class MigrationUtil {
 
-  private static final String DATA_CONSUMER_POLICY = "DataConsumerPolicy";
-  private static final String CREATE_TASK_RULE_NAME = "DataConsumerPolicy-CreateTask-Rule";
-
   private MigrationUtil() {}
-
-  /**
-   * Append the {@code DataConsumerPolicy-CreateTask-Rule} to an existing {@code DataConsumerPolicy}
-   * if it is missing. Required because {@link
-   * org.openmetadata.service.jdbi3.EntityRepository#initializeEntity} is create-if-missing only and
-   * will not merge new rules from the seed JSON for upgraded installations.
-   */
-  public static void addCreateTaskRuleToDataConsumerPolicy(CollectionDAO collectionDAO) {
-    PolicyRepository repository = (PolicyRepository) Entity.getEntityRepository(Entity.POLICY);
-    try {
-      Policy policy = repository.findByName(DATA_CONSUMER_POLICY, Include.NON_DELETED);
-      if (policy.getRules() == null) {
-        policy.setRules(new ArrayList<>());
-      }
-      boolean alreadyPresent =
-          policy.getRules().stream().anyMatch(r -> CREATE_TASK_RULE_NAME.equals(r.getName()));
-      if (alreadyPresent) {
-        LOG.debug(
-            "{} already present on {}, skipping", CREATE_TASK_RULE_NAME, DATA_CONSUMER_POLICY);
-        return;
-      }
-      Rule createTaskRule =
-          new Rule()
-              .withName(CREATE_TASK_RULE_NAME)
-              .withDescription(
-                  "Allow authenticated users to create tasks (data access requests, suggestions, etc.).")
-              .withResources(List.of(Entity.TASK))
-              .withOperations(List.of(MetadataOperation.CREATE))
-              .withEffect(Rule.Effect.ALLOW);
-      policy.getRules().add(createTaskRule);
-      collectionDAO
-          .policyDAO()
-          .update(policy.getId(), policy.getFullyQualifiedName(), JsonUtils.pojoToJson(policy));
-      LOG.info("Added {} to {}", CREATE_TASK_RULE_NAME, DATA_CONSUMER_POLICY);
-    } catch (EntityNotFoundException ex) {
-      LOG.warn("{} not found, skipping CreateTask rule backfill", DATA_CONSUMER_POLICY);
-    } catch (Exception ex) {
-      LOG.error(
-          "Failed to add {} to {}: {}",
-          CREATE_TASK_RULE_NAME,
-          DATA_CONSUMER_POLICY,
-          ex.getMessage(),
-          ex);
-    }
-  }
 
   /**
    * Migrate suggestions from the old suggestions table to the new task_entity table. Each
