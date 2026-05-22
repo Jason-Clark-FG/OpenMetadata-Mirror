@@ -67,7 +67,7 @@ adal==1.2.7
 adbc-driver-manager==1.10.0
 adbc-driver-postgresql==1.10.0
 adbc-driver-sqlite==1.10.0
-adlfs==2025.8.0
+adlfs==2026.5.0
 aenum==3.1.16
 aiobotocore==3.1.1
 aiofiles==24.1.0
