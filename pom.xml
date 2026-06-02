@@ -155,7 +155,7 @@
     <picocli.version>4.7.6</picocli.version>
     <logback-core.version>1.5.25</logback-core.version>
     <logback-classic.version>1.5.25</logback-classic.version>
-    <jsonpath.version>2.9.0</jsonpath.version>
+    <jsonpath.version>3.0.0</jsonpath.version>
     <everit.version>1.14.4</everit.version>
     <json-patch.version>1.13</json-patch.version>
     <jetty.version>12.1.7</jetty.version>
