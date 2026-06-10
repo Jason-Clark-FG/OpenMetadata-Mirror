@@ -132,7 +132,7 @@
     <sonar.organization>open-metadata</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
     <sonar.working.directory>target/sonar</sonar.working.directory>
-    <maven.sonar-plugin.version>3.10.0.2594</maven.sonar-plugin.version>
+    <maven.sonar-plugin.version>5.7.0.6970</maven.sonar-plugin.version>
     <sonar.language>java</sonar.language>
     <sonar.skip>false</sonar.skip>
     <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
