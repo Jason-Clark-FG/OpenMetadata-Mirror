@@ -227,7 +227,7 @@
     "@vitejs/plugin-react": "^5.0.1",
     "babel-eslint": "^10.1.0",
     "babel-jest": "^29.7.0",
-    "dotenv": "^16.0.0",
+    "dotenv": "^17.4.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-i18next": "^6.0.0-2",
