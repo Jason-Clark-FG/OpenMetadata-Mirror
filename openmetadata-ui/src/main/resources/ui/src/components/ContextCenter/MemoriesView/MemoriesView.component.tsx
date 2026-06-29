@@ -79,10 +79,16 @@ const MemoryActions: FC<MemoryActionsProps> = ({ memory, onDeleteMemory }) => {
 interface PinButtonProps {
   pinned: boolean;
   animKey: number;
+  isDisabled?: boolean;
   onClick: () => void;
 }
 
-const PinButton: FC<PinButtonProps> = ({ pinned, animKey, onClick }) => {
+const PinButton: FC<PinButtonProps> = ({
+  pinned,
+  animKey,
+  isDisabled,
+  onClick,
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -100,6 +106,7 @@ const PinButton: FC<PinButtonProps> = ({ pinned, animKey, onClick }) => {
               size={15}
             />
           }
+          isDisabled={isDisabled}
           onClick={onClick}
         />
       </TooltipTrigger>
@@ -138,7 +145,9 @@ interface MemoryRowProps {
   canDelete?: boolean;
   onDeleteMemory?: (memory: ContextMemory) => void;
   onEditMemory?: (memory: ContextMemory) => void;
+  onTogglePin?: (memory: ContextMemory) => void;
   onViewMemory?: (memory: ContextMemory) => void;
+  isPinningMemoryId?: string;
 }
 
 const MemoryRow: FC<MemoryRowProps> = ({
@@ -149,13 +158,17 @@ const MemoryRow: FC<MemoryRowProps> = ({
   canDelete,
   onDeleteMemory,
   onEditMemory,
+  onTogglePin,
   onViewMemory,
+  isPinningMemoryId,
 }) => {
   const isOwner =
     memory.owners?.some((owner) => owner.name === currentUserName) ?? false;
   const canActOnMemory = isOwner || Boolean(isAdminUser);
+  const pinned = Boolean(memory.pinned);
+  const canPin = canActOnMemory && canEdit && onTogglePin;
+  const isPinning = isPinningMemoryId === memory.id;
   const { t } = useTranslation();
-  const [pinned, setPinned] = useState(false);
   const [pinAnimKey, setPinAnimKey] = useState(0);
   const memoryUrl = useMemo(
     () =>
@@ -299,10 +312,14 @@ const MemoryRow: FC<MemoryRowProps> = ({
         <Box align="center" gap={1} onClick={(e) => e.stopPropagation()}>
           <PinButton
             animKey={pinAnimKey}
+            isDisabled={!canPin || isPinning}
             pinned={pinned}
             onClick={() => {
-              setPinned((prev) => !prev);
+              if (!canPin || isPinning) {
+                return;
+              }
               setPinAnimKey((prev) => prev + 1);
+              onTogglePin?.(memory);
             }}
           />
           <CopyLinkButton className="tw:w-7 tw:h-7" url={memoryUrl}>
@@ -339,6 +356,8 @@ const MemoriesView: FC<MemoriesViewProps> = ({
   onEditMemory,
   canEdit,
   canDelete,
+  isPinningMemoryId,
+  onTogglePin,
   onViewMemory,
 }) => {
   const { t } = useTranslation();
@@ -383,10 +402,12 @@ const MemoriesView: FC<MemoriesViewProps> = ({
           canEdit={canEdit}
           currentUserName={currentUserName}
           isAdminUser={isAdminUser}
+          isPinningMemoryId={isPinningMemoryId}
           key={memory.id}
           memory={memory}
           onDeleteMemory={onDeleteMemory}
           onEditMemory={onEditMemory}
+          onTogglePin={onTogglePin}
           onViewMemory={onViewMemory}
         />
       ))}

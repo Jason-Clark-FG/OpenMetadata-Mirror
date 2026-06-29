@@ -28,6 +28,7 @@ import org.openmetadata.schema.api.search.TermBoost;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.search.SearchSourceBuilderFactory;
 import org.openmetadata.service.search.indexes.ColumnSearchIndex;
+import org.openmetadata.service.search.indexes.ContextMemoryIndex;
 import org.openmetadata.service.search.indexes.SearchIndex;
 import org.openmetadata.service.search.indexes.TestCaseIndex;
 import org.openmetadata.service.search.indexes.TestCaseResolutionStatusIndex;
@@ -338,6 +339,8 @@ public class OpenSearchSourceBuilderFactory
           "user",
           "team_search_index",
           "team" -> buildUserOrTeamSearchBuilderV2(searchQuery, fromOffset, size);
+      case "context_memory_search_index", "contextMemory" -> buildContextMemorySearchBuilderV2(
+          searchQuery, fromOffset, size);
       default -> buildAggregateSearchBuilderV2(searchQuery, fromOffset, size, includeAggregations);
     };
   }
@@ -400,6 +403,15 @@ public class OpenSearchSourceBuilderFactory
         buildSearchQueryBuilderV2(query, SearchIndex.getDefaultFields());
     os.org.opensearch.client.opensearch.core.search.Highlight highlighter =
         buildHighlightsV2(new ArrayList<>());
+    return searchBuilderV2(queryBuilder, highlighter, from, size);
+  }
+
+  public OpenSearchRequestBuilder buildContextMemorySearchBuilderV2(
+      String query, int from, int size) {
+    os.org.opensearch.client.opensearch._types.query_dsl.Query queryBuilder =
+        buildSearchQueryBuilderV2(query, ContextMemoryIndex.getFields());
+    os.org.opensearch.client.opensearch.core.search.Highlight highlighter =
+        buildHighlightsV2(List.of("title", "summary", "question", "answer"));
     return searchBuilderV2(queryBuilder, highlighter, from, size);
   }
 
