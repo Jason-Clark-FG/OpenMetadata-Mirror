@@ -487,6 +487,10 @@ services:
       # Heap OPTS Configurations
       OPENMETADATA_HEAP_OPTS: ${OPENMETADATA_HEAP_OPTS:--Xmx1G -Xms1G}
       MASK_PASSWORDS_API: ${MASK_PASSWORDS_API:-true}
+
+      # Object Storage Configuration
+      ASSET_UPLOADER_ENABLE: ${ASSET_UPLOADER_ENABLE:-true}
+      ASSET_UPLOADER_PROVIDER: ${ASSET_UPLOADER_PROVIDER:-inmemory}
     expose:
       - 8585
       - 8586
