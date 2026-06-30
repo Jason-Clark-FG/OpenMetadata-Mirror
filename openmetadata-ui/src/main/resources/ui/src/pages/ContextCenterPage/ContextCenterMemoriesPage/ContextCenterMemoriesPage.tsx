@@ -34,7 +34,7 @@ import {
 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
-import { FC, useCallback, useEffect, useMemo, useState } from 'react';
+import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -174,6 +174,11 @@ const ContextCenterMemoriesPage: FC = () => {
   const [isAssetOptionsLoading, setIsAssetOptionsLoading] = useState(false);
   const [isAuthorOptionsLoading, setIsAuthorOptionsLoading] = useState(false);
   const [sortBy, setSortBy] = useState<MemorySortBy>('updated');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedAssetSearch, setDebouncedAssetSearch] = useState('');
+  const [debouncedAuthorSearch, setDebouncedAuthorSearch] = useState('');
+  const isAssetSearchMounted = useRef(false);
+  const isAuthorSearchMounted = useRef(false);
 
   const SORT_OPTIONS = useMemo(
     () => [
@@ -209,8 +214,10 @@ const ContextCenterMemoriesPage: FC = () => {
     currentUser?.isAdmin,
   ]);
 
-  const fetchMemories = useCallback(async () => {
-    setIsMemoriesLoading(true);
+  const fetchMemories = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setIsMemoriesLoading(true);
+    }
     try {
       const sortConfig = getSortConfig(sortBy);
       const authorFilter =
@@ -221,7 +228,7 @@ const ContextCenterMemoriesPage: FC = () => {
         limit: MEMORIES_PER_PAGE,
         offset: (currentPage - 1) * MEMORIES_PER_PAGE,
         fields: MEMORY_FIELDS,
-        q: searchValue.trim() || undefined,
+        q: debouncedSearch.trim() || undefined,
         assets: selectedAsset?.id,
         author: authorFilter,
         pinned: activeFilter === 'pinned' ? true : undefined,
@@ -240,7 +247,7 @@ const ContextCenterMemoriesPage: FC = () => {
     currentPage,
     currentUser?.id,
     currentUser?.name,
-    searchValue,
+    debouncedSearch,
     selectedAsset?.id,
     selectedAuthor?.id,
     sortBy,
@@ -352,6 +359,46 @@ const ContextCenterMemoriesPage: FC = () => {
   }, [getResourcePermission]);
 
   useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchValue), 300);
+
+    return () => clearTimeout(id);
+  }, [searchValue]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAssetSearch(assetSearch), 300);
+
+    return () => clearTimeout(id);
+  }, [assetSearch]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedAuthorSearch(authorSearch), 300);
+
+    return () => clearTimeout(id);
+  }, [authorSearch]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!isAssetSearchMounted.current) {
+      isAssetSearchMounted.current = true;
+
+      return;
+    }
+    fetchAssetOptions(debouncedAssetSearch);
+  }, [debouncedAssetSearch, fetchAssetOptions]);
+
+  useEffect(() => {
+    if (!isAuthorSearchMounted.current) {
+      isAuthorSearchMounted.current = true;
+
+      return;
+    }
+    fetchAuthorOptions(debouncedAuthorSearch);
+  }, [debouncedAuthorSearch, fetchAuthorOptions]);
+
+  useEffect(() => {
     fetchMemories();
   }, [fetchMemories]);
 
@@ -397,15 +444,10 @@ const ContextCenterMemoriesPage: FC = () => {
     async (memory: ContextMemory) => {
       setIsPinningMemoryId(memory.id);
       try {
-        const updatedMemory = memory.pinned
+        memory.pinned
           ? await unpinContextMemory(memory.id)
           : await pinContextMemory(memory.id);
-        setMemories((prev) =>
-          prev.map((item) =>
-            item.id === updatedMemory.id ? { ...item, ...updatedMemory } : item
-          )
-        );
-        await fetchMemories();
+        await fetchMemories(false);
         await fetchMemoryCounts();
       } catch (err) {
         showErrorToast(err as AxiosError);
@@ -651,15 +693,17 @@ const ContextCenterMemoriesPage: FC = () => {
         </Tabs>
 
         <Box align="center" gap={2}>
-          <Dropdown.Root>
+          <Dropdown.Root
+            onOpenChange={(isOpen) => {
+              if (isOpen) {
+                setAssetSearch('');
+                fetchAssetOptions('');
+              }
+            }}>
             <AriaButton
               className={
                 selectedAsset ? FILTER_BUTTON_ACTIVE_CLS : FILTER_BUTTON_CLS
-              }
-              onPress={() => {
-                setAssetSearch('');
-                fetchAssetOptions('');
-              }}>
+              }>
               <Database01
                 className={classNames('tw:shrink-0', {
                   'tw:text-brand-secondary': selectedAsset,
@@ -698,7 +742,6 @@ const ContextCenterMemoriesPage: FC = () => {
                   value={assetSearch}
                   onChange={(value) => {
                     setAssetSearch(value);
-                    fetchAssetOptions(value);
                   }}
                 />
               </div>
@@ -793,15 +836,17 @@ const ContextCenterMemoriesPage: FC = () => {
             </Dropdown.Popover>
           </Dropdown.Root>
 
-          <Dropdown.Root>
+          <Dropdown.Root
+            onOpenChange={(isOpen) => {
+              if (isOpen) {
+                setAuthorSearch('');
+                fetchAuthorOptions('');
+              }
+            }}>
             <AriaButton
               className={
                 selectedAuthor ? FILTER_BUTTON_ACTIVE_CLS : FILTER_BUTTON_CLS
-              }
-              onPress={() => {
-                setAuthorSearch('');
-                fetchAuthorOptions('');
-              }}>
+              }>
               <User03
                 className={classNames('tw:shrink-0', {
                   'tw:text-brand-secondary': selectedAuthor,
@@ -840,7 +885,6 @@ const ContextCenterMemoriesPage: FC = () => {
                   value={authorSearch}
                   onChange={(value) => {
                     setAuthorSearch(value);
-                    fetchAuthorOptions(value);
                   }}
                 />
               </div>
