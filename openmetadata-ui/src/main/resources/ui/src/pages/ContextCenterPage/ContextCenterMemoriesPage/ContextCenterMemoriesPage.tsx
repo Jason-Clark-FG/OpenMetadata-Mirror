@@ -29,7 +29,7 @@ import {
   FilterFunnel02,
   Plus,
   SearchLg,
-  User03
+  User03,
 } from '@untitledui/icons';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
@@ -46,7 +46,11 @@ import {
   MemoryFilterTab,
   MemorySortBy,
 } from '../../../components/ContextCenter/MemoriesView/MemoriesView.interface';
-import { FILTER_TABS, MEMORIES_PER_PAGE, MEMORY_FIELDS } from '../../../constants/ContextCenter.constants';
+import {
+  FILTER_TABS,
+  MEMORIES_PER_PAGE,
+  MEMORY_FIELDS,
+} from '../../../constants/ContextCenter.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import {
   OperationPermission,
@@ -72,7 +76,11 @@ import { getEntityName } from '../../../utils/EntityNameUtils';
 import { DEFAULT_ENTITY_PERMISSION } from '../../../utils/PermissionsUtils';
 import searchClassBase from '../../../utils/SearchClassBase';
 import { showErrorToast, showSuccessToast } from '../../../utils/ToastUtils';
-import { MemoryCounts, MemoryFilterOption, SearchOptionSource } from './ContextCenterMemoriesPage.interface';
+import {
+  MemoryCounts,
+  MemoryFilterOption,
+  SearchOptionSource,
+} from './ContextCenterMemoriesPage.interface';
 
 const FILTER_BUTTON_BASE_CLS =
   'tw:flex tw:items-center tw:gap-1.5 tw:rounded-lg tw:px-3' +
@@ -604,8 +612,7 @@ const ContextCenterMemoriesPage: FC = () => {
             className="tw:gap-2"
             items={FILTER_TABS.map((tab) => ({
               id: tab.id,
-              label:
-               <div className="tw:leading-4.5">{t(tab.label)}</div>,
+              label: <div className="tw:leading-4.5">{t(tab.label)}</div>,
             }))}
             type="button-brand">
             {(tab) => (
