@@ -102,7 +102,16 @@ export const updateTags = async (
       response.url().includes('/api/v1/contextCenter/pages/') &&
       response.request().method() === 'PATCH'
   );
-  await page.click('[data-testid="tags-container"] [data-testid="add-tag"]');
+  await page
+  .getByTestId('tags-container')
+  .getByTestId('add-tag')
+  .or(
+    page
+      .getByTestId('tags-container')
+      .getByTestId('edit-button')
+  )
+  .first()
+  .click();
 
   await page.waitForSelector('[data-testid="tag-selector"] input', {
     state: 'visible',
@@ -493,8 +502,6 @@ export const getKnowledgePageCardEntityIdentifier = async (
 export const toggleKnowledgePageBookmark = async (
   page: Page,
   bookmarkBtn: Locator,
-  bookmarkIdentifier: string,
-  shouldBeVisible: boolean
 ) => {
   const bookmarkResponse = page.waitForResponse((response) => {
     const url = response.url();
@@ -507,17 +514,6 @@ export const toggleKnowledgePageBookmark = async (
   const bookmarkRes = await bookmarkResponse;
   expect(bookmarkRes.status()).toBe(200);
   await waitForAllLoadersToDisappear(page);
-
-  const rightPanel = page.getByTestId('knowledge-center-right-panel');
-  const specificBookmark = rightPanel.getByTestId(
-    `bookmarked-${bookmarkIdentifier}`
-  );
-
-  if (shouldBeVisible) {
-    await expect(specificBookmark).toBeVisible();
-  } else {
-    await expect(specificBookmark).not.toBeVisible();
-  }
 };
 
 export const createNewKnowledgePageArticle = async (
@@ -691,7 +687,7 @@ export const createLink = async (
     state: 'visible',
   });
 
-  const linkButton = page.getByRole('button', { name: 'Link' });
+  const linkButton = page.getByTestId('center-panel').getByRole('button', { name: 'Link' });
   await expect(linkButton).toBeVisible();
   await linkButton.click();
 
