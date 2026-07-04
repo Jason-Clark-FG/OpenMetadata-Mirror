@@ -440,7 +440,6 @@ export async function waitForDocumentPermanentlyDeleted(
   );
 }
 
-
 /** Returns the first table asset from ES, or undefined if none exist. */
 export const fetchFirstTable = async (page: Page) => {
   const res = await page.request.get(
