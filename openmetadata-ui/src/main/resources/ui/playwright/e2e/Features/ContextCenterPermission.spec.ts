@@ -13,9 +13,9 @@
 
 import {
   APIRequestContext,
+  test as base,
   expect,
   Page,
-  test as base,
 } from '@playwright/test';
 import { KnowledgeCenterClass } from '../../support/entity/KnowledgeCenterClass';
 import { UserClass } from '../../support/user/UserClass';
@@ -410,7 +410,7 @@ test.describe('Context Center Permissions', () => {
       deleteAllOwnMemoryId,
       allPermissionOwnMemoryId,
       viewOnlyOwnMemoryId,
-      // earlyAlphabetMemoryId,
+      earlyAlphabetMemoryId,
     ]) {
       if (memoryId) {
         await apiContext
@@ -424,7 +424,7 @@ test.describe('Context Center Permissions', () => {
       editAllUser,
       deleteAllUser,
       allPermissionUser,
-      // earlyAlphabetUser,
+      earlyAlphabetUser,
     ]) {
       if (user?.responseData?.id) {
         await user.delete(apiContext);
