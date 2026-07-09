@@ -21,7 +21,7 @@ import {
   Typography,
 } from '@openmetadata/ui-core-components';
 import { RefreshCcw01, Trash01 } from '@untitledui/icons';
-import { FC } from 'react';
+import { FC, UIEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
@@ -124,14 +124,25 @@ const ArchiveRow: FC<ArchiveRowProps> = ({
   );
 };
 
+const SCROLL_THRESHOLD = 100;
+
 const ArchiveView: FC<ArchiveViewProps> = ({
   data,
   isLoading,
+  isLoadingMore,
   canRestore,
   canDelete,
   onDelete,
   onRestore,
+  onScrollEnd,
 }) => {
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    const { scrollHeight, scrollTop, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < SCROLL_THRESHOLD) {
+      onScrollEnd?.();
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="tw:flex tw:flex-col">
@@ -151,7 +162,10 @@ const ArchiveView: FC<ArchiveViewProps> = ({
   }
 
   return (
-    <div data-testid="archive-view">
+    <div
+      className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto"
+      data-testid="archive-view"
+      onScroll={handleScroll}>
       {data.map((item) => (
         <ArchiveRow
           canDelete={canDelete}
@@ -162,6 +176,12 @@ const ArchiveView: FC<ArchiveViewProps> = ({
           onRestore={onRestore}
         />
       ))}
+      {isLoadingMore && (
+        <>
+          <ArchiveRowSkeleton />
+          <ArchiveRowSkeleton />
+        </>
+      )}
     </div>
   );
 };
