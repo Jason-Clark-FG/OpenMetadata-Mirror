@@ -190,11 +190,21 @@ def _snowflake_errors(account_usage_schema: str | None) -> ErrorPack:
     and are caught by the TCP preflight in CheckAccess via NETWORK_ERRORS; a wrong
     *account* is not - Snowflake's wildcard DNS resolves any
     ``<account>.snowflakecomputing.com`` and accepts TCP on 443, so it is only
-    rejected at the HTTP login layer (errno 290404), handled here."""
+    rejected at the HTTP login layer, handled here."""
     return ErrorPack(
-        when(_sf_errno(290404)).diagnose(
+        # A bad account is rejected with HTTP 403 at the login endpoint, and the
+        # connector rewrites that into a fixed message naming the account
+        # (snowflake/connector/auth/_auth.py: `except ForbiddenError` ->
+        # "Failed to connect to DB. Verify the account name is correct: {host}:{port}").
+        # Keyed on that message, not an errno: the errno for this path is not the
+        # 290404 previously matched here (a number that appears nowhere in the
+        # connector) but 540001, and only because ForbiddenError.__init__ adds
+        # ER_HTTP_GENERAL_ERROR (290000) to the ER_FAILED_TO_CONNECT_TO_DB (250001)
+        # it is passed. Binding a rule to that accidental sum would tie us to an
+        # upstream quirk; the message is the driver's deliberate signal.
+        when(Matchers.contains("verify the account name is correct")).diagnose(
             "Snowflake account not found",
-            fix="Check the account identifier - the login endpoint returned 404. Use the account "
+            fix="Check the account identifier - the login endpoint rejected it. Use the account "
             "from your Snowflake URL (e.g. <org>-<account> or <locator>.<region>.<cloud>).",
         ),
         when(Matchers.contains("multi-factor authentication")).diagnose(
