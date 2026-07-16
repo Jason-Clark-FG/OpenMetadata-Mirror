@@ -17,7 +17,7 @@ import math
 import traceback
 from copy import deepcopy
 from time import sleep
-from typing import List, Optional, Tuple  # noqa: UP035
+from typing import Any, List, Optional, Tuple  # noqa: UP035
 
 import msal
 from pydantic import BaseModel, ConfigDict
@@ -61,6 +61,21 @@ GETGROUPS_DEFAULT_PARAMS = {"$top": "1", "$skip": "0"}
 API_RESPONSE_MESSAGE_KEY = "message"
 AUTH_TOKEN_MAX_RETRIES = 5
 AUTH_TOKEN_RETRY_WAIT = 120
+
+# Bounds the error body kept in the step's error log.
+ERROR_DETAIL_LIMIT = 200
+
+# Between-retry sleep for the test calls; the client default (30s) would blow a step budget.
+TEST_RETRY_WAIT_SECONDS = 2
+
+
+class PowerBiApiError(Exception):
+    """A Power BI REST API call answered with a non-success HTTP status."""
+
+    def __init__(self, status_code: int, path: str, detail: str) -> None:
+        super().__init__(f"Power BI API returned HTTP {status_code} for {path}: {detail}")
+        self.status_code = status_code
+        self.path = path
 
 
 # Similar inner methods with mode client. That's fine.
@@ -172,6 +187,37 @@ class PowerBiApiClient:
             return response.value
         group = self.fetch_all_workspaces()[0]
         return self.fetch_all_org_dashboards(group_id=group.id)
+
+    def _test_get(self, path: str, params: Optional[dict] = None) -> Any:  # noqa: UP045
+        """Authenticated GET that raises PowerBiApiError on a non-success status.
+
+        Test-connection's accessor. ``get`` looks for a TOP-LEVEL ``code`` key to
+        decide an error is an error, but Power BI nests it under ``error``
+        (``{"error":{"code":...,"message":...}}``), so ``get`` neither raises nor
+        returns a body - it returns None, the caller does ``Response(**None)`` and
+        the step dies with a bare TypeError carrying no status. ``get_raw``
+        preserves the status so the 401/403/404 rules can see it.
+        """
+        response = self.client.get_raw(path, data=params, retry_wait=TEST_RETRY_WAIT_SECONDS)
+        if not response.ok:
+            raise PowerBiApiError(response.status_code, path, response.text[:ERROR_DETAIL_LIMIT])
+        return response.json()
+
+    def test_fetch_dashboards(self) -> Optional[List[PowerBIDashboard]]:  # noqa: UP006, UP045
+        """Fetch dashboards for the test-connection GetDashboards step.
+
+        Separate from ``fetch_dashboards``, which is the ingestion path: that one
+        swallows failures and returns None by design, which as a check would report
+        "0 dashboards" for an outright error.
+        """
+        if self.config.useAdminApis:
+            response = DashboardsResponse(**self._test_get("/myorg/admin/dashboards"))
+            return response.value
+        groups = GroupsResponse(**self._test_get("/myorg/groups", params=GETGROUPS_DEFAULT_PARAMS))
+        if not groups.value:
+            return []
+        group_id = groups.value[0].id
+        return DashboardsResponse(**self._test_get(f"/myorg/groups/{group_id}/dashboards")).value
 
     def fetch_all_org_dashboards(self, group_id: str) -> Optional[List[PowerBIDashboard]]:  # noqa: UP006, UP045
         """Method to fetch all powerbi dashboards within the group
