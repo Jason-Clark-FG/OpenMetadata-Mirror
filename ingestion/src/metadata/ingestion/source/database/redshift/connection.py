@@ -252,10 +252,13 @@ REDSHIFT_ERRORS = ErrorPack(
         "Authentication failed",
         fix="Check the username and password, and that the user is allowed to connect.",
     ),
-    when(_sqlstate("28000", "28P01")).diagnose(  # invalid_authorization / invalid_password
-        "Authentication failed",
-        fix="Check the username and password, and that the user is allowed to connect.",
-    ),
+    # There is deliberately no _sqlstate("28000", "28P01") rule. Those are
+    # connect-phase codes, and libpq reports a failed connection through
+    # PQerrorMessage rather than a PGresult, so psycopg2 has no SQLSTATE to expose:
+    # .pgcode is None ("the error code returned by the backend, if available").
+    # Verified live against PostgreSQL 15 - a wrong password and a missing database
+    # both give pgcode None, while a query-phase permission denial gives '42501'.
+    # The message rule above is what actually catches auth failures.
     when(_database_not_found).diagnose(
         "Database not found",
         fix="Verify the configured database exists and the user is allowed to connect to it.",
