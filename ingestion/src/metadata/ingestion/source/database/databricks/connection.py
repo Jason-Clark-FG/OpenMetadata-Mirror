@@ -105,11 +105,13 @@ DATABRICKS_ERRORS = ErrorPack(
         "Access token expired",
         fix="The access token has expired. Generate a new token and update the connection.",
     ),
-    when(Matchers.contains("forbidden")).diagnose(
-        "Access denied",
-        fix="The workspace returned 403 Forbidden. Verify the token's user is entitled to the "
-        "workspace and the configured HTTP path / SQL warehouse.",
-    ),
+    # There is deliberately no rule for a 403 here. databricks-sql keeps the HTTP
+    # status in `error.context["http-code"]` (an int; see databricks/sql/exc.py) and
+    # `Error.__str__` returns only `self.message`, so the status never reaches the
+    # message text - and the string "Forbidden" appears nowhere in databricks-sql
+    # (verified against 4.2.6). A `contains("forbidden")` rule therefore could not
+    # fire for its stated purpose, while sitting ahead of every not-found rule and
+    # false-matching any object whose name contains "forbidden".
     when(Matchers.contains("malformed_request")).diagnose(
         "Invalid HTTP path",
         fix="The HTTP Path is malformed. Copy it from the SQL warehouse (or cluster) Connection "

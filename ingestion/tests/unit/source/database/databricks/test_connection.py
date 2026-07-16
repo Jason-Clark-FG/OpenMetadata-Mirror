@@ -98,9 +98,12 @@ def test_expired_token_message_is_classified():
     assert DATABRICKS_ERRORS.classify(error).title == "Access token expired"
 
 
-def test_forbidden_message_is_classified():
-    error = _SqlAlchemyError(Exception("HTTP Response code: 403, Forbidden"))
-    assert DATABRICKS_ERRORS.classify(error).title == "Access denied"
+def test_a_not_found_object_is_not_misread_as_access_denied():
+    """Regression: a `contains("forbidden")` rule used to sit ahead of every
+    not-found rule, so any object whose name contained "forbidden" was diagnosed as
+    "Access denied". The rule is gone; this keeps it gone."""
+    error = _SqlAlchemyError(Exception("[TABLE_OR_VIEW_NOT_FOUND] The table `forbidden_items` does not exist"))
+    assert DATABRICKS_ERRORS.classify(error).title == "Table or view not found"
 
 
 def test_malformed_http_path_is_classified():
