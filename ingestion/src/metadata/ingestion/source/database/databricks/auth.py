@@ -13,7 +13,7 @@
 This module provides authentication utilities for Databricks and Unity Catalog connections.
 """
 
-from typing import Optional, Union  # noqa: I001
+from typing import Union  # noqa: I001
 from urllib.parse import quote_plus
 
 from databricks.sdk.core import Config, azure_service_principal, oauth_service_principal
@@ -29,6 +29,10 @@ from metadata.generated.schema.entity.services.connections.database.databricks.p
 )
 from metadata.generated.schema.entity.services.connections.database.databricksConnection import (
     DatabricksConnection,
+    DatabricksScheme,
+)
+from metadata.generated.schema.entity.services.connections.database.unityCatalogConnection import (
+    DatabricksScheme as UnityCatalogScheme,
 )
 from metadata.generated.schema.entity.services.connections.database.unityCatalogConnection import (
     UnityCatalogConnection,
@@ -38,6 +42,11 @@ from metadata.generated.schema.entity.services.connections.database.unityCatalog
 # Databricks and Unity Catalog both dial the workspace over HTTPS; the gate
 # TCP-probes this port when hostPort carries none.
 DEFAULT_WORKSPACE_PORT = 443
+
+# Both connection schemas default `scheme` to this. Codegen emits a separate enum
+# per schema, so the two are distinct types carrying the same members.
+DEFAULT_SCHEME = DatabricksScheme.databricks.value
+Scheme = Union[DatabricksScheme, UnityCatalogScheme]  # noqa: UP007
 
 
 def normalize_host_port(host_port: str) -> str:
@@ -55,9 +64,12 @@ def probe_target(host_port: str, default_port: int = DEFAULT_WORKSPACE_PORT) -> 
     return normalized, default_port
 
 
-def catalog_url(scheme: str, host_port: str, catalog: Optional[str]) -> str:  # noqa: UP045
-    """The SQLAlchemy URL for a workspace, scoped to ``catalog`` when configured."""
-    url = f"{scheme}://{normalize_host_port(host_port)}"
+def catalog_url(scheme: Scheme | None, host_port: str, catalog: str | None) -> str:
+    """The SQLAlchemy URL for a workspace, scoped to ``catalog`` when configured.
+
+    ``scheme`` is optional on both connection schemas, defaulting to the same value.
+    """
+    url = f"{scheme.value if scheme else DEFAULT_SCHEME}://{normalize_host_port(host_port)}"
     if catalog:
         url = f"{url}?catalog={quote_plus(catalog)}"
     return url

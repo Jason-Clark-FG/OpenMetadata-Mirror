@@ -30,7 +30,7 @@ from metadata.core.connections.test_connection.checks.rest import (
     fetch_list,
     verify_access,
 )
-from metadata.core.connections.test_connection.classifier import exception_chain, http_status
+from metadata.core.connections.test_connection.classifier import http_status
 from metadata.core.connections.test_connection.network import NETWORK_ERRORS
 from metadata.generated.schema.entity.services.connections.dashboard.powerBIConnection import (
     PowerBIConnection as PowerBIConnectionConfig,
@@ -58,58 +58,47 @@ def _contains_any(*tokens: str) -> Matcher:
     lowered = tuple(token.lower() for token in tokens)
 
     def match(error: BaseException) -> bool:
-        chain = " ".join(str(current) for current in exception_chain(error)).lower()
+        chain = Matchers.text(error)
         return any(token in chain for token in lowered)
 
     return match
 
 
+ENTRA_ERRORS_DOC = "https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes"
+
+
 def _token_error(code: str) -> Matcher:
-    """Match a Microsoft Entra (AADSTS) code in a *token acquisition* failure.
+    """Match an AADSTS code in a token-acquisition failure.
 
-    Reachable because MSAL returns its error as a dict and PowerBiApiClient
-    interpolates that whole dict into the InvalidSourceException message, so the
-    AADSTS code survives as text - the error dict's ``error_description`` is where
-    Entra puts it.
-
-    Gated on InvalidSourceException, the only error the client raises when MSAL will
-    not mint a token, so a status-coded REST failure whose body happens to echo an
-    AADSTS code still classifies by its HTTP status instead of being captured here.
+    Gated on InvalidSourceException so a status-coded REST error echoing an AADSTS
+    code still classifies by its status.
     """
     lowered = code.lower()
-
-    def match(error: BaseException) -> bool:
-        chain = list(exception_chain(error))
-        if not any(isinstance(current, InvalidSourceException) for current in chain):
-            return False
-        return lowered in " ".join(str(current) for current in chain).lower()
-
-    return match
+    return lambda error: Matchers.exception(InvalidSourceException)(error) and lowered in Matchers.text(error)
 
 
 POWERBI_ERRORS = ErrorPack(
-    # Token acquisition (CheckAccess). Ordered before the generic
-    # InvalidSourceException rule so the specific cause wins. Code meanings are
-    # quoted from Microsoft's Entra error-code reference:
-    # https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes
+    # MSAL returns its error as a dict, which the client interpolates into the
+    # InvalidSourceException message - that is what makes the code matchable text.
+    # Codes: ENTRA_ERRORS_DOC.
     when(_token_error("AADSTS7000215")).diagnose(
         "Invalid client secret",
         fix="Microsoft Entra rejected the Client Secret (AADSTS7000215). Check it was copied "
         "whole, has not expired, and is the secret *value* rather than the secret ID.",
-        doc="https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes",
+        doc=ENTRA_ERRORS_DOC,
     ),
     when(_token_error("AADSTS700016")).diagnose(
         "Application not found in this tenant",
         fix="The app registration was not found in this directory (AADSTS700016). Check the "
         "Client ID and Tenant ID match the same tenant, and that an administrator has "
         "installed or consented to the application there.",
-        doc="https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes",
+        doc=ENTRA_ERRORS_DOC,
     ),
     when(_token_error("AADSTS90002")).diagnose(
         "Tenant not found",
         fix="Microsoft Entra does not know this tenant (AADSTS90002). Check the Tenant ID is the "
         "correct GUID or tenant name for your organization.",
-        doc="https://learn.microsoft.com/en-us/entra/identity-platform/reference-error-codes",
+        doc=ENTRA_ERRORS_DOC,
     ),
     # CheckAccess acquires the OAuth token, so a bad secret fails there as an
     # InvalidSourceException - not here. Any 401/403 from a REST call therefore

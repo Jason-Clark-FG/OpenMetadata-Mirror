@@ -33,9 +33,9 @@ from metadata.core.connections.test_connection.check import CheckError
 from metadata.core.connections.test_connection.checks.database import (
     DEFAULT_SAMPLE_ROWS,
     DatabaseStep,
-    enumerated,
     run_sql,
 )
+from metadata.core.connections.test_connection.checks.summary import enumerated
 from metadata.core.connections.test_connection.constants import STEP_TIMEOUT_SECONDS
 from metadata.core.connections.test_connection.network import (
     NETWORK_ERRORS,
@@ -85,8 +85,6 @@ if TYPE_CHECKING:
 logger = ingestion_logger()
 
 suppress_user_agent_entry_deprecation_log()
-
-DEFAULT_SCHEME = "databricks"
 
 DEFAULT_CATALOG = "main"
 
@@ -248,8 +246,7 @@ class DatabricksEngineWrapper:
 
 
 def get_connection_url(connection: DatabricksConnectionConfig) -> str:
-    scheme = connection.scheme.value if connection.scheme else DEFAULT_SCHEME
-    return catalog_url(scheme, connection.hostPort, connection.catalog)
+    return catalog_url(connection.scheme, connection.hostPort, connection.catalog)
 
 
 def get_connection(connection: DatabricksConnectionConfig) -> Engine:

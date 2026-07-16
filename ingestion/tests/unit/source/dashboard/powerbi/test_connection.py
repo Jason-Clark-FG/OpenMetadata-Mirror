@@ -155,7 +155,7 @@ def test_get_dashboards_empty_passes_with_caveat():
 
     evidence = provider.get_dashboards()
 
-    assert evidence.summary == "0 dashboards enumerated"
+    assert evidence.summary == "no dashboards enumerated"
     assert evidence.caveat is not None
     assert evidence.caveat.title == "No dashboards visible"
 
@@ -387,7 +387,7 @@ def test_the_non_admin_path_resolves_a_group_then_lists_its_dashboards():
 
 
 def test_the_non_admin_path_surfaces_a_group_listing_failure():
-    """A 403 on the first hop must fail the step, not decay into '0 dashboards'."""
+    """A 403 on the first hop must fail the step, not decay into "no dashboards"."""
     config = PowerBIConnectionConfig(clientId="cid", clientSecret="secret", tenantId="tid", useAdminApis=False)
 
     with (
