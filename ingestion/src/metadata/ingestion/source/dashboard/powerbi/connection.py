@@ -130,6 +130,11 @@ POWERBI_ERRORS = ErrorPack(
         fix="The requested resource was not found (404). Check the API URL and that the configured "
         "tenant/workspace exists and is visible to the service principal.",
     ),
+    when(http_status(429)).diagnose(
+        "Rate limited by Power BI",
+        fix="Power BI is throttling this service principal (429). Retry once the current window "
+        "has elapsed; the admin APIs throttle per user per time window.",
+    ),
     # Kept last: authority/instance-discovery failures are MSAL ValueErrors that
     # carry no HTTP status, so a broad substring match here must not shadow a
     # status-coded 401/403/404 whose message happens to echo the authority URL.

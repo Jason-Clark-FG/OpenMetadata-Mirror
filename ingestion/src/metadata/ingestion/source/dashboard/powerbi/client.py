@@ -28,7 +28,7 @@ from metadata.generated.schema.entity.services.connections.dashboard.powerBIConn
 from metadata.generated.schema.type.filterPattern import FilterPattern
 from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.connections.source_api_client import TrackedREST
-from metadata.ingestion.ometa.client import ClientConfig
+from metadata.ingestion.ometa.client import ClientConfig, LimitsException
 from metadata.ingestion.source.dashboard.powerbi.file_client import PowerBiFileClient
 from metadata.ingestion.source.dashboard.powerbi.models import (
     DashboardsResponse,
@@ -65,8 +65,16 @@ AUTH_TOKEN_RETRY_WAIT = 120
 # Bounds the error body kept in the step's error log.
 ERROR_DETAIL_LIMIT = 200
 
-# Between-retry sleep for the test calls; the client default (30s) would blow a step budget.
+# Retry budget for the test calls. The ingestion client is configured retry=100,
+# retry_wait=30 for throughput; the sleep grows per attempt (retry_wait * attempt),
+# so that sums to ~42h - a rate-limited /admin/dashboards would hang the step
+# indefinitely. Both must be overridden: bounding only the wait still leaves ~2.8h.
+# These sum to 2+4 = 6s.
+TEST_MAX_RETRIES = 2
 TEST_RETRY_WAIT_SECONDS = 2
+
+# Power BI throttles per user per time window and answers 429.
+HTTP_TOO_MANY_REQUESTS = 429
 
 
 class PowerBiApiError(Exception):
@@ -191,17 +199,40 @@ class PowerBiApiClient:
     def _test_get(self, path: str, params: Optional[dict] = None) -> Any:  # noqa: UP045
         """Authenticated GET that raises PowerBiApiError on a non-success status.
 
-        Test-connection's accessor. ``get`` looks for a TOP-LEVEL ``code`` key to
-        decide an error is an error, but Power BI nests it under ``error``
-        (``{"error":{"code":...,"message":...}}``), so ``get`` neither raises nor
-        returns a body - it returns None, the caller does ``Response(**None)`` and
-        the step dies with a bare TypeError carrying no status. ``get_raw``
-        preserves the status so the 401/403/404 rules can see it.
+        Test-connection's accessor. ``get`` decides a body is an error by looking for
+        a TOP-LEVEL ``code``, but Power BI nests it under ``error``, so ``get``
+        neither raises nor returns a body - it returns None and the caller does
+        ``Response(**None)``. ``get_raw`` keeps the status.
+
+        An exhausted 429 surfaces as ``LimitsException``, which is raised with no
+        message - ``str()`` is empty, so the step's errorLog would be blank. Re-raised
+        as a 429 to carry the status and a readable message.
         """
-        response = self.client.get_raw(path, data=params, retry_wait=TEST_RETRY_WAIT_SECONDS)
+        try:
+            response = self.client.get_raw(
+                path,
+                data=params,
+                retry_wait=TEST_RETRY_WAIT_SECONDS,
+                retries=TEST_MAX_RETRIES,
+            )
+        except LimitsException as limit_reached:
+            raise PowerBiApiError(HTTP_TOO_MANY_REQUESTS, path, str(limit_reached)) from limit_reached
         if not response.ok:
             raise PowerBiApiError(response.status_code, path, response.text[:ERROR_DETAIL_LIMIT])
-        return response.json()
+        return self._test_json(response, path)
+
+    @staticmethod
+    def _test_json(response, path: str) -> Any:
+        """Decode a success body, rejecting the 200-with-``message`` error shape.
+
+        Power BI can answer 200 with a bare ``{"message": ...}`` instead of the
+        expected payload; without this the caller's model would raise an
+        unclassifiable ValidationError.
+        """
+        data = response.json()
+        if isinstance(data, dict) and API_RESPONSE_MESSAGE_KEY in data and "value" not in data:
+            raise PowerBiApiError(response.status_code, path, str(data[API_RESPONSE_MESSAGE_KEY])[:ERROR_DETAIL_LIMIT])
+        return data
 
     def test_fetch_dashboards(self) -> Optional[List[PowerBIDashboard]]:  # noqa: UP006, UP045
         """Fetch dashboards for the test-connection GetDashboards step.

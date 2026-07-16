@@ -21,6 +21,7 @@ from requests.exceptions import HTTPError
 from metadata.core.connections.lifetime import Borrowed
 from metadata.core.connections.test_connection.check import CheckError, collect_checks
 from metadata.core.connections.test_connection.checks.dashboard import DashboardStep
+from metadata.core.connections.test_connection.constants import STEP_TIMEOUT_SECONDS
 from metadata.generated.schema.entity.services.connections.dashboard.powerBIConnection import (
     PowerBIConnection as PowerBIConnectionConfig,
 )
@@ -421,6 +422,64 @@ def test_an_aadsts_code_in_a_rest_error_does_not_shadow_its_status():
     failure whose body echoes a code still classifies by status."""
     error = _api_error(403, "AADSTS700016 mentioned in a proxy error body")
     assert POWERBI_ERRORS.classify(error).title == "Insufficient permissions"
+
+
+def test_a_rate_limited_call_is_bounded_in_time(real_api_client):
+    """Regression: a 429 hung the step for hours.
+
+    The ingestion client is retry=100/retry_wait=30 and the sleep grows per attempt
+    (retry_wait * attempt), so an exhausted 429 slept ~42h. Bounding only retry_wait
+    still left ~2.8h - the dominant term is the retry count, so both must be capped.
+    """
+    provider = PowerBIChecks(powerbi=Borrowed.of(MagicMock(api_client=real_api_client)))
+    slept: list[float] = []
+
+    with (
+        patch.object(requests.Session, "request", return_value=_powerbi_error_response(429, "TooManyRequests", "slow")),
+        patch("metadata.ingestion.ometa.client.time.sleep", side_effect=slept.append),
+        pytest.raises(CheckError),
+    ):
+        provider.get_dashboards()
+
+    assert sum(slept) <= STEP_TIMEOUT_SECONDS, f"a rate-limited step slept {sum(slept)}s"
+
+
+def test_a_rate_limited_call_reports_a_diagnosis_and_a_readable_error(real_api_client):
+    """An exhausted 429 arrives as LimitsException, raised with no message - so
+    str() is empty and the step's errorLog would be blank. It must still name the
+    status and say something."""
+    provider = PowerBIChecks(powerbi=Borrowed.of(MagicMock(api_client=real_api_client)))
+
+    with (
+        patch.object(requests.Session, "request", return_value=_powerbi_error_response(429, "TooManyRequests", "slow")),
+        patch("metadata.ingestion.ometa.client.time.sleep"),
+        pytest.raises(CheckError) as failure,
+    ):
+        provider.get_dashboards()
+
+    cause = failure.value.cause
+    assert POWERBI_ERRORS.classify(cause).title == "Rate limited by Power BI"
+    assert str(cause), "the step's errorLog would be empty"
+    assert "429" in str(cause)
+
+
+def test_a_two_hundred_carrying_only_a_message_is_diagnosed(real_api_client):
+    """Power BI can answer 200 with a bare {"message": ...}. response.ok is True, so
+    without a guard the model raises an unclassifiable ValidationError."""
+    provider = PowerBIChecks(powerbi=Borrowed.of(MagicMock(api_client=real_api_client)))
+    response = requests.Response()
+    response.status_code = 200
+    response._content = json.dumps({"message": "API is not accessible for application"}).encode()
+    response.headers["content-type"] = "application/json"
+
+    with (
+        patch.object(requests.Session, "request", return_value=response),
+        pytest.raises(CheckError) as failure,
+    ):
+        provider.get_dashboards()
+
+    assert isinstance(failure.value.cause, PowerBiApiError)
+    assert "API is not accessible" in str(failure.value.cause)
 
 
 def test_a_successful_dashboard_listing_is_counted(real_api_client):
