@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
+from botocore.exceptions import ClientError
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError, JSONDecodeError, SSLError, Timeout
 from sqlalchemy import create_engine
@@ -24,6 +25,7 @@ from metadata.core.connections.lifetime import Borrowed
 from metadata.core.connections.test_connection import collect_checks
 from metadata.core.connections.test_connection.check import CheckError
 from metadata.core.connections.test_connection.checks.pipeline import PipelineStep
+from metadata.core.connections.test_connection.classifier import exception_chain
 from metadata.core.connections.test_connection.network import NetworkUnreachableError
 from metadata.generated.schema.entity.services.connections.pipeline.airflowConnection import (
     AirflowConnection as AirflowConnectionConfig,
@@ -33,6 +35,11 @@ from metadata.generated.schema.entity.utils.airflowRestApiConnection import (
     ApiVersion,
 )
 from metadata.generated.schema.entity.utils.common.accessTokenConfig import AccessToken
+from metadata.generated.schema.entity.utils.common.mwaaAuthConfig import (
+    MwaaAuthentication,
+    MwaaConfig,
+)
+from metadata.generated.schema.security.credentials.awsCredentials import AWSCredentials
 from metadata.ingestion.connections.connection import BaseConnection
 from metadata.ingestion.source.pipeline.airflow.api.client import AirflowApiClient
 from metadata.ingestion.source.pipeline.airflow.connection import (
@@ -277,6 +284,80 @@ def test_rest_gate_fails_on_an_unauthorized_reply(_mock_probe):
         _rest_checks(client).check_access()
 
     assert AIRFLOW_ERRORS.classify(failure.value.cause).title == "Authentication failed"
+
+
+# ── MWAA flavour ─────────────────────────────────────────────────────────────
+
+
+def _mwaa_client() -> AirflowApiClient:
+    """A real AirflowApiClient on the MWAA path, with only the boto3 client stubbed."""
+    config = AirflowConnectionConfig(
+        hostPort="https://airflow.example.com:8080",
+        connection=AirflowRestApiConnection(
+            authConfig=MwaaAuthentication(
+                mwaaConfig=MwaaConfig(
+                    awsConfig=AWSCredentials(awsRegion="us-east-1"),
+                    mwaaEnvironmentName="my-environment",
+                )
+            )
+        ),
+    )
+    with patch("metadata.ingestion.source.pipeline.airflow.api.mwaa.AWSClient"):
+        return AirflowApiClient(config)
+
+
+def test_mwaa_gate_fails_when_aws_rejects_the_call():
+    """Regression: the MWAA gate verified nothing.
+
+    MWAAClient.get_version returns a hardcoded {"version": "MWAA", ...} and never
+    calls AWS, so CheckAccess passed unconditionally - bad credentials, a
+    nonexistent environment, no route. The gate must make a real call.
+    """
+    client = _mwaa_client()
+    denied = ClientError(
+        {"Error": {"Code": "AccessDeniedException", "Message": "not authorized to perform mwaa:InvokeRestApi"}},
+        "InvokeRestApi",
+    )
+    client.mwaa_client._mwaa_client.invoke_rest_api.side_effect = denied
+
+    with pytest.raises(CheckError) as failure:
+        _rest_checks(client).check_access()
+
+    assert failure.value.evidence.command == "read the Airflow REST API version"
+    # The MWAA diagnostics hint wraps the AWS error, which stays in the chain.
+    assert any(isinstance(current, ClientError) for current in exception_chain(failure.value.cause))
+
+
+def test_mwaa_gate_passes_when_the_environment_answers():
+    client = _mwaa_client()
+    client.mwaa_client._mwaa_client.invoke_rest_api.return_value = {"RestApiResponse": {"dags": [], "total_entries": 0}}
+
+    evidence = _rest_checks(client).check_access()
+
+    assert evidence.summary == "authenticated"
+    client.mwaa_client._mwaa_client.invoke_rest_api.assert_called_once()
+
+
+def test_mwaa_gate_calls_aws_with_the_configured_environment():
+    """The call must name the configured environment - that is half of what the gate
+    is proving."""
+    client = _mwaa_client()
+    client.mwaa_client._mwaa_client.invoke_rest_api.return_value = {"RestApiResponse": {}}
+
+    _rest_checks(client).check_access()
+
+    kwargs = client.mwaa_client._mwaa_client.invoke_rest_api.call_args.kwargs
+    assert kwargs["Name"] == "my-environment"
+    assert kwargs["Path"] == "/dags"
+
+
+def test_ingestion_mwaa_get_version_stays_a_stub():
+    """get_version is on the ingestion path and stays hardcoded; only the
+    test-connection accessor makes a real call."""
+    client = _mwaa_client()
+
+    assert client.get_version() == {"version": "MWAA", "status": "connected"}
+    client.mwaa_client._mwaa_client.invoke_rest_api.assert_not_called()
 
 
 def test_ingestion_get_version_still_tolerates_a_non_json_reply():

@@ -49,6 +49,12 @@ from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
+# Retry budget for the test call. The client defaults (retry=3, retry_wait=30) sum
+# to ~180s on a 504, which alone would blow the step budget; the sleep grows per
+# attempt, so both must be capped. These sum to 2+4 = 6s.
+TEST_MAX_RETRIES = 2
+TEST_RETRY_WAIT_SECONDS = 2
+
 
 class AirflowApiClient:
     """
@@ -165,19 +171,23 @@ class AirflowApiClient:
         return self._parse_response(response)
 
     def test_get_version(self) -> dict:
-        """Read the version, raising on anything that is not an Airflow JSON reply.
+        """Prove the host really is Airflow, for the test-connection gate.
 
-        The test-connection gate's accessor. ``get_version`` is deliberately lenient
-        - ingestion must survive a version probe it cannot parse - but that leniency
-        makes it useless as a gate: a host that is not Airflow answers 200 text/html,
-        which ``_parse_response`` swallows into ``{}``, and the gate passes. Uses
-        ``get_raw`` so the status is preserved and ``JSONDecodeError`` escapes to the
-        classifier, mirroring dbt Cloud's ``_test_get``.
+        ``get_version`` cannot gate anything on either flavour: over REST it is
+        lenient by design (``_parse_response`` turns a reply it cannot parse into
+        ``{}``, so a 200 text/html page passes), and over MWAA it is a hardcoded stub
+        that never calls AWS. Both need an accessor that actually fails.
+
+        REST uses ``get_raw`` so the status survives and ``JSONDecodeError`` escapes
+        to the classifier, mirroring dbt Cloud's ``_test_get``; MWAA makes a real
+        ``invoke_rest_api`` call.
         """
         if self.mwaa_client:
-            return self.mwaa_client.get_version()
+            return self.mwaa_client.test_get_version()
 
-        response = self.client.get_raw(f"{self._prefix}/version")
+        response = self.client.get_raw(
+            f"{self._prefix}/version", retry_wait=TEST_RETRY_WAIT_SECONDS, retries=TEST_MAX_RETRIES
+        )
         response.raise_for_status()
         return response.json()
 
