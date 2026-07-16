@@ -53,6 +53,7 @@ from metadata.ingestion.connections.builders import (
     init_empty_connection_arguments,
 )
 from metadata.ingestion.connections.connection import BaseConnection
+from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.source.database.databricks.auth import (
     catalog_url,
     get_auth_config,
@@ -197,25 +198,38 @@ class DatabricksEngineWrapper:
                     self.first_schema = self.schemas[0]
         return self.schemas
 
+    def _require_resolved_catalog_and_schema(self) -> tuple[str, str]:
+        """Fail loudly when the earlier steps resolved no catalog or schema.
+
+        Returning an empty list instead would be indistinguishable from "the schema
+        is genuinely empty", so a mandatory step would pass having proved nothing.
+        Mirrors Unity Catalog's ``_require_resolved_catalog_and_schema``.
+        """
+        if not (self.first_catalog and self.first_schema):
+            raise SourceConnectionException(
+                f"Could not resolve a catalog (got: {self.first_catalog}) and schema "
+                f"(got: {self.first_schema}) from the previous steps. Validate that the configured "
+                "catalog and schema exist and that the user has `USE CATALOG` and `USE SCHEMA` privileges on them."
+            )
+        return self.first_catalog, self.first_schema
+
     def get_tables(self):
         """Get tables using the cached first schema"""
         if self.first_schema is None:
             self.get_schemas()
-        if self.first_catalog and self.first_schema:
-            with self.engine.connect() as connection:
-                tables = connection.execute(text(f"SHOW TABLES IN `{self.first_catalog}`.`{self.first_schema}`"))
-                return tables.fetchmany(DEFAULT_SAMPLE_ROWS)
-        return []
+        catalog, schema = self._require_resolved_catalog_and_schema()
+        with self.engine.connect() as connection:
+            tables = connection.execute(text(f"SHOW TABLES IN `{catalog}`.`{schema}`"))
+            return tables.fetchmany(DEFAULT_SAMPLE_ROWS)
 
     def get_views(self):
         """Get views using the cached first schema"""
         if self.first_schema is None:
             self.get_schemas()
-        if self.first_catalog and self.first_schema:
-            with self.engine.connect() as connection:
-                views = connection.execute(text(f"SHOW VIEWS IN `{self.first_catalog}`.`{self.first_schema}`"))
-                return views.fetchmany(DEFAULT_SAMPLE_ROWS)
-        return []
+        catalog, schema = self._require_resolved_catalog_and_schema()
+        with self.engine.connect() as connection:
+            views = connection.execute(text(f"SHOW VIEWS IN `{catalog}`.`{schema}`"))
+            return views.fetchmany(DEFAULT_SAMPLE_ROWS)
 
     def get_catalogs(self, catalog_name: Optional[str] = None):  # noqa: UP045
         """Get catalogs"""

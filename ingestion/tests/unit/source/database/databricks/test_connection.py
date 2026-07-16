@@ -25,6 +25,7 @@ from metadata.generated.schema.entity.services.connections.database.databricksCo
     DatabricksConnection as DatabricksConnectionConfig,
 )
 from metadata.ingestion.connections.connection import BaseConnection
+from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.source.database.databricks.connection import (
     DATABRICKS_ERRORS,
     DatabricksChecks,
@@ -336,7 +337,11 @@ def test_schema_scoped_get_schemas_skips_use_catalog_when_catalog_unresolved():
     engine.connect.assert_not_called()
 
 
-def test_get_tables_returns_empty_when_catalog_unresolved():
+@pytest.mark.parametrize("listing", ["get_tables", "get_views"])
+def test_listing_raises_when_the_catalog_never_resolved(listing):
+    """GetTables/GetViews are mandatory steps. Returning [] here would be
+    indistinguishable from "the schema is empty", so the step would pass having
+    resolved nothing and proved nothing - it must fail instead."""
     from metadata.ingestion.source.database.databricks.connection import (
         DatabricksEngineWrapper,
     )
@@ -345,5 +350,25 @@ def test_get_tables_returns_empty_when_catalog_unresolved():
     wrapper = DatabricksEngineWrapper(Borrowed.of(engine))
     wrapper.first_catalog = None
     wrapper.first_schema = "my_schema"
-    assert wrapper.get_tables() == []
+
+    with pytest.raises(SourceConnectionException) as failure:
+        getattr(wrapper, listing)()
+
+    assert "Could not resolve a catalog" in str(failure.value)
     engine.connect.assert_not_called()
+
+
+@pytest.mark.parametrize("listing", ["get_tables", "get_views"])
+def test_listing_raises_when_the_schema_never_resolved(listing):
+    from metadata.ingestion.source.database.databricks.connection import (
+        DatabricksEngineWrapper,
+    )
+
+    engine = MagicMock()
+    wrapper = DatabricksEngineWrapper(Borrowed.of(engine))
+    wrapper.first_catalog = "my_catalog"
+    wrapper.schemas = []  # get_schemas() ran and found nothing usable
+    wrapper.first_schema = None
+
+    with pytest.raises(SourceConnectionException):
+        getattr(wrapper, listing)()
