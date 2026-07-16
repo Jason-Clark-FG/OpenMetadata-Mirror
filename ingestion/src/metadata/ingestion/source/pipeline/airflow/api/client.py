@@ -31,6 +31,7 @@ from metadata.generated.schema.entity.utils.common.mwaaAuthConfig import (
     MwaaAuthentication,
 )
 from metadata.ingestion.connections.source_api_client import TrackedREST
+from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.ometa.client import ClientConfig
 from metadata.ingestion.source.pipeline.airflow.api.auth import (
     build_access_token_callback,
@@ -49,9 +50,8 @@ from metadata.utils.logger import ingestion_logger
 
 logger = ingestion_logger()
 
-# Retry budget for the test call. The client defaults (retry=3, retry_wait=30) sum
-# to ~180s on a 504, which alone would blow the step budget; the sleep grows per
-# attempt, so both must be capped. These sum to 2+4 = 6s.
+# Retry budget for the test call, summing to 6s. The client defaults (retry=3,
+# retry_wait=30) sleep ~180s on a 504, over the step budget.
 TEST_MAX_RETRIES = 2
 TEST_RETRY_WAIT_SECONDS = 2
 
@@ -106,6 +106,15 @@ class AirflowApiClient:
                 verify=verify_ssl,
             )
             self.client = TrackedREST(client_config, source_name="airflow_api")
+
+    @property
+    def _rest(self) -> TrackedREST:
+        """The REST client. ``client`` is None on the MWAA flavour, which reaches
+        Airflow through the AWS SDK instead - callers must branch on ``mwaa_client``
+        before reading this."""
+        if self.client is None:
+            raise SourceConnectionException("No Airflow REST client: this is an MWAA connection")
+        return self.client
 
     @property
     def api_version(self) -> str:
@@ -185,7 +194,7 @@ class AirflowApiClient:
         if self.mwaa_client:
             return self.mwaa_client.test_get_version()
 
-        response = self.client.get_raw(
+        response = self._rest.get_raw(
             f"{self._prefix}/version", retry_wait=TEST_RETRY_WAIT_SECONDS, retries=TEST_MAX_RETRIES
         )
         response.raise_for_status()

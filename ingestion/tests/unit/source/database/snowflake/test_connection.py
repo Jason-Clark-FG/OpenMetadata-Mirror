@@ -75,14 +75,8 @@ def test_auth_failure_message_is_classified():
 
 
 def _bad_account_error() -> ForbiddenError:
-    """The real error a bad account produces, built from the driver's own class.
-
-    Snowflake's wildcard DNS resolves any <account>.snowflakecomputing.com and
-    accepts TCP on 443, so a wrong account is only rejected at the login endpoint,
-    with HTTP 403. snowflake/connector/auth/_auth.py catches that ForbiddenError and
-    re-raises its class with this exact message and errno=ER_FAILED_TO_CONNECT_TO_DB;
-    this reproduces that call verbatim.
-    """
+    """A login-endpoint 403, reproducing snowflake/connector/auth/_auth.py's
+    `except ForbiddenError` re-raise verbatim (message + errno)."""
     return ForbiddenError(
         msg=(
             "Failed to connect to DB. Verify the account name is correct: "
@@ -94,25 +88,23 @@ def _bad_account_error() -> ForbiddenError:
     )
 
 
-def test_bad_account_login_is_classified():
-    assert SNOWFLAKE_ERRORS.classify(_SqlAlchemyError(_bad_account_error())).title == "Snowflake account not found"
+def test_a_login_endpoint_403_is_classified():
+    assert (
+        SNOWFLAKE_ERRORS.classify(_SqlAlchemyError(_bad_account_error())).title
+        == "Snowflake rejected the login endpoint request"
+    )
 
 
 def test_the_bad_account_errno_is_not_290404():
-    """Pins why the rule is keyed on the message.
-
-    The rule used to match errno 290404 - a number that appears nowhere in
-    snowflake-connector-python. The real errno on this path is 540001, because
-    ForbiddenError.__init__ adds ER_HTTP_GENERAL_ERROR (290000) to the
-    ER_FAILED_TO_CONNECT_TO_DB (250001) that _auth.py passes it. Building the error
-    from the real class is what makes that visible.
-    """
+    """Pins why the rule is keyed on the message: 290404 appears nowhere in the
+    connector, and this path's errno is 540001 only because ForbiddenError.__init__
+    adds ER_HTTP_GENERAL_ERROR to the errno it is passed."""
     error = _bad_account_error()
     assert error.errno != 290404
     assert error.errno == ER_HTTP_GENERAL_ERROR + ER_FAILED_TO_CONNECT_TO_DB == 540001
 
 
-def test_a_bad_account_is_not_read_as_a_generic_auth_failure():
+def test_a_login_endpoint_403_is_not_read_as_a_generic_auth_failure():
     """The 403 path carries errno 540001, not the overloaded 250001, but the
     message rule must still win regardless of ordering."""
     assert SNOWFLAKE_ERRORS.classify(_SqlAlchemyError(_bad_account_error())).title != "Authentication failed"

@@ -181,14 +181,8 @@ def _dns_failure() -> RequestsConnectionError:
 
 
 def test_a_dns_failure_is_claimed_by_the_connectors_own_rule_not_the_network_pack():
-    """Pins why NETWORK_ERRORS is not folded into this pack.
-
-    A requests DNS failure does carry socket.gaierror in its cause chain, so the
-    fold's rules were not unreachable for want of the exception - they were
-    unreachable because `including` appends at LOWER precedence and the
-    RequestsConnectionError rule, which wraps every such failure, claims it first.
-    NETWORK_ERRORS would have said "Host could not be resolved"; it never got asked.
-    """
+    """The gaierror IS in the chain - the fold was unreachable by precedence, not
+    absence: `including` appends lower, so the RequestsConnectionError rule wins."""
     error = _dns_failure()
 
     assert any(isinstance(current, socket.gaierror) for current in exception_chain(error))

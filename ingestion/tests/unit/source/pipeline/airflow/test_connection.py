@@ -222,13 +222,8 @@ def _real_rest_client(host="https://airflow.example.com:8080") -> AirflowApiClie
 
 
 def _html_response(status_code: int = 200) -> requests.Response:
-    """A real requests.Response carrying an HTML body.
-
-    What a host that is not the Airflow REST API (an SSO login page, a marketing
-    site, a reverse proxy) actually answers with: HTTP 200 and text/html. Built as
-    a real Response so response.json() raises the genuine
-    requests.exceptions.JSONDecodeError rather than a fabricated stand-in.
-    """
+    """A real Response with an HTML body - what a host that is not the Airflow REST
+    API answers with. Real, so response.json() raises the genuine JSONDecodeError."""
     response = requests.Response()
     response.status_code = status_code
     response._content = b"<!doctype html><html><body>Sign in</body></html>"
@@ -239,13 +234,9 @@ def _html_response(status_code: int = 200) -> requests.Response:
 
 @patch("metadata.core.connections.test_connection.network.tcp_probe")
 def test_rest_gate_fails_against_a_host_that_is_not_airflow(_mock_probe):
-    """Regression: a 200 text/html reply must fail the gate.
-
-    ometa's REST.get returns the raw Response when the body will not decode as
-    JSON; the Airflow client's _parse_response then swallowed that into {}, so
-    check_access saw an empty dict, did not raise, and the gate went GREEN against
-    any web server. The gate must fail, and the JSONDecodeError rule must fire.
-    """
+    """Regression: REST.get returns the raw Response when the body will not decode,
+    and _parse_response swallowed that into {} - so the gate went green against any
+    web server answering 200 text/html."""
     client = _real_rest_client()
 
     with (
@@ -307,12 +298,8 @@ def _mwaa_client() -> AirflowApiClient:
 
 
 def test_mwaa_gate_fails_when_aws_rejects_the_call():
-    """Regression: the MWAA gate verified nothing.
-
-    MWAAClient.get_version returns a hardcoded {"version": "MWAA", ...} and never
-    calls AWS, so CheckAccess passed unconditionally - bad credentials, a
-    nonexistent environment, no route. The gate must make a real call.
-    """
+    """Regression: MWAAClient.get_version is hardcoded and never calls AWS, so the
+    gate passed unconditionally - bad credentials, wrong environment, no route."""
     client = _mwaa_client()
     denied = ClientError(
         {"Error": {"Code": "AccessDeniedException", "Message": "not authorized to perform mwaa:InvokeRestApi"}},

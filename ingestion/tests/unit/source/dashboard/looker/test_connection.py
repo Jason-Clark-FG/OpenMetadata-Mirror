@@ -441,16 +441,9 @@ def test_an_unreachable_host_is_diagnosed_from_the_flattened_message():
     ],
 )
 def test_a_socket_error_is_flattened_by_the_sdk_and_diagnosed_from_its_text(raised, title):
-    """The real transport behaviour, and why NETWORK_ERRORS is not folded in.
+    """Drives the real transport: the type is destroyed, the text still diagnoses.
 
-    looker_sdk/rtl/requests_transport.py catches IOError around session.request and
-    returns a Response whose body is str(exc) - every socket error and every
-    requests.RequestException is an IOError - so the exception's *type* never
-    reaches the classifier. A type-based rule cannot fire here; _transport_text
-    reading the flattened string is what works.
-
-    Driving the real transport rather than asserting this from a comment: it proves
-    both halves at once - the type is gone, and the text still yields a diagnosis.
+    This is why NETWORK_ERRORS (which matches by type) is not folded into the pack.
     """
     transport_ = RequestsTransport.configure(_TransportSettings())
 
@@ -474,14 +467,8 @@ def test_a_socket_error_is_flattened_by_the_sdk_and_diagnosed_from_its_text(rais
     ],
 )
 def test_dropping_the_network_fold_changes_no_diagnosis(raised, title):
-    """Why removing `.including(NETWORK_ERRORS)` is safe as well as correct.
-
-    Even for an error that somehow arrived with its type intact, _transport_text
-    already matches on the same message text and returns the same title - the fold
-    was redundant where it was reachable and unreachable everywhere else. The
-    previous test asserted this outcome and credited it to NETWORK_ERRORS, which is
-    what made an unreachable fold look load-bearing.
-    """
+    """_transport_text returns the same titles NETWORK_ERRORS would, so dropping the
+    fold is behaviour-preserving even where it could have been reached."""
     assert LOOKER_ERRORS.classify(raised).title == title
 
 

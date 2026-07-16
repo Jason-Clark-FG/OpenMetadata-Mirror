@@ -200,17 +200,10 @@ LOOKER_ERRORS = ErrorPack(
         fix="A server answered but did not return a Looker error. Check that Host Port points at the Looker instance.",
     ),
 )
-# NETWORK_ERRORS is deliberately NOT folded in here. Its rules match by exception
-# type, and no socket error can reach the classifier with its type intact on this
-# path: looker_sdk/rtl/requests_transport.py catches IOError around session.request
-# and turns it into a Response whose *body* is str(exc) - and every
-# requests.RequestException, socket.gaierror, ConnectionRefusedError and
-# TimeoutError is an IOError. Verified against the installed SDK: a raised
-# ConnectionRefusedError comes back as Response(ok=False, value=b'[Errno 61]
-# Connection refused'). The pack's own _transport_text rules read those flattened
-# strings and are what actually diagnose reachability here. Looker also never runs
-# a tcp_probe, so NetworkUnreachableError - which only tcp_probe raises - cannot
-# exist either.
+# NETWORK_ERRORS is deliberately not folded in: it matches by exception type, and
+# looker_sdk/rtl/requests_transport.py RequestsTransport.request catches IOError
+# (which every socket error and requests exception is) and returns its str() as a
+# response body, so no type survives. _transport_text above reads those strings.
 
 
 class LookerChecks:

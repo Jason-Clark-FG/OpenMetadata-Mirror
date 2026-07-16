@@ -28,6 +28,7 @@ from metadata.ingestion.connections.connection import BaseConnection
 from metadata.ingestion.connections.test_connections import SourceConnectionException
 from metadata.ingestion.source.database.databricks.connection import (
     DATABRICKS_ERRORS,
+    UNRESOLVED_TARGET_TOKEN,
     DatabricksChecks,
     DatabricksConnection,
 )
@@ -357,7 +358,8 @@ def test_listing_raises_when_the_catalog_never_resolved(listing):
     with pytest.raises(SourceConnectionException) as failure:
         getattr(wrapper, listing)()
 
-    assert "Could not resolve a catalog" in str(failure.value)
+    assert UNRESOLVED_TARGET_TOKEN in str(failure.value)
+    assert DATABRICKS_ERRORS.classify(failure.value).title == "Could not resolve a catalog and schema to probe"
     engine.connect.assert_not_called()
 
 

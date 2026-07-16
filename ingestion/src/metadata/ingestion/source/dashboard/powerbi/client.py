@@ -65,15 +65,12 @@ AUTH_TOKEN_RETRY_WAIT = 120
 # Bounds the error body kept in the step's error log.
 ERROR_DETAIL_LIMIT = 200
 
-# Retry budget for the test calls. The ingestion client is configured retry=100,
-# retry_wait=30 for throughput; the sleep grows per attempt (retry_wait * attempt),
-# so that sums to ~42h - a rate-limited /admin/dashboards would hang the step
-# indefinitely. Both must be overridden: bounding only the wait still leaves ~2.8h.
-# These sum to 2+4 = 6s.
+# Retry budget for the test calls, summing to 6s. Both must be capped: the client is
+# retry=100/retry_wait=30 for ingestion throughput and the sleep grows per attempt,
+# so a rate-limited call sleeps ~42h - and ~2.8h if only the wait is capped.
 TEST_MAX_RETRIES = 2
 TEST_RETRY_WAIT_SECONDS = 2
 
-# Power BI throttles per user per time window and answers 429.
 HTTP_TOO_MANY_REQUESTS = 429
 
 

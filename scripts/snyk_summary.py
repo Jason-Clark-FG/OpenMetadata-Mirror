@@ -5,6 +5,7 @@ Usage:
   python3 scripts/snyk_summary.py [dir] \\
       [--counts-file PATH] [--slack-file PATH] [--top N]
 """
+
 import argparse
 import glob
 import json
@@ -48,10 +49,17 @@ def collect_deps(data):
             continue
         for v in proj.get("vulnerabilities", []) or []:
             key = (v.get("packageName", "?"), v.get("version", "?"))
-            entry = libs.setdefault(key, {
-                "sev": "low", "cves": set(), "titles": set(),
-                "fixedIn": set(), "paths": 0, "ids": set(),
-            })
+            entry = libs.setdefault(
+                key,
+                {
+                    "sev": "low",
+                    "cves": set(),
+                    "titles": set(),
+                    "fixedIn": set(),
+                    "paths": 0,
+                    "ids": set(),
+                },
+            )
             if sev_key(v.get("severity")) < sev_key(entry["sev"]):
                 entry["sev"] = v.get("severity", "low")
             for cve in (v.get("identifiers", {}) or {}).get("CVE", []) or []:
@@ -71,8 +79,10 @@ def collect_code(data):
     findings = {}
     rules = {}
     for run in runs:
-        for rule in (run.get("tool", {}).get("driver", {}).get("rules", []) or []):
-            rules[rule.get("id")] = rule.get("shortDescription", {}).get("text", rule.get("name", ""))
+        for rule in run.get("tool", {}).get("driver", {}).get("rules", []) or []:
+            rules[rule.get("id")] = rule.get("shortDescription", {}).get(
+                "text", rule.get("name", "")
+            )
         for r in run.get("results", []) or []:
             rid = r.get("ruleId", "?")
             level = r.get("level", "warning")
@@ -93,16 +103,28 @@ def render_deps_md(name, libs, total):
     if not libs:
         out.append("✅ No vulnerabilities.\n")
         return "\n".join(out)
-    out.append(f"> **{len(libs)} vulnerable librar{'y' if len(libs)==1 else 'ies'} · {total} finding{'s' if total!=1 else ''}**\n")
+    out.append(
+        f"> **{len(libs)} vulnerable librar{'y' if len(libs) == 1 else 'ies'} · {total} finding{'s' if total != 1 else ''}**\n"
+    )
     out.append("| Sev | Package | Version | CVE / ID | Title | Fix in | Paths |")
     out.append("|---|---|---|---|---|---|---|")
     for (pkg, ver), info in sorted(libs.items(), key=lambda kv: sev_key(kv[1]["sev"])):
         sev = info["sev"]
         ids = sorted(info["cves"]) or sorted(i for i in info["ids"] if i)[:1]
-        ids_str = ", ".join(f"[{c}](https://nvd.nist.gov/vuln/detail/{c})" if c.startswith("CVE") else c for c in ids) or "—"
+        ids_str = (
+            ", ".join(
+                f"[{c}](https://nvd.nist.gov/vuln/detail/{c})"
+                if c.startswith("CVE")
+                else c
+                for c in ids
+            )
+            or "—"
+        )
         title = sorted(info["titles"])[0][:80] if info["titles"] else ""
         fix = ", ".join(sorted(info["fixedIn"])[:2]) or "—"
-        out.append(f"| {SEV_ICON.get(sev,'⚪')} {sev} | `{esc(pkg)}` | {esc(ver)} | {esc(ids_str)} | {esc(title)} | {esc(fix)} | {info['paths']} |")
+        out.append(
+            f"| {SEV_ICON.get(sev, '⚪')} {sev} | `{esc(pkg)}` | {esc(ver)} | {esc(ids_str)} | {esc(title)} | {esc(fix)} | {info['paths']} |"
+        )
     out.append("")
     return "\n".join(out)
 
@@ -112,10 +134,14 @@ def render_code_md(name, by_rule, rules, total):
     if not by_rule:
         out.append("✅ No code findings.\n")
         return "\n".join(out)
-    out.append(f"> **{total} location{'s' if total!=1 else ''} across {len(by_rule)} rule{'s' if len(by_rule)!=1 else ''}**\n")
+    out.append(
+        f"> **{total} location{'s' if total != 1 else ''} across {len(by_rule)} rule{'s' if len(by_rule) != 1 else ''}**\n"
+    )
     for rid, items in sorted(by_rule.items()):
         desc = rules.get(rid, rid)
-        out.append(f"<details><summary><b>{esc(rid)}</b> — {esc(desc)} ({len(items)})</summary>\n")
+        out.append(
+            f"<details><summary><b>{esc(rid)}</b> — {esc(desc)} ({len(items)})</summary>\n"
+        )
         out.append("| Level | File | Lines |")
         out.append("|---|---|---|")
         for uri, level, lines in sorted(items):
@@ -165,7 +191,9 @@ def count_severities(libs, by_rule):
             counts[sev] += 1
     for rid, items in by_rule.items():
         for uri, level, lines in items:
-            mapped = {"error": "high", "warning": "medium", "note": "low"}.get(level, "medium")
+            mapped = {"error": "high", "warning": "medium", "note": "low"}.get(
+                level, "medium"
+            )
             counts[mapped] += 1  # count locations to match render_code_md total
     return counts
 
@@ -237,7 +265,9 @@ def main():
             cut = body.rfind("\n", 0, 2750)
             if cut < 0:
                 cut = 2750
-            body = body[:cut].rstrip() + "\n…truncated. See Job Summary for full report."
+            body = (
+                body[:cut].rstrip() + "\n…truncated. See Job Summary for full report."
+            )
         with open(args.slack_file, "w") as f:
             f.write(body)
 

@@ -8,6 +8,7 @@ Usage:
 Mirrors the surface of scripts/snyk_summary.py so the notify job can
 consume `_retire_counts.json` and `_retire_slack.txt` identically.
 """
+
 import argparse
 import json
 import os
@@ -34,7 +35,7 @@ def resolve_report_path(src):
 
 def short_path(filepath):
     if NM in filepath:
-        return filepath[filepath.find(NM) + len(NM):]
+        return filepath[filepath.find(NM) + len(NM) :]
     return filepath
 
 
@@ -79,11 +80,14 @@ def collect_libs(data):
         short = short_path(filepath)
         for result in item.get("results") or []:
             key = (result.get("component", "?"), result.get("version", "?"))
-            entry = libs.setdefault(key, {
-                "files": [],
-                "vulns": [],
-                "seen": set(),
-            })
+            entry = libs.setdefault(
+                key,
+                {
+                    "files": [],
+                    "vulns": [],
+                    "seen": set(),
+                },
+            )
             if short and short not in entry["files"]:
                 entry["files"].append(short)
             for v in result.get("vulnerabilities") or []:

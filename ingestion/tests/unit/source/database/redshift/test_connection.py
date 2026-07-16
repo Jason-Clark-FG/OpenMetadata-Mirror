@@ -114,15 +114,9 @@ def test_auth_failure_message_is_classified():
 
 
 def test_a_connect_phase_auth_failure_carries_no_sqlstate_to_match_on():
-    """Pins why there is no 28000/28P01 rule.
-
-    libpq reports a failed connection via PQerrorMessage, not a PGresult, so
-    psycopg2 has no SQLSTATE to put on .pgcode - verified live against PostgreSQL
-    15, where a wrong password gives pgcode None. A rule keyed on those codes could
-    never fire; the message rule is what catches this. The previous test here
-    fabricated pgcode="28000" on a connect error, a shape libpq never produces, and
-    so 'proved' a rule that was dead.
-    """
+    """Pins why there is no 28000/28P01 rule: a connect-phase failure has no
+    PGresult, so .pgcode is None (verified on PostgreSQL 15) and only the message
+    rule can fire. The old test fabricated pgcode="28000" here."""
     error = _SqlAlchemyError(_Psycopg2Error(_AUTH_FAILED_MSG))
     assert _pgcode(error) is None
     assert REDSHIFT_ERRORS.classify(error).title == "Authentication failed"

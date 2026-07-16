@@ -193,20 +193,19 @@ def _snowflake_errors(account_usage_schema: str | None) -> ErrorPack:
     ``<account>.snowflakecomputing.com`` and accepts TCP on 443, so it is only
     rejected at the HTTP login layer, handled here."""
     return ErrorPack(
-        # A bad account is rejected with HTTP 403 at the login endpoint, and the
-        # connector rewrites that into a fixed message naming the account
-        # (snowflake/connector/auth/_auth.py: `except ForbiddenError` ->
-        # "Failed to connect to DB. Verify the account name is correct: {host}:{port}").
-        # Keyed on that message, not an errno: the errno for this path is not the
-        # 290404 previously matched here (a number that appears nowhere in the
-        # connector) but 540001, and only because ForbiddenError.__init__ adds
-        # ER_HTTP_GENERAL_ERROR (290000) to the ER_FAILED_TO_CONNECT_TO_DB (250001)
-        # it is passed. Binding a rule to that accidental sum would tie us to an
-        # upstream quirk; the message is the driver's deliberate signal.
+        # snowflake/connector/auth/_auth.py turns ANY 403 at the login endpoint into
+        # this message, so it means "rejected at login", not specifically a bad
+        # account - a proxy, an IP allowlist or a network policy lands here too; the
+        # remediation says so. Keyed on the message, not the errno: this path's errno
+        # is 540001 (ForbiddenError.__init__ adds ER_HTTP_GENERAL_ERROR to the
+        # ER_FAILED_TO_CONNECT_TO_DB it is passed), an accidental sum, and never the
+        # 290404 once matched here - a number absent from the connector entirely.
         when(Matchers.contains("verify the account name is correct")).diagnose(
-            "Snowflake account not found",
-            fix="Check the account identifier - the login endpoint rejected it. Use the account "
-            "from your Snowflake URL (e.g. <org>-<account> or <locator>.<region>.<cloud>).",
+            "Snowflake rejected the login endpoint request",
+            fix="Snowflake answered 403 before authenticating. Most often the account identifier is "
+            "wrong - use the one from your Snowflake URL (e.g. <org>-<account> or "
+            "<locator>.<region>.<cloud>). If it is correct, check whether a network policy, IP "
+            "allowlist, or proxy is blocking this host.",
         ),
         when(Matchers.contains("multi-factor authentication")).diagnose(
             "Multi-factor authentication required",

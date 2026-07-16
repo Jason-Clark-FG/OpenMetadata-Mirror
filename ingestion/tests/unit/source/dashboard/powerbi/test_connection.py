@@ -275,13 +275,9 @@ def _powerbi_error_response(status_code: int, code: str, message: str) -> reques
     ],
 )
 def test_a_real_powerbi_error_envelope_reaches_the_status_rules(real_api_client, status_code, code, title):
-    """Regression: the 401/403/404 rules were dead on the real path.
-
-    ometa's REST._request looked for a top-level "code"; Power BI nests it under
-    "error", so _one_request returned None, fetch_dashboards did
-    DashboardsResponse(**None) and the step failed with a bare TypeError - no
-    status, no diagnosis. The status must survive to the classifier.
-    """
+    """Regression: ometa's REST._request looks for a TOP-LEVEL "code"; Power BI nests
+    it under "error", so the request decayed to None and the step died with a bare
+    TypeError carrying no status. The status must reach the classifier."""
     provider = PowerBIChecks(powerbi=Borrowed.of(MagicMock(api_client=real_api_client)))
 
     with (
@@ -425,12 +421,8 @@ def test_an_aadsts_code_in_a_rest_error_does_not_shadow_its_status():
 
 
 def test_a_rate_limited_call_is_bounded_in_time(real_api_client):
-    """Regression: a 429 hung the step for hours.
-
-    The ingestion client is retry=100/retry_wait=30 and the sleep grows per attempt
-    (retry_wait * attempt), so an exhausted 429 slept ~42h. Bounding only retry_wait
-    still left ~2.8h - the dominant term is the retry count, so both must be capped.
-    """
+    """Regression: an exhausted 429 slept ~42h (~2.8h with only retry_wait capped) -
+    the sleep grows per attempt, so the retry count dominates."""
     provider = PowerBIChecks(powerbi=Borrowed.of(MagicMock(api_client=real_api_client)))
     slept: list[float] = []
 

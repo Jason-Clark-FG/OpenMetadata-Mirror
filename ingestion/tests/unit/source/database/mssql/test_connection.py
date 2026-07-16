@@ -168,10 +168,8 @@ class _Session:
 def _pytds_error(*messages: tuple[int, str]) -> Exception:
     """The error pytds raises for a sequence of server messages.
 
-    Calls the driver's own ``_TdsSession.raise_db_exception``, which is where the
-    number/text asymmetry lives, so this cannot drift from it. Each pairing below is
-    cross-checked against a live server in
-    ``test_pytds_reproduces_the_live_server_message_pairs``.
+    Goes through the driver's own _TdsSession.raise_db_exception, where the
+    number/text asymmetry lives, so it cannot drift from it.
     """
     session = _Session([_message(number, text) for number, text in messages])
     try:
@@ -182,11 +180,10 @@ def _pytds_error(*messages: tuple[int, str]) -> Exception:
 
 
 def _pymssql_error(number: int, message: str) -> Exception:
-    """pymssql's DBAPI shape: ``args[0]`` is the ``(number, message)`` tuple.
+    """pymssql's DBAPI shape: args[0] is the (number, message) tuple.
 
-    Hand-rolled - pymssql ships in its own extra and is not installed. Shape from
-    pymssql v2.3.9 ``_pymssql.pyx``, ``connect``: ``raise OperationalError(e.args[0])``
-    where ``e`` is ``MSSQLDatabaseException((msg_no, error_msg))``.
+    Hand-rolled - pymssql is in its own extra, not installed. Shape from v2.3.9
+    _pymssql.pyx, connect: `raise OperationalError(e.args[0])`.
     """
     return Exception((number, message))
 
@@ -233,12 +230,9 @@ _NO_VIEW_SERVER_STATE = (
     ],
 )
 def test_pytds_reproduces_the_live_server_message_pairs(messages, expected_number):
-    """Ties every fixture above to an observation against a real SQL Server.
-
-    Each expected_number was read off a live Azure SQL Edge instance through the
-    same driver. If pytds ever changes which message it takes the number from, this
-    fails rather than the rules silently going dead.
-    """
+    """Each expected_number was read off a live Azure SQL Edge through this driver.
+    If pytds changes which message it takes the number from, this fails rather than
+    the rules silently going dead."""
     assert _mssql_number(_pytds_error(*messages)) == expected_number
 
 
@@ -400,12 +394,8 @@ def _mssql_definition() -> TestConnectionDefinition:
 
 
 def _run_against(engine) -> TestConnectionResult:
-    """Drive the runner exactly as BaseConnection.test_connection does.
-
-    tcp_probe is stubbed so the CheckAccess preflight passes and the test reaches
-    the driver error under test - reachability itself is covered by the network
-    module's own tests, and a real socket here would be slow and non-deterministic.
-    """
+    """Drive the runner as BaseConnection.test_connection does. tcp_probe is stubbed
+    so the gate's preflight passes and the test reaches the driver error."""
     metadata = MagicMock()
     metadata.get_by_name.return_value = _mssql_definition()
     checks = MssqlChecks(db=Borrowed.of(engine), get_databases_statement="SELECT 1")
@@ -414,14 +404,8 @@ def _run_against(engine) -> TestConnectionResult:
 
 
 def _engine_failing_with(error: Exception) -> Engine:
-    """A real mssql+pytds Engine whose DBAPI connect raises `error`.
-
-    Real rather than mocked on purpose: SQLAlchemy then does the wrapping itself,
-    so the classifier sees exactly the production shape - a
-    sqlalchemy.exc.OperationalError carrying the driver error on `.orig` - instead
-    of a shape the test author imagined. It also gives the CheckAccess preflight a
-    genuine url.host/url.port to read.
-    """
+    """A real mssql+pytds Engine whose DBAPI connect raises `error`, so SQLAlchemy
+    does the wrapping and the classifier sees the production shape."""
 
     def connect_raises():
         raise error

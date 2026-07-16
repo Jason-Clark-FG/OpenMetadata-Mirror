@@ -98,26 +98,22 @@ def _sqlserver_errno(*codes: int) -> Matcher:
 # --- SQL Server error pack ---------------------------------------------------
 # Numbers: https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors
 #
-# SQL Server can answer one failure with several messages, and pytds folds them
-# unevenly (tds_session._TdsSession.raise_db_exception): the TEXT is every message
-# joined, but the NUMBER is the LAST message's only. So a rule may key on a number
-# only where that number arrives last. Verified live (Azure SQL Edge, pytds):
+# SQL Server answers one failure with several messages, and pytds folds them
+# unevenly (tds_session._TdsSession.raise_db_exception): the text is every message
+# joined, the number is the LAST message's only. So a number is matchable only where
+# it arrives last. Observed live, and pinned by the tests:
 #
-#   missing database  -> [4060, 18456], number 18456, text has both  -> text only
-#   bad password      -> [18456],       number 18456                 -> number works
-#   denied SELECT     -> [229],         number 229                   -> number works
-#   no VIEW SERVER STATE -> [300, 297], number 297, text has both    -> 297 works
+#   missing database     -> [4060, 18456] -> number 18456
+#   bad password         -> [18456]       -> number 18456
+#   denied SELECT        -> [229]         -> number 229
+#   no VIEW SERVER STATE -> [300, 297]    -> number 297
 #
-# Hence 4060 and 300 are absent: they are never last on the paths that raise them.
-# 911 ("Database 'x' does not exist") does arrive alone, but only from USE, which no
-# check issues. 262 is a statement permission (CREATE DATABASE / TABLE / SHOWPLAN);
-# these checks only SELECT.
+# Hence no 4060 or 300 rule. 911 arrives alone but only from USE, which no check
+# issues; 262 is a statement permission and these checks only SELECT.
 SQLSERVER_ERRORS = ErrorPack(
-    # Ordered before the login rules: 4060's text ends "The login failed." and pytds
-    # appends "Login failed for user ...", so a login-first order would call a
-    # missing database an auth failure. This is the one case with no number to key
-    # on, so a non-English server is diagnosed as an auth failure - accepted, since
-    # no locale-independent signal exists for it.
+    # Must precede the login rules: the joined text ends "Login failed for user ..."
+    # and the number is 18456, so both signals point at auth. No number to key on
+    # here, so a non-English server reads this as an auth failure.
     when(Matchers.contains("Cannot open database")).diagnose(
         "Database not found or not accessible",
         fix="Verify the configured database exists and the login is allowed to open it.",

@@ -91,9 +91,19 @@ DEFAULT_CATALOG = "main"
 SYSTEM_SCHEMAS = frozenset({"information_schema", "performance_schema", "sys"})
 
 
+# The listing checks raise a message carrying this token when no catalog/schema was
+# resolved; the pack matches on it. Shared so producer and matcher cannot drift.
+UNRESOLVED_TARGET_TOKEN = "Could not resolve a catalog and schema"
+
+
 # databricks-sql/thrift reports failures as message tokens, not numeric codes, so
 # rules key on tokens; specific ones precede broad ones (first match wins).
 DATABRICKS_ERRORS = ErrorPack(
+    when(Matchers.contains(UNRESOLVED_TARGET_TOKEN)).diagnose(
+        "Could not resolve a catalog and schema to probe",
+        fix="The earlier steps found no catalog/schema this user can use. Verify the configured "
+        "catalog and schema exist and that the user has USE CATALOG and USE SCHEMA on them.",
+    ),
     when(Matchers.contains("invalid access token")).diagnose(
         "Authentication failed",
         fix="Check the access token - the workspace rejected it. Verify the token is valid, "
@@ -103,13 +113,9 @@ DATABRICKS_ERRORS = ErrorPack(
         "Access token expired",
         fix="The access token has expired. Generate a new token and update the connection.",
     ),
-    # There is deliberately no rule for a 403 here. databricks-sql keeps the HTTP
-    # status in `error.context["http-code"]` (an int; see databricks/sql/exc.py) and
-    # `Error.__str__` returns only `self.message`, so the status never reaches the
-    # message text - and the string "Forbidden" appears nowhere in databricks-sql
-    # (verified against 4.2.6). A `contains("forbidden")` rule therefore could not
-    # fire for its stated purpose, while sitting ahead of every not-found rule and
-    # false-matching any object whose name contains "forbidden".
+    # No 403 rule: databricks-sql keeps the status in error.context["http-code"] and
+    # Error.__str__ returns only self.message (databricks/sql/exc.py), so no status
+    # reaches the text; "Forbidden" appears nowhere in the driver (4.2.6).
     when(Matchers.contains("malformed_request")).diagnose(
         "Invalid HTTP path",
         fix="The HTTP Path is malformed. Copy it from the SQL warehouse (or cluster) Connection "
@@ -201,15 +207,12 @@ class DatabricksEngineWrapper:
     def _require_resolved_catalog_and_schema(self) -> tuple[str, str]:
         """Fail loudly when the earlier steps resolved no catalog or schema.
 
-        Returning an empty list instead would be indistinguishable from "the schema
-        is genuinely empty", so a mandatory step would pass having proved nothing.
-        Mirrors Unity Catalog's ``_require_resolved_catalog_and_schema``.
+        Returning an empty list would be indistinguishable from "the schema is
+        genuinely empty", so a mandatory step would pass having proved nothing.
         """
         if not (self.first_catalog and self.first_schema):
             raise SourceConnectionException(
-                f"Could not resolve a catalog (got: {self.first_catalog}) and schema "
-                f"(got: {self.first_schema}) from the previous steps. Validate that the configured "
-                "catalog and schema exist and that the user has `USE CATALOG` and `USE SCHEMA` privileges on them."
+                f"{UNRESOLVED_TARGET_TOKEN}: catalog={self.first_catalog}, schema={self.first_schema}"
             )
         return self.first_catalog, self.first_schema
 

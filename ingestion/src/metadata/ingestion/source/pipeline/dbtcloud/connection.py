@@ -124,19 +124,12 @@ DBTCLOUD_ERRORS = ErrorPack(
         "regional - the access URL differs per region.",
     ),
 )
-# NETWORK_ERRORS is deliberately NOT folded in here. `including` appends at LOWER
-# precedence, and the requests-typed rules above match first for every network
-# failure requests can raise: a DNS failure really does carry socket.gaierror in its
-# cause chain, but it arrives wrapped in requests.exceptions.ConnectionError, which
-# the rule above claims before the fold is ever consulted. The fold's fourth rule,
-# NetworkUnreachableError, is raised only by tcp_probe, and this connector runs no
-# preflight - so all four rules were unreachable.
-#
-# No preflight is added to make them live: dbt Cloud is a public SaaS endpoint, the
-# case where a corporate egress proxy is most likely, and requests honours
-# HTTPS_PROXY while a raw TCP probe to the URL's host:port does not - so a preflight
-# would fail a working proxied setup. `ping` warns against exactly this where the
-# transport may differ from the URL's host:port.
+# NETWORK_ERRORS is deliberately not folded in: `including` appends at lower
+# precedence, so the requests-typed rules above claim every network failure first
+# (a DNS gaierror arrives wrapped in requests' ConnectionError), and
+# NetworkUnreachableError needs a tcp_probe this connector never runs. No preflight
+# is added because requests honours HTTPS_PROXY and a raw TCP probe does not, which
+# would fail a proxied setup - see `ping`.
 
 
 class DBTCloudChecks:
