@@ -11,10 +11,9 @@
 """
 Maps a connector exception to an actionable ``Diagnosis``.
 
-Each connector owns an ``ErrorPack`` of ordered, first-match-wins rules built
-with ``when(matcher).diagnose(...)``. Matchers walk the exception's ``__cause__``
-/ ``__context__`` chain, so a driver error wrapped by SQLAlchemy still matches.
-An unmatched exception yields ``None`` - the raw ``errorLog`` is always retained.
+An ``ErrorPack`` is ordered, first-match-wins rules built with
+``when(matcher).diagnose(...)``. Matchers walk the ``__cause__``/``__context__``
+chain, so a wrapped driver error still matches. No match yields ``None``.
 """
 
 from __future__ import annotations
@@ -42,12 +41,7 @@ class Matchers:
 
     @staticmethod
     def text(error: BaseException) -> str:
-        """The lower-cased text of the error and its cause chain, joined.
-
-        The raw material a connector's own matcher reads when it needs more than
-        a single token - two tokens that must co-occur, or a token qualified by a
-        configured value. ``contains`` is the one-token case of the same idea.
-        """
+        """The lower-cased text of the error and its cause chain, joined."""
         return " ".join(str(current) for current in exception_chain(error)).lower()
 
     @staticmethod
@@ -57,11 +51,10 @@ class Matchers:
 
     @staticmethod
     def errno(*codes: int) -> Matcher:
-        """Match a driver error number.
+        """Match a driver error number at ``args[0]`` (PyMySQL-style), or on ``.orig``.
 
-        DBAPI drivers (PyMySQL, ...) put the numeric code in ``exception.args[0]``;
-        SQLAlchemy preserves the original at ``exception.orig``. We check both,
-        across the cause chain. Codes are the stable signal - message text varies.
+        Only drivers that lead with the code populate it; others need their own
+        accessor.
         """
         wanted = frozenset(codes)
 
@@ -77,23 +70,12 @@ class Matchers:
 
     @staticmethod
     def any_of(*matchers: Matcher) -> Matcher:
-        """Match when any of ``matchers`` does - one diagnosis, several signals.
-
-        A condition a driver reports more than one way (a numeric code on one path,
-        a message token on another) is still one thing to tell the user. Binding
-        those signals to a single rule keeps the diagnosis written once, so the
-        fix text cannot drift between copies.
-        """
+        """Match when any of ``matchers`` does - one diagnosis, several signals."""
         return lambda error: any(matcher(error) for matcher in matchers)
 
     @staticmethod
     def exception(*types: type[BaseException]) -> Matcher:
-        """Match when the error, or anything in its cause chain, is one of ``types``.
-
-        The signal is the exception type, not its message - the right matcher for
-        driver-agnostic failures (e.g. Python socket errors) whose text varies by
-        platform but whose class does not.
-        """
+        """Match when the error, or anything in its cause chain, is one of ``types``."""
         return lambda error: any(isinstance(current, types) for current in exception_chain(error))
 
 
@@ -131,3 +113,24 @@ class ErrorPack:
             if rule.matcher(error):
                 return rule.diagnosis
         return None
+
+
+def response_status(error: BaseException) -> int | None:
+    """The HTTP status a ``requests``-shaped error carries, or ``None``."""
+    code = getattr(error, "status_code", None)
+    if not isinstance(code, int):
+        code = getattr(getattr(error, "response", None), "status_code", None)
+    return code if isinstance(code, int) else None
+
+
+def http_status(*codes: int, extract: Callable[[BaseException], int | None] = response_status) -> Matcher:
+    """Match a REST error by HTTP status. ``extract`` says where the SDK keeps it."""
+    wanted = frozenset(codes)
+    return lambda error: any(extract(current) in wanted for current in exception_chain(error))
+
+
+# A check only needs to prove the list endpoint is reachable and returns items,
+# not enumerate every one, so ``fetch_list`` counts at most this many and renders
+# ``<cap>+`` when the count meets or exceeds it, keeping the summary bounded on
+# huge tenants and accounts.
+DEFAULT_LIST_CAP = 100
