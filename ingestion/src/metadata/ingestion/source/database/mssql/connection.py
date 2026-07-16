@@ -70,35 +70,22 @@ if TYPE_CHECKING:
 def _mssql_number(error: BaseException) -> int | None:
     """The SQL Server error number, however the raising driver carries it.
 
-    ``Matchers.errno`` cannot find it: it requires an ``int`` at ``args[0]``, and
-    no supported driver puts one there. Verified against each driver's source:
+    ``Matchers.errno`` cannot find it: it wants an ``int`` at ``args[0]`` and no
+    supported driver puts one there. pytds sets ``.number``/``.msg_no``
+    (``tds_base._create_exception_by_message``); pymssql leaves a ``(number, message)``
+    tuple at ``args[0]`` (``_pymssql.pyx``, ``connect``); pyodbc exposes no number at
+    all, only ``(sqlstate, message)``.
 
-    * pytds (default, ``mssql+pytds``) - ``tds_base._create_exception_by_message``
-      builds ``OperationalError(error_msg)`` and then assigns ``.number`` and
-      ``.msg_no``, so ``args[0]`` is the *message*. pytds reads ``.msg_no`` back the
-      same way in its own retry handler (``pytds/__init__.py``, ``ex_handler``).
-    * pymssql (``mssql+pymssql``) - ``_mssql.pyx`` raises
-      ``MSSQLDatabaseException((msg_no, error_msg))``, and ``_pymssql.pyx`` converts
-      it with ``raise OperationalError(e.args[0])``, so the DBAPI error's ``args[0]``
-      is the ``(number, message)`` *tuple* and ``.number`` does not survive.
-    * pyodbc (``mssql+pyodbc``) - ``args`` is ``(sqlstate_str, message)``; the number
-      appears only inside the message text, so it is unreachable here and the
-      message rules cover that driver.
-
-    Reading the number rather than the message keeps these rules locale-independent:
-    SQL Server localizes message text, but never the number.
+    Only ever the number of pytds' LAST server message - see SQLSERVER_ERRORS.
     """
     for current in exception_chain(error):
-        for candidate in (current, getattr(current, "orig", None)):
-            if candidate is None:
-                continue
-            for attribute in ("number", "msg_no"):
-                value = getattr(candidate, attribute, None)
-                if isinstance(value, int):
-                    return value
-            args = getattr(candidate, "args", ())
-            if args and isinstance(args[0], tuple) and args[0] and isinstance(args[0][0], int):
-                return args[0][0]
+        for attribute in ("number", "msg_no"):
+            value = getattr(current, attribute, None)
+            if isinstance(value, int):
+                return value
+        args = getattr(current, "args", ())
+        if args and isinstance(args[0], tuple) and args[0] and isinstance(args[0][0], int):
+            return args[0][0]
     return None
 
 
@@ -108,22 +95,33 @@ def _sqlserver_errno(*codes: int) -> Matcher:
     return lambda error: _mssql_number(error) in wanted
 
 
+# --- SQL Server error pack ---------------------------------------------------
+# Numbers: https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors
+#
+# SQL Server can answer one failure with several messages, and pytds folds them
+# unevenly (tds_session._TdsSession.raise_db_exception): the TEXT is every message
+# joined, but the NUMBER is the LAST message's only. So a rule may key on a number
+# only where that number arrives last. Verified live (Azure SQL Edge, pytds):
+#
+#   missing database  -> [4060, 18456], number 18456, text has both  -> text only
+#   bad password      -> [18456],       number 18456                 -> number works
+#   denied SELECT     -> [229],         number 229                   -> number works
+#   no VIEW SERVER STATE -> [300, 297], number 297, text has both    -> 297 works
+#
+# Hence 4060 and 300 are absent: they are never last on the paths that raise them.
+# 911 ("Database 'x' does not exist") does arrive alone, but only from USE, which no
+# check issues. 262 is a statement permission (CREATE DATABASE / TABLE / SHOWPLAN);
+# these checks only SELECT.
 SQLSERVER_ERRORS = ErrorPack(
-    # Database missing / not accessible MUST be matched before the login rules: SQL
-    # Server's 4060 message is "Cannot open database "X" requested by the login. The
-    # login failed." - it contains "login failed", so a login-first ordering would
-    # misclassify a missing database as an auth failure (confirmed live on pytds).
-    # 4060 (cannot open database requested by the login), 911 (database does not exist).
-    when(
-        Matchers.any_of(
-            _sqlserver_errno(4060, 911),
-            Matchers.contains("Cannot open database"),
-        )
-    ).diagnose(
+    # Ordered before the login rules: 4060's text ends "The login failed." and pytds
+    # appends "Login failed for user ...", so a login-first order would call a
+    # missing database an auth failure. This is the one case with no number to key
+    # on, so a non-English server is diagnosed as an auth failure - accepted, since
+    # no locale-independent signal exists for it.
+    when(Matchers.contains("Cannot open database")).diagnose(
         "Database not found or not accessible",
         fix="Verify the configured database exists and the login is allowed to open it.",
     ),
-    # Login failed (auth). SQL Server error 18456; message "Login failed for user".
     when(
         Matchers.any_of(
             _sqlserver_errno(18456),
@@ -133,21 +131,12 @@ SQLSERVER_ERRORS = ErrorPack(
         "Authentication failed",
         fix="Check the username and password, and that the login is allowed to connect.",
     ),
-    # Permission denied:
-    #   229 "The SELECT permission was denied on the object '<t>', database '<d>',
-    #       schema '<s>'." - a table/view the GetTables/GetViews steps read.
-    #   300 "VIEW SERVER STATE permission was denied on object 'server', database
-    #       'master'." and 297 "The user does not have permission to perform this
-    #       action." - SQL Server emits this pair together when a login without
-    #       VIEW SERVER STATE reads sys.dm_exec_query_stats, which GetQueries does.
-    # Only 229 and 300 carry "permission was denied"; 297's text does not, so the
-    # number is the only signal that catches the 297 half of that pair.
-    # 262 ("<statement> permission denied in database '<d>'") is deliberately absent:
-    # it is a statement permission (CREATE DATABASE / CREATE TABLE / SHOWPLAN) and
-    # test-connection only ever issues SELECTs, so it cannot fire here.
+    # 229 denied SELECT on an object GetTables/GetViews reads; 297 the tail of the
+    # VIEW SERVER STATE denial GetQueries provokes via sys.dm_exec_query_stats.
+    # 297's own text lacks "permission was denied", so its number is the only signal.
     when(
         Matchers.any_of(
-            _sqlserver_errno(229, 297, 300),
+            _sqlserver_errno(229, 297),
             Matchers.contains("permission was denied"),
         )
     ).diagnose(

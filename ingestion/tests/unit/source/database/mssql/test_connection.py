@@ -15,11 +15,13 @@ tests/unit/test_source_url.py and tests/unit/test_source_connection.py.
 """
 
 import socket
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pyodbc
 import pytest
-from pytds.tds_base import Message, _create_exception_by_message
+from pytds.tds_base import Message
+from pytds.tds_session import _TdsSession
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError as SqlAlchemyOperationalError
@@ -36,9 +38,7 @@ from metadata.generated.schema.entity.services.connections.database.mssqlConnect
     MssqlScheme,
 )
 from metadata.generated.schema.entity.services.connections.testConnectionDefinition import (
-    Category,
     TestConnectionDefinition,
-    TestConnectionStep,
 )
 from metadata.generated.schema.entity.services.connections.testConnectionResult import (
     TestConnectionResult,
@@ -141,102 +141,168 @@ def test_get_databases_statement_uses_all_dbs_when_ingest_all():
 
 
 # ── Driver error fixtures ────────────────────────────────────────────────────
-#
-# Each shape below is the one its driver really produces; the previous fixtures
-# fabricated `Exception(number, message)`, a shape no supported driver raises, and
-# embedded the message token in the wrapper text, so every test passed on the
-# message rule alone and the error numbers were never exercised.
 
 
-def _pytds_error(number: int, message: str) -> Exception:
-    """A real pytds driver error, built by the driver's own exception factory.
-
-    pytds is the default scheme (mssql+pytds). Going through
-    ``_create_exception_by_message`` rather than hand-rolling means the shape is
-    the driver's by construction: ``args[0]`` is the message and the number lands
-    on ``.number``/``.msg_no`` (pytds/tds_base.py, ``_create_exception_by_message``).
-    """
-    message_record: Message = {
+def _message(number: int, text: str) -> Message:
+    return {
         "marker": 0xAA,
         "msgno": number,
         "state": 1,
         "severity": 16,
         "sql_state": None,
         "priv_msg_type": 0,
-        "message": message,
+        "message": text,
         "server": "sql1",
         "proc_name": "",
         "line_number": 1,
     }
-    return _create_exception_by_message(message_record)
+
+
+class _Session:
+    """The only attribute raise_db_exception touches."""
+
+    def __init__(self, messages: list[Message]) -> None:
+        self.messages = messages
+
+
+def _pytds_error(*messages: tuple[int, str]) -> Exception:
+    """The error pytds raises for a sequence of server messages.
+
+    Calls the driver's own ``_TdsSession.raise_db_exception``, which is where the
+    number/text asymmetry lives, so this cannot drift from it. Each pairing below is
+    cross-checked against a live server in
+    ``test_pytds_reproduces_the_live_server_message_pairs``.
+    """
+    session = _Session([_message(number, text) for number, text in messages])
+    try:
+        _TdsSession.raise_db_exception(session)
+    except Exception as raised:
+        return raised
+    raise AssertionError("raise_db_exception did not raise")
 
 
 def _pymssql_error(number: int, message: str) -> Exception:
-    """A pymssql-style DBAPI error: ``args[0]`` is the ``(number, message)`` tuple.
+    """pymssql's DBAPI shape: ``args[0]`` is the ``(number, message)`` tuple.
 
-    Hand-rolled because pymssql ships in its own extra and is not installed here.
-    Shape verified against pymssql v2.3.9 source: ``_mssql.pyx`` raises
-    ``MSSQLDatabaseException((get_last_msg_no(conn), error_msg))``, and
-    ``_pymssql.pyx``'s ``connect()`` converts it with
-    ``raise OperationalError(e.args[0])`` - so the tuple, not the number, becomes
-    the DBAPI error's ``args[0]``, and ``.number`` does not survive the conversion.
+    Hand-rolled - pymssql ships in its own extra and is not installed. Shape from
+    pymssql v2.3.9 ``_pymssql.pyx``, ``connect``: ``raise OperationalError(e.args[0])``
+    where ``e`` is ``MSSQLDatabaseException((msg_no, error_msg))``.
     """
     return Exception((number, message))
 
 
 def _pyodbc_error(sqlstate: str, message: str) -> Exception:
-    """A real pyodbc error class: ``args`` is ``(sqlstate, message)``.
-
-    pyodbc builds this tuple in ``GetError`` (src/errors.cpp): SQLSTATE at index 0,
-    message at index 1. The SQL Server number appears only inside the message text,
-    e.g. "... The login failed. (4060) (SQLDriverConnect)".
-    """
+    """pyodbc's shape: ``args`` is ``(sqlstate, message)`` (src/errors.cpp, GetError).
+    The number appears only inside the message text."""
     return pyodbc.ProgrammingError(sqlstate, f"[{sqlstate}] [Microsoft][ODBC Driver 18 for SQL Server]{message}")
 
 
 def _wrapped(orig: Exception) -> Exception:
-    """The driver error as SQLAlchemy re-raises it: original preserved on ``.orig``."""
-    return SqlAlchemyOperationalError("SELECT 1", {}, orig)
+    """The driver error as SQLAlchemy re-raises it.
+
+    ``__cause__`` is the driver error, which is also what ``.orig`` holds - verified
+    on both the connect and execute paths, they are the same object.
+    """
+    error = SqlAlchemyOperationalError("SELECT 1", {}, orig)
+    error.__cause__ = orig
+    return error
+
+
+# The message sequences SQL Server really sends, captured from a live server
+# (Azure SQL Edge, pytds). The pairs are the whole point: pytds joins every
+# message's TEXT but keeps only the LAST message's NUMBER.
+_MISSING_DATABASE = (
+    (4060, 'Cannot open database "no_such_db" requested by the login. The login failed.'),
+    (18456, "Login failed for user 'sa'."),
+)
+_BAD_PASSWORD = ((18456, "Login failed for user 'sa'."),)
+_DENIED_SELECT = ((229, "The SELECT permission was denied on the object 'secret_t', database 'probe', schema 'dbo'."),)
+_NO_VIEW_SERVER_STATE = (
+    (300, "VIEW SERVER STATE permission was denied on object 'server', database 'master'."),
+    (297, "The user does not have permission to perform this action."),
+)
+
+
+@pytest.mark.parametrize(
+    ("messages", "expected_number"),
+    [
+        (_MISSING_DATABASE, 18456),  # NOT 4060 - the pair's last message wins
+        (_BAD_PASSWORD, 18456),
+        (_DENIED_SELECT, 229),
+        (_NO_VIEW_SERVER_STATE, 297),  # NOT 300 - same reason
+    ],
+)
+def test_pytds_reproduces_the_live_server_message_pairs(messages, expected_number):
+    """Ties every fixture above to an observation against a real SQL Server.
+
+    Each expected_number was read off a live Azure SQL Edge instance through the
+    same driver. If pytds ever changes which message it takes the number from, this
+    fails rather than the rules silently going dead.
+    """
+    assert _mssql_number(_pytds_error(*messages)) == expected_number
 
 
 def test_matchers_errno_cannot_read_any_supported_driver():
-    """Why this connector needs its own accessor. Matchers.errno requires an int at
-    args[0]; pytds puts the message there, pymssql a tuple, pyodbc a SQLSTATE
-    string. Guards against a well-meaning revert to the generic matcher."""
-    assert not Matchers.errno(18456)(_pytds_error(18456, "Login failed for user 'x'."))
+    """Why this connector needs its own accessor: Matchers.errno wants an int at
+    args[0]; pytds puts the message there, pymssql a tuple, pyodbc a SQLSTATE."""
+    assert not Matchers.errno(18456)(_pytds_error(*_BAD_PASSWORD))
     assert not Matchers.errno(18456)(_pymssql_error(18456, "Login failed for user 'x'."))
     assert not Matchers.errno(4060)(_pyodbc_error("42000", "Cannot open database."))
 
 
 def test_mssql_number_reads_each_driver_shape():
-    assert _mssql_number(_pytds_error(18456, "Login failed for user 'x'.")) == 18456
+    assert _mssql_number(_pytds_error(*_BAD_PASSWORD)) == 18456
     assert _mssql_number(_pymssql_error(4060, "Cannot open database.")) == 4060
-    assert _mssql_number(_wrapped(_pytds_error(229, "The SELECT permission was denied."))) == 229
+    assert _mssql_number(_wrapped(_pytds_error(*_DENIED_SELECT))) == 229
     # pyodbc carries no number anywhere the accessor can reach.
     assert _mssql_number(_pyodbc_error("42000", "Cannot open database. (4060)")) is None
     assert _mssql_number(Exception("no number here")) is None
 
 
-# SQL Server localizes message text but never the error number. These messages are
-# the German equivalents, so nothing in them can satisfy the English `contains`
-# rules - the diagnosis can only come from the number. This is what proves the
-# codes are actually bound: with the number accessor removed, every one of these
-# falls through to None.
+def test_mssql_number_reads_through_sqlalchemys_cause():
+    """SQLAlchemy chains the driver error onto __cause__, which is the same object
+    it exposes as .orig - so walking the cause chain alone suffices."""
+    driver_error = _pytds_error(*_DENIED_SELECT)
+    wrapper = _wrapped(driver_error)
+    assert wrapper.orig is wrapper.__cause__ is driver_error
+    assert _mssql_number(wrapper) == 229
+
+
+# SQL Server localizes message text but never the number, so a German message can
+# only be diagnosed via the number. This is what proves a code is really bound.
 @pytest.mark.parametrize(
-    ("number", "localized_message", "title"),
+    ("messages", "title"),
     [
-        (4060, 'Die Datenbank "x" kann nicht geöffnet werden.', "Database not found or not accessible"),
-        (911, 'Die Datenbank "x" ist nicht vorhanden.', "Database not found or not accessible"),
-        (18456, "Fehler bei der Anmeldung für den Benutzer 'y'.", "Authentication failed"),
-        (229, "Die SELECT-Berechtigung wurde für das Objekt 'x' verweigert.", "Insufficient privileges"),
-        (297, "Der Benutzer hat keine Berechtigung zum Ausführen dieser Aktion.", "Insufficient privileges"),
-        (300, "Die VIEW SERVER STATE-Berechtigung wurde verweigert.", "Insufficient privileges"),
+        (((18456, "Fehler bei der Anmeldung für den Benutzer 'y'."),), "Authentication failed"),
+        (((229, "Die SELECT-Berechtigung wurde für das Objekt 'x' verweigert."),), "Insufficient privileges"),
+        (
+            (
+                (300, "Die VIEW SERVER STATE-Berechtigung wurde verweigert."),
+                (297, "Der Benutzer hat keine Berechtigung zum Ausführen dieser Aktion."),
+            ),
+            "Insufficient privileges",
+        ),
     ],
 )
-def test_error_numbers_classify_independently_of_message_text(number, localized_message, title):
-    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(number, localized_message)))
-    assert diagnosis is not None, f"error {number} is unbound: no rule matched"
+def test_error_numbers_classify_independently_of_message_text(messages, title):
+    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(*messages)))
+    assert diagnosis is not None, "unbound: no rule matched"
     assert diagnosis.title == title
+
+
+def test_a_localized_missing_database_has_no_number_to_key_on():
+    """The documented limitation, pinned so nobody re-adds a 4060 rule expecting it
+    to fire. pytds reports the [4060, 18456] pair's number as 18456, so on a
+    non-English server a missing database is diagnosed as an auth failure. English
+    survives only via the "Cannot open database" text rule."""
+    localized = (
+        (4060, 'Die Datenbank "x" kann nicht geöffnet werden. Fehler bei der Anmeldung.'),
+        (18456, "Fehler bei der Anmeldung für den Benutzer 'y'."),
+    )
+    error = _wrapped(_pytds_error(*localized))
+
+    assert _mssql_number(error) == 18456
+    assert MSSQL_ERRORS.classify(error).title == "Authentication failed"
 
 
 def test_pymssql_tuple_shape_classifies_by_number():
@@ -246,7 +312,7 @@ def test_pymssql_tuple_shape_classifies_by_number():
 
 
 def test_pytds_login_failure_classifies_as_auth():
-    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(18456, "Login failed for user 'x'.")))
+    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(*_BAD_PASSWORD)))
     assert diagnosis is not None
     assert diagnosis.title == "Authentication failed"
 
@@ -259,7 +325,7 @@ def test_pyodbc_login_failure_classifies_as_auth_on_message_text():
 
 
 def test_pytds_database_not_found_classifies():
-    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(4060, 'Cannot open database "x" requested by the login.')))
+    diagnosis = MSSQL_ERRORS.classify(_wrapped(_pytds_error(*_MISSING_DATABASE)))
     assert diagnosis is not None
     assert diagnosis.title == "Database not found or not accessible"
 
@@ -271,20 +337,18 @@ def test_pyodbc_cannot_open_database_classifies():
 
 
 def test_cannot_open_database_wins_over_login_failed():
-    """The SQL Server 4060 message embeds 'The login failed.', so the database
-    rule must be ordered before the login rule (regression for live-found bug).
+    """4060's text ends "The login failed." and pytds appends "Login failed for
+    user ..." - and the number is 18456. Both signals point at auth; only rule order
+    saves this case."""
+    error = _wrapped(_pytds_error(*_MISSING_DATABASE))
 
-    pytds makes this sharper than the message alone: on a 4060 it joins every
-    server message into the text, so the real error reads "Cannot open database
-    ... The login failed." followed by "Login failed for user ..."
-    (pytds/tds_session.py, ``raise_db_exception``).
-    """
-    joined = "Cannot open database \"x\" requested by the login. The login failed. Login failed for user 'y'."
-    assert MSSQL_ERRORS.classify(_wrapped(_pytds_error(4060, joined))).title == "Database not found or not accessible"
+    assert "Login failed for user" in str(error)
+    assert _mssql_number(error) == 18456
+    assert MSSQL_ERRORS.classify(error).title == "Database not found or not accessible"
 
 
 def test_pytds_permission_denied_classifies():
-    error = _wrapped(_pytds_error(229, "The SELECT permission was denied on the object 'x'."))
+    error = _wrapped(_pytds_error(*_DENIED_SELECT))
     diagnosis = MSSQL_ERRORS.classify(error)
     assert diagnosis is not None
     assert diagnosis.title == "Insufficient privileges"
@@ -297,11 +361,10 @@ def test_pyodbc_permission_denied_classifies():
 
 
 def test_statement_permission_denied_is_not_diagnosed():
-    """262 is a statement permission (CREATE DATABASE / CREATE TABLE / SHOWPLAN).
-    test-connection only issues SELECTs, so it must not be claimed here - and its
-    real text says "permission denied", not "permission was denied", so it does not
-    fall into the message rule either."""
-    error = _wrapped(_pytds_error(262, "CREATE DATABASE permission denied in database 'master'."))
+    """262 is a statement permission (CREATE DATABASE / TABLE / SHOWPLAN); these
+    checks only SELECT. Its text says "permission denied", not "permission was
+    denied", so the message rule misses it too."""
+    error = _wrapped(_pytds_error((262, "CREATE DATABASE permission denied in database 'master'.")))
     assert MSSQL_ERRORS.classify(error) is None
 
 
@@ -322,36 +385,18 @@ def test_unknown_error_is_not_classified():
 # assert on the TestConnectionResult the backend and UI actually consume.
 
 
-def _step(name: str, mandatory: bool, category: Category | None = None) -> TestConnectionStep:
-    # description is required by the schema but the runner never reads it.
-    return TestConnectionStep(
-        name=name,
-        description=name,
-        mandatory=mandatory,
-        shortCircuit=category is Category.ConnectionGate,
-        category=category,
-    )
+MSSQL_DEFINITION_JSON = (
+    Path(__file__).parents[6] / "openmetadata-service/src/main/resources/json/data/testConnections/database/mssql.json"
+)
 
 
 def _mssql_definition() -> TestConnectionDefinition:
-    """The MSSQL definition as shipped.
+    """The MSSQL definition the server seeds, loaded from the resource itself.
 
-    Step names, order, gate category and mandatory flags are taken from
-    openmetadata-service/src/main/resources/json/data/testConnections/database/
-    mssql.json - the file the server seeds and the runner fetches at run time - so
-    this exercises the real production shape.
+    Read rather than transcribed so step order, gate category and mandatory flags
+    cannot drift from what production runs.
     """
-    return TestConnectionDefinition(
-        name="Mssql",
-        steps=[
-            _step("CheckAccess", mandatory=True, category=Category.ConnectionGate),
-            _step("GetDatabases", mandatory=True),
-            _step("GetSchemas", mandatory=True),
-            _step("GetTables", mandatory=True),
-            _step("GetViews", mandatory=False),
-            _step("GetQueries", mandatory=False),
-        ],
-    )
+    return TestConnectionDefinition.model_validate_json(MSSQL_DEFINITION_JSON.read_text())
 
 
 def _run_against(engine) -> TestConnectionResult:
@@ -385,7 +430,7 @@ def _engine_failing_with(error: Exception) -> Engine:
 
 
 def test_bad_login_fails_the_whole_test_with_an_auth_diagnosis():
-    result = _run_against(_engine_failing_with(_pytds_error(18456, "Login failed for user 'x'.")))
+    result = _run_against(_engine_failing_with(_pytds_error(*_BAD_PASSWORD)))
 
     assert result.status.value == "Failed"
     gate = result.steps[0]
@@ -397,7 +442,7 @@ def test_bad_login_fails_the_whole_test_with_an_auth_diagnosis():
 
 
 def test_a_failed_gate_short_circuits_every_later_step():
-    result = _run_against(_engine_failing_with(_pytds_error(18456, "Login failed for user 'x'.")))
+    result = _run_against(_engine_failing_with(_pytds_error(*_BAD_PASSWORD)))
 
     later = result.steps[1:]
     assert [step.status.value for step in later] == ["Skipped"] * 5
@@ -405,20 +450,23 @@ def test_a_failed_gate_short_circuits_every_later_step():
 
 
 def test_missing_database_is_reported_as_a_database_problem_not_an_auth_one():
-    """4060's real text embeds "The login failed.", so this is the case a naive
-    message-ordering gets wrong; it must reach the user as a database diagnosis."""
-    joined = "Cannot open database \"x\" requested by the login. The login failed. Login failed for user 'y'."
-    result = _run_against(_engine_failing_with(_pytds_error(4060, joined)))
+    """Both of 4060's signals point at auth - the joined text ends "Login failed for
+    user ..." and the number is 18456 - so only rule order gets this right."""
+    result = _run_against(_engine_failing_with(_pytds_error(*_MISSING_DATABASE)))
 
     assert result.status.value == "Failed"
     assert result.steps[0].diagnosis.title == "Database not found or not accessible"
 
 
-def test_localized_server_still_produces_a_diagnosis_at_the_api_level():
-    """End-to-end proof the number, not the English text, drives the diagnosis."""
-    result = _run_against(_engine_failing_with(_pytds_error(18456, "Fehler bei der Anmeldung.")))
+def test_a_localized_permission_denial_is_diagnosed_at_the_api_level():
+    """End-to-end proof a number, not the English text, can drive the diagnosis."""
+    localized = (
+        (300, "Die VIEW SERVER STATE-Berechtigung wurde verweigert."),
+        (297, "Der Benutzer hat keine Berechtigung zum Ausführen dieser Aktion."),
+    )
+    result = _run_against(_engine_failing_with(_pytds_error(*localized)))
 
-    assert result.steps[0].diagnosis.title == "Authentication failed"
+    assert result.steps[0].diagnosis.title == "Insufficient privileges"
 
 
 def test_an_unclassified_failure_still_reports_its_raw_error_log():
