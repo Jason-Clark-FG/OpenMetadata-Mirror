@@ -164,6 +164,23 @@ class AirflowApiClient:
         response = self.client.get(f"{self._prefix}/version")
         return self._parse_response(response)
 
+    def test_get_version(self) -> dict:
+        """Read the version, raising on anything that is not an Airflow JSON reply.
+
+        The test-connection gate's accessor. ``get_version`` is deliberately lenient
+        - ingestion must survive a version probe it cannot parse - but that leniency
+        makes it useless as a gate: a host that is not Airflow answers 200 text/html,
+        which ``_parse_response`` swallows into ``{}``, and the gate passes. Uses
+        ``get_raw`` so the status is preserved and ``JSONDecodeError`` escapes to the
+        classifier, mirroring dbt Cloud's ``_test_get``.
+        """
+        if self.mwaa_client:
+            return self.mwaa_client.get_version()
+
+        response = self.client.get_raw(f"{self._prefix}/version")
+        response.raise_for_status()
+        return response.json()
+
     def list_dags(self, limit: int = 100, offset: int = 0) -> dict:
         if self.mwaa_client:
             return self.mwaa_client.list_dags(limit=limit, offset=offset)

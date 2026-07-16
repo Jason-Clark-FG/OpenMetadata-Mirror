@@ -13,6 +13,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from requests.exceptions import ConnectionError as RequestsConnectionError
 from requests.exceptions import HTTPError, JSONDecodeError, SSLError, Timeout
 from sqlalchemy import create_engine
@@ -24,6 +25,14 @@ from metadata.core.connections.test_connection import collect_checks
 from metadata.core.connections.test_connection.check import CheckError
 from metadata.core.connections.test_connection.checks.pipeline import PipelineStep
 from metadata.core.connections.test_connection.network import NetworkUnreachableError
+from metadata.generated.schema.entity.services.connections.pipeline.airflowConnection import (
+    AirflowConnection as AirflowConnectionConfig,
+)
+from metadata.generated.schema.entity.utils.airflowRestApiConnection import (
+    AirflowRestApiConnection,
+    ApiVersion,
+)
+from metadata.generated.schema.entity.utils.common.accessTokenConfig import AccessToken
 from metadata.ingestion.connections.connection import BaseConnection
 from metadata.ingestion.source.pipeline.airflow.api.client import AirflowApiClient
 from metadata.ingestion.source.pipeline.airflow.connection import (
@@ -107,20 +116,23 @@ def test_checks_borrow_the_connection_client():
 
 
 @patch("metadata.core.connections.test_connection.network.tcp_probe")
-def test_rest_check_access_reads_the_version(_mock_probe):
+def test_rest_check_access_reads_the_version_via_the_strict_accessor(_mock_probe):
+    """The gate must read the version through test_get_version, not get_version:
+    the latter tolerates an unparseable reply and would pass against any host."""
     client = _rest_client()
-    client.get_version.return_value = {"version": "2.9.0"}
+    client.test_get_version.return_value = {"version": "2.9.0"}
 
     evidence = _rest_checks(client).check_access()
 
-    client.get_version.assert_called_once_with()
+    client.test_get_version.assert_called_once_with()
+    client.get_version.assert_not_called()
     assert evidence.summary == "authenticated"
 
 
 @patch("metadata.core.connections.test_connection.network.tcp_probe")
 def test_rest_check_access_failure_reports_a_check_error(_mock_probe):
     client = _rest_client()
-    client.get_version.side_effect = RuntimeError("transport closed")
+    client.test_get_version.side_effect = RuntimeError("transport closed")
 
     with (
         patch(
@@ -179,6 +191,102 @@ def test_rest_task_detail_access_is_a_noop_pass():
     evidence = _rest_checks(client).task_detail_access()
 
     assert "per-DAG" in evidence.summary
+
+
+# ── REST path, driving the real AirflowApiClient ─────────────────────────────
+#
+# The tests above mock AirflowApiClient wholesale, so they prove only that the
+# provider calls it - never that the client surfaces a non-Airflow host. These
+# drive the real client (and the real REST plumbing under it) by stubbing only
+# the outermost seam, requests.Session.request.
+
+
+def _real_rest_client(host="https://airflow.example.com:8080") -> AirflowApiClient:
+    """A real AirflowApiClient. apiVersion is pinned so the gate makes exactly one
+    HTTP call and the test is not coupled to version auto-detection."""
+    config = AirflowConnectionConfig(
+        hostPort=host,
+        connection=AirflowRestApiConnection(
+            authConfig=AccessToken(token="a-token"),
+            apiVersion=ApiVersion.v2,
+        ),
+    )
+    return AirflowApiClient(config)
+
+
+def _html_response(status_code: int = 200) -> requests.Response:
+    """A real requests.Response carrying an HTML body.
+
+    What a host that is not the Airflow REST API (an SSO login page, a marketing
+    site, a reverse proxy) actually answers with: HTTP 200 and text/html. Built as
+    a real Response so response.json() raises the genuine
+    requests.exceptions.JSONDecodeError rather than a fabricated stand-in.
+    """
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = b"<!doctype html><html><body>Sign in</body></html>"
+    response.headers["content-type"] = "text/html; charset=utf-8"
+    response.url = "https://airflow.example.com:8080/api/v2/version"
+    return response
+
+
+@patch("metadata.core.connections.test_connection.network.tcp_probe")
+def test_rest_gate_fails_against_a_host_that_is_not_airflow(_mock_probe):
+    """Regression: a 200 text/html reply must fail the gate.
+
+    ometa's REST.get returns the raw Response when the body will not decode as
+    JSON; the Airflow client's _parse_response then swallowed that into {}, so
+    check_access saw an empty dict, did not raise, and the gate went GREEN against
+    any web server. The gate must fail, and the JSONDecodeError rule must fire.
+    """
+    client = _real_rest_client()
+
+    with (
+        patch.object(requests.Session, "request", return_value=_html_response()),
+        pytest.raises(CheckError) as failure,
+    ):
+        _rest_checks(client).check_access()
+
+    assert AIRFLOW_ERRORS.classify(failure.value.cause).title == "Host is not the Airflow REST API"
+
+
+@patch("metadata.core.connections.test_connection.network.tcp_probe")
+def test_rest_gate_passes_against_a_real_airflow_version_payload(_mock_probe):
+    """The counterpart: a genuine Airflow /version JSON body still passes the gate."""
+    client = _real_rest_client()
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b'{"version": "2.9.0", "git_version": "abc"}'
+    response.headers["content-type"] = "application/json"
+
+    with patch.object(requests.Session, "request", return_value=response):
+        evidence = _rest_checks(client).check_access()
+
+    assert evidence.summary == "authenticated"
+
+
+@patch("metadata.core.connections.test_connection.network.tcp_probe")
+def test_rest_gate_fails_on_an_unauthorized_reply(_mock_probe):
+    """A 401 from the real client must fail the gate and diagnose as auth."""
+    client = _real_rest_client()
+
+    with (
+        patch.object(requests.Session, "request", return_value=_html_response(status_code=401)),
+        pytest.raises(CheckError) as failure,
+    ):
+        _rest_checks(client).check_access()
+
+    assert AIRFLOW_ERRORS.classify(failure.value.cause).title == "Authentication failed"
+
+
+def test_ingestion_get_version_still_tolerates_a_non_json_reply():
+    """get_version is on the ingestion path and must keep its lenient behaviour;
+    only the test-connection accessor is strict. Guards against the fix being
+    applied to the wrong method."""
+    client = _real_rest_client()
+
+    with patch.object(requests.Session, "request", return_value=_html_response()):
+        assert client.get_version() == {}
 
 
 # ── Backend (metadata-DB) path ───────────────────────────────────────────────
