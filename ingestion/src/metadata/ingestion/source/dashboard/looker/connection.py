@@ -35,9 +35,10 @@ from metadata.core.connections.test_connection.checks.dashboard import Dashboard
 from metadata.core.connections.test_connection.checks.rest import (
     call_endpoint,
     fetch_list,
+    http_status,
     verify_access,
 )
-from metadata.core.connections.test_connection.classifier import exception_chain, http_status
+from metadata.core.connections.test_connection.classifier import chain_text, exception_chain
 from metadata.generated.schema.entity.services.connections.dashboard.lookerConnection import (
     LookerConnection as LookerConnectionConfig,
 )
@@ -126,7 +127,7 @@ def _transport_text(*tokens: str) -> Matcher:
     def match(error: BaseException) -> bool:
         if _has_error_doc(error):
             return False
-        chain = Matchers.text(error)
+        chain = chain_text(error)
         return any(token in chain for token in lowered)
 
     return match
