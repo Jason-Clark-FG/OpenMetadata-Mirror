@@ -364,7 +364,7 @@ jobs:
       - name: Send Slack — header
         id: send-header
         if: env.SEND_SLACK_NOTIFICATION == 'true'
-        uses: slackapi/slack-github-action@v1.27.1
+        uses: slackapi/slack-github-action@v3.0.3
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_IDS }}
           payload-file-path: header.json
@@ -419,7 +419,7 @@ jobs:
 
       - name: Send Slack — thread reply
         if: always() && env.SEND_SLACK_NOTIFICATION == 'true' && steps.send-header.outputs.ts != '' && steps.build-thread.outcome == 'success'
-        uses: slackapi/slack-github-action@v1.27.1
+        uses: slackapi/slack-github-action@v3.0.3
         with:
           channel-id: ${{ secrets.SLACK_CHANNEL_IDS }}
           payload-file-path: thread.json

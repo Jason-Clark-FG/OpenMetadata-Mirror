@@ -234,7 +234,7 @@ jobs:
 
     - name: Slack on Failure
       if: (steps.e2e-test.outcome == 'failure' || steps.python-unittest.outcome == 'failure' || steps.python-integration-test.outcome == 'failure') && env.DEBUG == 'false'
-      uses: slackapi/slack-github-action@v1.23.0
+      uses: slackapi/slack-github-action@v3.0.3
       with:
         payload: |
           {
