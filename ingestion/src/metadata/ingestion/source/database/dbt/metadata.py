@@ -84,6 +84,7 @@ from metadata.ingestion.models.patch_request import PatchedEntity, PatchRequest
 from metadata.ingestion.models.table_metadata import ColumnDescription
 from metadata.ingestion.ometa.client import APIError
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
+from metadata.ingestion.ometa.utils import model_str
 from metadata.ingestion.source.database.column_type_parser import ColumnTypeParser
 from metadata.ingestion.source.database.database_service import DataModelLink
 from metadata.ingestion.source.database.dbt.constants import (
@@ -1176,7 +1177,7 @@ class DbtSource(DbtServiceSource):
                         upstream_node,
                         f"dbt lineage edge dropped: upstream table '{upstream_node}' was not "
                         f"returned by OpenMetadata, so no edge was created to "
-                        f"'{to_entity.fullyQualifiedName.root}'. Either the table has not been "
+                        f"'{model_str(to_entity.fullyQualifiedName)}'. Either the table has not been "
                         "ingested or the lookup itself failed - check the logs above for a "
                         "search or API error. Further models referencing this upstream are not "
                         "reported again.",
