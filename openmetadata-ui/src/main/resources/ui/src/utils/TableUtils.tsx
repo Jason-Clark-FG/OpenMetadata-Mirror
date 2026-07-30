@@ -62,7 +62,6 @@ import { ReactComponent as IconRight } from '../assets/svg/ic-arrow-right.svg';
 import { ReactComponent as DataQualityIcon } from '../assets/svg/ic-data-contract.svg';
 import { ReactComponent as GovernanceIcon } from '../assets/svg/ic-governance.svg';
 import { ReactComponent as PersonaIcon } from '../assets/svg/ic-personas.svg';
-import { ReactComponent as PipelineIcon } from '../assets/svg/ic-pipeline.svg';
 import { ReactComponent as TeamIcon } from '../assets/svg/ic-teams.svg';
 import { ReactComponent as IconDistLineThrough } from '../assets/svg/icon-dist-line-through.svg';
 import { ReactComponent as IconDistKey } from '../assets/svg/icon-distribution.svg';
@@ -314,7 +313,7 @@ const entityIconMapping: Record<string, ElementType> = {
   [EntityType.POLICY]: PolicyIcon,
   [EntityType.EVENT_SUBSCRIPTION]: AlertIcon,
   [EntityType.USER]: UserIcon,
-  [EntityType.INGESTION_PIPELINE]: PipelineIcon,
+  [EntityType.INGESTION_PIPELINE]: ENTITY_ICON_MAPPER[EntityType.AUDIT_REPORT].icon,
   [EntityType.ALERT]: AlertIcon,
   [EntityType.KPI]: KPIIcon,
   ['tagCategory']: ClassificationIcon,
@@ -329,6 +328,8 @@ const entityIconMapping: Record<string, ElementType> = {
   [EntityType.MCP_SERVICE]: ENTITY_ICON_MAPPER[EntityType.MCP_SERVICE].icon,
   ['aiFrameworkControl']: ENTITY_ICON_MAPPER['aiFrameworkControl'].icon,
   ['aiGovernancePolicy']: ENTITY_ICON_MAPPER['aiGovernancePolicy'].icon,
+  ['aiGovernanceFramework']: ENTITY_ICON_MAPPER['aiGovernanceFramework'].icon,
+  [EntityType.AUDIT_REPORT]: ENTITY_ICON_MAPPER[EntityType.AUDIT_REPORT].icon,
   [EntityType.API_ENDPOINT]: ENTITY_ICON_MAPPER[EntityType.API_ENDPOINT].icon,
   [EntityType.METRIC]: ENTITY_ICON_MAPPER[EntityType.METRIC].icon,
   [EntityType.API_SERVICE]: ENTITY_ICON_MAPPER[EntityType.API_SERVICE].icon,
