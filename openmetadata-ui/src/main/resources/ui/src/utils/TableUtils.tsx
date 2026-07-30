@@ -313,7 +313,8 @@ const entityIconMapping: Record<string, ElementType> = {
   [EntityType.POLICY]: PolicyIcon,
   [EntityType.EVENT_SUBSCRIPTION]: AlertIcon,
   [EntityType.USER]: UserIcon,
-  [EntityType.INGESTION_PIPELINE]: ENTITY_ICON_MAPPER[EntityType.AUDIT_REPORT].icon,
+  [EntityType.INGESTION_PIPELINE]:
+    ENTITY_ICON_MAPPER[EntityType.AUDIT_REPORT].icon,
   [EntityType.ALERT]: AlertIcon,
   [EntityType.KPI]: KPIIcon,
   ['tagCategory']: ClassificationIcon,
