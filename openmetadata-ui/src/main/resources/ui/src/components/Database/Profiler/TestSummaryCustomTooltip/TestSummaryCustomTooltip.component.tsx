@@ -23,15 +23,18 @@ import { Link } from 'react-router-dom';
 import { GREEN_3, RED_3 } from '../../../../constants/Color.constants';
 import { TABLE_FRESHNESS_KEY } from '../../../../constants/TestSuite.constant';
 import { Thread } from '../../../../generated/entity/feed/thread';
+import { Task } from '../../../../generated/entity/tasks/task';
 import { TestCaseStatus } from '../../../../generated/tests/testCase';
-import { TestCasePageTabs } from '../../../../pages/IncidentManager/IncidentManager.interface';
 import {
   convertSecondsToHumanReadableFormat,
   formatDateTime,
 } from '../../../../utils/date-time/DateTimeUtils';
 import { formatNumberWithComma } from '../../../../utils/NumberUtils';
-import observabilityRouterClassBase from '../../../../utils/ObservabilityRouterClassBase';
-import { getTaskDetailPath } from '../../../../utils/TaskNavigationUtils';
+import {
+  getTaskDetailPath,
+  getTaskDetailPathFromTask,
+  getTaskDisplayId,
+} from '../../../../utils/TaskNavigationUtils';
 import { OwnerLabel } from '../../../common/OwnerLabel/OwnerLabel.component';
 import './test-summary-custom-tooltip.less';
 
@@ -40,7 +43,6 @@ const OMITTED_TOOLTIP_PAYLOAD_KEYS = [
   'status',
   'incidentId',
   'task',
-  'testCaseFqn',
   'passedRows',
   'failedRows',
   'boundArea',
@@ -52,13 +54,34 @@ function isThread(value: unknown): value is Thread {
 
 interface TestSummaryCustomTooltipProps {
   active?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   payload?: Array<{ payload: Record<string, unknown> }>;
-  testCaseFqn?: string;
 }
+
+const getIncidentDetails = (task?: Task | Thread) => {
+  if (!task) {
+    return {};
+  }
+
+  if (isThread(task)) {
+    return {
+      incidentDisplayId: task.task?.id,
+      incidentPath: getTaskDetailPath(task),
+      incidentAssignees: task.task?.assignees,
+    };
+  }
+
+  return {
+    incidentDisplayId: getTaskDisplayId(task.taskId),
+    incidentPath: getTaskDetailPathFromTask(task),
+    incidentAssignees: task.assignees,
+  };
+};
 
 const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
   const { t } = useTranslation();
-  const { active, payload = [], testCaseFqn: testCaseFqnProp } = props;
+  const { active, onMouseEnter, onMouseLeave, payload = [] } = props;
 
   const state = useMemo(() => {
     if (payload.length === 0) {
@@ -86,8 +109,7 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
       status,
       passedRows,
       failedRows,
-      incidentId: payloadData.incidentId as string | undefined,
-      task: payloadData.task as Thread | undefined,
+      task: payloadData.task as Task | Thread | undefined,
       totalRows,
       formattedDateTime,
       statusColor,
@@ -135,16 +157,21 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
     status,
     passedRows,
     failedRows,
-    incidentId,
     task,
     totalRows,
     formattedDateTime,
     statusColor,
     data,
   } = state;
+  const { incidentDisplayId, incidentPath, incidentAssignees } =
+    getIncidentDetails(task);
 
   return (
-    <Card>
+    <Card
+      className="test-summary-tooltip"
+      data-testid="test-summary-tooltip"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}>
       <div className="test-summary-tooltip-container">
         {/* Date and time at the top */}
         <div className="tooltip-date-time">{formattedDateTime}</div>
@@ -168,7 +195,7 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
             </Typography>
           </li>
           {/* Incident (from task) */}
-          {task?.task && (
+          {incidentDisplayId && incidentPath && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
               <Typography
                 as="span"
@@ -181,36 +208,9 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
                 data-testid="incident">
                 <Link
                   className="tooltip-incident-link font-medium cursor-pointer"
-                  to={getTaskDetailPath(task)}>
-                  {`#${task.task.id}`}
+                  to={incidentPath}>
+                  {`#${incidentDisplayId}`}
                 </Link>
-              </Typography>
-            </li>
-          )}
-          {/* Incident ID (if task not present) - show as link when testCaseFqn available */}
-          {incidentId && !task?.task && (
-            <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
-              <Typography
-                as="span"
-                className="flex items-center text-grey-muted">
-                {t('label.incident')}
-              </Typography>
-              <Typography
-                as="span"
-                className="font-medium"
-                data-testid="incident">
-                {testCaseFqnProp ? (
-                  <Link
-                    className="tooltip-incident-link font-medium cursor-pointer"
-                    to={observabilityRouterClassBase.getTestCaseDetailPagePath(
-                      testCaseFqnProp,
-                      TestCasePageTabs.ISSUES
-                    )}>
-                    {`#${incidentId}`}
-                  </Link>
-                ) : (
-                  `#${incidentId}`
-                )}
               </Typography>
             </li>
           )}
@@ -255,7 +255,7 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
             tooltipRender(entry as [string, string | number | Thread])
           )}
           {/* Assignee (at the bottom) */}
-          {task?.task && (
+          {incidentAssignees && (
             <li className="d-flex items-center justify-between gap-6 p-b-xss text-sm">
               <Typography
                 as="span"
@@ -266,7 +266,7 @@ const TestSummaryCustomTooltip = (props: TestSummaryCustomTooltipProps) => {
                 as="span"
                 className="font-medium"
                 data-testid="assignee">
-                <OwnerLabel owners={task.task.assignees} />
+                <OwnerLabel owners={incidentAssignees} />
               </Typography>
             </li>
           )}

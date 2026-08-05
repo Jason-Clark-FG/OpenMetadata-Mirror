@@ -17,6 +17,7 @@ import { TestCaseChartDataType } from '../../components/Database/Profiler/Profil
 import { GREEN_3, RED_3, YELLOW_2 } from '../../constants/Color.constants';
 import { COLORS } from '../../constants/profiler.constant';
 import { Thread } from '../../generated/entity/feed/thread';
+import { Task } from '../../generated/entity/tasks/task';
 import {
   TestCaseParameterValue,
   TestCaseResult,
@@ -32,14 +33,14 @@ export type PrepareChartDataType = {
   testCaseParameterValue: TestCaseParameterValue[];
   testCaseResults: TestCaseResult[];
   entityThread: Thread[];
-  testCaseFqn?: string;
+  tasks?: Task[];
 };
 
 export const prepareChartData = ({
   testCaseParameterValue,
   testCaseResults,
   entityThread,
-  testCaseFqn,
+  tasks = [],
 }: PrepareChartDataType) => {
   // Bond will only be shown if params length is 2 and both values are present
   const params =
@@ -91,9 +92,11 @@ export const prepareChartData = ({
       ...omitBy(metric, isUndefined),
       boundArea,
       incidentId: result.incidentId,
-      task: entityThread.find(
-        (task) => task.task?.testCaseResolutionStatusId === result.incidentId
-      ),
+      task:
+        tasks.find((task) => task.id === result.incidentId) ??
+        entityThread.find(
+          (task) => task.task?.testCaseResolutionStatusId === result.incidentId
+        ),
     });
   });
 
@@ -115,7 +118,6 @@ export const prepareChartData = ({
     })),
     data: dataPoints,
     showAILearningBanner,
-    testCaseFqn,
   };
 };
 
