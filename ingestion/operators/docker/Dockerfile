@@ -196,9 +196,32 @@ RUN pip install psycopg2 mysqlclient==2.1.1
 # though mysqlclient's compiled extension links against them at runtime.
 # apt-mark manual pins them before autoremove runs so the cleanup doesn't take
 # them out too -- verified end-to-end by the `import MySQLdb` gate check.
+#
+# The C build toolchain (build-essential, gcc/g++, libc6-dev, ...) is also
+# build-time only: every C extension in this image (mysqlclient, cx_Oracle,
+# confluent_kafka, etc.) is already compiled by this point. Keeping it around
+# only serves linux-libc-dev -- the kernel headers -- which alone carries
+# ~41 CVEs describing kernel bugs a container never executes (it runs on the
+# host kernel, not its own). `apt-get purge linux-libc-dev` cannot be scoped
+# to that one package: libc6-dev depends on it, so apt cascades through
+# gcc/g++/build-essential, which is why the whole chain is named explicitly
+# below. The apt-mark manual list has grown to match: purging these -dev/
+# toolchain packages orphans their runtime siblings (ODBC, FreeTDS, Kerberos,
+# SASL, Postgres, libaio, libxml2, OpenSSL, expat, msodbcsql18) and
+# autoremove would sweep them too -- this already broke `import MySQLdb` once
+# in this PR. Consequence to state plainly: wheels (pure-Python and binary)
+# still install at runtime, but source distributions that compile C no
+# longer can.
 USER root
-RUN apt-get -qq purge -y libmariadb-dev libmariadb-dev-compat libunbound8 \
-  && apt-mark manual libmariadb3 mariadb-common \
+RUN apt-get -qq purge -y \
+      libmariadb-dev libmariadb-dev-compat libunbound8 \
+      build-essential gcc g++ gcc-14 g++-14 libc6-dev linux-libc-dev \
+      libstdc++-14-dev libgcc-14-dev libcrypt-dev rpcsvc-proto comerr-dev \
+  && apt-mark manual \
+      libmariadb3 mariadb-common libodbc2 odbcinst unixodbc-common \
+      libsybdb5 freetds-bin tdsodbc libkrb5-3 libsasl2-2 \
+      libsasl2-modules-gssapi-mit libpq5 libaio1t64 libxml2 libssl3t64 \
+      libexpat1 msodbcsql18 \
   && apt-get -qq autoremove -y --purge \
   && rm -rf /var/lib/apt/lists/*
 USER openmetadata

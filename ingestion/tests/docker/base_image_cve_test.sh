@@ -139,6 +139,26 @@ r="$(in_image 'git --version >/dev/null 2>&1 && echo ok || echo broken')"
 r="$(in_image 'metadata --help >/dev/null 2>&1 && echo ok || echo broken')"
 [ "$r" = "ok" ] && pass "metadata cli" || fail "metadata cli (${r:-no output})"
 
+echo "== toolchain purge =="
+# The PII processor (ingestion/src/metadata/pii/algorithms/presidio_utils.py:146-157)
+# calls spacy.cli.download at runtime to fetch en_core_web_md, which is a pip
+# install of a wheel run as the non-root runtime user. Purging the C build
+# toolchain must not break that path. A small pure-Python wheel exercises the
+# same mechanism cheaply -- downloading the real ~40MB spacy model here would
+# be redundant, the controller already verified that end-to-end separately.
+r="$(in_image 'pip install --user -q --no-warn-script-location six >/dev/null 2>&1 && python -c "import six" >/dev/null 2>&1 && echo ok || echo broken')"
+[ "$r" = "ok" ] && pass "runtime wheel install still works (spacy-model download path)" || fail "runtime wheel install broken (${r:-no output})"
+
+# Regression guard: nobody should silently re-add the build toolchain. Use
+# dpkg-query -W plus `cut -f2` as above -- not -f/--showformat, whose
+# ${Version} placeholder gets eaten by the nested host-shell -> docker ->
+# container-bash quoting layers.
+r="$(in_image 'command -v gcc >/dev/null 2>&1 && echo present || echo absent')"
+[ "$r" = "absent" ] && pass "gcc not on PATH" || fail "gcc still on PATH"
+
+r="$(in_image 'dpkg-query -W linux-libc-dev 2>/dev/null | cut -f2')"
+[ -z "$r" ] && pass "linux-libc-dev not installed" || fail "linux-libc-dev still installed (${r})"
+
 echo "---"
 if [ "$FAILURES" -ne 0 ]; then
   echo "${FAILURES} check(s) failed for ${IMAGE}"
