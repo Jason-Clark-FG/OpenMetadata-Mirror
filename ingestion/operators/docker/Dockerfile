@@ -212,6 +212,25 @@ RUN pip install psycopg2 mysqlclient==2.1.1
 # in this PR. Consequence to state plainly: wheels (pure-Python and binary)
 # still install at runtime, but source distributions that compile C no
 # longer can.
+#
+# librdkafka1/librdkafka++1 are swept by the same autoremove and are
+# deliberately NOT added to the apt-mark manual list above. librdkafka-dev is
+# force-removed as a reverse dependency of libc6-dev, which leaves the two
+# runtime libraries orphaned -- but nothing in this image links them: the
+# confluent-kafka wheel from PyPI bundles its own private copy (confirmed
+# with `ldd` on confluent_kafka.cimpl, which resolves to
+# confluent_kafka.libs/librdkafka-*.so.1, not the system package). Pinning
+# them would keep CVE-bearing packages for no runtime benefit, so they are
+# allowed to go. Caveat: the `import confluent_kafka` gate check below passes
+# because of the bundled library and would NOT catch a regression here (an
+# architecture without a wheel, an sdist fallback, or a future release that
+# links the system library instead).
+#
+# Downstream images that build FROM this one also lose compiler access --
+# this was verified safe for the one known downstream consumer: its added
+# extras all install from wheels, `cmdstanpy` is a declared dependency that
+# is never imported, and `prophet` ships a precompiled Stan binary rather
+# than building one.
 USER root
 RUN apt-get -qq purge -y \
       libmariadb-dev libmariadb-dev-compat libunbound8 \

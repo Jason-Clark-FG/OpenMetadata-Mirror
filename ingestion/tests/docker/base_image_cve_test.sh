@@ -146,8 +146,17 @@ echo "== toolchain purge =="
 # toolchain must not break that path. A small pure-Python wheel exercises the
 # same mechanism cheaply -- downloading the real ~40MB spacy model here would
 # be redundant, the controller already verified that end-to-end separately.
-r="$(in_image 'pip install --user -q --no-warn-script-location six >/dev/null 2>&1 && python -c "import six" >/dev/null 2>&1 && echo ok || echo broken')"
-[ "$r" = "ok" ] && pass "runtime wheel install still works (spacy-model download path)" || fail "runtime wheel install broken (${r:-no output})"
+# Probe reachability separately from the install so a network-unreachable
+# sandbox and an actual purge regression don't collapse into the same
+# failure message -- the install failing closed here is correct either way,
+# this only affects how it's triaged.
+net="$(in_image 'pip install --user -q --no-warn-script-location --dry-run six >/dev/null 2>&1 && echo ok || echo unreachable')"
+if [ "$net" != "ok" ]; then
+  fail "runtime wheel install: network unreachable, result inconclusive"
+else
+  r="$(in_image 'pip install --user -q --no-warn-script-location six >/dev/null 2>&1 && python -c "import six" >/dev/null 2>&1 && echo ok || echo broken')"
+  [ "$r" = "ok" ] && pass "runtime wheel install still works (spacy-model download path)" || fail "runtime wheel install broken (purge regression?)"
+fi
 
 # Regression guard: nobody should silently re-add the build toolchain. Use
 # dpkg-query -W plus `cut -f2` as above -- not -f/--showformat, whose
