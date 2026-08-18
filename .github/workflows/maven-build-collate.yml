@@ -75,6 +75,25 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
+      # Collate tracks each OpenMetadata release line on an identically named
+      # branch, so a PR must be validated against the Collate branch matching
+      # its base branch. Building a 1.13 PR against Collate main fails on code
+      # that only exists in the other line.
+      - name: Resolve the Collate branch to build
+        id: collate-branch
+        env:
+          GH_TOKEN: ${{ secrets.COLLATE_PAT }}
+          BASE_BRANCH: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          COLLATE_REF="$BASE_BRANCH"
+          if ! gh api "repos/open-metadata/openmetadata-collate/branches/$COLLATE_REF" --silent; then
+            echo "::warning::No openmetadata-collate branch '$COLLATE_REF'; falling back to main."
+            COLLATE_REF=main
+          fi
+          echo "Building Collate on '$COLLATE_REF' for base branch '$BASE_BRANCH'."
+          echo "ref=$COLLATE_REF" >> "$GITHUB_OUTPUT"
+
       - name: Trigger Collate build & wait
         uses: the-actions-org/workflow-dispatch@v4
         env:
@@ -82,7 +101,7 @@ jobs:
           SHA: ${{ github.event_name == 'push' && github.event.after || github.event.pull_request.head.sha }}
         with:
           workflow: OpenMetadata Collate Test
-          ref: main
+          ref: ${{ steps.collate-branch.outputs.ref }}
           repo: open-metadata/openmetadata-collate
           token: ${{ secrets.COLLATE_PAT }}
           wait-for-completion: true
