@@ -147,6 +147,8 @@ const MetricDetails: React.FC<MetricDetailsProps> = ({
         })
       );
       onToggleDelete(newVersion);
+
+      return true;
     } catch (error) {
       showErrorToast(
         error as AxiosError,
@@ -154,6 +156,8 @@ const MetricDetails: React.FC<MetricDetailsProps> = ({
           entity: t('label.metric'),
         })
       );
+
+      return false;
     }
   };
 
