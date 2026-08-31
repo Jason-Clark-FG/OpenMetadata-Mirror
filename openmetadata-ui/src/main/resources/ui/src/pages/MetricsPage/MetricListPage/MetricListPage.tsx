@@ -19,7 +19,10 @@ import {
   EmptyPlaceholder,
   Input,
 } from '@openmetadata/ui-core-components';
-import { NoFilterFunnel, NoSearch } from '@openmetadata/ui-core-components/icons';
+import {
+  NoFilterFunnel,
+  NoSearch,
+} from '@openmetadata/ui-core-components/icons';
 import {
   keepPreviousData,
   useQuery,
@@ -1037,14 +1040,15 @@ const MetricListPage = () => {
                                     entity: t('label.all'),
                                   }),
                                   color: 'primary',
-                                  onPress: () =>
-                                    handleStatusFilterChange(),
+                                  onPress: () => handleStatusFilterChange(),
                                 },
                               ]}
                               description={t(
                                 'message.nothing-matches-current-filter'
                               )}
-                              icon={<NoFilterFunnel className="tw:text-quaternary" />}
+                              icon={
+                                <NoFilterFunnel className="tw:text-quaternary" />
+                              }
                               title={t(
                                 'label.no-result-for-these-filter-plural'
                               )}
