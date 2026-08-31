@@ -14,7 +14,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@testing-library/jest-dom';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { METRICS_DOCS } from '../../../constants/docs.constants';
 import { EntityType } from '../../../enums/entity.enum';
 import { EntityStatus } from '../../../generated/entity/data/metric';
 import { getEntityBulkEditPath } from '../../../utils/EntityPureUtils';
@@ -182,20 +181,6 @@ jest.mock('../../../utils/ToastUtils', () => ({
   showWarningToast: jest.fn(),
 }));
 
-jest.mock(
-  '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder',
-  () => ({
-    __esModule: true,
-    default: ({ doc }: { doc: string }) => (
-      <div data-testid="error-placeholder">
-        <a href={doc} rel="noreferrer" target="_blank">
-          docs
-        </a>
-      </div>
-    ),
-  })
-);
-
 jest.mock('../../../components/common/Table/TableV2', () => ({
   __esModule: true,
   default: ({
@@ -260,28 +245,6 @@ describe('MetricListPage', () => {
     jest.clearAllMocks();
     const { searchQuery } = require('../../../rest/searchAPI');
     searchQuery.mockResolvedValue(buildSearchResponse([]));
-  });
-
-  it('renders the docs link with correct URL when empty state is shown', async () => {
-    const { searchQuery } = require('../../../rest/searchAPI');
-    searchQuery
-      .mockResolvedValueOnce(
-        buildSearchResponse([{ id: 'p', name: 'p_metric' }])
-      )
-      .mockResolvedValue(buildSearchResponse([]));
-
-    renderPage();
-
-    await screen.findByText('p_metric');
-
-    fireEvent.click(screen.getByTestId(`status-option-${EntityStatus.Draft}`));
-
-    const link = await screen.findByText('docs');
-
-    expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', METRICS_DOCS);
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noreferrer');
   });
 
   it('passes filtered metric scope when bulk edit is clicked without selection', async () => {
@@ -449,11 +412,10 @@ describe('MetricListPage', () => {
 
     fireEvent.change(searchInput, { target: { value: 'zzz' } });
 
-    await screen.findByTestId('error-placeholder', {}, { timeout: 2000 });
+    await screen.findByTestId('metric-empty-placeholder', {}, { timeout: 2000 });
 
     fireEvent.change(searchInput, { target: { value: '' } });
 
-    expect(screen.queryByTestId('error-placeholder')).not.toBeInTheDocument();
     expect(
       screen.queryByTestId('metric-empty-placeholder')
     ).not.toBeInTheDocument();
@@ -472,7 +434,9 @@ describe('MetricListPage', () => {
 
     renderPage();
 
-    expect(await screen.findByTestId('error-placeholder')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('no-data-placeholder')
+    ).toBeInTheDocument();
 
     await waitFor(() => expect(showErrorToast).toHaveBeenCalled());
   });
