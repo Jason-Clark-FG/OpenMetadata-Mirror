@@ -412,7 +412,11 @@ describe('MetricListPage', () => {
 
     fireEvent.change(searchInput, { target: { value: 'zzz' } });
 
-    await screen.findByTestId('metric-empty-placeholder', {}, { timeout: 2000 });
+    await screen.findByTestId(
+      'metric-empty-placeholder',
+      {},
+      { timeout: 2000 }
+    );
 
     fireEvent.change(searchInput, { target: { value: '' } });
 
