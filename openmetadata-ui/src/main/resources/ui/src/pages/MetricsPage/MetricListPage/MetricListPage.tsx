@@ -19,6 +19,7 @@ import {
   EmptyPlaceholder,
   Input,
 } from '@openmetadata/ui-core-components';
+import { NoFilterFunnel, NoSearch } from '@openmetadata/ui-core-components/icons';
 import {
   keepPreviousData,
   useQuery,
@@ -73,11 +74,9 @@ import PageHeader from '../../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../../components/PageLayoutV1/PageLayoutV1';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
 import { INITIAL_PAGING_VALUE, ROUTES } from '../../../constants/constants';
-import { METRICS_DOCS } from '../../../constants/docs.constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
 import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
-import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import { EntityStatus, Metric } from '../../../generated/entity/data/metric';
@@ -1009,17 +1008,50 @@ const MetricListPage = () => {
                       isMetricsFetching || isSearchPending ? (
                         <Loader />
                       ) : (
-                        <ErrorPlaceHolder
-                          className="p-y-md border-none"
-                          doc={METRICS_DOCS}
-                          heading={t('label.metric')}
-                          permission={permission.Create}
-                          permissionValue={t('label.create-entity', {
-                            entity: t('label.metric'),
-                          })}
-                          type={ERROR_PLACEHOLDER_TYPE.CREATE}
-                          onClick={() => navigate(ROUTES.ADD_METRIC)}
-                        />
+                        <Box className="tw:relative tw:min-h-70">
+                          {searchText ? (
+                            <EmptyPlaceholder
+                              actions={[
+                                {
+                                  key: 'clear-search',
+                                  label: t('label.clear-entity', {
+                                    entity: t('label.search'),
+                                  }),
+                                  color: 'primary',
+                                  onPress: () => handleSearchTextChange(''),
+                                },
+                              ]}
+                              description={t(
+                                'message.check-spelling-or-try-shorter-term'
+                              )}
+                              icon={<NoSearch className="tw:text-secondary" />}
+                              title={t('label.no-matching-result-plural')}
+                              variant="blank"
+                            />
+                          ) : (
+                            <EmptyPlaceholder
+                              actions={[
+                                {
+                                  key: 'clear-filters',
+                                  label: t('label.clear-entity', {
+                                    entity: t('label.all'),
+                                  }),
+                                  color: 'primary',
+                                  onPress: () =>
+                                    handleStatusFilterChange(),
+                                },
+                              ]}
+                              description={t(
+                                'message.nothing-matches-current-filter'
+                              )}
+                              icon={<NoFilterFunnel className="tw:text-quaternary" />}
+                              title={t(
+                                'label.no-result-for-these-filter-plural'
+                              )}
+                              variant="blank"
+                            />
+                          )}
+                        </Box>
                       ),
                   }}
                   pagination={false}
