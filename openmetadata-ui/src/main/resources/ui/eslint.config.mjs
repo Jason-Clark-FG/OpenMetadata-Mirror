@@ -341,7 +341,9 @@ export default [
       // surface the same findings locally and in the editor.
       'sonarjs/cyclomatic-complexity': 'warn', // 54 in a 400-file sample
       'sonarjs/expression-complexity': 'warn', // 15
-      'sonarjs/no-nested-conditional': 'warn', // 16
+      // Promoted to error: all nested-ternary violations refactored to
+      // intermediate variables / if-else; backlog is zero and this ratchets it.
+      'sonarjs/no-nested-conditional': 'error',
       'sonarjs/no-nested-functions': 'warn', // 18
 
       // Security. Enforced in production code. Test fixtures, mock data, and
