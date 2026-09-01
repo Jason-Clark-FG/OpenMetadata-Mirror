@@ -331,11 +331,10 @@ const LineageProvider = ({ children }: LineageProviderProps) => {
     };
 
     const existingMust = quickFilterQuery?.query?.bool?.must;
+    const fallbackMustArray = existingMust ? [existingMust] : [];
     const mustArray = Array.isArray(existingMust)
       ? [...existingMust]
-      : existingMust
-      ? [existingMust]
-      : [];
+      : fallbackMustArray;
 
     const scopedQuery: QueryFilterInterface = {
       query: {

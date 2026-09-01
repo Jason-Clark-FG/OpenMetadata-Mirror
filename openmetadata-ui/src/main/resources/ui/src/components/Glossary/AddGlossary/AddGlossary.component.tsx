@@ -91,6 +91,10 @@ const AddGlossary = ({
             },
           ];
 
+    const selectedDomainList = isArray(selectedDomain)
+      ? selectedDomain
+      : [selectedDomain];
+
     const data: CreateGlossary = {
       name: name.trim(),
       displayName: displayName?.trim(),
@@ -100,7 +104,7 @@ const AddGlossary = ({
       tags: tags || [],
       mutuallyExclusive: Boolean(mutuallyExclusive),
       domains: selectedDomain
-        ? ((isArray(selectedDomain) ? selectedDomain : [selectedDomain])
+        ? (selectedDomainList
             .map((d) => d.fullyQualifiedName)
             .filter(Boolean) as string[]) ?? []
         : undefined,

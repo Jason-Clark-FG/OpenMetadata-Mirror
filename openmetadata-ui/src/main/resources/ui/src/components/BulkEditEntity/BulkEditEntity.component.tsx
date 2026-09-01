@@ -464,12 +464,12 @@ const BulkEditEntity = ({
               row[BULK_EDIT_OPERATION_KEY] ?? 'NO_CHANGE'
             ).toLowerCase()}`;
 
+            const highlightSuffix = isNewMetricRowMissingName(row)
+              ? ''
+              : ' bulk-edit-row-highlight';
+
             return row.id === highlightedRowId
-              ? `${operationClass}${
-                  isNewMetricRowMissingName(row)
-                    ? ''
-                    : ' bulk-edit-row-highlight'
-                }`
+              ? `${operationClass}${highlightSuffix}`
               : operationClass;
           }}
           rowHeight={52}
@@ -535,6 +535,15 @@ const BulkEditEntity = ({
     [dataSource]
   );
 
+  const showExportErrorState = Boolean(
+    isExportHydrationRequired && csvExportError
+  );
+  const showLoaderState =
+    !showExportErrorState &&
+    ((isExportHydrationRequired && isEmpty(csvExportData)) ||
+      isLoadingSourceData);
+  const showWorkflowContent = !showExportErrorState && !showLoaderState;
+
   return (
     <>
       <CsvWorkflowHeader
@@ -569,7 +578,7 @@ const BulkEditEntity = ({
         )}
       </div>
 
-      {isExportHydrationRequired && csvExportError ? (
+      {showExportErrorState && (
         <div className="csv-import-card bulk-edit-card">
           <Banner
             className="border-radius"
@@ -583,10 +592,9 @@ const BulkEditEntity = ({
             </Button>
           </div>
         </div>
-      ) : (isExportHydrationRequired && isEmpty(csvExportData)) ||
-        isLoadingSourceData ? (
-        <Loader />
-      ) : (
+      )}
+      {showLoaderState && <Loader />}
+      {showWorkflowContent && (
         <>
           <div>
             {activeStep === 1 && (

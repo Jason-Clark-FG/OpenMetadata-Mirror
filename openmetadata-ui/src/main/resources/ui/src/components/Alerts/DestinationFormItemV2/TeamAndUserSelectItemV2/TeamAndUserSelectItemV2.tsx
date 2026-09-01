@@ -111,6 +111,48 @@ function TeamAndUserSelectItemV2({
     return () => document.removeEventListener('click', handleOutsideClick);
   }, []);
 
+  const renderOptionList = () => {
+    if (isLoadingOptions) {
+      return (
+        <div className="tw:space-y-1 tw:p-2">
+          {[1, 2, 3].map((i) => (
+            <div
+              className="tw:h-6 tw:animate-pulse tw:rounded tw:bg-secondary"
+              key={i}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (isEmpty(options)) {
+      return (
+        <p className="tw:p-2 tw:text-center tw:text-sm tw:text-tertiary">
+          {t('label.no-data-found')}
+        </p>
+      );
+    }
+
+    return options.map(({ label, value }) => (
+      <button
+        className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-md tw:px-2 tw:py-1.5 tw:text-left hover:tw:bg-secondary"
+        data-testid={value}
+        key={value}
+        type="button"
+        onClick={() => handleOptionClick(value)}>
+        <Checkbox
+          data-testid={`${label}-option-checkbox`}
+          isSelected={selectedOptions.includes(value)}
+        />
+        <span
+          className="tw:truncate tw:text-sm tw:text-primary"
+          data-testid={`${label}-option-label`}>
+          {label}
+        </span>
+      </button>
+    ));
+  };
+
   return (
     <div className="tw:relative tw:w-full">
       <div
@@ -164,39 +206,7 @@ function TeamAndUserSelectItemV2({
             onChange={(val) => setSearchText(val)}
           />
           <div className="tw:mt-2 tw:max-h-48 tw:overflow-y-auto">
-            {isLoadingOptions ? (
-              <div className="tw:space-y-1 tw:p-2">
-                {[1, 2, 3].map((i) => (
-                  <div
-                    className="tw:h-6 tw:animate-pulse tw:rounded tw:bg-secondary"
-                    key={i}
-                  />
-                ))}
-              </div>
-            ) : isEmpty(options) ? (
-              <p className="tw:p-2 tw:text-center tw:text-sm tw:text-tertiary">
-                {t('label.no-data-found')}
-              </p>
-            ) : (
-              options.map(({ label, value }) => (
-                <button
-                  className="tw:flex tw:w-full tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-md tw:px-2 tw:py-1.5 tw:text-left hover:tw:bg-secondary"
-                  data-testid={value}
-                  key={value}
-                  type="button"
-                  onClick={() => handleOptionClick(value)}>
-                  <Checkbox
-                    data-testid={`${label}-option-checkbox`}
-                    isSelected={selectedOptions.includes(value)}
-                  />
-                  <span
-                    className="tw:truncate tw:text-sm tw:text-primary"
-                    data-testid={`${label}-option-label`}>
-                    {label}
-                  </span>
-                </button>
-              ))
-            )}
+            {renderOptionList()}
           </div>
         </div>
       )}

@@ -844,11 +844,10 @@ function buildEsRule(fieldName, value, operator, config, valueSrc) {
       omPropertyType === 'date-cp' ||
       omPropertyType === 'dateTime-cp' ||
       omPropertyType === 'time-cp';
-    const extensionValue = hasValue
-      ? isBetweenOp && isRangeableOmType
-        ? value
-        : value[0]
-      : null;
+    let extensionValue = null;
+    if (hasValue) {
+      extensionValue = isBetweenOp && isRangeableOmType ? value : value[0];
+    }
 
     return buildExtensionQuery(
       extensionPropertyName,
