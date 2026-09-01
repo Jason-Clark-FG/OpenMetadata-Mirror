@@ -402,6 +402,13 @@ const TableV2 = <T extends object>(
         return resolvedKey === descriptor.column;
       }) as ColumnType<T> | undefined;
 
+      let sortOrder: SorterResult<T>['order'] = null;
+      if (descriptor.direction === 'ascending') {
+        sortOrder = 'ascend';
+      } else if (descriptor.direction === 'descending') {
+        sortOrder = 'descend';
+      }
+
       rest.onChange(
         {
           current: internalCurrentPage,
@@ -413,12 +420,7 @@ const TableV2 = <T extends object>(
           column: matchedCol,
           columnKey: String(descriptor.column ?? ''),
           field: String(descriptor.column ?? ''),
-          order:
-            descriptor.direction === 'ascending'
-              ? 'ascend'
-              : descriptor.direction === 'descending'
-              ? 'descend'
-              : null,
+          order: sortOrder,
         } as SorterResult<T>,
         {
           currentDataSource: (rest.dataSource ?? []) as T[],
@@ -533,6 +535,35 @@ const TableV2 = <T extends object>(
   ]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
+
+  let paginationFooter: React.ReactNode = null;
+  if (customPaginationProps && customPaginationProps.showPagination) {
+    paginationFooter = (
+      <div>
+        <NextPrevious {...customPaginationProps} />
+      </div>
+    );
+  } else if (
+    clientPagination &&
+    !(
+      clientPagination.hideOnSinglePage &&
+      filteredDataSource.length <= clientPagination.pageSize
+    )
+  ) {
+    paginationFooter = (
+      <div>
+        <NextPrevious
+          isNumberBased
+          currentPage={internalCurrentPage}
+          pageSize={clientPagination.pageSize}
+          paging={{ total: filteredDataSource.length }}
+          pagingHandler={({ currentPage }) =>
+            setInternalCurrentPage(currentPage)
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -833,6 +864,55 @@ const TableV2 = <T extends object>(
                           ) as React.TdHTMLAttributes<HTMLTableCellElement>) ??
                           {};
 
+                        let expandIndicator: React.ReactNode = null;
+                        if (showExpandInCell) {
+                          if (hasChildren && ExpandIcon) {
+                            expandIndicator = (
+                              <ExpandIcon
+                                expandable={hasChildren}
+                                expanded={isExpanded}
+                                prefixCls=""
+                                record={record}
+                                onExpand={(rec, e) => {
+                                  e.stopPropagation();
+                                  handleExpandToggle(rec as T, rowKey);
+                                }}
+                              />
+                            );
+                          } else if (hasChildren) {
+                            expandIndicator = (
+                              <button
+                                aria-expanded={isExpanded}
+                                className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
+                                data-testid="expand-icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleExpandToggle(record, rowKey);
+                                }}>
+                                {isExpanded ? (
+                                  <ChevronDown className="tw:size-4" />
+                                ) : (
+                                  <ChevronRight className="tw:size-4" />
+                                )}
+                              </button>
+                            );
+                          } else if (ExpandIcon) {
+                            expandIndicator = (
+                              <ExpandIcon
+                                expandable={false}
+                                expanded={false}
+                                prefixCls=""
+                                record={record}
+                                onExpand={(_rec, _e) => {}}
+                              />
+                            );
+                          } else {
+                            expandIndicator = (
+                              <span className="tw:inline-block tw:w-4 tw:mr-1" />
+                            );
+                          }
+                        }
+
                         return (
                           <UntitledTable.Cell
                             {...cellHandlerProps}
@@ -871,45 +951,7 @@ const TableV2 = <T extends object>(
                               )}>
                               {showExpandInCell && (
                                 <div className="tw:flex tw:items-center tw:shrink-0">
-                                  {hasChildren ? (
-                                    ExpandIcon ? (
-                                      <ExpandIcon
-                                        expandable={hasChildren}
-                                        expanded={isExpanded}
-                                        prefixCls=""
-                                        record={record}
-                                        onExpand={(rec, e) => {
-                                          e.stopPropagation();
-                                          handleExpandToggle(rec as T, rowKey);
-                                        }}
-                                      />
-                                    ) : (
-                                      <button
-                                        aria-expanded={isExpanded}
-                                        className="tw:p-0 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:mr-1 tw:inline-flex"
-                                        data-testid="expand-icon"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleExpandToggle(record, rowKey);
-                                        }}>
-                                        {isExpanded ? (
-                                          <ChevronDown className="tw:size-4" />
-                                        ) : (
-                                          <ChevronRight className="tw:size-4" />
-                                        )}
-                                      </button>
-                                    )
-                                  ) : ExpandIcon ? (
-                                    <ExpandIcon
-                                      expandable={false}
-                                      expanded={false}
-                                      prefixCls=""
-                                      record={record}
-                                      onExpand={(_rec, _e) => {}}
-                                    />
-                                  ) : (
-                                    <span className="tw:inline-block tw:w-4 tw:mr-1" />
-                                  )}
+                                  {expandIndicator}
                                 </div>
                               )}
                               {colType.ellipsis ? (
@@ -946,27 +988,7 @@ const TableV2 = <T extends object>(
         })()}
       </div>
 
-      {customPaginationProps && customPaginationProps.showPagination ? (
-        <div>
-          <NextPrevious {...customPaginationProps} />
-        </div>
-      ) : clientPagination &&
-        !(
-          clientPagination.hideOnSinglePage &&
-          filteredDataSource.length <= clientPagination.pageSize
-        ) ? (
-        <div>
-          <NextPrevious
-            isNumberBased
-            currentPage={internalCurrentPage}
-            pageSize={clientPagination.pageSize}
-            paging={{ total: filteredDataSource.length }}
-            pagingHandler={({ currentPage }) =>
-              setInternalCurrentPage(currentPage)
-            }
-          />
-        </div>
-      ) : null}
+      {paginationFooter}
     </div>
   );
 };

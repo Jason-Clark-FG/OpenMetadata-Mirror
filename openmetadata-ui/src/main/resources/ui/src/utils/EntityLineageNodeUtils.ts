@@ -487,14 +487,19 @@ export const createNodes = (
   return uniqueNodesData.map((node) => {
     node.deleted = isDeleted(node.deleted);
 
-    const type =
-      node.type === EntityLineageNodeType.LOAD_MORE
-        ? node.type
-        : incomingMap.has(node.id) && !outgoingMap.has(node.id)
-        ? EntityLineageNodeType.OUTPUT
-        : !incomingMap.has(node.id) && outgoingMap.has(node.id)
-        ? EntityLineageNodeType.INPUT
-        : EntityLineageNodeType.DEFAULT;
+    const hasIncoming = incomingMap.has(node.id);
+    const hasOutgoing = outgoingMap.has(node.id);
+
+    let type: EntityLineageNodeType | string;
+    if (node.type === EntityLineageNodeType.LOAD_MORE) {
+      type = node.type;
+    } else if (hasIncoming && !hasOutgoing) {
+      type = EntityLineageNodeType.OUTPUT;
+    } else if (!hasIncoming && hasOutgoing) {
+      type = EntityLineageNodeType.INPUT;
+    } else {
+      type = EntityLineageNodeType.DEFAULT;
+    }
 
     const nodeHeight = isExpanded ? 550 : NODE_HEIGHT;
 
