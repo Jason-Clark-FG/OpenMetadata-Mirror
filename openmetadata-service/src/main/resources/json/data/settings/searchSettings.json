@@ -219,6 +219,11 @@
           "matchType": "exact"
         },
         {
+          "field": "name.keyword",
+          "boost": 20.0,
+          "matchType": "exact"
+        },
+        {
           "field": "name",
           "boost": 10.0,
           "matchType": "phrase"
@@ -575,6 +580,11 @@
           "matchType": "exact"
         },
         {
+          "field": "name.keyword",
+          "boost": 20.0,
+          "matchType": "exact"
+        },
+        {
           "field": "name",
           "boost": 10.0,
           "matchType": "phrase"
@@ -650,6 +660,11 @@
       "searchFields": [
         {
           "field": "displayName.keyword",
+          "boost": 20.0,
+          "matchType": "exact"
+        },
+        {
+          "field": "name.keyword",
           "boost": 20.0,
           "matchType": "exact"
         },
@@ -2353,6 +2368,11 @@
       "searchFields": [
         {
           "field": "displayName.keyword",
+          "boost": 20.0,
+          "matchType": "exact"
+        },
+        {
+          "field": "name.keyword",
           "boost": 20.0,
           "matchType": "exact"
         },

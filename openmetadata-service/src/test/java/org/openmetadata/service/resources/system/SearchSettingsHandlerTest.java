@@ -315,6 +315,23 @@ class SearchSettingsHandlerTest {
   }
 
   @Test
+  void testNameKeywordPresentForTopLevelNameSearchableAssets() {
+    // Top-level name-searchable assets must expose name.keyword for exact-match search,
+    // matching databaseSchema and table.
+    List<String> assetTypes = List.of("database", "storedProcedure", "query", "metric");
+    for (String assetType : assetTypes) {
+      AssetTypeConfiguration config = findAssetConfig(defaultSearchSettings, assetType);
+      assertNotNull(
+          config, "searchSettings.json must contain " + assetType + " assetTypeConfiguration");
+      Set<String> fieldNames =
+          config.getSearchFields().stream().map(FieldBoost::getField).collect(Collectors.toSet());
+      assertTrue(
+          fieldNames.contains("name.keyword"),
+          assetType + " searchFields must include 'name.keyword' for exact-match search");
+    }
+  }
+
+  @Test
   void testMergeAddsNewAssetTypeFromDefaults() {
     SearchSettings defaults = createBaseSettings(5000);
     defaults.setAssetTypeConfigurations(
