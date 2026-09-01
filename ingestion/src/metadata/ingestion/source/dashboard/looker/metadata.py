@@ -30,6 +30,7 @@ from typing import (  # noqa: UP035
     Dict,
     Iterable,
     List,
+    NamedTuple,
     Optional,
     Sequence,
     Set,
@@ -178,6 +179,20 @@ LOOKER_TAG_CATEGORY = "LookerTags"
 DATAMODEL_LINEAGE_SENTINEL = object()
 
 
+class ExploreRef(NamedTuple):
+    """The only two fields view lineage needs off a `LookmlModelExplore`.
+
+    Deferred lineage keeps one entry per (view, explore) pair until the flush. Holding the
+    SDK object there would pin its whole fieldset — measured at ~250 KB per explore — for
+    the length of the bulk stage, so a large instance would carry hundreds of MB it never
+    reads. Two strings cost ~200 B.
+    """
+
+    # Optional to match the SDK, where both fields are `str | None`.
+    model_name: Optional[str]  # noqa: UP045
+    name: Optional[str]  # noqa: UP045
+
+
 def clean_dashboard_name(name: str) -> str:
     """
     Clean incorrect (and known) looker characters in ids
@@ -240,7 +255,7 @@ class LookerSource(DashboardServiceSource):
         self._pending_explores: List[str] = []  # noqa: UP006
         self._pending_views: List[Tuple[str, str]] = []  # noqa: UP006
         self._processed_view_names: Set[str] = set()  # noqa: UP006
-        self._pending_view_lineage: List[Tuple[LookMlView, LookmlModelExplore, str]] = []  # noqa: UP006
+        self._pending_view_lineage: List[Tuple[LookMlView, ExploreRef, str]] = []  # noqa: UP006
         self._pending_standalone_lineage: List[Tuple[LookMlView, str, str, str]] = []  # noqa: UP006
 
         self._added_lineage: Optional[Dict] = {}  # noqa: UP006, UP045
@@ -857,7 +872,9 @@ class LookerSource(DashboardServiceSource):
                 # once the Barrier has committed this request.
                 self._pending_views.append((view.name, datamodel_view_name))
                 self._processed_view_names.add(view.name)
-                self._pending_view_lineage.append((view, explore, datamodel_view_name))
+                self._pending_view_lineage.append(
+                    (view, ExploreRef(explore.model_name, explore.name), datamodel_view_name)
+                )
             else:
                 logger.warning(
                     f"Cannot find the view [{view_name}] in the configured repositories. "
@@ -1117,7 +1134,11 @@ class LookerSource(DashboardServiceSource):
                 )
             )
 
-    def add_view_lineage(self, view: LookMlView, explore: LookmlModelExplore) -> Iterable[Either[AddLineageRequest]]:  # noqa: C901
+    def add_view_lineage(  # noqa: C901
+        self,
+        view: LookMlView,
+        explore: Union[LookmlModelExplore, ExploreRef],  # noqa: UP007
+    ) -> Iterable[Either[AddLineageRequest]]:
         """
         Add the lineage source -> view -> explore
         """
