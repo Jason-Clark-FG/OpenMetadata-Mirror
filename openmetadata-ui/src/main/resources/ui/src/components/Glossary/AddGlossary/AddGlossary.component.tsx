@@ -14,7 +14,7 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Form, Space, Typography } from 'antd';
 import { FormProps, useForm } from 'antd/lib/form/Form';
-import { isArray } from 'lodash';
+import { compact, isArray } from 'lodash';
 import { useTranslation } from 'react-i18next';
 import { NAME_FIELD_RULES } from '../../../constants/Form.constants';
 import { EntityType } from '../../../enums/entity.enum';
@@ -91,9 +91,9 @@ const AddGlossary = ({
             },
           ];
 
-    const selectedDomainList = isArray(selectedDomain)
+    const selectedDomainList: EntityReference[] = isArray(selectedDomain)
       ? selectedDomain
-      : [selectedDomain];
+      : compact([selectedDomain]);
 
     const data: CreateGlossary = {
       name: name.trim(),

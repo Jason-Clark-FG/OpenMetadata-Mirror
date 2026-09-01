@@ -583,7 +583,7 @@ const BulkEditEntity = ({
           <Banner
             className="border-radius"
             isLoading={false}
-            message={csvExportError}
+            message={csvExportError ?? ''}
             type="error"
           />
           <div className="bulk-edit-retry">

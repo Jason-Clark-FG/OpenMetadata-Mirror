@@ -152,7 +152,7 @@ const OntologyQueryResults = ({
           />
         </div>
       )}
-      {showConceptChips && (
+      {showConceptChips && conceptResults && (
         <div
           className="tw:flex tw:flex-wrap tw:gap-2"
           data-testid="ontology-sparql-chips">

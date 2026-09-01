@@ -52,7 +52,7 @@ const Assignees: FC<Props> = ({
     newOptions?: DefaultOptionType | DefaultOptionType[]
   ) => {
     if (isUndefined(newOptions)) {
-      onChange(newOptions as Option[]);
+      onChange(newOptions as unknown as Option[]);
 
       return;
     }
