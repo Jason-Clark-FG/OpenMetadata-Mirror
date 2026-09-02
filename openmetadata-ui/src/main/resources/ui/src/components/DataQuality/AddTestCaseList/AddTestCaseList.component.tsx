@@ -22,6 +22,7 @@ import {
   Typography,
 } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
+import { AxiosError } from 'axios';
 import { debounce } from 'lodash';
 import isEmpty from 'lodash/isEmpty';
 import VirtualList from 'rc-virtual-list';
@@ -62,6 +63,7 @@ import { getEntityFQN } from '../../../utils/FeedUtilsPure';
 import { getNameFromFQN } from '../../../utils/FqnUtils';
 import { getEntityDetailsPath } from '../../../utils/RouterUtils';
 import { replacePlus } from '../../../utils/StringUtils';
+import { showErrorToast } from '../../../utils/ToastUtils';
 import Loader from '../../common/Loader/Loader';
 import Searchbar from '../../common/SearchBarComponent/SearchBar.component';
 import { SearchDropdownOption } from '../../SearchDropdown/SearchDropdown.interface';
@@ -72,6 +74,10 @@ import {
   normalizeSelectedTestProp,
   seedSelectedFromExistingTest,
 } from './AddTestCaseListForm.utils';
+
+const handleFetchTestCasesError = (error: AxiosError) => {
+  showErrorToast(error);
+};
 
 export const AddTestCaseList = ({
   onCancel,
@@ -388,7 +394,7 @@ export const AddTestCaseList = ({
           fetchTestCases({
             searchText: searchTerm,
             page: pageNumber + 1,
-          });
+          }).catch(handleFetchTestCasesError);
       }
     },
     [searchTerm, totalCount, items, isLoading, fetchTestCases, pageNumber]
@@ -574,7 +580,7 @@ export const AddTestCaseList = ({
     fetchTestCases({
       searchText: searchTerm,
       hydrateSelectedFromProp: isInitialSearchFilterLoad.current,
-    });
+    }).catch(handleFetchTestCasesError);
     isInitialSearchFilterLoad.current = false;
   }, [
     searchTerm,
