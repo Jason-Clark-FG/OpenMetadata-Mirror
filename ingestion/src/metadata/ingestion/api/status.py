@@ -31,6 +31,8 @@ logger = ingestion_logger()
 MAX_STACK_TRACE_LENGTH = 1_000_000
 # Max items per list rendered in as_string() to bound memory usage
 MAX_STATUS_DISPLAY_ITEMS = 1_000
+# Placeholder for filtered entities that carry no name
+UNKNOWN_FILTER_KEY = "<unknown>"
 
 TruncatedStr = Annotated[Optional[str], AfterValidator(lambda v: v[:MAX_STACK_TRACE_LENGTH] if v else None)]  # noqa: UP045
 
@@ -98,8 +100,11 @@ class Status(BaseModel):
     def warning(self, key: str, reason: str) -> None:
         self.warnings.append({key: reason})
 
-    def filter(self, key: str, reason: str) -> None:
-        self.filtered.append({key: reason})
+    def filter(self, key: Optional[str], reason: str) -> None:  # noqa: UP045
+        # Sources can legitimately hand us a nameless entity (e.g. a Tableau workbook
+        # published to a Personal Space has no project), and `filtered` is typed
+        # Dict[str, str] — a None key makes the Status un-revalidatable.
+        self.filtered.append({key if key is not None else UNKNOWN_FILTER_KEY: reason})
 
     def as_string(self) -> str:
         def literal_safe(v: Any) -> Any:
