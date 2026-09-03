@@ -11,12 +11,12 @@
  *  limitations under the License.
  */
 import type { Node } from 'reactflow';
+import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { ScheduleTimeline } from '../generated/governance/workflows/elements/triggers/periodicBatchEntityTrigger';
 import {
   Type,
   WorkflowDefinition,
 } from '../generated/governance/workflows/workflowDefinition';
-import { NodeType } from '../generated/governance/workflows/elements/nodeType';
 import { getInitialNodeConfig } from './NodeUtils';
 
 const startNode = {
