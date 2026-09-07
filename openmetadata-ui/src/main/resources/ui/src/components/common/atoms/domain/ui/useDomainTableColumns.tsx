@@ -60,7 +60,7 @@ export const useDomainTableColumns = ({
         case 'owners':
           return renderDomainOwnersCell(entity);
         case 'glossaryTerms':
-          return renderDomainGlossaryTagsCell(entity, { size: tagSize });
+          return renderDomainGlossaryTagsCell(entity);
         case 'tags':
           return renderDomainClassificationTagsCell(entity);
         default:

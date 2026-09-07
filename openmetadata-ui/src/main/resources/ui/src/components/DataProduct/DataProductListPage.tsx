@@ -64,7 +64,6 @@ import EntityListingTable from '../common/EntityListingTable/EntityListingTable.
 import { ColumnDef } from '../common/EntityListingTable/EntityListingTable.interface';
 import HeaderBreadcrumb from '../common/HeaderBreadcrumb/HeaderBreadcrumb.component';
 import { OwnerLabel } from '../common/OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../common/TagBadgeList/TagBadgeList.component';
 import ViewToggle, { ViewMode } from '../common/ViewToggle/ViewToggle';
 import PageLayoutV1 from '../PageLayoutV1/PageLayoutV1';
 import TagsViewer from '../Tag/TagsViewer/TagsViewer';
@@ -252,7 +251,7 @@ const DataProductListPage = ({
             />
           );
         case 'glossaryTerms':
-          return <TagBadgeList size="lg" tags={getGlossaryTags(entity.tags)} />;
+          return <TagsViewer sizeCap={1} tags={getGlossaryTags(entity.tags)} />;
         case 'domains':
           return renderDataProductDomainCell(entity);
         case 'tags':

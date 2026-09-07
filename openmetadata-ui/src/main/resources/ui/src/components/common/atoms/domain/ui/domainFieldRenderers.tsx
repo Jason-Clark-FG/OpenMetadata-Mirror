@@ -28,9 +28,7 @@ import { renderBreakableTooltip } from '../../../../../utils/TooltipUtils';
 import { DomainTypeChip } from '../../../../DomainListing/components/DomainTypeChip';
 import TagsViewer from '../../../../Tag/TagsViewer/TagsViewer';
 import { OwnerLabel } from '../../../OwnerLabel/OwnerLabel.component';
-import TagBadgeList from '../../../TagBadgeList/TagBadgeList.component';
 
-type TagSize = 'sm' | 'lg';
 
 interface TaggedEntity {
   tags?: TagLabel[];
@@ -117,9 +115,8 @@ export const renderDomainOwnersCell = (entity: OwnedEntity): ReactNode => (
 
 export const renderDomainGlossaryTagsCell = (
   entity: TaggedEntity,
-  options?: { size?: TagSize }
 ): ReactNode => (
-  <TagBadgeList size={options?.size} tags={getGlossaryTags(entity.tags)} />
+  <TagsViewer sizeCap={1} tags={getGlossaryTags(entity.tags)} />
 );
 
 export const renderDomainClassificationTagsCell = (
