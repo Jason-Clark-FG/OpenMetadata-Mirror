@@ -368,6 +368,33 @@ test.describe('Knowledge Graph', { tag: ['@knowledge-graph'] }, () => {
   test('renders every returned node and predicate from the live RDF endpoint', async ({
     page,
   }) => {
+    const firstCall = page.waitForRequest((r) =>
+      r.url().includes('/rdf/graph/explore?')
+    );
+    await open(page);
+
+    // The RDF store is written after the table is created, not as part of it, so
+    // for the first seconds of the test explore answers with the bare root node
+    // and no edges. Replaying the page's own request until the projection lands
+    // keeps `edges.length > 0` an assertion about the renderer rather than a
+    // race against ingestion.
+    const exploreUrl = (await firstCall).url();
+    await expect
+      .poll(
+        async () => {
+          const projected = (await (
+            await page.request.get(exploreUrl)
+          ).json()) as GraphData;
+
+          return projected.edges.length;
+        },
+        {
+          timeout: 60_000,
+          message: `${exploreUrl} never projected an edge for the table`,
+        }
+      )
+      .toBeGreaterThan(0);
+
     const response = page.waitForResponse(
       (r) => r.url().includes('/rdf/graph/explore?') && r.status() === 200
     );
