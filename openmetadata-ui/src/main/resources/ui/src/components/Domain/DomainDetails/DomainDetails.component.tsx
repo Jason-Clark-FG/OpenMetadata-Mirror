@@ -31,7 +31,6 @@ import { ReactComponent as StyleIcon } from '../../../assets/svg/style.svg';
 import { ManageButtonItemLabel } from '../../../components/common/ManageButtonContentItem/ManageButtonContentItem.component';
 import { EntityHeader } from '../../../components/Entity/EntityHeader/EntityHeader.component';
 import Voting from '../../../components/Entity/Voting/Voting.component';
-import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import { AssetsTabRef } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import EntityNameModal from '../../../components/Modals/EntityNameModal/EntityNameModal.component';
@@ -54,6 +53,7 @@ import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useCustomPages } from '../../../hooks/useCustomPages';
 import { useEntityPermissions } from '../../../hooks/useEntityPermissions/useEntityPermissions';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
+import { VotingDataProps } from '../../../interface/entity/vote.interface';
 import { FeedCounts } from '../../../interface/feed.interface';
 import {
   AnnouncementEntity,

@@ -28,7 +28,6 @@ import NoDataPlaceholder from '../../../components/common/EmptyPlaceholder/NoDat
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../../components/common/Loader/Loader';
 import ResizableLeftPanels from '../../../components/common/ResizablePanels/ResizableLeftPanels';
-import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import { EntityDetailsObjectInterface } from '../../../components/Explore/ExplorePage.interface';
 import GlossaryV1 from '../../../components/Glossary/GlossaryV1.component';
 import {
@@ -57,6 +56,7 @@ import { withPageLayout } from '../../../hoc/withPageLayout';
 import { usePaging } from '../../../hooks/paging/usePaging';
 import { useElementInView } from '../../../hooks/useElementInView';
 import { useFqn } from '../../../hooks/useFqn';
+import { VotingDataProps } from '../../../interface/entity/vote.interface';
 import {
   getGlossariesByName,
   getGlossariesList,

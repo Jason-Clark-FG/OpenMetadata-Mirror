@@ -16,7 +16,7 @@ import classNames from 'classnames';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as ThumbsUpOutline } from '../../../assets/svg/thumbs-up-outline.svg';
-import { QueryVoteType } from '../../Database/TableQueries/TableQueries.interface';
+import { QueryVoteType } from '../../../interface/entity/vote.interface';
 import { VotingProps } from './voting.interface';
 import './voting.less';
 

@@ -49,6 +49,7 @@ import { Query } from '../../../generated/entity/data/query';
 import { usePaging } from '../../../hooks/paging/usePaging';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useFqn } from '../../../hooks/useFqn';
+import { QueryVote } from '../../../interface/entity/vote.interface';
 import {
   getQueryById,
   patchQueries,
@@ -79,7 +80,6 @@ import QueryCard from './QueryCard';
 import {
   FetchFilteredQueriesType,
   QueryFilterType,
-  QueryVote,
   TableQueriesProp,
 } from './TableQueries.interface';
 import TableQueryRightPanel from './TableQueryRightPanel/TableQueryRightPanel.component';

@@ -56,6 +56,7 @@ import { Style } from '../../../generated/type/tagLabel';
 import { Votes } from '../../../generated/type/votes';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
 import { useFqn } from '../../../hooks/useFqn';
+import { QueryVoteType } from '../../../interface/entity/vote.interface';
 import {
   exportGlossaryInCSVFormat,
   getGlossariesById,
@@ -76,7 +77,6 @@ import { useRequiredParams } from '../../../utils/useRequiredParams';
 import { DEFAULT_GLOSSARY_TERM_ICON } from '../../common/IconPicker/IconPicker.constants';
 import { TitleBreadcrumbProps } from '../../common/TitleBreadcrumb/TitleBreadcrumb.interface';
 import { useGenericContext } from '../../Customization/GenericProvider/GenericContext';
-import { QueryVoteType } from '../../Database/TableQueries/TableQueries.interface';
 import { EntityStatusBadge } from '../../Entity/EntityStatusBadge/EntityStatusBadge.component';
 import Voting from '../../Entity/Voting/Voting.component';
 import { LearningIcon } from '../../Learning/LearningIcon/LearningIcon.component';

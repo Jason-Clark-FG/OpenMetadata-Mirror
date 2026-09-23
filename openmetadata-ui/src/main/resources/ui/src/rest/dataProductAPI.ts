@@ -13,7 +13,6 @@
 
 import { AxiosResponse } from 'axios';
 import { Operation } from 'fast-json-patch';
-import { QueryVote } from '../components/Database/TableQueries/TableQueries.interface';
 import { AssetsOfEntity } from '../components/Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import {
   APPLICATION_JSON_CONTENT_TYPE_HEADER,
@@ -32,6 +31,7 @@ import {
 import { EntityHistory } from '../generated/type/entityHistory';
 import { Paging } from '../generated/type/paging';
 import { ListParams } from '../interface/API.interface';
+import { QueryVote } from '../interface/entity/vote.interface';
 import { formatDataProductResponse } from '../utils/APIUtils';
 import { buildDomainFilter } from '../utils/elasticsearchQueryBuilder';
 import { getEncodedFqn } from '../utils/StringUtils';

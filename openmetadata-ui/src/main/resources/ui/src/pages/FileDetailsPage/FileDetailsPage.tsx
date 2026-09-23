@@ -20,7 +20,6 @@ import { withActivityFeed } from '../../components/AppRouter/withActivityFeed';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PageLoader } from '../../components/common/Loader/Loader';
 import { DataAssetWithDomains } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
-import { QueryVote } from '../../components/Database/TableQueries/TableQueries.interface';
 import FileDetails from '../../components/DriveService/File/FileDetails';
 import { ROUTES } from '../../constants/constants';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
@@ -31,6 +30,7 @@ import { File } from '../../generated/entity/data/file';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
 import { useFqn } from '../../hooks/useFqn';
+import { QueryVote } from '../../interface/entity/vote.interface';
 import {
   addDriveAssetFollower,
   getDriveAssetByFqn,

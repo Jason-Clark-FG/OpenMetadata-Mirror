@@ -34,8 +34,6 @@ import { BlockEditorRef } from '../../../components/BlockEditor/BlockEditor.inte
 import { EntityAttachmentProvider } from '../../../components/common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 import TabsLabel from '../../../components/common/TabsLabel/TabsLabel.component';
 import { GenericProvider } from '../../../components/Customization/GenericProvider/GenericProvider';
-import { QueryVoteType } from '../../../components/Database/TableQueries/TableQueries.interface';
-import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import {
   CREATE_PAGE_HASH,
   KNOWLEDGE_CENTER_CLASSIFICATION,
@@ -60,6 +58,10 @@ import {
 } from '../../../hooks/useArticleDraftStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useEntityPermissions } from '../../../hooks/useEntityPermissions/useEntityPermissions';
+import {
+  QueryVoteType,
+  VotingDataProps,
+} from '../../../interface/entity/vote.interface';
 import { FeedCounts } from '../../../interface/feed.interface';
 import {
   ContentChangeState,

@@ -22,7 +22,6 @@ import APIEndpointDetails from '../../components/APIEndpoint/APIEndpointDetails/
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PageLoader } from '../../components/common/Loader/Loader';
 import { DataAssetWithDomains } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
-import { QueryVote } from '../../components/Database/TableQueries/TableQueries.interface';
 import { ROUTES } from '../../constants/constants';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ClientErrors } from '../../enums/Axios.enum';
@@ -32,6 +31,7 @@ import { APIEndpoint } from '../../generated/entity/data/apiEndpoint';
 import { useApplicationStore } from '../../hooks/useApplicationStore';
 import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
 import { useFqn } from '../../hooks/useFqn';
+import { QueryVote } from '../../interface/entity/vote.interface';
 import {
   addApiEndpointFollower,
   patchApiEndPoint,

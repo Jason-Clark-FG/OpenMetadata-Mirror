@@ -22,7 +22,6 @@ import Loader from '../../components/common/Loader/Loader';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
 import QueryCard from '../../components/Database/TableQueries/QueryCard';
-import { QueryVote } from '../../components/Database/TableQueries/TableQueries.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
@@ -30,6 +29,7 @@ import { EntityType, TabSpecificField } from '../../enums/entity.enum';
 import { Query } from '../../generated/entity/data/query';
 import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
 import { useFqn } from '../../hooks/useFqn';
+import { QueryVote } from '../../interface/entity/vote.interface';
 import {
   getQueryById,
   patchQueries,

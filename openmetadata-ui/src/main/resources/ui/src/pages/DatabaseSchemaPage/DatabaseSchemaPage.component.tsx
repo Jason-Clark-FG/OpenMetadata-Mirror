@@ -34,7 +34,6 @@ import { GenericProvider } from '../../components/Customization/GenericProvider/
 import { DataAssetsHeader } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.component';
 import { DataAssetWithDomains } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
 import ProfilerSettings from '../../components/Database/Profiler/ProfilerSettings/ProfilerSettings';
-import { QueryVote } from '../../components/Database/TableQueries/TableQueries.interface';
 import { EntityName } from '../../components/Modals/EntityNameModal/EntityNameModal.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { FQN_SEPARATOR_CHAR } from '../../constants/char.constants';
@@ -63,6 +62,7 @@ import { useCustomPages } from '../../hooks/useCustomPages';
 import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
 import { useFqn } from '../../hooks/useFqn';
 import { useTableFilters } from '../../hooks/useTableFilters';
+import { QueryVote } from '../../interface/entity/vote.interface';
 import { FeedCounts } from '../../interface/feed.interface';
 import {
   addFollowers,

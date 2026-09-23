@@ -55,6 +55,10 @@ import { useEntityPermissions } from '../../../hooks/useEntityPermissions/useEnt
 import { useEntityRules } from '../../../hooks/useEntityRules';
 import { useFqn } from '../../../hooks/useFqn';
 import { useMarketplaceStore } from '../../../hooks/useMarketplaceStore';
+import {
+  QueryVote,
+  VotingDataProps,
+} from '../../../interface/entity/vote.interface';
 import { FeedCounts } from '../../../interface/feed.interface';
 import {
   AnnouncementEntity,
@@ -105,11 +109,9 @@ import Loader from '../../common/Loader/Loader';
 import { ManageButtonItemLabel } from '../../common/ManageButtonContentItem/ManageButtonContentItem.component';
 import { GenericProvider } from '../../Customization/GenericProvider/GenericProvider';
 import { AssetSelectionDrawer } from '../../DataAssets/AssetsSelectionModal/AssetSelectionDrawer';
-import { QueryVote } from '../../Database/TableQueries/TableQueries.interface';
 import { EntityHeader } from '../../Entity/EntityHeader/EntityHeader.component';
 import { EntityStatusBadge } from '../../Entity/EntityStatusBadge/EntityStatusBadge.component';
 import Voting from '../../Entity/Voting/Voting.component';
-import { VotingDataProps } from '../../Entity/Voting/voting.interface';
 import { EntityDetailsObjectInterface } from '../../Explore/ExplorePage.interface';
 import { AssetsTabRef } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.component';
 import { AssetsOfEntity } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
