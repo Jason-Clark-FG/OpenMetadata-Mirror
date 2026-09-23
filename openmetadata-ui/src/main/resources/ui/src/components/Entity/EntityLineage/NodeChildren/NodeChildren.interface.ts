@@ -10,12 +10,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { MlFeature } from '../../../../generated/entity/data/mlmodel';
-import { SearchIndexField } from '../../../../generated/entity/data/searchIndex';
-import { Column } from '../../../../generated/entity/data/table';
-import { Field } from '../../../../generated/entity/data/topic';
-import { EntityReference } from '../../../../generated/entity/type';
-import { LineageNodeType } from '../../../Lineage/Lineage.interface';
+import { LineageNodeType } from '../../../../interface/lineage.interface';
 
 export interface NodeChildrenProps {
   node: LineageNodeType;
@@ -25,17 +20,3 @@ export interface NodeChildrenProps {
   onColumnHover?: (columnFqn?: string) => void;
   onColumnSelect?: (columnFqn?: string) => void;
 }
-
-export type EntityChildrenItem =
-  | Flatten<Column>
-  | Flatten<Field>
-  | Flatten<EntityReference>
-  | Flatten<MlFeature>
-  | Flatten<Field>
-  | Flatten<SearchIndexField>;
-
-export type EntityChildren = EntityChildrenItem[];
-
-export type Flatten<T> = T & {
-  depth?: number;
-};

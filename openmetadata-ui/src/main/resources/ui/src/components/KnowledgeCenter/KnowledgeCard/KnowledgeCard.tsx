@@ -27,7 +27,7 @@ import { OwnerType } from '../../../enums/user.enum';
 
 import { FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
+import { ResourceEntity } from '../../../enums/permissions.enum';
 import { useEntityPermissions } from '../../../hooks/useEntityPermissions/useEntityPermissions';
 import type { VotingDataProps } from '../../../interface/entity/vote.interface';
 import {

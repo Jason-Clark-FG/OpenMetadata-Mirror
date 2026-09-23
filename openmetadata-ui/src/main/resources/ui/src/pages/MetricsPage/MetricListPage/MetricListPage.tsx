@@ -74,7 +74,8 @@ import MetricListHealth from '../../../components/Metric/MetricListHealth/Metric
 import MetricStatusPill from '../../../components/Metric/MetricStatusPill/MetricStatusPill';
 import { WILD_CARD_CHAR } from '../../../constants/char.constants';
 import { usePermissionProvider } from '../../../context/PermissionProvider/PermissionProvider';
-import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
+import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
+import { ResourceEntity } from '../../../enums/permissions.enum';
 import { EntityType } from '../../../enums/entity.enum';
 import { SearchIndex } from '../../../enums/search.enum';
 import type { Metric } from '../../../generated/entity/data/metric';

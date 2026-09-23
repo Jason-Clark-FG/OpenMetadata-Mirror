@@ -15,8 +15,8 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ENTITY_PATH } from '../../constants/constants';
 import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
-import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { EntityTabs } from '../../enums/entity.enum';
+import { ResourceEntity } from '../../enums/permissions.enum';
 import { Type } from '../../generated/entity/type';
 import CustomEntityDetailV1 from './CustomPropertiesPageV1';
 

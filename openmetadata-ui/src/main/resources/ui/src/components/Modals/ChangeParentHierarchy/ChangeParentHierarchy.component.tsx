@@ -23,6 +23,7 @@ import {
   EntityStatus,
   GlossaryTerm,
 } from '../../../generated/entity/data/glossaryTerm';
+import { MoveGlossaryTermWebsocketResponse } from '../../../interface/governance/glossary.interface';
 import { moveGlossaryTerm } from '../../../rest/glossaryAPI';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { EntityStatusClass } from '../../../utils/EntityStatusUtils';
@@ -33,10 +34,7 @@ import Banner from '../../common/Banner/Banner';
 import { GlossaryPickerValue } from '../../common/GlossaryTermPicker/GlossaryTagSuggestionUtils';
 import GlossaryTermPicker from '../../common/GlossaryTermPicker/GlossaryTermPicker';
 import StatusBadge from '../../common/StatusBadge/StatusBadge.component';
-import {
-  ChangeParentHierarchyProps,
-  MoveGlossaryTermWebsocketResponse,
-} from './ChangeParentHierarchy.interface';
+import { ChangeParentHierarchyProps } from './ChangeParentHierarchy.interface';
 
 const MAX_BUFFERED_EVENTS = 100;
 
