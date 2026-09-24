@@ -29,9 +29,10 @@ import {
 import { EntityClass } from './EntityClass';
 import { SharedInfra } from './SharedInfra';
 
-/** See TableClass.TableClassOptions. `createFullHierarchy` defaults to false; the entity routes its parent service/chain through SharedInfra. Pass true only for tests that navigate a per-fixture service page, exercise service-level cascade, or otherwise assert on a unique service name. */
+/** See TableClass.TableClassOptions. `createFullHierarchy` defaults to false; the entity routes its parent service/chain through SharedInfra. Pass true only for tests that navigate a per-fixture service page, exercise service-level cascade, or otherwise assert on a unique service name. `sharedInfraKey` names the SharedInfra slot to use; leave undefined (→ 'default') so multiple dashboards share one service, or set a unique key when a filter test must see this entity on its own dashboardService. */
 export type DashboardClassOptions = {
   createFullHierarchy?: boolean;
+  sharedInfraKey?: string;
 };
 
 export interface DataModelType extends ResponseDataWithServiceType {
@@ -74,6 +75,7 @@ export class DashboardClass extends EntityClass {
   dataModelResponseData: DataModelType = {} as DataModelType;
   chartsResponseData: ResponseDataType = {} as ResponseDataType;
   createFullHierarchy: boolean;
+  sharedInfraKey: string | undefined;
 
   constructor(
     name?: string,
@@ -86,6 +88,7 @@ export class DashboardClass extends EntityClass {
     this.serviceCategory = SERVICE_TYPE.Dashboard;
     this.serviceType = ServiceTypes.DASHBOARD_SERVICES;
     this.createFullHierarchy = options?.createFullHierarchy ?? false;
+    this.sharedInfraKey = options?.sharedInfraKey;
 
     const serviceName = service?.name ?? `pw-dashboard-service-${uuid()}`;
     this.dashboardName = `pw-dashboard-${uuid()}`;
@@ -168,7 +171,10 @@ export class DashboardClass extends EntityClass {
       });
     } else {
       // Shared per-worker Superset DashboardService from SharedInfra.
-      this.serviceResponseData = await SharedInfra.dashboardService(apiContext);
+      this.serviceResponseData = await SharedInfra.dashboardService(
+        apiContext,
+        this.sharedInfraKey
+      );
       const sharedName = this.serviceResponseData.name;
       this.service = { ...this.service, name: sharedName };
       this.charts = { ...this.charts, service: sharedName };
