@@ -49,6 +49,7 @@ import AlertAiSection from './AlertAiSection.component';
 const AlertAiDestinationSection = ({
   isViewOnly,
   onChange,
+  recipientCategories,
   selectedSource,
   validationErrors,
   value,
@@ -159,6 +160,7 @@ const AlertAiDestinationSection = ({
               // eslint-disable-next-line react/no-array-index-key -- form array row keyed by position, no stable id
               key={index}
               name={index}
+              recipientCategories={recipientCategories}
               remove={(destinationIndex) =>
                 updateAlertAiValue(
                   value,
@@ -167,7 +169,6 @@ const AlertAiDestinationSection = ({
                   destinations.filter((_, i) => i !== destinationIndex)
                 )
               }
-              selectedSource={selectedSource}
               validationErrors={validationErrors}
               value={value}
               onChange={onChange}
