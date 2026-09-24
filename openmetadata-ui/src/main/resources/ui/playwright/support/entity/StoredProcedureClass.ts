@@ -32,6 +32,7 @@ import { SharedInfra } from './SharedInfra';
 /** See TableClass.TableClassOptions. `createFullHierarchy` defaults to false; the entity routes its parent service/chain through SharedInfra. Pass true only for tests that navigate a per-fixture service page, exercise service-level cascade, or otherwise assert on a unique service name. */
 export type StoredProcedureClassOptions = {
   createFullHierarchy?: boolean;
+  sharedInfraKey?: string;
 };
 
 export class StoredProcedureClass extends EntityClass {
@@ -79,10 +80,12 @@ export class StoredProcedureClass extends EntityClass {
   entityResponseData: ResponseDataWithServiceType =
     {} as ResponseDataWithServiceType;
   createFullHierarchy: boolean;
+  sharedInfraKey: string | undefined;
 
   constructor(name?: string, options?: StoredProcedureClassOptions) {
     super(EntityTypeEndpoint.StoreProcedure);
     this.createFullHierarchy = options?.createFullHierarchy ?? false;
+    this.sharedInfraKey = options?.sharedInfraKey;
 
     this.service = {
       name: name ?? `pw-database-service-${uuid()}`,
@@ -155,7 +158,10 @@ export class StoredProcedureClass extends EntityClass {
         data: this.schema,
       });
     } else {
-      const hierarchy = await SharedInfra.databaseHierarchy(apiContext);
+      const hierarchy = await SharedInfra.databaseHierarchy(
+        apiContext,
+        this.sharedInfraKey
+      );
       service = hierarchy.service;
       database = {
         ...hierarchy.database,
