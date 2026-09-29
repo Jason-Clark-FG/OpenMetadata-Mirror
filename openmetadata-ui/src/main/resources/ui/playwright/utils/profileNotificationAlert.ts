@@ -434,14 +434,21 @@ export const addExternalDestinationProfile = async ({
   const categoryInput = page
     .getByTestId(`destination-category-select-${destinationNumber}`)
     .getByRole('combobox');
+  const categoryList = page.getByRole('listbox');
   await expect(categoryInput).toBeVisible();
+  // A list closed by an earlier pick lingers briefly, with options of the same names.
+  await expect(categoryList).toHaveCount(0);
+  // The list closes on scroll, and a click that has to scroll first gets its scroll event only
+  // after the list has opened, so the scrolling is done before the click.
+  await categoryInput.scrollIntoViewIfNeeded();
   await categoryInput.click();
   await categoryInput.fill('');
   await categoryInput.press('ArrowDown');
 
-  const option = page.getByRole('option', { exact: true, name: category });
-  await expect(option).toBeVisible();
-  await option.click();
+  await categoryList
+    .getByRole('option', { exact: true, name: category })
+    .click();
+  await expect(categoryList).toHaveCount(0);
 
   if (category === 'Email') {
     const emailInput = page.getByTestId(`email-input-${destinationNumber}`);
