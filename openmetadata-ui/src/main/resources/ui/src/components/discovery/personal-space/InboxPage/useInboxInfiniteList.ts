@@ -85,6 +85,9 @@ export function useInboxInfiniteList<T>(
       setTotal(res.paging?.total ?? res.data.length);
     } catch (error) {
       showErrorToast(error as AxiosError);
+      setItems([]);
+      setAfter(undefined);
+      setTotal(0);
     } finally {
       setIsLoading(false);
     }

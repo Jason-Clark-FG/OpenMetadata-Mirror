@@ -154,6 +154,39 @@ describe('useInboxInfiniteList', () => {
     expect(second).toHaveBeenCalledWith(undefined);
   });
 
+  it('clears stale items/total and drops the cursor when a reload rejects after a prior successful load', async () => {
+    const first = jest.fn().mockResolvedValue({
+      data: [{ id: 1 }, { id: 2 }],
+      paging: { after: 'c1', total: 7 },
+    });
+    const second = jest.fn().mockRejectedValue(new Error('boom'));
+
+    const view = await act(async () =>
+      render(<Harness fetchPage={first} onApi={(value) => (api = value)} />)
+    );
+    await waitFor(() => expect(api.items.map((i) => i.id)).toEqual([1, 2]));
+
+    expect(api.total).toBe(7);
+
+    await act(async () => {
+      view.rerender(
+        <Harness fetchPage={second} onApi={(value) => (api = value)} />
+      );
+    });
+
+    await waitFor(() => expect(mockShowErrorToast).toHaveBeenCalled());
+
+    expect(api.items).toHaveLength(0);
+    expect(api.total).toBe(0);
+    expect(api.isLoading).toBe(false);
+
+    await act(async () => {
+      intersect?.();
+    });
+
+    expect(second).not.toHaveBeenCalledWith('c1');
+  });
+
   it('exposes setItems and setTotal for optimistic updates', async () => {
     const fetchPage = jest
       .fn()
