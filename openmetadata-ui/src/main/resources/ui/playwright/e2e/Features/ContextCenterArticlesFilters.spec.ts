@@ -110,6 +110,10 @@ test.describe(
     test.beforeAll('Setup entities and articles', async ({ browser }) => {
       test.setTimeout(4 * 60 * 1000);
 
+      // beforeAll can run twice in one worker under fullyParallel (see frontend-playwright.md);
+      // rebuild describe-scope state so we never wait on FQNs a prior afterAll already hard-deleted.
+      createdArticleFqns.length = 0;
+
       const { apiContext, afterAction } = await performAdminLogin(browser);
 
       const adminResponse = await apiContext.get(
