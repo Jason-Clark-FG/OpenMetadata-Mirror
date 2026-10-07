@@ -720,6 +720,13 @@ test.describe(
         await expect
           .poll(async () => {
             const resourcesAutocomplete = page.getByTestId('resources');
+            const chip = resourcesAutocomplete.getByTestId(
+              'autocomplete-selected-item'
+            );
+
+            if (await chip.isVisible()) {
+              return true;
+            }
 
             await resourcesAutocomplete.click();
 
@@ -729,6 +736,7 @@ test.describe(
 
             try {
               await option.click({ timeout: 3000 });
+              await chip.waitFor({ state: 'visible', timeout: 2000 });
 
               return true;
             } catch {
@@ -739,6 +747,13 @@ test.describe(
         await expect
           .poll(async () => {
             const operationsAutocomplete = page.getByTestId('operations');
+            const chip = operationsAutocomplete.getByTestId(
+              'autocomplete-selected-item'
+            );
+
+            if (await chip.isVisible()) {
+              return true;
+            }
 
             await operationsAutocomplete.click();
 
@@ -748,6 +763,7 @@ test.describe(
 
             try {
               await option.click({ timeout: 3000 });
+              await chip.waitFor({ state: 'visible', timeout: 2000 });
 
               return true;
             } catch {
@@ -1037,6 +1053,13 @@ test.describe(
           await expect
             .poll(async () => {
               const resourcesAutocomplete = page.getByTestId('resources');
+              const chip = resourcesAutocomplete.getByTestId(
+                'autocomplete-selected-item'
+              );
+
+              if (await chip.isVisible()) {
+                return true;
+              }
 
               await resourcesAutocomplete.click();
 
@@ -1046,6 +1069,7 @@ test.describe(
 
               try {
                 await option.click({ timeout: 3000 });
+                await chip.waitFor({ state: 'visible', timeout: 2000 });
 
                 return true;
               } catch {
@@ -1057,6 +1081,13 @@ test.describe(
           await expect
             .poll(async () => {
               const operationsAutocomplete = page.getByTestId('operations');
+              const chip = operationsAutocomplete.getByTestId(
+                'autocomplete-selected-item'
+              );
+
+              if (await chip.isVisible()) {
+                return true;
+              }
 
               await operationsAutocomplete.click();
 
@@ -1066,6 +1097,7 @@ test.describe(
 
               try {
                 await option.click({ timeout: 3000 });
+                await chip.waitFor({ state: 'visible', timeout: 2000 });
 
                 return true;
               } catch {
