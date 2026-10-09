@@ -31,7 +31,7 @@ import org.openmetadata.schema.alert.type.EmailAlertConfig;
 import org.openmetadata.schema.entity.events.EventSubscription;
 import org.openmetadata.schema.entity.events.SubscriptionDestination;
 import org.openmetadata.schema.type.Webhook;
-import org.openmetadata.service.events.subscription.channels.DestinationConfig;
+import org.openmetadata.service.alerting.channel.DestinationConfig;
 
 class AlertBacklogMigrationTest {
   private static final String INTERNAL = "URL targeting private/internal network not allowed";
