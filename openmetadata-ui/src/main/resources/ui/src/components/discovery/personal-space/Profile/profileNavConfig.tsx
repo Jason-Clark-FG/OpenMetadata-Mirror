@@ -17,6 +17,7 @@ import {
   Key01,
   PermissionDebugger as AccessControlIcon,
   Policy as GovernanceTabIcon,
+  Settings01,
   Settings02,
   ShieldTick,
   Sliders02,
@@ -41,6 +42,7 @@ import MembersPanel from './tabs/members/MembersPanel';
 import NotificationPanel from './tabs/notification/NotificationPanel';
 import PermissionsTab from './tabs/PermissionsTab';
 import PlatformSettingsPanel from './tabs/platform-settings/PlatformSettingsPanel';
+import PreferencesPanel from './tabs/preferences/PreferencesPanel';
 
 // Single source of truth lives in Profile.constants (hook-safe layer); re-exported
 // here so existing imports of `ProfileNavId` from this module keep working.
@@ -161,6 +163,14 @@ export const PROFILE_NAV_ITEMS: ProfileNavItem[] = [
         userData={userData}
       />
     ),
+  },
+  {
+    id: 'preferences',
+    group: 'account',
+    label: 'label.preference-plural',
+    description: 'message.preferences-page-description',
+    icon: Settings01,
+    render: () => <PreferencesPanel />,
   },
   {
     id: 'access-token',
