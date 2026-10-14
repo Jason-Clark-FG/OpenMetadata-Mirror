@@ -45,6 +45,7 @@ from metadata.ingestion.source.dashboard.powerbi.models import (
 )
 from metadata.ingestion.source.dashboard.powerbi.workspace_state import WorkspaceState
 from metadata.utils import fqn
+from metadata.utils.logger import ingestion_logger
 
 MOCK_REDSHIFT_EXP = """
 let
@@ -2563,3 +2564,38 @@ class PowerBIUnitTest(TestCase):
         assert request.dataModelType == DataModelType.PowerBIDatamart
         assert request.columns == []
         assert request.sourceUrl.root.endswith("/groups/ws-1/datamarts/datamart_b?experience=power-bi")
+
+    @pytest.mark.order(59)
+    def test_scanned_dataset_without_tables_logs_schema_retrieval_error(self):
+        """
+        The admin scan returns semantic models it could not read the schema of
+        with no tables and a schemaRetrievalError; that reason must reach the logs
+        """
+        workspace = Group.model_validate(
+            {
+                "id": "ws-1",
+                "name": "TEST_WS_ReportingHub",
+                "datasets": [
+                    {
+                        "id": "4506eed4-c797-4776-a358-0a46047e6320",
+                        "name": "JS_Directlake_Onelake_Warehouse_Test_v2",
+                        "targetStorageMode": "Abf",
+                        "schemaRetrievalError": "Semantic model has object level security",
+                    }
+                ],
+            }
+        )
+        dataset = workspace.datasets[0]
+
+        with (
+            patch.object(self.powerbi.service_connection, "useAdminApis", True),
+            self.assertLogs(ingestion_logger(), level="WARNING") as logs,
+        ):
+            result = self.powerbi._get_column_info(dataset)
+
+        assert result == []
+        assert len(logs.records) == 1
+        message = logs.records[0].getMessage()
+        assert "JS_Directlake_Onelake_Warehouse_Test_v2" in message
+        assert "schemaRetrievalError=Semantic model has object level security" in message
+        assert "targetStorageMode=Abf" in message

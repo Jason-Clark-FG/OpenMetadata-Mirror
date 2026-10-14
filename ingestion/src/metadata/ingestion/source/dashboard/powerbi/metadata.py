@@ -691,7 +691,40 @@ class PowerbiSource(DashboardServiceSource):
             except Exception as exc:
                 logger.debug(traceback.format_exc())
                 logger.warning(f"Error to yield datamodel column: {exc}")
+        self._log_dataset_schema_diagnostics(dataset, datasource_columns)
         return datasource_columns
+
+    def _log_dataset_schema_diagnostics(self, dataset: Dataset, columns: list[Column]) -> None:
+        """Explain why a data model ends up with no tables/columns, the scanner otherwise fails silently"""
+        tables = dataset.tables or []
+        details = (
+            f"[id={dataset.id}, name={dataset.name}, targetStorageMode={dataset.targetStorageMode},"
+            f" contentProviderType={dataset.contentProviderType},"
+            f" schemaRetrievalError={dataset.schemaRetrievalError},"
+            f" schemaMayNotBeUpToDate={dataset.schemaMayNotBeUpToDate}]"
+        )
+        logger.debug(
+            "PowerBI data model %s: tables in API response=%s, tables built=%s, tables without columns=%s",
+            details,
+            len(tables),
+            len(columns),
+            [table.name for table in tables if not table.columns],
+        )
+        if tables:
+            return
+        if not self.service_connection.useAdminApis:
+            logger.debug(
+                "PowerBI data model %s has no tables: without useAdminApis tables are fetched from"
+                " /groups/{group}/datasets/{dataset}/tables, which only returns tables for push datasets",
+                details,
+            )
+            return
+        logger.warning(
+            "PowerBI data model %s has no tables in the admin scan result. Power BI omits tables for"
+            " models that were not refreshed/republished since creation, models with object-level security"
+            " and live-connection models; schemaRetrievalError carries Power BI's reason when it gives one",
+            details,
+        )
 
     def _get_dataflow_column_info(self, dataflow_export: DataflowExportResponse) -> Optional[List[Column]]:  # noqa: UP006, UP045
         """Build columns from dataflow export response entities"""

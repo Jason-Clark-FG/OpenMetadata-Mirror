@@ -254,6 +254,11 @@ class Dataset(BaseModel):
     configuredBy: Optional[str] = None  # noqa: N815, UP045
     upstreamDataflows: Optional[List[UpstreaDataflow]] = []  # noqa: N815, UP006, UP045
     upstreamDatasets: Optional[List[UpstreaDataset]] = []  # noqa: N815, UP006, UP045
+    # Scanner API only: explains why a semantic model came back without tables
+    schemaRetrievalError: str | None = None  # noqa: N815
+    schemaMayNotBeUpToDate: bool | None = None  # noqa: N815
+    targetStorageMode: str | None = None  # noqa: N815
+    contentProviderType: str | None = None  # noqa: N815
 
 
 class DatasetResponse(BaseModel):
