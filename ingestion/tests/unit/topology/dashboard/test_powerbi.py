@@ -2599,3 +2599,26 @@ class PowerBIUnitTest(TestCase):
         assert "JS_Directlake_Onelake_Warehouse_Test_v2" in message
         assert "schemaRetrievalError=Semantic model has object level security" in message
         assert "targetStorageMode=Abf" in message
+
+    @pytest.mark.order(60)
+    def test_dataset_without_columns_warns_only_when_no_table_has_columns(self):
+        """Tables without any columns warn like a model with no tables; one real column silences it"""
+        tables_only = Dataset(id="ds-1", name="tables_only", tables=[PowerBiTable(name="t1", columns=[])])
+        with_columns = Dataset(
+            id="ds-2",
+            name="with_columns",
+            tables=[
+                PowerBiTable(name="measures_only", columns=[]),
+                PowerBiTable(name="t2", columns=[PowerBiColumns(name="c1", dataType="string")]),
+            ],
+        )
+
+        with (
+            patch.object(self.powerbi.service_connection, "useAdminApis", True),
+            self.assertLogs(ingestion_logger(), level="WARNING") as logs,
+        ):
+            self.powerbi._get_column_info(tables_only)
+            self.powerbi._get_column_info(with_columns)
+
+        assert len(logs.records) == 1
+        assert "name=tables_only, tables=1" in logs.records[0].getMessage()
