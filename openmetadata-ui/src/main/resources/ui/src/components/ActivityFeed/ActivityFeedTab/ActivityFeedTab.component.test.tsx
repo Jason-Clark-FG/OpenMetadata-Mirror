@@ -525,7 +525,7 @@ describe('ActivityFeedTab', () => {
       ).not.toBeInTheDocument();
 
       mockGetTaskData.mockClear();
-      fireEvent.click(screen.getByRole('button', { name: 'label.retry' }));
+      fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
       // A table's feed has no feed filter; the retry re-reads the first page.
       expect(mockGetTaskData).toHaveBeenCalledWith(
@@ -549,7 +549,7 @@ describe('ActivityFeedTab', () => {
         screen.queryByText('message.no-open-tasks-title')
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'label.retry' })
+        screen.queryByRole('button', { name: 'label.reload' })
       ).not.toBeInTheDocument();
     });
   });

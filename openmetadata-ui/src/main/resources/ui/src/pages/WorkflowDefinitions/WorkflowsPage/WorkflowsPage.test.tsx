@@ -217,16 +217,19 @@ describe('WorkflowsPage on OSS', () => {
   });
 
   it.each([
-    [500, 'workflow-load-error'],
-    [403, 'workflow-permission-error'],
+    [500, 'server.entity-fetch-error', true],
+    [403, 'label.access-denied', false],
   ])(
     'shows an error placeholder, not the empty state, when loading fails with %s',
-    async (status, testId) => {
+    async (status, text, canReload) => {
       mockGetWorkflowDefinitions.mockRejectedValue({ response: { status } });
 
       renderPage();
 
-      expect(await screen.findByTestId(testId)).toBeInTheDocument();
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(
+        Boolean(screen.queryByRole('button', { name: 'label.reload' }))
+      ).toBe(canReload);
       expect(
         screen.queryByText('message.put-your-data-operations-on-autopilot')
       ).not.toBeInTheDocument();
@@ -244,6 +247,28 @@ describe('WorkflowsPage on OSS', () => {
     expect(
       await screen.findByText('message.put-your-data-operations-on-autopilot')
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('workflow-load-error')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('server.entity-fetch-error')
+    ).not.toBeInTheDocument();
+  });
+
+  it('reloads the list from the error placeholder', async () => {
+    mockGetWorkflowDefinitions.mockRejectedValueOnce({
+      response: { status: 500 },
+    });
+    mockGetWorkflowDefinitions.mockResolvedValue({
+      data: [],
+      paging: { total: 0 },
+    });
+
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'label.reload' })
+    );
+
+    expect(
+      await screen.findByText('message.put-your-data-operations-on-autopilot')
+    ).toBeInTheDocument();
   });
 });

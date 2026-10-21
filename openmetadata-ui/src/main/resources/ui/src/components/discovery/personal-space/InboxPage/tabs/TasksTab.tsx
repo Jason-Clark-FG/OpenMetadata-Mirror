@@ -23,6 +23,7 @@ import {
   Inbox01,
 } from '@openmetadata/ui-core-components/icons';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { debounce } from 'lodash';
 import React, {
@@ -35,6 +36,9 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import Loader from '../../../../../components/common/Loader/Loader';
+import PermissionPlaceholder from '../../../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
+import { ClientErrors } from '../../../../../enums/Axios.enum';
 import { MY_TASKS_QUERY_KEY } from '../../../../../hooks/useMyTasks';
 import {
   listMyVisibleTasks,
@@ -47,7 +51,6 @@ import {
   TASK_LIST_QUERY_KEY,
   TASK_STATUS_COUNTS_QUERY_KEY,
 } from '../../inbox.constants';
-import InboxLoadError from '../components/InboxLoadError';
 import InboxTaskListItem from '../components/InboxTaskListItem';
 import InboxTaskListSkeleton from '../components/InboxTaskListSkeleton';
 import InboxTaskListToolbar, {
@@ -174,12 +177,19 @@ const TasksEmptyState = ({
   const { t } = useTranslation();
 
   if (error) {
-    return (
-      <InboxLoadError
-        data-testid="inbox-tasks-error"
-        entity={t('label.task-plural')}
-        error={error}
-        onRetry={onRetry}
+    return (error as AxiosError)?.response?.status ===
+      ClientErrors.FORBIDDEN ? (
+      <PermissionPlaceholder
+        permissionValue={t('label.view-entity', {
+          entity: t('label.task-plural'),
+        })}
+      />
+    ) : (
+      <SomethingWentWrongPlaceholder
+        description={t('server.entity-fetch-error', {
+          entity: t('label.task-plural'),
+        })}
+        onReload={onRetry}
       />
     );
   }

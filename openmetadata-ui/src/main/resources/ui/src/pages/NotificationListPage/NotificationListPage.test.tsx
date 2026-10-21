@@ -249,7 +249,7 @@ describe('Notification Alerts Page Tests', () => {
     ).not.toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByText('label.try-again'));
+      fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
     });
 
     expect(await screen.findByTestId('alert-name')).toBeInTheDocument();

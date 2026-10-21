@@ -28,9 +28,12 @@ import React, {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import PermissionPlaceholder from '../../../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ProfilePicture from '../../../../../components/common/ProfilePicture/ProfilePicture';
 import { usePermissionProvider } from '../../../../../context/PermissionProvider/PermissionProvider';
 import { OperationPermission } from '../../../../../context/PermissionProvider/PermissionProvider.interface';
+import { ClientErrors } from '../../../../../enums/Axios.enum';
 import { ResourceEntity } from '../../../../../enums/permissions.enum';
 import { Operation } from '../../../../../generated/entity/policies/accessControl/resourcePermission';
 import {
@@ -82,7 +85,6 @@ import { useIsScrolled } from '../useIsScrolled';
 import { useTaskAboutEntity } from '../useTaskAboutEntity';
 import ClampedText from './ClampedText';
 import InboxCommentComposer from './InboxCommentComposer';
-import InboxLoadError from './InboxLoadError';
 import TaskActionCommentModal from './TaskActionCommentModal';
 import TaskActivityTimeline from './TaskActivityTimeline';
 import TaskAssetCard from './TaskAssetCard';
@@ -305,25 +307,33 @@ const TaskUnavailable = ({
   onRetry: () => void;
 }) => {
   const { t } = useTranslation();
-  const isNotFound = !error || error.response?.status === 404;
+  const status = error?.response?.status;
+  let placeholder = (
+    <SomethingWentWrongPlaceholder
+      description={t('server.entity-fetch-error', { entity: t('label.task') })}
+      onReload={onRetry}
+    />
+  );
+  if (!error || status === ClientErrors.NOT_FOUND) {
+    placeholder = (
+      <EmptyPlaceholder
+        data-testid="task-not-found"
+        description={t('message.no-task-found-desc')}
+        title={t('label.no-task-found')}
+        variant="blank"
+      />
+    );
+  } else if (status === ClientErrors.FORBIDDEN) {
+    placeholder = (
+      <PermissionPlaceholder
+        permissionValue={t('label.view-entity', { entity: t('label.task') })}
+      />
+    );
+  }
 
   return (
     <div className="tw:flex tw:h-full tw:items-center tw:justify-center tw:p-8">
-      {isNotFound ? (
-        <EmptyPlaceholder
-          data-testid="task-not-found"
-          description={t('message.no-task-found-desc')}
-          title={t('label.no-task-found')}
-          variant="blank"
-        />
-      ) : (
-        <InboxLoadError
-          data-testid="task-load-error"
-          entity={t('label.task')}
-          error={error}
-          onRetry={onRetry}
-        />
-      )}
+      {placeholder}
     </div>
   );
 };

@@ -20,11 +20,15 @@ import {
   FilterFunnel01,
   Hourglass01,
 } from '@openmetadata/ui-core-components/icons';
+import { AxiosError } from 'axios';
 import classNames from 'classnames';
 import { TFunction } from 'i18next';
 import { countBy, groupBy } from 'lodash';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import PermissionPlaceholder from '../../../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
+import { ClientErrors } from '../../../../../enums/Axios.enum';
 import ProfilePicture from '../../../../../components/common/ProfilePicture/ProfilePicture';
 import { usePersonalSpaceStore } from '../../../../../hooks/usePersonalSpaceStore';
 import { formatDate } from '../../../../../utils/date-time/DateTimeUtils';
@@ -33,7 +37,6 @@ import searchClassBase from '../../../../../utils/SearchClassBase';
 import ActivityFeedItem from '../components/ActivityFeedItem';
 import ActivitySkeleton from '../components/ActivitySkeleton';
 import ActivityToolbar from '../components/ActivityToolbar';
-import InboxLoadError from '../components/InboxLoadError';
 import {
   ActivityFilter,
   ActivityGrouping,
@@ -126,12 +129,19 @@ const ActivityEmptyState = ({
   const { t } = useTranslation();
 
   if (error) {
-    return (
-      <InboxLoadError
-        data-testid="inbox-activity-error"
-        entity={t('label.activity')}
-        error={error}
-        onRetry={onRetry}
+    return (error as AxiosError)?.response?.status ===
+      ClientErrors.FORBIDDEN ? (
+      <PermissionPlaceholder
+        permissionValue={t('label.view-entity', {
+          entity: t('label.activity'),
+        })}
+      />
+    ) : (
+      <SomethingWentWrongPlaceholder
+        description={t('server.entity-fetch-error', {
+          entity: t('label.activity'),
+        })}
+        onReload={onRetry}
       />
     );
   }

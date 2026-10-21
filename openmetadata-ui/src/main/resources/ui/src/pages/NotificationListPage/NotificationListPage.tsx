@@ -11,6 +11,7 @@
  *  limitations under the License.
  */
 import {
+  Box,
   Button,
   ButtonUtility,
   Grid,
@@ -24,13 +25,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import DeleteModal from '../../components/common/DeleteModal/DeleteModal';
+import PermissionPlaceholder from '../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import { PagingHandlerParams } from '../../components/common/NextPrevious/NextPrevious.interface';
 import RichTextEditorPreviewerNew from '../../components/common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../components/common/Table/TableV2';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
-import AlertsEmptyState from '../../components/observability/Alerts/AlertsEmptyState';
-import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
+import { AlertsEmptyState } from '../../components/observability/Alerts/ObservabilityAlertsAiTable.component';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { NO_DATA_PLACEHOLDER } from '../../constants/constants';
@@ -43,6 +45,7 @@ import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { OperationPermission } from '../../context/PermissionProvider/PermissionProvider.interface';
+import { ClientErrors } from '../../enums/Axios.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { ResourceEntity } from '../../enums/permissions.enum';
 import {
@@ -399,10 +402,19 @@ const NotificationListPage = () => {
             loading={Boolean(loadingCount)}
             locale={{
               emptyText: alertsError ? (
-                <AlertsLoadErrorState
-                  error={alertsError}
-                  onRetry={() => fetchAlerts()}
-                />
+                <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+                  {alertsError.response?.status === ClientErrors.FORBIDDEN ? (
+                    <PermissionPlaceholder
+                      permissionValue={t('label.view-entity', {
+                        entity: t('label.alert-plural'),
+                      })}
+                    />
+                  ) : (
+                    <SomethingWentWrongPlaceholder
+                      onReload={() => fetchAlerts()}
+                    />
+                  )}
+                </Box>
               ) : (
                 <AlertsEmptyState
                   hasCreatePermission={Boolean(

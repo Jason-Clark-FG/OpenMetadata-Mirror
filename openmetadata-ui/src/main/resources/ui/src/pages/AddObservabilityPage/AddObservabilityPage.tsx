@@ -15,12 +15,15 @@ import { Box, Card, Typography } from '@openmetadata/ui-core-components';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import { useTranslation } from 'react-i18next';
+import NoDataPlaceholder from '../../components/common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
 import ResizablePanels from '../../components/common/ResizablePanels/ResizablePanels';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
-import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
+import { ClientErrors } from '../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { ResourceEntity } from '../../enums/permissions.enum';
 import { ProviderType } from '../../generated/entity/events/notificationTemplate';
@@ -39,7 +42,7 @@ import { useObservabilityAlertForm } from './hooks/useObservabilityAlertForm';
 const useAlertFormAccess = (isEditMode: boolean) => {
   const { fqn } = useFqn();
   const { permissions } = usePermissionProvider();
-  const { canEditAll, isLoading } = useEntityPermissions(
+  const { canEditAll, isLoading, error, refresh } = useEntityPermissions(
     ResourceEntity.EVENT_SUBSCRIPTION,
     fqn,
     { enabled: isEditMode }
@@ -54,6 +57,9 @@ const useAlertFormAccess = (isEditMode: boolean) => {
           permissions
         ),
     isPermissionLoading: isEditMode && isLoading,
+    // A failed permission fetch is not a denial; it gets a reload instead.
+    permissionError: isEditMode ? error : null,
+    refreshPermission: refresh,
   };
 };
 
@@ -66,14 +72,55 @@ function AddObservabilityPage({
     formState;
   const isNotification = alertType === AlertType.Notification;
   const isAiMode = useIsAiMode();
-  const { hasAccess, isPermissionLoading } = useAlertFormAccess(isEditMode);
+  const { hasAccess, isPermissionLoading, permissionError, refreshPermission } =
+    useAlertFormAccess(isEditMode);
 
-  if (isPermissionLoading) {
-    return <Loader />;
-  }
+  const getAlertLoadErrorPlaceholder = (status?: number) => {
+    if (status === ClientErrors.NOT_FOUND) {
+      return (
+        <NoDataPlaceholder
+          title={t('label.no-entity', { entity: t('label.alert') })}
+        />
+      );
+    }
 
-  if (!hasAccess) {
-    return <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.PERMISSION} />;
+    if (status === ClientErrors.FORBIDDEN) {
+      return (
+        <PermissionPlaceholder
+          permissionValue={t('label.edit-entity', {
+            entity: t('label.alert'),
+          })}
+        />
+      );
+    }
+
+    return <SomethingWentWrongPlaceholder onReload={fetchAlert} />;
+  };
+
+  const getAccessPlaceholder = () => {
+    if (isPermissionLoading) {
+      return <Loader />;
+    }
+
+    if (permissionError) {
+      return (
+        <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+          <SomethingWentWrongPlaceholder onReload={refreshPermission} />
+        </Box>
+      );
+    }
+
+    if (!hasAccess) {
+      return <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.PERMISSION} />;
+    }
+
+    return null;
+  };
+
+  const accessPlaceholder = getAccessPlaceholder();
+
+  if (accessPlaceholder) {
+    return accessPlaceholder;
   }
 
   // Only the edit route fetches an alert, and a retry clears the error first.
@@ -81,7 +128,9 @@ function AddObservabilityPage({
     return (
       <Box className="tw:py-4" direction="col" gap={4}>
         <TitleBreadcrumb titleLinks={breadcrumb} />
-        <AlertsLoadErrorState error={alertError} onRetry={fetchAlert} />
+        <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+          {getAlertLoadErrorPlaceholder(alertError.response?.status)}
+        </Box>
       </Box>
     );
   }

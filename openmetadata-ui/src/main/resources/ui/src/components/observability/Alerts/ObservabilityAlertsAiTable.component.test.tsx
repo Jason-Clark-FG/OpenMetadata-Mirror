@@ -458,7 +458,7 @@ describe('ObservabilityAlertsAiTable', () => {
       screen.queryByText('label.new-entity:label.alert')
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('label.try-again'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(onRetryPermission).toHaveBeenCalledTimes(1);
   });
@@ -481,7 +481,7 @@ describe('ObservabilityAlertsAiTable', () => {
       screen.queryByText('message.observability-alert-empty-heading')
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('label.try-again'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
@@ -492,11 +492,14 @@ describe('ObservabilityAlertsAiTable', () => {
         {...baseProps}
         alerts={[]}
         alertsError={{ response: { status: 403 } } as AxiosError}
+        onRetry={jest.fn()}
       />
     );
 
     expect(screen.getByText('label.access-denied')).toBeInTheDocument();
-    expect(screen.queryByText('label.try-again')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByText('label.new-entity:label.alert')
     ).not.toBeInTheDocument();

@@ -322,7 +322,7 @@ describe('ObservabilityAlertsTable component', () => {
     // The create onboarding is replaced, not shown.
     expect(screen.queryByText('label.new-entity')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('label.try-again'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(onRetryPermission).toHaveBeenCalledTimes(1);
   });
@@ -344,7 +344,7 @@ describe('ObservabilityAlertsTable component', () => {
       screen.queryByText('message.observability-alert-empty-heading')
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('label.try-again'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
@@ -355,10 +355,13 @@ describe('ObservabilityAlertsTable component', () => {
       alertsError: { response: { status: 403 } } as AxiosError,
       loading: false,
       loadingCount: 0,
+      onRetry: jest.fn(),
     });
 
     expect(screen.getByText('label.access-denied')).toBeInTheDocument();
-    expect(screen.queryByText('label.try-again')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
   });
 
   it('should render pagination when showPagination is true', () => {

@@ -338,13 +338,13 @@ describe('TasksTab', () => {
       };
       renderTab();
 
-      expect(
-        screen.getByTestId('inbox-tasks-error-forbidden')
-      ).toHaveTextContent('message.no-permission-to-view');
+      expect(screen.getByText('label.access-denied')).toBeInTheDocument();
       expect(
         screen.queryByText('label.no-open-tasks-yet')
       ).not.toBeInTheDocument();
-      expect(screen.queryByText('label.retry')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'label.reload' })
+      ).not.toBeInTheDocument();
     });
 
     it('shows an error with a retry that reloads the list and its counts', () => {
@@ -356,14 +356,14 @@ describe('TasksTab', () => {
       };
       renderTab();
 
-      expect(screen.getByTestId('inbox-tasks-error')).toHaveTextContent(
-        'message.something-went-wrong'
-      );
+      expect(
+        screen.getByText('message.something-went-wrong')
+      ).toBeInTheDocument();
       expect(
         screen.queryByText('label.no-open-tasks-yet')
       ).not.toBeInTheDocument();
 
-      fireEvent.click(screen.getByText('label.retry'));
+      fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
       expect(mockRefetch).toHaveBeenCalled();
       expect(mockInvalidateQueries).toHaveBeenCalledWith({

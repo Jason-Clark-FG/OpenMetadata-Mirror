@@ -14,11 +14,14 @@
 import { Box } from '@openmetadata/ui-core-components';
 import { isUndefined } from 'lodash';
 import { useTranslation } from 'react-i18next';
+import NoDataPlaceholder from '../../components/common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
-import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
+import { ClientErrors } from '../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { getEntityName } from '../../utils/EntityNameUtils';
 import { AlertDetailsPageProps } from './AlertDetailsPage.interface';
@@ -63,14 +66,33 @@ function AlertDetailsPage({
     );
   }
   if (!loadingCount && isUndefined(alertDetails)) {
+    const status = alertDetailsError?.response?.status;
+    let loadErrorPlaceholder = (
+      <SomethingWentWrongPlaceholder onReload={fetchAlertDetails} />
+    );
+    if (status === ClientErrors.NOT_FOUND) {
+      loadErrorPlaceholder = (
+        <NoDataPlaceholder
+          title={t('label.no-entity', { entity: t('label.alert') })}
+        />
+      );
+    } else if (status === ClientErrors.FORBIDDEN) {
+      loadErrorPlaceholder = (
+        <PermissionPlaceholder
+          permissionValue={t('label.view-entity', {
+            entity: t('label.alert-detail-plural'),
+          })}
+        />
+      );
+    }
+
     return (
       <PageLayoutV1 pageTitle={t('label.alert-detail-plural')}>
         <Box direction="col" gap={4}>
           <TitleBreadcrumb titleLinks={breadcrumb} />
-          <AlertsLoadErrorState
-            error={alertDetailsError}
-            onRetry={fetchAlertDetails}
-          />
+          <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+            {loadErrorPlaceholder}
+          </Box>
         </Box>
       </PageLayoutV1>
     );

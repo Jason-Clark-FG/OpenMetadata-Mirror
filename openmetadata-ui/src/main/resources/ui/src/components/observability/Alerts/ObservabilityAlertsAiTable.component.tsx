@@ -12,21 +12,33 @@
  */
 
 import {
+  Box,
   Button,
+  EmptyPlaceholder,
   PaginationCardWithControls,
   Table,
   TableCard,
 } from '@openmetadata/ui-core-components';
+import {
+  Bell01,
+  MarkerPin01,
+  Plus,
+  ZapFast,
+} from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
 import {
   PAGE_SIZE_BASE,
   PAGE_SIZE_LARGE,
   PAGE_SIZE_MEDIUM,
 } from '../../../constants/constants';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { OperationPermission } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { CursorType } from '../../../enums/pagination.enum';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
@@ -43,8 +55,6 @@ import {
 } from '../../../pages/ObservabilityAlertsPage/ObservabilityAlertsPage.utils';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { computeTotalPages } from '../../../utils/PaginationUtils';
-import AlertsEmptyState from './AlertsEmptyState';
-import AlertsLoadErrorState from './AlertsLoadErrorState';
 import ObservabilityAlertAiActions from './ObservabilityAlertAiActions.component';
 
 interface ObservabilityAlertsAiPageChangeParams {
@@ -56,6 +66,68 @@ const PAGE_SIZE_OPTIONS = [PAGE_SIZE_BASE, PAGE_SIZE_MEDIUM, PAGE_SIZE_LARGE];
 // max-width: 0 lets the link truncate inside the fixed table layout instead
 // of forcing the name column wider than its 30% allocation.
 const ALERT_NAME_COLUMN_LAYOUT_CLASS = 'tw:w-[30%]! tw:max-w-0';
+
+interface AlertsEmptyStateProps {
+  hasCreatePermission: boolean;
+  onAddAlert: () => void;
+}
+
+export function AlertsEmptyState({
+  hasCreatePermission,
+  onAddAlert,
+}: Readonly<AlertsEmptyStateProps>) {
+  const { t } = useTranslation();
+
+  const features = useMemo(
+    () => [
+      {
+        key: 'trigger',
+        icon: <ZapFast className="tw:text-fg-brand-primary" />,
+        title: t('label.pick-a-trigger'),
+        description: t('message.alert-pick-a-trigger-description'),
+      },
+      {
+        key: 'destination',
+        icon: <MarkerPin01 className="tw:text-fg-warning-primary" />,
+        title: t('label.choose-the-destination'),
+        description: t('message.alert-choose-destination-description'),
+      },
+      {
+        key: 'stay-ahead',
+        icon: <Bell01 className="tw:text-fg-success-primary" />,
+        title: t('label.stay-ahead'),
+        description: t('message.alert-stay-ahead-description'),
+      },
+    ],
+    [t]
+  );
+
+  return (
+    <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+      <EmptyPlaceholder
+        actions={
+          hasCreatePermission
+            ? [
+                {
+                  key: 'new-alert',
+                  label: t('label.new-entity', {
+                    entity: t('label.alert'),
+                  }),
+                  color: 'primary' as const,
+                  iconLeading: Plus,
+                  onPress: onAddAlert,
+                },
+              ]
+            : undefined
+        }
+        description={t('message.observability-alert-empty-description')}
+        features={features}
+        title={t('message.observability-alert-empty-heading')}
+        variant="features"
+      />
+    </Box>
+  );
+}
 
 interface ObservabilityAlertsAiTableProps {
   /** Accessible table name; defaults to the Observability alerts label. */
@@ -203,12 +275,22 @@ function ObservabilityAlertsAiTable({
   const isAlertsEmpty = !loading && alerts.length === 0;
 
   const getEmptyOrErrorPlaceholder = () => {
-    if (alertsError) {
-      return <AlertsLoadErrorState error={alertsError} onRetry={onRetry} />;
-    }
-
-    if (hasResourcePermissionError) {
-      return <AlertsLoadErrorState onRetry={onRetryPermission} />;
+    if (alertsError || hasResourcePermissionError) {
+      return (
+        <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+          {alertsError?.response?.status === ClientErrors.FORBIDDEN ? (
+            <PermissionPlaceholder
+              permissionValue={t('label.view-entity', {
+                entity: t('label.alert-plural'),
+              })}
+            />
+          ) : (
+            <SomethingWentWrongPlaceholder
+              onReload={alertsError ? onRetry : onRetryPermission}
+            />
+          )}
+        </Box>
+      );
     }
 
     return (

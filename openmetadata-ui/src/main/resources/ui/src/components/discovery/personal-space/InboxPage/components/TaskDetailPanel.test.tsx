@@ -863,7 +863,9 @@ describe('TaskDetailPanel', () => {
     expect(screen.getByTestId('task-not-found')).toHaveTextContent(
       'label.no-task-found'
     );
-    expect(screen.queryByTestId('task-load-error')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('message.something-went-wrong')
+    ).not.toBeInTheDocument();
   });
 
   it('shows a load error with a retry, not "not found", for a server error', async () => {
@@ -871,19 +873,21 @@ describe('TaskDetailPanel', () => {
 
     await act(async () => render(<TaskDetailPanel taskId="task-1" />));
 
-    expect(screen.getByTestId('task-load-error')).toHaveTextContent(
-      'message.something-went-wrong'
-    );
+    expect(
+      screen.getByText('message.something-went-wrong')
+    ).toBeInTheDocument();
     expect(screen.queryByText('label.no-task-found')).not.toBeInTheDocument();
     expect(mockShowErrorToast).not.toHaveBeenCalled();
 
     mockGetTaskById.mockResolvedValueOnce({ data: TASK });
     await act(async () => {
-      fireEvent.click(screen.getByText('label.retry'));
+      fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
     });
 
     expect(mockGetTaskById).toHaveBeenCalledTimes(2);
-    expect(screen.queryByTestId('task-load-error')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('message.something-went-wrong')
+    ).not.toBeInTheDocument();
   });
 
   it('shows an access placeholder for a 403', async () => {
@@ -891,9 +895,10 @@ describe('TaskDetailPanel', () => {
 
     await act(async () => render(<TaskDetailPanel taskId="task-1" />));
 
-    expect(screen.getByTestId('task-load-error-forbidden')).toHaveTextContent(
-      'label.access-denied'
-    );
+    expect(screen.getByText('label.access-denied')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('label.no-task-found')).not.toBeInTheDocument();
   });
 

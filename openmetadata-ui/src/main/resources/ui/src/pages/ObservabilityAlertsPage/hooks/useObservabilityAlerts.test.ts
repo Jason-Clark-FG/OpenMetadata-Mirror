@@ -225,4 +225,20 @@ describe('useObservabilityAlerts', () => {
     expect(result.current.alertsError).toBeUndefined();
     expect(result.current.alerts).toEqual([userAlert]);
   });
+
+  it('drops the rows already on screen when a refetch fails', async () => {
+    const serverError = { response: { status: 500 } };
+    const { result } = renderHook(() => useObservabilityAlerts());
+
+    await waitFor(() => expect(result.current.alerts).toEqual([userAlert]));
+
+    mockGetAllAlerts.mockRejectedValueOnce(serverError);
+
+    await act(async () => {
+      await result.current.fetchAlerts();
+    });
+
+    expect(result.current.alertsError).toBe(serverError);
+    expect(result.current.alerts).toEqual([]);
+  });
 });

@@ -15,6 +15,7 @@ import {
   Box,
   ButtonUtility,
   Card,
+  Owner,
   Skeleton,
   Tabs,
 } from '@openmetadata/ui-core-components';
@@ -23,12 +24,13 @@ import {
   RefreshCw01,
   Trash01,
 } from '@openmetadata/ui-core-components/icons';
+import { isEmpty } from 'lodash';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import DeleteModal from '../../../components/common/DeleteModal/DeleteModal';
 import Description from '../../../components/common/EntityDescription/Description';
 import TitleBreadcrumb from '../../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
-import AlertOwnersInline from '../../../components/observability/Alerts/AlertOwnersInline';
+import { UserTeamSelectableList } from '../../../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
 import EntityHeaderTitle from '../../../components/Entity/EntityHeaderTitle/EntityHeaderTitle.component';
 import { AlertDetailTabs } from '../../../enums/Alerts.enum';
 import { EntityType } from '../../../enums/entity.enum';
@@ -71,6 +73,35 @@ function AlertDetailsContent({
   );
   // Keeps the recent events filter and page when switching tabs.
   const visitedTabs = useVisitedTabs(activeTab);
+  const owners = alertDetails?.owners;
+  const hasOwners = !isEmpty(owners);
+
+  const renderOwners = () => {
+    if (!hasOwners && !editOwnersPermission) {
+      return null;
+    }
+
+    return (
+      <Box
+        align="center"
+        className="tw:min-w-0 tw:shrink-0"
+        data-testid="alert-owners"
+        gap={2}>
+        <span className="tw:text-sm tw:font-medium tw:text-secondary">
+          {t('label.owner-plural')}
+        </span>
+        {hasOwners && <Owner owners={owners} />}
+        {editOwnersPermission && (
+          <UserTeamSelectableList
+            hasPermission
+            multiple={{ user: true, team: false }}
+            owner={owners}
+            onUpdate={onOwnerUpdate}
+          />
+        )}
+      </Box>
+    );
+  };
 
   const handleAlertHardDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -113,11 +144,7 @@ function AlertDetailsContent({
                       {ownerLoading ? (
                         <Skeleton height={40} variant="rounded" width={80} />
                       ) : (
-                        <AlertOwnersInline
-                          hasPermission={Boolean(editOwnersPermission)}
-                          owners={alertDetails?.owners}
-                          onUpdate={onOwnerUpdate}
-                        />
+                        renderOwners()
                       )}
                       {extraInfo}
                     </div>

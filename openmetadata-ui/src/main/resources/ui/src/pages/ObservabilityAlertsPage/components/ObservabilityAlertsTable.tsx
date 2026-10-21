@@ -11,13 +11,20 @@
  *  limitations under the License.
  */
 
-import { Button, Table, TableCard } from '@openmetadata/ui-core-components';
+import {
+  Box,
+  Button,
+  Table,
+  TableCard,
+} from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import NextPrevious from '../../../components/common/NextPrevious/NextPrevious';
 import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
-import AlertsEmptyState from '../../../components/observability/Alerts/AlertsEmptyState';
-import AlertsLoadErrorState from '../../../components/observability/Alerts/AlertsLoadErrorState';
+import { AlertsEmptyState } from '../../../components/observability/Alerts/ObservabilityAlertsAiTable.component';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { ALERT_TABLE_COLUMN_IDS } from '../ObservabilityAlertsPage.constants';
@@ -133,12 +140,22 @@ function ObservabilityAlertsTable({
   const isAlertsEmpty = !loading && loadingCount === 0 && alerts.length === 0;
 
   const getEmptyOrErrorPlaceholder = () => {
-    if (alertsError) {
-      return <AlertsLoadErrorState error={alertsError} onRetry={onRetry} />;
-    }
-
-    if (hasResourcePermissionError) {
-      return <AlertsLoadErrorState onRetry={onRetryPermission} />;
+    if (alertsError || hasResourcePermissionError) {
+      return (
+        <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+          {alertsError?.response?.status === ClientErrors.FORBIDDEN ? (
+            <PermissionPlaceholder
+              permissionValue={t('label.view-entity', {
+                entity: t('label.alert-plural'),
+              })}
+            />
+          ) : (
+            <SomethingWentWrongPlaceholder
+              onReload={alertsError ? onRetry : onRetryPermission}
+            />
+          )}
+        </Box>
+      );
     }
 
     return (

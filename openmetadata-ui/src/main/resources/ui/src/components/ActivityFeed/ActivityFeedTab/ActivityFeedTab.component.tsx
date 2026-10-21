@@ -51,6 +51,7 @@ import {
 } from '../../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../../constants/entity.constants';
 import { observerOptions } from '../../../constants/Mydata.constants';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
 import { FeedFilter } from '../../../enums/mydata.enum';
@@ -72,11 +73,12 @@ import {
   getEntityUserLink,
 } from '../../../utils/EntityPureUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
-import InboxLoadError from '../../discovery/personal-space/InboxPage/components/InboxLoadError';
 import { getFeedTotalCount } from '../../../utils/FeedUtilsPure';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
 import withSuspenseFallback from '../../AppRouter/withSuspenseFallback';
+import PermissionPlaceholder from '../../common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ErrorPlaceHolderNew from '../../common/ErrorWithPlaceholder/ErrorPlaceHolderNew';
 import Loader from '../../common/Loader/Loader';
 import '../../MyData/Widgets/FeedsWidget/feeds-widget.less';
@@ -413,12 +415,16 @@ const ActivityFeedListPlaceholder = ({
     return <>{fallback}</>;
   }
 
-  return (
-    <InboxLoadError
-      data-testid="activity-feed"
-      entity={isTaskList ? t('label.task-plural') : t('label.activity-feed')}
-      error={error}
-      onRetry={onRetry}
+  const entity = isTaskList ? t('label.task-plural') : t('label.activity-feed');
+
+  return error?.response?.status === ClientErrors.FORBIDDEN ? (
+    <PermissionPlaceholder
+      permissionValue={t('label.view-entity', { entity })}
+    />
+  ) : (
+    <SomethingWentWrongPlaceholder
+      description={t('server.entity-fetch-error', { entity })}
+      onReload={onRetry}
     />
   );
 };

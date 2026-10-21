@@ -149,6 +149,25 @@ jest.mock('@openmetadata/ui-core-components', () => {
         {testId}
       </button>
     ),
+    EmptyPlaceholder: ({
+      actions,
+      description,
+      title,
+    }: {
+      actions?: { key: string; label: string; onPress?: () => void }[];
+      description?: ReactNode;
+      title?: ReactNode;
+    }) => (
+      <div>
+        <span>{title}</span>
+        <span>{description}</span>
+        {actions?.map((action) => (
+          <button key={action.key} onClick={action.onPress}>
+            {action.label}
+          </button>
+        ))}
+      </div>
+    ),
     Owner: jest.fn(() => <div data-testid="owner-label" />),
     PageLayout: {
       PageHeader: ({
@@ -188,6 +207,9 @@ jest.mock('@openmetadata/ui-core-components', () => {
 });
 
 jest.mock('@openmetadata/ui-core-components/icons', () => ({
+  AlertTriangle: () => null,
+  Database01: () => null,
+  Lock01: () => null,
   Edit01: () => null,
   RefreshCw04: () => null,
   Trash01: () => null,
@@ -214,24 +236,6 @@ jest.mock(
     ),
   })
 );
-
-jest.mock('./AlertsLoadErrorState', () => ({
-  __esModule: true,
-  default: ({
-    error,
-    onRetry,
-  }: {
-    error?: { response?: { status?: number } };
-    onRetry?: () => void;
-  }) => (
-    <button
-      data-status={error?.response?.status}
-      data-testid="alerts-load-error"
-      onClick={onRetry}>
-      retry
-    </button>
-  ),
-}));
 
 jest.mock('../../../components/common/DeleteModal/DeleteModal', () => ({
   __esModule: true,
@@ -501,15 +505,51 @@ describe('AlertDetailsPage', () => {
     expect(screen.getByTestId('page-header')).toHaveTextContent(
       'service.alert'
     );
-    expect(screen.getByTestId('alerts-load-error')).toHaveAttribute(
-      'data-status',
-      '500'
-    );
+    expect(
+      screen.getByText('message.something-went-wrong')
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('error-placeholder')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('alerts-load-error'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(fetchAlertDetails).toHaveBeenCalled();
+  });
+
+  it('renders a not-found state without retry when the alert does not exist', () => {
+    mockUseAlertDetailsData.mockReturnValue(
+      getDetailsState({
+        alertDetails: undefined,
+        alertDetailsError: { response: { status: 404 } },
+        loadingCount: 0,
+      })
+    );
+
+    renderPage(<AlertDetailsPage />);
+
+    expect(screen.getByText('label.no-entity:label.alert')).toBeInTheDocument();
+    expect(
+      screen.queryByText('message.something-went-wrong')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders an access-denied state without retry when the alert load is forbidden', () => {
+    mockUseAlertDetailsData.mockReturnValue(
+      getDetailsState({
+        alertDetails: undefined,
+        alertDetailsError: { response: { status: 403 } },
+        loadingCount: 0,
+      })
+    );
+
+    renderPage(<AlertDetailsPage />);
+
+    expect(screen.getByText('label.access-denied')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
   });
 
   it('keeps the document title mounted while alert details are loading', () => {
@@ -553,6 +593,57 @@ describe('AlertDetailsPage', () => {
 
     expect(within(metaRow).getByTestId('alert-owners')).toBeInTheDocument();
     expect(within(metaRow).getByTestId('event-counts')).toHaveTextContent('3');
+  });
+
+  it('shows the owners label and edit control to an editor when the alert has no owners', () => {
+    mockUseAlertDetailsData.mockReturnValue(
+      getDetailsState({ alertDetails: { ...alertDetails, owners: [] } })
+    );
+
+    renderPage(<AlertDetailsPage />);
+
+    const ownersRow = screen.getByTestId('alert-owners');
+
+    expect(ownersRow).toHaveTextContent('label.owner-plural');
+    expect(
+      within(ownersRow).getByRole('button', { name: 'Owner' })
+    ).toBeInTheDocument();
+    expect(within(ownersRow).queryByTestId('owner-label')).toBeNull();
+    expect(ownersRow).not.toHaveTextContent('label.no-owners');
+  });
+
+  it('shows owner avatars without the edit control to a viewer', () => {
+    mockUseAlertDetailsData.mockReturnValue(
+      getDetailsState({
+        alertDetails: {
+          ...alertDetails,
+          owners: [{ id: 'u1', name: 'aaron', type: 'user' }],
+        },
+        editOwnersPermission: false,
+      })
+    );
+
+    renderPage(<AlertDetailsPage />);
+
+    const ownersRow = screen.getByTestId('alert-owners');
+
+    expect(within(ownersRow).getByTestId('owner-label')).toBeInTheDocument();
+    expect(
+      within(ownersRow).queryByRole('button', { name: 'Owner' })
+    ).toBeNull();
+  });
+
+  it('hides the owners row from a viewer when the alert has no owners', () => {
+    mockUseAlertDetailsData.mockReturnValue(
+      getDetailsState({
+        alertDetails: { ...alertDetails, owners: [] },
+        editOwnersPermission: false,
+      })
+    );
+
+    renderPage(<AlertDetailsPage />);
+
+    expect(screen.queryByTestId('alert-owners')).not.toBeInTheDocument();
   });
 
   it('renders the recent events and diagnostic tabs with AI content', () => {

@@ -27,6 +27,8 @@ import { useTranslation } from 'react-i18next';
 import { Navigate } from 'react-router-dom';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';
 import DeleteModal from '../../../components/common/DeleteModal/DeleteModal';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import HeaderBreadcrumb from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.component';
 import { getGlossaryHomeCrumb } from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.utils';
 import Loader from '../../../components/common/Loader/Loader';
@@ -38,7 +40,6 @@ import { NodeFormSidebar } from '../../../components/WorkflowDefinitions/Workflo
 import { WorkflowCanvas } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowCanvas';
 import { WorkflowExecutionHistory } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowExecutionHistory';
 import { WorkflowHeader } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowHeader';
-import WorkflowLoadErrorPlaceholder from '../../../components/WorkflowDefinitions/WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 import WorkflowSidebar from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowSidebar';
 import type { WorkflowBuilderTab } from '../../../constants/WorkflowBuilder.constants';
 import {
@@ -49,6 +50,7 @@ import {
   useWorkflowModeContext,
   WorkflowModeProvider,
 } from '../../../contexts/WorkflowModeContext';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { NodeType } from '../../../generated/governance/workflows/elements/nodeType';
 import { ApprovalMode } from '../../../generated/governance/workflows/elements/triggers/eventBasedEntityTrigger';
 import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
@@ -114,11 +116,20 @@ const WorkflowBuilderLoadError: React.FC<WorkflowBuilderLoadErrorProps> = ({
   const isAiMode = useIsAiMode();
   const placeholder = (
     <div className="tw:relative tw:flex-1 tw:min-h-0">
-      <WorkflowLoadErrorPlaceholder
-        entity={t('label.workflow')}
-        error={error}
-        onReload={onReload}
-      />
+      {error.response?.status === ClientErrors.FORBIDDEN ? (
+        <PermissionPlaceholder
+          permissionValue={t('label.view-entity', {
+            entity: t('label.workflow'),
+          })}
+        />
+      ) : (
+        <SomethingWentWrongPlaceholder
+          title={t('server.entity-fetch-error', {
+            entity: t('label.workflow'),
+          })}
+          onReload={onReload}
+        />
+      )}
     </div>
   );
 

@@ -197,14 +197,14 @@ describe('ActivityTab', () => {
     activityState = { ...activityState, error: { response: { status: 500 } } };
     render(<ActivityTab />);
 
-    expect(screen.getByTestId('inbox-activity-error')).toHaveTextContent(
-      'message.something-went-wrong'
-    );
+    expect(
+      screen.getByText('message.something-went-wrong')
+    ).toBeInTheDocument();
     expect(
       screen.queryByText('label.activity-feed-starts-here')
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('label.retry'));
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
 
     expect(mockRefetch).toHaveBeenCalled();
   });
@@ -213,10 +213,10 @@ describe('ActivityTab', () => {
     activityState = { ...activityState, error: { response: { status: 403 } } };
     render(<ActivityTab />);
 
+    expect(screen.getByText('label.access-denied')).toBeInTheDocument();
     expect(
-      screen.getByTestId('inbox-activity-error-forbidden')
-    ).toHaveTextContent('label.access-denied');
-    expect(screen.queryByText('label.retry')).not.toBeInTheDocument();
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
   });
 
   it('shows the skeleton while loading', () => {

@@ -57,18 +57,21 @@ const renderBuilder = () =>
 
 describe('WorkflowBuilder load failure', () => {
   it.each([
-    [500, 'workflow-load-error'],
-    [403, 'workflow-permission-error'],
+    [500, 'server.entity-fetch-error', true],
+    [403, 'label.access-denied', false],
   ])(
     'shows an error placeholder instead of an editable blank canvas on a %s',
-    async (status, testId) => {
+    async (status, text, canReload) => {
       mockGetWorkflowDefinitionByFQN.mockRejectedValue({
         response: { status },
       });
 
       renderBuilder();
 
-      expect(await screen.findByTestId(testId)).toBeInTheDocument();
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(
+        Boolean(screen.queryByRole('button', { name: 'label.reload' }))
+      ).toBe(canReload);
       expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
       expect(
         screen.queryByTestId('edit-workflow-button')

@@ -19,6 +19,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import NoDataPlaceholder from '../../../components/common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import NextPrevious from '../../../components/common/NextPrevious/NextPrevious';
 import { PagingHandlerParams } from '../../../components/common/NextPrevious/NextPrevious.interface';
 import { StatusType } from '../../../components/common/StatusBadge/StatusBadge.interface';
@@ -29,6 +31,7 @@ import {
   PAGE_SIZE_BASE,
 } from '../../../constants/constants';
 import { getStatusMapping } from '../../../constants/WorkflowBuilder.constants';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { EntityType } from '../../../enums/entity.enum';
 import { CursorType } from '../../../enums/pagination.enum';
 import {
@@ -45,7 +48,6 @@ import {
 import EntityLink from '../../../utils/EntityLink';
 import { getEntityLinkFromType } from '../../../utils/EntityLinkUtils';
 import { getNameFromFQN } from '../../../utils/FqnUtils';
-import WorkflowLoadErrorPlaceholder from '../WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 
 const GLOBAL_RELATED_ENTITY_VARIABLE = 'global_relatedEntity';
 
@@ -235,11 +237,24 @@ export const WorkflowExecutionHistory: React.FC<
   if (loadError && !loading) {
     return (
       <div className="tw:relative tw:flex-1 tw:min-h-0">
-        <WorkflowLoadErrorPlaceholder
-          entity={t('label.execution-history')}
-          error={loadError}
-          onReload={() => fetchExecutionHistory()}
-        />
+        {loadError.response?.status === ClientErrors.FORBIDDEN ? (
+          <PermissionPlaceholder
+            permissionValue={t('label.view-entity', {
+              entity: t('label.execution-history'),
+            })}
+          />
+        ) : (
+          <SomethingWentWrongPlaceholder
+            title={t('server.entity-fetch-error', {
+              entity: t('label.execution-history'),
+            })}
+            onReload={() => {
+              // The retry reads the first page, so the pager must show page 1.
+              setCurrentPage(1);
+              fetchExecutionHistory();
+            }}
+          />
+        )}
       </div>
     );
   }

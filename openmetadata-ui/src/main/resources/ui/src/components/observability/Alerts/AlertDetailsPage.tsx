@@ -14,6 +14,7 @@
 import {
   Box,
   ButtonUtility,
+  Owner,
   PageLayout,
   Tabs,
   Typography,
@@ -25,17 +26,21 @@ import {
 } from '@openmetadata/ui-core-components/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import { isUndefined } from 'lodash';
+import { isEmpty, isUndefined } from 'lodash';
 import { Key, ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import DeleteModal from '../../../components/common/DeleteModal/DeleteModal';
 import DocumentTitle from '../../../components/common/DocumentTitle/DocumentTitle';
+import NoDataPlaceholder from '../../../components/common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import HeaderBreadcrumb from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.component';
 import Loader from '../../../components/common/Loader/Loader';
-import AlertOwnersInline from './AlertOwnersInline';
+import { UserTeamSelectableList } from '../../../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
 import { AlertDetailTabs } from '../../../enums/Alerts.enum';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import {
   AlertType,
@@ -59,7 +64,6 @@ import AlertAiRecentEventsTab from './AlertAiRecentEventsTab';
 import AlertDescriptionCard from './AlertDescriptionCard.component';
 import AlertEditModal from './AlertEditModal.component';
 import { AlertKind, OBSERVABILITY_ALERT_KIND } from './alertKinds';
-import AlertsLoadErrorState from './AlertsLoadErrorState';
 
 interface AlertDetailsPageProps {
   /** Which alerts this page serves; Settings → Notifications passes its kind. */
@@ -279,13 +283,29 @@ const AlertDetailsPage = ({
         className="tw:mt-1.5 tw:text-secondary"
         gap={3}
         wrap="nowrap">
-        {ownerLoading ? null : (
-          <AlertOwnersInline
-            hasPermission={Boolean(editOwnersPermission)}
-            owners={alertDetails?.owners}
-            onUpdate={onOwnerUpdate}
-          />
-        )}
+        {!ownerLoading &&
+          (!isEmpty(alertDetails?.owners) || editOwnersPermission) && (
+            <Box
+              align="center"
+              className="tw:min-w-0 tw:shrink-0"
+              data-testid="alert-owners"
+              gap={2}>
+              <span className="tw:text-sm tw:font-medium tw:text-secondary">
+                {t('label.owner-plural')}
+              </span>
+              {!isEmpty(alertDetails?.owners) && (
+                <Owner owners={alertDetails?.owners} />
+              )}
+              {editOwnersPermission && (
+                <UserTeamSelectableList
+                  hasPermission
+                  multiple={{ user: true, team: false }}
+                  owner={alertDetails?.owners}
+                  onUpdate={onOwnerUpdate}
+                />
+              )}
+            </Box>
+          )}
         <AlertAiEventCounts
           counts={alertEventCounts}
           loading={alertEventCountsLoading}
@@ -299,6 +319,7 @@ const AlertDetailsPage = ({
       editOwnersPermission,
       onOwnerUpdate,
       ownerLoading,
+      t,
     ]
   );
 
@@ -384,6 +405,26 @@ const AlertDetailsPage = ({
     }
 
     if (!loadingCount && isUndefined(alertDetails)) {
+      const status = alertDetailsError?.response?.status;
+      let loadErrorPlaceholder = (
+        <SomethingWentWrongPlaceholder onReload={fetchAlertDetails} />
+      );
+      if (status === ClientErrors.NOT_FOUND) {
+        loadErrorPlaceholder = (
+          <NoDataPlaceholder
+            title={t('label.no-entity', { entity: t('label.alert') })}
+          />
+        );
+      } else if (status === ClientErrors.FORBIDDEN) {
+        loadErrorPlaceholder = (
+          <PermissionPlaceholder
+            permissionValue={t('label.view-entity', {
+              entity: t('label.alert-detail-plural'),
+            })}
+          />
+        );
+      }
+
       return (
         <ObservabilityPageShell
           header={
@@ -401,10 +442,9 @@ const AlertDetailsPage = ({
             />
           }
           pageTitle={alertName}>
-          <AlertsLoadErrorState
-            error={alertDetailsError}
-            onRetry={fetchAlertDetails}
-          />
+          <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+            {loadErrorPlaceholder}
+          </Box>
         </ObservabilityPageShell>
       );
     }

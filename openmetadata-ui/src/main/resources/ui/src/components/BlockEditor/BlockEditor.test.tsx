@@ -21,20 +21,31 @@ describe('BlockEditor', () => {
   // An editor that starts editable and is made read-only a tick later lets a
   // trailing "@name" in its content open the mention popup, which then stays
   // pinned to the page's top-left.
-  it('is read-only from its first render when not editable', async () => {
+  it('is read-only from its first render when not editable', () => {
+    // Fake timers hold back the deferred setEditable(false), so only an editor
+    // created read-only passes.
+    jest.useFakeTimers();
     const ref = createRef<BlockEditorRef>();
 
-    await act(async () => {
-      render(
-        <BlockEditor
-          content="<p>uireview comment @admin</p>"
-          editable={false}
-          ref={ref}
-        />
-      );
-    });
+    try {
+      act(() => {
+        render(
+          <BlockEditor
+            content="<p>uireview comment @admin</p>"
+            editable={false}
+            ref={ref}
+          />
+        );
+      });
 
-    expect(ref.current?.editor?.isEditable).toBe(false);
+      expect(ref.current?.editor).toBeTruthy();
+      expect(ref.current?.editor?.isEditable).toBe(false);
+      expect(
+        document.querySelector('.ProseMirror[contenteditable="true"]')
+      ).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('is editable by default', async () => {

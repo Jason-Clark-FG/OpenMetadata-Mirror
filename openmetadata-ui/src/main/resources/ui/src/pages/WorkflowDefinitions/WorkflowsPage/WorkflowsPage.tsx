@@ -33,6 +33,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { ReactComponent as WorkflowIcon } from '../../../assets/svg/workflow.svg';
+import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
+import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import HeaderBreadcrumb from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.component';
 import { getGlossaryHomeCrumb } from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.utils';
 import Loader from '../../../components/common/Loader/Loader';
@@ -48,6 +50,7 @@ import {
   PAGE_SIZE_MEDIUM,
 } from '../../../constants/constants';
 import { LEARNING_PAGE_IDS } from '../../../constants/Learning.constants';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { CursorType } from '../../../enums/pagination.enum';
 import { WorkflowDefinition } from '../../../generated/governance/workflows/workflowDefinition';
 import { Paging } from '../../../generated/type/paging';
@@ -66,7 +69,6 @@ import {
   WORKFLOW_NAME_REGEX,
 } from '../../../utils/WorkflowValidationUtils';
 import { WorkflowDetailsTabs } from '../WorkflowDetails/workflow-details.interface';
-import WorkflowLoadErrorPlaceholder from '../../../components/WorkflowDefinitions/WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 import WorkflowList, { WorkflowListItem } from './WorkflowList';
 import WorkflowsPageSection from './WorkflowsPageSection';
 
@@ -322,11 +324,20 @@ const WorkflowsPage = () => {
     if (loadError) {
       return (
         <Box className="tw:relative tw:flex-1 tw:min-h-0">
-          <WorkflowLoadErrorPlaceholder
-            entity={t('label.workflow-plural')}
-            error={loadError}
-            onReload={() => getWorkflows()}
-          />
+          {loadError.response?.status === ClientErrors.FORBIDDEN ? (
+            <PermissionPlaceholder
+              permissionValue={t('label.view-entity', {
+                entity: t('label.workflow-plural'),
+              })}
+            />
+          ) : (
+            <SomethingWentWrongPlaceholder
+              title={t('server.entity-fetch-error', {
+                entity: t('label.workflow-plural'),
+              })}
+              onReload={() => getWorkflows()}
+            />
+          )}
         </Box>
       );
     }

@@ -165,6 +165,7 @@ export function useObservabilityAlerts({
         handlePagingChange(paging);
         fetchAllAlertsPermission(alertsList);
       } catch (error) {
+        setAlerts([]);
         setAlertsError(error as AxiosError);
       } finally {
         setLoading(false);

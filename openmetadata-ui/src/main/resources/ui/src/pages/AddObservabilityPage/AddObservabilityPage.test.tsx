@@ -235,10 +235,61 @@ describe('Add ObservabilityPage Alerts Page Tests', () => {
     expect(screen.queryByTestId('save-button')).not.toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByText('label.try-again'));
+      fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
     });
 
     expect(getObservabilityAlertByFQN).toHaveBeenCalledTimes(2);
+  });
+
+  it('should show a not-found state without retry when the alert to edit does not exist', async () => {
+    mockFqn.fqn = 'alert-test';
+    mockEntityPermissions(true);
+    (getObservabilityAlertByFQN as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject({ response: { status: 404 } })
+    );
+
+    await act(async () => {
+      render(<AddObservabilityPage {...mockProps} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(await screen.findByText('label.no-entity')).toBeInTheDocument();
+    expect(
+      screen.queryByText('message.something-went-wrong')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'label.reload' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('should offer a reload, not a permission denial, when the edit permission fails to load', async () => {
+    mockFqn.fqn = 'alert-test';
+    const refresh = jest.fn();
+    mockUseEntityPermissions.mockReturnValue({
+      permissions: DEFAULT_ENTITY_PERMISSION,
+      isLoading: false,
+      error: { response: { status: 500 } },
+      refresh,
+      ...getDerivedPermissionFlags(DEFAULT_ENTITY_PERMISSION, false),
+    });
+
+    await act(async () => {
+      render(<AddObservabilityPage {...mockProps} />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(
+      screen.getByText('message.something-went-wrong')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('permission-error-placeholder')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'label.reload' }));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it('should render Add Observability Page', async () => {
