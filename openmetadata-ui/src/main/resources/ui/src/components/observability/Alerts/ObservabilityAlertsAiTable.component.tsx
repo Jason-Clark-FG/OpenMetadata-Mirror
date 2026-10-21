@@ -38,8 +38,8 @@ import {
   PAGE_SIZE_LARGE,
   PAGE_SIZE_MEDIUM,
 } from '../../../constants/constants';
-import { ClientErrors } from '../../../enums/Axios.enum';
 import { OperationPermission } from '../../../context/PermissionProvider/PermissionProvider.interface';
+import { ClientErrors } from '../../../enums/Axios.enum';
 import { CursorType } from '../../../enums/pagination.enum';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
 import { Paging } from '../../../generated/type/paging';

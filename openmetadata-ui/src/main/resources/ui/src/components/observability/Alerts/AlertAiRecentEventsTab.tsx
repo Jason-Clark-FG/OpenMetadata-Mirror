@@ -57,8 +57,8 @@ import { getEntityName } from '../../../utils/EntityNameUtils';
 import { computeTotalPages } from '../../../utils/PaginationUtils';
 import searchClassBase from '../../../utils/SearchClassBase';
 import { showErrorToast } from '../../../utils/ToastUtils';
-import RichTextEditorPreviewNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 import { AlertEventDetailsToDisplay } from '../../Alerts/AlertDetails/AlertRecentEventsTab/AlertRecentEventsTab.interface';
+import RichTextEditorPreviewNew from '../../common/RichTextEditor/RichTextEditorPreviewNew';
 
 const PAGE_SIZE_OPTIONS = [PAGE_SIZE_BASE, PAGE_SIZE_MEDIUM, PAGE_SIZE_LARGE];
 const SKELETON_ROWS = 5;
