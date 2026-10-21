@@ -111,7 +111,15 @@ function AddObservabilityPage({
     }
 
     if (!hasAccess) {
-      return <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.PERMISSION} />;
+      return (
+        <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+          <PermissionPlaceholder
+            permissionValue={t('label.edit-entity', {
+              entity: t('label.alert'),
+            })}
+          />
+        </Box>
+      );
     }
 
     return null;
