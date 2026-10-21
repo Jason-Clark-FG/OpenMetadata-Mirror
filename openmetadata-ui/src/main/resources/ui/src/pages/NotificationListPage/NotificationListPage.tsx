@@ -226,7 +226,9 @@ const NotificationListPage = () => {
     fetchAlertResourcePermission();
   }, []);
 
-  useEffect(() => {
+  // Re-requests the page the user is on, so a retry after a failed page 2+
+  // does not show page 1's alerts under the current page number.
+  const fetchCurrentPage = useCallback(() => {
     const { cursorType, cursorValue } = pagingCursor ?? {};
 
     if (cursorType && cursorValue) {
@@ -234,6 +236,10 @@ const NotificationListPage = () => {
     } else {
       fetchAlerts();
     }
+  }, [fetchAlerts, pagingCursor]);
+
+  useEffect(() => {
+    fetchCurrentPage();
   }, [pageSize, pagingCursor]);
 
   const handleAlertDelete = useCallback(async () => {
@@ -442,7 +448,7 @@ const NotificationListPage = () => {
                     />
                   ) : (
                     <SomethingWentWrongPlaceholder
-                      onReload={() => fetchAlerts()}
+                      onReload={fetchCurrentPage}
                     />
                   )}
                 </Box>
