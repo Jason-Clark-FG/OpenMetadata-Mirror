@@ -345,6 +345,11 @@ describe('TasksTab', () => {
       expect(
         screen.queryByRole('button', { name: 'label.reload' })
       ).not.toBeInTheDocument();
+      // Nothing can be listed or filtered, so the list column is not shown.
+      expect(screen.queryByTestId('toolbar')).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId('inbox-tasks-scroll')
+      ).not.toBeInTheDocument();
     });
 
     it('shows an error with a retry that reloads the list and its counts', () => {
@@ -355,6 +360,8 @@ describe('TasksTab', () => {
         error: { response: { status: 500 } },
       };
       renderTab();
+
+      expect(screen.getByTestId('toolbar')).toBeInTheDocument();
 
       expect(
         screen.getByText('message.something-went-wrong')

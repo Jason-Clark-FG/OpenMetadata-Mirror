@@ -277,6 +277,8 @@ interface TasksTabBodyProps {
   toolbar: ReactNode;
   // Shown in place of the detail when no task matches.
   emptyState?: ReactNode;
+  // A 403 leaves nothing to list or filter, so the placeholder takes the whole tab.
+  isForbidden?: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   tasks: Task[];
@@ -296,6 +298,7 @@ interface TasksTabBodyProps {
 const TasksTabBody: React.FC<TasksTabBodyProps> = ({
   toolbar,
   emptyState,
+  isForbidden = false,
   isLoading,
   isLoadingMore,
   tasks,
@@ -372,6 +375,14 @@ const TasksTabBody: React.FC<TasksTabBodyProps> = ({
       </Box>
     );
   });
+
+  if (isForbidden) {
+    return (
+      <Box className="tw:relative tw:min-h-0 tw:w-full tw:flex-1">
+        {emptyState}
+      </Box>
+    );
+  }
 
   // `minmax(0, …)`: a bare `fr` track never shrinks below its content, so one
   // long unbreakable title would widen the list and push the detail off-screen.
@@ -762,6 +773,9 @@ const TasksTab: React.FC<TasksTabProps> = ({
         handleCommentsChanged={handleCommentsChanged}
         handleResolved={handleResolved}
         handleTaskUpdated={handleTaskUpdated}
+        isForbidden={
+          (error as AxiosError)?.response?.status === ClientErrors.FORBIDDEN
+        }
         isLoading={isLoading}
         isLoadingMore={isLoadingMore}
         scrollRef={scrollRef}
