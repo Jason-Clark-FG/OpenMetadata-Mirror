@@ -29,9 +29,9 @@ import { EntityReference } from '../../../../../generated/entity/type';
 import { useAuth } from '../../../../../hooks/authHooks';
 import { getNonDeletedTeams } from '../../../../../utils/TeamUtils';
 import Chip from '../../../../common/Chip/Chip.component';
+import { WidgetEditButton } from '../../../../common/WidgetActionButton/WidgetActionButton';
 import TeamsSelectableNew from '../../../Team/TeamsSelectable/TeamsSelectableNew';
 import { UserProfileTeamsProps } from './UserProfileTeams.interface';
-import { WidgetEditButton } from '../../../../common/WidgetActionButton/WidgetActionButton';
 
 const UserProfileTeams = ({
   teams,

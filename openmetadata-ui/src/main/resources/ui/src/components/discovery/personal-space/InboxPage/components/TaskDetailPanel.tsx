@@ -31,6 +31,7 @@ import { Link } from 'react-router-dom';
 import PermissionPlaceholder from '../../../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
 import SomethingWentWrongPlaceholder from '../../../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import ProfilePicture from '../../../../../components/common/ProfilePicture/ProfilePicture';
+import { INCIDENT_TASK_TYPES } from '../../../../../constants/Task.constant';
 import { usePermissionProvider } from '../../../../../context/PermissionProvider/PermissionProvider';
 import { OperationPermission } from '../../../../../context/PermissionProvider/PermissionProvider.interface';
 import { ClientErrors } from '../../../../../enums/Axios.enum';
@@ -42,7 +43,6 @@ import {
   TaskCategory,
 } from '../../../../../generated/entity/tasks/task';
 import { EntityReference } from '../../../../../generated/entity/teams/user';
-import { INCIDENT_TASK_TYPES } from '../../../../../constants/Task.constant';
 import { TaskFormSchema } from '../../../../../rest/taskFormSchemasAPI';
 import {
   addTaskComment,

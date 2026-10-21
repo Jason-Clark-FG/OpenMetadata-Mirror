@@ -31,8 +31,8 @@ import { EntityReference } from '../../../../generated/entity/type';
 import { getAllPersonas, searchPersonas } from '../../../../rest/PersonaAPI';
 import { getEntityName } from '../../../../utils/EntityNameUtils';
 import { getEntityReferenceListFromEntities } from '../../../../utils/EntityReferenceUtils';
-import { PersonaSelectableListProps } from './PersonaSelectableList.interface';
 import { WidgetEditButton } from '../../../common/WidgetActionButton/WidgetActionButton';
+import { PersonaSelectableListProps } from './PersonaSelectableList.interface';
 
 export const PersonaListItemRenderer = (props: EntityReference) => {
   const { t } = useTranslation();
