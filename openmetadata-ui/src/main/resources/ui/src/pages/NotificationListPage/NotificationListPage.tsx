@@ -14,10 +14,10 @@ import {
   Box,
   Button,
   ButtonUtility,
+  EmptyPlaceholder,
   Grid,
   Skeleton,
   Typography,
-  EmptyPlaceholder,
 } from '@openmetadata/ui-core-components';
 import {
   Bell01,
