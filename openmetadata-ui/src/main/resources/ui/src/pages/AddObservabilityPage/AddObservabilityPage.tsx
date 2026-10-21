@@ -11,27 +11,80 @@
  *  limitations under the License.
  */
 
-import { Card, Typography } from '@openmetadata/ui-core-components';
+import { Box, Card, Typography } from '@openmetadata/ui-core-components';
+import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import { useTranslation } from 'react-i18next';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
 import ResizablePanels from '../../components/common/ResizablePanels/ResizablePanels';
+import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
+import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
+import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
+import { ResourceEntity } from '../../enums/permissions.enum';
 import { ProviderType } from '../../generated/entity/events/notificationTemplate';
+import { Operation } from '../../generated/entity/policies/policy';
 import { AlertType } from '../../generated/events/eventSubscription';
 import { withPageLayout } from '../../hoc/withPageLayout';
+import { useIsAiMode } from '../../hooks/useAppMode';
+import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
+import { useFqn } from '../../hooks/useFqn';
+import { checkPermission } from '../../utils/PermissionsUtils';
 import { AddObservabilityPageProps } from './AddObservabilityPage.interface';
 import ObservabilityAlertForm from './components/ObservabilityAlertForm';
 import { useObservabilityAlertForm } from './hooks/useObservabilityAlertForm';
+
+// Create gates the add form, EditAll on the alert gates the edit form.
+const useAlertFormAccess = (isEditMode: boolean) => {
+  const { fqn } = useFqn();
+  const { permissions } = usePermissionProvider();
+  const { canEditAll, isLoading } = useEntityPermissions(
+    ResourceEntity.EVENT_SUBSCRIPTION,
+    fqn,
+    { enabled: isEditMode }
+  );
+
+  return {
+    hasAccess: isEditMode
+      ? canEditAll
+      : checkPermission(
+          Operation.Create,
+          ResourceEntity.EVENT_SUBSCRIPTION,
+          permissions
+        ),
+    isPermissionLoading: isEditMode && isLoading,
+  };
+};
 
 function AddObservabilityPage({
   alertType = AlertType.Observability,
 }: Readonly<AddObservabilityPageProps>) {
   const { t } = useTranslation();
   const formState = useObservabilityAlertForm({ alertType });
-  const { alert, isEditMode, isLoading } = formState;
+  const { alert, alertError, breadcrumb, fetchAlert, isEditMode, isLoading } =
+    formState;
   const isNotification = alertType === AlertType.Notification;
+  const isAiMode = useIsAiMode();
+  const { hasAccess, isPermissionLoading } = useAlertFormAccess(isEditMode);
+
+  if (isPermissionLoading) {
+    return <Loader />;
+  }
+
+  if (!hasAccess) {
+    return <ErrorPlaceHolder type={ERROR_PLACEHOLDER_TYPE.PERMISSION} />;
+  }
+
+  // Only the edit route fetches an alert, and a retry clears the error first.
+  if (alertError) {
+    return (
+      <Box className="tw:py-4" direction="col" gap={4}>
+        <TitleBreadcrumb titleLinks={breadcrumb} />
+        <AlertsLoadErrorState error={alertError} onRetry={fetchAlert} />
+      </Box>
+    );
+  }
 
   if (isLoading || (isEditMode && isEmpty(alert))) {
     return <Loader />;
@@ -55,7 +108,10 @@ function AddObservabilityPage({
         className: 'content-resizable-panel-container ',
         allowScroll: true,
         children: (
-          <Card className="steps-form-container">
+          <Card
+            className={classNames('steps-form-container', {
+              'tw:my-4': isAiMode,
+            })}>
             <Card.Content>
               <ObservabilityAlertForm
                 {...formState}

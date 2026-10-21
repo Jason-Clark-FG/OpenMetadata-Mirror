@@ -38,6 +38,7 @@ import { NodeFormSidebar } from '../../../components/WorkflowDefinitions/Workflo
 import { WorkflowCanvas } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowCanvas';
 import { WorkflowExecutionHistory } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowExecutionHistory';
 import { WorkflowHeader } from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowHeader';
+import WorkflowLoadErrorPlaceholder from '../../../components/WorkflowDefinitions/WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 import WorkflowSidebar from '../../../components/WorkflowDefinitions/WorkflowBuilder/WorkflowSidebar';
 import type { WorkflowBuilderTab } from '../../../constants/WorkflowBuilder.constants';
 import {
@@ -96,6 +97,48 @@ const isEnforceApproval = (
     get(workflowDefinition, 'trigger.config.approvalMode')) ===
   ApprovalMode.Enforce;
 
+interface WorkflowBuilderLoadErrorProps {
+  breadcrumb: React.ReactNode;
+  embedded: boolean;
+  error: AxiosError;
+  onReload: () => void;
+}
+
+const WorkflowBuilderLoadError: React.FC<WorkflowBuilderLoadErrorProps> = ({
+  breadcrumb,
+  embedded,
+  error,
+  onReload,
+}) => {
+  const { t } = useTranslation();
+  const isAiMode = useIsAiMode();
+  const placeholder = (
+    <div className="tw:relative tw:flex-1 tw:min-h-0">
+      <WorkflowLoadErrorPlaceholder
+        entity={t('label.workflow')}
+        error={error}
+        onReload={onReload}
+      />
+    </div>
+  );
+
+  if (embedded) {
+    return placeholder;
+  }
+
+  return (
+    <PageLayoutV1
+      fullHeight
+      pageTitle={t('label.workflow-plural')}
+      variant={isAiMode ? 'compact' : 'default'}>
+      <div className="tw:flex tw:flex-1 tw:min-h-0 tw:flex-col">
+        <div className="tw:mb-4">{breadcrumb}</div>
+        {placeholder}
+      </div>
+    </PageLayoutV1>
+  );
+};
+
 const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
   workflowLogic,
   workflowFqn,
@@ -138,6 +181,8 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
     workflowDefinition,
     workflowMetadata,
     isNodeDragEnabled,
+    loadError,
+    reloadWorkflow,
   } = workflowLogic;
 
   const syncWithStore = workflowLogic.syncWithStore;
@@ -507,6 +552,19 @@ const WorkflowBuilderInternal: React.FC<WorkflowBuilderInternalProps> = ({
 
   if (loading) {
     return <Loader />;
+  }
+
+  if (loadError) {
+    return (
+      <WorkflowBuilderLoadError
+        breadcrumb={
+          isAiMode ? breadcrumb : <TitleBreadcrumb titleLinks={breadcrumbs} />
+        }
+        embedded={embedded}
+        error={loadError}
+        onReload={reloadWorkflow}
+      />
+    );
   }
 
   const sidebarClassName = classNames(

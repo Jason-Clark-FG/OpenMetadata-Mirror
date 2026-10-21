@@ -20,9 +20,9 @@ import {
   PopoverTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
+import { Edit01 } from '@openmetadata/ui-core-components/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ReactComponent as EditIcon } from '../../../../../assets/svg/edit-new.svg';
 import { ReactComponent as ClosePopoverIcon } from '../../../../../assets/svg/ic-popover-close.svg';
 import { ReactComponent as SavePopoverIcon } from '../../../../../assets/svg/ic-popover-save.svg';
 import { ReactComponent as IconTeamsGrey } from '../../../../../assets/svg/teams-grey.svg';
@@ -97,21 +97,22 @@ const UserProfileTeams = ({
       className="d-flex flex-col w-full  p-[20px] user-profile-card"
       data-testid="user-profile-teams">
       <div className="user-profile-card-header d-flex items-center justify-start gap-2 w-full">
-        <div>
-          <IconTeamsGrey height={16} />
+        <div className="d-flex flex-center user-page-icon tw:size-4">
+          <IconTeamsGrey height={18} width={18} />
         </div>
 
         <div className="d-flex justify-between w-full">
-          <Typography className="text-sm font-medium p-l-xss">
+          <Typography className="text-sm font-medium">
             {t('label.team-plural')}
           </Typography>
 
           {isAdminUser && !isDeletedUser && (
             <PopoverTrigger isOpen={isTeamsEdit} onOpenChange={setIsTeamsEdit}>
               <ButtonUtility
+                className="tw:p-1"
                 color="tertiary"
                 data-testid="edit-teams-button"
-                icon={<EditIcon height={16} width={16} />}
+                icon={<Edit01 size={16} />}
                 size="xs"
                 tooltip={t('label.edit-entity', {
                   entity: t('label.team-plural'),

@@ -65,6 +65,19 @@ const mockNavigate = jest.fn();
 const mockUpdateNotificationAlert = jest.fn();
 const mockUpdateObservabilityAlert = jest.fn();
 
+jest.mock(
+  '../../components/common/UserTeamSelectableList/UserTeamSelectableList.component',
+  () => ({
+    UserTeamSelectableList: jest
+      .fn()
+      .mockImplementation(
+        ({ onUpdate }: { onUpdate?: (owners: unknown[]) => void }) => (
+          <button onClick={() => onUpdate?.([])}>Owner</button>
+        )
+      ),
+  })
+);
+
 jest.mock('../../hooks/useFqn', () => ({
   useFqn: jest.fn().mockReturnValue({ fqn: 'testAlert' }),
 }));
@@ -218,6 +231,28 @@ describe('AlertDetailsPage', () => {
     });
 
     expect(screen.getByText('ErrorPlaceHolder')).toBeInTheDocument();
+  });
+
+  it('should render the breadcrumb and a retryable error when the alert fails to load', async () => {
+    (
+      ObservabilityAPIs.getObservabilityAlertByFQN as jest.Mock
+    ).mockImplementationOnce(() =>
+      Promise.reject({ response: { status: 500 } })
+    );
+
+    render(<AlertDetailsPage isNotificationAlert />, {
+      wrapper: createWrapper(),
+    });
+
+    expect(
+      await screen.findByText('message.something-went-wrong')
+    ).toBeInTheDocument();
+    expect(screen.getByText('TitleBreadcrumb')).toBeInTheDocument();
+    expect(screen.queryByText('ErrorPlaceHolder')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('label.try-again'));
+
+    expect(await screen.findByText('EntityHeaderTitle')).toBeInTheDocument();
   });
 
   it('should render alert details page properly if fqn is present', async () => {

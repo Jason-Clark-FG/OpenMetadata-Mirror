@@ -47,6 +47,7 @@ import {
   TASK_LIST_QUERY_KEY,
   TASK_STATUS_COUNTS_QUERY_KEY,
 } from '../../inbox.constants';
+import InboxLoadError from '../components/InboxLoadError';
 import InboxTaskListItem from '../components/InboxTaskListItem';
 import InboxTaskListSkeleton from '../components/InboxTaskListSkeleton';
 import InboxTaskListToolbar, {
@@ -91,14 +92,17 @@ const STATUS_FILTERS: { id: TaskStatusFilter; labelKey: string }[] = [
   { id: 'closed', labelKey: 'label.closed' },
 ];
 
-// Pulls the three per-status totals out of the useQueries results array.
+// Pulls the three per-status totals out of the useQueries results array. A
+// failed count shows no badge rather than a misleading 0.
 const getStatusCounts = (
-  countQueries: { data?: number }[]
-): Record<TaskStatusFilter, number> => ({
-  all: countQueries[0].data ?? 0,
-  open: countQueries[1].data ?? 0,
-  closed: countQueries[2].data ?? 0,
-});
+  countQueries: { data?: number; isError: boolean }[]
+): Record<TaskStatusFilter, number | undefined> => {
+  const [all, open, closed] = countQueries.map(({ data, isError }) =>
+    isError ? undefined : data ?? 0
+  );
+
+  return { all, open, closed };
+};
 
 // The Status options each tab can hold: Open splits into whose move it is,
 // Closed into the outcome. "Open" itself is the tab, so it is never an option.
@@ -135,7 +139,16 @@ const isListSettled = ({
   tasks: Task[];
 }) => !isLoading && !isLoadingMore && (!hasMore || !canLoadMore(tasks));
 
+// A failed load also leaves nothing to show; it must not read as an empty queue.
+const hasNothingToShow = (
+  error: unknown,
+  visibleTasks: Task[],
+  list: Parameters<typeof isListSettled>[0]
+) => Boolean(error) || (visibleTasks.length === 0 && isListSettled(list));
+
 interface TasksEmptyStateProps {
+  // The list failed to load; shown in place of any empty state.
+  error?: unknown;
   status: TaskStatusFilter;
   isNarrowed: boolean;
   // Set when a narrowed scan stopped at its cap with pages still unread, so
@@ -143,19 +156,33 @@ interface TasksEmptyStateProps {
   scannedCount?: number;
   onClearFilters: () => void;
   onLoadMore: () => void;
+  onRetry: () => void;
 }
 
 // A dedicated empty state per status: All = generic "nothing to do", Open =
 // "no open tasks", Closed = archival. A search or filter that matches nothing
 // says so instead, with a way back to the whole queue.
 const TasksEmptyState = ({
+  error,
   status,
   isNarrowed,
   scannedCount,
   onClearFilters,
   onLoadMore,
+  onRetry,
 }: TasksEmptyStateProps) => {
   const { t } = useTranslation();
+
+  if (error) {
+    return (
+      <InboxLoadError
+        data-testid="inbox-tasks-error"
+        entity={t('label.task-plural')}
+        error={error}
+        onRetry={onRetry}
+      />
+    );
+  }
   const isScanCapped = scannedCount !== undefined;
   const clearAction = {
     key: 'clear-filters',
@@ -527,6 +554,8 @@ const TasksTab: React.FC<TasksTabProps> = ({
     isLoadingMore,
     hasMore,
     total,
+    error,
+    refetch,
     scrollRef,
     sentinelRef,
     setItems,
@@ -684,9 +713,30 @@ const TasksTab: React.FC<TasksTabProps> = ({
 
   // A search or filter that matches nothing must not read as an empty queue.
   const isNarrowed = Boolean(searchQuery) || isClientNarrowed;
-  const showEmptyState =
-    visibleTasks.length === 0 &&
-    isListSettled({ isLoading, isLoadingMore, hasMore, canLoadMore, tasks });
+  const showEmptyState = hasNothingToShow(error, visibleTasks, {
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    canLoadMore,
+    tasks,
+  });
+
+  const handleRetry = useCallback(() => {
+    refetch();
+    refreshStatusCounts();
+  }, [refetch, refreshStatusCounts]);
+
+  const emptyState = showEmptyState ? (
+    <TasksEmptyState
+      error={error}
+      isNarrowed={isNarrowed}
+      scannedCount={hasMore ? tasks.length : undefined}
+      status={status}
+      onClearFilters={handleClearFilters}
+      onLoadMore={handleScanFurther}
+      onRetry={handleRetry}
+    />
+  ) : undefined;
 
   return (
     <Box
@@ -697,17 +747,7 @@ const TasksTab: React.FC<TasksTabProps> = ({
       data-testid="inbox-tasks-tab"
       direction="col">
       <TasksTabBody
-        emptyState={
-          showEmptyState ? (
-            <TasksEmptyState
-              isNarrowed={isNarrowed}
-              scannedCount={hasMore ? tasks.length : undefined}
-              status={status}
-              onClearFilters={handleClearFilters}
-              onLoadMore={handleScanFurther}
-            />
-          ) : undefined
-        }
+        emptyState={emptyState}
         groups={taskGroups}
         handleCommentsChanged={handleCommentsChanged}
         handleResolved={handleResolved}

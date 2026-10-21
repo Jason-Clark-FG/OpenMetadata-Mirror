@@ -36,6 +36,19 @@ const mockUseAlertDetailsData = jest.fn();
 const mockUseAlertFormData = jest.fn();
 const mockGetModifiedAlertDataForForm = jest.fn();
 
+jest.mock(
+  '../../common/UserTeamSelectableList/UserTeamSelectableList.component',
+  () => ({
+    UserTeamSelectableList: jest
+      .fn()
+      .mockImplementation(
+        ({ onUpdate }: { onUpdate?: (owners: unknown[]) => void }) => (
+          <button onClick={() => onUpdate?.([])}>Owner</button>
+        )
+      ),
+  })
+);
+
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
@@ -164,6 +177,9 @@ jest.mock('@openmetadata/ui-core-components', () => {
       ),
     },
     Tabs,
+    Typography: ({ children }: { children?: ReactNode }) => (
+      <span>{children}</span>
+    ),
     toOwnerRefs: jest.requireActual('@openmetadata/ui-core-components')
       .toOwnerRefs,
     toOwnerRef: jest.requireActual('@openmetadata/ui-core-components')
@@ -172,7 +188,7 @@ jest.mock('@openmetadata/ui-core-components', () => {
 });
 
 jest.mock('@openmetadata/ui-core-components/icons', () => ({
-  Edit03: () => null,
+  Edit01: () => null,
   RefreshCw04: () => null,
   Trash01: () => null,
 }));
@@ -198,6 +214,24 @@ jest.mock(
     ),
   })
 );
+
+jest.mock('./AlertsLoadErrorState', () => ({
+  __esModule: true,
+  default: ({
+    error,
+    onRetry,
+  }: {
+    error?: { response?: { status?: number } };
+    onRetry?: () => void;
+  }) => (
+    <button
+      data-status={error?.response?.status}
+      data-testid="alerts-load-error"
+      onClick={onRetry}>
+      retry
+    </button>
+  ),
+}));
 
 jest.mock('../../../components/common/DeleteModal/DeleteModal', () => ({
   __esModule: true,
@@ -451,14 +485,31 @@ describe('AlertDetailsPage', () => {
     );
   });
 
-  it('renders generic error when alert details are unavailable', () => {
+  it('renders a retryable load error under the page header when the alert fails to load', () => {
+    const fetchAlertDetails = jest.fn();
     mockUseAlertDetailsData.mockReturnValue(
-      getDetailsState({ alertDetails: undefined, loadingCount: 0 })
+      getDetailsState({
+        alertDetails: undefined,
+        alertDetailsError: { response: { status: 500 } },
+        fetchAlertDetails,
+        loadingCount: 0,
+      })
     );
 
     renderPage(<AlertDetailsPage />);
 
-    expect(screen.getByTestId('error-placeholder')).toBeInTheDocument();
+    expect(screen.getByTestId('page-header')).toHaveTextContent(
+      'service.alert'
+    );
+    expect(screen.getByTestId('alerts-load-error')).toHaveAttribute(
+      'data-status',
+      '500'
+    );
+    expect(screen.queryByTestId('error-placeholder')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('alerts-load-error'));
+
+    expect(fetchAlertDetails).toHaveBeenCalled();
   });
 
   it('keeps the document title mounted while alert details are loading', () => {
@@ -500,7 +551,7 @@ describe('AlertDetailsPage', () => {
     // migration when it lost its horizontal wrapper).
     const metaRow = screen.getByTestId('header-metadata');
 
-    expect(within(metaRow).getByTestId('owner-label')).toBeInTheDocument();
+    expect(within(metaRow).getByTestId('alert-owners')).toBeInTheDocument();
     expect(within(metaRow).getByTestId('event-counts')).toHaveTextContent('3');
   });
 

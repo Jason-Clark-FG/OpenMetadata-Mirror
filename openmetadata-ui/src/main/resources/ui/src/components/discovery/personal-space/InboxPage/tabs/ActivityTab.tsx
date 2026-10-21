@@ -33,6 +33,7 @@ import searchClassBase from '../../../../../utils/SearchClassBase';
 import ActivityFeedItem from '../components/ActivityFeedItem';
 import ActivitySkeleton from '../components/ActivitySkeleton';
 import ActivityToolbar from '../components/ActivityToolbar';
+import InboxLoadError from '../components/InboxLoadError';
 import {
   ActivityFilter,
   ActivityGrouping,
@@ -112,6 +113,50 @@ const GROUPING: Record<
   },
 };
 
+// A failed feed says so; an empty one says whether the filters emptied it.
+const ActivityEmptyState = ({
+  error,
+  isFiltered,
+  onRetry,
+}: {
+  error: unknown;
+  isFiltered: boolean;
+  onRetry: () => void;
+}) => {
+  const { t } = useTranslation();
+
+  if (error) {
+    return (
+      <InboxLoadError
+        data-testid="inbox-activity-error"
+        entity={t('label.activity')}
+        error={error}
+        onRetry={onRetry}
+      />
+    );
+  }
+
+  return isFiltered ? (
+    <EmptyPlaceholder
+      data-testid="inbox-activity-no-results"
+      description={t('message.activity-feed-no-results-description')}
+      icon={
+        <FilterFunnel01 className="tw:size-7 tw:text-utility-gray-blue-600" />
+      }
+      title={t('label.no-activity-in-period')}
+      variant="blank"
+    />
+  ) : (
+    <EmptyPlaceholder
+      data-testid="inbox-activity-empty"
+      description={t('message.activity-feed-empty-description')}
+      icon={<Hourglass01 className="tw:size-7 tw:text-utility-brand-600" />}
+      title={t('label.activity-feed-starts-here')}
+      variant="blank"
+    />
+  );
+};
+
 export interface ActivityTabProps {
   dateRange?: InboxDateRange;
   onDatePresetChange?: (key: string) => void;
@@ -139,7 +184,10 @@ const ActivityTab: React.FC<ActivityTabProps> = ({
   }, [markInboxActivitySeen]);
 
   // Shared with the badge (one fetch); merge semantics documented on the hook.
-  const { items, isLoading } = useInboxActivity(filter, dateRange);
+  const { items, isLoading, error, refetch } = useInboxActivity(
+    filter,
+    dateRange
+  );
   const counts = useInboxActivityCounts(dateRange);
   // The Mentions feed (already read for its count) marks the cards that name
   // the viewer, whichever tab they appear under.
@@ -195,32 +243,17 @@ const ActivityTab: React.FC<ActivityTabProps> = ({
       ? ACTIVITY_CLOCK_FORMAT
       : ACTIVITY_DATE_FORMAT;
 
-  const emptyPlaceholder =
-    isFiltered || typeKeys.length ? (
-      <EmptyPlaceholder
-        data-testid="inbox-activity-no-results"
-        description={t('message.activity-feed-no-results-description')}
-        icon={
-          <FilterFunnel01 className="tw:size-7 tw:text-utility-gray-blue-600" />
-        }
-        title={t('label.no-activity-in-period')}
-        variant="blank"
-      />
-    ) : (
-      <EmptyPlaceholder
-        data-testid="inbox-activity-empty"
-        description={t('message.activity-feed-empty-description')}
-        icon={<Hourglass01 className="tw:size-7 tw:text-utility-brand-600" />}
-        title={t('label.activity-feed-starts-here')}
-        variant="blank"
-      />
-    );
-
   let activityContent: React.ReactNode;
   if (isLoading) {
     activityContent = <ActivitySkeleton />;
-  } else if (filteredItems.length === 0) {
-    activityContent = emptyPlaceholder;
+  } else if (error || filteredItems.length === 0) {
+    activityContent = (
+      <ActivityEmptyState
+        error={error}
+        isFiltered={isFiltered || typeKeys.length > 0}
+        onRetry={refetch}
+      />
+    );
   } else {
     activityContent = (
       <Box direction="col" gap={4}>

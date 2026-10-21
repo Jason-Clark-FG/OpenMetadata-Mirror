@@ -23,6 +23,7 @@ import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import {
   lazy,
+  ReactNode,
   RefObject,
   useCallback,
   useEffect,
@@ -71,6 +72,7 @@ import {
   getEntityUserLink,
 } from '../../../utils/EntityPureUtils';
 import entityUtilClassBase from '../../../utils/EntityUtilClassBase';
+import InboxLoadError from '../../discovery/personal-space/InboxPage/components/InboxLoadError';
 import { getFeedTotalCount } from '../../../utils/FeedUtilsPure';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
@@ -390,6 +392,37 @@ const ActivityFeedTabList = ({
   );
 };
 
+/**
+ * The list's empty placeholder, or why it is empty when its fetch failed: a
+ * failure must not read as "no tasks".
+ */
+const ActivityFeedListPlaceholder = ({
+  error,
+  fallback,
+  isTaskList,
+  onRetry,
+}: {
+  error?: AxiosError;
+  fallback: ReactNode;
+  isTaskList: boolean;
+  onRetry: () => void;
+}) => {
+  const { t } = useTranslation();
+
+  if (!error) {
+    return <>{fallback}</>;
+  }
+
+  return (
+    <InboxLoadError
+      data-testid="activity-feed"
+      entity={isTaskList ? t('label.task-plural') : t('label.activity-feed')}
+      error={error}
+      onRetry={onRetry}
+    />
+  );
+};
+
 const ActivityFeedTabRightPanel = ({
   content,
   hasSelection,
@@ -482,6 +515,7 @@ export const ActivityFeedTab = ({
     getFeedData,
     getTaskData,
     loading,
+    listError,
     entityPaging,
     tasks,
     selectedTask,
@@ -1107,7 +1141,14 @@ export const ActivityFeedTab = ({
         />
         <ActivityFeedTabList
           activityEvents={activityEvents}
-          emptyPlaceholderText={placeholderText}
+          emptyPlaceholderText={
+            <ActivityFeedListPlaceholder
+              error={listError}
+              fallback={placeholderText}
+              isTaskList={isTaskActiveTab}
+              onRetry={() => handleFeedFetchFromFeedList()}
+            />
+          }
           entityThread={entityThread}
           isActivityLoading={isActivityLoading}
           isAllTab={isAllTab}

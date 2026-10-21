@@ -230,6 +230,34 @@ describe('Notification Alerts Page Tests', () => {
     expect(await screen.findByText(/label.add-entity/)).toBeInTheDocument();
   });
 
+  it('shows an error + retry state, not the onboarding, when the alerts list fails to load', async () => {
+    (getAllAlerts as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject({ response: { status: 500 } })
+    );
+
+    await act(async () => {
+      render(<NotificationListPage />, {
+        wrapper: MemoryRouter,
+      });
+    });
+
+    expect(
+      await screen.findByText('message.something-went-wrong')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('message.observability-alert-empty-heading')
+    ).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('label.try-again'));
+    });
+
+    expect(await screen.findByTestId('alert-name')).toBeInTheDocument();
+    expect(
+      screen.queryByText('message.something-went-wrong')
+    ).not.toBeInTheDocument();
+  });
+
   it('Table should render alerts data', async () => {
     await act(async () => {
       render(<NotificationListPage />, {
@@ -255,7 +283,9 @@ describe('Notification Alerts Page Tests', () => {
       });
     });
 
-    expect(descriptionTableObject).toHaveBeenCalledWith();
+    expect(descriptionTableObject).toHaveBeenCalledWith({
+      render: expect.any(Function),
+    });
   });
 
   it('should call LimitWrapper with resource as eventsubscription', async () => {

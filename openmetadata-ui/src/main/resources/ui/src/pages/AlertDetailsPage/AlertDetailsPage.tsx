@@ -11,10 +11,13 @@
  *  limitations under the License.
  */
 
+import { Box } from '@openmetadata/ui-core-components';
 import { isUndefined } from 'lodash';
 import { useTranslation } from 'react-i18next';
 import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import Loader from '../../components/common/Loader/Loader';
+import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
+import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { getEntityName } from '../../utils/EntityNameUtils';
@@ -39,7 +42,14 @@ function AlertDetailsPage({
     onTabChange,
     tab,
   });
-  const { alertDetails, loadingCount, viewPermission } = detailsState;
+  const {
+    alertDetails,
+    alertDetailsError,
+    breadcrumb,
+    fetchAlertDetails,
+    loadingCount,
+    viewPermission,
+  } = detailsState;
 
   if (!loadingCount && !isUndefined(viewPermission) && !viewPermission) {
     return (
@@ -53,7 +63,17 @@ function AlertDetailsPage({
     );
   }
   if (!loadingCount && isUndefined(alertDetails)) {
-    return <ErrorPlaceHolder className="m-0" />;
+    return (
+      <PageLayoutV1 pageTitle={t('label.alert-detail-plural')}>
+        <Box direction="col" gap={4}>
+          <TitleBreadcrumb titleLinks={breadcrumb} />
+          <AlertsLoadErrorState
+            error={alertDetailsError}
+            onRetry={fetchAlertDetails}
+          />
+        </Box>
+      </PageLayoutV1>
+    );
   }
 
   return (

@@ -12,6 +12,7 @@
  */
 
 import { Typography } from '@openmetadata/ui-core-components';
+import { ClockRewind } from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { capitalize } from 'lodash';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -44,7 +45,7 @@ import {
 import EntityLink from '../../../utils/EntityLink';
 import { getEntityLinkFromType } from '../../../utils/EntityLinkUtils';
 import { getNameFromFQN } from '../../../utils/FqnUtils';
-import { showErrorToast } from '../../../utils/ToastUtils';
+import WorkflowLoadErrorPlaceholder from '../WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 
 const GLOBAL_RELATED_ENTITY_VARIABLE = 'global_relatedEntity';
 
@@ -61,6 +62,7 @@ export const WorkflowExecutionHistory: React.FC<
   const workflowFqn = workflowFqnProp ?? routeFqn;
   const [instances, setInstances] = useState<WorkflowInstance[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<AxiosError>();
   const [paging, setPaging] = useState<Paging>({ total: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(PAGE_SIZE_BASE);
@@ -196,6 +198,7 @@ export const WorkflowExecutionHistory: React.FC<
 
       try {
         setLoading(true);
+        setLoadError(undefined);
         const response = await getWorkflowInstancesByFQN(workflowFqn, {
           limit: pageSize,
           ...(offsetCursor ? { offset: offsetCursor } : {}),
@@ -203,7 +206,7 @@ export const WorkflowExecutionHistory: React.FC<
         setInstances(response.data ?? []);
         setPaging(response.paging);
       } catch (error) {
-        showErrorToast(error as AxiosError);
+        setLoadError(error as AxiosError);
         setInstances([]);
       } finally {
         setLoading(false);
@@ -229,12 +232,27 @@ export const WorkflowExecutionHistory: React.FC<
 
   const isEmpty = !loading && instances.length === 0;
 
+  if (loadError && !loading) {
+    return (
+      <div className="tw:relative tw:flex-1 tw:min-h-0">
+        <WorkflowLoadErrorPlaceholder
+          entity={t('label.execution-history')}
+          error={loadError}
+          onReload={() => fetchExecutionHistory()}
+        />
+      </div>
+    );
+  }
+
   if (!workflowFqn || isEmpty) {
     return (
       <div
         className="tw:relative tw:flex-1 tw:min-h-0"
         data-testid="workflow-execution-history-empty">
-        <NoDataPlaceholder />
+        <NoDataPlaceholder
+          description={t('message.no-runs-recorded-yet')}
+          icon={<ClockRewind className="tw:text-secondary" />}
+        />
       </div>
     );
   }

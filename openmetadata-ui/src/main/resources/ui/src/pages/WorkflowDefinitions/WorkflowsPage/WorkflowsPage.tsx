@@ -66,6 +66,7 @@ import {
   WORKFLOW_NAME_REGEX,
 } from '../../../utils/WorkflowValidationUtils';
 import { WorkflowDetailsTabs } from '../WorkflowDetails/workflow-details.interface';
+import WorkflowLoadErrorPlaceholder from '../../../components/WorkflowDefinitions/WorkflowLoadErrorPlaceholder/WorkflowLoadErrorPlaceholder';
 import WorkflowList, { WorkflowListItem } from './WorkflowList';
 import WorkflowsPageSection from './WorkflowsPageSection';
 
@@ -86,6 +87,7 @@ const WorkflowsPage = () => {
   const [description, setDescription] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState<AxiosError>();
   const navigate = useNavigate();
   const allowCreateWorkflow = useMemo(
     () => workflowClassBase.getCapabilities().allowCreateWorkflow,
@@ -174,6 +176,7 @@ const WorkflowsPage = () => {
     ) => {
       try {
         setLoading(true);
+        setLoadError(undefined);
 
         const params: WorkflowDefinitionsParams = {
           limit: pageSize,
@@ -193,7 +196,7 @@ const WorkflowsPage = () => {
         setPaging(res.paging || { total: 0 });
         setCurrentPage(page);
       } catch (error) {
-        showErrorToast(error as AxiosError);
+        setLoadError(error as AxiosError);
       } finally {
         setLoading(false);
       }
@@ -315,6 +318,60 @@ const WorkflowsPage = () => {
     </Box>
   );
 
+  const renderContent = () => {
+    if (loadError) {
+      return (
+        <Box className="tw:relative tw:flex-1 tw:min-h-0">
+          <WorkflowLoadErrorPlaceholder
+            entity={t('label.workflow-plural')}
+            error={loadError}
+            onReload={() => getWorkflows()}
+          />
+        </Box>
+      );
+    }
+
+    if (isWorkflowsEmpty) {
+      return (
+        <>
+          <WorkflowsPageSection />
+          {emptyPlaceholder}
+        </>
+      );
+    }
+
+    return (
+      <div
+        className={classNames('tw:flex tw:flex-1 tw:min-h-0 tw:flex-col', {
+          'tw:mx-2': isAiMode,
+        })}>
+        <div className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:pt-4">
+          <WorkflowsPageSection />
+          <WorkflowList
+            total={paging.total}
+            workflows={workflows}
+            onWorkflowClick={onWorkflowClick}
+          />
+          <div className="tw:py-3" data-testid="workflows-pagination">
+            <NextPrevious
+              currentPage={currentPage}
+              isLoading={loading}
+              pageSize={pageSize}
+              pageSizeOptions={[
+                PAGE_SIZE_BASE,
+                PAGE_SIZE_MEDIUM,
+                PAGE_SIZE_LARGE,
+              ]}
+              paging={paging}
+              pagingHandler={handlePageChange}
+              onShowSizeChange={setPageSize}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <PageLayoutV1
       fullHeight
@@ -362,40 +419,7 @@ const WorkflowsPage = () => {
           </div>
         )}
 
-        {isWorkflowsEmpty ? (
-          <>
-            <WorkflowsPageSection />
-            {emptyPlaceholder}
-          </>
-        ) : (
-          <div
-            className={classNames('tw:flex tw:flex-1 tw:min-h-0 tw:flex-col', {
-              'tw:mx-2': isAiMode,
-            })}>
-            <div className="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:pt-4">
-              <WorkflowsPageSection />
-              <WorkflowList
-                workflows={workflows}
-                onWorkflowClick={onWorkflowClick}
-              />
-            </div>
-            <div className="tw:py-3" data-testid="workflows-pagination">
-              <NextPrevious
-                currentPage={currentPage}
-                isLoading={loading}
-                pageSize={pageSize}
-                pageSizeOptions={[
-                  PAGE_SIZE_BASE,
-                  PAGE_SIZE_MEDIUM,
-                  PAGE_SIZE_LARGE,
-                ]}
-                paging={paging}
-                pagingHandler={handlePageChange}
-                onShowSizeChange={setPageSize}
-              />
-            </div>
-          </div>
-        )}
+        {renderContent()}
       </div>
 
       <SlideoutMenu

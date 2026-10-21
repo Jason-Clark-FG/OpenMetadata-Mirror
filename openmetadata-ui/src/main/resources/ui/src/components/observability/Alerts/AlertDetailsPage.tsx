@@ -14,12 +14,12 @@
 import {
   Box,
   ButtonUtility,
-  Owner,
   PageLayout,
   Tabs,
+  Typography,
 } from '@openmetadata/ui-core-components';
 import {
-  Edit03,
+  Edit01,
   RefreshCw04,
   Trash01,
 } from '@openmetadata/ui-core-components/icons';
@@ -34,7 +34,7 @@ import DocumentTitle from '../../../components/common/DocumentTitle/DocumentTitl
 import ErrorPlaceHolder from '../../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import HeaderBreadcrumb from '../../../components/common/HeaderBreadcrumb/HeaderBreadcrumb.component';
 import Loader from '../../../components/common/Loader/Loader';
-import { UserTeamSelectableList } from '../../../components/common/UserTeamSelectableList/UserTeamSelectableList.component';
+import AlertOwnersInline from './AlertOwnersInline';
 import { AlertDetailTabs } from '../../../enums/Alerts.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../../enums/common.enum';
 import {
@@ -59,9 +59,7 @@ import AlertAiRecentEventsTab from './AlertAiRecentEventsTab';
 import AlertDescriptionCard from './AlertDescriptionCard.component';
 import AlertEditModal from './AlertEditModal.component';
 import { AlertKind, OBSERVABILITY_ALERT_KIND } from './alertKinds';
-
-const ACTION_BUTTON_CLASS_NAME = 'tw:rounded-lg';
-const ACTION_ICON_CLASS_NAME = 'tw:h-4 tw:w-4 tw:text-fg-quaternary';
+import AlertsLoadErrorState from './AlertsLoadErrorState';
 
 interface AlertDetailsPageProps {
   /** Which alerts this page serves; Settings → Notifications passes its kind. */
@@ -108,6 +106,7 @@ const AlertDetailsPage = ({
   });
   const {
     alertDetails,
+    alertDetailsError,
     alertEventCounts,
     alertEventCountsLoading,
     deletePermission,
@@ -130,10 +129,12 @@ const AlertDetailsPage = ({
     viewPermission,
   } = detailsState;
 
-  const alertName = getEntityName(alertDetails);
+  const entityName = getEntityName(alertDetails);
+  // Falls back to the route FQN so a failed load still names the alert.
+  const alertName = entityName || fqn;
   // `alertDetails` is undefined for the whole fetch, and `getEntityName`
   // returns '' for it — which would render a bare " | Collate" in the tab.
-  const documentTitle = alertName || t('label.alert-detail-plural');
+  const documentTitle = entityName || t('label.alert-detail-plural');
   const alertConfigValue = useMemo(
     () =>
       alertDetails
@@ -275,20 +276,14 @@ const AlertDetailsPage = ({
     () => (
       <Box
         align="center"
-        className="tw:mt-1.5 tw:flex-wrap tw:text-secondary"
-        gap={3}>
+        className="tw:mt-1.5 tw:text-secondary"
+        gap={3}
+        wrap="nowrap">
         {ownerLoading ? null : (
-          <Owner
-            hasPermission={editOwnersPermission}
-            owners={alertDetails?.owners ?? []}
-            selectorContent={
-              <UserTeamSelectableList
-                hasPermission={Boolean(editOwnersPermission)}
-                multiple={{ user: true, team: false }}
-                owner={alertDetails?.owners}
-                onUpdate={onOwnerUpdate}
-              />
-            }
+          <AlertOwnersInline
+            hasPermission={Boolean(editOwnersPermission)}
+            owners={alertDetails?.owners}
+            onUpdate={onOwnerUpdate}
           />
         )}
         <AlertAiEventCounts
@@ -328,9 +323,10 @@ const AlertDetailsPage = ({
       <>
         {editPermission && alertDetails?.provider !== ProviderType.System && (
           <ButtonUtility
-            className={ACTION_BUTTON_CLASS_NAME}
+            color="tertiary"
             data-testid="edit-button"
-            icon={<Edit03 className={ACTION_ICON_CLASS_NAME} />}
+            icon={Edit01}
+            size="lg"
             tooltip={t('label.edit-entity', {
               entity: t('label.alert'),
             })}
@@ -339,9 +335,10 @@ const AlertDetailsPage = ({
         )}
         {deletePermission && alertDetails?.provider !== ProviderType.System && (
           <ButtonUtility
-            className={ACTION_BUTTON_CLASS_NAME}
+            color="tertiary"
             data-testid="delete-button"
-            icon={<Trash01 className={ACTION_ICON_CLASS_NAME} />}
+            icon={Trash01}
+            size="lg"
             tooltip={t('label.delete-entity', {
               entity: t('label.alert'),
             })}
@@ -349,10 +346,11 @@ const AlertDetailsPage = ({
           />
         )}
         <ButtonUtility
-          className={ACTION_BUTTON_CLASS_NAME}
+          color="tertiary"
           data-testid="sync-button"
-          icon={<RefreshCw04 className={ACTION_ICON_CLASS_NAME} />}
+          icon={RefreshCw04}
           isDisabled={isSyncing}
+          size="lg"
           tooltip={t('label.sync-alert-offset', {
             entity: t('label.alert'),
           })}
@@ -386,11 +384,42 @@ const AlertDetailsPage = ({
     }
 
     if (!loadingCount && isUndefined(alertDetails)) {
-      return <ErrorPlaceHolder className="m-0" />;
+      return (
+        <ObservabilityPageShell
+          header={
+            <PageLayout.PageHeader
+              breadcrumb={
+                <HeaderBreadcrumb
+                  noMargin
+                  className="tw:text-xs"
+                  items={breadcrumbItems}
+                  showHome={false}
+                />
+              }
+              title={alertName}
+              variant="gradient"
+            />
+          }
+          pageTitle={alertName}>
+          <AlertsLoadErrorState
+            error={alertDetailsError}
+            onRetry={fetchAlertDetails}
+          />
+        </ObservabilityPageShell>
+      );
     }
 
     return null;
-  }, [loadingCount, viewPermission, alertDetails, t]);
+  }, [
+    loadingCount,
+    viewPermission,
+    alertDetails,
+    alertDetailsError,
+    alertName,
+    breadcrumbItems,
+    fetchAlertDetails,
+    t,
+  ]);
 
   if (guardPlaceholder) {
     return guardPlaceholder;
@@ -422,7 +451,15 @@ const AlertDetailsPage = ({
               meta={headerMetadata}
               /* The subtitle should mirror the alert identifier from the route,
                * not the backend entity id returned in alertDetails. */
-              subtitle={fqn}
+              subtitle={
+                <Typography
+                  className="tw:truncate tw:text-secondary"
+                  data-testid="alert-details-fqn"
+                  size="text-sm"
+                  title={fqn}>
+                  {fqn}
+                </Typography>
+              }
               title={alertName}
               variant="gradient"
             />

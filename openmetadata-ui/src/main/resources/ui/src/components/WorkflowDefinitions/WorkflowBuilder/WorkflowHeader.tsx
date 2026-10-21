@@ -264,7 +264,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
   );
 
   const workflowIcon = (
-    <div className="tw:flex tw:items-center tw:justify-center tw:size-8 tw:rounded-md tw:bg-brand-solid">
+    <div className="tw:flex tw:items-center tw:justify-center tw:size-8 tw:shrink-0 tw:rounded-md tw:bg-brand-solid">
       <WorkflowIcon className="tw:size-4 tw:text-white" />
     </div>
   );
@@ -317,10 +317,10 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
           }
           title={
             <Typography
-              ellipsis
               as="h3"
               className="tw:m-0 tw:text-primary"
               data-testid="workflow-title"
+              ellipsis={{ tooltip: true }}
               size="text-xl"
               weight="semibold">
               {title}
@@ -330,16 +330,16 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
         />
       ) : (
         <Card className="tw:px-6 tw:py-4" data-testid="workflow-header">
-          <div className="tw:flex tw:items-center tw:justify-between">
-            <div className="tw:flex tw:items-center tw:gap-3">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-4">
+            <div className="tw:flex tw:items-center tw:gap-3 tw:min-w-0">
               {workflowIcon}
-              <div data-testid="workflow-title-section">
+              <div className="tw:min-w-0" data-testid="workflow-title-section">
                 <div className="tw:flex tw:items-center tw:gap-2">
                   <Typography
-                    ellipsis
                     as="p"
                     className="tw:m-0 tw:mb-1 tw:text-primary"
                     data-testid="workflow-title"
+                    ellipsis={{ tooltip: true }}
                     size="text-md"
                     weight="semibold">
                     {title}
@@ -361,7 +361,7 @@ export const WorkflowHeader: React.FC<WorkflowHeaderProps> = ({
               </div>
             </div>
 
-            <div className="tw:flex tw:gap-3 tw:items-center">
+            <div className="tw:flex tw:shrink-0 tw:gap-3 tw:items-center">
               {workflowControls}
               {editWorkflowButton}
               {manageMenu}

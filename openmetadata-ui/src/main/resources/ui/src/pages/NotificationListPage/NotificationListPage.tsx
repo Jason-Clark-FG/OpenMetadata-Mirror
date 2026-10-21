@@ -15,26 +15,25 @@ import {
   ButtonUtility,
   Grid,
   Skeleton,
-  Tooltip,
   Typography,
 } from '@openmetadata/ui-core-components';
+import { Edit01, Trash01 } from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { ReactComponent as EditIcon } from '../../assets/svg/edit-new.svg';
-import { ReactComponent as DeleteIcon } from '../../assets/svg/ic-delete.svg';
 import DeleteModal from '../../components/common/DeleteModal/DeleteModal';
-import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
 import { PagingHandlerParams } from '../../components/common/NextPrevious/NextPrevious.interface';
+import RichTextEditorPreviewerNew from '../../components/common/RichTextEditor/RichTextEditorPreviewNew';
 import Table from '../../components/common/Table/TableV2';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
+import AlertsEmptyState from '../../components/observability/Alerts/AlertsEmptyState';
+import AlertsLoadErrorState from '../../components/observability/Alerts/AlertsLoadErrorState';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { NO_DATA_PLACEHOLDER } from '../../constants/constants';
-import { ALERTS_DOCS } from '../../constants/docs.constants';
 import {
   GlobalSettingOptions,
   GlobalSettingsMenuCategory,
@@ -44,7 +43,6 @@ import { PAGE_HEADERS } from '../../constants/PageHeaders.constant';
 import { useLimitStore } from '../../context/LimitsProvider/useLimitsStore';
 import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { OperationPermission } from '../../context/PermissionProvider/PermissionProvider.interface';
-import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import { EntityType } from '../../enums/entity.enum';
 import { ResourceEntity } from '../../enums/permissions.enum';
 import {
@@ -74,6 +72,7 @@ const NotificationListPage = () => {
   const navigate = useNavigate();
   const [loadingCount, setLoadingCount] = useState(0);
   const [alerts, setAlerts] = useState<EventSubscription[]>([]);
+  const [alertsError, setAlertsError] = useState<AxiosError>();
   const [selectedAlert, setSelectedAlert] = useState<EventSubscription>();
   const [isDeleting, setIsDeleting] = useState(false);
   const {
@@ -156,6 +155,7 @@ const NotificationListPage = () => {
   const fetchAlerts = useCallback(
     async (params?: Partial<Paging>) => {
       setLoadingCount((count) => count + 1);
+      setAlertsError(undefined);
       try {
         const { data, paging } = await getAllAlerts({
           after: params?.after,
@@ -176,7 +176,8 @@ const NotificationListPage = () => {
 
         handlePagingChange(paging);
         fetchAllAlertsPermission(data);
-      } catch {
+      } catch (error) {
+        setAlertsError(error as AxiosError);
         showErrorToast(
           t('server.entity-fetch-error', { entity: t('label.alert-plural') })
         );
@@ -243,6 +244,17 @@ const NotificationListPage = () => {
     [paging]
   );
 
+  const handleAddAlert = useCallback(
+    () =>
+      navigate(
+        getSettingPath(
+          GlobalSettingsMenuCategory.NOTIFICATIONS,
+          GlobalSettingOptions.ADD_NOTIFICATION
+        )
+      ),
+    [navigate]
+  );
+
   const columns = useMemo(
     () => [
       {
@@ -254,7 +266,9 @@ const NotificationListPage = () => {
           return (
             record.fullyQualifiedName && (
               <Link
+                className="tw:block tw:max-w-48 tw:truncate"
                 data-testid="alert-name"
+                title={getEntityName(record)}
                 to={getNotificationAlertDetailsPath(record.fullyQualifiedName)}>
                 {getEntityName(record)}
               </Link>
@@ -271,7 +285,11 @@ const NotificationListPage = () => {
           return resources?.join(', ') || '--';
         },
       },
-      ...descriptionTableObject(),
+      ...descriptionTableObject<EventSubscription>({
+        render: (text: string) => (
+          <RichTextEditorPreviewerNew clampByLines markdown={text} />
+        ),
+      }),
       {
         title: t('label.action-plural').toString(),
         dataIndex: 'fullyQualifiedName',
@@ -303,28 +321,28 @@ const NotificationListPage = () => {
           return (
             <div className="d-flex items-center">
               {alertPermission.edit && (
-                <Tooltip arrow placement="bottom" title={t('label.edit')}>
-                  <ButtonUtility
-                    color="tertiary"
-                    data-testid={`alert-edit-${record.name}`}
-                    href={getNotificationAlertsEditPath(fullyQualifiedName)}
-                    icon={EditIcon}
-                    isDisabled={record.provider === ProviderType.System}
-                    size="sm"
-                  />
-                </Tooltip>
+                <ButtonUtility
+                  color="tertiary"
+                  data-testid={`alert-edit-${record.name}`}
+                  href={getNotificationAlertsEditPath(fullyQualifiedName)}
+                  icon={Edit01}
+                  isDisabled={record.provider === ProviderType.System}
+                  size="lg"
+                  tooltip={t('label.edit')}
+                  tooltipPlacement="bottom"
+                />
               )}
               {alertPermission.delete && (
-                <Tooltip arrow placement="bottom" title={t('label.delete')}>
-                  <ButtonUtility
-                    color="tertiary"
-                    data-testid={`alert-delete-${record.name}`}
-                    icon={DeleteIcon}
-                    isDisabled={record.provider === ProviderType.System}
-                    size="sm"
-                    onClick={() => setSelectedAlert(record)}
-                  />
-                </Tooltip>
+                <ButtonUtility
+                  color="tertiary"
+                  data-testid={`alert-delete-${record.name}`}
+                  icon={Trash01}
+                  isDisabled={record.provider === ProviderType.System}
+                  size="lg"
+                  tooltip={t('label.delete')}
+                  tooltipPlacement="bottom"
+                  onClick={() => setSelectedAlert(record)}
+                />
               )}
             </div>
           );
@@ -358,14 +376,7 @@ const NotificationListPage = () => {
                 <Button
                   color="primary"
                   data-testid="create-notification"
-                  onClick={() =>
-                    navigate(
-                      getSettingPath(
-                        GlobalSettingsMenuCategory.NOTIFICATIONS,
-                        GlobalSettingOptions.ADD_NOTIFICATION
-                      )
-                    )
-                  }>
+                  onClick={handleAddAlert}>
                   {t('label.add-entity', { entity: t('label.alert') })}
                 </Button>
               </LimitWrapper>
@@ -384,27 +395,21 @@ const NotificationListPage = () => {
               pagingHandler: onPageChange,
               onShowSizeChange: handlePageSizeChange,
             }}
-            dataSource={alerts}
+            dataSource={alertsError ? [] : alerts}
             loading={Boolean(loadingCount)}
             locale={{
-              emptyText: (
-                <ErrorPlaceHolder
-                  permission
-                  className="p-y-md"
-                  doc={ALERTS_DOCS}
-                  heading={t('label.alert')}
-                  permissionValue={t('label.create-entity', {
-                    entity: t('label.alert'),
-                  })}
-                  type={ERROR_PLACEHOLDER_TYPE.CREATE}
-                  onClick={() =>
-                    navigate(
-                      getSettingPath(
-                        GlobalSettingsMenuCategory.NOTIFICATIONS,
-                        GlobalSettingOptions.ADD_NOTIFICATION
-                      )
-                    )
-                  }
+              emptyText: alertsError ? (
+                <AlertsLoadErrorState
+                  error={alertsError}
+                  onRetry={() => fetchAlerts()}
+                />
+              ) : (
+                <AlertsEmptyState
+                  hasCreatePermission={Boolean(
+                    alertResourcePermission?.Create ||
+                      alertResourcePermission?.All
+                  )}
+                  onAddAlert={handleAddAlert}
                 />
               ),
             }}

@@ -31,7 +31,10 @@ let hookState: {
   isLoading: boolean;
   total: number;
   hasMore?: boolean;
+  error?: unknown;
 };
+const mockRefetch = jest.fn();
+let mockCountQueries: { data?: number; isError: boolean }[];
 // Extra fields merged into the task the mock panel resolves with, so a test can
 // simulate resolving into a specific status/type (e.g. an Approved DAR).
 let resolvedPayload: Record<string, unknown> = {};
@@ -41,7 +44,7 @@ jest.mock('@tanstack/react-query', () => ({
   // The badge totals come from React Query; return static totals so tests stay
   // synchronous. The fetch/dedup itself is the library's concern — the component
   // contract we assert is that mutations invalidate the counts cache.
-  useQueries: () => [{ data: 0 }, { data: 0 }, { data: 0 }],
+  useQueries: () => mockCountQueries,
 }));
 
 let mockCurrentUserIds: ReadonlySet<string> = new Set();
@@ -66,6 +69,8 @@ jest.mock('../useInboxInfiniteList', () => ({
       isLoadingMore: false,
       hasMore: Boolean(hookState.hasMore),
       total: hookState.total,
+      error: hookState.error ?? null,
+      refetch: mockRefetch,
       scrollRef: { current: null },
       sentinelRef: { current: null },
       setItems: mockSetItems,
@@ -210,13 +215,16 @@ jest.mock('@openmetadata/ui-core-components', () => {
   const TabsItem = ({
     id,
     label,
+    badge,
     children,
   }: {
     id: string;
     label?: ReactNode;
+    badge?: number;
     children?: ReactNode | ((state: { isSelected: boolean }) => ReactNode);
   }) => (
     <button
+      data-badge={badge}
       data-testid={`task-status-${id}`}
       type="button"
       onClick={() => tabsOnChange?.(id)}>
@@ -301,6 +309,11 @@ describe('TasksTab', () => {
     jest.clearAllMocks();
     resolvedPayload = {};
     hookState = { items: [], isLoading: false, total: 0 };
+    mockCountQueries = [
+      { data: 0, isError: false },
+      { data: 0, isError: false },
+      { data: 0, isError: false },
+    ];
     // The list fetchers resolve with a paging total (used when a test invokes the
     // captured fetchPage). Status-count totals come from the mocked useQueries.
     mockListTasks.mockResolvedValue({ paging: { total: 0 } });
@@ -312,6 +325,72 @@ describe('TasksTab', () => {
 
     // Defaults to the Open filter, so the Open empty state renders.
     expect(screen.getByText('label.no-open-tasks-yet')).toBeInTheDocument();
+  });
+
+  // A failed load must not read as an empty queue.
+  describe('when the task list fails to load', () => {
+    it('shows a permission placeholder for a 403, with no retry', () => {
+      hookState = {
+        items: [],
+        isLoading: false,
+        total: 0,
+        error: { response: { status: 403 } },
+      };
+      renderTab();
+
+      expect(
+        screen.getByTestId('inbox-tasks-error-forbidden')
+      ).toHaveTextContent('message.no-permission-to-view');
+      expect(
+        screen.queryByText('label.no-open-tasks-yet')
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText('label.retry')).not.toBeInTheDocument();
+    });
+
+    it('shows an error with a retry that reloads the list and its counts', () => {
+      hookState = {
+        items: [],
+        isLoading: false,
+        total: 0,
+        error: { response: { status: 500 } },
+      };
+      renderTab();
+
+      expect(screen.getByTestId('inbox-tasks-error')).toHaveTextContent(
+        'message.something-went-wrong'
+      );
+      expect(
+        screen.queryByText('label.no-open-tasks-yet')
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('label.retry'));
+
+      expect(mockRefetch).toHaveBeenCalled();
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: [expect.any(String)],
+      });
+    });
+
+    it('drops a status badge whose count failed instead of showing 0', () => {
+      mockCountQueries = [
+        { data: 4, isError: false },
+        { isError: true },
+        { data: 0, isError: false },
+      ];
+      renderTab();
+
+      expect(screen.getByTestId('task-status-all')).toHaveAttribute(
+        'data-badge',
+        '4'
+      );
+      expect(screen.getByTestId('task-status-open')).not.toHaveAttribute(
+        'data-badge'
+      );
+      expect(screen.getByTestId('task-status-closed')).toHaveAttribute(
+        'data-badge',
+        '0'
+      );
+    });
   });
 
   // A filter that matches nothing must not claim the queue is empty.

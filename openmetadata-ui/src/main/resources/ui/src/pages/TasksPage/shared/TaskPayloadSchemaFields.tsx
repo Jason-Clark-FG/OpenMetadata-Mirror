@@ -96,7 +96,7 @@ const ClampedText = ({ text }: { text: string }) => {
     <div className="tw:relative">
       <p
         className={`tw:m-0 tw:text-sm tw:text-primary tw:wrap-break-word${
-          expanded ? '' : ' tw:overflow-hidden tw:max-h-10 tw:break-all'
+          expanded ? '' : ' tw:overflow-hidden tw:max-h-10'
         }`}
         ref={ref}>
         {text}

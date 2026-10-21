@@ -75,4 +75,43 @@ describe('WorkflowExecutionHistory', () => {
 
     expect(screen.getAllByRole('row')).toHaveLength(mockInstances.length + 1);
   });
+
+  it('shows a run-specific empty state when the workflow has no runs', async () => {
+    (getWorkflowInstancesByFQN as jest.Mock).mockResolvedValue({
+      data: [],
+      paging: { total: 0 },
+    });
+
+    await act(async () => {
+      render(<WorkflowExecutionHistory />, { wrapper: MemoryRouter });
+    });
+
+    expect(
+      screen.getByTestId('workflow-execution-history-empty')
+    ).toHaveTextContent('message.no-runs-recorded-yet');
+    expect(
+      screen.queryByText('message.no-data-available')
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [500, 'workflow-load-error'],
+    [403, 'workflow-permission-error'],
+  ])(
+    'shows an error placeholder instead of the empty state on a %s',
+    async (status, testId) => {
+      (getWorkflowInstancesByFQN as jest.Mock).mockRejectedValue({
+        response: { status },
+      });
+
+      await act(async () => {
+        render(<WorkflowExecutionHistory />, { wrapper: MemoryRouter });
+      });
+
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('workflow-execution-history-empty')
+      ).not.toBeInTheDocument();
+    }
+  );
 });

@@ -659,7 +659,7 @@ export const TaskTabNew = ({
             <UserPopOverCard userName={task.createdBy?.name ?? ''}>
               <ProfilePicture name={task.createdBy?.name ?? ''} width="24" />
             </UserPopOverCard>
-            <Typography>{task.createdBy?.name}</Typography>
+            <Typography>{getEntityName(task.createdBy)}</Typography>
           </Link>
         ),
       },
@@ -1569,18 +1569,18 @@ export const TaskTabNew = ({
             'flex-column': isEditAssignee,
           }
         )}>
-        <div className="d-flex gap-2" data-testid="task-assignees">
-          <Box className="m-l-0" rowGap={4} wrap="wrap">
-            <Box
-              align="center"
-              className="text-grey-muted tw:w-1/3 tw:pr-2"
-              gap={2}>
+        <div className="d-flex gap-2 tw:w-full" data-testid="task-assignees">
+          <div className="tw:grid tw:w-full tw:grid-cols-[160px_auto_1fr] tw:items-center tw:gap-x-2 tw:gap-y-4">
+            <Box align="center" className="text-grey-muted" gap={2}>
               <UserIcon height={16} />
               <Typography className="incident-manager-details-label">
                 {t('label.created-by')}
               </Typography>
             </Box>
-            <div className="tw:w-2/3 tw:pr-2 tw:pl-0.5">
+            <Typography color="secondary" size="text-sm">
+              :
+            </Typography>
+            <div className="tw:min-w-0">
               <Link
                 className="no-underline flex items-center gap-2"
                 to={getUserPath(task.createdBy?.name ?? '')}>
@@ -1593,21 +1593,24 @@ export const TaskTabNew = ({
                   </div>
                 </UserPopOverCard>
 
-                <Typography>{task.createdBy?.name}</Typography>
+                <Typography>{getEntityName(task.createdBy)}</Typography>
               </Link>
             </div>
 
             {isEditAssignee ? (
-              renderAssigneeEditor()
+              <div className="tw:col-span-3">{renderAssigneeEditor()}</div>
             ) : (
               <>
-                <Box className="text-grey-muted tw:w-1/3 tw:pr-2" gap={2}>
+                <Box align="center" className="text-grey-muted" gap={2}>
                   <AssigneesIcon height={16} />
                   <Typography className="incident-manager-details-label @grey-8">
                     {t('label.assignee-plural')}
                   </Typography>
                 </Box>
-                <Box className="tw:w-2/3 tw:pr-2 tw:pl-0.5" gap={2}>
+                <Typography color="secondary" size="text-sm">
+                  :
+                </Typography>
+                <Box className="tw:min-w-0" gap={2}>
                   {task?.assignees?.length === 1 ? (
                     <div className="d-flex items-center gap-2">
                       <UserPopOverCard userName={task?.assignees[0].name ?? ''}>
@@ -1635,7 +1638,7 @@ export const TaskTabNew = ({
                 </Box>
               </>
             )}
-          </Box>
+          </div>
         </div>
       </div>
     );

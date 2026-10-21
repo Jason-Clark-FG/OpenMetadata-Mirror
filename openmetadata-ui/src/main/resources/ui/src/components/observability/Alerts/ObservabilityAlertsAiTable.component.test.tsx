@@ -12,6 +12,7 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import { AxiosError } from 'axios';
 import { ReactNode } from 'react';
 import { PAGE_SIZE_BASE } from '../../../constants/constants';
 import { OperationPermission } from '../../../context/PermissionProvider/PermissionProvider.interface';
@@ -213,7 +214,8 @@ jest.mock('@openmetadata/ui-core-components', () => {
 jest.mock('@openmetadata/ui-core-components/icons', () => ({
   AlertTriangle: () => null,
   Bell01: () => null,
-  Edit03: () => null,
+  Edit01: () => null,
+  Lock01: () => null,
   MarkerPin01: () => null,
   Plus: () => null,
   Trash01: () => null,
@@ -459,6 +461,45 @@ describe('ObservabilityAlertsAiTable', () => {
     fireEvent.click(screen.getByText('label.try-again'));
 
     expect(onRetryPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an error + retry state instead of the onboarding when the alerts list failed to load', () => {
+    const onRetry = jest.fn();
+    render(
+      <ObservabilityAlertsAiTable
+        {...baseProps}
+        alerts={[]}
+        alertsError={{ response: { status: 500 } } as AxiosError}
+        onRetry={onRetry}
+      />
+    );
+
+    expect(
+      screen.getByText('message.something-went-wrong')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('message.observability-alert-empty-heading')
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('label.try-again'));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an access-denied state when the alerts list is forbidden', () => {
+    render(
+      <ObservabilityAlertsAiTable
+        {...baseProps}
+        alerts={[]}
+        alertsError={{ response: { status: 403 } } as AxiosError}
+      />
+    );
+
+    expect(screen.getByText('label.access-denied')).toBeInTheDocument();
+    expect(screen.queryByText('label.try-again')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('label.new-entity:label.alert')
+    ).not.toBeInTheDocument();
   });
 
   it('maps pagination changes to cursor params', () => {

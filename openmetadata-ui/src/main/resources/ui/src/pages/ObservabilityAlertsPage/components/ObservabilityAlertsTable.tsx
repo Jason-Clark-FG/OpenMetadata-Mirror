@@ -11,25 +11,13 @@
  *  limitations under the License.
  */
 
-import {
-  Box,
-  Button,
-  EmptyPlaceholder,
-  Table,
-  TableCard,
-} from '@openmetadata/ui-core-components';
-import {
-  AlertTriangle,
-  Bell01,
-  MarkerPin01,
-  Plus,
-  ZapFast,
-} from '@openmetadata/ui-core-components/icons';
-import { useMemo } from 'react';
+import { Button, Table, TableCard } from '@openmetadata/ui-core-components';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import NextPrevious from '../../../components/common/NextPrevious/NextPrevious';
 import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
+import AlertsEmptyState from '../../../components/observability/Alerts/AlertsEmptyState';
+import AlertsLoadErrorState from '../../../components/observability/Alerts/AlertsLoadErrorState';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
 import { getEntityName } from '../../../utils/EntityNameUtils';
 import { ALERT_TABLE_COLUMN_IDS } from '../ObservabilityAlertsPage.constants';
@@ -45,6 +33,7 @@ function ObservabilityAlertsTable({
   alertResourcePermission,
   hasResourcePermissionError,
   alerts,
+  alertsError,
   columnList,
   currentPage,
   getAlertDetailsPath,
@@ -54,6 +43,7 @@ function ObservabilityAlertsTable({
   onEditAlert,
   onPageChange,
   onPageSizeChange,
+  onRetry,
   onRetryPermission,
   onSelectAlert,
   onViewAlert,
@@ -71,30 +61,6 @@ function ObservabilityAlertsTable({
     alertResourcePermission?.Create || alertResourcePermission?.All
   );
 
-  const emptyStateFeatures = useMemo(
-    () => [
-      {
-        key: 'trigger',
-        icon: <ZapFast className="tw:text-fg-brand-primary" />,
-        title: t('label.pick-a-trigger'),
-        description: t('message.alert-pick-a-trigger-description'),
-      },
-      {
-        key: 'destination',
-        icon: <MarkerPin01 className="tw:text-fg-warning-primary" />,
-        title: t('label.choose-the-destination'),
-        description: t('message.alert-choose-destination-description'),
-      },
-      {
-        key: 'stay-ahead',
-        icon: <Bell01 className="tw:text-fg-success-primary" />,
-        title: t('label.stay-ahead'),
-        description: t('message.alert-stay-ahead-description'),
-      },
-    ],
-    [t]
-  );
-
   const renderRow = (record: EventSubscription) => {
     const alertPermission = alertPermissions?.find(
       (alert) => alert.id === record.id
@@ -110,13 +76,19 @@ function ObservabilityAlertsTable({
           )}>
           {onViewAlert ? (
             <Button
+              className="tw:block tw:max-w-48 tw:truncate"
               color="link-color"
               data-testid="alert-name"
+              title={alertName}
               onPress={() => onViewAlert(record)}>
               {alertName}
             </Button>
           ) : (
-            <Link data-testid="alert-name" to={getAlertDetailsPath(alertFqn)}>
+            <Link
+              className="tw:block tw:max-w-48 tw:truncate"
+              data-testid="alert-name"
+              title={alertName}
+              to={getAlertDetailsPath(alertFqn)}>
               {alertName}
             </Link>
           )}
@@ -131,7 +103,10 @@ function ObservabilityAlertsTable({
           className={getAlertTableCellLayoutClassName(
             ALERT_TABLE_COLUMN_IDS.DESCRIPTION
           )}>
-          <RichTextEditorPreviewerNew markdown={record.description ?? ''} />
+          <RichTextEditorPreviewerNew
+            clampByLines
+            markdown={record.description ?? ''}
+          />
         </Table.Cell>
         <Table.Cell
           className={getAlertTableCellLayoutClassName(
@@ -157,66 +132,27 @@ function ObservabilityAlertsTable({
   // resolves, hiding the "New Alert" CTA from an authorized user.
   const isAlertsEmpty = !loading && loadingCount === 0 && alerts.length === 0;
 
-  const emptyStatePlaceholder = (
-    <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
-      <EmptyPlaceholder
-        actions={
-          hasCreatePermission
-            ? [
-                {
-                  key: 'new-alert',
-                  label: t('label.new-entity', {
-                    entity: t('label.alert'),
-                  }),
-                  color: 'primary' as const,
-                  iconLeading: Plus,
-                  onPress: onAddAlert,
-                },
-              ]
-            : undefined
-        }
-        description={t('message.observability-alert-empty-description')}
-        features={emptyStateFeatures}
-        title={t('message.observability-alert-empty-heading')}
-        variant="features"
-      />
-    </Box>
-  );
+  const getEmptyOrErrorPlaceholder = () => {
+    if (alertsError) {
+      return <AlertsLoadErrorState error={alertsError} onRetry={onRetry} />;
+    }
 
-  // When the resource-permission fetch failed we can't tell allow from deny, and
-  // showErrorToast suppresses its 401/403 — so show an explicit error + retry
-  // cue instead of the create-less onboarding.
-  const errorStatePlaceholder = (
-    <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
-      <EmptyPlaceholder
-        actions={
-          onRetryPermission
-            ? [
-                {
-                  key: 'retry',
-                  label: t('label.try-again'),
-                  color: 'primary' as const,
-                  onPress: onRetryPermission,
-                },
-              ]
-            : undefined
-        }
-        description={t('server.unexpected-error')}
-        icon={<AlertTriangle className="tw:text-fg-error-primary" />}
-        title={t('message.something-went-wrong')}
-        variant="blank"
-      />
-    </Box>
-  );
+    if (hasResourcePermissionError) {
+      return <AlertsLoadErrorState onRetry={onRetryPermission} />;
+    }
 
-  const emptyOrErrorPlaceholder = hasResourcePermissionError
-    ? errorStatePlaceholder
-    : emptyStatePlaceholder;
+    return (
+      <AlertsEmptyState
+        hasCreatePermission={hasCreatePermission}
+        onAddAlert={onAddAlert}
+      />
+    );
+  };
 
   return (
     <TableCard.Root className="tw:rounded-xl tw:border tw:border-secondary tw:shadow-none tw:outline-0">
       {isAlertsEmpty ? (
-        emptyOrErrorPlaceholder
+        getEmptyOrErrorPlaceholder()
       ) : (
         <>
           <div className="tw:border-b tw:border-secondary">
@@ -228,6 +164,7 @@ function ObservabilityAlertsTable({
                   <Table.Head
                     className={getAlertTableHeaderLayoutClassName(col.id)}
                     id={col.id}
+                    isRowHeader={col.id === ALERT_TABLE_COLUMN_IDS.NAME}
                     key={col.id}
                     label={col.name}
                   />
