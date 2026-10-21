@@ -18,18 +18,14 @@ import {
   Table,
   TableCard,
 } from '@openmetadata/ui-core-components';
-import {
-  Bell01,
-  MarkerPin01,
-  Plus,
-  ZapFast,
-} from '@openmetadata/ui-core-components/icons';
+import { Plus } from '@openmetadata/ui-core-components/icons';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
 import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import NextPrevious from '../../../components/common/NextPrevious/NextPrevious';
 import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
+import { ALERT_EMPTY_STATE_FEATURES } from '../../../constants/Alerts.constants';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
 import { getEntityName } from '../../../utils/EntityNameUtils';
@@ -40,30 +36,6 @@ import {
   getAlertTableHeaderLayoutClassName,
 } from '../ObservabilityAlertsPage.utils';
 import ObservabilityAlertActions from './ObservabilityAlertActions';
-
-const ALERT_EMPTY_STATE_FEATURES = [
-  {
-    key: 'trigger',
-    Icon: ZapFast,
-    iconClassName: 'tw:text-fg-brand-primary',
-    titleKey: 'label.pick-a-trigger',
-    descriptionKey: 'message.alert-pick-a-trigger-description',
-  },
-  {
-    key: 'destination',
-    Icon: MarkerPin01,
-    iconClassName: 'tw:text-fg-warning-primary',
-    titleKey: 'label.choose-the-destination',
-    descriptionKey: 'message.alert-choose-destination-description',
-  },
-  {
-    key: 'stay-ahead',
-    Icon: Bell01,
-    iconClassName: 'tw:text-fg-success-primary',
-    titleKey: 'label.stay-ahead',
-    descriptionKey: 'message.alert-stay-ahead-description',
-  },
-];
 
 function ObservabilityAlertsTable({
   alertPermissions,

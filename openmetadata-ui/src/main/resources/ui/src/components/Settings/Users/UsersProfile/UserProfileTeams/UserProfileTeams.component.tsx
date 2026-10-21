@@ -14,13 +14,11 @@
 import {
   Box,
   Button,
-  ButtonUtility,
   Divider,
   Popover,
   PopoverTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Edit01 } from '@openmetadata/ui-core-components/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ReactComponent as ClosePopoverIcon } from '../../../../../assets/svg/ic-popover-close.svg';
@@ -33,6 +31,7 @@ import { getNonDeletedTeams } from '../../../../../utils/TeamUtils';
 import Chip from '../../../../common/Chip/Chip.component';
 import TeamsSelectableNew from '../../../Team/TeamsSelectable/TeamsSelectableNew';
 import { UserProfileTeamsProps } from './UserProfileTeams.interface';
+import { WidgetEditButton } from '../../../../common/WidgetActionButton/WidgetActionButton';
 
 const UserProfileTeams = ({
   teams,
@@ -108,13 +107,9 @@ const UserProfileTeams = ({
 
           {isAdminUser && !isDeletedUser && (
             <PopoverTrigger isOpen={isTeamsEdit} onOpenChange={setIsTeamsEdit}>
-              <ButtonUtility
-                className="tw:p-1"
-                color="tertiary"
+              <WidgetEditButton
                 data-testid="edit-teams-button"
-                icon={<Edit01 size={16} />}
-                size="xs"
-                tooltip={t('label.edit-entity', {
+                title={t('label.edit-entity', {
                   entity: t('label.team-plural'),
                 })}
               />

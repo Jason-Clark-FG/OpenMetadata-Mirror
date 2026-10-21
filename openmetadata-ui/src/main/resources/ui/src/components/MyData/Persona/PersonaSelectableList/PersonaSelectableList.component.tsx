@@ -14,12 +14,10 @@ import {
   Autocomplete,
   Box,
   Button,
-  ButtonUtility,
   Popover,
   PopoverTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Edit01 } from '@openmetadata/ui-core-components/icons';
 import { debounce } from 'lodash';
 import { Key, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +32,7 @@ import { getAllPersonas, searchPersonas } from '../../../../rest/PersonaAPI';
 import { getEntityName } from '../../../../utils/EntityNameUtils';
 import { getEntityReferenceListFromEntities } from '../../../../utils/EntityReferenceUtils';
 import { PersonaSelectableListProps } from './PersonaSelectableList.interface';
+import { WidgetEditButton } from '../../../common/WidgetActionButton/WidgetActionButton';
 
 export const PersonaListItemRenderer = (props: EntityReference) => {
   const { t } = useTranslation();
@@ -219,13 +218,9 @@ export const PersonaSelectableList = ({
 
   return (
     <PopoverTrigger isOpen={popupVisible} onOpenChange={setPopupVisible}>
-      <ButtonUtility
-        className="tw:p-1"
-        color="tertiary"
+      <WidgetEditButton
         data-testid={`${isDefaultPersona ? 'default-' : ''}edit-user-persona`}
-        icon={<Edit01 size={16} />}
-        size="xs"
-        tooltip={t('label.edit-entity', {
+        title={t('label.edit-entity', {
           entity: t('label.persona'),
         })}
       />

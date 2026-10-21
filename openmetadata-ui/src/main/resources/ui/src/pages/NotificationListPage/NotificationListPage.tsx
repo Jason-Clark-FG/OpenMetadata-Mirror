@@ -19,14 +19,7 @@ import {
   Skeleton,
   Typography,
 } from '@openmetadata/ui-core-components';
-import {
-  Bell01,
-  Edit01,
-  MarkerPin01,
-  Plus,
-  Trash01,
-  ZapFast,
-} from '@openmetadata/ui-core-components/icons';
+import { Edit01, Plus, Trash01 } from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,6 +35,7 @@ import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadc
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
+import { ALERT_EMPTY_STATE_FEATURES } from '../../constants/Alerts.constants';
 import { NO_DATA_PLACEHOLDER } from '../../constants/constants';
 import {
   GlobalSettingOptions,
@@ -77,30 +71,6 @@ import {
 import { descriptionTableObject } from '../../utils/TableColumn.util';
 import { showErrorToast } from '../../utils/ToastUtils';
 
-const ALERT_EMPTY_STATE_FEATURES = [
-  {
-    key: 'trigger',
-    Icon: ZapFast,
-    iconClassName: 'tw:text-fg-brand-primary',
-    titleKey: 'label.pick-a-trigger',
-    descriptionKey: 'message.alert-pick-a-trigger-description',
-  },
-  {
-    key: 'destination',
-    Icon: MarkerPin01,
-    iconClassName: 'tw:text-fg-warning-primary',
-    titleKey: 'label.choose-the-destination',
-    descriptionKey: 'message.alert-choose-destination-description',
-  },
-  {
-    key: 'stay-ahead',
-    Icon: Bell01,
-    iconClassName: 'tw:text-fg-success-primary',
-    titleKey: 'label.stay-ahead',
-    descriptionKey: 'message.alert-stay-ahead-description',
-  },
-];
-
 const NotificationListPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -131,6 +101,9 @@ const NotificationListPage = () => {
   >();
   const [alertResourcePermission, setAlertResourcePermission] =
     useState<OperationPermission>();
+  const canCreateAlert = alertResourcePermission
+    ? getDerivedPermissionFlags(alertResourcePermission).canCreate
+    : false;
 
   const fetchAlertPermissionByFqn = async (alertDetails: EventSubscription) => {
     const permission = await getEntityPermissionByFqn(
@@ -456,8 +429,7 @@ const NotificationListPage = () => {
                 <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
                   <EmptyPlaceholder
                     actions={
-                      alertResourcePermission?.Create ||
-                      alertResourcePermission?.All
+                      canCreateAlert
                         ? [
                             {
                               key: 'new-alert',

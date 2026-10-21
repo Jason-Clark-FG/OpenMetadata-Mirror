@@ -40,9 +40,9 @@ import {
   Task,
   TaskAvailableTransition,
   TaskCategory,
-  TaskType,
 } from '../../../../../generated/entity/tasks/task';
 import { EntityReference } from '../../../../../generated/entity/teams/user';
+import { INCIDENT_TASK_TYPES } from '../../../../../constants/Task.constant';
 import { TaskFormSchema } from '../../../../../rest/taskFormSchemasAPI';
 import {
   addTaskComment,
@@ -106,11 +106,6 @@ const TASK_FIELDS =
 // the consumed transition simply stays hidden (never re-firable) and the
 // route-activation revalidation picks the task up on the next visit or refocus.
 const TRANSITION_SYNC_INTERVALS_MS = [1000, 3000];
-
-const INCIDENT_TASK_TYPES: ReadonlySet<TaskType> = new Set([
-  TaskType.IncidentResolution,
-  TaskType.TestCaseResolution,
-]);
 
 export interface TaskDetailPanelProps {
   taskId: string;

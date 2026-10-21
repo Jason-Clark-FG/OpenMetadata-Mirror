@@ -14,13 +14,11 @@
 import {
   Autocomplete,
   Button,
-  ButtonUtility,
   Divider,
   Popover,
   PopoverTrigger,
   Typography,
 } from '@openmetadata/ui-core-components';
-import { Edit01 } from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { debounce, toLower, uniqBy } from 'lodash';
 import { Key, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,6 +37,7 @@ import Chip from '../../../../common/Chip/Chip.component';
 import '../../users.less';
 import UserProfileInheritedRoles from '../UserProfileInheritedRoles/UserProfileInheritedRoles.component';
 import { UserProfileRolesProps } from './UserProfileRoles.interface';
+import { WidgetEditButton } from '../../../../common/WidgetActionButton/WidgetActionButton';
 
 const UserProfileRoles = ({
   userRoles,
@@ -231,13 +230,9 @@ const UserProfileRoles = ({
           </Typography>
           {isAdminUser && (
             <PopoverTrigger isOpen={isRolesEdit} onOpenChange={setIsRolesEdit}>
-              <ButtonUtility
-                className="tw:p-1"
-                color="tertiary"
+              <WidgetEditButton
                 data-testid="edit-roles-button"
-                icon={<Edit01 size={16} />}
-                size="xs"
-                tooltip={t('label.edit-entity', {
+                title={t('label.edit-entity', {
                   entity: t('label.role-plural'),
                 })}
               />
