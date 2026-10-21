@@ -178,15 +178,6 @@ export const styles = sortCx({
         'tw:*:data-icon:text-fg-error-secondary tw:hover:*:data-icon:text-fg-error-primary',
       ].join(' '),
     },
-    'link-success': {
-      root: [
-        'tw:text-success-primary',
-        // Inner text underline
-        'tw:*:data-text:underline tw:*:data-text:decoration-transparent tw:*:data-text:underline-offset-2 tw:hover:*:data-text:decoration-current',
-        // Icon styles
-        'tw:*:data-icon:text-fg-success-secondary tw:hover:*:data-icon:text-fg-success-primary',
-      ].join(' '),
-    },
     'secondary-success': {
       root: [
         'tw:bg-surface tw:text-success-primary tw:shadow-xs-skeuomorphic',
@@ -320,12 +311,9 @@ export const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, Props>(
     const Component = href ? AriaLink : AriaButton;
 
     const isIcon = (IconLeading || IconTrailing) && !children;
-    const isLinkType = [
-      'link-gray',
-      'link-color',
-      'link-destructive',
-      'link-success',
-    ].includes(color);
+    const isLinkType = ['link-gray', 'link-color', 'link-destructive'].includes(
+      color
+    );
     const isUnboxedLink = isLinkType && !boxed;
     noTextPadding = isUnboxedLink || noTextPadding;
 

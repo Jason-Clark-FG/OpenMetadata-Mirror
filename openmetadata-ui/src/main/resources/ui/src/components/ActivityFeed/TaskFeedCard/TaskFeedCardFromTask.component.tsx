@@ -387,8 +387,8 @@ const TaskFeedCardFromTask = ({
         <Box gap={4}>
           {canQuickResolve() && (
             <Button
-              className="tw:gap-1.5"
-              color="link-success"
+              className="tw:gap-1.5 tw:text-success-primary tw:hover:text-success-primary"
+              color="link-gray"
               data-testid="approve-button"
               iconLeading={
                 <CheckCircleFilled
