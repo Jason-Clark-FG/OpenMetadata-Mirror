@@ -60,6 +60,7 @@ import { getResolvedTaskFormSchema } from '../../../../../utils/TaskFormSchemaUt
 import { getTaskAboutPath } from '../../../../../utils/TaskNavigationUtils';
 import { isOntologyReviewTask } from '../../../../../utils/TaskUtils';
 import { showErrorToast } from '../../../../../utils/ToastUtils';
+import CommentComposer from '../../../../common/CommentComposer/CommentComposer';
 import OntologyReviewPanel from '../../../../governance/ontology/OntologyReviewPanel/OntologyReviewPanel';
 import { useApplicationsProvider } from '../../../../Settings/Applications/ApplicationsProvider/ApplicationsProvider';
 import { formatInboxDate, isTaskOpen } from '../inbox.utils';
@@ -84,7 +85,6 @@ import { useCurrentUserIds } from '../useCurrentUserIds';
 import { useIsScrolled } from '../useIsScrolled';
 import { useTaskAboutEntity } from '../useTaskAboutEntity';
 import ClampedText from './ClampedText';
-import InboxCommentComposer from './InboxCommentComposer';
 import TaskActionCommentModal from './TaskActionCommentModal';
 import TaskActivityTimeline from './TaskActivityTimeline';
 import TaskAssetCard from './TaskAssetCard';
@@ -849,7 +849,7 @@ const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({
           aria-hidden
           className="tw:pointer-events-none tw:absolute tw:inset-x-0 tw:bottom-full tw:h-8 tw:bg-linear-to-t tw:from-bg-surface tw:to-transparent"
         />
-        <InboxCommentComposer onSave={handleAddComment} />
+        <CommentComposer onSave={handleAddComment} />
       </Box>
 
       <TaskActionCommentModal
