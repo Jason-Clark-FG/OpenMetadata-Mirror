@@ -229,6 +229,22 @@ describe('Button — icon size and color', () => {
     );
   });
 
+  it('colours a link-success button and its icon green, as an inline link', () => {
+    render(
+      <Button color="link-success" iconLeading={Edit01}>
+        Approve
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Approve' });
+
+    expect(button).toHaveClass(
+      'tw:text-success-primary',
+      'tw:*:data-icon:text-fg-success-secondary'
+    );
+    expect(button).toHaveClass('tw:p-0!');
+  });
+
   it('uses white icons on primary buttons', () => {
     render(
       <Button color="primary" iconLeading={Edit01}>

@@ -22,46 +22,16 @@ import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/Error
 import Loader from '../../components/common/Loader/Loader';
 import ResizablePanels from '../../components/common/ResizablePanels/ResizablePanels';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
-import { usePermissionProvider } from '../../context/PermissionProvider/PermissionProvider';
 import { ClientErrors } from '../../enums/Axios.enum';
 import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
-import { ResourceEntity } from '../../enums/permissions.enum';
 import { ProviderType } from '../../generated/entity/events/notificationTemplate';
-import { Operation } from '../../generated/entity/policies/policy';
 import { AlertType } from '../../generated/events/eventSubscription';
 import { withPageLayout } from '../../hoc/withPageLayout';
 import { useIsAiMode } from '../../hooks/useAppMode';
-import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
-import { useFqn } from '../../hooks/useFqn';
-import { checkPermission } from '../../utils/PermissionsUtils';
 import { AddObservabilityPageProps } from './AddObservabilityPage.interface';
 import ObservabilityAlertForm from './components/ObservabilityAlertForm';
+import { useAlertFormAccess } from './hooks/useAlertFormAccess';
 import { useObservabilityAlertForm } from './hooks/useObservabilityAlertForm';
-
-// Create gates the add form, EditAll on the alert gates the edit form.
-const useAlertFormAccess = (isEditMode: boolean) => {
-  const { fqn } = useFqn();
-  const { permissions } = usePermissionProvider();
-  const { canEditAll, isLoading, error, refresh } = useEntityPermissions(
-    ResourceEntity.EVENT_SUBSCRIPTION,
-    fqn,
-    { enabled: isEditMode }
-  );
-
-  return {
-    hasAccess: isEditMode
-      ? canEditAll
-      : checkPermission(
-          Operation.Create,
-          ResourceEntity.EVENT_SUBSCRIPTION,
-          permissions
-        ),
-    isPermissionLoading: isEditMode && isLoading,
-    // A failed permission fetch is not a denial; it gets a reload instead.
-    permissionError: isEditMode ? error : null,
-    refreshPermission: refresh,
-  };
-};
 
 function AddObservabilityPage({
   alertType = AlertType.Observability,
