@@ -72,7 +72,7 @@ interface AlertsEmptyStateProps {
   onAddAlert: () => void;
 }
 
-export function AlertsEmptyState({
+function AlertsEmptyState({
   hasCreatePermission,
   onAddAlert,
 }: Readonly<AlertsEmptyStateProps>) {

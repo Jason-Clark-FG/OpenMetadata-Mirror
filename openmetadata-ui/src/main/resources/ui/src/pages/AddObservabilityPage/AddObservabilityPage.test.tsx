@@ -196,6 +196,7 @@ describe('Add ObservabilityPage Alerts Page Tests', () => {
     });
 
     expect(screen.getByText('label.access-denied')).toBeInTheDocument();
+    expect(screen.getByText(/label\.create-entity/)).toBeInTheDocument();
     expect(screen.queryByTestId('save-button')).not.toBeInTheDocument();
   });
 
@@ -209,6 +210,7 @@ describe('Add ObservabilityPage Alerts Page Tests', () => {
     });
 
     expect(screen.getByText('label.access-denied')).toBeInTheDocument();
+    expect(screen.getByText(/label\.edit-entity/)).toBeInTheDocument();
     expect(screen.queryByTestId('save-button')).not.toBeInTheDocument();
   });
 

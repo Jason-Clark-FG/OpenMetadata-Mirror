@@ -14,16 +14,22 @@
 import {
   Box,
   Button,
+  EmptyPlaceholder,
   Table,
   TableCard,
 } from '@openmetadata/ui-core-components';
+import {
+  Bell01,
+  MarkerPin01,
+  Plus,
+  ZapFast,
+} from '@openmetadata/ui-core-components/icons';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import PermissionPlaceholder from '../../../components/common/EmptyPlaceholder/PermissionPlaceholder';
 import SomethingWentWrongPlaceholder from '../../../components/common/EmptyPlaceholder/SomethingWentWrongPlaceholder';
 import NextPrevious from '../../../components/common/NextPrevious/NextPrevious';
 import RichTextEditorPreviewerNew from '../../../components/common/RichTextEditor/RichTextEditorPreviewNew';
-import { AlertsEmptyState } from '../../../components/observability/Alerts/ObservabilityAlertsAiTable.component';
 import { ClientErrors } from '../../../enums/Axios.enum';
 import { EventSubscription } from '../../../generated/events/eventSubscription';
 import { getEntityName } from '../../../utils/EntityNameUtils';
@@ -34,6 +40,30 @@ import {
   getAlertTableHeaderLayoutClassName,
 } from '../ObservabilityAlertsPage.utils';
 import ObservabilityAlertActions from './ObservabilityAlertActions';
+
+const ALERT_EMPTY_STATE_FEATURES = [
+  {
+    key: 'trigger',
+    Icon: ZapFast,
+    iconClassName: 'tw:text-fg-brand-primary',
+    titleKey: 'label.pick-a-trigger',
+    descriptionKey: 'message.alert-pick-a-trigger-description',
+  },
+  {
+    key: 'destination',
+    Icon: MarkerPin01,
+    iconClassName: 'tw:text-fg-warning-primary',
+    titleKey: 'label.choose-the-destination',
+    descriptionKey: 'message.alert-choose-destination-description',
+  },
+  {
+    key: 'stay-ahead',
+    Icon: Bell01,
+    iconClassName: 'tw:text-fg-success-primary',
+    titleKey: 'label.stay-ahead',
+    descriptionKey: 'message.alert-stay-ahead-description',
+  },
+];
 
 function ObservabilityAlertsTable({
   alertPermissions,
@@ -159,10 +189,36 @@ function ObservabilityAlertsTable({
     }
 
     return (
-      <AlertsEmptyState
-        hasCreatePermission={hasCreatePermission}
-        onAddAlert={onAddAlert}
-      />
+      <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+        <EmptyPlaceholder
+          actions={
+            hasCreatePermission
+              ? [
+                  {
+                    key: 'new-alert',
+                    label: t('label.new-entity', {
+                      entity: t('label.alert'),
+                    }),
+                    color: 'primary' as const,
+                    iconLeading: Plus,
+                    onPress: onAddAlert,
+                  },
+                ]
+              : undefined
+          }
+          description={t('message.observability-alert-empty-description')}
+          features={ALERT_EMPTY_STATE_FEATURES.map(
+            ({ key, Icon, iconClassName, titleKey, descriptionKey }) => ({
+              key,
+              icon: <Icon className={iconClassName} />,
+              title: t(titleKey),
+              description: t(descriptionKey),
+            })
+          )}
+          title={t('message.observability-alert-empty-heading')}
+          variant="features"
+        />
+      </Box>
     );
   };
 

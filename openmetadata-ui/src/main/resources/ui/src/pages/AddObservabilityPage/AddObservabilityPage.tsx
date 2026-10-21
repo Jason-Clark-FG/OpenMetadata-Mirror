@@ -114,9 +114,10 @@ function AddObservabilityPage({
       return (
         <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
           <PermissionPlaceholder
-            permissionValue={t('label.edit-entity', {
-              entity: t('label.alert'),
-            })}
+            permissionValue={t(
+              isEditMode ? 'label.edit-entity' : 'label.create-entity',
+              { entity: t('label.alert') }
+            )}
           />
         </Box>
       );

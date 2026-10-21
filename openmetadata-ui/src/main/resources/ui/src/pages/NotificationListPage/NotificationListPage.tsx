@@ -17,8 +17,16 @@ import {
   Grid,
   Skeleton,
   Typography,
+  EmptyPlaceholder,
 } from '@openmetadata/ui-core-components';
-import { Edit01, Trash01 } from '@openmetadata/ui-core-components/icons';
+import {
+  Bell01,
+  Edit01,
+  MarkerPin01,
+  Plus,
+  Trash01,
+  ZapFast,
+} from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { isUndefined } from 'lodash';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -32,7 +40,6 @@ import RichTextEditorPreviewerNew from '../../components/common/RichTextEditor/R
 import Table from '../../components/common/Table/TableV2';
 import TitleBreadcrumb from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.component';
 import { TitleBreadcrumbProps } from '../../components/common/TitleBreadcrumb/TitleBreadcrumb.interface';
-import { AlertsEmptyState } from '../../components/observability/Alerts/ObservabilityAlertsAiTable.component';
 import PageHeader from '../../components/PageHeader/PageHeader.component';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { NO_DATA_PLACEHOLDER } from '../../constants/constants';
@@ -69,6 +76,30 @@ import {
 } from '../../utils/RouterUtils';
 import { descriptionTableObject } from '../../utils/TableColumn.util';
 import { showErrorToast } from '../../utils/ToastUtils';
+
+const ALERT_EMPTY_STATE_FEATURES = [
+  {
+    key: 'trigger',
+    Icon: ZapFast,
+    iconClassName: 'tw:text-fg-brand-primary',
+    titleKey: 'label.pick-a-trigger',
+    descriptionKey: 'message.alert-pick-a-trigger-description',
+  },
+  {
+    key: 'destination',
+    Icon: MarkerPin01,
+    iconClassName: 'tw:text-fg-warning-primary',
+    titleKey: 'label.choose-the-destination',
+    descriptionKey: 'message.alert-choose-destination-description',
+  },
+  {
+    key: 'stay-ahead',
+    Icon: Bell01,
+    iconClassName: 'tw:text-fg-success-primary',
+    titleKey: 'label.stay-ahead',
+    descriptionKey: 'message.alert-stay-ahead-description',
+  },
+];
 
 const NotificationListPage = () => {
   const { t } = useTranslation();
@@ -416,13 +447,45 @@ const NotificationListPage = () => {
                   )}
                 </Box>
               ) : (
-                <AlertsEmptyState
-                  hasCreatePermission={Boolean(
-                    alertResourcePermission?.Create ||
+                <Box className="tw:relative tw:min-h-[calc(100vh_-_16rem)] tw:w-full">
+                  <EmptyPlaceholder
+                    actions={
+                      alertResourcePermission?.Create ||
                       alertResourcePermission?.All
-                  )}
-                  onAddAlert={handleAddAlert}
-                />
+                        ? [
+                            {
+                              key: 'new-alert',
+                              label: t('label.new-entity', {
+                                entity: t('label.alert'),
+                              }),
+                              color: 'primary' as const,
+                              iconLeading: Plus,
+                              onPress: handleAddAlert,
+                            },
+                          ]
+                        : undefined
+                    }
+                    description={t(
+                      'message.observability-alert-empty-description'
+                    )}
+                    features={ALERT_EMPTY_STATE_FEATURES.map(
+                      ({
+                        key,
+                        Icon,
+                        iconClassName,
+                        titleKey,
+                        descriptionKey,
+                      }) => ({
+                        key,
+                        icon: <Icon className={iconClassName} />,
+                        title: t(titleKey),
+                        description: t(descriptionKey),
+                      })
+                    )}
+                    title={t('message.observability-alert-empty-heading')}
+                    variant="features"
+                  />
+                </Box>
               ),
             }}
             pagination={false}
