@@ -356,6 +356,18 @@ const TasksTabBody: React.FC<TasksTabBodyProps> = ({
     );
   }
 
+  // A kept selection (e.g. a deep-linked task held past the loaded page) owns
+  // the detail pane, so the empty placeholder only shows when no task is
+  // selected — never suppress an explicit selection.
+  let detailPane: ReactNode;
+  if (isLoading) {
+    detailPane = <TaskDetailSkeleton />;
+  } else if (selectedTaskId) {
+    detailPane = detailContent;
+  } else {
+    detailPane = emptyState;
+  }
+
   // `minmax(0, …)`: a bare `fr` track never shrinks below its content, so one
   // long unbreakable title would widen the list and push the detail off-screen.
   return (
@@ -394,7 +406,7 @@ const TasksTabBody: React.FC<TasksTabBodyProps> = ({
       </Box>
 
       <Box className="tw:relative tw:min-h-0 tw:w-full" direction="col">
-        {isLoading ? <TaskDetailSkeleton /> : emptyState ?? detailContent}
+        {detailPane}
       </Box>
     </Box>
   );
