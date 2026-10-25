@@ -2,6 +2,7 @@ package org.openmetadata.service.security;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -245,6 +247,35 @@ class JWTTokenGeneratorTest {
             .generateJWTToken(
                 userName, Set.of(), false, email, 3600, false, ServiceTokenType.PERSONAL_ACCESS)
             .getJWTToken());
+  }
+
+  @Test
+  void tokensMintedForOneUserWithOneExpiryDifferInJtiAndBytes() {
+    Date expires = new Date(System.currentTimeMillis() + 3_600_000L);
+    String first = mintWithExpiry(expires);
+    String second = mintWithExpiry(expires);
+
+    assertNotEquals(first, second);
+    String firstJti = JWT.decode(first).getId();
+    String secondJti = JWT.decode(second).getId();
+    assertDoesNotThrow(() -> UUID.fromString(firstJti));
+    assertDoesNotThrow(() -> UUID.fromString(secondJti));
+    assertNotEquals(firstJti, secondJti);
+  }
+
+  private String mintWithExpiry(Date expires) {
+    return jwtTokenGenerator
+        .getJwtAuthMechanism(
+            "mohit",
+            Set.of(),
+            false,
+            "mohit@getcollate.io",
+            false,
+            ServiceTokenType.PERSONAL_ACCESS,
+            expires,
+            JWTTokenExpiry.OneHour,
+            List.of())
+        .getJWTToken();
   }
 
   @Test

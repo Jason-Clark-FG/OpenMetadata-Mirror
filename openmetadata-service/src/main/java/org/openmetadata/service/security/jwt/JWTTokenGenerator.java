@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.openmetadata.schema.api.security.AuthenticationConfiguration;
@@ -63,7 +64,6 @@ public class JWTTokenGenerator {
   public static final String TOKEN_TYPE = "tokenType";
   public static final String PREFERRED_USERNAME = "preferred_username";
   public static final String USERNAME = "username";
-  public static final String IMPERSONATED_USER_CLAIM = "impersonatedUser";
   public static final String SESSION_ID_CLAIM = "sessionId";
   public static final String SCOPE_CLAIM = "scope";
   private static final String INTERNAL_TOKEN_CONFIGURATION_ERROR =
@@ -285,6 +285,7 @@ public class JWTTokenGenerator {
           .withClaim(ROLES_CLAIM, roles.stream().toList())
           .withClaim(IS_BOT_CLAIM, isBot)
           .withClaim(TOKEN_TYPE, tokenType.value())
+          .withJWTId(UUID.randomUUID().toString())
           .withIssuedAt(new Date(System.currentTimeMillis()))
           .withExpiresAt(expires);
 
@@ -385,38 +386,6 @@ public class JWTTokenGenerator {
   public Date getCustomExpiryDate(long seconds) {
     LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(seconds);
     return Date.from(expiryDate.atZone(ZoneId.systemDefault()).toInstant());
-  }
-
-  public JWTAuthMechanism generateImpersonationToken(
-      String botName,
-      String targetUser,
-      Set<String> botRoles,
-      boolean isBotAdmin,
-      String botEmail,
-      long expiryInSeconds) {
-    try {
-      Algorithm algorithm = getAlgorithm(tokenValidationAlgorithm, null, privateKey);
-      Date expiryDate = getCustomExpiryDate(expiryInSeconds);
-
-      String token =
-          JWT.create()
-              .withIssuer(issuer)
-              .withKeyId(kid)
-              .withClaim(SUBJECT_CLAIM, targetUser)
-              .withClaim(IS_BOT_CLAIM, false)
-              .withClaim(TOKEN_TYPE, ServiceTokenType.BOT.value())
-              .withClaim(IMPERSONATED_USER_CLAIM, botName)
-              .withIssuedAt(new Date(System.currentTimeMillis()))
-              .withExpiresAt(expiryDate)
-              .sign(algorithm);
-
-      JWTAuthMechanism jwtAuthMechanism = new JWTAuthMechanism();
-      jwtAuthMechanism.setJWTToken(token);
-      jwtAuthMechanism.setJWTTokenExpiresAt(expiryDate.getTime());
-      return jwtAuthMechanism;
-    } catch (Exception e) {
-      throw new JWTCreationException("Failed to generate impersonation token", e);
-    }
   }
 
   public JWKSResponse getJWKSResponse() {
