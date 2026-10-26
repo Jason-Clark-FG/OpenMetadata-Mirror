@@ -21,7 +21,7 @@
     <integrationTests.skipIsolated>false</integrationTests.skipIsolated>
     <integrationTests.skipParallel>false</integrationTests.skipParallel>
     <integrationTests.forkTimeoutSeconds>3600</integrationTests.forkTimeoutSeconds>
-    <integrationTests.globalStateTests>TagRecognizerFeedbackIT,WorkflowDefinitionResourceIT,ChangeRequestAdmissionIT,ChangeRequestApplyIT,ChangeRequestDecisionIT,ChangeRequestImportAndBulkIT,ChangeRequestLifecycleIT,ChangeRequestResourceIT,AppsResourceIT,TestSuiteReindexIT,DataContractValidationAppIT,SystemResourceIT,Sso*IT,VectorEmbeddingIntegrationIT,PatchTableEmbeddingIT,GlossaryOntologyExportIT,UserMetricsResourceIT,ConversationSchemaMigrationIT,MetricMigrationIT,EntityShapeIT,ContextMemoryExtractionIT,ContextMemoryDerivationIT,CredentialDatabaseOutageIT</integrationTests.globalStateTests>
+    <integrationTests.globalStateTests>TagRecognizerFeedbackIT,WorkflowDefinitionResourceIT,ChangeRequestAdmissionIT,ChangeRequestApplyIT,ChangeRequestDecisionIT,ChangeRequestImportAndBulkIT,ChangeRequestLifecycleIT,ChangeRequestResourceIT,AppsResourceIT,TestSuiteReindexIT,DataContractValidationAppIT,SystemResourceIT,Sso*IT,VectorEmbeddingIntegrationIT,PatchTableEmbeddingIT,GlossaryOntologyExportIT,UserMetricsResourceIT,ConversationSchemaMigrationIT,MetricMigrationIT,EntityShapeIT,ContextMemoryExtractionIT,ContextMemoryDerivationIT,CredentialDatabaseOutageIT,CredentialRedisNoRoundTripIT,CredentialRedisDownIT</integrationTests.globalStateTests>
     <integrationTests.multiNodeTests>SessionMultiNodeIT,SessionRedisMultiNodeIT,TokenRevocationRedisMultiNodeIT,CsvExportMultiNodeIT</integrationTests.multiNodeTests>
     <integrationTests.retryQueueTests>SearchIndexRetryQueueIT</integrationTests.retryQueueTests>
     <!-- Tests that need the RDF store. The rdf lane runs them against a Fuseki the bootstrap
@@ -469,6 +469,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -530,6 +532,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -537,6 +541,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -621,6 +626,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -682,6 +689,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -689,6 +698,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -774,6 +784,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -836,6 +848,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -843,6 +857,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -928,6 +943,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -989,6 +1006,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -996,6 +1015,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -1080,6 +1100,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -1141,6 +1163,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -1148,6 +1172,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -1231,6 +1256,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -1293,6 +1320,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -1300,6 +1329,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -1400,6 +1430,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -1463,6 +1495,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -1470,6 +1504,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -1560,6 +1595,8 @@
                     <include>**/ContextMemoryExtractionIT.java</include>
                     <include>**/ContextMemoryDerivationIT.java</include>
                     <include>**/CredentialDatabaseOutageIT.java</include>
+                    <include>**/CredentialRedisNoRoundTripIT.java</include>
+                    <include>**/CredentialRedisDownIT.java</include>
                     <include>**/SessionMultiNodeIT.java</include>
                     <include>**/SessionRedisMultiNodeIT.java</include>
                     <include>**/TokenRevocationRedisMultiNodeIT.java</include>
@@ -1622,6 +1659,8 @@
                     <exclude>**/ContextMemoryExtractionIT.java</exclude>
                     <exclude>**/ContextMemoryDerivationIT.java</exclude>
                     <exclude>**/CredentialDatabaseOutageIT.java</exclude>
+                    <exclude>**/CredentialRedisNoRoundTripIT.java</exclude>
+                    <exclude>**/CredentialRedisDownIT.java</exclude>
                     <exclude>**/SessionMultiNodeIT.java</exclude>
                     <exclude>**/SessionRedisMultiNodeIT.java</exclude>
                     <exclude>**/TokenRevocationRedisMultiNodeIT.java</exclude>
@@ -1629,6 +1668,7 @@
                     <exclude>**/SearchIndexRetryQueueIT.java</exclude>
                     <exclude>**/*UIIT.java</exclude>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                   </excludes>
                   <!-- excludedGroups must be a direct <configuration> child: nested inside
                        <systemPropertyVariables> it is a no-op (-DexcludedGroups is never read by the
@@ -1745,6 +1785,7 @@
                   <argLine>-Xmx4096m -XX:+UseG1GC</argLine>
                   <includes>
                     <include>**/tests/search/scale/*IT.java</include>
+                    <include>**/tests/security/scale/*IT.java</include>
                   </includes>
                   <includedGroups>scale</includedGroups>
                   <systemPropertyVariables>
@@ -1797,6 +1838,7 @@
                   </includes>
                   <excludes>
                     <exclude>**/tests/search/scale/**</exclude>
+                    <exclude>**/tests/security/scale/**</exclude>
                     <!-- StaticDatasetSeedIT (@Tag("seed")) and ClusterPurgeIT (@Tag("purge")) match
                          the include glob but must NEVER run in a normal search-it pass — the former
                          seeds the full bulk cohort, the latter hard-deletes data. Excluded by path
