@@ -44,10 +44,6 @@ jest.mock('../../common/EntityDescription/Description', () =>
   jest.fn().mockImplementation(() => <div>Description</div>)
 );
 
-jest.mock('../../common/ErrorWithPlaceholder/ErrorPlaceHolder', () =>
-  jest.fn().mockImplementation(() => <div>ErrorPlaceHolder</div>)
-);
-
 jest.mock('../../Entity/EntityVersionTimeLine/EntityVersionTimeLine', () =>
   jest.fn().mockImplementation(() => <div>EntityVersionTimeLine</div>)
 );
@@ -136,7 +132,9 @@ describe('MlModelVersion tests', () => {
     });
 
     const featureTabLabel = screen.getByText('label.feature-plural');
-    const errorPlaceHolder = screen.getByText('ErrorPlaceHolder');
+    const errorPlaceHolder = screen.getByTestId(
+      /(no-data|permission-error|search-error|create-error|assign-error)-placeholder/
+    );
 
     expect(featureTabLabel).toBeInTheDocument();
     expect(errorPlaceHolder).toBeInTheDocument();
@@ -159,6 +157,49 @@ describe('MlModelVersion tests', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith(
       '/mlmodel/mlflow_svc.eta_predictions/versions/0.3/custom_properties'
+    );
+  });
+});
+
+describe('MlModelVersion ViewCustomFields permission', () => {
+  const mockCustomPropertyTable = jest.requireMock(
+    '../../common/CustomPropertyTable/CustomPropertyTable'
+  ).CustomPropertyTable;
+
+  const renderWithViewCustomFields = (viewCustomFields: boolean) => {
+    render(
+      <MlModelVersion
+        {...mlModelVersionMockProps}
+        entityPermissions={{
+          ...mlModelVersionMockProps.entityPermissions,
+          ViewCustomFields: viewCustomFields,
+        }}
+      />,
+      { wrapper: MemoryRouter }
+    );
+
+    fireEvent.click(screen.getByText('label.custom-property-plural'));
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should pass hasPermission=true to CustomPropertyTable when ViewCustomFields is granted', () => {
+    renderWithViewCustomFields(true);
+
+    expect(mockCustomPropertyTable).toHaveBeenCalledWith(
+      expect.objectContaining({ hasPermission: true }),
+      expect.any(Object)
+    );
+  });
+
+  it('should pass hasPermission=false to CustomPropertyTable when ViewCustomFields is denied', () => {
+    renderWithViewCustomFields(false);
+
+    expect(mockCustomPropertyTable).toHaveBeenCalledWith(
+      expect.objectContaining({ hasPermission: false }),
+      expect.any(Object)
     );
   });
 });

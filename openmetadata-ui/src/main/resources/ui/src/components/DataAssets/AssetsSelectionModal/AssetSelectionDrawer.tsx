@@ -14,8 +14,8 @@ import { SlideoutMenu, Typography } from '@openmetadata/ui-core-components';
 import { isUndefined } from 'lodash';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AssetsOfEntity } from '../../../enums/Assets.enum';
 import { QueryFilterInterface } from '../../../pages/ExplorePage/ExplorePage.interface';
-import { AssetsOfEntity } from '../../Glossary/GlossaryTerms/tabs/AssetsTabs.interface';
 import AssetSelectionContentBody from './AssetSelectionContentBody';
 import AssetSelectionFooter from './AssetSelectionFooter';
 import { useAssetSelectionState } from './useAssetSelectionState';
@@ -80,6 +80,7 @@ export const AssetSelectionDrawer = ({
           <AssetSelectionContentBody
             aggregations={state.aggregations}
             assetJobResponse={state.assetJobResponse}
+            assetsFilter={state.assetsFilter}
             cancelDomainAssetMove={state.cancelDomainAssetMove}
             clearFilters={state.clearFilters}
             confirmDomainAssetMove={state.confirmDomainAssetMove}

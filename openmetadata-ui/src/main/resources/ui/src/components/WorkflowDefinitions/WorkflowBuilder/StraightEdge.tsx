@@ -12,7 +12,7 @@
  */
 
 import { Button, Typography } from '@openmetadata/ui-core-components';
-import { XClose } from '@untitledui/icons';
+import { XClose } from '@openmetadata/ui-core-components/icons';
 import classNames from 'classnames';
 import { capitalize, startCase } from 'lodash';
 import React, { useState } from 'react';
@@ -116,7 +116,11 @@ const computeLabelStyleOverrides = (
   return {
     hasStyleOverrides,
     labelStyleOverrides: {
-      backgroundColor: labelBgStyle?.fill,
+      // The tint tokens are translucent in dark mode; layering them over the
+      // label's opaque surface keeps the edge line from showing through.
+      backgroundImage: labelBgStyle?.fill
+        ? `linear-gradient(${labelBgStyle.fill}, ${labelBgStyle.fill})`
+        : undefined,
       borderColor: labelBgStyle?.stroke,
       color: labelStyle?.color,
       ...labelStyle,
@@ -197,7 +201,7 @@ export const StraightEdge = (props: EdgeProps) => {
     labelStyle
   );
   const labelClassName = classNames(
-    'tw:flex tw:items-center tw:rounded tw:border tw:border-border-secondary tw:bg-primary tw:px-2 tw:py-1 tw:shadow-sm',
+    'tw:flex tw:items-center tw:rounded tw:border tw:border-border-secondary tw:bg-surface tw:px-2 tw:py-1 tw:shadow-sm',
     { 'tw:cursor-pointer': hasStyleOverrides }
   );
 
@@ -243,7 +247,7 @@ export const StraightEdge = (props: EdgeProps) => {
               ),
             }}>
             <Button
-              className="tw:rounded-full tw:bg-primary tw:shadow-sm"
+              className="tw:rounded-full tw:bg-surface tw:shadow-sm"
               color="tertiary-destructive"
               iconLeading={XClose}
               size="sm"

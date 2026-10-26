@@ -60,10 +60,13 @@ from metadata.generated.schema.type.basic import (
     Markdown,
     SourceUrl,
 )
-from metadata.generated.schema.type.entityLineage import ColumnLineage
+from metadata.generated.schema.type.entityLineage import ColumnLineage, LineageDetails
+from metadata.generated.schema.type.entityLineage import Source as LineageSource
+from metadata.generated.schema.type.entityReference import EntityReference
 from metadata.generated.schema.type.entityReferenceList import EntityReferenceList
 from metadata.generated.schema.type.usageRequest import UsageRequest
 from metadata.ingestion.api.models import Either
+from metadata.ingestion.api.step import WorkflowFatalError
 from metadata.ingestion.api.steps import InvalidSourceException
 from metadata.ingestion.lineage.models import ConnectionTypeDialectMapper, Dialect
 from metadata.ingestion.lineage.parser import LineageParser
@@ -71,7 +74,9 @@ from metadata.ingestion.lineage.sql_lineage import (
     get_column_fqn,
     get_table_fqn_from_query_name,
 )
+from metadata.ingestion.models.delete_entity import DeleteEntity
 from metadata.ingestion.models.ometa_classification import OMetaTagAndClassification
+from metadata.ingestion.models.ometa_lineage import OMetaFQNLineageRequest
 from metadata.ingestion.ometa.ometa_api import OpenMetadata
 from metadata.ingestion.ometa.utils import model_str
 from metadata.ingestion.progress.modes import ProgressMode
@@ -79,7 +84,16 @@ from metadata.ingestion.source.dashboard.dashboard_service import (
     DashboardServiceSource,
     DashboardUsage,
 )
-from metadata.ingestion.source.dashboard.tableau.client import TableauClient
+from metadata.ingestion.source.dashboard.tableau.client import (
+    BACKFILL_RUNNING,
+    TableauClient,
+)
+from metadata.ingestion.source.dashboard.tableau.metrics import (
+    build_metric_request,
+    datasource_dimensions,
+    metric_fields_parents_first,
+    related_metric_names,
+)
 from metadata.ingestion.source.dashboard.tableau.models import (
     ChartUrl,
     DataSource,
@@ -104,12 +118,27 @@ from metadata.utils.helpers import (
     get_standard_chart_type,
 )
 from metadata.utils.logger import ingestion_logger
-from metadata.utils.tag_utils import get_ometa_tag_and_classification, get_tag_labels
 
 logger = ingestion_logger()
 
 TABLEAU_TAG_CATEGORY = "TableauTags"
 TABLEAU_FIELD_TYPE_DISPLAY = "Tableau Field"
+METADATA_API_STATUS = "Tableau Metadata API"
+# The server rejects char/varchar/binary/varbinary columns with a null dataLength.
+# Tableau's metadata API never reports a column length for any type, so there is no
+# real value to report here - this placeholder only exists to satisfy that constraint.
+# `ColumnTypeParser.get_column_type` returns the plain string value (e.g. "BINARY"),
+# not the `DataType` enum member, so this set must compare against those raw strings.
+LENGTH_REQUIRED_DATA_TYPES = {
+    DataType.CHAR.value,
+    DataType.VARCHAR.value,
+    DataType.BINARY.value,
+    DataType.VARBINARY.value,
+}
+# 0, not 1 - a length of 1 renders as e.g. varchar(1) in the UI, implying a real
+# limit that doesn't exist. 0 still satisfies the server's non-null check and
+# matches what Superset reports for the same unknown-length case.
+DEFAULT_DATA_LENGTH = 0
 # Tableau titles database column names when it builds fields (`order_date` becomes
 # `Order Date`), so separators and casing carry no meaning when comparing the two.
 # `\w` is Unicode-aware, and `_` is listed explicitly because `\w` matches it: a name made
@@ -141,6 +170,12 @@ class TableauSource(DashboardServiceSource):
     ):
         super().__init__(config, metadata)
         self.today = datetime.now().strftime("%Y-%m-%d")
+        if self.source_config.includeMetrics and not self.source_config.includeDataModels:
+            logger.warning(
+                "includeMetrics is enabled but includeDataModels is disabled: calculated measures "
+                "are read off the data models, so no Metric will be ingested. "
+                "Enable includeDataModels to ingest metrics."
+            )
 
     @classmethod
     def create(
@@ -155,11 +190,76 @@ class TableauSource(DashboardServiceSource):
             raise InvalidSourceException(f"Expected TableauConnection, but got {connection}")
         return cls(config, metadata)
 
+    def _iter(self) -> Iterable[Either]:
+        """
+        Fail a run that stopped for a Metadata API backfill, whatever the success threshold:
+        every record it sent succeeded. It is raised once the topology is done because the
+        runner only records a producer's exception, then reconciles anyway.
+        """
+        yield from super()._iter()
+        if self._stops_for_backfill():
+            message = (
+                f"Tableau's Metadata API is still building its store ({BACKFILL_RUNNING}), so its "
+                "results may be incomplete. The run stopped there and marked nothing as deleted: with "
+                "markDeletedDataModels on, it would soft-delete data models that still exist in Tableau. "
+                "Re-run once the backfill completes. To ingest meanwhile, turn off markDeletedDataModels; "
+                "dashboards then lose their links to the data models the store has not reached, until a "
+                "run after the backfill."
+            )
+            self.status.failed(StackTraceError(name=METADATA_API_STATUS, error=message))
+            raise WorkflowFatalError(message)
+        if self.client.metadata_api_backfill_running:
+            self.status.warning(
+                METADATA_API_STATUS,
+                f"Tableau's Metadata API is still building its store ({BACKFILL_RUNNING}), so data models, "
+                "their links to dashboards and lineage ingested in this run may be incomplete. Re-run once "
+                "the backfill completes.",
+            )
+
+    def _stops_for_backfill(self) -> bool:
+        """
+        Data models are read only from the Metadata API. While Tableau backfills it, a run that
+        reconciles data models would delete the ones the store has not reached yet, so it stops.
+        Without that reconciliation, the partial results are ingested as they are.
+        See ADR:2026-10-22-tableau-runs-stop-without-deleting-while-the-metadata-api-backfills.
+        """
+        return self.client.metadata_api_backfill_running and bool(
+            self.source_config.includeDataModels and self.source_config.markDeletedDataModels
+        )
+
+    def get_dashboard(self) -> Iterable[TableauDashboard]:
+        """
+        Stop at the first dashboard read once the run stops for a backfill: it would be sent
+        without the data models the store left out, unlinking them.
+        """
+        for dashboard_details in super().get_dashboard():
+            if self._stops_for_backfill():
+                return
+            yield dashboard_details
+
+    # A run that stopped for a backfill has not listed every dashboard, chart or data model.
+    def mark_dashboards_as_deleted(self) -> Iterable[Either[DeleteEntity]]:
+        if not self._stops_for_backfill():
+            yield from super().mark_dashboards_as_deleted()
+
+    def mark_datamodels_as_deleted(self) -> Iterable[Either[DeleteEntity]]:
+        if not self._stops_for_backfill():
+            yield from super().mark_datamodels_as_deleted()
+
+    def mark_charts_as_deleted(self) -> Iterable[Either[DeleteEntity]]:
+        if not self._stops_for_backfill():
+            yield from super().mark_charts_as_deleted()
+
     def get_dashboards_list(self) -> Iterable[TableauDashboard]:
         if not self.source_config.includeOwners:
             logger.debug("Skipping owner information as includeOwners is False")
         self._declare_dashboard_progress_total()
-        yield from self.client.get_workbooks(include_owners=self.source_config.includeOwners)
+        yield from self.client.get_workbooks(
+            include_owners=bool(self.source_config.includeOwners),
+            dashboard_filter_pattern=self.source_config.dashboardFilterPattern,
+            project_filter_pattern=self.source_config.projectFilterPattern,
+            on_filtered=self.status.filter,
+        )
 
     def _declare_dashboard_progress_total(self) -> None:
         """Declare the Dashboard progress total. ``get_workbook_count`` is a
@@ -236,12 +336,11 @@ class TableauSource(DashboardServiceSource):
 
             _all_tags = tags.union(_data_models_tags)
 
-            yield from get_ometa_tag_and_classification(
+            yield from self.yield_tag_definitions(
                 tags=list(_all_tags),
                 classification_name=TABLEAU_TAG_CATEGORY,
                 tag_description="Tableau Tag",
                 classification_description="Tags associated with tableau entities",
-                include_tags=self.source_config.includeTags,
             )
 
     def _get_datamodel_sql_query(self, data_model: DataSource) -> str | None:
@@ -285,11 +384,10 @@ class TableauSource(DashboardServiceSource):
                 dataModelType=data_model_type.value,
                 serviceType=DashboardServiceType.Tableau.value,
                 columns=self.get_column_info(data_model),
-                tags=get_tag_labels(
-                    metadata=self.metadata,
+                tags=self.get_tag_labels(
+                    entity_fqn=fqn._build(vars(self.context.get())["dashboard_service"], "model", data_model.id),
                     tags=[tag.name for tag in data_model_tags],
                     classification_name=TABLEAU_TAG_CATEGORY,
-                    include_tags=self.source_config.includeTags,
                 ),
                 sql=self._get_datamodel_sql_query(data_model=data_model),
                 owners=self.get_owner_ref(dashboard_details=dashboard_details),
@@ -365,11 +463,10 @@ class TableauSource(DashboardServiceSource):
                     )
                     for data_model in self.context.get().dataModels or []
                 ],
-                tags=get_tag_labels(
-                    metadata=self.metadata,
+                tags=self.get_tag_labels(
+                    entity_fqn=fqn._build(vars(self.context.get())["dashboard_service"], dashboard_details.id),
                     tags=list(dashboard_details.tags),
                     classification_name=TABLEAU_TAG_CATEGORY,
-                    include_tags=self.source_config.includeTags,
                 ),
                 sourceUrl=SourceUrl(dashboard_url),
                 service=self.context.get().dashboard_service,
@@ -796,6 +893,109 @@ class TableauSource(DashboardServiceSource):
                     )
                 )
 
+    def yield_dashboard_lineage(self, dashboard_details: TableauDashboard) -> Iterable[Either]:
+        """Lineage, then the workbook's calculated measures as Metrics.
+
+        Metrics come last: the base stage's Barrier has persisted the data models they
+        reference as `assets` and draw their lineage from.
+        """
+        yield from super().yield_dashboard_lineage(dashboard_details)
+        if self.source_config.includeMetrics and self.source_config.includeDataModels:
+            yield from self.yield_datamodel_metrics(dashboard_details)
+
+    def yield_datamodel_metrics(self, dashboard_details: TableauDashboard) -> Iterable[Either]:
+        """One Metric per calculated measure of the workbook's datasources, plus its lineage."""
+        service = self.context.get().dashboard_service  # pyright: ignore[reportAttributeAccessIssue]
+        datasources = {
+            datasource.id: datasource
+            for data_model in dashboard_details.dataModels or []
+            for datasource in (data_model, *(data_model.upstreamDatasources or []))
+        }
+        # ponytail: a published datasource shared by N workbooks re-PUTs its metrics N times;
+        # the writes are idempotent, track emitted names across workbooks if that cost shows up.
+        for datasource in datasources.values():
+            metric_fields = metric_fields_parents_first(datasource)
+            if not metric_fields:
+                continue
+            # Measures follow their data model. Check the filter here: a model excluded now
+            # may still exist on the server from an earlier run.
+            if filter_by_datamodel(self.source_config.dataModelFilterPattern, datasource.name or datasource.id):
+                continue
+            data_model_entity = self._get_datamodel(datasource)
+            if not data_model_entity:
+                continue
+            asset = EntityReference(id=data_model_entity.id, type="dashboardDataModel")
+            dimensions = datasource_dimensions(datasource)
+            emitted: set[str] = set()
+            for field in metric_fields:
+                try:
+                    related = [name for name in related_metric_names(service, datasource, field) if name in emitted]
+                    metric_request = build_metric_request(
+                        service, datasource, field, dimensions, asset=asset, related_metrics=related
+                    )
+                    yield Either(right=metric_request)  # pyright: ignore[reportCallIssue]
+                    metric_name = model_str(metric_request.name)
+                    emitted.add(metric_name)
+                    for edge in self._yield_metric_lineage(data_model_entity, field, metric_name, related):
+                        yield from self.yield_lineage_request(edge)
+                except Exception as err:
+                    yield Either(  # pyright: ignore[reportCallIssue]
+                        left=StackTraceError(
+                            name=field.name or field.id,
+                            error=f"Error yielding Metric for Tableau field [{field.name or field.id}]: {err}",
+                            stackTrace=traceback.format_exc(),
+                        )
+                    )
+
+    def _yield_metric_lineage(
+        self,
+        data_model_entity: DashboardDataModel,
+        field: DatasourceField,
+        metric_name: str,
+        related: list[str],
+    ) -> Iterable[Either[OMetaFQNLineageRequest]]:
+        """Metric -> Metric and DataModel -> Metric edges, addressed by FQN (a Metric's FQN is its name).
+
+        A calculated measure is a field of its datasource, computed from the datasource's fields,
+        never from the warehouse directly: the model is its source, and the model's own
+        Table -> DataModel lineage carries the path on to the physical columns.
+        """
+        for parent_name in related:
+            yield Either(  # pyright: ignore[reportCallIssue]
+                right=OMetaFQNLineageRequest(
+                    from_entity_fqn=parent_name,
+                    from_entity_type="metric",
+                    to_entity_fqn=metric_name,
+                    to_entity_type="metric",
+                    lineage_details=LineageDetails(source=LineageSource.DashboardLineage),
+                )
+            )
+
+        # The measure is itself a column of the model (`get_column_info`), fed by the table columns
+        # its formula reads. The server accepts exactly one column endpoint on a Metric: its own FQN.
+        column_name = truncate_column_name(field.id)
+        from_columns = [
+            FullyQualifiedEntityName(model_str(column.fullyQualifiedName))
+            for column in data_model_entity.columns or []
+            if model_str(column.name) == column_name
+        ]
+        yield Either(  # pyright: ignore[reportCallIssue]
+            right=OMetaFQNLineageRequest(
+                from_entity_fqn=model_str(data_model_entity.fullyQualifiedName),
+                from_entity_type="dashboardDataModel",
+                to_entity_fqn=metric_name,
+                to_entity_type="metric",
+                lineage_details=LineageDetails(
+                    source=LineageSource.DashboardLineage,
+                    columnsLineage=[
+                        ColumnLineage(fromColumns=from_columns, toColumn=FullyQualifiedEntityName(metric_name))
+                    ]
+                    if from_columns
+                    else None,
+                ),
+            )
+        )
+
     def yield_dashboard_chart(self, dashboard_details: TableauDashboard) -> Iterable[Either[CreateChartRequest]]:
         """
         Method to fetch charts linked to dashboard
@@ -821,11 +1021,10 @@ class TableauSource(DashboardServiceSource):
                     displayName=chart.name,
                     chartType=get_standard_chart_type(chart.sheetType),
                     sourceUrl=SourceUrl(chart_url),
-                    tags=get_tag_labels(
-                        metadata=self.metadata,
+                    tags=self.get_tag_labels(
+                        entity_fqn=fqn._build(vars(self.context.get())["dashboard_service"], chart.id),
                         tags=list(chart.tags),
                         classification_name=TABLEAU_TAG_CATEGORY,
-                        include_tags=self.source_config.includeTags,
                     ),
                     service=FullyQualifiedEntityName(self.context.get().dashboard_service),
                 )
@@ -1055,6 +1254,13 @@ class TableauSource(DashboardServiceSource):
             )
         return None
 
+    @staticmethod
+    def _get_data_length(data_type: str) -> int | None:
+        """
+        char/varchar/binary/varbinary columns must have a non-null dataLength
+        """
+        return DEFAULT_DATA_LENGTH if data_type in LENGTH_REQUIRED_DATA_TYPES else None
+
     def get_child_columns(self, field: DatasourceField) -> list[Column]:
         """
         Extract the child columns from the fields
@@ -1063,9 +1269,11 @@ class TableauSource(DashboardServiceSource):
         for column in field.upstreamColumns or []:
             try:
                 if column:
+                    data_type = ColumnTypeParser.get_column_type(column.remoteType if column.remoteType else None)
                     parsed_column = {
                         "dataTypeDisplay": (column.remoteType if column.remoteType else DataType.UNKNOWN.value),
-                        "dataType": ColumnTypeParser.get_column_type(column.remoteType if column.remoteType else None),
+                        "dataType": data_type,
+                        "dataLength": self._get_data_length(data_type),
                         "name": truncate_column_name(column.id),
                         "displayName": column.name if column.name else column.id,
                     }
@@ -1130,8 +1338,10 @@ class TableauSource(DashboardServiceSource):
                 }
                 mirrored_column = self._get_mirrored_upstream_column(field=field)
                 if mirrored_column:
+                    mirrored_data_type = ColumnTypeParser.get_column_type(mirrored_column.remoteType)
                     parsed_fields["dataTypeDisplay"] = mirrored_column.remoteType or DataType.UNKNOWN.value
-                    parsed_fields["dataType"] = ColumnTypeParser.get_column_type(mirrored_column.remoteType)
+                    parsed_fields["dataType"] = mirrored_data_type
+                    parsed_fields["dataLength"] = self._get_data_length(mirrored_data_type)
                     if mirrored_column.remoteType == DataType.ARRAY.value:
                         parsed_fields["arrayDataType"] = DataType.UNKNOWN
                 else:

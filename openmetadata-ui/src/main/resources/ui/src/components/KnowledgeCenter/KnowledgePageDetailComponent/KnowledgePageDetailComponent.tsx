@@ -10,8 +10,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { EmptyPlaceholder } from '@openmetadata/ui-core-components';
-import { Articles, Lock } from '@openmetadata/ui-core-components/icons';
+import {
+  File06 as Articles,
+  Lock01 as Lock,
+} from '@openmetadata/ui-core-components/icons';
 import { AxiosError } from 'axios';
 import { compare } from 'fast-json-patch';
 import { cloneDeep, debounce, isEqual, isNil, isUndefined } from 'lodash';
@@ -34,8 +36,6 @@ import { BlockEditorRef } from '../../../components/BlockEditor/BlockEditor.inte
 import { EntityAttachmentProvider } from '../../../components/common/EntityDescription/EntityAttachmentProvider/EntityAttachmentProvider';
 import TabsLabel from '../../../components/common/TabsLabel/TabsLabel.component';
 import { GenericProvider } from '../../../components/Customization/GenericProvider/GenericProvider';
-import { QueryVoteType } from '../../../components/Database/TableQueries/TableQueries.interface';
-import { VotingDataProps } from '../../../components/Entity/Voting/voting.interface';
 import {
   CREATE_PAGE_HASH,
   KNOWLEDGE_CENTER_CLASSIFICATION,
@@ -49,8 +49,8 @@ import {
   KNOWLEDGE_PAGE_FIELDS,
   KNOWLEDGE_PAGE_UN_SAVED_CHANGE_STATE,
 } from '../../../constants/KnowledgeCenter.constant';
-import { ResourceEntity } from '../../../context/PermissionProvider/PermissionProvider.interface';
 import { EntityTabs, EntityType } from '../../../enums/entity.enum';
+import { ResourceEntity } from '../../../enums/permissions.enum';
 import { TagLabel } from '../../../generated/type/tagLabel';
 import { useCurrentUserPreferences } from '../../../hooks/currentUserStore/useCurrentUserStore';
 import { useApplicationStore } from '../../../hooks/useApplicationStore';
@@ -60,6 +60,10 @@ import {
 } from '../../../hooks/useArticleDraftStore';
 import useCustomLocation from '../../../hooks/useCustomLocation/useCustomLocation';
 import { useEntityPermissions } from '../../../hooks/useEntityPermissions/useEntityPermissions';
+import {
+  QueryVoteType,
+  VotingDataProps,
+} from '../../../interface/entity/vote.interface';
 import { FeedCounts } from '../../../interface/feed.interface';
 import {
   ContentChangeState,
@@ -92,6 +96,8 @@ import tagClassBase from '../../../utils/TagClassBase';
 import { createTagObject } from '../../../utils/TagsPureUtils';
 import { showErrorToast } from '../../../utils/ToastUtils';
 import { useRequiredParams } from '../../../utils/useRequiredParams';
+import NoDataPlaceholder from '../../common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../common/EmptyPlaceholder/PermissionPlaceholder';
 import KnowledgePageDetailRightPanel from '../KnowledgePageDetailRightPanel/KnowledgePageDetailRightPanel';
 import { TitleComponent } from '../TitleComponent/TitleComponent';
 import KnowledgePageDetailSkeleton from './KnowledgePageDetailSkeleton';
@@ -859,8 +865,11 @@ const KnowledgePageDetailComponent: FC<KnowledgePageDetailComponentProps> = ({
   );
 
   useEffect(() => {
-    knowledgePageIdRef.current = knowledgePage?.id;
-  }, [knowledgePage?.id]);
+    // A route can change before its page fetch resolves. Saves for the previous
+    // article must stop controlling the new route's badge during that gap.
+    knowledgePageIdRef.current =
+      knowledgePage?.fullyQualifiedName === fqn ? knowledgePage.id : undefined;
+  }, [fqn, knowledgePage?.fullyQualifiedName, knowledgePage?.id]);
 
   useEffect(() => {
     if (tab) {
@@ -1002,7 +1011,7 @@ const KnowledgePageDetailComponent: FC<KnowledgePageDetailComponentProps> = ({
   if (!hasViewPermission) {
     return (
       <div className="tw:relative tw:flex-1 tw:h-full">
-        <EmptyPlaceholder
+        <PermissionPlaceholder
           description={
             <Transi18next
               i18nKey="message.no-access-placeholder"
@@ -1012,7 +1021,7 @@ const KnowledgePageDetailComponent: FC<KnowledgePageDetailComponentProps> = ({
               }}
             />
           }
-          icon={<Lock className="tw:text-secondary" />}
+          icon={<Lock />}
           title={t('label.access-denied')}
         />
       </div>
@@ -1022,8 +1031,8 @@ const KnowledgePageDetailComponent: FC<KnowledgePageDetailComponentProps> = ({
   if (!knowledgePage) {
     return (
       <div className="tw:relative tw:flex-1 tw:h-full">
-        <EmptyPlaceholder
-          icon={<Articles className="tw:text-secondary" />}
+        <NoDataPlaceholder
+          icon={<Articles />}
           title={t('label.no-entity', { entity: t('label.article') })}
         />
       </div>

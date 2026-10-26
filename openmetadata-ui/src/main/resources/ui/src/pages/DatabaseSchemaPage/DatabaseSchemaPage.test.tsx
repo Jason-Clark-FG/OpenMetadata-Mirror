@@ -14,10 +14,8 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { FEED_COUNT_INITIAL_DATA } from '../../constants/entity.constants';
-import {
-  OperationPermission,
-  ResourceEntity,
-} from '../../context/PermissionProvider/PermissionProvider.interface';
+import { OperationPermission } from '../../context/PermissionProvider/PermissionProvider.interface';
+import { ResourceEntity } from '../../enums/permissions.enum';
 import { getDatabaseSchemaDetailsByFQN } from '../../rest/databaseAPI';
 import { getStoredProceduresList } from '../../rest/storedProceduresAPI';
 import { renderWithQueryClient } from '../../test/unit/test-utils';
@@ -192,10 +190,6 @@ jest.mock('../../components/common/Loader/Loader', () => ({
     .mockImplementation(() => <div data-testid="loader">Loader</div>),
 }));
 
-jest.mock('../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder', () =>
-  jest.fn().mockImplementation(() => <p>ErrorPlaceHolder</p>)
-);
-
 jest.mock('../../rest/databaseAPI', () => ({
   getDatabaseSchemaDetailsByFQN: jest
     .fn()
@@ -336,7 +330,11 @@ describe('Tests for DatabaseSchemaPage', () => {
       renderWithQueryClient(<DatabaseSchemaPageComponent />);
     });
 
-    expect(await screen.findByText('ErrorPlaceHolder')).toBeInTheDocument();
+    expect(
+      await screen.findByTestId(
+        /(no-data|permission-error|search-error|create-error|assign-error)-placeholder/
+      )
+    ).toBeInTheDocument();
   });
 
   it('DatabaseSchemaPage should fetch details with basic fields', async () => {

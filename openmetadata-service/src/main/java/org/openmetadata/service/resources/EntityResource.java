@@ -47,6 +47,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -57,19 +58,20 @@ import org.openmetadata.csv.CsvImportProgressCallback;
 import org.openmetadata.schema.BulkAssetsRequestInterface;
 import org.openmetadata.schema.CreateEntity;
 import org.openmetadata.schema.EntityInterface;
+import org.openmetadata.schema.FieldInterface;
+import org.openmetadata.schema.api.VoteRequest;
 import org.openmetadata.schema.type.AIContext;
 import org.openmetadata.schema.type.ApiStatus;
 import org.openmetadata.schema.type.EntityHistory;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.schema.type.Include;
 import org.openmetadata.schema.type.MetadataOperation;
-import org.openmetadata.schema.type.Permission;
-import org.openmetadata.schema.type.ResourcePermission;
 import org.openmetadata.schema.type.api.BulkDeleteStaleRequest;
 import org.openmetadata.schema.type.api.BulkOperationResult;
 import org.openmetadata.schema.type.api.BulkResponse;
 import org.openmetadata.schema.type.change.ChangeSource;
 import org.openmetadata.schema.type.csv.CsvImportResult;
+import org.openmetadata.schema.utils.JsonUtils;
 import org.openmetadata.schema.utils.ResultList;
 import org.openmetadata.service.Entity;
 import org.openmetadata.service.OpenMetadataApplicationConfig;
@@ -83,6 +85,9 @@ import org.openmetadata.service.csv.CsvAsyncJobManager;
 import org.openmetadata.service.exception.BadRequestException;
 import org.openmetadata.service.exception.CatalogExceptionMessage;
 import org.openmetadata.service.exception.EntityNotFoundException;
+import org.openmetadata.service.governance.approval.ApprovalGate;
+import org.openmetadata.service.jdbi3.AssetEditService;
+import org.openmetadata.service.jdbi3.ChildFieldPageReader;
 import org.openmetadata.service.jdbi3.EntityRepository;
 import org.openmetadata.service.jdbi3.ListFilter;
 import org.openmetadata.service.limits.Limits;
@@ -97,6 +102,7 @@ import org.openmetadata.service.security.AuthorizationLogic;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.ImpersonationContext;
 import org.openmetadata.service.security.PagePermissionsResolver;
+import org.openmetadata.service.security.PatchRequester;
 import org.openmetadata.service.security.policyevaluator.BulkFieldHydrator;
 import org.openmetadata.service.security.policyevaluator.CreateResourceContext;
 import org.openmetadata.service.security.policyevaluator.OperationContext;
@@ -108,6 +114,7 @@ import org.openmetadata.service.util.AsyncService.DatabaseOperation;
 import org.openmetadata.service.util.BulkAssetsOperationResponse;
 import org.openmetadata.service.util.CSVExportResponse;
 import org.openmetadata.service.util.CSVImportResponse;
+import org.openmetadata.service.util.ChildFieldResolver;
 import org.openmetadata.service.util.DeleteEntityResponse;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.Fields;
@@ -122,7 +129,7 @@ import org.openmetadata.service.util.WebsocketNotificationHandler;
 
 @Slf4j
 @LatencyPhase
-public abstract class EntityResource<T extends EntityInterface, K extends EntityRepository<T>> {
+public abstract class EntityResource<T extends EntityInterface<?>, K extends EntityRepository<T>> {
   private static final String INCLUDE_PERMISSIONS_PARAM = "includePermissions";
   protected final Class<T> entityClass;
   protected final String entityType;
@@ -176,6 +183,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   protected Response addFollowerInternal(
       SecurityContext securityContext, UUID entityId, UUID userId) {
     authorizeFollowerMutation(securityContext, userId);
+    authorizeView(securityContext, entityId);
     return repository
         .addFollower(securityContext.getUserPrincipal().getName(), entityId, userId)
         .toResponse();
@@ -184,9 +192,27 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   protected Response deleteFollowerInternal(
       SecurityContext securityContext, UUID entityId, UUID userId) {
     authorizeFollowerMutation(securityContext, userId);
+    // The response carries the entity, so a follower who has since lost access must not read it.
+    authorizeView(securityContext, entityId);
     return repository
         .deleteFollower(securityContext.getUserPrincipal().getName(), entityId, userId)
         .toResponse();
+  }
+
+  /** The vote response carries the whole entity, so voting takes the same view as reading it. */
+  protected Response updateVoteInternal(
+      SecurityContext securityContext, UUID entityId, VoteRequest request) {
+    authorizeView(securityContext, entityId);
+    return repository
+        .updateVote(securityContext.getUserPrincipal().getName(), entityId, request)
+        .toResponse();
+  }
+
+  private void authorizeView(SecurityContext securityContext, UUID entityId) {
+    authorizer.authorize(
+        securityContext,
+        new OperationContext(entityType, VIEW_BASIC),
+        getResourceContextById(entityId));
   }
 
   private void authorizeFollowerMutation(SecurityContext securityContext, UUID userId) {
@@ -437,7 +463,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   @SuppressWarnings("unchecked")
   private T reuseAuthorizedEntity(
       UriInfo uriInfo, ResourceContextInterface resourceContext, Fields fields) {
-    EntityInterface resolved = resourceContext == null ? null : resourceContext.getResolvedEntity();
+    EntityInterface<?> resolved =
+        resourceContext == null ? null : resourceContext.getResolvedEntity();
     boolean coversProjection =
         resolved != null && resourceContext.getLoadedFields().containsAll(fields.getFieldList());
     T result = null;
@@ -1076,103 +1103,126 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   }
 
   /**
-   * Authorizes a bulk asset tag/glossary operation: the caller must hold {@code operation} on every
-   * target asset's entity type, otherwise the whole request is rejected. Admins and bots are
-   * exempt. This is the shared permission gate for the bulk asset endpoints (classification tags on
-   * {@link org.openmetadata.service.resources.tags.TagResource}, glossary terms on
-   * GlossaryTermResource); it only validates permissions and performs no business logic.
+   * Adds this entity (a tag) to the assets in the request. Each asset is authorized and saved as its
+   * own PATCH; an asset the caller may not edit is reported as a failed row. See {@link
+   * #editAssetsAsync} for which assets are saved in the background.
    */
-  protected void authorizeBulkAssetsPermission(
-      SecurityContext securityContext, List<EntityReference> assets, MetadataOperation operation) {
-    SubjectContext subjectContext = getSubjectContext(securityContext);
-    String user = subjectContext.user().getName();
-
-    Set<String> editPermissibleResources =
-        authorizer.listPermissions(securityContext, user).stream()
-            .filter(
-                permission ->
-                    permission.getPermissions().stream()
-                        .anyMatch(
-                            perm ->
-                                operation.equals(perm.getOperation())
-                                    && Permission.Access.ALLOW.equals(perm.getAccess())))
-            .map(ResourcePermission::getResource)
-            .collect(Collectors.toSet());
-
-    // Validate if all entity types in the request are in the permissible resources
-    List<String> unauthorizedEntityTypes =
-        assets.stream()
-            .map(EntityReference::getType)
-            .filter(entityType -> !editPermissibleResources.contains(entityType))
-            .distinct()
-            .toList();
-
-    if (!unauthorizedEntityTypes.isEmpty()
-        && !subjectContext.isAdmin()
-        && !subjectContext.isBot()) {
-      throw new AuthorizationException(
-          CatalogExceptionMessage.resourcePermissionNotAllowed(
-              user, List.of(operation), unauthorizedEntityTypes));
-    }
-  }
-
   public Response bulkAddToAssetsAsync(
       SecurityContext securityContext, UUID entityId, BulkAssetsRequestInterface request) {
-    authorizeBulkAssetsPermission(
-        securityContext, request.getAssets(), MetadataOperation.EDIT_TAGS);
-
-    String jobId = UUID.randomUUID().toString();
-    AsyncService.getInstance()
-        .executeDatabaseTask(
-            DatabaseOperation.BULK_ASSET_OPERATION,
-            jobId,
-            RequestLatencyContext.wrapWithContext(
-                () -> {
-                  try {
-                    BulkOperationResult result =
-                        repository.bulkAddAndValidateTagsToAssets(entityId, request);
-                    WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
-                        jobId, securityContext, result);
-                  } catch (Exception e) {
-                    WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
-                        jobId,
-                        securityContext,
-                        e.getMessage() == null ? e.toString() : e.getMessage());
-                  }
-                }));
-    BulkAssetsOperationResponse response =
-        new BulkAssetsOperationResponse(
-            jobId, "Bulk Add tags to Asset operation initiated successfully.");
-    return Response.ok().entity(response).type(MediaType.APPLICATION_JSON).build();
+    return editAssetsAsync(
+        securityContext,
+        request,
+        (assets, requester) ->
+            repository.bulkAddAndValidateTagsToAssets(entityId, assets, requester),
+        "Bulk Add tags to Asset operation initiated successfully.");
   }
 
+  /** Removes this entity (a tag) from the assets in the request, as {@link #bulkAddToAssetsAsync}. */
   public Response bulkRemoveFromAssetsAsync(
       SecurityContext securityContext, UUID entityId, BulkAssetsRequestInterface request) {
-    authorizeBulkAssetsPermission(
-        securityContext, request.getAssets(), MetadataOperation.EDIT_TAGS);
+    return editAssetsAsync(
+        securityContext,
+        request,
+        (assets, requester) ->
+            repository.bulkRemoveAndValidateTagsToAssets(entityId, assets, requester),
+        "Bulk Remove tags to Asset operation initiated successfully.");
+  }
+
+  /** An Assets tab edit of the assets in a request, made as the requester. */
+  @FunctionalInterface
+  private interface AssetsEdit {
+    BulkOperationResult apply(BulkAssetsRequestInterface request, PatchRequester requester);
+  }
+
+  // The assets whose tags an approval workflow gates are edited before the response, so it can say
+  // how many change requests were submitted; the others are edited in the background. The job's
+  // outcome reports them all.
+  private Response editAssetsAsync(
+      SecurityContext securityContext,
+      BulkAssetsRequestInterface request,
+      AssetsEdit edit,
+      String startedMessage) {
+    PatchRequester requester = PatchRequester.fromRequest(securityContext, authorizer);
+    Optional<BulkOperationResult> gated =
+        takeGatedAssets(request, requester).map(assets -> edit.apply(assets, requester));
     String jobId = UUID.randomUUID().toString();
     AsyncService.getInstance()
         .executeDatabaseTask(
             DatabaseOperation.BULK_ASSET_OPERATION,
             jobId,
             RequestLatencyContext.wrapWithContext(
-                () -> {
-                  try {
-                    BulkOperationResult result =
-                        repository.bulkRemoveAndValidateTagsToAssets(entityId, request);
-                    WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
-                        jobId, securityContext, result);
-                  } catch (Exception e) {
-                    WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
-                        jobId,
-                        securityContext,
-                        e.getMessage() == null ? e.toString() : e.getMessage());
-                  }
-                }));
-    BulkAssetsOperationResponse response =
-        new BulkAssetsOperationResponse(
-            jobId, "Bulk Remove tags to Asset operation initiated successfully.");
-    return Response.ok().entity(response).type(MediaType.APPLICATION_JSON).build();
+                asRequester(
+                    requester,
+                    () -> {
+                      try {
+                        BulkOperationResult result = edit.apply(request, requester);
+                        WebsocketNotificationHandler.bulkAssetsOperationCompleteNotification(
+                            jobId,
+                            securityContext,
+                            gated
+                                .map(held -> AssetEditService.combine(held, result))
+                                .orElse(result));
+                      } catch (Exception e) {
+                        WebsocketNotificationHandler.bulkAssetsOperationFailedNotification(
+                            jobId,
+                            securityContext,
+                            e.getMessage() == null ? e.toString() : e.getMessage());
+                      }
+                    })));
+    BulkAssetsOperationResponse response = new BulkAssetsOperationResponse(jobId, startedMessage);
+    return jobStartedResponse(response, gated.map(EntityResource::submittedCount).orElse(0));
+  }
+
+  // Moves the assets whose tags an approval workflow gates for the requester out of the request,
+  // into
+  // a request of their own.
+  private static Optional<BulkAssetsRequestInterface> takeGatedAssets(
+      BulkAssetsRequestInterface request, PatchRequester requester) {
+    List<EntityReference> assets = listOrEmpty(request.getAssets());
+    Set<UUID> gatedIds =
+        ApprovalGate.gatedAssets(assets, Entity.FIELD_TAGS, requester.actor().userName());
+    Optional<BulkAssetsRequestInterface> gated = Optional.empty();
+    if (!gatedIds.isEmpty()) {
+      Map<Boolean, List<EntityReference>> split =
+          assets.stream().collect(Collectors.partitioningBy(a -> gatedIds.contains(a.getId())));
+      BulkAssetsRequestInterface gatedRequest =
+          JsonUtils.readValue(JsonUtils.pojoToJson(request), request.getClass());
+      gatedRequest.setAssets(new ArrayList<>(split.get(true)));
+      request.setAssets(new ArrayList<>(split.get(false)));
+      gated = Optional.of(gatedRequest);
+    }
+    return gated;
+  }
+
+  // A dry run submits nothing.
+  private static int submittedCount(BulkOperationResult result) {
+    return Boolean.TRUE.equals(result.getDryRun())
+        ? 0
+        : Objects.requireNonNullElse(result.getNumberOfRowsPendingApproval(), 0);
+  }
+
+  // The held assets already have change requests, so the response says how many.
+  private static Response jobStartedResponse(BulkAssetsOperationResponse response, int submitted) {
+    Response.ResponseBuilder builder =
+        Response.ok().entity(response).type(MediaType.APPLICATION_JSON);
+    if (submitted > 0) {
+      builder.header(RestUtil.PENDING_CHANGE_COUNT_HEADER, submitted);
+    }
+    return builder.build();
+  }
+
+  // The job runs on its own thread, and policy conditions such as isImpersonated() read the
+  // impersonation from the thread: the job takes the request's, so each asset is authorized as the
+  // request would be, and clears it when it ends.
+  private static Runnable asRequester(PatchRequester requester, Runnable job) {
+    return () -> {
+      ImpersonationContext.setImpersonatedBy(requester.actor().impersonatedBy());
+      try {
+        job.run();
+      } finally {
+        ImpersonationContext.clear();
+      }
+    };
   }
 
   public Response importCsvInternalAsync(
@@ -1281,8 +1331,8 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
     if (result.getStatus() != ApiStatus.ABORTED
         && result.getNumberOfRowsProcessed() > 1
         && !dryRun) {
-      EntityRepository<EntityInterface> versioningRepo =
-          (EntityRepository<EntityInterface>)
+      EntityRepository<EntityInterface<?>> versioningRepo =
+          (EntityRepository<EntityInterface<?>>)
               Entity.getEntityRepository(effectiveVersioningEntityType);
 
       if (versioningRepo.supportsBulkImportVersioning()) {
@@ -1293,7 +1343,7 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
   }
 
   protected void processChangeEventForBulkImport(
-      EntityRepository<EntityInterface> versioningRepo,
+      EntityRepository<EntityInterface<?>> versioningRepo,
       UriInfo uriInfo,
       SecurityContext securityContext,
       String name,
@@ -1342,6 +1392,50 @@ public abstract class EntityResource<T extends EntityInterface, K extends Entity
       String name, RelationIncludes relationIncludes, Fields fields) {
     Include include = relationIncludes == null ? Include.ALL : relationIncludes.getDefaultInclude();
     return new ResourceContext<>(entityType, null, name, include, fields, relationIncludes);
+  }
+
+  /**
+   * Authorizes VIEW_BASIC on a parent named by FQN and returns one page of its inline child
+   * collection: columns, schema fields, tasks or features depending on the entity type.
+   *
+   * <p>Shared here rather than copied into each resource because the body is identical for every
+   * type that has such a collection.
+   *
+   * <p>Authorization comes first and the parent is loaded afterwards, matching how the table
+   * columns endpoint has always ordered the two. The load asks for the registry's required fields
+   * rather than reusing the entity the resource context resolved: several repositories null out
+   * their inline child collection unless it was explicitly requested, so the context's copy can
+   * carry no children at all.
+   *
+   * <p>Only for entity types the child-field registry knows; calling it for any other type is a
+   * programming error and fails loudly.
+   */
+  protected ResultList<FieldInterface> getChildFieldPage(
+      SecurityContext securityContext,
+      String fqn,
+      int limit,
+      int offset,
+      String fieldsParam,
+      Include include,
+      String sortBy,
+      String sortOrder) {
+    authorizer.authorize(
+        securityContext,
+        new OperationContext(entityType, VIEW_BASIC),
+        getResourceContextByName(fqn, include));
+    ChildFieldResolver.ChildContainerSpec spec = ChildFieldResolver.specFor(entityType);
+    EntityInterface<?> parent =
+        repository.getByName(
+            null, fqn, repository.getFields(spec.requiredFields()), include, false);
+    return new ChildFieldPageReader(repository, spec)
+        .read(
+            parent,
+            limit,
+            offset,
+            fieldsParam,
+            sortBy,
+            sortOrder,
+            ChildFieldPageReader.ChildPageEnricher.NONE);
   }
 
   protected static final MetadataOperation[] VIEW_ALL_OPERATIONS = {MetadataOperation.VIEW_ALL};

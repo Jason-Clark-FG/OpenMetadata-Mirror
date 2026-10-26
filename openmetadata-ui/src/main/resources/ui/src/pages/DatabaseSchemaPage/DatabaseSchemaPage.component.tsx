@@ -11,8 +11,8 @@
  *  limitations under the License.
  */
 
+import { Box, Skeleton, Tabs } from '@openmetadata/ui-core-components';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Col, Row, Skeleton, Tabs, TabsProps } from 'antd';
 import { AxiosError } from 'axios';
 import { compare, Operation } from 'fast-json-patch';
 import { isEmpty, isUndefined } from 'lodash';
@@ -26,14 +26,15 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { withActivityFeed } from '../../components/AppRouter/withActivityFeed';
-import ErrorPlaceHolder from '../../components/common/ErrorWithPlaceholder/ErrorPlaceHolder';
+import NoDataPlaceholder from '../../components/common/EmptyPlaceholder/NoDataPlaceholder';
+import PermissionPlaceholder from '../../components/common/EmptyPlaceholder/PermissionPlaceholder';
 import { AlignRightIconButton } from '../../components/common/IconButtons/EditIconButton';
-import { PageLoader } from '../../components/common/Loader/Loader';
 import { GenericProvider } from '../../components/Customization/GenericProvider/GenericProvider';
 import { DataAssetsHeader } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.component';
 import { DataAssetWithDomains } from '../../components/DataAssets/DataAssetsHeader/DataAssetsHeader.interface';
 import ProfilerSettings from '../../components/Database/Profiler/ProfilerSettings/ProfilerSettings';
-import { QueryVote } from '../../components/Database/TableQueries/TableQueries.interface';
+import EntityDetailsPageSkeleton from '../../components/Entity/EntityDetailsPageSkeleton/EntityDetailsPageSkeleton';
+import { useEntityExportModalProvider } from '../../components/Entity/EntityExportModalProvider/EntityExportModalProvider.component';
 import { EntityName } from '../../components/Modals/EntityNameModal/EntityNameModal.interface';
 import PageLayoutV1 from '../../components/PageLayoutV1/PageLayoutV1';
 import { FQN_SEPARATOR_CHAR } from '../../constants/char.constants';
@@ -44,15 +45,14 @@ import {
 } from '../../constants/constants';
 import { FEED_COUNT_INITIAL_DATA } from '../../constants/entity.constants';
 import { GlobalSettingOptions } from '../../constants/GlobalSettings.constants';
-import { ResourceEntity } from '../../context/PermissionProvider/PermissionProvider.interface';
 import { ClientErrors } from '../../enums/Axios.enum';
-import { ERROR_PLACEHOLDER_TYPE } from '../../enums/common.enum';
 import {
   EntityTabs,
   EntityType,
   FqnPart,
   TabSpecificField,
 } from '../../enums/entity.enum';
+import { ResourceEntity } from '../../enums/permissions.enum';
 import { Tag } from '../../generated/entity/classification/tag';
 import { DatabaseSchema } from '../../generated/entity/data/databaseSchema';
 import { PageType } from '../../generated/system/ui/page';
@@ -62,6 +62,7 @@ import { useCustomPages } from '../../hooks/useCustomPages';
 import { useEntityPermissions } from '../../hooks/useEntityPermissions/useEntityPermissions';
 import { useFqn } from '../../hooks/useFqn';
 import { useTableFilters } from '../../hooks/useTableFilters';
+import { QueryVote } from '../../interface/entity/vote.interface';
 import { FeedCounts } from '../../interface/feed.interface';
 import {
   addFollowers,
@@ -80,7 +81,9 @@ import { getStoredProceduresList } from '../../rest/storedProceduresAPI';
 import { getTableList } from '../../rest/tableAPI';
 import {
   checkIfExpandViewSupported,
+  DetailsTabItem,
   getDetailsTabWithNewLabel,
+  getRenderedActiveTab,
   getTabLabelMapFromTabs,
 } from '../../utils/CustomizePage/CustomizePageEntityTabUtils';
 import databaseSchemaClassBase from '../../utils/DatabaseSchemaClassBase';
@@ -114,6 +117,7 @@ const DatabaseSchemaPage: FunctionComponent = () => {
     type: EntityType.DATABASE_SCHEMA,
   });
   const navigate = useNavigate();
+  const { showModal } = useEntityExportModalProvider();
 
   const [feedCount, setFeedCount] = useState<FeedCounts>(
     FEED_COUNT_INITIAL_DATA
@@ -276,12 +280,14 @@ const DatabaseSchemaPage: FunctionComponent = () => {
         decodedDatabaseSchemaFQN,
         databaseSchemaPermission,
         databaseSchema ?? ({} as DatabaseSchema),
-        navigate
+        navigate,
+        showModal
       ),
     [
       databaseSchemaPermission,
       decodedDatabaseSchemaFQN,
       databaseSchema?.deleted,
+      showModal,
     ]
   );
 
@@ -594,7 +600,7 @@ const DatabaseSchemaPage: FunctionComponent = () => {
     }
   };
 
-  const tabs: TabsProps['items'] = useMemo(() => {
+  const tabs: DetailsTabItem[] = useMemo(() => {
     const tabLabelMap = getTabLabelMapFromTabs(customizedPage?.tabs);
 
     const tabs = databaseSchemaClassBase.getDatabaseSchemaPageTabs({
@@ -788,53 +794,57 @@ const DatabaseSchemaPage: FunctionComponent = () => {
   }, [isFollowing, unFollowSchema, followSchema]);
 
   if (isPermissionsLoading) {
-    return <PageLoader />;
+    return <EntityDetailsPageSkeleton />;
   }
 
   if (isError) {
     return (
-      <ErrorPlaceHolder>
-        {getEntityMissingError(
-          EntityType.DATABASE_SCHEMA,
-          decodedDatabaseSchemaFQN
-        )}
-      </ErrorPlaceHolder>
+      <div className="tw:relative tw:h-full tw:w-full tw:min-h-60 tw:rounded-xl tw:bg-surface">
+        <NoDataPlaceholder
+          data-testid="no-data-placeholder"
+          title={getEntityMissingError(
+            EntityType.DATABASE_SCHEMA,
+            decodedDatabaseSchemaFQN
+          )}
+        />
+      </div>
     );
   }
 
   if (!viewDatabaseSchemaPermission) {
     return (
-      <ErrorPlaceHolder
-        className="border-none"
-        permissionValue={t('label.view-entity', {
-          entity: t('label.database-schema'),
-        })}
-        type={ERROR_PLACEHOLDER_TYPE.PERMISSION}
-      />
+      <div className="tw:relative tw:h-full tw:w-full tw:min-h-60 tw:rounded-xl tw:bg-surface">
+        <PermissionPlaceholder
+          data-testid="permission-error-placeholder"
+          permissionValue={t('label.view-entity', {
+            entity: t('label.database-schema'),
+          })}
+        />
+      </div>
     );
   }
 
   return (
-    <PageLayoutV1 pageTitle={getEntityName(databaseSchema)}>
+    <PageLayoutV1 fillEntityTabs pageTitle={getEntityName(databaseSchema)}>
       {isSchemaMissing ? (
-        <ErrorPlaceHolder className="m-0">
-          {getEntityMissingError(
-            EntityType.DATABASE_SCHEMA,
-            decodedDatabaseSchemaFQN
-          )}
-        </ErrorPlaceHolder>
+        <div className="tw:relative tw:h-full tw:w-full tw:min-h-60 tw:rounded-xl tw:bg-surface">
+          <NoDataPlaceholder
+            data-testid="no-data-placeholder"
+            title={getEntityMissingError(
+              EntityType.DATABASE_SCHEMA,
+              decodedDatabaseSchemaFQN
+            )}
+          />
+        </div>
       ) : (
-        <Row gutter={[0, 12]}>
-          <Col span={24}>
+        <Box direction="col" gap={3}>
+          <div>
             {databaseSchemaLoading || !databaseSchema ? (
-              <Skeleton
-                active
-                className="m-b-md"
-                paragraph={{
-                  rows: 2,
-                  width: ['20%', '80%'],
-                }}
-              />
+              <div className="tw:flex tw:flex-col tw:gap-3 m-b-md">
+                <Skeleton height={16} width="38%" />
+                <Skeleton height={16} width="20%" />
+                <Skeleton height={16} width="80%" />
+              </div>
             ) : (
               <DataAssetsHeader
                 isRecursiveDelete
@@ -855,7 +865,7 @@ const DatabaseSchemaPage: FunctionComponent = () => {
                 onVersionClick={versionHandler}
               />
             )}
-          </Col>
+          </div>
           <GenericProvider<DatabaseSchema>
             customizedPage={customizedPage}
             data={databaseSchema ?? ({} as DatabaseSchema)}
@@ -863,16 +873,30 @@ const DatabaseSchemaPage: FunctionComponent = () => {
             permissions={databaseSchemaPermission}
             type={EntityType.DATABASE_SCHEMA}
             onUpdate={handleUpdateDatabaseSchema}>
-            <Col className="entity-details-page-tabs" span={24}>
+            <div className="entity-details-page-tabs">
               <Tabs
-                activeKey={activeTab}
-                className="tabs-new"
+                className="tw:gap-3"
                 data-testid="tabs"
-                items={tabs}
-                tabBarExtraContent={expandButton}
-                onChange={activeTabHandler}
-              />
-            </Col>
+                selectedKey={getRenderedActiveTab(tabs, activeTab)}
+                onSelectionChange={(key) => activeTabHandler(String(key))}>
+                <Tabs.List
+                  actions={expandButton}
+                  size="sm"
+                  type="underline"
+                  variant="card">
+                  {tabs.map(({ key, label }) => (
+                    <Tabs.Item id={key} key={key}>
+                      {label}
+                    </Tabs.Item>
+                  ))}
+                </Tabs.List>
+                {tabs.map(({ key, children }) => (
+                  <Tabs.Panel id={key} key={key}>
+                    {children}
+                  </Tabs.Panel>
+                ))}
+              </Tabs>
+            </div>
           </GenericProvider>
           {updateProfilerSetting && (
             <ProfilerSettings
@@ -882,7 +906,7 @@ const DatabaseSchemaPage: FunctionComponent = () => {
               onVisibilityChange={(value) => setUpdateProfilerSetting(value)}
             />
           )}
-        </Row>
+        </Box>
       )}
     </PageLayoutV1>
   );

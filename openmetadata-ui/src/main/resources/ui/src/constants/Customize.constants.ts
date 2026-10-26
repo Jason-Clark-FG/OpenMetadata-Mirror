@@ -16,7 +16,7 @@ import { PageType } from '../generated/system/ui/page';
 
 export enum PersonaCustomizePageFqn {
   Navigation = 'navigation',
-  AppMode = 'app-mode',
+  AppLayout = 'app-layout',
   Homepage = 'homepage',
 }
 
@@ -27,6 +27,7 @@ export const TAB_LABEL_MAP = {
   [EntityTabs.ACTIVITY_FEED]: 'label.activity-feed-and-task-plural',
   [EntityTabs.CUSTOM_PROPERTIES]: 'label.custom-property-plural',
   [EntityTabs.TERMS]: 'label.term-plural',
+  [EntityTabs.REVIEW]: 'label.review',
   [EntityTabs.SCHEMA]: 'label.schema',
   [EntityTabs.SAMPLE_DATA]: 'label.sample-data',
   [EntityTabs.TABLE_QUERIES]: 'label.query-plural',
@@ -72,6 +73,7 @@ export const TAB_LABEL_MAP = {
   [EntityTabs.INPUT_OUTPUT_PORTS]: 'label.input-output-port-plural',
   [EntityTabs.RELATIONS_GRAPH]: 'label.relations-graph',
   [EntityTabs.DATA_OBSERVABILITY]: 'label.data-observability',
+  [EntityTabs.APPROVAL]: 'label.approval',
 } as Record<EntityTabs, TFunctionKeys>;
 
 export type CustomizeEntityType =

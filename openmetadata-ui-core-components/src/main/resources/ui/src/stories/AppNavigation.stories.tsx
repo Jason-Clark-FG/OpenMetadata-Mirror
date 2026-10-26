@@ -24,7 +24,7 @@ import {
   Settings01,
   Tag01,
   Users01,
-} from '@untitledui/icons';
+} from '../icons';
 import { NavAccountCard } from '../components/application/app-navigation/base-components/nav-account-card';
 import { NavItemButton } from '../components/application/app-navigation/base-components/nav-item-button';
 import { NavList } from '../components/application/app-navigation/base-components/nav-list';
@@ -302,4 +302,31 @@ export const WithBadges: Story = {
       </div>
     );
   },
+};
+
+export const NavItemButtonSizes: Story = {
+  render: () => (
+    <div className="tw:flex tw:flex-col tw:gap-6 tw:bg-secondary tw:p-6">
+      {(['md', 'lg', 'xl'] as const).map((size) => (
+        <div className="tw:flex tw:items-center tw:gap-2" key={size}>
+          <span className="tw:w-8 tw:text-xs tw:text-tertiary">{size}</span>
+          <NavItemButton
+            current
+            href="/home"
+            icon={Home01}
+            label="Home"
+            size={size}
+            variant="solid"
+          />
+          <NavItemButton
+            href="/team"
+            icon={Users01}
+            label="Team"
+            size={size}
+            variant="solid"
+          />
+        </div>
+      ))}
+    </div>
+  ),
 };

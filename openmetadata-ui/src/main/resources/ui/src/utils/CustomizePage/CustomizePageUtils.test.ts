@@ -10,7 +10,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import { TabsProps } from 'antd';
 import { EntityTabs } from '../../enums/entity.enum';
 import { PageType, Tab } from '../../generated/system/ui/page';
 import { WidgetConfig } from '../../pages/CustomizablePage/CustomizablePage.interface';
@@ -22,6 +21,7 @@ import {
 } from './CustomizePageDispatchUtils';
 import {
   checkIfExpandViewSupported,
+  DetailsTabItem,
   getTabDisplayName,
   getTabLabelMapFromTabs,
   sortTabs,
@@ -81,7 +81,7 @@ describe('CustomizePageUtils', () => {
 
   describe('sortTabs', () => {
     it('should sort tabs according to given order', () => {
-      const tabs: TabsProps['items'] = [
+      const tabs: DetailsTabItem[] = [
         { key: 'c', label: 'C' },
         { key: 'a', label: 'A' },
         { key: 'b', label: 'B' },
@@ -96,7 +96,7 @@ describe('CustomizePageUtils', () => {
     });
 
     it('should handle tabs not in order array', () => {
-      const tabs: TabsProps['items'] = [
+      const tabs: DetailsTabItem[] = [
         { key: 'c', label: 'C' },
         { key: 'd', label: 'D' },
         { key: 'a', label: 'A' },
@@ -225,7 +225,17 @@ describe('CustomizePageUtils', () => {
       const result = getDefaultTabs(PageType.Glossary);
 
       expect(result).toBeDefined();
-      expect(result).toHaveLength(3); // Terms, Relations Graph, Activity Feed tabs
+      expect(result).toHaveLength(4); // Terms, Review, Relations Graph, Activity Feed tabs
+    });
+
+    it('lists Review right after Terms in glossary default tabs, so a persona can move or hide it', () => {
+      const result = getDefaultTabs(PageType.Glossary);
+
+      expect(result.map((tab) => tab.id).slice(0, 2)).toEqual([
+        EntityTabs.TERMS,
+        EntityTabs.REVIEW,
+      ]);
+      expect(result[1].editable).toBe(false);
     });
 
     it('should include RELATIONS_GRAPH in glossary default tabs', () => {

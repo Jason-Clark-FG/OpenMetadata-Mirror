@@ -23,7 +23,7 @@ import static org.openmetadata.service.Entity.FIELD_TAGS;
 import static org.openmetadata.service.Entity.populateEntityFieldTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTags;
 import static org.openmetadata.service.resources.tags.TagLabelUtil.addDerivedTagsGracefully;
-import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusive;
+import static org.openmetadata.service.resources.tags.TagLabelUtil.checkMutuallyExclusiveForUserAppliedTags;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -64,6 +64,9 @@ public class TopicRepository extends EntityRepository<Topic> {
   private static final Set<String> CHANGE_SUMMARY_FIELDS =
       Set.of("messageSchema.schemaFields.description");
   public static final String TOPIC_SAMPLE_DATA_EXTENSION = "topic.sampleData";
+  // A PUT loads the stored topic with these fields, and the bulk loader reads schema field tags
+  // only with messageSchema. Without it, a re-run that sends no field tags indexes the fields bare.
+  private static final String UPDATE_FIELDS = "messageSchema";
 
   public TopicRepository() {
     super(
@@ -72,7 +75,7 @@ public class TopicRepository extends EntityRepository<Topic> {
         Topic.class,
         Entity.getCollectionDAO().topicDAO(),
         "",
-        "",
+        UPDATE_FIELDS,
         CHANGE_SUMMARY_FIELDS);
     supportsSearch = true;
     // Covered by the parent service delete cascade: search docs by service.id
@@ -242,6 +245,8 @@ public class TopicRepository extends EntityRepository<Topic> {
 
       if (!topicsWithSchemas.isEmpty()) {
         bulkPopulateEntityFieldTags(topicsWithSchemas, t -> t.getMessageSchema().getSchemaFields());
+        inheritEntityTermsOnFields(
+            topicsWithSchemas, t -> t.getMessageSchema().getSchemaFields(), tagsMap);
       }
     }
   }
@@ -279,7 +284,7 @@ public class TopicRepository extends EntityRepository<Topic> {
   @Override
   public EntityRepository<Topic>.EntityUpdater getUpdater(
       Topic original, Topic updated, Operation operation, ChangeSource changeSource) {
-    return new TopicUpdater(original, updated, operation);
+    return new TopicUpdater(original, updated, operation, changeSource);
   }
 
   public Topic getSampleData(UUID topicId, boolean authorizePII) {
@@ -369,7 +374,7 @@ public class TopicRepository extends EntityRepository<Topic> {
     for (Field field : fields) {
       validateTags(field.getTags());
       field.setTags(addDerivedTags(field.getTags()));
-      checkMutuallyExclusive(field.getTags());
+      checkMutuallyExclusiveForUserAppliedTags(field.getTags());
       if (field.getChildren() != null) {
         validateSchemaFieldTags(field.getChildren());
       }
@@ -401,7 +406,7 @@ public class TopicRepository extends EntityRepository<Topic> {
   }
 
   @Override
-  public EntityInterface getParentEntity(Topic entity, String fields) {
+  public EntityInterface<?> getParentEntity(Topic entity, String fields) {
     if (entity.getService() == null) {
       return null;
     }
@@ -417,7 +422,7 @@ public class TopicRepository extends EntityRepository<Topic> {
   }
 
   @Override
-  public List<TagLabel> getAllTags(EntityInterface entity) {
+  public List<TagLabel> getAllTags(EntityInterface<?> entity) {
     List<TagLabel> allTags = new ArrayList<>();
     Topic topic = (Topic) entity;
     EntityUtil.mergeTags(allTags, topic.getTags());
@@ -511,8 +516,9 @@ public class TopicRepository extends EntityRepository<Topic> {
   public class TopicUpdater extends EntityUpdater {
     public static final String FIELD_DATA_TYPE_DISPLAY = "dataTypeDisplay";
 
-    public TopicUpdater(Topic original, Topic updated, Operation operation) {
-      super(original, updated, operation);
+    public TopicUpdater(
+        Topic original, Topic updated, Operation operation, ChangeSource changeSource) {
+      super(original, updated, operation, changeSource);
     }
 
     @Transaction
@@ -662,11 +668,12 @@ public class TopicRepository extends EntityRepository<Topic> {
         updateFieldDescription(schemaFieldPrefix, stored, updated);
         updateFieldDataTypeDisplay(schemaFieldPrefix, stored, updated);
         updateFieldDisplayName(schemaFieldPrefix, stored, updated);
-        updateTags(
-            stored.getFullyQualifiedName(),
-            EntityUtil.getFieldName(schemaFieldPrefix, FIELD_TAGS),
-            stored.getTags(),
-            updated.getTags());
+        updated.setTags(
+            updateTags(
+                stored.getFullyQualifiedName(),
+                EntityUtil.getFieldName(schemaFieldPrefix, FIELD_TAGS),
+                stored.getTags(),
+                updated.getTags()));
 
         if (updated.getChildren() != null && stored.getChildren() != null) {
           updateSchemaFields(

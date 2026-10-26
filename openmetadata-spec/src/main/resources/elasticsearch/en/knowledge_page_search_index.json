@@ -64,7 +64,13 @@
   "mappings": {
     "properties": {
       "id": {
-        "type": "text"
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
       },
       "name": {
         "type": "keyword",
@@ -174,6 +180,53 @@
           },
           "deleted": {
             "type": "text"
+          },
+          "href": {
+            "type": "text"
+          }
+        }
+      },
+      "domains": {
+        "properties": {
+          "id": {
+            "type": "keyword",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 36
+              }
+            }
+          },
+          "type": {
+            "type": "keyword"
+          },
+          "name": {
+            "type": "keyword",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
+          "displayName": {
+            "type": "keyword",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "lowercase_normalizer",
+                "ignore_above": 256
+              }
+            }
+          },
+          "fullyQualifiedName": {
+            "type": "keyword"
+          },
+          "description": {
+            "type": "text"
+          },
+          "deleted": {
+            "type": "boolean"
           },
           "href": {
             "type": "text"
@@ -502,6 +555,17 @@
       },
       "parentId": {
         "type": "keyword"
+      },
+      "totalVotes": {
+        "type": "long"
+      },
+      "page": {
+        "properties": {
+          "publicationDate": {
+            "type": "date",
+            "format": "epoch_millis||strict_date_optional_time||epoch_second"
+          }
+        }
       }
     }
   }
