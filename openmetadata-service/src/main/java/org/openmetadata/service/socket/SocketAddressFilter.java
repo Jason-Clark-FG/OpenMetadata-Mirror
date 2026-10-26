@@ -225,28 +225,12 @@ public class SocketAddressFilter implements Filter {
     String userName =
         SecurityUtil.findUserNameFromClaims(
             jwtFilter.getJwtPrincipalClaimsMapping(), jwtFilter.getJwtPrincipalClaims(), claims);
-    String impersonatedBy =
-        claims.containsKey(JwtFilter.IMPERSONATED_USER_CLAIM)
-            ? claims.get(JwtFilter.IMPERSONATED_USER_CLAIM).asString()
-            : null;
-    jwtFilter.checkValidationsForToken(claims, token, userName, impersonatedBy);
+    jwtFilter.checkValidationsForToken(claims, token, userName, null);
     String sessionId =
         claims.containsKey(JWTTokenGenerator.SESSION_ID_CLAIM)
             ? claims.get(JWTTokenGenerator.SESSION_ID_CLAIM).asString()
             : null;
     return new ValidatedTokenPrincipal(userName, sessionId);
-  }
-
-  public static void checkForUsernameAndImpersonationValidation(
-      String token, Map<String, Claim> claims, JwtFilter jwtFilter) {
-    String userName =
-        SecurityUtil.findUserNameFromClaims(
-            jwtFilter.getJwtPrincipalClaimsMapping(), jwtFilter.getJwtPrincipalClaims(), claims);
-    String impersonatedBy =
-        claims.containsKey(JwtFilter.IMPERSONATED_USER_CLAIM)
-            ? claims.get(JwtFilter.IMPERSONATED_USER_CLAIM).asString()
-            : null;
-    jwtFilter.checkValidationsForToken(claims, token, userName, impersonatedBy);
   }
 
   private UUID getUserIdForPrincipal(String userName) {
