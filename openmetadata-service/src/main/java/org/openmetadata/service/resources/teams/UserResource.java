@@ -157,6 +157,7 @@ import org.openmetadata.service.security.AuthServeletHandlerRegistry;
 import org.openmetadata.service.security.AuthorizationException;
 import org.openmetadata.service.security.Authorizer;
 import org.openmetadata.service.security.CatalogPrincipal;
+import org.openmetadata.service.security.IdentityEndpoint;
 import org.openmetadata.service.security.auth.AuthenticatorHandler;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
 import org.openmetadata.service.security.auth.SecurityConfigurationManager;
@@ -458,6 +459,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @GET
   @Path("/generateRandomPwd")
+  @IdentityEndpoint
   @Operation(
       operationId = "generateRandomPwd",
       summary = "Generate a random password",
@@ -622,6 +624,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @POST
   @Path("/logout")
+  @IdentityEndpoint
   @Operation(
       operationId = "logoutUser",
       summary = "Logout a User(Only called for saml and basic Auth)",
@@ -707,7 +710,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
       @Context ContainerRequestContext containerRequestContext,
       @Valid CreateUser create) {
     if (grantsPrivileges(create)) {
-      authorizeAdminForPrivilegedFields(securityContext);
+      authorizeAdminForPrivilegedFields(securityContext, containerRequestContext);
     }
     User user = getUser(securityContext.getUserPrincipal().getName(), create);
     if (Boolean.TRUE.equals(user.getIsBot())) {
@@ -837,6 +840,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
   public Response createOrUpdateUser(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
+      @Context ContainerRequestContext containerRequestContext,
       @Valid CreateUser create) {
     User user = getUser(securityContext.getUserPrincipal().getName(), create);
     repository.setFullyQualifiedName(user);
@@ -857,7 +861,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
     // ownership branch below, otherwise a principal holding EDIT on users would be able to grant
     // roles to somebody else through PUT while PATCH refuses the same change.
     if (grantsPrivileges(create, existingUser, user)) {
-      authorizeAdminForPrivilegedFields(securityContext);
+      authorizeAdminForPrivilegedFields(securityContext, containerRequestContext);
     } else if (!securityContext.getUserPrincipal().getName().equalsIgnoreCase(user.getName())) {
       // doing authorization check outside of authorizer here. We are checking if the logged-in user
       // is same as the user. We are trying to update. One option is to set users.owner as user,
@@ -878,6 +882,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @PUT
   @Path("/generateToken/{id}")
+  @IdentityEndpoint
   @Operation(
       operationId = "generateJWTTokenForBotUser",
       summary = "Generate JWT Token for a Bot User",
@@ -926,6 +931,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @POST
   @Path("/generateToken")
+  @IdentityEndpoint
   @Operation(
       operationId = "generateJWTTokenForUser",
       summary = "Generate JWT Token for a User",
@@ -987,6 +993,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @PUT
   @Path("/revokeToken")
+  @IdentityEndpoint
   @Operation(
       operationId = "revokeJWTTokenForBotUser",
       summary = "Revoke JWT Token for a Bot User",
@@ -1030,6 +1037,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @GET
   @Path("/token/{id}")
+  @IdentityEndpoint
   @Operation(
       operationId = "getJWTTokenForBotUser",
       summary = "Get JWT Token for a Bot User",
@@ -1067,6 +1075,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @GET
   @Path("/auth-mechanism/{id}")
+  @IdentityEndpoint
   @Operation(
       operationId = "getAuthenticationMechanismBotUser",
       summary = "Get Authentication Mechanism for a Bot User",
@@ -1113,6 +1122,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
   public Response patch(
       @Context UriInfo uriInfo,
       @Context SecurityContext securityContext,
+      @Context ContainerRequestContext containerRequestContext,
       @Parameter(description = "Id of the user", schema = @Schema(type = "UUID")) @PathParam("id")
           UUID id,
       @RequestBody(
@@ -1143,7 +1153,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
         throw new AuthorizationException("Users can only update their own default domain");
       }
       if (isPrivilegedUserPatchPath(path)) {
-        authorizer.authorizeAdmin(securityContext);
+        authorizeAdminForPrivilegedFields(securityContext, containerRequestContext);
         continue;
       }
       if (patchOpObject.containsKey("value")) {
@@ -1165,7 +1175,8 @@ public class UserResource extends EntityResource<User, UserRepository> {
             String teamId = value.getString("id");
             repository.validateTeamAddition(id, UUID.fromString(teamId));
             if (!repository.isTeamJoinable(teamId)) {
-              authorizer.authorizeAdmin(securityContext); // Only admin can join closed teams
+              // Only admin can join closed teams
+              authorizeAdminForPrivilegedFields(securityContext, containerRequestContext);
             }
           }
         }
@@ -1284,12 +1295,28 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   // The principal is not in the database yet during self sign-up, and authorizeAdmin() resolves the
   // subject from it, so a plain call would surface the outcome as a 404 instead of a 403.
-  private void authorizeAdminForPrivilegedFields(SecurityContext securityContext) {
+  private void authorizeAdminForPrivilegedFields(
+      SecurityContext securityContext, ContainerRequestContext requestContext) {
+    rejectPrivilegedImpersonation(requestContext);
     String principal = securityContext.getUserPrincipal().getName();
     try {
       authorizer.authorizeAdmin(securityContext);
     } catch (EntityNotFoundException e) {
       throw new AuthorizationException(CatalogExceptionMessage.notAdmin(principal));
+    }
+  }
+
+  /**
+   * Minting a bot token, granting admin or elevating roles while impersonating would outlive the
+   * request-scoped grant, so a privileged user mutation is closed to impersonated callers even
+   * though the impersonated principal is itself an admin. Read from the request context: the
+   * injected {@link SecurityContext} is a Jersey proxy that hides the impersonation.
+   */
+  private static void rejectPrivilegedImpersonation(ContainerRequestContext requestContext) {
+    if (requestContext.getSecurityContext() instanceof CatalogSecurityContext catalogSecurityContext
+        && catalogSecurityContext.impersonatedUser() != null) {
+      throw new AuthorizationException(
+          "Impersonated requests cannot grant privileges or mint credentials for a user");
     }
   }
 
@@ -1760,6 +1787,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @PUT
   @Path("/changePassword")
+  @IdentityEndpoint
   @Operation(
       operationId = "changeUserPassword",
       summary = "Change Password For User",
@@ -1881,6 +1909,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @GET
   @Path("/security/token")
+  @IdentityEndpoint
   @Operation(
       operationId = "getPersonalAccessToken",
       summary = "Get personal access token to User",
@@ -1918,6 +1947,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @PUT
   @Path("/security/token/revoke")
+  @IdentityEndpoint
   @Operation(
       operationId = "revokePersonalAccessToken",
       summary = "Revoke personal access token to User",
@@ -1969,6 +1999,7 @@ public class UserResource extends EntityResource<User, UserRepository> {
 
   @PUT
   @Path("/security/token")
+  @IdentityEndpoint
   @Operation(
       operationId = "createPersonalAccessToken",
       summary = "Provide access token to User",
