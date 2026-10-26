@@ -37,6 +37,7 @@ import com.github.benmanes.caffeine.cache.Ticker;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.core.UriInfo;
 import java.lang.reflect.Field;
@@ -82,6 +83,7 @@ import org.openmetadata.schema.security.client.OidcClientConfig;
 import org.openmetadata.schema.services.connections.metadata.AuthProvider;
 import org.openmetadata.schema.type.EntityReference;
 import org.openmetadata.service.Entity;
+import org.openmetadata.service.exception.CredentialUnavailableExceptionMapper;
 import org.openmetadata.service.exception.EntityNotFoundException;
 import org.openmetadata.service.jdbi3.UserRepository;
 import org.openmetadata.service.security.auth.CatalogSecurityContext;
@@ -572,7 +574,9 @@ class JwtFilterTest {
     CredentialUnavailableException unavailable =
         assertThrows(CredentialUnavailableException.class, () -> omFilter.filter(context));
 
-    assertEquals(2, unavailable.retryAfterSeconds());
+    Response response = new CredentialUnavailableExceptionMapper().toResponse(unavailable);
+    assertEquals(503, response.getStatus());
+    assertEquals("2", response.getHeaderString("Retry-After"));
     verify(context, never()).setSecurityContext(any());
   }
 
