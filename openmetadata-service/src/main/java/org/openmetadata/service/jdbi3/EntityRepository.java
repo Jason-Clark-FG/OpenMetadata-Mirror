@@ -945,6 +945,35 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
     storeEntityWithVersion(entity, update, expectedVersion);
   }
 
+  /**
+   * Locks the entity's row and asserts the stored version is still the expected one, for a
+   * version-checked store that applies side effects beyond the database before it runs. The
+   * compare-and-swap in {@link #store(T, boolean, Double)} is the only place a concurrent update
+   * is detected, and it runs after those side effects landed: two overlapping If-Match PATCHes of
+   * one bot user, say, both pass the initial read and write the shared vault secret, and only the
+   * winner's own version check rejects the loser - too late for the credential the winner keeps.
+   * Serialized here on the row lock, a stale caller is rejected before writing anything external.
+   */
+  protected void lockAndAssertStoredVersion(T entity, Double expectedVersion) {
+    if (expectedVersion != null) {
+      assertLockedStoredVersion(entityDAOForWrite(), entity.getId(), expectedVersion);
+    }
+  }
+
+  /** Visible for the stored-version assertion's own test; callers hold the transaction open. */
+  static void assertLockedStoredVersion(EntityDAO<?> dao, UUID entityId, Double expectedVersion) {
+    String savedJson = dao.findByIdForUpdate(dao.getTableName(), entityId, "");
+    if (savedJson == null) {
+      // A missing row is rejected by the version-checked store that follows.
+      return;
+    }
+    JsonNode savedVersion = JsonUtils.readTree(savedJson).path("version");
+    if (!expectedVersion.equals(savedVersion.asDouble())) {
+      throw new PreconditionFailedException(
+          "The entity has been modified by another user. Please refresh and retry.");
+    }
+  }
+
   protected void storeEntities(List<T> entities) {
     // Default: store entities directly. Override if fields need nullification before storage.
     storeMany(entities);
@@ -3471,11 +3500,29 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
     return entity;
   }
 
+  /**
+   * Create an entity a previous {@link #prepareInternal(Object, boolean)} pass in the same request
+   * already handled — the PUT create-or-update path, whose resource boundary prepares with {@code
+   * update == true} before deciding whether the request creates. The create pipeline still runs its
+   * own prepare pass, but with {@code reStore == true}: {@link #prepare(Object, boolean, boolean)}
+   * then treats the second pass as a re-storage of what the first pass stored, instead of
+   * re-validating it against a strict credential policy.
+   */
+  public final T createPrepared(
+      UriInfo uriInfo, T entity, String updatedBy, String impersonatedBy) {
+    entity = withHref(uriInfo, createInternal(entity, updatedBy, impersonatedBy, true));
+    return entity;
+  }
+
   public final T createInternal(T entity) {
     return createInternal(entity, null, null);
   }
 
   private T createInternal(T entity, String updatedBy, String impersonatedBy) {
+    return createInternal(entity, updatedBy, impersonatedBy, false);
+  }
+
+  private T createInternal(T entity, String updatedBy, String impersonatedBy, boolean reStore) {
     // Check if parent entity is being deleted
     if (lockManager != null) {
       try {
@@ -3487,7 +3534,7 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
     }
 
     try (var ignored = phase("createPrepareInternal")) {
-      prepareInternal(entity, false);
+      prepareInternal(entity, false, reStore);
     }
 
     // Set updatedBy and impersonatedBy after prepare but before storing
@@ -3501,8 +3548,12 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
   }
 
   public final void prepareInternal(T entity, boolean update) {
+    prepareInternal(entity, update, false);
+  }
+
+  public final void prepareInternal(T entity, boolean update, boolean reStore) {
     validateTags(entity);
-    prepare(entity, update);
+    prepare(entity, update, reStore);
     setFullyQualifiedName(entity);
     validateExtension(entity, update);
     if (!update) {
@@ -3512,6 +3563,19 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
       prepareCertification(entity);
     }
     // Domain is already validated
+  }
+
+  /**
+   * Prepare an entity whose encoded values an earlier step in this request already accepted — a
+   * previous {@link #prepareInternal(Object, boolean, boolean)} pass in the same request (the PUT
+   * create-or-update path), or the masker's provenance check on the PATCH pipeline. The default
+   * delegates to {@link #prepare(Object, boolean)}: most repositories have no reason to distinguish
+   * the passes. A repository whose prepare encrypts password fields must override this, because
+   * re-running a strict credential policy on an already-encoded value cannot tell that value from
+   * a foreign credential — see ServiceEntityRepository.
+   */
+  protected void prepare(T entity, boolean update, boolean reStore) {
+    prepare(entity, update);
   }
 
   /**
@@ -5167,8 +5231,12 @@ public abstract class EntityRepository<T extends EntityInterface<?>> {
     // before prepare, so validation sees who makes this change rather than who made the last one.
     updated.setImpersonatedBy(impersonatedBy);
 
+    // The masker pass above already proved every encoded value the patch carries is one the
+    // entity holds, so this prepare stores what it accepted instead of re-validating it against a
+    // strict credential policy - which would otherwise reject the entity's own stored references
+    // on an edit that never touched them, such as a rename.
     try (var ignored = phase("patchPrepareInternal")) {
-      prepareInternal(updated, true);
+      prepareInternal(updated, true, true);
     }
     try (var ignored = phase("patchRuleEvaluation")) {
       RuleEngine.getInstance().evaluateUpdate(original, updated);

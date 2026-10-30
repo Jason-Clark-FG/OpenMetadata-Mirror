@@ -96,6 +96,8 @@ import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedField
 import org.openmetadata.service.search.InheritedFieldEntitySearch.InheritedFieldResult;
 import org.openmetadata.service.secrets.SecretsManager;
 import org.openmetadata.service.secrets.SecretsManagerFactory;
+import org.openmetadata.service.secrets.masker.EntityMaskerFactory;
+import org.openmetadata.service.secrets.masker.PasswordEntityMasker;
 import org.openmetadata.service.security.AuthServeletHandlerRegistry;
 import org.openmetadata.service.security.AuthenticationException;
 import org.openmetadata.service.security.JwtFilter;
@@ -294,6 +296,23 @@ public class UserRepository extends EntityRepository<User> {
   }
 
   /**
+   * A PATCH may set a bot's authentication mechanism to an encoded value that the stored bot
+   * already holds, so the unmask validates it against the stored copy before the encrypt pass
+   * stores it (see {@link PasswordEntityMasker#unmaskAuthenticationMechanism}).
+   */
+  @Override
+  protected User restorePatchSecrets(User original, User updated) {
+    if (Boolean.TRUE.equals(updated.getIsBot())) {
+      EntityMaskerFactory.getEntityMasker()
+          .unmaskAuthenticationMechanism(
+              updated.getName(),
+              updated.getAuthenticationMechanism(),
+              original.getAuthenticationMechanism());
+    }
+    return updated;
+  }
+
+  /**
    * Names of users whose navbar selection ({@code defaultDomain}) is one of {@code domainIds}. The
    * selection is a {@code DEFAULTS_TO} relationship, so deleting the domain removes it; callers use
    * this only to evict those users' cached context.
@@ -355,8 +374,7 @@ public class UserRepository extends EntityRepository<User> {
   public void storeEntity(User user, boolean update) {
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
     if (secretsManager != null && Boolean.TRUE.equals(user.getIsBot())) {
-      secretsManager.encryptAuthenticationMechanism(
-          user.getName(), user.getAuthenticationMechanism());
+      encryptBotMechanism(secretsManager, user, update);
     }
 
     store(user, update);
@@ -372,6 +390,45 @@ public class UserRepository extends EntityRepository<User> {
     return mechanism != null && mechanism.getAuthType() == AuthenticationMechanism.AuthType.JWT;
   }
 
+  /**
+   * A create stores a user-submitted authentication mechanism, so the encrypt pass rejects
+   * credentials the bot does not own. An update stores values the masker already validated (PATCH
+   * and PUT) or a stored copy (restore), where encoded values are the bot's own.
+   */
+  private void encryptBotMechanism(SecretsManager secretsManager, User user, boolean update) {
+    if (update) {
+      secretsManager.encryptAuthenticationMechanism(
+          user.getName(),
+          user.getAuthenticationMechanism(),
+          SecretsManager.CredentialPolicy.INTERNAL_RE_STORAGE);
+    } else {
+      secretsManager.encryptAuthenticationMechanism(
+          user.getName(), user.getAuthenticationMechanism());
+    }
+  }
+
+  /**
+   * A version-checked store (an If-Match PATCH) never runs {@link #storeEntity}: it calls {@link
+   * EntityRepository#store} directly to compare versions. Without this override the encryption that
+   * pass relies on never runs, and the masker's decrypted echo of a stored bot token would be
+   * serialized into the entity JSON as plaintext.
+   */
+  @Override
+  protected void storeEntityWithVersion(User user, boolean update, Double expectedVersion) {
+    SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
+    if (secretsManager != null && Boolean.TRUE.equals(user.getIsBot())) {
+      // The re-encryption writes the bot's shared credential into the external secrets manager:
+      // on a losing pair of overlapping If-Match changes that write must never land, so the
+      // saved version is asserted under a row lock first.
+      lockAndAssertStoredVersion(user, expectedVersion);
+      secretsManager.encryptAuthenticationMechanism(
+          user.getName(),
+          user.getAuthenticationMechanism(),
+          SecretsManager.CredentialPolicy.INTERNAL_RE_STORAGE);
+    }
+    super.storeEntityWithVersion(user, update, expectedVersion);
+  }
+
   @Override
   public void storeEntities(List<User> entities) {
     List<String> fqns = new ArrayList<>(entities.size());
@@ -380,6 +437,7 @@ public class UserRepository extends EntityRepository<User> {
     for (User user : entities) {
       SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
       if (secretsManager != null && Boolean.TRUE.equals(user.getIsBot())) {
+        // The batch store is a user create path: encoded values it does not own are rejected.
         secretsManager.encryptAuthenticationMechanism(
             user.getName(), user.getAuthenticationMechanism());
       }

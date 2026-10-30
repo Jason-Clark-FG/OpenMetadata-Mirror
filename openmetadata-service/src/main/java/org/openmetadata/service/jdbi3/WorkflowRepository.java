@@ -11,6 +11,8 @@ import org.openmetadata.service.Entity;
 import org.openmetadata.service.resources.automations.WorkflowResource;
 import org.openmetadata.service.secrets.SecretsManager;
 import org.openmetadata.service.secrets.SecretsManagerFactory;
+import org.openmetadata.service.secrets.masker.EntityMaskerFactory;
+import org.openmetadata.service.secrets.masker.PasswordEntityMasker;
 import org.openmetadata.service.util.EntityUtil;
 import org.openmetadata.service.util.EntityUtil.RelationIncludes;
 
@@ -52,15 +54,53 @@ public class WorkflowRepository extends EntityRepository<Workflow> {
     return List.of("openMetadataServerConnection");
   }
 
+  /**
+   * A PATCH may set a password field to an encoded value that the stored workflow already holds, so
+   * the unmask validates it against that stored copy before the encrypt pass stores it (see
+   * {@link PasswordEntityMasker#unmaskWorkflow}).
+   */
+  @Override
+  protected Workflow restorePatchSecrets(Workflow original, Workflow updated) {
+    return EntityMaskerFactory.getEntityMasker().unmaskWorkflow(updated, original);
+  }
+
   @Override
   public void storeEntity(Workflow entity, boolean update) {
     SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
 
     if (secretsManager != null) {
-      entity = secretsManager.encryptWorkflow(entity);
+      // A create stores user-submitted values, so the encrypt pass rejects credentials the
+      // workflow does not own. An update stores values the masker already validated (PATCH and
+      // PUT) or a stored copy (restore), where encoded values are the entity's own.
+      entity =
+          update
+              ? secretsManager.encryptWorkflow(
+                  entity, SecretsManager.CredentialPolicy.INTERNAL_RE_STORAGE)
+              : secretsManager.encryptWorkflow(entity);
     }
 
     store(entity, update);
+  }
+
+  /**
+   * A version-checked store (an If-Match PATCH or PUT) never runs {@link #storeEntity}: it calls
+   * {@link EntityRepository#store} directly to compare versions. Without this override the
+   * encryption that pass relies on never runs, and the plaintext the patch's unmask restored from
+   * a stored echo or mask would be serialized into the entity JSON as-is.
+   */
+  @Override
+  protected void storeEntityWithVersion(Workflow entity, boolean update, Double expectedVersion) {
+    SecretsManager secretsManager = SecretsManagerFactory.getSecretsManager();
+    if (secretsManager != null) {
+      // The re-encryption stores secrets outside the database; on a losing pair of overlapping
+      // If-Match changes that write must never land, so the saved version is asserted under a
+      // row lock first.
+      lockAndAssertStoredVersion(entity, expectedVersion);
+      entity =
+          secretsManager.encryptWorkflow(
+              entity, SecretsManager.CredentialPolicy.INTERNAL_RE_STORAGE);
+    }
+    super.storeEntityWithVersion(entity, update, expectedVersion);
   }
 
   public void storeEntities(List<Workflow> workflows) {
@@ -70,6 +110,7 @@ public class WorkflowRepository extends EntityRepository<Workflow> {
 
     for (Workflow workflow : workflows) {
       if (secretsManager != null) {
+        // The batch store is a user create path: encoded values it does not own are rejected.
         workflow = secretsManager.encryptWorkflow(workflow);
       }
 
