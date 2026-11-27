@@ -234,7 +234,7 @@ jobs:
       - name: Post merge-queue flaky tests to Slack (pw-health)
         if: ${{ success() && github.event_name == 'merge_group' && steps.queue-flaky.outputs.posted == 'true' }}
         continue-on-error: true
-        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        uses: slackapi/slack-github-action@0bc3581177d9a0f8d555e07689384b376528e8fa # v4.1.0
         with:
           method: chat.postMessage
           token: ${{ secrets.COLLATE_BOT_SLACK_TOKEN }}
@@ -863,7 +863,7 @@ jobs:
       - name: Post to Slack
         if: ${{ always() && steps.slack.outcome == 'success' }}
         continue-on-error: true
-        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        uses: slackapi/slack-github-action@0bc3581177d9a0f8d555e07689384b376528e8fa # v4.1.0
         with:
           method: chat.postMessage
           token: ${{ secrets.COLLATE_BOT_SLACK_TOKEN }}

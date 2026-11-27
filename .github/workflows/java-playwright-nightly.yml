@@ -324,7 +324,7 @@ jobs:
       # the channel to ignore the alert.
       - name: Slack notification
         if: ${{ failure() && github.event_name != 'pull_request' && env.SLACK_JAVA_PLAYWRIGHT_URL != '' }}
-        uses: slackapi/slack-github-action@v4.0.0
+        uses: slackapi/slack-github-action@v4.1.0
         with:
           webhook: ${{ env.SLACK_JAVA_PLAYWRIGHT_URL }}
           webhook-type: incoming-webhook
@@ -424,7 +424,7 @@ jobs:
       # the channel to ignore the alert.
       - name: Slack notification
         if: ${{ failure() && github.event_name != 'pull_request' && env.SLACK_JAVA_PLAYWRIGHT_URL != '' }}
-        uses: slackapi/slack-github-action@v4.0.0
+        uses: slackapi/slack-github-action@v4.1.0
         with:
           webhook: ${{ env.SLACK_JAVA_PLAYWRIGHT_URL }}
           webhook-type: incoming-webhook
