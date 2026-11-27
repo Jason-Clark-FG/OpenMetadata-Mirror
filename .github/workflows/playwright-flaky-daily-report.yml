@@ -96,7 +96,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' || inputs.post_to_slack }}
         # A failed upload falls back to a text post below instead of failing the job.
         continue-on-error: true
-        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        uses: slackapi/slack-github-action@0bc3581177d9a0f8d555e07689384b376528e8fa # v4.1.0
         with:
           method: files.uploadV2
           token: ${{ secrets.COLLATE_BOT_SLACK_TOKEN }}
@@ -109,7 +109,7 @@ jobs:
       # going, with the top offenders inline and a link to the report artifact.
       - name: Post a text fallback to Slack (pw-health)
         if: ${{ steps.post.outcome == 'failure' }}
-        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        uses: slackapi/slack-github-action@0bc3581177d9a0f8d555e07689384b376528e8fa # v4.1.0
         with:
           method: chat.postMessage
           token: ${{ secrets.COLLATE_BOT_SLACK_TOKEN }}
